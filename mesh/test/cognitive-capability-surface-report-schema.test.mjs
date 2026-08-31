@@ -61,7 +61,11 @@ test('schema preserves freshness, capability, conflict, assurance, and resource 
     'memory', 'storage', 'network-transfer', 'currency', 'other'
   ]);
   assert.deepEqual(schema.$defs.resourceRange.properties.basis.enum, ['observed', 'estimated', 'unknown']);
-  assert.equal(schema.$defs.resourceRange.properties.measurement_count.minimum, 1);
+  assert.equal(
+    schema.$defs.resourceRange.properties.measurement_count.$ref,
+    '#/$defs/positiveSafeInteger'
+  );
+  assert.equal(schema.$defs.positiveSafeInteger.minimum, 1);
 });
 
 test('semantic annotations preserve historical, exact-cell, attribution, and no-ranking rules', async () => {
