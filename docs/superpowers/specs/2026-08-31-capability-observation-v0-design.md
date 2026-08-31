@@ -4,7 +4,7 @@
 
 **Date:** 2026-08-31
 
-**Scope:** attributable, time-bounded empirical observations of one exact cognitive capability profile under one exact evaluation context, without benchmark aggregation, ranking, routing, model invocation, training, spending, or authority effects
+**Scope:** attributable, time-bounded empirical observations of one exact Cognitive Capability Profile under one exact evaluation context, without benchmark aggregation, ranking, routing, model invocation, training, spending, or authority effects.
 
 **Builds on:**
 
@@ -20,44 +20,36 @@
 
 ## 1. Core decision
 
-AXIOM needs a contract for empirical capability evidence that is distinct from declared capability metadata, availability evidence, replacement fidelity, and learning promotion.
+AXIOM needs empirical capability evidence distinct from declared capability metadata, availability evidence, replacement fidelity, and learning promotion.
 
-The existing layers answer different questions:
+The neighboring contracts answer different questions:
 
-1. **Cognitive Capability Profile v0** — what does this exact reviewed candidate declare about its capabilities, deployment, data posture, economics, openness, and assurance?
-2. **Cognitive Availability Attestation v0** — was this exact topology component observed as available, unavailable, or indeterminate at a particular time?
-3. **Replacement Fidelity Evaluation v0** — how does a candidate compare against one accepted reference or baseline across fidelity dimensions?
+1. **Cognitive Capability Profile v0** — what does an exact reviewed candidate declare about its capabilities and operating posture?
+2. **Cognitive Availability Attestation v0** — was an exact topology component observed as available, unavailable, or indeterminate at a particular time?
+3. **Replacement Fidelity Evaluation v0** — how does a candidate compare with an accepted reference across fidelity dimensions?
 4. **Cognitive Learning Ledger v0** — what learned artifact exists, where might it belong, and what evidence/cost/reuse state accompanies that proposal?
 
-None of those contracts answers:
+Capability Observation v0 answers:
 
 > **What empirical outcome was observed when this exact capability profile was evaluated for this capability in this exact context, using this exact evaluation definition?**
-
-Capability Observation v0 fills that gap.
 
 The governing rule is:
 
 > **A capability claim is metadata. A capability observation is evidence. Evidence is contextual, attributable, time-bounded, and non-authorizing.**
 
-## 2. Why Capability Observation is a separate contract
+## 2. Separate contract, not profile expansion
 
-Capability Observation must not be embedded into Cognitive Capability Profile v0.
+Capability observations must not be embedded into Cognitive Capability Profile v0. Profiles are relatively stable reviewed declarations; observations are numerous, time-varying, evaluator-specific, environment-specific evidence. Mixing them would churn profile digests, blur declarations with measurements, and turn provider/runtime metadata into an implicit benchmark database.
 
-A profile is relatively stable routing-relevant metadata. Empirical observations are potentially numerous, time-varying, evaluator-specific, environment-specific, and replaceable. Embedding them in the profile would create several problems:
+Capability Observation also does not replace:
 
-- profile digests would churn whenever a new benchmark result arrived;
-- reviewed declarations and empirical evidence would become difficult to distinguish;
-- historical observations could be silently overwritten by a newer profile revision;
-- a provider/model catalog could become a benchmark database;
-- routing policy pressure could leak into a contract intended only to describe candidates.
+- **Availability Attestation:** reachability is not competence.
+- **Replacement Fidelity Evaluation:** replacement fidelity is comparative; capability observation records one contextual empirical outcome.
+- **Cognitive Learning Ledger:** observed performance may support promotion evidence, but does not itself perform promotion.
 
-Capability Observation also must not replace Replacement Fidelity Evaluation v0. Fidelity evaluation is comparative and continuity-oriented: candidate versus reference. Capability Observation is absolute only in the limited evidence-relative sense that it records one observed outcome under one evaluation context. It makes no claim that the result is universal or reference-independent.
+## 3. Contract identity
 
-Capability Observation must likewise remain separate from Availability Attestation. A model can be available and perform poorly. A model can be unavailable today while retaining historical evidence of strong capability. Reachability is not competence.
-
-## 3. Contract identity and status
-
-Proposed schema identifier:
+Schema:
 
 `axiom-cognitive-capability-observation.v0`
 
@@ -69,9 +61,20 @@ Status:
 
 `inert-evidence`
 
-The contract is content-addressed through the repository's canonical digest mechanism.
+The contract is content-addressed through the existing canonical digest mechanism.
 
-## 4. Exact profile binding
+## 4. Common lexical constraints
+
+Implementation should reuse existing AXIOM contract conventions where practical.
+
+- identifiers/references: bounded strings matching `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$` unless a referenced contract already imposes a stricter compatible bound;
+- digests: lowercase 64-hex SHA-256 strings;
+- units: bounded strings matching `^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,63}$`;
+- timestamps: canonical ISO strings round-tripping through `Date.toISOString()`;
+- all objects: plain objects, exact required fields, `additionalProperties:false` in the JSON Schema mirror;
+- duplicate entries in bounded identifier arrays fail closed.
+
+## 5. Exact profile binding
 
 Each observation binds to exactly one Cognitive Capability Profile v0 through:
 
@@ -80,19 +83,17 @@ profile_id
 profile_digest
 ```
 
-The resolver must validate the supplied Cognitive Capability Profile and recompute its canonical digest.
+`resolveCognitiveCapabilityObservation(document, profile)` must validate the supplied profile and recompute its canonical digest.
 
-The observation must fail closed unless:
+Resolution fails closed unless:
 
-- `profile_id` matches the supplied profile exactly;
-- `profile_digest` matches the canonical profile digest exactly;
-- the observed capability is one of the capabilities declared by the supplied profile.
+- `profile_id` exactly matches the supplied profile;
+- `profile_digest` exactly matches the canonical profile digest;
+- `capability` is declared by that exact profile.
 
-This prevents empirical evidence for one provider/model/runtime profile from being silently attributed to another revision or offering.
+The resolved summary may copy `offering_ref` for operator convenience, but the exact profile remains authoritative for candidate identity.
 
-The observation may copy `offering_ref` into its resolved summary for operator convenience, but the source of truth remains the exact bound profile.
-
-## 5. Top-level fields
+## 6. Top-level shape
 
 Capability Observation v0 contains exactly:
 
@@ -124,9 +125,9 @@ selection_effect
 
 Unknown fields fail closed.
 
-## 6. Capability field
+## 7. Capability vocabulary
 
-`capability` must use the same closed vocabulary as Cognitive Capability Profile v0:
+`capability` uses exactly the existing Cognitive Capability Profile v0 vocabulary:
 
 - `reasoning`
 - `coding`
@@ -141,13 +142,11 @@ Unknown fields fail closed.
 - `agent-orchestration`
 - `other`
 
-The resolver additionally requires that the exact bound profile declares the same capability.
+Capability Observation v0 does not introduce a second capability taxonomy.
 
-Capability Observation v0 does not add a second uncontrolled capability taxonomy.
+## 8. Context object
 
-## 7. Context object
-
-Capability evidence is meaningful only with context. The context object contains exactly:
+The context object contains exactly:
 
 ```text
 context_ref
@@ -161,21 +160,11 @@ toolset_ref
 toolset_digest
 ```
 
-### 7.1 Context identity
+`context_ref/context_digest` identify the complete evaluated context artifact. Materially different prompts, system instructions, memory state, retrieval configuration, scaffolding, input fixtures, or tool permissions should produce a different context artifact/digest.
 
-`context_ref` and `context_digest` identify the complete evaluated context contract or artifact.
+`task_family_ref/task_family_digest` identify the reviewed task-family definition.
 
-The exact digest is required because materially different prompts, system instructions, memory state, tool permissions, scaffolding, retrieval configuration, or input fixtures can materially change performance.
-
-### 7.2 Task family
-
-`task_family_ref` and `task_family_digest` identify the reviewed task-family definition.
-
-Examples may include a coding benchmark family, legal-research task set, embodied-control suite, or user-specific workflow family. The contract does not prescribe a universal benchmark catalog.
-
-### 7.3 Difficulty class
-
-The closed v0 vocabulary is:
+`difficulty_class` is exactly one of:
 
 - `trivial`
 - `routine`
@@ -184,19 +173,11 @@ The closed v0 vocabulary is:
 - `adversarial`
 - `unknown`
 
-This is descriptive metadata supplied by the evaluation definition. It is not inferred by Capability Observation v0 and does not establish a universal cross-domain scale.
+Difficulty is supplied by the evaluation definition; v0 does not infer it or claim a universal cross-domain scale.
 
-### 7.4 Environment and toolset
+`environment_ref/environment_digest` and `toolset_ref/toolset_digest` are mandatory. A no-tools evaluation must bind an explicit reviewed empty/no-tools artifact rather than use null. The contract records these identities only; it does not create the environment or invoke tools.
 
-`environment_ref` + `environment_digest` identify the execution/evaluation environment definition.
-
-`toolset_ref` + `toolset_digest` identify the tools available during evaluation.
-
-Both reference/digest pairs are mandatory in v0. A no-tools evaluation uses an explicit reviewed `none`/empty-toolset artifact rather than nulling the fields. This avoids ambiguity between "no tools" and "tool information omitted."
-
-Capability Observation v0 records these identities only. It does not create the environment or invoke the tools.
-
-## 8. Evaluation object
+## 9. Evaluation object
 
 The evaluation object contains exactly:
 
@@ -211,25 +192,13 @@ method_ref
 method_digest
 ```
 
-### 8.1 Exact suite and metric binding
+The exact suite, metric set, threshold, and evaluation method are content-addressed separately so a benchmark label cannot hide changes to prompts, datasets, scoring, thresholds, or procedure.
 
-The observation must identify the exact evaluation suite and exact metric set.
+`threshold_ref/threshold_digest` define how the observed metric is interpreted. Capability Observation v0 therefore has no universal built-in numeric meaning for `pass`, `degraded`, or `fail`.
 
-A benchmark name alone is insufficient because prompts, datasets, scoring code, thresholds, and aggregation methods may change while preserving a human-readable label.
+`method_ref/method_digest` may identify zero-shot, few-shot, agentic-with-tools, human-reviewed, deterministic harness, simulation, or another reviewed procedure without widening the v0 schema.
 
-### 8.2 Threshold binding
-
-`threshold_ref` and `threshold_digest` identify the exact interpretation rule used to classify the outcome.
-
-Capability Observation v0 therefore does not contain a universal built-in meaning for `pass`, `degraded`, or `fail`. The classification is evidence-relative to the bound threshold definition.
-
-### 8.3 Method binding
-
-`method_ref` and `method_digest` identify the exact evaluation method/procedure.
-
-This permits distinctions such as zero-shot, few-shot, agentic-with-tools, human-reviewed, deterministic harness, simulation, or other future methods without widening the v0 schema with procedural detail.
-
-## 9. Result object
+## 10. Result object
 
 The result object contains exactly:
 
@@ -241,52 +210,27 @@ observed_metric_digest
 failure_mode_refs
 ```
 
-### 9.1 Classification
-
-The closed v0 vocabulary is:
+`classification` is exactly one of:
 
 - `pass`
 - `degraded`
 - `fail`
 - `indeterminate`
 
-Semantics:
+Semantics are threshold-relative:
 
-- `pass` — the observed metric satisfies the exact bound threshold definition;
-- `degraded` — the evaluation definition explicitly classifies the observed metric as partially acceptable/degraded;
-- `fail` — the observed metric fails the exact bound threshold definition;
-- `indeterminate` — available evidence is insufficient to classify the result under the bound evaluation definition.
+- `pass` — satisfies the exact bound threshold definition;
+- `degraded` — the bound evaluation definition classifies the measured outcome as partially acceptable/degraded;
+- `fail` — fails the bound threshold definition;
+- `indeterminate` — evidence is insufficient to classify under the bound definition.
 
-The observation does not convert this classification into a model rank, capability score, selection weight, or authority decision.
+`confidence` is a finite number in `[0,1]`. It is confidence in the observation/evaluation result as defined by the evaluator or method. It is not a probability of general intelligence, arbitrary future success, identity continuity, or a routing weight.
 
-### 9.2 Confidence
+`observed_metric_ref/observed_metric_digest` identify the exact measured-result artifact. The metric itself remains externally referenced because different evaluations may produce accuracy, traces, trajectories, rubric results, error counts, distributions, or multidimensional records that are not directly comparable.
 
-`confidence` is a finite number from `0` through `1` inclusive.
+`failure_mode_refs` is a duplicate-free array with `0-32` identifiers. It may be empty for **any** classification. Empty means **no reviewed failure-mode attribution was recorded**; it does not mean absence of failure or absence of a failure mechanism.
 
-It represents confidence in the observation/evaluation result as defined by the evaluator or evaluation method. It is not:
-
-- a probability that the model is intelligent;
-- a probability that the model will succeed on arbitrary future tasks;
-- a probability of identity continuity;
-- a selection weight.
-
-### 9.3 Observed metric artifact
-
-`observed_metric_ref` and `observed_metric_digest` identify the exact measured result artifact.
-
-The contract does not impose a universal numeric metric field. Different evaluations may produce accuracy, latency distributions, structured error counts, pass/fail traces, trajectories, rubric scores, or multidimensional result files.
-
-Keeping the metric content externally referenced prevents Capability Observation v0 from pretending unlike metrics are directly comparable.
-
-### 9.4 Failure modes
-
-`failure_mode_refs` is a bounded duplicate-free array of opaque identifiers naming reviewed failure-mode records or taxonomy entries.
-
-It may be empty for pass or indeterminate observations.
-
-The contract does not infer failure modes automatically.
-
-## 10. Evaluator provenance
+## 11. Evaluator provenance
 
 The evaluator object contains exactly:
 
@@ -296,7 +240,7 @@ evaluator_ref
 evaluator_principal_ref
 ```
 
-The closed v0 evaluator-kind vocabulary is:
+`evaluator_kind` is exactly one of:
 
 - `local-agent`
 - `local-service`
@@ -306,13 +250,11 @@ The closed v0 evaluator-kind vocabulary is:
 - `external-verifier`
 - `synthetic-harness`
 
-`evaluator_ref` is mandatory.
+`evaluator_ref` is mandatory. `evaluator_principal_ref` may be null when the evaluator is not represented by an AXIOM principal.
 
-`evaluator_principal_ref` may be null where the evaluator is not represented by an AXIOM principal.
+Evaluator provenance is evidence and grants no authority over the observed profile or subject agent.
 
-Evaluator provenance is evidence. It grants no authority over the observed profile or subject agent.
-
-## 11. Evidence object
+## 12. Evidence object
 
 The evidence object contains exactly:
 
@@ -325,7 +267,7 @@ verification_digest
 assurance_class
 ```
 
-Evidence kinds:
+`evidence_kind` is exactly one of:
 
 - `evaluation-run`
 - `signed-evaluation-run`
@@ -335,7 +277,7 @@ Evidence kinds:
 - `synthetic-probe-result`
 - `other`
 
-Assurance classes:
+`assurance_class` is exactly one of:
 
 - `declared`
 - `signed`
@@ -344,18 +286,16 @@ Assurance classes:
 
 Rules:
 
-- `evidence_ref` and `evidence_digest` are always required;
-- `declared` assurance requires `verification_ref:null` and `verification_digest:null`;
+- `evidence_ref/evidence_digest` are always required;
+- `declared` requires `verification_ref:null` and `verification_digest:null`;
 - `signed`, `verified-local`, and `corroborated` require non-null verification reference and digest;
-- an assurance label records evidence posture only; it does not create a trust root or authority grant.
+- `verification_ref` and `verification_digest` are always null together or present together;
+- `signed-evaluation-run` cannot use `assurance_class: declared`;
+- assurance records evidence posture only and does not create a trust root or authority grant.
 
-Capability Observation v0 reuses the general evidence posture already established by cognitive observability rather than inventing a parallel assurance theory.
+## 13. Resource observations
 
-## 12. Resource observations
-
-Capability evaluation may have meaningful direct resource cost. The contract records observations without collapsing unlike units.
-
-`resource_observations` is a bounded array. Each item contains exactly:
+`resource_observations` is an array with `0-32` entries. Each item contains exactly:
 
 ```text
 resource_class
@@ -365,7 +305,7 @@ unit
 source_ref
 ```
 
-Resource classes:
+`resource_class` is exactly one of:
 
 - `input-tokens`
 - `output-tokens`
@@ -378,28 +318,26 @@ Resource classes:
 - `currency`
 - `other`
 
-Basis:
+`basis` is exactly one of:
 
 - `observed`
 - `estimated`
 - `unknown`
 
-Rules mirror the CCLE cost discipline:
+Rules:
 
-- observed/estimated entries require non-negative safe-integer `amount` plus a bounded unit identifier;
+- observed/estimated entries require non-negative safe-integer `amount` and non-null bounded `unit`;
 - unknown entries require `amount:null` and `unit:null`;
-- `source_ref` may be null when no separate source artifact exists;
-- no automatic conversion between units occurs;
-- no aggregate resource score is generated;
-- privacy, sovereignty, resilience, or quality are not monetized by this contract.
+- `source_ref` may be null;
+- unlike units are never implicitly converted or aggregated;
+- no aggregate resource score is emitted;
+- privacy, sovereignty, resilience, and quality are not monetized by this contract.
 
-Examples of acceptable units include explicit scaled units such as `microcad`, `milliseconds`, `millijoules`, `bytes`, or `tokens` where defined by the supplying evaluation system.
+Explicit scaled units such as `microcad`, `milliseconds`, `millijoules`, `bytes`, or `tokens` are acceptable when defined by the supplying evaluation system.
 
-## 13. Freshness and temporal semantics
+## 14. Freshness and temporal semantics
 
-Capability can drift because models, providers, serving stacks, prompts, tools, policies, retrieval systems, and surrounding infrastructure change.
-
-The observation therefore contains:
+The observation contains:
 
 ```text
 observed_at
@@ -412,14 +350,14 @@ Rules:
 - all timestamps are canonical ISO timestamps;
 - `valid_until >= observed_at`;
 - `recorded_at >= observed_at`;
-- the validator does not read the wall clock;
-- future consumers decide whether evidence is stale relative to an explicit assessment time;
+- validator and resolver never read the wall clock;
+- later consumers evaluate staleness relative to an explicit assessment time;
 - stale evidence is not rewritten into `fail`;
-- a historical strong result remains historical evidence even if it is too old for current routing decisions.
+- historical evidence remains historical evidence even when too old for a current routing decision.
 
-## 14. Pure resolver semantics
+## 15. Public interfaces and pure resolver
 
-Proposed public interfaces:
+Proposed interfaces:
 
 ```js
 export const COGNITIVE_CAPABILITY_OBSERVATION_SCHEMA =
@@ -430,41 +368,22 @@ export function cognitiveCapabilityObservationDigest(document) {}
 export function resolveCognitiveCapabilityObservation(document, profile) {}
 ```
 
-`validateCognitiveCapabilityObservation(document)`:
+`validateCognitiveCapabilityObservation(document)` validates shape, lexical constraints, enum domains, array bounds, evidence posture, resource semantics, timestamps, and hard boundaries; it returns a frozen descriptive summary only.
 
-- validates exact shape, enum domains, bounds, timestamps, paired references/digests, resource semantics, evidence semantics, and hard boundary values;
-- returns a frozen descriptive summary only.
-
-`cognitiveCapabilityObservationDigest(document)`:
-
-- validates first;
-- returns the canonical digest.
+`cognitiveCapabilityObservationDigest(document)` validates first and returns the canonical digest.
 
 `resolveCognitiveCapabilityObservation(document, profile)`:
 
 1. validates the observation;
-2. validates the supplied Cognitive Capability Profile through its existing validator;
-3. requires exact `profile_id` equality;
-4. recomputes and requires exact `profile_digest` equality;
-5. requires the observed `capability` to be declared by the profile;
-6. returns a deeply frozen resolved evidence summary.
+2. validates the supplied Cognitive Capability Profile with the existing profile validator;
+3. requires exact profile ID equality;
+4. recomputes and requires exact profile digest equality;
+5. requires observed capability membership in the profile;
+6. returns a deeply frozen evidence summary.
 
-The resolver must not:
+The resolver must not invoke the offering, contact the provider, probe availability, read credentials, perform network I/O, execute benchmarks, create subprocesses, load models, modify routing, mutate Cognitive Topology, mutate the Cognitive Learning Ledger, authorize spending, or authorize training.
 
-- invoke the offering;
-- access its runtime/provider catalog entry remotely;
-- probe availability;
-- read credentials;
-- perform network I/O;
-- execute a benchmark;
-- create subprocesses;
-- load a model;
-- modify routing;
-- modify Cognitive Topology;
-- modify the Cognitive Learning Ledger;
-- authorize spending or training.
-
-## 15. Hard authority and activation boundary
+## 16. Hard boundary fields
 
 Every document must contain exactly:
 
@@ -478,17 +397,13 @@ runtime_activation = false
 selection_effect = evidence-only
 ```
 
-Any other value fails closed.
-
-The resolved summary should repeat these constants mechanically.
-
-The governing invariant is:
+Any other value fails closed. The resolved summary repeats these constants mechanically.
 
 > **Observed competence may inform a later policy decision. It never becomes permission to act.**
 
-## 16. Non-claims
+## 17. Non-claims
 
-Capability Observation v0 explicitly does not claim:
+Capability Observation v0 does not claim:
 
 - universal model intelligence;
 - global capability rank;
@@ -511,180 +426,158 @@ Capability Observation v0 explicitly does not claim:
 
 A result is evidence under the exact bound context and evaluation definition, no more.
 
-## 17. Relationship to capability topology
+## 18. Relationship to future Capability Topology
 
-Capability Observation v0 is intentionally atomic.
-
-It does not aggregate multiple observations into a current capability score.
+Capability Observation v0 is intentionally atomic. It does not aggregate observations into a current capability score.
 
 A later **Capability Topology Report** may consume multiple observations and derive evidence-relative surfaces such as:
 
 - recent supported capability areas;
 - known degraded areas;
-- repeated failure modes;
+- repeated failure-mode attributions;
 - stale or missing evidence;
 - context-dependent reliability;
 - conflicting observations;
 - evaluator diversity;
 - tool/environment sensitivity;
-- cost/latency/resource posture;
+- resource posture;
 - evidence coverage by capability family.
 
-That later report should remain multidimensional and contextual. It should not collapse the agent or model to a universal IQ-like scalar.
+That report should remain multidimensional and contextual rather than collapsing a component to an IQ-like scalar. Future routing policy may consume such a report, but routing remains a separate policy/effect layer.
 
-Future routing policy may consume a Capability Topology Report, but routing remains a separate policy/effect layer.
+## 19. Relationship to CCLE
 
-## 18. Relationship to CCLE
+Capability observations may later support CCLE decisions about whether:
 
-Capability Observation provides empirical evidence that CCLE may later use when evaluating:
+- a skill improves performance;
+- an adapter candidate preserves or improves a target capability;
+- a persistent specialist is worth retaining;
+- repeated provider use justifies local adaptation/distillation evaluation;
+- a learning promotion has supporting outcome evidence;
+- jagged capability requires composition with another specialist.
 
-- whether a skill actually improves performance;
-- whether an adapter candidate preserves or improves target capability;
-- whether a persistent specialist is worth retaining;
-- whether repeated provider use justifies local adaptation/distillation evaluation;
-- whether a proposed learning promotion has supporting outcome evidence;
-- whether a cognitive component has jagged capability that requires composition with another specialist.
+Capability Observation does not promote a Cognitive Learning Ledger record. A Ledger `evaluation_evidence` reference may point to a Capability Observation artifact or later report, but all Ledger promotion gates remain unchanged.
 
-Capability Observation does not itself promote a Cognitive Learning Ledger record.
+## 20. Conflict and repetition semantics
 
-A Ledger `evaluation_evidence` reference may point to a Capability Observation artifact or a higher-level report when policy permits, but the Ledger's own promotion gates remain unchanged.
+Capability Observation v0 is atomic and does not resolve conflicts. Two valid observations may disagree because of different suites, thresholds, contexts, environments, toolsets, provider/model drift, stochastic variation, evaluator disagreement, contamination, or measurement error.
 
-## 19. Conflict and repetition semantics
+Contradictory valid observations are not validation failures. A later aggregation layer must preserve contributing observation IDs and report conflict explicitly rather than applying opaque latest-wins semantics.
 
-Capability Observation v0 is an atomic record and does not resolve conflicts.
+## 21. Threat model
 
-Two valid observations may disagree because of:
+### 21.1 Benchmark laundering
 
-- different evaluation suites;
-- different thresholds;
-- different environments;
-- different toolsets;
-- model/provider drift;
-- stochastic variation;
-- evaluator disagreement;
-- data contamination;
-- measurement error.
+An actor changes prompts, tools, thresholds, test subsets, or scoring while retaining a familiar benchmark name.
 
-The presence of contradictory observations is not a validation failure unless they are malformed individually.
+**Mitigation:** exact digests for context, task family, environment, toolset, suite, metrics, threshold, and method.
 
-A future Capability Topology Report should preserve contributing observation IDs and report conflicts explicitly rather than applying opaque latest-wins logic.
+### 21.2 Evidence spoofing
 
-## 20. Threat model
+An actor fabricates result artifacts or evaluator claims.
 
-### 20.1 Benchmark laundering
+**Mitigation:** evidence digests, evaluator provenance, assurance posture, and explicit verification references where claimed.
 
-An actor may advertise a strong result while changing prompts, tools, thresholds, or test subsets.
+### 21.3 Metric laundering
 
-Mitigation: exact digests for context, task family, environment, toolset, suite, metrics, threshold, and method.
+Unlike metrics are presented as if directly comparable.
 
-### 20.2 Evidence spoofing
+**Mitigation:** measured metrics remain content-addressed external artifacts; v0 emits only threshold-relative classification and no universal numeric score.
 
-An actor may fabricate a result artifact or evaluator claim.
+### 21.4 Stale-evidence routing
 
-Mitigation: exact evidence digests, evaluator provenance, assurance posture, and separate verification references where claimed.
+Old capability evidence is reused after model/provider behaviour changes.
 
-### 20.3 Metric laundering
+**Mitigation:** explicit observation/expiry timestamps; later consumers decide freshness relative to an explicit assessment time.
 
-Unlike metrics may be presented as comparable scores.
+### 21.5 Hidden scaffolding
 
-Mitigation: observed metrics remain separately content-addressed; v0 emits only threshold-relative classification and no universal numeric score.
+A candidate appears capable only because omitted tools, system prompts, memory, retrieval, or environment support were available.
 
-### 20.4 Stale-evidence routing
+**Mitigation:** mandatory context, environment, and toolset identities with exact digests.
 
-Old capability evidence may be reused after model/provider behaviour changes.
-
-Mitigation: explicit `observed_at` and `valid_until`; later consumers evaluate freshness relative to an explicit assessment time.
-
-### 20.5 Tool/environment omission
-
-A model may appear capable only because hidden scaffolding or tools were available.
-
-Mitigation: mandatory context/environment/toolset identities with exact digests.
-
-### 20.6 Benchmark contamination
+### 21.6 Benchmark contamination
 
 A model may have trained on evaluation data.
 
-Mitigation: v0 makes no contamination-free claim. Evidence or future evaluation definitions may record contamination analysis separately.
+**Mitigation:** v0 makes no contamination-free claim. Contamination evidence belongs in a future separable contract or evaluation artifact.
 
-### 20.7 Authority laundering
+### 21.7 Authority laundering
 
-A strong empirical result may be treated as permission to route privileged work or activate a model.
+A strong result is treated as permission to route privileged work or activate a model.
 
-Mitigation: mechanically fixed zero-authority fields and explicit `selection_effect = evidence-only`.
+**Mitigation:** mechanically fixed zero-authority fields and `selection_effect = evidence-only`.
 
-### 20.8 Provider self-report inflation
+### 21.8 Provider self-report inflation
 
-Provider-issued evaluations may overstate capability.
+Provider-issued evidence overstates capability.
 
-Mitigation: evaluator provenance remains visible; provider evidence can coexist with independent/local observations instead of replacing them.
+**Mitigation:** evaluator provenance remains visible; provider observations can coexist with independent/local evidence rather than replacing it.
 
-## 21. v0 invariants
+## 22. v0 invariants
 
 1. Every observation binds to exactly one Cognitive Capability Profile by ID and canonical digest.
 2. The observed capability must be declared by that exact profile.
 3. Unknown fields fail closed at every object boundary.
 4. Every evaluation identity is content-addressed through exact suite, metric-set, threshold, and method references/digests.
 5. Every context identity is content-addressed through exact context, task-family, environment, and toolset references/digests.
-6. A classification is meaningful only relative to the exact bound threshold definition.
-7. `confidence` is bounded to `[0,1]` and is never treated as an intelligence probability or routing weight.
-8. Observed metric content remains externally referenced and is not converted to a universal built-in score.
-9. Resource observations preserve unit, basis, and amount; unlike units are never implicitly aggregated.
-10. Unknown resource observations require null amount and unit.
-11. Evidence posture is attributable and content-addressed; verified assurance claims require explicit verification references/digests.
-12. Timestamps are canonical; `valid_until` and `recorded_at` cannot precede `observed_at`.
-13. The validator and resolver are pure and read no wall clock.
-14. Conflicting valid observations may coexist; v0 does not silently resolve them.
-15. No observation establishes availability, identity, universal intelligence, ranking, selection, or execution authority.
-16. `contains_secret_material`, `authority_effect`, `network_effect`, `training_effect`, `spend_effect`, `runtime_activation`, and `selection_effect` remain exact hard boundary values.
-17. No raw credentials, provider tokens, cookies, session secrets, vault keys, model bytes, executable benchmark code, or training payloads may appear in the document.
-18. Capability Observation v0 cannot mutate Cognitive Capability Profile, Cognitive Topology, Cognitive Learning Ledger, routing state, capability registry state, or runtime state.
+6. Classification is meaningful only relative to the bound threshold definition.
+7. `confidence` is finite in `[0,1]` and never an intelligence probability or routing weight.
+8. Observed metric content remains externally referenced and is never converted to a built-in universal score.
+9. `failure_mode_refs` contains `0-32` duplicate-free identifiers; empty does not claim absence of failure.
+10. `resource_observations` contains `0-32` entries and preserves amount/unit/basis without implicit aggregation.
+11. Unknown resource observations require null amount and unit.
+12. Evidence is attributable and content-addressed; non-declared assurance requires explicit verification references/digests.
+13. `signed-evaluation-run` cannot claim merely declared assurance.
+14. Timestamps are canonical; `valid_until` and `recorded_at` cannot precede `observed_at`.
+15. Validator and resolver are pure and read no wall clock.
+16. Conflicting valid observations may coexist; v0 does not silently resolve them.
+17. No observation establishes availability, identity, universal intelligence, ranking, selection, or execution authority.
+18. Hard boundary fields remain exact and fail closed on any other value.
+19. No raw credentials, provider tokens, cookies, session secrets, vault keys, model bytes, executable benchmark code, or training payloads appear in the document.
+20. Capability Observation cannot mutate Cognitive Capability Profile, Cognitive Topology, Cognitive Learning Ledger, routing state, capability-registry state, or runtime state.
 
-## 22. First executable slice
+## 23. First executable slice
 
-The first implementation should remain deliberately small:
+The first implementation remains deliberately small:
 
 1. strict semantic validator and deterministic digest;
-2. strict JSON Schema 2020-12 mirror;
+2. JSON Schema 2020-12 mirror;
 3. pure resolver against exact Cognitive Capability Profile v0;
-4. tests for shape, digests, profile binding, capability membership, evidence posture, context/evaluation bindings, resource semantics, timestamps, deep-freeze/purity, and authority boundaries;
-5. canonical documentation registration only after implementation is ready for repository verification.
+4. tests for exact shape, lexical constraints, deterministic digests, profile binding, capability membership, context/evaluation bindings, evidence posture, array bounds, resource semantics, timestamps, deep-freeze/purity, and authority boundaries;
+5. canonical documentation registration only when implementation is ready for repository verification.
 
-No aggregation/report builder belongs in the first slice.
+No aggregation/report builder, Gateway route, provider call, model execution, scheduler, training process, UI, or routing policy belongs in the first slice.
 
-No Gateway route, provider call, model execution, scheduler, training process, UI, or routing policy belongs in the first slice.
-
-## 23. Deliberately deferred slices
+## 24. Deferred slices
 
 Future separable work may add:
 
 - Capability Topology Report v0;
 - explicit conflict/freshness interpretation;
 - evaluation-suite registry contracts;
-- benchmark contamination evidence;
+- benchmark-contamination evidence;
 - repeated-observation reliability summaries;
 - capability regression detection;
 - context/tool sensitivity reports;
 - learned routing-policy proposals;
 - policy-governed routing selection;
 - Axiom One visualization of jagged capability surfaces;
-- ingestion bridges from external benchmark/evaluation frameworks.
+- ingestion bridges from external evaluation frameworks.
 
-Each effect-bearing or network-bearing extension requires its own authority/threat review.
+Each network-bearing or effect-bearing extension requires its own authority/threat review.
 
-## 24. Product principle
+## 25. Product principle
 
-The user should eventually be able to inspect a cognitive component and answer:
+The user should eventually be able to answer:
 
-- What does it claim it can do?
+- What does this component claim it can do?
 - What have we actually observed it doing?
 - Under exactly what prompts, tools, environment, and evaluation definition?
-- How recent is that evidence?
+- How recent is the evidence?
 - Who produced it?
-- What failed, and under which conditions?
-- What did the evaluation cost in actual measured units?
+- What failure modes were actually attributed, if any?
+- What did evaluation cost in actual measured units?
 - Which conclusions are declarations, which are observations, and which are later policy judgments?
-
-The intended product posture is:
 
 > **Do not ask whether a model is "smart." Ask what it has demonstrated, under which conditions, with what evidence, how recently, and with what authority consequences.**
