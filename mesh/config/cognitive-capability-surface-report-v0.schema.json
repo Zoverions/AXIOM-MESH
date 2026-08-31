@@ -1,0 +1,493 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.local/schemas/cognitive-capability-surface-report-v0.schema.json",
+  "title": "AXIOM Cognitive Capability Surface Report v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "report_id",
+    "profile_id",
+    "profile_digest",
+    "assessment_at",
+    "observations",
+    "capability_surfaces",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "training_effect",
+    "spend_effect",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-capability-surface-report.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence-report" },
+    "report_id": { "$ref": "#/$defs/id" },
+    "profile_id": { "$ref": "#/$defs/id" },
+    "profile_digest": { "$ref": "#/$defs/digest" },
+    "assessment_at": { "$ref": "#/$defs/timestamp" },
+    "observations": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/observationInventory" }
+    },
+    "capability_surfaces": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/capabilitySurface" }
+    },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "training_effect": { "const": "none" },
+    "spend_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "selection_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "maxLength": 64,
+      "format": "date-time"
+    },
+    "unit": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,63}$"
+    },
+    "nonNegativeSafeInteger": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "positiveSafeInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "reasoning",
+        "coding",
+        "vision",
+        "computer-use",
+        "research",
+        "planning",
+        "critique",
+        "summarization",
+        "embedding",
+        "tool-use",
+        "agent-orchestration",
+        "other"
+      ]
+    },
+    "observationInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation_id", "observation_digest", "capability", "freshness_class"],
+      "properties": {
+        "observation_id": { "$ref": "#/$defs/id" },
+        "observation_digest": { "$ref": "#/$defs/digest" },
+        "capability": { "$ref": "#/$defs/capability" },
+        "freshness_class": {
+          "type": "string",
+          "enum": ["current", "stale", "future", "not-yet-recorded"]
+        }
+      }
+    },
+    "observationCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current", "stale", "future", "not_yet_recorded"],
+      "properties": {
+        "current": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "stale": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "future": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "not_yet_recorded": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      }
+    },
+    "observationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation_id", "observation_digest"],
+      "properties": {
+        "observation_id": { "$ref": "#/$defs/id" },
+        "observation_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability",
+        "context_ref",
+        "context_digest",
+        "task_family_ref",
+        "task_family_digest",
+        "difficulty_class",
+        "environment_ref",
+        "environment_digest",
+        "toolset_ref",
+        "toolset_digest",
+        "suite_ref",
+        "suite_digest",
+        "metric_set_ref",
+        "metric_set_digest",
+        "threshold_ref",
+        "threshold_digest",
+        "method_ref",
+        "method_digest"
+      ],
+      "properties": {
+        "capability": { "$ref": "#/$defs/capability" },
+        "context_ref": { "$ref": "#/$defs/id" },
+        "context_digest": { "$ref": "#/$defs/digest" },
+        "task_family_ref": { "$ref": "#/$defs/id" },
+        "task_family_digest": { "$ref": "#/$defs/digest" },
+        "difficulty_class": {
+          "type": "string",
+          "enum": ["trivial", "routine", "challenging", "expert", "adversarial", "unknown"]
+        },
+        "environment_ref": { "$ref": "#/$defs/id" },
+        "environment_digest": { "$ref": "#/$defs/digest" },
+        "toolset_ref": { "$ref": "#/$defs/id" },
+        "toolset_digest": { "$ref": "#/$defs/digest" },
+        "suite_ref": { "$ref": "#/$defs/id" },
+        "suite_digest": { "$ref": "#/$defs/digest" },
+        "metric_set_ref": { "$ref": "#/$defs/id" },
+        "metric_set_digest": { "$ref": "#/$defs/digest" },
+        "threshold_ref": { "$ref": "#/$defs/id" },
+        "threshold_digest": { "$ref": "#/$defs/digest" },
+        "method_ref": { "$ref": "#/$defs/id" },
+        "method_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "classificationCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "degraded", "fail", "indeterminate"],
+      "properties": {
+        "pass": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "degraded": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "fail": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "indeterminate": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      }
+    },
+    "evaluatorCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluator_kinds", "evaluator_refs"],
+      "properties": {
+        "evaluator_kinds": {
+          "type": "array",
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "local-agent",
+              "local-service",
+              "remote-service",
+              "human-reviewer",
+              "provider",
+              "external-verifier",
+              "synthetic-harness"
+            ]
+          }
+        },
+        "evaluator_refs": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "failureMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failure_mode_ref", "supporting_observations"],
+      "properties": {
+        "failure_mode_ref": { "$ref": "#/$defs/id" },
+        "supporting_observations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/observationRef" }
+        }
+      }
+    },
+    "resourceRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_class",
+        "basis",
+        "unit",
+        "measurement_count",
+        "minimum",
+        "maximum",
+        "supporting_observations"
+      ],
+      "properties": {
+        "resource_class": {
+          "type": "string",
+          "enum": [
+            "input-tokens",
+            "output-tokens",
+            "compute-time",
+            "wall-time",
+            "energy",
+            "memory",
+            "storage",
+            "network-transfer",
+            "currency",
+            "other"
+          ]
+        },
+        "basis": {
+          "type": "string",
+          "enum": ["observed", "estimated", "unknown"]
+        },
+        "unit": {
+          "oneOf": [
+            { "$ref": "#/$defs/unit" },
+            { "type": "null" }
+          ]
+        },
+        "measurement_count": { "$ref": "#/$defs/positiveSafeInteger" },
+        "minimum": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonNegativeSafeInteger" },
+            { "type": "null" }
+          ]
+        },
+        "maximum": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonNegativeSafeInteger" },
+            { "type": "null" }
+          ]
+        },
+        "supporting_observations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/observationRef" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "basis": { "const": "unknown" } },
+            "required": ["basis"]
+          },
+          "then": {
+            "properties": {
+              "unit": { "type": "null" },
+              "minimum": { "type": "null" },
+              "maximum": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "unit": { "$ref": "#/$defs/unit" },
+              "minimum": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+              "maximum": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+            }
+          }
+        }
+      ]
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cell_digest",
+        "dimensions",
+        "observation_refs",
+        "classification_counts",
+        "classification_set",
+        "conflict_class",
+        "evaluator_kinds",
+        "evaluator_refs",
+        "assurance_classes",
+        "failure_modes",
+        "resource_ranges"
+      ],
+      "properties": {
+        "cell_digest": { "$ref": "#/$defs/digest" },
+        "dimensions": { "$ref": "#/$defs/dimensions" },
+        "observation_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/observationRef" }
+        },
+        "classification_counts": { "$ref": "#/$defs/classificationCounts" },
+        "classification_set": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["pass", "degraded", "fail", "indeterminate"]
+          }
+        },
+        "conflict_class": {
+          "type": "string",
+          "enum": ["none", "mixed", "direct"]
+        },
+        "evaluator_kinds": {
+          "type": "array",
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "local-agent",
+              "local-service",
+              "remote-service",
+              "human-reviewer",
+              "provider",
+              "external-verifier",
+              "synthetic-harness"
+            ]
+          }
+        },
+        "evaluator_refs": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "assurance_classes": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["declared", "signed", "verified-local", "corroborated"]
+          }
+        },
+        "failure_modes": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/failureMode" }
+        },
+        "resource_ranges": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/resourceRange" }
+        }
+      }
+    },
+    "capabilitySurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability",
+        "declared",
+        "observation_counts",
+        "current_cells",
+        "variation_present",
+        "direct_conflict_cells",
+        "mixed_classification_cells",
+        "current_evaluator_coverage",
+        "current_assurance_classes",
+        "current_failure_modes",
+        "current_resource_ranges"
+      ],
+      "properties": {
+        "capability": { "$ref": "#/$defs/capability" },
+        "declared": { "const": true },
+        "observation_counts": { "$ref": "#/$defs/observationCounts" },
+        "current_cells": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/cell" }
+        },
+        "variation_present": { "type": "boolean" },
+        "direct_conflict_cells": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "mixed_classification_cells": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "current_evaluator_coverage": { "$ref": "#/$defs/evaluatorCoverage" },
+        "current_assurance_classes": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["declared", "signed", "verified-local", "corroborated"]
+          }
+        },
+        "current_failure_modes": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/failureMode" }
+        },
+        "current_resource_ranges": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/resourceRange" }
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-capability-surface-report.mjs",
+  "x-axiom-semantic-rules": [
+    "The report binds one exact Cognitive Capability Profile by profile_id and canonical profile_digest, and every observation must bind to that exact profile and a capability declared by it.",
+    "Freshness precedence is future then not-yet-recorded then stale then current relative to explicit assessment_at, and derivation never reads the wall clock.",
+    "Only current observations participate in current cells, current evaluator and assurance coverage, failure-mode support, and current resource ranges; stale evidence is not rewritten as fail.",
+    "Every capability declared by the bound profile is represented; a declared capability with no observations is absence of evidence and must not be treated as fail.",
+    "Exact cell identity includes capability, context, task family, difficulty, environment, toolset, suite, metric set, threshold, and method content identities.",
+    "Pass plus fail in one exact cell is direct conflict; mixed non-indeterminate classifications are mixed conflict; no winner or majority classification is chosen.",
+    "Contextual variation across different exact cells is not direct conflict and must not be collapsed into a universal reliability claim.",
+    "Evaluator kinds, evaluator references, and assurance classes preserve provenance but distinct references do not prove evaluator independence.",
+    "Failure-mode references remain attributable to exact supporting observations and repetition does not create causal probability.",
+    "Resource ranges combine only exact resource_class plus basis plus unit buckets; measurement_count counts resource entries while supporting observations are deduplicated by observation identity and digest.",
+    "Observed and estimated resource values remain separate, unlike units and currencies are never converted, unknown values preserve null unit/minimum/maximum, and no average or aggregate resource score is emitted.",
+    "There is no majority-vote truth, universal capability score, candidate rank, averaged confidence, preferred model, or routing weight in this report.",
+    "Canonical ordering is part of verification; input observation order must not affect the same logical report or digest.",
+    "Aggregation does not create authority, routing permission, execution permission, training permission, spending permission, topology mutation, learning promotion, or runtime activation."
+  ],
+  "x-axiom-non-claims": [
+    "universal-intelligence-score",
+    "overall-quality-rank",
+    "majority-vote-truth",
+    "cross-benchmark-comparability",
+    "future-task-success-probability",
+    "provider-availability",
+    "evaluator-independence",
+    "evaluator-correctness",
+    "benchmark-impartiality",
+    "contamination-free-evaluation",
+    "causal-failure-attribution",
+    "optimal-model-choice",
+    "routing-correctness",
+    "cost-optimality",
+    "routing-authority",
+    "execution-authority",
+    "training-authority",
+    "spend-authority",
+    "topology-mutation",
+    "learning-promotion",
+    "principal-continuity",
+    "subjective-identity-continuity"
+  ]
+}
