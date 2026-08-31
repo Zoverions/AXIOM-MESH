@@ -145,6 +145,20 @@ function validateRecordShape(document) {
     }
   }
 
+  if (
+    (document.promotion_state === 'evaluated' || document.promotion_state === 'accepted')
+    && document.evaluation_evidence.length === 0
+  ) {
+    throw new ValidationError('evaluated or accepted promotion requires explicit evaluation evidence');
+  }
+
+  if (
+    document.proposed_target_tier === 'foundation-training'
+    && document.promotion_state === 'accepted'
+  ) {
+    throw new ValidationError('foundation-training cannot be accepted by Cognitive Learning Ledger v0');
+  }
+
   if (document.proposed_target_tier === 'identity-kernel' && document.evaluation_evidence.length < 2) {
     throw new ValidationError('identity-kernel target requires at least two explicit evaluation evidence references');
   }
