@@ -25,7 +25,7 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.public_shell_cache, true);
   assert.equal(result.api_cache, false);
   assert.equal(result.remote_origins_allowed, false);
-  assert.equal(result.explained_actions, 5);
+  assert.equal(result.explained_actions, 10);
   assert.equal(result.memory_lifecycle_status, 'experimental-bounded-lifecycle');
   assert.equal(result.provenance_relations, 3);
   assert.equal(result.self_links, false);
@@ -33,6 +33,9 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.link_deletion, false);
   assert.equal(result.hard_delete, false);
   assert.equal(result.restore, false);
+  assert.equal(result.social_lifecycle_status, 'experimental-bounded-local-social-lifecycle');
+  assert.equal(result.social_actions, 5);
+  assert.equal(result.social_network_effect, 'none');
   assert.match(result.policy_digest, /^[a-f0-9]{64}$/);
   assert.match(result.assets_digest, /^[a-f0-9]{64}$/);
 
@@ -71,6 +74,16 @@ test('AXIOM One preview rejects non-loopback and weakened policy', async () => {
   assert.throws(
     () => validateAxiomOnePolicy(weakenedLifecycle),
     /memory lifecycle boundary is weakened/
+  );
+
+  const weakenedSocial = JSON.parse(await readFile(
+    new URL('../../apps/axiom-one/app-policy.json', import.meta.url),
+    'utf8'
+  ));
+  weakenedSocial.social_lifecycle.remote_distribution = true;
+  assert.throws(
+    () => validateAxiomOnePolicy(weakenedSocial),
+    /Social lifecycle boundary is weakened/
   );
 });
 
