@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-23
+**Updated:** 2026-08-31
 
 **Active build:** `0.12.0-dev.3`
 
@@ -212,6 +212,19 @@ decision.
   — portable vault/component manifests, replaceable base models, owner
   correction/evaluation continuity, optional governed personalized artifacts,
   and selective recovery/migration.
+
+#### Cross-cutting design records
+
+- [Participant, Steward, and Verification Fabric](superpowers/specs/2026-08-31-participant-steward-verification-fabric-design.md)
+  — participant roles, read-only project stewardship, research verification
+  cells, selective federation, and local embodiment-safety boundaries.
+- [Project-State Consolidation Map](superpowers/specs/2026-08-31-axiom-project-state-consolidation-map.md)
+  — point-in-time, exact-SHA repository inventory and proposed Steward
+  consolidation semantics.
+
+These records are architecture and repository observations only. They grant no
+capability, policy, promotion, repository-write, model-selection, deployment,
+or runtime-effect authority.
 
 #### Draft architecture contracts
 
