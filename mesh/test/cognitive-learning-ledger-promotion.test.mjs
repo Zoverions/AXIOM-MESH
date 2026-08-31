@@ -1,3 +1,4 @@
+// TDD red gate: validator intentionally unchanged in this commit.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { validateCognitiveLearningRecord } from '../src/lib/cognitive-learning-ledger.mjs';
