@@ -119,15 +119,15 @@ function validateLedgerShape(document) {
   tier(document.proposed_target_tier, 'proposed_target_tier');
   boundedString(document.proposal_reason, 'proposal_reason', 1, 2048);
 
-  validateArtifactRefs(document.source_evidence, 'source_evidence', 128, false);
+  validateArtifactRefs(document.source_evidence, 'source_evidence', 128);
   validateDerivedArtifacts(document.derived_artifacts);
   validateExpectedReuse(document.expected_reuse);
   validateResourceCosts(document.resource_costs);
   validatePolicyUtility(document.policy_utility);
-  validateArtifactRefs(document.evaluation_refs, 'evaluation_refs', 64, true);
+  validateArtifactRefs(document.evaluation_refs, 'evaluation_refs', 64);
   enumValue(document.promotion_state, 'promotion_state', PROMOTION_STATES);
-  validateArtifactRefs(document.predecessor_refs, 'predecessor_refs', 64, true);
-  validateArtifactRefs(document.successor_refs, 'successor_refs', 64, true);
+  validateArtifactRefs(document.predecessor_refs, 'predecessor_refs', 64);
+  validateArtifactRefs(document.successor_refs, 'successor_refs', 64);
 
   if (document.representation_class === 'lossy' && document.source_evidence.length === 0) {
     throw new ValidationError('lossy learning requires at least one retained source_evidence reference');
@@ -162,12 +162,8 @@ function validateLedgerShape(document) {
   return document;
 }
 
-function validateArtifactRefs(value, label, maximum, allowEmpty) {
+function validateArtifactRefs(value, label, maximum) {
   if (!Array.isArray(value)) throw new ValidationError(`${label} must be an array`);
-  if (!allowEmpty && value.length === 0 && label === 'source_evidence') {
-    // Exact-retained or mixed records may legitimately be created before evidence is attached;
-    // only lossy records are forced to carry source evidence by the cross-field rule above.
-  }
   if (value.length > maximum) throw new ValidationError(`${label} must contain at most ${maximum} items`);
 
   const refs = new Set();
@@ -175,7 +171,7 @@ function validateArtifactRefs(value, label, maximum, allowEmpty) {
     exactObject(item, `${label} item`, ['ref', 'digest']);
     id(item.ref, `${label}.ref`);
     digest(item.digest, `${label}.digest`);
-    if (refs.has(item.ref)) throw new ValidationError(`${label} contains duplicate ref ${item.ref}`);
+    if (refs.has(item.ref)) throw new ValidationError(`duplicate ref in ${label}: ${item.ref}`);
     refs.add(item.ref);
   }
 }
@@ -190,7 +186,7 @@ function validateDerivedArtifacts(value) {
     id(item.ref, 'derived_artifacts.ref');
     digest(item.digest, 'derived_artifacts.digest');
     enumValue(item.representation_class, 'derived_artifacts.representation_class', REPRESENTATION_CLASSES);
-    if (refs.has(item.ref)) throw new ValidationError(`derived_artifacts contains duplicate ref ${item.ref}`);
+    if (refs.has(item.ref)) throw new ValidationError(`duplicate ref in derived_artifacts: ${item.ref}`);
     refs.add(item.ref);
   }
 }
@@ -242,7 +238,7 @@ function validatePolicyUtility(value) {
     enumValue(item.value, 'policy_utility.value', UTILITY_VALUES);
     boundedString(item.rationale, 'policy_utility.rationale', 1, 1024);
     if (dimensions.has(item.dimension)) {
-      throw new ValidationError(`policy_utility contains duplicate dimension ${item.dimension}`);
+      throw new ValidationError(`duplicate dimension in policy_utility: ${item.dimension}`);
     }
     dimensions.add(item.dimension);
   }
