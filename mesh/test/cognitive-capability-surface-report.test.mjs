@@ -163,3 +163,151 @@ test('production module imports only canonical, profile, and observation helpers
   const imports = [...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(match => match[1]).sort();
   assert.deepEqual(imports, ['./canonical.mjs', './cognitive-capability-observation.mjs', './cognitive-capability-profile.mjs']);
 });
+
+test('same exact cell preserves direct conflict without winner selection', () => {
+  const profile = validProfile();
+  const pass = validObservation(profile, { observation_id: 'obs.pass' });
+  const fail = validObservation(profile, {
+    observation_id: 'obs.fail', classification: 'fail',
+    observed_metric_ref: 'metric-result.fail.v1', observed_metric_digest: 'f'.repeat(64),
+    failure_mode_refs: ['failure.reasoning.logic']
+  });
+  const reasoning = deriveAt13(profile, [fail, pass]).capability_surfaces[0];
+  assert.equal(reasoning.current_cells.length, 1);
+  assert.deepEqual(reasoning.current_cells[0].classification_counts, { pass: 1, degraded: 0, fail: 1, indeterminate: 0 });
+  assert.deepEqual(reasoning.current_cells[0].classification_set, ['pass', 'fail']);
+  assert.equal(reasoning.current_cells[0].conflict_class, 'direct');
+  assert.equal(reasoning.direct_conflict_cells, 1);
+  assert.equal(Object.hasOwn(reasoning, 'score'), false);
+  assert.equal(Object.hasOwn(reasoning.current_cells[0], 'winner'), false);
+  assert.equal(Object.hasOwn(reasoning.current_cells[0], 'confidence'), false);
+});
+
+test('mixed and indeterminate conflict semantics stay non-voting', () => {
+  const profile = validProfile();
+  const pair = (classification, suffix) => validObservation(profile, {
+    observation_id: `obs.${suffix}`,
+    classification,
+    observed_metric_ref: `metric.${suffix}`,
+    observed_metric_digest: suffix[0].repeat(64)
+  });
+  const passDegraded = deriveAt13(profile, [pair('pass', 'aaaa'), pair('degraded', 'bbbb')]).capability_surfaces[0].current_cells[0];
+  assert.equal(passDegraded.conflict_class, 'mixed');
+  const degradedFail = deriveAt13(profile, [pair('degraded', 'cccc'), pair('fail', 'dddd')]).capability_surfaces[0].current_cells[0];
+  assert.equal(degradedFail.conflict_class, 'mixed');
+  const passIndeterminate = deriveAt13(profile, [pair('pass', 'eeee'), pair('indeterminate', 'ffff')]).capability_surfaces[0].current_cells[0];
+  assert.equal(passIndeterminate.conflict_class, 'none');
+});
+
+test('different exact contexts create variation instead of direct conflict', () => {
+  const profile = validProfile();
+  const pass = validObservation(profile, { observation_id: 'obs.pass.context' });
+  const fail = validObservation(profile, {
+    observation_id: 'obs.fail.other-context', classification: 'fail',
+    context_ref: 'context.reasoning.other.v1', context_digest: 'f'.repeat(64),
+    observed_metric_ref: 'metric-result.other.v1', observed_metric_digest: 'e'.repeat(64)
+  });
+  const reasoning = deriveAt13(profile, [pass, fail]).capability_surfaces[0];
+  assert.equal(reasoning.current_cells.length, 2);
+  assert.equal(reasoning.direct_conflict_cells, 0);
+  assert.equal(reasoning.variation_present, true);
+});
+
+test('only current evidence participates in evaluator, failure, and resource aggregates', () => {
+  const profile = validProfile();
+  const current = validObservation(profile, { observation_id: 'obs.current.aggregate', failure_mode_refs: ['failure.shared'] });
+  const stale = validObservation(profile, {
+    observation_id: 'obs.stale.aggregate', classification: 'fail', failure_mode_refs: ['failure.stale'],
+    valid_until: '2026-08-31T12:30:00.000Z', observed_metric_ref: 'metric.stale', observed_metric_digest: 'f'.repeat(64)
+  });
+  stale.evaluator = { evaluator_kind: 'human-reviewer', evaluator_ref: 'evaluator.stale.human', evaluator_principal_ref: null };
+  const reasoning = deriveAt13(profile, [current, stale]).capability_surfaces[0];
+  assert.deepEqual(reasoning.current_evaluator_coverage.evaluator_kinds, ['synthetic-harness']);
+  assert.deepEqual(reasoning.current_failure_modes.map(x => x.failure_mode_ref), ['failure.shared']);
+  assert.equal(reasoning.current_resource_ranges.some(x => x.resource_class === 'input-tokens'), true);
+});
+
+test('evaluator assurance and repeated failure attribution remain sorted and attributable', () => {
+  const profile = validProfile();
+  const one = validObservation(profile, { observation_id: 'obs.eval.a', failure_mode_refs: ['failure.shared'] });
+  const two = validObservation(profile, {
+    observation_id: 'obs.eval.b', classification: 'degraded',
+    observed_metric_ref: 'metric.eval.b', observed_metric_digest: 'f'.repeat(64),
+    failure_mode_refs: ['failure.shared', 'failure.zeta']
+  });
+  two.evaluator = { evaluator_kind: 'human-reviewer', evaluator_ref: 'evaluator.human.v1', evaluator_principal_ref: null };
+  two.evidence = {
+    evidence_kind: 'human-review', evidence_ref: 'evidence.human.v1', evidence_digest: 'c'.repeat(64),
+    verification_ref: 'verification.human.v1', verification_digest: 'd'.repeat(64), assurance_class: 'verified-local'
+  };
+  const reasoning = deriveAt13(profile, [two, one]).capability_surfaces[0];
+  assert.deepEqual(reasoning.current_evaluator_coverage.evaluator_kinds, ['human-reviewer', 'synthetic-harness']);
+  assert.deepEqual(reasoning.current_evaluator_coverage.evaluator_refs, ['evaluator.human.v1', 'evaluator.reasoning.harness.v1']);
+  assert.deepEqual(reasoning.current_assurance_classes, ['declared', 'verified-local']);
+  const shared = reasoning.current_failure_modes.find(x => x.failure_mode_ref === 'failure.shared');
+  assert.equal(shared.supporting_observations.length, 2);
+  assert.deepEqual(shared.supporting_observations.map(x => x.observation_id), ['obs.eval.a', 'obs.eval.b']);
+});
+
+test('resource ranges count measurements while preserving basis, unit, and source attribution', () => {
+  const profile = validProfile();
+  const observation = validObservation(profile, { observation_id: 'obs.resources' });
+  observation.resource_observations = [
+    { resource_class: 'input-tokens', basis: 'observed', amount: 100, unit: 'tokens', source_ref: null },
+    { resource_class: 'input-tokens', basis: 'observed', amount: 140, unit: 'tokens', source_ref: null },
+    { resource_class: 'input-tokens', basis: 'estimated', amount: 120, unit: 'tokens', source_ref: null },
+    { resource_class: 'input-tokens', basis: 'observed', amount: 2, unit: 'kilotokens', source_ref: null },
+    { resource_class: 'energy', basis: 'unknown', amount: null, unit: null, source_ref: null }
+  ];
+  const ranges = deriveAt13(profile, [observation]).capability_surfaces[0].current_resource_ranges;
+  const observed = ranges.find(x => x.resource_class === 'input-tokens' && x.basis === 'observed' && x.unit === 'tokens');
+  assert.equal(observed.measurement_count, 2);
+  assert.equal(observed.minimum, 100);
+  assert.equal(observed.maximum, 140);
+  assert.equal(observed.supporting_observations.length, 1);
+  assert.equal(ranges.some(x => x.basis === 'estimated' && x.unit === 'tokens'), true);
+  assert.equal(ranges.some(x => x.basis === 'observed' && x.unit === 'kilotokens'), true);
+  const unknown = ranges.find(x => x.resource_class === 'energy' && x.basis === 'unknown');
+  assert.equal(unknown.unit, null);
+  assert.equal(unknown.minimum, null);
+  assert.equal(unknown.maximum, null);
+});
+
+test('source order does not affect report content or digest and nested output is frozen', () => {
+  const profile = validProfile();
+  const one = validObservation(profile, { observation_id: 'obs.order.a' });
+  const two = validObservation(profile, {
+    observation_id: 'obs.order.b', context_ref: 'context.other', context_digest: 'f'.repeat(64),
+    observed_metric_ref: 'metric.order.b', observed_metric_digest: 'e'.repeat(64)
+  });
+  const a = deriveAt13(profile, [one, two]);
+  const b = deriveAt13(profile, [two, one]);
+  assert.deepEqual(a, b);
+  assert.equal(cognitiveCapabilitySurfaceReportDigest(a), cognitiveCapabilitySurfaceReportDigest(b));
+  assert.equal(Object.isFrozen(a.capability_surfaces[0]), true);
+  assert.equal(Object.isFrozen(a.capability_surfaces[0].current_cells), true);
+});
+
+test('verifier rejects derived-field tampering, source-set drift, and non-canonical order', async () => {
+  const module = await import('../src/lib/cognitive-capability-surface-report.mjs');
+  assert.equal(typeof module.verifyCognitiveCapabilitySurfaceReport, 'function');
+  const profile = validProfile();
+  const observation = validObservation(profile);
+  const report = deriveAt13(profile, [observation]);
+  const verified = module.verifyCognitiveCapabilitySurfaceReport(report, profile, [observation]);
+  assert.equal(verified.valid, true);
+  assert.equal(Object.isFrozen(verified), true);
+  const tampered = structuredClone(report);
+  tampered.capability_surfaces[0].observation_counts.current = 99;
+  assert.throws(() => module.verifyCognitiveCapabilitySurfaceReport(tampered, profile, [observation]), /re-derivation|mismatch/i);
+  assert.throws(() => module.verifyCognitiveCapabilitySurfaceReport(report, profile, []), /re-derivation|mismatch|inventory/i);
+
+  const other = validObservation(profile, {
+    observation_id: 'obs.zzz', context_ref: 'context.zzz', context_digest: 'f'.repeat(64),
+    observed_metric_ref: 'metric.zzz', observed_metric_digest: 'e'.repeat(64)
+  });
+  const ordered = deriveAt13(profile, [observation, other]);
+  const reversed = structuredClone(ordered);
+  reversed.observations.reverse();
+  assert.throws(() => module.verifyCognitiveCapabilitySurfaceReport(reversed, profile, [observation, other]), /canonical|re-derivation|mismatch/i);
+});
