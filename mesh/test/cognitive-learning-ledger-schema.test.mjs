@@ -63,6 +63,8 @@ test('semantic annotations document cross-field safety rules and non-claims', as
   assert.match(rules, /exact-retained.*digest/i);
   assert.match(rules, /unknown.*amount.*unit/i);
   assert.match(rules, /identity-kernel.*evaluation/i);
+  assert.match(rules, /evaluated.*accepted.*evaluation evidence/i);
+  assert.match(rules, /foundation-training.*accepted/i);
   assert.match(rules, /duplicate.*ref/i);
   assert.match(rules, /self-reference/i);
 
