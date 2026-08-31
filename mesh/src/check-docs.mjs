@@ -185,7 +185,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Compatibility commitments effective immediately',
     '## Workstream C — Machine principal and invocation semantics',
     '## Workstream E — MCP server laboratory',
-    '## Workstream K — A2A compatibility',
+    '## Workstream K — A2A-compatible discovery and task exchange',
     '## Documentation and claims maintenance',
     '## Current non-claims'
   ],
