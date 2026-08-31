@@ -107,6 +107,7 @@ export async function checkAxiomOnePreview() {
     index,
     app,
     presentation,
+    socialWorkflows,
     styles,
     worker,
     server,
@@ -118,6 +119,7 @@ export async function checkAxiomOnePreview() {
     readText('index.html'),
     readText('app.mjs'),
     readText('presentation.mjs'),
+    readText('social-workflows.mjs'),
     readText('styles.css'),
     readText('sw.mjs'),
     readText('server.mjs'),
@@ -126,7 +128,7 @@ export async function checkAxiomOnePreview() {
   validatePolicy(policy);
   validateExplanations(policy, humanContract);
   validateManifest(manifest);
-  validateAssets({ index, app, presentation, styles, worker, server, icon });
+  validateAssets({ index, app, presentation, socialWorkflows, styles, worker, server, icon });
   return {
     valid: true,
     schema: policy.schema,
@@ -163,6 +165,7 @@ export async function checkAxiomOnePreview() {
       index: sha256(index),
       app: sha256(app),
       presentation: sha256(presentation),
+      social_workflows: sha256(socialWorkflows),
       styles: sha256(styles),
       worker: sha256(worker),
       server: sha256(server),
@@ -358,7 +361,7 @@ function validateManifest(manifest) {
   ) throw new ValidationError('AXIOM One web manifest is invalid');
 }
 
-function validateAssets({ index, app, presentation, styles, worker, server, icon }) {
+function validateAssets({ index, app, presentation, socialWorkflows, styles, worker, server, icon }) {
   const requiredIndex = [
     '<meta name="viewport"',
     '<link rel="manifest" href="/manifest.webmanifest">',
@@ -386,7 +389,7 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     /https?:\/\//
   ];
   if (forbiddenBrowserPatterns.some(pattern => pattern.test(
-    `${app}\n${presentation}\n${index}\n${styles}`
+    `${app}\n${presentation}\n${socialWorkflows}\n${index}\n${styles}`
   ))) {
     throw new ValidationError('AXIOM One browser assets cross a storage, injection, or remote-origin boundary');
   }
@@ -422,15 +425,30 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (lifecycleMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One memory lifecycle surface is incomplete');
   }
+  const socialSource = `${app}\n${socialWorkflows}`;
   const socialMarkers = [
+    "from '/social-workflows.mjs'",
     "state.client.call('social.get'",
+    "state.client.call('intents.submit'",
     "response.network_effect === 'none'",
-    "publication.status ?? 'unknown'",
+    'buildSocialActorCreateRequest',
+    'buildSocialPersonaCreateRequest',
+    'buildSocialPublicationCreateRequest',
+    'buildSocialPublicationSupersedeRequest',
+    'buildSocialPublicationRetractRequest',
+    "action: 'social.actor.create'",
+    "action: 'social.persona.create'",
+    "action: 'social.publication.create'",
+    "action: 'social.publication.supersede'",
+    "action: 'social.publication.retract'",
     'Owner-local Social corpus',
     'No federation'
   ];
-  if (socialMarkers.some(marker => !app.includes(marker))) {
-    throw new ValidationError('AXIOM One owner-local Social surface is incomplete');
+  if (socialMarkers.some(marker => !socialSource.includes(marker))) {
+    throw new ValidationError('AXIOM One owner-local Social lifecycle surface is incomplete');
+  }
+  if (/\bfetch\s*\(/.test(socialWorkflows)) {
+    throw new ValidationError('AXIOM One Social workflow builders cannot perform network I/O');
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
@@ -452,9 +470,11 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (
     !server.includes("'/presentation.mjs'")
     || !server.includes("'/human-contract.json'")
+    || !server.includes("'/social-workflows.mjs'")
     || !worker.includes("'/presentation.mjs'")
     || !worker.includes("'/human-contract.json'")
-  ) throw new ValidationError('AXIOM One public explanation assets are not exact');
+    || !worker.includes("'/social-workflows.mjs'")
+  ) throw new ValidationError('AXIOM One public explanation and Social workflow assets are not exact');
   if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
     throw new ValidationError('AXIOM One reduced-motion behavior is missing');
   }
