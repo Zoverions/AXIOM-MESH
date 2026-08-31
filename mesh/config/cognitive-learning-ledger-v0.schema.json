@@ -218,6 +218,8 @@
     "known resource-cost observations require non-negative safe-integer amount and unit; unknown resource-cost observations require null amount and unit",
     "resource costs remain unit-preserving observations and are not implicitly aggregated with policy utility",
     "identity-kernel target proposals require at least two explicit evaluation-evidence references",
+    "evaluated and accepted promotion states require at least one explicit evaluation evidence reference",
+    "foundation-training target proposals cannot be accepted by personal-agent ledger v0",
     "predecessor and successor learning-record references cannot self-reference the current learning record",
     "updated_at cannot precede created_at"
   ],
