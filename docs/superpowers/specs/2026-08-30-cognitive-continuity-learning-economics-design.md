@@ -6,6 +6,8 @@
 
 **Scope:** continual learning across memory, skills, adapters, model recruitment, identity continuity, cognitive-cost accounting, capability topology, consolidation, model promotion, and long-horizon sovereignty
 
+**Project identity:** this is an AXIOM-MESH architecture track/subsystem, **Cognitive Continuity & Learning Economics (CCLE)**. It is not a new foundation model, a separate agent identity, or a parallel product. It integrates the existing Cognitive Topology, Sovereign Agent Composition & Continuity, Self-Bundle, memory, skills, accounting, and Axiom One directions into one governed lifelong-learning loop.
+
 **Builds on:**
 
 - `docs/superpowers/specs/2026-08-29-sovereign-agent-composition-continuity-design.md`
@@ -54,7 +56,7 @@ identity-kernel or equivalent continuity representation
 accepted semantic self-model and durable beliefs
 skills / workflows / specialist procedures
 adapters / local specialist models
-lossless episodic memory and evidence
+exact retained episodic evidence and memory
 working neural state / temporary adaptation
 context window / active task state
 current perception / observations
@@ -87,13 +89,15 @@ AXIOM should represent at least these learning classes independently:
 
 No class silently implies another. Recording an event does not make it a belief. A belief does not install a skill. A successful skill does not justify a model fine-tune. A fine-tune does not become identity. A stronger model does not grant authority.
 
-## 5. Lossless memory versus lossy synthesis
+## 5. Exact retained evidence versus lossy synthesis
 
 Neural adaptation, test-time training, summarization, embeddings, and semantic compression may all be useful but are inherently lossy representations.
 
-AXIOM therefore treats authoritative memory and synthesized understanding separately.
+AXIOM therefore treats retained source evidence and synthesized understanding separately.
 
-### 5.1 Lossless layer
+Here, **exact** or **lossless** means exact relative to the artifact AXIOM actually captured and retained. It does not imply complete capture of an event, environment, person's experience, or external reality. Provenance must preserve that distinction.
+
+### 5.1 Exact retained layer
 
 Where policy permits, exact or content-addressed source evidence remains recoverable with:
 
@@ -122,7 +126,7 @@ Every derived artifact should retain lineage to the evidence it summarizes or tr
 
 The design rule is:
 
-> **Lossy cognition may guide behaviour; it must not silently erase the exact record it was derived from.**
+> **Lossy cognition may guide behaviour; it must not silently erase the exact retained record it was derived from.**
 
 ## 6. Consolidation pipeline
 
@@ -161,12 +165,12 @@ The same learned value may be stored in different forms. AXIOM should choose the
 
 - low marginal reuse cost;
 - high provenance value;
-- suitable for exact or semi-structured durable facts and events.
+- suitable for exact-retained or semi-structured durable facts and events.
 
 ### Tier 2 — semantic consolidation
 
 - moderately more expensive to create and verify;
-- cheaper repeated retrieval than replaying all raw history;
+- cheaper repeated retrieval than replaying all retained history;
 - suitable for stable concepts, preferences, relationships, beliefs, and summaries.
 
 ### Tier 3 — skills and workflows
@@ -197,36 +201,48 @@ The same learned value may be stored in different forms. AXIOM should choose the
 
 The system should evaluate cognitive decisions over a time horizon rather than only at the current call.
 
-For a candidate learning artifact `a`, define an advisory expected lifetime cost:
+AXIOM must keep **measured resource cost** separate from **policy-weighted cognitive utility** unless a user explicitly defines a common normalization. Currency, tokens, joules, GPU-seconds, storage, and bandwidth are not interchangeable with privacy, sovereignty, resilience, latency, or quality.
+
+For a candidate learning artifact `a`, define an advisory resource-cost vector or unit-preserving total where conversion is legitimate:
 
 ```text
-LCC(a, tier) = C_create
-             + C_validate
-             + C_store
-             + C_maintain
-             + C_migrate
-             + C_risk
-             + Sum(expected future use cost)
-             - V_reuse
-             - V_latency
-             - V_privacy
-             - V_sovereignty
-             - V_resilience
+ResourceCost(a, tier) = C_create
+                      + C_validate
+                      + C_store
+                      + C_maintain
+                      + C_migrate
+                      + C_risk_resource
+                      + Sum(expected future use cost)
 ```
 
-The variables are policy-relative estimates, not universal monetary truth.
+And retain policy utility separately:
+
+```text
+PolicyUtility(a, tier) = {
+  reuse,
+  quality,
+  latency,
+  privacy,
+  sovereignty,
+  resilience,
+  portability,
+  reversibility
+}
+```
+
+A user or policy may supply explicit weights or exchange assumptions to produce an advisory decision score, but the underlying components and units must remain inspectable. AXIOM must not fabricate a single monetary value for privacy, sovereignty, or resilience.
 
 The important comparison is between alternatives, for example:
 
 - repeatedly calling a frontier model with large context;
-- storing exact memory and retrieving it;
+- storing exact retained memory and retrieving it;
 - converting repeated reasoning into a reusable skill;
 - training a local adapter;
 - distilling a specialist;
 - acquiring released weights;
 - maintaining provider-bound persistence.
 
-A more expensive option now may be preferred when expected reuse, sovereignty, privacy, latency, or provider resilience makes its total lifetime cost lower.
+A more expensive option now may be preferred when expected reuse or user-valued quality, sovereignty, privacy, latency, or resilience makes the long-horizon trade-off better.
 
 ## 9. Cognitive return on investment
 
@@ -256,7 +272,7 @@ The system should be able to explain why it recommends `retrieve`, `consolidate`
 
 A durable artifact should be viewed as an investment whose effective per-use cost can fall as reuse rises.
 
-For a reusable artifact with fixed creation cost `F` and marginal reuse cost `m`:
+For a reusable artifact with fixed creation cost `F` and marginal reuse cost `m` measured in compatible units:
 
 ```text
 average_cost_after_n_uses = (F / n) + m
@@ -465,11 +481,11 @@ It should not train a model, invoke a provider, decide automatically what is tru
 
 It proves that AXIOM can distinguish:
 
-- raw evidence;
+- raw retained evidence;
 - derived learning;
 - target learning tier;
 - expected reuse;
-- lossless versus lossy representation;
+- exact-retained versus lossy representation;
 - estimated cost posture;
 - promotion state;
 - evaluation evidence;
@@ -485,13 +501,13 @@ The exact schema may be refined during implementation, but v0 should include:
 - source evidence references/digests;
 - derived-artifact reference/digest;
 - learning class;
-- representation class: `lossless | lossy | mixed`;
+- representation class: `exact-retained | lossy | mixed`;
 - current tier;
 - proposed target tier;
 - proposal reason;
 - expected reuse class or bounded numeric estimate;
-- observed/estimated creation, validation, storage, maintenance, and per-use cost fields with currency/unit metadata or `unknown`;
-- expected sovereignty/privacy/latency benefit descriptors;
+- observed/estimated creation, validation, storage, maintenance, and per-use cost fields with explicit currency/resource units or `unknown`;
+- separate expected sovereignty/privacy/latency/quality/resilience benefit descriptors;
 - evaluation references/digests;
 - promotion state: `observed | candidate | evaluated | accepted | rejected | superseded | rolled-back`;
 - predecessor/successor lineage references;
@@ -505,14 +521,15 @@ The exact schema may be refined during implementation, but v0 should include:
 2. A learning record cannot create or widen authority.
 3. A learning record cannot activate a skill, adapter, model, route, credential, or provider.
 4. Cost estimates may be `unknown`; missing data must not be fabricated.
-5. A `lossy` artifact must not be represented as the exact source record.
+5. A `lossy` artifact must not be represented as the exact retained source record.
 6. Accepted promotion must reference applicable evidence/policy but v0 does not itself execute the promotion.
 7. Source evidence and derived artifacts remain distinguishable.
 8. Identity-tier proposals require stronger explicit evaluation references than ordinary memory-tier proposals.
 9. Unknown fields fail closed under the exact v0 schema.
 10. Secrets are forbidden.
 11. Network locations may appear only as opaque references where existing AXIOM privacy rules permit; v0 performs no fetch.
-12. Numeric cost fields are observations/estimates with units, not authority to spend.
+12. Numeric cost fields are observations/estimates with explicit units, not authority to spend.
+13. Resource costs and policy utility remain separately inspectable unless an explicit user/policy normalization is supplied.
 
 ## 21. Companion evidence contracts after v0
 
@@ -533,7 +550,7 @@ Axiom One should eventually expose a human-readable **Cognition** surface rather
 Possible views:
 
 - **Continuity** — principal, self-bundle, identity-kernel, topology, fidelity;
-- **Memory** — exact evidence versus summaries/semantic state;
+- **Memory** — exact retained evidence versus summaries/semantic state;
 - **Skills** — reusable procedures and their test/usage history;
 - **Models** — temporary, persistent, provider-bound, owner-controlled;
 - **Learning** — recent candidates and promotion decisions;
@@ -556,7 +573,7 @@ This design should be implemented as a sequence of bounded subprojects rather th
 
 ### Phase B — consolidation
 
-5. Explicit exact-memory versus synthesized-memory lineage.
+5. Explicit exact-retained-memory versus synthesized-memory lineage.
 6. Semantic consolidation proposal lifecycle.
 7. Skill proposal linkage to accepted evidence and reuse observations.
 8. Learning promotion evaluation.
@@ -588,7 +605,7 @@ Each phase must preserve the existing capability/evidence/authority boundary and
 
 The architecture is successful when AXIOM can demonstrate all of the following without relying on one permanently mutable model:
 
-1. the agent can preserve exact experience independently of model weights;
+1. the agent can preserve retained experience/evidence independently of model weights;
 2. synthesized understanding retains provenance to source evidence;
 3. repeated useful cognition can become a reusable owner-controlled artifact;
 4. temporary cognition can remain temporary without losing accepted durable learning;
@@ -596,7 +613,7 @@ The architecture is successful when AXIOM can demonstrate all of the following w
 6. jagged capability is represented as contextual evidence rather than one intelligence score;
 7. durable neural adaptation is regression-tested and reversible;
 8. the user can see whether cognition is owned, rented, provider-bound, or reconstructable;
-9. the system can compare current spend against long-horizon reuse/localization options;
+9. the system can compare current spend against long-horizon reuse/localization options without conflating unlike units or values;
 10. no learning artifact can grant itself authority;
 11. no provider or model is required to be the permanent self;
 12. the architecture remains useful even if frontier continual-learning research changes substantially.
@@ -611,6 +628,6 @@ The persistent agent owns its continuity, evidence, learning lineage, and author
 
 The long-horizon objective is therefore:
 
-> **Experience once. Preserve exactly. Understand progressively. Reuse cheaply. Promote cautiously. Own what becomes worth owning.**
+> **Experience once. Preserve retained evidence exactly. Understand progressively. Reuse cheaply. Promote cautiously. Own what becomes worth owning.**
 
 That is the AXIOM continual-learning model.
