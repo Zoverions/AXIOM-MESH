@@ -91,6 +91,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-08-29-self-bundle-continuity-v0-design.md',
   'docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md',
   'docs/superpowers/specs/2026-08-30-sovereign-intelligence-selection-v0-design.md',
+  'docs/superpowers/specs/2026-08-31-participant-steward-verification-fabric-design.md',
+  'docs/superpowers/specs/2026-08-31-axiom-project-state-consolidation-map.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
