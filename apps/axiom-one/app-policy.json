@@ -25,7 +25,18 @@
   "human_explanations": {
     "contract_schema": "axiom-one-human-contract.v1",
     "status": "experimental-human-explanations",
-    "action_previews": ["system.echo", "memory.put", "memory.link", "memory.tombstone", "export.create"],
+    "action_previews": [
+      "system.echo",
+      "memory.put",
+      "memory.link",
+      "memory.tombstone",
+      "export.create",
+      "social.actor.create",
+      "social.persona.create",
+      "social.publication.create",
+      "social.publication.supersede",
+      "social.publication.retract"
+    ],
     "stable_gateway_errors": 20,
     "event_kinds": 37,
     "raw_evidence_always_available": true,
@@ -45,6 +56,25 @@
     "hard_delete": false,
     "restore": false,
     "sharing": false
+  },
+  "social_lifecycle": {
+    "status": "experimental-bounded-local-social-lifecycle",
+    "actions": [
+      "social.actor.create",
+      "social.persona.create",
+      "social.publication.create",
+      "social.publication.supersede",
+      "social.publication.retract"
+    ],
+    "read_route": "social.get",
+    "attribution_modes": ["pseudonymous"],
+    "publication_media_types": ["text/plain"],
+    "audience_modes": ["public"],
+    "discoverability": ["listed"],
+    "authorship_modes": ["human-authored"],
+    "network_effect": "none",
+    "remote_distribution": false,
+    "persistent_browser_storage": false
   },
   "surfaces": [
     "overview",
