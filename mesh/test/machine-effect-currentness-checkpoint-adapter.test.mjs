@@ -1,3 +1,4 @@
+// RED gate intentionally rerun after #1420 base parser repair; assertions unchanged.
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
