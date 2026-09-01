@@ -342,3 +342,43 @@ test('mutation effective time, command validity, predecessor and successor seque
     /expired/
   );
 });
+
+
+test('narrowed state cannot reactivate through authority-update', async t => {
+  const f = await fixture(t);
+  const narrow = command(f, {
+    commandId: 'mutation.fixture.narrow-first',
+    mutationKind: 'narrow',
+    resultingAuthorityDigest: AUTHORITY_B,
+    reasonCode: 'reduce-scope'
+  });
+  await applyMachinePrincipalCurrentnessMutation({
+    currentnessStore: f.store,
+    mutationCommand: narrow,
+    trustedMutationAuthorityPublicKey: f.mutationAuthority.publicKey,
+    currentnessControllerPrivateKey: f.currentnessController.privateKey,
+    trustedCurrentnessControllerPublicKey: f.currentnessController.publicKey,
+    at: '2026-09-01T18:10:02.000Z'
+  });
+
+  const reactivate = command(f, {
+    commandId: 'mutation.fixture.reactivate-from-narrow',
+    mutationKind: 'authority-update',
+    resultingAuthorityDigest: AUTHORITY_C,
+    issuedAt: '2026-09-01T18:10:03.000Z',
+    effectiveAt: '2026-09-01T18:10:04.000Z',
+    expiresAt: '2026-09-01T18:11:00.000Z',
+    reasonCode: 'attempt-reactivation'
+  });
+  await assert.rejects(
+    applyMachinePrincipalCurrentnessMutation({
+      currentnessStore: f.store,
+      mutationCommand: reactivate,
+      trustedMutationAuthorityPublicKey: f.mutationAuthority.publicKey,
+      currentnessControllerPrivateKey: f.currentnessController.privateKey,
+      trustedCurrentnessControllerPublicKey: f.currentnessController.publicKey,
+      at: '2026-09-01T18:10:04.000Z'
+    }),
+    /authority-update is permitted only from active to active/
+  );
+});
