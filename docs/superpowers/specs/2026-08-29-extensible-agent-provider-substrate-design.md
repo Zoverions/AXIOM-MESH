@@ -1,12 +1,12 @@
 # Extensible Agent Provider Substrate — Design
 
-**Status:** approved architectural extension; provider profile and binding slices implemented as inert local contracts; first Beacon-style observation verifier remains read-only and compatibility-neutral
+**Status:** approved architectural extension; provider profile and binding slices implemented as inert local contracts; Beacon-style observation verification remains read-only and compatibility-neutral; restart-safe local replay persistence is implemented as a separate non-authorizing substrate
 
 **Date:** 2026-08-29
 
 **Scope:** provider descriptors for replaceable memory, knowledge-projection, agent-interoperability, attestation, provenance, and settlement components used by sovereign agent compositions
 
-**Authority:** `mesh/config/capabilities.json` remains authoritative for runnable capability state. Provider presence, discovery, validation, evidence, cryptographic identity, reputation, payment capability, or hardware evidence does not grant AXIOM authority.
+**Authority:** `mesh/config/capabilities.json` remains authoritative for runnable capability state. Provider presence, discovery, validation, evidence, cryptographic identity, reputation, payment capability, hardware evidence, or replay-state persistence does not grant AXIOM authority.
 
 ## 1. Design doctrine
 
@@ -173,7 +173,9 @@ Tests cover:
 - required memory-slot resolution;
 - rejection of provider or composition drift;
 - signed external observation verification, tamper detection, bounded freshness, and caller-supplied replay-state checks;
-- static proof that the binding resolver and Beacon verifier import no network, filesystem, subprocess, Grid, credential, wallet, token, or secret runtime surface.
+- durable replay survival across fresh state reads, active-capacity saturation, expiry pruning, corrupt/non-canonical state, symlink paths, writer contention, bounded state size, and five-minute maximum retention;
+- static proof that the binding resolver and Beacon verifier import no network, filesystem, subprocess, Grid, credential, wallet, token, or secret runtime surface;
+- static proof that the durable replay store remains filesystem-only and imports no network, subprocess, privileged AXIOM runtime, credential, wallet, token, or secret surface.
 
 ## 10. First-slice promotion boundary
 
@@ -230,10 +232,10 @@ It currently proves only local properties of the supplied envelope:
 - replay-key derivation from sender id plus nonce;
 - rejection when that replay key appears in an explicit caller-supplied replay snapshot.
 
-It intentionally does **not** provide:
+It intentionally does **not** itself provide:
 
 - a network listener or outbound transport;
-- persistent replay storage;
+- persistent replay mutation;
 - TOFU enrollment;
 - AXIOM-principal binding;
 - discovery trust;
@@ -258,18 +260,61 @@ compatibility_claimed = false
 
 An external signature proves only that the supplied observation verifies under the supplied external public key. It does not establish that the key belongs to an AXIOM principal, that the sender is trustworthy, that it satisfies any Entity Assurance requirement, or that any requested action is authorized.
 
-## 13. Next promotion gates
+The verifier deliberately remains pure. Restart-safe replay persistence is implemented separately so that cryptographic verification cannot silently acquire filesystem, network, identity, or authority effects.
+
+## 13. Durable external replay state
+
+`axiom-external-observation-replay-state.v0` adds a narrow local persistence primitive for replay protection without turning the Beacon-style verifier into a live adapter.
+
+The store binds replay identity to:
+
+```text
+digestObject({ sender_id, nonce })
+```
+
+The raw nonce is not persisted. The store retains only the replay-key digest, external sender identifier, and expiry instant required to reject reuse during the active window.
+
+The current local durability contract is:
+
+- absolute state path;
+- regular non-symlink state file when present;
+- private directory/file creation modes where supported by the host (`0700` directory, `0600` state/lock/temp files);
+- exclusive same-path writer lock using create-if-absent semantics;
+- canonical closed-world JSON state with a recomputed state digest;
+- bounded state bytes and bounded active-entry count;
+- maximum five-minute replay lifetime, matching the observation-envelope ceiling;
+- expiry pruning before capacity evaluation;
+- no eviction of still-active replay protection to admit a new claim;
+- file-handle `sync()` before same-directory atomic replacement;
+- fail-closed behavior for corrupt JSON, non-canonical or widened state, digest mismatch, symlink final paths, active-capacity exhaustion, temporary-file collision, or writer-lock contention.
+
+The store is **restart-safe local replay state**, not an independent tamper-proof ledger. `state_digest` is content integrity/addressing inside the local contract; it is not a signature, MAC, external witness, or rollback anchor. An attacker already able to rewrite the protected state file and recompute its digest is outside the integrity claim of this v0 store. Power-loss durability of filesystem directory metadata is also host/filesystem dependent; v0 proves synced state-file bytes before replacement and restart behavior in the supported test lanes, not a universal storage-device persistence guarantee.
+
+The store grants no authority and introduces no transport. Its fixed boundary remains:
+
+```text
+replay_persistence = true
+authority_effect = none
+network_effect = none
+runtime_activation = false
+```
+
+It does not enroll an external key, bind one to an AXIOM principal, establish sender trust, authorize policy, invoke Gateway, execute work, or certify Beacon compatibility.
+
+The pure Beacon verifier and the durable replay store are not yet composed into one atomic verify-and-claim API. Therefore the verifier correctly continues to return `replay_persistence = false`; a later orchestration slice must prove ordering, concurrency, restart, and failure semantics before a received external observation can claim both successful verification and durable replay consumption as one operation.
+
+## 14. Next promotion gates
 
 Before this candidate can become an actual agent-interoperability adapter, later work must separately define and verify:
 
-1. durable replay state with restart-safe semantics;
-2. explicit external-identity enrollment and rotation;
+1. an atomic or otherwise fail-closed orchestration contract that composes external-envelope verification with the durable replay store and proves concurrent/restart behavior;
+2. explicit external-identity enrollment, rotation, and revocation;
 3. optional TOFU only for low-assurance contexts, with stronger verified relationships for consequential actions;
 4. transport-specific parsing and conformance fixtures against an upstream protocol version;
 5. explicit normalization/subject binding before external evidence can enter Entity Assurance;
 6. policy-controlled mapping from external observations into AXIOM invocation requests;
 7. a mandatory authority recheck before any effect;
 8. receipts connecting the external observation, local policy decision, and any eventual action;
-9. adversarial tests for key substitution, replay across restarts, stale observations, parser ambiguity, confused-deputy behavior, and oversized inputs.
+9. adversarial tests for key substitution, replay across restarts, stale observations, parser ambiguity, confused-deputy behavior, oversized inputs, replay-state rollback, and crash/interruption boundaries.
 
-Until those gates exist, the Beacon-style verifier remains a local evidence parser and must not be advertised as a live adapter or interoperability implementation.
+Until those gates exist, the Beacon-style verifier remains a local evidence parser, the replay store remains a local persistence primitive, and neither must be advertised as a live adapter or interoperability implementation.
