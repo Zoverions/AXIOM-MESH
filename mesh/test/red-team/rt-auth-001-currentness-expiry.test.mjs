@@ -120,7 +120,7 @@ test('RT-AUTH-001 fails closed when machine principal expires before Sandbox eff
   assert.equal(intercepted, true, 'test must intercept the real Hypervisor -> Sandbox execute request');
   assert.ok(releasedAfterExpiryAt, 'test must record release after expiry');
   assert.ok(new Date(releasedAfterExpiryAt) > new Date(expiresAt));
-  assert.equal(error.code, 'machine_principal_currentness_invalid');
-  assert.equal(error.status, 403);
+  assert.equal(error.code, 'expired_capability');
+  assert.equal(error.status, 401);
 
 });
