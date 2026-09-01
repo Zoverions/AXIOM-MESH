@@ -193,6 +193,12 @@ A Grid signature proves that the trusted Grid signed the admission statement. It
 does not prove the underlying observation is true beyond the scope established by
 the upstream verifier.
 
+Signed revocation snapshots can invalidate either the original admission digest or
+the upstream verification digest before receipt expiry. Durable binding collection
+requires such a snapshot. A retained minimum sequence can reject older state, but
+the snapshot explicitly sets `global_currentness_claimed: false`: sequence alone
+does not solve rollback/currentness after loss of the caller's newest checkpoint.
+
 ## Verifier independence evidence
 
 Parallel verification now has an explicit evidence contract in
@@ -310,9 +316,9 @@ contract/schema change and corresponding migration, tests, and review.
 
 Before this primitive can affect live orchestration:
 
-1. define rotation/revocation and Grid-chain anchoring policy for durable source
-   admissions, including how active receipts are invalidated after upstream trust
-   changes;
+1. bind signed revocation snapshots to Grid continuity/currentness anchors and
+   define Grid-key rotation/revocation semantics so an old valid snapshot cannot
+   masquerade as the newest trusted state;
 2. source verifier candidates from an independently governed runtime/provider
    catalog and bind catalog admission to verifier profiles;
 3. connect compiled work orders to an orchestrator that can execute checks and
