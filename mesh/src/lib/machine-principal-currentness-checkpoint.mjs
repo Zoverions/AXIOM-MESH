@@ -243,6 +243,14 @@ export function validateMachinePrincipalCurrentnessCheckpointTransition(
       'Machine principal currentness predecessor head digest mismatch'
     );
   }
+  if (
+    Date.parse(current.statement.observed_at)
+    <= Date.parse(previous.statement.observed_at)
+  ) {
+    throw new ValidationError(
+      'Machine principal currentness observed_at must advance chronologically'
+    );
+  }
   return Object.freeze({
     valid: true,
     previous_sequence: previous.statement.sequence,
