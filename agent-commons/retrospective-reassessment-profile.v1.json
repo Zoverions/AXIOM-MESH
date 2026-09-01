@@ -1,0 +1,59 @@
+{
+  "schema": "axiom-retrospective-reassessment-profile.v1",
+  "status": "experimental assurance/review architecture; no production promotion",
+  "purpose": "Append later review, challenge, corroboration, contradiction, correction, appeal, or reopening records to an original event without rewriting the assurance, evidence, decision, or finality that existed at the original event time.",
+  "outcomes": [
+    "corroborated",
+    "partially_corroborated",
+    "contradicted",
+    "unverifiable",
+    "accepted_despite_uncertainty",
+    "rejected",
+    "superseded_by_correction",
+    "reopened_on_new_evidence"
+  ],
+  "challenge_states": [
+    "none",
+    "challengeable",
+    "challenged",
+    "stayed",
+    "appealed",
+    "reversed",
+    "superseded",
+    "expired",
+    "finalized"
+  ],
+  "required_bindings": [
+    "original event ID",
+    "original event digest",
+    "assurance at execution",
+    "reviewer or verifier identity",
+    "review authority evidence",
+    "reviewed evidence set",
+    "review method",
+    "review time",
+    "review assurance",
+    "outcome",
+    "challenge state",
+    "limitations",
+    "superseding or corrective links where applicable"
+  ],
+  "core_invariants": [
+    "reassessment appends; it never mutates the original event",
+    "later assurance is not retroactive assurance",
+    "later contradiction does not erase historical evidence",
+    "correction creates a linked successor record rather than silently replacing the original",
+    "appeal and reversal change current interpretation/finality state without falsifying prior procedural history",
+    "unknown or unverifiable evidence remains explicit",
+    "review authority is distinct from runtime authority",
+    "a reassessment record cannot mint a new consequential effect grant",
+    "new evidence may reopen a previously accepted or finalized interpretation only through an explicit linked record",
+    "conflicting reassessments remain visible until a separate resolution process addresses them"
+  ],
+  "nonclaims": [
+    "This profile does not define a court, universal appeals body, or legal standard of review.",
+    "Reassessment does not prove objective truth merely because a reviewer is independent.",
+    "A later review may improve confidence without changing the historical assurance of the original event.",
+    "This profile does not authorize corrective effects by itself."
+  ]
+}
