@@ -5,7 +5,9 @@ on:
     branches: ["main"]
     paths:
       - "mesh/src/lib/agent-trust-currentness-checkpoint.mjs"
+      - "mesh/src/lib/machine-authority-currentness-checkpoint.mjs"
       - "mesh/src/lib/machine-effect-currentness-admission.mjs"
+      - "mesh/test/machine-authority-currentness-checkpoint.test.mjs"
       - "mesh/test/machine-effect-currentness-admission.test.mjs"
       - ".github/workflows/rt-auth-001-currentness.yml"
 
@@ -29,5 +31,8 @@ jobs:
           node-version: "24.18.0"
           package-manager-cache: false
           check-latest: false
-      - name: Run focused authority-currentness regression
-        run: node --test mesh/test/machine-effect-currentness-admission.test.mjs
+      - name: Run focused authority-currentness regressions
+        run: >-
+          node --test
+          mesh/test/machine-authority-currentness-checkpoint.test.mjs
+          mesh/test/machine-effect-currentness-admission.test.mjs
