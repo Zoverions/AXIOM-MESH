@@ -4,7 +4,10 @@ import {
   assertString,
   digestObject
 } from './canonical.mjs';
-import { ADAPTIVE_ASSURANCE_INPUT_SCHEMA } from './adaptive-assurance.mjs';
+import {
+  ADAPTIVE_ASSURANCE_INPUT_SCHEMA,
+  evaluateAdaptiveAssurance
+} from './adaptive-assurance.mjs';
 
 export const ASSURANCE_SIGNAL_EVIDENCE_SCHEMA = 'axiom-assurance-signal-evidence.v1';
 export const ASSURANCE_SIGNAL_POLICY_SCHEMA = 'axiom-assurance-signal-policy.v1';
@@ -22,6 +25,7 @@ export const ASSURANCE_RISK_SIGNALS = Object.freeze([
 ]);
 
 const SIGNALS = new Set([...ASSURANCE_RISK_SIGNALS, 'reputation']);
+const LIVE_SIGNAL_RESOLUTIONS = new WeakSet();
 const SOURCE_CLASSES = new Set([
   'measurement',
   'policy-derived',
@@ -295,10 +299,12 @@ export function resolveAdaptiveAssuranceSignals({
     authority_effect: 'none'
   });
 
-  return Object.freeze({
+  const result = Object.freeze({
     ...resolutionBody,
     resolution_digest: digestObject(resolutionBody)
   });
+  LIVE_SIGNAL_RESOLUTIONS.add(result);
+  return result;
 }
 
 export function buildAdaptiveAssuranceInputFromEvidence({
@@ -328,5 +334,64 @@ export function buildAdaptiveAssuranceInputFromEvidence({
       ...(policyFloor === undefined ? {} : { policy_floor: policyFloor })
     }),
     resolution
+  });
+}
+
+
+export function requireLiveAssuranceSignalResolution(raw) {
+  if (
+    !raw
+    || typeof raw !== 'object'
+    || raw.schema !== ASSURANCE_SIGNAL_RESOLUTION_SCHEMA
+    || !LIVE_SIGNAL_RESOLUTIONS.has(raw)
+  ) {
+    throw new ValidationError(
+      'adaptive assurance safe path requires a live signal resolution'
+    );
+  }
+  if (digestObject({
+    schema: raw.schema,
+    task_id: raw.task_id,
+    policy_id: raw.policy_id,
+    policy_digest: raw.policy_digest,
+    evaluated_at: raw.evaluated_at,
+    signals: raw.signals,
+    signal_evidence: raw.signal_evidence,
+    reputation_score: raw.reputation_score,
+    reputation_confidence: raw.reputation_confidence,
+    reputation_evidence: raw.reputation_evidence,
+    conservative_disagreement_resolution: raw.conservative_disagreement_resolution,
+    authority_effect: raw.authority_effect
+  }) !== raw.resolution_digest) {
+    throw new ValidationError('assurance signal resolution_digest mismatch');
+  }
+  return raw;
+}
+
+export function evaluateAdaptiveAssuranceFromEvidence({
+  taskId,
+  riskClass,
+  policyFloor,
+  signalPolicy,
+  evidence,
+  verifiedSourceBindings,
+  now
+} = {}) {
+  const built = buildAdaptiveAssuranceInputFromEvidence({
+    taskId,
+    riskClass,
+    policyFloor,
+    signalPolicy,
+    evidence,
+    verifiedSourceBindings,
+    now
+  });
+  const decision = evaluateAdaptiveAssurance(
+    built.input,
+    { inputProvenanceDigest: built.resolution.resolution_digest }
+  );
+  return Object.freeze({
+    resolution: built.resolution,
+    decision
   });
 }
