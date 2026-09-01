@@ -1,0 +1,66 @@
+{
+  "schema": "axiom-dispute-record.v1",
+  "dispute_id": "dispute:service-delivery-001",
+  "subject_contract_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "state": "mediation_active",
+  "parties": [
+    "party:provider",
+    "party:recipient"
+  ],
+  "claims": [
+    {
+      "claim_id": "claim:late-delivery",
+      "claimant": "party:recipient",
+      "statement": "The report was not delivered by the agreed deadline.",
+      "evidence_refs": [
+        "evidence:delivery-log"
+      ],
+      "status": "contested"
+    }
+  ],
+  "mediator": {
+    "mediator_id": "mediator:neutral-01",
+    "role_basis_ref": "agreement:mediation-selection-01",
+    "binding_authority": false
+  },
+  "known_facts": [
+    "A report artifact exists."
+  ],
+  "contested_facts": [
+    "Whether the delivery receipt satisfies the agreed deadline."
+  ],
+  "unknown_facts": [
+    "Whether an external network outage materially prevented delivery."
+  ],
+  "proposed_remedies": [
+    {
+      "remedy_id": "remedy:phased-redelivery",
+      "proposer": "mediator:neutral-01",
+      "description": "Permit a corrected redelivery within 24 hours, followed by acceptance review.",
+      "reversible": true,
+      "requires_consequential_effect": false,
+      "effect_authority_ref": null
+    }
+  ],
+  "settlement": {
+    "candidate_digest": null,
+    "accepted_by": [],
+    "material_change_reviewed": false,
+    "execution_authority_effect": "none"
+  },
+  "escalation": {
+    "target": null,
+    "reason": null,
+    "evidence_refs": []
+  },
+  "opened_at": "2026-09-01T14:10:00.000Z",
+  "authority": {
+    "dispute_grants_remedy_authority": false,
+    "mediator_grants_remedy_authority": false,
+    "settlement_grants_execution_authority": false
+  },
+  "limitations": [
+    "Mediation is advisory and does not establish legal judgment.",
+    "Any consequential remedy requires separate local authority."
+  ]
+}
