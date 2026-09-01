@@ -1,0 +1,85 @@
+{
+  "schema": "axiom-research-relevance-resource-gate.v1",
+  "status": "project governance artifact; not production promotion",
+  "purpose": "Prevent AXIOM-MESH from spending scarce engineering effort on exhausted, redundant, weakly evidenced, or strategically irrelevant directions while preserving compatibility paths for institutions that still depend on older paradigms.",
+  "decision_rule": "Prefer composition, verification, interoperability, and novel guarantees over reimplementation of mature mechanisms unless a concrete gap, failure mode, or deployment barrier is demonstrated.",
+  "categories": [
+    {
+      "id": "adopt_existing",
+      "meaning": "Prior art is mature and sufficient for the problem.",
+      "action": "Integrate/profile/adapter-wrap; do not rebuild core mechanism."
+    },
+    {
+      "id": "augment_existing",
+      "meaning": "Existing systems solve most of the problem but leave a bounded gap.",
+      "action": "Build the missing invariant, verifier, policy layer, evidence layer, or interoperability bridge."
+    },
+    {
+      "id": "novel_research",
+      "meaning": "There is a real unsolved problem with plausible differentiated value.",
+      "action": "Prototype in isolated research surfaces with explicit falsification criteria and resource caps."
+    },
+    {
+      "id": "compatibility_only",
+      "meaning": "Direction is technically superseded or strategically weak but required to meet current institutional reality.",
+      "action": "Provide thin compatibility shim, migration path, and deprecation boundaries; do not let legacy semantics become core."
+    },
+    {
+      "id": "park",
+      "meaning": "Interesting but low-value, weakly evidenced, prematurely timed, or dominated by stronger alternatives.",
+      "action": "Document and stop spending implementation resources until new evidence changes the case."
+    },
+    {
+      "id": "reject",
+      "meaning": "Direction contradicts core invariants, duplicates solved work without advantage, or has repeated failure evidence with no changed premise.",
+      "action": "Record rationale and negative evidence; do not implement."
+    }
+  ],
+  "evaluation_dimensions": [
+    "problem importance",
+    "strength of prior art",
+    "evidence of unresolved gap",
+    "novelty of AXIOM contribution",
+    "interoperability leverage",
+    "security improvement",
+    "institutional adoption value",
+    "migration value",
+    "implementation cost",
+    "maintenance burden",
+    "standardization trajectory",
+    "reversibility",
+    "falsifiability",
+    "opportunity cost"
+  ],
+  "hard_questions": [
+    "What exact problem remains unsolved after applying current standards and mature open-source implementations?",
+    "What does AXIOM do measurably better or differently?",
+    "Can the value be delivered as a verifier, adapter, sidecar, profile, fixture, or policy layer instead of a new subsystem?",
+    "What evidence would falsify the need for this work?",
+    "Has the same approach repeatedly failed, and if so, what premise has materially changed?",
+    "Is this required for adoption even if it is not frontier architecture?",
+    "Can a legacy path be isolated so it does not contaminate core semantics?",
+    "What higher-value work is delayed if we proceed?"
+  ],
+  "anti_dead_end_rules": [
+    "Do not build a new identity protocol merely because agent identity is important when existing standards can be profiled.",
+    "Do not rely on prompt-injection detection as the primary security boundary.",
+    "Do not assume data/instruction separation can fully solve contextual manipulation.",
+    "Do not create universal trust or reputation scores as substitutes for claim-specific evidence and local authority.",
+    "Do not rebuild mature authn/authz primitives when composition of existing standards is sufficient.",
+    "Do not treat blockchain, consensus, DID, OAuth, MCP, A2A, SPIFFE, or any other technology as mandatory merely because it is fashionable or widely adopted.",
+    "Do not preserve obsolete semantics in the core solely to satisfy compatibility; isolate them at edges."
+  ],
+  "compatibility_principle": "Meet institutions where they are through adapters and translation layers, while keeping the internal substrate aligned with the strongest current model.",
+  "evidence_requirements": {
+    "prior_art_review": true,
+    "recent_research_check": true,
+    "relevant_repository_scan": true,
+    "standards_check": true,
+    "explicit_gap_statement": true,
+    "falsification_criterion": true,
+    "estimated_resource_cost": true,
+    "alternative_reuse_path": true
+  },
+  "review_cadence": "Reassess parked/rejected directions only when material new evidence, standards movement, implementation results, or institutional demand changes the premises."
+}
