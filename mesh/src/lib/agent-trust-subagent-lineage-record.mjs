@@ -435,7 +435,7 @@ export function createSubagentLineageRecord({
     delegate_id: composition.admission.statement.delegate_id,
     lineage_authority_id: lineageAuthorityId,
     lineage_authority_key_id: subagentLineageAuthorityKeyId(authorityPublicKey),
-    delegation_admission: composition.admission,
+    delegation_admission: delegationAdmission,
     delegation_admission_digest: composition.admission.admission_digest,
     attenuation_proof_digest: composition.admission.statement.attenuation_proof_digest,
     parent_ceiling_digest: composition.admission.statement.parent_ceiling_digest,
