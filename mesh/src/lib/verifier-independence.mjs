@@ -18,7 +18,8 @@ const PROFILE_FIELDS = new Set([
   'method_id',
   'runtime_id',
   'model_family',
-  'operator_domain'
+  'operator_domain',
+  'profile_digest'
 ]);
 
 function rejectUnknown(value, allowed, label) {
@@ -52,7 +53,14 @@ export function normalizeVerifierProfile(raw) {
     model_family: id(value.model_family, 'verifier profile model_family'),
     operator_domain: id(value.operator_domain, 'verifier profile operator_domain')
   });
-  return Object.freeze({ ...body, profile_digest: digestObject(body) });
+  const profileDigest = digestObject(body);
+  if (
+    value.profile_digest !== undefined
+    && digest(value.profile_digest, 'verifier profile profile_digest') !== profileDigest
+  ) {
+    throw new ValidationError('verifier profile profile_digest mismatch');
+  }
+  return Object.freeze({ ...body, profile_digest: profileDigest });
 }
 
 export function evaluateVerifierIndependence(leftRaw, rightRaw) {
