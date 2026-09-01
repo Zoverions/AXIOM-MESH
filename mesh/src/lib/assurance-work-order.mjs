@@ -6,7 +6,7 @@ import {
   digestObject
 } from './canonical.mjs';
 import {
-  ADAPTIVE_ASSURANCE_DECISION_SCHEMA
+  validateAdaptiveAssuranceDecision
 } from './adaptive-assurance.mjs';
 import {
   evaluateVerifierIndependence,
@@ -127,12 +127,7 @@ export function compileAssuranceWorkOrder({
   budgetLimits,
   randomIntFn = randomInt
 } = {}) {
-  const adaptiveDecision = assertPlainObject(decision, 'adaptive assurance decision');
-  if (adaptiveDecision.schema !== ADAPTIVE_ASSURANCE_DECISION_SCHEMA) {
-    throw new ValidationError(
-      `adaptive assurance decision schema must be ${ADAPTIVE_ASSURANCE_DECISION_SCHEMA}`
-    );
-  }
+  const adaptiveDecision = validateAdaptiveAssuranceDecision(decision);
   const origin = normalizeVerifierProfile(originVerifierProfile);
   if (!Array.isArray(verifierCandidates) || verifierCandidates.length > 256) {
     throw new ValidationError('assurance work verifierCandidates must contain at most 256 items');
