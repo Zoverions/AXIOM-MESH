@@ -1,0 +1,46 @@
+{
+  "schema": "axiom-challenge-window-record.v1",
+  "record_id": "challenge-window:credential-decision-001",
+  "subject_event_id": "event:credential-decision-001",
+  "subject_event_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "finality_state": "challengeable",
+  "challenge": {
+    "opens_at": "2026-09-01T18:30:00.000Z",
+    "closes_at": "2026-09-08T18:30:00.000Z",
+    "eligible_challenger_refs": [
+      "party:subject",
+      "institution:issuer",
+      "reviewer:authorized-appeal-body"
+    ],
+    "active_challenge_refs": [],
+    "escalation_target_ref": "review:credential-appeal-v1"
+  },
+  "retention": {
+    "class": "reviewable",
+    "minimum_until": "2026-09-08T18:30:00.000Z",
+    "evidence_refs": [
+      "evidence:decision-receipt",
+      "evidence:credential-proof",
+      "evidence:policy-snapshot"
+    ],
+    "hold_refs": [],
+    "raw_material_may_be_minimized": true,
+    "deletion_allowed": false
+  },
+  "optimistic_effect": {
+    "performed": false,
+    "reversible": false,
+    "rollback_or_compensation_ref": null,
+    "preexecution_assurance_satisfied": true
+  },
+  "authority": {
+    "challenge_grants_runtime_authority": false,
+    "finality_grants_truth": false,
+    "retention_grants_disclosure": false,
+    "hold_grants_unrelated_authority": false
+  },
+  "limitations": [
+    "Challengeability is procedural and does not imply the original decision was wrong.",
+    "Finality state does not convert a decision into objective truth."
+  ]
+}
