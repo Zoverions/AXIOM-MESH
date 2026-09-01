@@ -1,0 +1,96 @@
+{
+  "schema": "axiom-authority-laundering-negative-fixtures.v1",
+  "status": "candidate-portable-fixtures",
+  "claim_boundary": {
+    "externally_reproduced": false,
+    "vulnerability_confirmed": false,
+    "production_exploit_claimed": false,
+    "purpose": "Portable negative tests for authority laundering and stale-authority effect admission."
+  },
+  "invariant": "Discovery, identity, authentication, protocol metadata, capability possession, stale authority evidence, transport reachability, or successful preprocessing MUST NOT become permission for a consequential effect.",
+  "fixtures": [
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-REVOKE",
+      "class": "authority-currentness-toctou",
+      "precondition": "A machine principal is authorized and a short-lived execution capability is issued.",
+      "mutation_before_effect": "Revoke the principal or its authoritative credential before Sandbox effect execution.",
+      "expected": "Effect admission fails closed; previously issued capability is insufficient by itself.",
+      "evidence_required": [
+        "exact build/commit",
+        "capability issuance timestamp and digest",
+        "revocation/currentness mutation timestamp and evidence",
+        "effect-attempt timestamp",
+        "terminal decision/error",
+        "proof that the effect did not occur"
+      ]
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-REMOVE",
+      "class": "authority-currentness-toctou",
+      "precondition": "A machine principal is authorized and a capability is issued.",
+      "mutation_before_effect": "Remove the principal from the active authority registry before effect execution.",
+      "expected": "Effect admission fails closed."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-NARROW",
+      "class": "authority-currentness-toctou",
+      "precondition": "A capability permits action A for purpose P at destination D.",
+      "mutation_before_effect": "Narrow current principal authority so A, P, or D is no longer permitted.",
+      "expected": "Effect admission fails closed even if the issued capability remains cryptographically valid."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-SPONSOR",
+      "class": "authority-lineage-currentness",
+      "precondition": "A machine principal has sponsor S1 and a capability is issued.",
+      "mutation_before_effect": "Invalidate or replace sponsor binding before effect execution.",
+      "expected": "Effect admission fails closed unless current authoritative policy explicitly permits continuity."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-RUNTIME",
+      "class": "runtime-binding-currentness",
+      "precondition": "A machine principal is bound to runtime R1 and a capability is issued.",
+      "mutation_before_effect": "Change the authoritative runtime binding or measured runtime identity to R2.",
+      "expected": "Effect admission fails closed unless the capability is re-authorized for R2."
+    },
+    {
+      "id": "RT-AUTH-001-TARGET-SELECTOR",
+      "class": "target-resolution-authority-laundering",
+      "precondition": "Caller is authorized for one canonical target.",
+      "mutation_before_effect": "Supply nested selectors, operator-like objects, arrays, nulls, wildcards, alternate encodings, or semantically broader target expressions.",
+      "expected": "The executor rejects non-canonical target semantics or proves the resolved target digest is identical to the pre-authorized target."
+    },
+    {
+      "id": "RT-AUTH-001-PROXY-METADATA",
+      "class": "transport-authority-laundering",
+      "precondition": "A local or internal agent/tool endpoint is reachable.",
+      "mutation_before_effect": "Supply attacker-controlled forwarding, host, scheme, origin, or proxy metadata without a trusted-proxy attestation boundary.",
+      "expected": "Transport metadata does not create trusted actor context, origin trust, or execution authority."
+    },
+    {
+      "id": "RT-AUTH-001-PREPROCESSOR-EXECUTION",
+      "class": "pre-model-code-execution-boundary",
+      "precondition": "Untrusted prompt, template, policy, or adapter input is accepted as data.",
+      "mutation_before_effect": "Inject template/expression syntax or other data that a preprocessing layer could accidentally evaluate.",
+      "expected": "Input remains inert data; no host-language or template evaluation occurs."
+    },
+    {
+      "id": "RT-AUTH-001-ERROR-PLANE",
+      "class": "evidence-confidentiality-boundary",
+      "precondition": "A tool/provider/runtime raises an internal exception containing implementation or credential-adjacent detail.",
+      "mutation_before_effect": "Propagate the failure through the conversational or agent-visible plane.",
+      "expected": "Public/agent-visible output is bounded and classified while privileged diagnostics remain in the evidence channel."
+    }
+  ],
+  "cross_protocol_expectations": [
+    "AID/DNS discovery resolves a candidate endpoint, never an authorization decision.",
+    "MCP/A2A metadata and tool discovery never mint authority.",
+    "Authentication proves a principal or credential, not permission for an effect.",
+    "Runtime attestation proves measured execution properties, not authorization or external-world truth.",
+    "A capability remains subject to any explicitly required late currentness/effect-admission checks."
+  ],
+  "nonclaims": [
+    "These fixtures do not claim any listed failure is currently exploitable in AXIOM-MESH.",
+    "These fixtures do not authorize testing of third-party systems.",
+    "A NOT_REPRODUCED result with exact environment and limitations is a valid outcome."
+  ]
+}
