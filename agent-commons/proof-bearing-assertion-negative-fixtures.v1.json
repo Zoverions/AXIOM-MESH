@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-proof-bearing-assertion-negative-fixtures.v1",
+  "cases": [
+    {
+      "id": "valid-proof-no-local-grant",
+      "proof": "valid",
+      "local_grant": null,
+      "expect": {
+        "decision": "deny_effect",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "valid-proof-wrong-audience",
+      "proof": "valid",
+      "requested_audience": "institution:B",
+      "proof_audience": "institution:A",
+      "expect": {
+        "decision": "reject_evidence",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "valid-proof-wrong-resource",
+      "proof": "valid",
+      "requested_resource": "record:B",
+      "proof_resource": "record:A",
+      "expect": {
+        "decision": "reject_evidence",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "opaque-verifier-high-consequence",
+      "proof": "valid",
+      "verifier_transparency": "insufficient",
+      "consequence": "high",
+      "expect": {
+        "decision": "require_independent_verifier_or_stronger_profile",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "expired-proof-used-offline",
+      "proof": "previously_valid",
+      "freshness": "expired",
+      "connectivity": "offline",
+      "expect": {
+        "decision": "reject_as_required_proof_may_remain_advisory",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "proof-of-payment-used-as-proof-of-identity",
+      "statement_type": "payment_received",
+      "attempted_interpretation": "identity_verified",
+      "expect": {
+        "decision": "reject_semantic_widening",
+        "authority": "none"
+      }
+    }
+  ]
+}
