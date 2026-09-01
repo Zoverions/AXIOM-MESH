@@ -8,8 +8,13 @@ import {
 import {
   createMachinePrincipalCurrentnessCheckpoint,
   validateMachinePrincipalCurrentnessCheckpointTransition,
-  verifyMachinePrincipalCurrentnessCheckpoint
+  verifyMachinePrincipalCurrentnessCheckpoint,
+  verifyMachinePrincipalCurrentnessCheckpointWithControllerLifecycle
 } from '../src/lib/machine-principal-currentness-checkpoint.mjs';
+import {
+  createMachineCurrentnessControllerKeyCredential,
+  createMachineCurrentnessControllerKeyRevocation
+} from '../src/lib/machine-currentness-controller-key-lifecycle.mjs';
 
 const AUTHORITY = 'a'.repeat(64);
 
@@ -213,4 +218,122 @@ test('retained checkpoints reject rollback and same-sequence equivocation', () =
     trustedControllerPublicKey: controller.publicKey,
     retainedCheckpoint: retained
   }), /equivocation/);
+});
+
+
+test('checkpoint verification can require a root-verified currentness-controller lifecycle', () => {
+  const root = generateKeyPairSync('ed25519');
+  const operational = generateKeyPairSync('ed25519');
+  const credential = createMachineCurrentnessControllerKeyCredential({
+    principalId: 'controller.currentness.1',
+    rootPrivateKey: root.privateKey,
+    trustedRootPublicKey: root.publicKey,
+    operationalPublicKey: operational.publicKey,
+    keyEpoch: 1,
+    activatedAt: '2026-09-01T16:59:00.000Z'
+  });
+  const checkpoint = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness({ observedAt: '2026-09-01T17:00:00.000Z' }),
+    controllerPrivateKey: operational.privateKey,
+    trustedControllerPublicKey: operational.publicKey
+  });
+  const verified = verifyMachinePrincipalCurrentnessCheckpointWithControllerLifecycle(
+    checkpoint,
+    {
+      controllerCredential: credential,
+      trustedControllerRootPublicKey: root.publicKey,
+      expectedControllerPrincipalId: 'controller.currentness.1',
+      expectedPrincipalId: 'agent.fixture.1',
+      expectedPrincipalType: 'agent'
+    }
+  );
+  assert.equal(verified.checkpoint.checkpoint_digest, checkpoint.checkpoint_digest);
+  assert.equal(verified.controller_credential_digest, credential.credential_digest);
+  assert.equal(verified.controller_key_epoch, 1);
+  assert.equal(verified.execution_authority_granted, false);
+  assert.equal(verified.authority_effect, 'none');
+  assert.equal(verified.global_currentness_claimed, false);
+  assert.equal(verified.controller_wall_clock_signing_time_proved, false);
+});
+
+test('retired or revoked currentness-controller key cannot validate a checkpoint after its lifecycle boundary', () => {
+  const root = generateKeyPairSync('ed25519');
+  const firstOperational = generateKeyPairSync('ed25519');
+  const secondOperational = generateKeyPairSync('ed25519');
+  const first = createMachineCurrentnessControllerKeyCredential({
+    principalId: 'controller.currentness.1',
+    rootPrivateKey: root.privateKey,
+    trustedRootPublicKey: root.publicKey,
+    operationalPublicKey: firstOperational.publicKey,
+    keyEpoch: 1,
+    activatedAt: '2026-09-01T16:59:00.000Z'
+  });
+  const second = createMachineCurrentnessControllerKeyCredential({
+    principalId: 'controller.currentness.1',
+    rootPrivateKey: root.privateKey,
+    trustedRootPublicKey: root.publicKey,
+    operationalPublicKey: secondOperational.publicKey,
+    keyEpoch: 2,
+    activatedAt: '2026-09-01T17:00:00.000Z',
+    transitionKind: 'rotation',
+    predecessorCredential: first,
+    predecessorDisposition: 'retired'
+  });
+  const staleCheckpoint = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness({ observedAt: '2026-09-01T17:00:01.000Z' }),
+    controllerPrivateKey: firstOperational.privateKey,
+    trustedControllerPublicKey: firstOperational.publicKey
+  });
+  assert.throws(() => verifyMachinePrincipalCurrentnessCheckpointWithControllerLifecycle(
+    staleCheckpoint,
+    {
+      controllerCredential: first,
+      trustedControllerRootPublicKey: root.publicKey,
+      successorControllerCredential: second,
+      expectedControllerPrincipalId: 'controller.currentness.1'
+    }
+  ), /stale after successor activation/);
+
+  const revocation = createMachineCurrentnessControllerKeyRevocation(first, {
+    trustedRootPublicKey: root.publicKey,
+    rootPrivateKey: root.privateKey,
+    effectiveAt: '2026-09-01T16:59:30.000Z',
+    reasonCode: 'compromised'
+  });
+  assert.throws(() => verifyMachinePrincipalCurrentnessCheckpointWithControllerLifecycle(
+    staleCheckpoint,
+    {
+      controllerCredential: first,
+      trustedControllerRootPublicKey: root.publicKey,
+      controllerRevocation: revocation,
+      expectedControllerPrincipalId: 'controller.currentness.1'
+    }
+  ), /revoked at requested time/);
+});
+
+test('controller credential substitution is rejected even when checkpoint signature is cryptographically valid', () => {
+  const root = generateKeyPairSync('ed25519');
+  const signer = generateKeyPairSync('ed25519');
+  const other = generateKeyPairSync('ed25519');
+  const otherCredential = createMachineCurrentnessControllerKeyCredential({
+    principalId: 'controller.currentness.1',
+    rootPrivateKey: root.privateKey,
+    trustedRootPublicKey: root.publicKey,
+    operationalPublicKey: other.publicKey,
+    keyEpoch: 1,
+    activatedAt: '2026-09-01T16:59:00.000Z'
+  });
+  const checkpoint = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness(),
+    controllerPrivateKey: signer.privateKey,
+    trustedControllerPublicKey: signer.publicKey
+  });
+  assert.throws(() => verifyMachinePrincipalCurrentnessCheckpointWithControllerLifecycle(
+    checkpoint,
+    {
+      controllerCredential: otherCredential,
+      trustedControllerRootPublicKey: root.publicKey,
+      expectedControllerPrincipalId: 'controller.currentness.1'
+    }
+  ), /does not match signed controller key/);
 });
