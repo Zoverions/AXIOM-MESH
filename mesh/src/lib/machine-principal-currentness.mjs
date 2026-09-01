@@ -5,12 +5,34 @@ export const MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA =
 
 const DIGEST = /^[a-f0-9]{64}$/;
 const STATUS = new Set(['active', 'narrowed', 'revoked', 'compromised', 'expired']);
+const PRINCIPAL_TYPES = new Set(['agent', 'service']);
+const CURRENTNESS_KEYS = new Set([
+  'schema',
+  'principal_id',
+  'principal_type',
+  'authority_digest',
+  'status',
+  'sequence',
+  'observed_at',
+  'source_head_digest',
+  'predecessor_head_digest',
+  'admission_digest',
+  'authority_effect',
+  'execution_authority_granted',
+  'global_currentness_claimed'
+]);
 
 function requireObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError(`${label} must be an object`);
   }
   return value;
+}
+
+function rejectUnknownKeys(value, allowed, label) {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) throw new ValidationError(`${label} contains unsupported field: ${key}`);
+  }
 }
 
 function requireString(value, label, { max = 256, pattern = null } = {}) {
@@ -39,6 +61,7 @@ function requireSequence(value) {
 
 export function normalizeMachinePrincipalCurrentness(value) {
   const raw = requireObject(value, 'Machine principal currentness');
+  rejectUnknownKeys(raw, CURRENTNESS_KEYS, 'Machine principal currentness');
   if (raw.schema !== MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA) {
     throw new ValidationError('Machine principal currentness schema is unsupported');
   }
@@ -46,12 +69,21 @@ export function normalizeMachinePrincipalCurrentness(value) {
   if (!STATUS.has(status)) {
     throw new ValidationError('Machine principal currentness status is invalid');
   }
+  const principalType = requireString(
+    raw.principal_type,
+    'Machine principal currentness principal_type',
+    { max: 16 }
+  );
+  if (!PRINCIPAL_TYPES.has(principalType)) {
+    throw new ValidationError('Machine principal currentness principal_type is invalid');
+  }
   const normalized = {
     schema: MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
     principal_id: requireString(raw.principal_id, 'Machine principal currentness principal_id', {
       max: 160,
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     }),
+    principal_type: principalType,
     authority_digest: requireString(
       raw.authority_digest,
       'Machine principal currentness authority_digest',
@@ -95,15 +127,21 @@ export function normalizeMachinePrincipalCurrentness(value) {
 
 export function machinePrincipalAdmissionDigest({
   principalId,
+  principalType,
   authorityDigest,
   capabilityId,
   intentDigest,
   planDigest,
   effectDestination
 } = {}) {
+  const normalizedType = requireString(principalType, 'Effect admission principal type', { max: 16 });
+  if (!PRINCIPAL_TYPES.has(normalizedType)) {
+    throw new ValidationError('Effect admission principal type is invalid');
+  }
   return digestObject({
     schema: 'axiom-machine-principal-effect-admission.v1',
     principal_id: requireString(principalId, 'Effect admission principal id', { max: 160 }),
+    principal_type: normalizedType,
     authority_digest: requireString(authorityDigest, 'Effect admission authority digest', {
       max: 64,
       pattern: DIGEST
@@ -128,6 +166,7 @@ export function machinePrincipalAdmissionDigest({
 export function evaluateMachinePrincipalCurrentness({
   currentness,
   expectedPrincipalId,
+  expectedPrincipalType,
   expectedAuthorityDigest,
   expectedAdmissionDigest,
   now = new Date(),
@@ -146,6 +185,9 @@ export function evaluateMachinePrincipalCurrentness({
 
   if (proof.principal_id !== expectedPrincipalId) {
     return deny('machine_currentness_principal_mismatch');
+  }
+  if (proof.principal_type !== expectedPrincipalType) {
+    return deny('machine_currentness_principal_type_mismatch');
   }
   if (proof.authority_digest !== expectedAuthorityDigest) {
     return deny('machine_currentness_authority_changed');
