@@ -128,17 +128,20 @@ Each accepted signal observation binds:
 - confidence;
 - source identity and source class;
 - basis digest;
+- upstream source-verification digest;
 - observation time and optional expiry;
 - a non-authorizing marker;
 - a canonical evidence digest.
 
 Accepted source classes are deliberately limited to measurement,
 policy-derived, independently verified, and entity-assurance evidence. Acting-agent
-self-declarations are not an accepted evidence class.
+self-declarations are not an accepted evidence class. Source labels alone are still
+insufficient: the resolver also requires the exact upstream source-verification
+digest to appear in a broker-supplied admitted verification set.
 
-Every risk signal requires current attributable evidence. Missing, stale, expired,
-future-dated, or unsupported-source observations fail closed rather than defaulting
-to a low-risk value.
+Every risk signal requires current attributable evidence backed by an admitted
+upstream verification. Missing, stale, expired, future-dated, unsupported-source,
+or unverified observations fail closed rather than defaulting to a low-risk value.
 
 When multiple valid sources disagree on a risk-increasing signal, resolution uses
 the highest observed risk value. It does not average a high-risk observation away.
