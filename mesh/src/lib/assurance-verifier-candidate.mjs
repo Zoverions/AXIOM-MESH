@@ -44,6 +44,15 @@ export function admitVerifierCandidate({
     );
   }
 
+  if (
+    normalizedProfile.model_family !== 'family.unverified'
+    || normalizedProfile.operator_domain !== 'operator.unverified'
+  ) {
+    throw new ValidationError(
+      'verifier candidate cannot self-assert model_family or operator_domain diversity'
+    );
+  }
+
   const history = verifyMachineIdentityCredentialHistory(credentialHistory, {
     trustedIssuerPublicKey,
     expectedPrincipalId: normalizedProfile.verifier_id
