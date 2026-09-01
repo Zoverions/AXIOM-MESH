@@ -1,6 +1,6 @@
 # Machine-principal effect-admission currentness v1
 
-Status: experimental semantic core only. This document and the accompanying pure evaluator do not create an authority source or claim that mutable machine-principal revocation is implemented.
+Status: experimental semantic core plus local durable retained-head store. This layer does not create effect authority and does not claim that production mutable machine-principal revocation or globally rollback-resistant currentness is implemented.
 
 ## Purpose
 
@@ -33,6 +33,20 @@ The evaluator fails closed when:
 - the presented sequence is older than the retained sequence;
 - the same retained sequence presents a different head digest.
 
+## Local retained-head store
+
+The experimental durable store retains controller-signed machine-principal currentness checkpoints as canonical append-only JSONL. It:
+
+- requires an exact principal id/type trust binding;
+- begins at signed sequence 1 and advances exactly one checkpoint at a time;
+- rejects rollback, same-sequence equivocation, sequence gaps, truncated histories, torn writes, non-canonical records, and signed-record tampering;
+- rejects symlink/non-regular state paths;
+- synchronizes appended records before acknowledging retention;
+- detects disk history changes made outside the active store before appending;
+- exposes the exact retained checkpoint and source-head digests needed by later admission logic.
+
+This is **local durable retention**, not global rollback proof. A local storage snapshot can still be reverted by an actor with sufficient storage control unless a stronger independent anchor, monotonic hardware source, quorum/witness policy, or equivalent reviewed mechanism is added.
+
 ## Explicit non-claims
 
 Currentness evidence:
@@ -45,7 +59,7 @@ Currentness evidence:
 
 ## Integration gate
 
-Do not wire this evaluator into Sandbox as a trusted decision input until AXIOM-MESH has a reviewed currentness source that can produce cryptographically verified lifecycle state and retained-head semantics. The existing delegation-root currentness checkpoint/store is the preferred semantic precedent.
+Do not wire this evaluator into Sandbox as a trusted decision input merely because the local durable store exists. The store now provides reviewed local retained-head semantics, but the accepted runtime still needs an authoritative currentness producer, trusted controller-key lifecycle/provisioning, and a defined method for Sandbox to obtain the required latest retained head without accepting caller-supplied rollback. Stronger rollback resistance beyond the local store remains a separate deployment/security gate.
 
 The first integration regression must reproduce the external RT-AUTH-001 race safely:
 
