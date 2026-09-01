@@ -33,8 +33,12 @@ function transitionAllowed(previousStatus, command) {
   if (!['active', 'narrowed'].includes(previousStatus)) {
     throw new ValidationError('Machine currentness retained lifecycle status is unsupported');
   }
-  if (kind === 'authority-update' && nextStatus !== 'active') {
-    throw new ValidationError('Machine currentness authority-update must remain active');
+  if (kind === 'authority-update') {
+    if (previousStatus !== 'active' || nextStatus !== 'active') {
+      throw new ValidationError(
+        'Machine currentness authority-update is permitted only from active to active'
+      );
+    }
   }
   if (kind === 'narrow' && nextStatus !== 'narrowed') {
     throw new ValidationError('Machine currentness narrow mutation must result in narrowed status');
