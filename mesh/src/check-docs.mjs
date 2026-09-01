@@ -63,6 +63,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
+  'docs/audits/GRID-STARTUP-REMEDIATION-2026-08-24.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md',
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md',

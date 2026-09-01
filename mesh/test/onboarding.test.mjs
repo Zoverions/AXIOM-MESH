@@ -101,6 +101,34 @@ test('CLI rejects unknown commands before resolving credentials', async () => {
   );
 });
 
+test('doctor probes the address each service actually binds', async () => {
+  // The kernel config declares only `gateway` and `internal` hosts; hypervisor,
+  // sandbox and grid all listen on the internal host. Probing `hosts[service]`
+  // directly yielded an undefined host for three of the four services.
+  const { meshConfig } = await import('../src/lib/config.mjs');
+  const config = meshConfig({ gatewayHost: '127.0.0.2', internalHost: '127.0.0.3' });
+  const checked = [];
+  await runDoctor({
+    config,
+    verifySetup: async () => ({
+      valid: true,
+      runtime: { node: '24.18.0', npm: '11.9.0' },
+      dependency_packages: 0
+    }),
+    checkGridLock: async () => ({ ready: true, state: 'clear' }),
+    checkPort: async input => {
+      checked.push(input);
+      return { available: true, code: null };
+    }
+  });
+  assert.deepEqual(checked.map(item => [item.service, item.host]), [
+    ['gateway', '127.0.0.2'],
+    ['hypervisor', '127.0.0.3'],
+    ['sandbox', '127.0.0.3'],
+    ['grid', '127.0.0.3']
+  ]);
+});
+
 test('doctor verifies setup and every configured service port without provisioning', async () => {
   const checked = [];
   const result = await runDoctor({

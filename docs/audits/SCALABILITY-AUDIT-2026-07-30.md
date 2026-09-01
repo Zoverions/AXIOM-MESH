@@ -4,6 +4,7 @@
 **Audited revision:** `2ab099be6c8035d73dfe8d0118a9e87afa0ef2bf`  
 **Kernel version:** `0.12.0-dev.3`
 **Status:** architecture and source audit; implementation work required  
+**Remediation:** S-01 and S-02 are partially remediated — see [Grid Startup Remediation 2026-08-24](GRID-STARTUP-REMEDIATION-2026-08-24.md) for what is met, what is only partially met, and what is still not claimed  
 **Scope:** supported four-service kernel, durable Grid, internal transport, public API, exports, backups, observability, and capacity evidence
 
 ## Executive conclusion
@@ -64,6 +65,7 @@ not sufficient.
 ### S-01 — Full materialized-state rebuild remains tied to total history
 
 **Severity:** Critical for long-lived nodes  
+**Remediation status:** partially remediated 2026-08-24 — peak memory is now bounded in both modes and replay is skippable under an opt-in anchor; the default still re-derives the full history, and the shadow-table swap is not implemented. See [Grid Startup Remediation 2026-08-24](GRID-STARTUP-REMEDIATION-2026-08-24.md).  
 **Affected code:** `mesh/src/grid/_store-core.mjs`
 
 Grid initialization verifies the chain, deletes every materialized table, loads
@@ -105,6 +107,7 @@ work must not be treated as closure of startup scalability.
 ### S-02 — Protected-column migration scans and decrypts complete tables on every startup
 
 **Severity:** High  
+**Remediation status:** remediated 2026-08-24 for the routine-startup cost; the migration is still not resumable and there is no separate offline deep-verification command. See [Grid Startup Remediation 2026-08-24](GRID-STARTUP-REMEDIATION-2026-08-24.md).  
 **Affected code:** `mesh/src/grid/_store-core.mjs`
 
 `migrateProtectedColumns()` loads all protected columns from every mapped table
