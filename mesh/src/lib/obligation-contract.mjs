@@ -8,6 +8,20 @@ import {
 export const OBLIGATION_CONTRACT_SCHEMA = 'axiom-obligation-contract.v1';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$/;
+const SETTLEMENT_STATES = new Set([
+  'draft',
+  'offered',
+  'accepted_as_record',
+  'active_obligation_set',
+  'partially_fulfilled',
+  'fulfilled',
+  'claimed_breach',
+  'in_dispute',
+  'cure_pending',
+  'settled',
+  'terminated',
+  'expired'
+]);
 
 function exact(raw, fields, label) {
   const value = assertPlainObject(raw, label);
@@ -25,6 +39,15 @@ function id(value, label) {
   return assertString(value, label, { min: 1, max: 192, pattern: ID });
 }
 
+function timestamp(value, label) {
+  const text = assertString(value, label, { min: 24, max: 24 });
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== text) {
+    throw new ValidationError(`${label} must be canonical UTC ISO`);
+  }
+  return text;
+}
+
 export function validateObligationContract(raw) {
   const value = exact(raw, [
     'schema','contract_id','version','status','parties','context','obligations',
@@ -39,7 +62,11 @@ export function validateObligationContract(raw) {
   assertString(value.version, 'version', {
     min: 5, max: 32, pattern: /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/
   });
-  id(value.status, 'status');
+
+  const status = id(value.status, 'status');
+  if (!SETTLEMENT_STATES.has(status)) {
+    throw new ValidationError('obligation contract status is invalid');
+  }
 
   if (!Array.isArray(value.parties) || value.parties.length < 2 || value.parties.length > 128) {
     throw new ValidationError('obligation contract requires 2-128 parties');
@@ -62,8 +89,13 @@ export function validateObligationContract(raw) {
   assertStringArray(context.jurisdiction_or_policy_refs, 'context.jurisdiction_or_policy_refs', {
     maxItems: 64, itemMax: 512
   });
-  assertString(context.effective_from, 'context.effective_from', { min: 24, max: 24 });
-  assertString(context.expires_at, 'context.expires_at', { min: 24, max: 24 });
+
+  const effectiveFrom = timestamp(context.effective_from, 'context.effective_from');
+  const expiresAt = timestamp(context.expires_at, 'context.expires_at');
+  if (new Date(expiresAt).valueOf() <= new Date(effectiveFrom).valueOf()) {
+    throw new ValidationError('context.expires_at must be after context.effective_from');
+  }
+
   if (typeof context.human_review_required !== 'boolean') {
     throw new ValidationError('context.human_review_required must be boolean');
   }
@@ -91,7 +123,12 @@ export function validateObligationContract(raw) {
     assertStringArray(obligation.conditions, `obligations[${index}].conditions`, {
       maxItems: 64, itemMax: 1024
     });
-    assertString(obligation.deadline, `obligations[${index}].deadline`, { min: 24, max: 24 });
+
+    const deadline = timestamp(obligation.deadline, `obligations[${index}].deadline`);
+    if (new Date(deadline).valueOf() < new Date(effectiveFrom).valueOf()) {
+      throw new ValidationError('obligation deadline cannot precede contract effective_from');
+    }
+
     const evidence = assertStringArray(obligation.evidence_required, `obligations[${index}].evidence_required`, {
       maxItems: 64, itemMax: 512
     });
@@ -130,6 +167,7 @@ export function validateObligationContract(raw) {
   return Object.freeze({
     valid: true,
     contract_id: value.contract_id,
+    status,
     obligation_count: value.obligations.length,
     contract_effect: 'obligation_and_evidence_structure_only',
     authority_effect: 'none',
