@@ -1,0 +1,65 @@
+{
+  "schema": "axiom-machine-delegation-policy-candidate-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a3b-prerequisite-machine-principal-v2-policy",
+  "scope": "Pure candidate policy describing a bounded future delegation ceiling above an unchanged delegation-disabled axiom-machine-principal.v1. It creates no delegation grant or runtime authority.",
+  "core_invariant": "A candidate delegation policy is a proposal for future authority semantics, not authority. Current machine-principal v1 remains delegation.allowed=false/max_depth=0, and no child effect may be authorized from this candidate alone.",
+  "attack_classes": [
+    {
+      "id": "v1-bypass",
+      "risks": ["candidate treated as if v1 delegation were enabled", "runtime reads candidate instead of current machine-principal validator"],
+      "controls": ["candidate requires a normalized v1 principal whose delegation is false/depth 0", "runtime_accepted=false", "delegation_effect=none"]
+    },
+    {
+      "id": "authority-widening",
+      "risks": ["candidate adds action", "adds scope", "adds purpose", "adds destination", "increases budget"],
+      "controls": ["all candidate sets must be subsets of v1 principal ceilings", "all budgets must be <= v1 budgets", "content-addressed policy digest"]
+    },
+    {
+      "id": "depth-confusion",
+      "risks": ["multi-depth policy with subdelegation false", "unbounded recursion", "spawned child interpreted as automatic authority"],
+      "controls": ["max depth is explicit and <=8", "non-subdelegating policy must use depth 1", "future A3a attenuation must consume depth on every delegation"]
+    },
+    {
+      "id": "lifetime-amplification",
+      "risks": ["candidate outlives session principal", "expired candidate reused"],
+      "controls": ["candidate expiry must be future at evaluation", "candidate cannot outlive non-persistent machine principal"]
+    },
+    {
+      "id": "approval-or-currentness-laundering",
+      "risks": ["candidate self-claims owner approval", "candidate self-claims revocation currentness", "policy digest treated as owner signature"],
+      "controls": ["owner_approval_bound=false", "revocation_currentness_bound=false", "authority_effect=none", "future authority-bearing layer must bind separate reviewed approval/currentness evidence"]
+    },
+    {
+      "id": "policy-vs-grant-confusion",
+      "risks": ["candidate presented as bearer grant", "A3a proof plus candidate treated as delegation record"],
+      "controls": ["delegation_effect=none", "runtime_accepted=false", "A3b remains a separate signed/current authority-bearing record"]
+    }
+  ],
+  "known_nonclaims": [
+    "This candidate does not modify axiom-machine-principal.v1 or enable its delegation field.",
+    "This candidate does not bind owner/sponsor approval.",
+    "This candidate does not establish identity or revocation currentness.",
+    "This candidate does not create a child principal, grant, handoff or effect admission.",
+    "This candidate does not define capabilities/data classes beyond the existing v1 principal surface; A2/A3a remain responsible for richer authority projections.",
+    "This candidate does not modify the capability registry or supported runtime."
+  ],
+  "next_gates": [
+    "review machine-principal v2 normative semantics rather than weakening v1",
+    "bind candidate policy to an explicit owner/sponsor approval artifact",
+    "bind A6 current identity/revocation evidence",
+    "combine approved parent policy with A3a attenuation proof into A3b signed delegation record",
+    "only then consider a separately reviewed runtime integration path"
+  ],
+  "boundaries": {
+    "runtime_accepted": false,
+    "owner_approval_bound": false,
+    "revocation_currentness_bound": false,
+    "delegation_enabled": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "filesystem_effect": false,
+    "capability_promotion_enabled": false
+  }
+}
