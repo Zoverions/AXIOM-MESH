@@ -14,7 +14,7 @@ test('identity lineage fixtures keep discovery, continuity and accountability no
   assert.equal(fixtures.portable, true);
   assert.equal(fixtures.production_conformance_claimed, false);
   assert.equal(fixtures.authority_granted, false);
-  assert.equal(fixtures.cases.length, 7);
+  assert.equal(fixtures.cases.length, 10);
   assert.equal(new Set(fixtures.cases.map(({ id }) => id)).size, fixtures.cases.length);
 
   for (const entry of fixtures.cases) {
@@ -28,7 +28,7 @@ test('identity lineage fixtures keep discovery, continuity and accountability no
   assert.match(threat.core_invariant, /MUST NOT create local effect authority/);
 });
 
-test('portable negative set covers rotation, stale evidence, replay, proof laundering, protocol switching and root compromise', async () => {
+test('portable negative set covers rotation, stale evidence, replay, proof laundering, protocol switching, credential isolation and root compromise', async () => {
   const fixtures = JSON.parse(await readFile(fixtureUrl, 'utf8'));
   const ids = new Set(fixtures.cases.map(({ id }) => id));
   for (const required of [
@@ -38,6 +38,30 @@ test('portable negative set covers rotation, stale evidence, replay, proof laund
     'cross-service-delegation-replay',
     'endpoint-proof-as-allow',
     'protocol-switch-authority-laundering',
-    'root-compromise-vs-service-compromise'
+    'root-compromise-vs-service-compromise',
+    'endpoint-rotation-does-not-inherit-old-grant',
+    'platform-credential-isolation',
+    'root-compromise-invalidates-unrevalidated-lineage'
   ]) assert.ok(ids.has(required), required);
+});
+
+test('service-key rotation preserves identity continuity without inheriting retired-key grants', async () => {
+  const fixtures = JSON.parse(await readFile(fixtureUrl, 'utf8'));
+  const rotation = fixtures.cases.find(({ id }) => id === 'service-key-rotation-root-stable');
+  const oldGrant = fixtures.cases.find(({ id }) => id === 'endpoint-rotation-does-not-inherit-old-grant');
+
+  assert.equal(rotation.expect.identity_continuity, 'preserved_by_delegation');
+  assert.equal(rotation.expect.endpoint_currency, 'new_key_only');
+  assert.equal(oldGrant.expect.decision, 'deny');
+  assert.equal(oldGrant.expect.requires_fresh_or_rebound_grant, true);
+});
+
+test('root compromise and platform credential replay are treated as wider-scope failures', async () => {
+  const fixtures = JSON.parse(await readFile(fixtureUrl, 'utf8'));
+  const root = fixtures.cases.find(({ id }) => id === 'root-compromise-invalidates-unrevalidated-lineage');
+  const platform = fixtures.cases.find(({ id }) => id === 'platform-credential-isolation');
+
+  assert.equal(root.expect.recovery_class, 'root_compromise');
+  assert.equal(root.expect.requires_reestablished_root_or_local_recovery_policy, true);
+  assert.equal(platform.expect.cross_platform_reuse, 'forbidden');
 });
