@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-effect-consumption-record.v1.schema.json",
+  "title": "AXIOM Agent Effect Consumption Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "statement",
+    "statement_digest",
+    "store_signature",
+    "record_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-effect-consumption-record.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consumption_id",
+        "handoff_digest",
+        "handoff_id",
+        "sender_principal_id",
+        "sender_credential_digest",
+        "executor_principal_id",
+        "executor_credential_digest",
+        "action",
+        "input_digest",
+        "effect_at",
+        "currentness_set_digest",
+        "sender_currentness_checkpoint_digest",
+        "executor_currentness_checkpoint_digest",
+        "sender_active_credential_digest",
+        "executor_active_credential_digest",
+        "store_key_id",
+        "storage_key",
+        "state",
+        "consumption_kind",
+        "store_policy",
+        "storage_scope",
+        "consume_before_effect_committed",
+        "effect_executed",
+        "effect_admission_authorized",
+        "resume_after_recovery_allowed",
+        "global_currentness_claimed",
+        "rollback_detection_scope",
+        "media_durability_claimed",
+        "production_persistence_claimed",
+        "authority_effect",
+        "delegation_effect"
+      ],
+      "properties": {
+        "consumption_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+        },
+        "handoff_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "handoff_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+        },
+        "sender_principal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+        },
+        "sender_credential_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "executor_principal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+        },
+        "executor_credential_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "action": { "const": "agent.read-system-facts" },
+        "input_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "effect_at": { "type": "string", "format": "date-time" },
+        "currentness_set_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "sender_currentness_checkpoint_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "executor_currentness_checkpoint_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "sender_active_credential_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "executor_active_credential_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "store_key_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "storage_key": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "state": { "const": "consumed" },
+        "consumption_kind": { "const": "one-time-pre-effect-consumption" },
+        "store_policy": { "const": "hash-derived-exclusive-create-v1" },
+        "storage_scope": { "const": "caller-selected-root-plus-hash-derived-control-path" },
+        "consume_before_effect_committed": { "const": true },
+        "effect_executed": { "const": false },
+        "effect_admission_authorized": { "const": false },
+        "resume_after_recovery_allowed": { "const": false },
+        "global_currentness_claimed": { "const": false },
+        "rollback_detection_scope": { "const": "retained-record-digest-required" },
+        "media_durability_claimed": { "const": false },
+        "production_persistence_claimed": { "const": false },
+        "authority_effect": { "const": "none" },
+        "delegation_effect": { "const": "none" }
+      }
+    },
+    "statement_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "store_signature": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 1024,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "record_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
