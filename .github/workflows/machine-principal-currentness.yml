@@ -5,12 +5,12 @@ on:
     branches: ["main"]
     paths:
       - "mesh/src/lib/machine-currentness-controller-key-lifecycle.mjs"
-      - "mesh/src/lib/machine-currentness-admission-receipt.mjs"
+      - "mesh/src/lib/machine-currentness-admission-receipt.mjs"\n      - "mesh/src/lib/machine-currentness-admission-evaluator.mjs"
       - "mesh/src/lib/machine-principal-currentness.mjs"
       - "mesh/src/lib/machine-principal-currentness-checkpoint.mjs"
       - "mesh/src/lib/machine-principal-currentness-store.mjs"
       - "mesh/test/machine-currentness-controller-key-lifecycle.test.mjs"
-      - "mesh/test/machine-currentness-admission-receipt.test.mjs"
+      - "mesh/test/machine-currentness-admission-receipt.test.mjs"\n      - "mesh/test/machine-currentness-admission-evaluator.test.mjs"
       - "mesh/test/machine-principal-currentness.test.mjs"
       - "mesh/test/machine-principal-currentness-checkpoint.test.mjs"
       - "mesh/test/machine-principal-currentness-store.test.mjs"
@@ -41,7 +41,7 @@ jobs:
         run: >-
           node --test
           mesh/test/machine-currentness-controller-key-lifecycle.test.mjs
-          mesh/test/machine-currentness-admission-receipt.test.mjs
+          mesh/test/machine-currentness-admission-receipt.test.mjs\n          mesh/test/machine-currentness-admission-evaluator.test.mjs
           mesh/test/machine-principal-currentness.test.mjs
           mesh/test/machine-principal-currentness-checkpoint.test.mjs
           mesh/test/machine-principal-currentness-store.test.mjs
