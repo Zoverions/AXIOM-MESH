@@ -20,7 +20,6 @@ const PRINCIPAL_ID = 'agent.currentness.store';
 const PRINCIPAL_TYPE = 'agent';
 const AUTHORITY_1 = 'a'.repeat(64);
 const AUTHORITY_2 = 'b'.repeat(64);
-const ADMISSION = 'c'.repeat(64);
 const T1 = '2026-09-01T16:00:00.000Z';
 const T2 = '2026-09-01T16:01:00.000Z';
 const T3 = '2026-09-01T16:02:00.000Z';
@@ -43,7 +42,6 @@ function currentness({
     observed_at: observedAt,
     source_head_digest: digestObject({ sourceSeed, sequence, authorityDigest, status }),
     predecessor_head_digest: predecessorHeadDigest,
-    admission_digest: ADMISSION,
     authority_effect: 'none',
     execution_authority_granted: false,
     global_currentness_claimed: false
