@@ -12,10 +12,26 @@ import {
 const NOW = '2026-09-01T12:00:00.000Z';
 const DIGEST = 'a'.repeat(64);
 const SOURCE_VERIFICATION_DIGEST = 'b'.repeat(64);
-const VERIFIED_SOURCES = new Map([[
-  SOURCE_VERIFICATION_DIGEST,
-  Object.freeze({ source_id: 'source.local', source_class: 'measurement' })
-]]);
+const ENTITY_VERIFICATION_DIGEST = 'c'.repeat(64);
+const INDEPENDENT_VERIFICATION_DIGEST = 'd'.repeat(64);
+const VERIFIED_SOURCES = new Map([
+  [
+    SOURCE_VERIFICATION_DIGEST,
+    Object.freeze({ source_id: 'source.local', source_class: 'measurement' })
+  ],
+  [
+    ENTITY_VERIFICATION_DIGEST,
+    Object.freeze({ source_id: 'source.entity', source_class: 'entity-assurance' })
+  ],
+  [
+    INDEPENDENT_VERIFICATION_DIGEST,
+    Object.freeze({ source_id: 'source.independent', source_class: 'independently-verified' })
+  ],
+  [
+    'e'.repeat(64),
+    Object.freeze({ source_id: 'source.caution', source_class: 'independently-verified' })
+  ]
+]);
 
 function policy(overrides = {}) {
   return {
@@ -41,6 +57,7 @@ function evidence({
   confidence = 90,
   sourceId = 'source.local',
   sourceClass = 'measurement',
+  sourceVerificationDigest = SOURCE_VERIFICATION_DIGEST,
   observedAt = '2026-09-01T11:00:00.000Z',
   expiresAt = '2026-09-02T11:00:00.000Z'
 }) {
@@ -54,7 +71,7 @@ function evidence({
     source_id: sourceId,
     source_class: sourceClass,
     basis_digest: DIGEST,
-    source_verification_digest: SOURCE_VERIFICATION_DIGEST,
+    source_verification_digest: sourceVerificationDigest,
     observed_at: observedAt,
     expires_at: expiresAt,
     non_authorizing: true
@@ -72,7 +89,9 @@ function completeEvidence() {
     signal: 'reputation',
     value: 80,
     confidence: 90,
-    sourceClass: 'entity-assurance'
+    sourceId: 'source.entity',
+    sourceClass: 'entity-assurance',
+    sourceVerificationDigest: ENTITY_VERIFICATION_DIGEST
   }));
   return result;
 }
@@ -162,7 +181,8 @@ test('conflicting risk evidence resolves toward the higher observed risk', () =>
     signal: 'consequence',
     value: 95,
     sourceId: 'source.independent',
-    sourceClass: 'independently-verified'
+    sourceClass: 'independently-verified',
+    sourceVerificationDigest: INDEPENDENT_VERIFICATION_DIGEST
   }));
   const resolution = resolveAdaptiveAssuranceSignals({
     taskId: 'task.signal-example',
@@ -184,7 +204,8 @@ test('conflicting reputation resolves toward less friction rather than trust inf
     value: 35,
     confidence: 80,
     sourceId: 'source.caution',
-    sourceClass: 'independently-verified'
+    sourceClass: 'independently-verified',
+    sourceVerificationDigest: 'e'.repeat(64)
   }));
   const resolution = resolveAdaptiveAssuranceSignals({
     taskId: 'task.signal-example',
@@ -250,7 +271,7 @@ test('verified source digest cannot be laundered across source identity or class
 test('otherwise valid signal evidence is ignored when its upstream verification was not admitted', () => {
   const items = completeEvidence().map(item => (
     item.signal === 'anomaly'
-      ? { ...item, source_verification_digest: 'c'.repeat(64) }
+      ? { ...item, source_verification_digest: 'f'.repeat(64) }
       : item
   ));
   assert.throws(
