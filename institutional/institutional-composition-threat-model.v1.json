@@ -1,0 +1,120 @@
+{
+  "schema": "axiom-institutional-composition-threat-model.v1",
+  "status": "experimental threat model; not a finding catalog",
+  "core_invariant": "Reusable institutional patterns may carry structure and evidence obligations, but must never carry ambient runtime authority into a local deployment.",
+  "attack_classes": [
+    {
+      "id": "pattern-authority-smuggling",
+      "risk": "Imported pattern encodes installation, role, credential, vote, or package provenance as permission.",
+      "controls": [
+        "authority_effect=none on package import",
+        "local adoption required",
+        "effect admission separate"
+      ]
+    },
+    {
+      "id": "role-person-confusion",
+      "risk": "Authority follows a person after term expiry, removal, or role change.",
+      "controls": [
+        "office separate from occupant",
+        "term/status/currentness binding",
+        "succession revalidation"
+      ]
+    },
+    {
+      "id": "credential-authority-laundering",
+      "risk": "Qualification or membership credential is treated as execution authority.",
+      "controls": [
+        "credential authority_effect=none",
+        "local policy evaluation"
+      ]
+    },
+    {
+      "id": "transitive-recognition",
+      "risk": "Recognition by one institution silently creates trust or authority in another.",
+      "controls": [
+        "no automatic transitive trust",
+        "explicit bilateral/local recognition profile"
+      ]
+    },
+    {
+      "id": "jurisdiction-confusion",
+      "risk": "A reusable package is applied outside its legal/policy scope.",
+      "controls": [
+        "local jurisdiction overlay",
+        "assumptions and limitations",
+        "adaptation diff"
+      ]
+    },
+    {
+      "id": "hidden-delegation",
+      "risk": "Pattern embeds subdelegation or privilege expansion.",
+      "controls": [
+        "delegation declared",
+        "attenuation tests",
+        "max depth/expiry/revocation"
+      ]
+    },
+    {
+      "id": "quorum-laundering",
+      "risk": "Vote or threshold result becomes direct execution authority.",
+      "controls": [
+        "collective result is evidence",
+        "local effect admission required"
+      ]
+    },
+    {
+      "id": "succession-capture",
+      "risk": "Recovery or acting-office mechanism restores stale/revoked authority.",
+      "controls": [
+        "fresh appointment/currentness",
+        "separate recovery evidence",
+        "no authority from backup alone"
+      ]
+    },
+    {
+      "id": "appeal-suppression",
+      "risk": "Pattern omits review/remedy for consequential institutional decisions.",
+      "controls": [
+        "challenge/appeal primitive available",
+        "domain policy declares applicability",
+        "irreversible decisions require stronger preconditions"
+      ]
+    },
+    {
+      "id": "record-correlation",
+      "risk": "Reusable identifiers create unnecessary cross-domain surveillance.",
+      "controls": [
+        "scoped identifiers",
+        "selective disclosure",
+        "PII minimization",
+        "no universal person score"
+      ]
+    },
+    {
+      "id": "pattern-supply-chain",
+      "risk": "Malicious or substituted reusable package changes policy semantics.",
+      "controls": [
+        "immutable digest/provenance",
+        "license/source",
+        "local diff review",
+        "simulation before adoption"
+      ]
+    },
+    {
+      "id": "semantic-drift",
+      "risk": "Same primitive label means different authority semantics across adapters.",
+      "controls": [
+        "primitive registry semantics stable",
+        "projection maps vocabulary only",
+        "conformance tests"
+      ]
+    }
+  ],
+  "nonclaims": [
+    "A reusable pattern is not law, policy, accreditation, certification, or authority.",
+    "A valid package is not safe for every jurisdiction or institution.",
+    "An institutional decision record does not prove arbitrary external-world truth.",
+    "This model does not authorize live public-sector, clinical, financial, criminal-justice, election, or other high-coercion deployment."
+  ]
+}
