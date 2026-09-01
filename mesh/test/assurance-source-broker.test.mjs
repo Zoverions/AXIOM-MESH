@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -6,10 +7,35 @@ import {
 } from '../src/lib/entity-assurance.mjs';
 import {
   admitEntityAssuranceSource,
-  collectBrokerVerifiedSourceBindings
+  buildDurableAssuranceSourceAdmission,
+  collectBrokerVerifiedSourceBindings,
+  collectDurableVerifiedSourceBindings,
+  verifyDurableAssuranceSourceAdmission
 } from '../src/lib/assurance-source-broker.mjs';
+import { MeshIdentity } from '../src/lib/identity.mjs';
 
 const NOW = '2026-09-01T12:00:00.000Z';
+
+
+function signingIdentity(service = 'grid') {
+  const pair = generateKeyPairSync('ed25519');
+  const privatePem = pair.privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const publicPem = pair.publicKey.export({ type: 'spki', format: 'pem' });
+  return {
+    identity: new MeshIdentity(service, privatePem, publicPem),
+    publicKey: pair.publicKey
+  };
+}
+
+function admittedSource() {
+  return admitEntityAssuranceSource({
+    sourceId: 'source.entity-assurance',
+    policy: policy(),
+    evidence: [evidence()],
+    subjectId: 'agent.broker-subject',
+    now: NOW
+  });
+}
 
 function policy() {
   return {
@@ -104,4 +130,114 @@ test('broker admissions remain runtime-local and non-authorizing', () => {
   });
   assert.equal(admission.authority_effect, 'none');
   assert.equal('execution_authority' in admission, false);
+});
+
+
+test('durable source admission survives serialization and verifies with the trusted Grid key', () => {
+  const { identity, publicKey } = signingIdentity();
+  const receipt = buildDurableAssuranceSourceAdmission(admittedSource(), {
+    identity,
+    issuedAt: '2026-09-01T12:00:00.000Z',
+    expiresAt: '2026-09-02T12:00:00.000Z'
+  });
+
+  const serialized = JSON.parse(JSON.stringify(receipt));
+  const verified = verifyDurableAssuranceSourceAdmission(
+    serialized,
+    publicKey,
+    { now: '2026-09-01T18:00:00.000Z' }
+  );
+  assert.equal(verified.valid, true);
+  assert.equal(verified.source_id, 'source.entity-assurance');
+  assert.equal(verified.source_class, 'entity-assurance');
+  assert.equal(verified.authority_effect, 'none');
+  assert.equal(verified.truth_established, false);
+
+  const bindings = collectDurableVerifiedSourceBindings(
+    [serialized],
+    publicKey,
+    { now: '2026-09-01T18:00:00.000Z' }
+  );
+  assert.deepEqual(bindings.get(verified.source_verification_digest), {
+    source_id: 'source.entity-assurance',
+    source_class: 'entity-assurance'
+  });
+});
+
+test('durable source admission rejects tampering and the wrong Grid key', () => {
+  const trusted = signingIdentity();
+  const wrong = signingIdentity('other-grid');
+  const receipt = buildDurableAssuranceSourceAdmission(admittedSource(), {
+    identity: trusted.identity,
+    issuedAt: '2026-09-01T12:00:00.000Z',
+    expiresAt: '2026-09-02T12:00:00.000Z'
+  });
+
+  assert.throws(
+    () => verifyDurableAssuranceSourceAdmission(
+      receipt,
+      wrong.publicKey,
+      { now: '2026-09-01T18:00:00.000Z' }
+    ),
+    /signature is invalid/
+  );
+
+  const tampered = JSON.parse(JSON.stringify(receipt));
+  tampered.statement.source_id = 'source.substituted';
+  assert.throws(
+    () => verifyDurableAssuranceSourceAdmission(
+      tampered,
+      trusted.publicKey,
+      { now: '2026-09-01T18:00:00.000Z' }
+    ),
+    /receipt_digest mismatch|signature is invalid/
+  );
+});
+
+test('durable source admission rejects future, expired, and excessive-lifetime records', () => {
+  const { identity, publicKey } = signingIdentity();
+  const receipt = buildDurableAssuranceSourceAdmission(admittedSource(), {
+    identity,
+    issuedAt: '2026-09-01T12:00:00.000Z',
+    expiresAt: '2026-09-02T12:00:00.000Z'
+  });
+
+  assert.throws(
+    () => verifyDurableAssuranceSourceAdmission(
+      receipt,
+      publicKey,
+      { now: '2026-09-01T11:59:59.000Z' }
+    ),
+    /future-dated/
+  );
+  assert.throws(
+    () => verifyDurableAssuranceSourceAdmission(
+      receipt,
+      publicKey,
+      { now: '2026-09-02T12:00:00.000Z' }
+    ),
+    /expired/
+  );
+  assert.throws(
+    () => buildDurableAssuranceSourceAdmission(admittedSource(), {
+      identity,
+      issuedAt: '2026-09-01T12:00:00.000Z',
+      expiresAt: '2026-09-09T12:00:00.000Z'
+    }),
+    /exceeds seven days/
+  );
+});
+
+test('serialized lookalike cannot be treated as a live admission for signing', () => {
+  const { identity } = signingIdentity();
+  const live = admittedSource();
+  const cloned = JSON.parse(JSON.stringify(live));
+  assert.throws(
+    () => buildDurableAssuranceSourceAdmission(cloned, {
+      identity,
+      issuedAt: '2026-09-01T12:00:00.000Z',
+      expiresAt: '2026-09-02T12:00:00.000Z'
+    }),
+    /requires a live broker admission/
+  );
 });
