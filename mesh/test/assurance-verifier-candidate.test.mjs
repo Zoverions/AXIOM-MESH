@@ -8,8 +8,10 @@ import {
 } from '../src/lib/agent-trust-machine-identity.mjs';
 import {
   admitVerifierCandidate,
-  collectAdmittedVerifierProfiles
+  collectAdmittedVerifierProfiles,
+  compileAdmittedAssuranceWorkOrder
 } from '../src/lib/assurance-verifier-candidate.mjs';
+import { createAdaptiveAssuranceEvaluator } from '../src/lib/adaptive-assurance.mjs';
 import { VERIFIER_PROFILE_SCHEMA } from '../src/lib/verifier-independence.mjs';
 
 const CATALOG = JSON.parse(readFileSync(
@@ -196,6 +198,122 @@ test('candidate broker rejects self-asserted model-family or operator diversity'
       at: NOW
     }),
     /cannot self-assert model_family/
+  );
+});
+
+test('admitted work-order compiler accepts only admitted origin and reviewer identities', () => {
+  const issuerPair = issuer();
+
+  function makeAdmission(id, contextChar, evidenceChar, methodId) {
+    const operationalPair = operational();
+    const machineCredential = createMachineIdentityCredential({
+      principal: principal(id),
+      issuerId: 'issuer.verifier-candidate',
+      issuerPrivateKey: issuerPair.privateKey,
+      operationalPublicKey: operationalPair.publicKey,
+      keyEpoch: 1,
+      issuedAt: '2026-09-01T10:00:00.000Z',
+      validFrom: '2026-09-01T10:00:00.000Z',
+      expiresAt: '2026-09-02T10:00:00.000Z'
+    });
+    return admitVerifierCandidate({
+      profile: {
+        ...profile(id),
+        context_digest: contextChar.repeat(64),
+        evidence_set_digest: evidenceChar.repeat(64),
+        method_id: methodId
+      },
+      catalogEntry: RUNTIME,
+      credentialHistory: [machineCredential],
+      trustedIssuerPublicKey: issuerPair.publicKey,
+      at: NOW
+    });
+  }
+
+  const origin = makeAdmission(
+    'agent.verifier-origin',
+    '1',
+    '2',
+    'method.primary'
+  );
+  const reviewers = [
+    makeAdmission('agent.verifier-one', '3', '4', 'method.reconstruct'),
+    makeAdmission('agent.verifier-two', '5', '6', 'method.adversarial')
+  ];
+
+  const decision = createAdaptiveAssuranceEvaluator({
+    randomIntFn: () => 9_999
+  })({
+    schema: 'axiom-adaptive-assurance-input.v1',
+    task_id: 'task.admitted-work-order',
+    risk_class: 'high',
+    signals: {
+      consequence: 90,
+      uncertainty: 80,
+      irreversibility: 80,
+      authority_exposure: 90,
+      anomaly: 50,
+      provenance_weakness: 60,
+      correlation_risk: 70,
+      context_integrity_risk: 60
+    },
+    reputation_score: 50,
+    reputation_confidence: 0
+  });
+
+  const result = compileAdmittedAssuranceWorkOrder({
+    decision,
+    originVerifierAdmission: origin,
+    verifierCandidateAdmissions: reviewers,
+    checkCosts: {
+      'independent-context-verification': {
+        compute_units: 10,
+        external_cost_units: 0,
+        elapsed_ms: 100
+      },
+      'adversarial-review': {
+        compute_units: 10,
+        external_cost_units: 0,
+        elapsed_ms: 100
+      },
+      'provenance-review': {
+        compute_units: 10,
+        external_cost_units: 0,
+        elapsed_ms: 100
+      },
+      'correlation-aware-cross-check': {
+        compute_units: 10,
+        external_cost_units: 0,
+        elapsed_ms: 100
+      }
+    },
+    budgetLimits: {
+      maxChecks: 8,
+      maxComputeUnits: 100,
+      maxExternalCostUnits: 10,
+      maxElapsedMs: 2_000
+    },
+    randomIntFn: () => 0
+  });
+
+  const allowed = new Set(reviewers.map(item => item.verifier_profile.verifier_id));
+  assert.ok(result.assignments.length >= 4);
+  assert.ok(result.assignments.every(item => allowed.has(item.verifier_id)));
+  assert.equal(
+    result.assignments.some(item => item.verifier_id === origin.verifier_profile.verifier_id),
+    false
+  );
+
+  assert.throws(
+    () => compileAdmittedAssuranceWorkOrder({
+      decision,
+      originVerifierAdmission: { ...origin },
+      verifierCandidateAdmissions: reviewers,
+      checkCosts: {},
+      budgetLimits: {},
+      randomIntFn: () => 0
+    }),
+    /only live broker admissions/
   );
 });
 
