@@ -74,8 +74,10 @@ export async function evaluateRetainedMachineCurrentnessAdmission({
     planDigest,
     effectDestination
   });
+  const { controller_key_id: _controllerKeyId, ...lifecycleCurrentness } =
+    checkpoint.statement;
   const evaluated = evaluateMachinePrincipalCurrentness({
-    currentness: checkpoint.statement,
+    currentness: lifecycleCurrentness,
     expectedPrincipalId: principalId,
     expectedPrincipalType: principalType,
     expectedAuthorityDigest: authorityDigest,
