@@ -144,6 +144,103 @@ test('correlated candidate replicas cannot satisfy machine verification', () => 
   );
 });
 
+test('work order rejects a mutated adaptive decision with a stale digest', () => {
+  const decision = adaptiveDecision();
+  const tampered = {
+    ...decision,
+    required_checks: decision.required_checks.filter(
+      check => check !== 'correlation-aware-cross-check'
+    )
+  };
+  assert.throws(
+    () => compileAssuranceWorkOrder({
+      decision: tampered,
+      originVerifierProfile: profile('verifier.origin', 'a', 'b'),
+      verifierCandidates: [profile('verifier.one', 'c', 'd')],
+      checkCosts: costs(),
+      budgetLimits: {
+        maxChecks: 8,
+        maxComputeUnits: 100,
+        maxExternalCostUnits: 20,
+        maxElapsedMs: 2_000
+      },
+      randomIntFn: () => 0
+    }),
+    /decision_digest mismatch/
+  );
+});
+
+test('provenance review cannot be satisfied by a reviewer sharing the origin evidence set', () => {
+  const origin = profile('verifier.origin', 'a', 'b');
+  const candidates = [
+    {
+      ...profile('verifier.one', 'c', 'b'),
+      method_id: 'method.reconstruct'
+    },
+    {
+      ...profile('verifier.two', 'd', 'b'),
+      method_id: 'method.adversarial'
+    }
+  ];
+  assert.throws(
+    () => compileAssuranceWorkOrder({
+      decision: adaptiveDecision(),
+      originVerifierProfile: origin,
+      verifierCandidates: candidates,
+      checkCosts: costs(),
+      budgetLimits: {
+        maxChecks: 8,
+        maxComputeUnits: 100,
+        maxExternalCostUnits: 20,
+        maxElapsedMs: 2_000
+      },
+      randomIntFn: () => 0
+    }),
+    /no meaningfully independent verifier for check: provenance-review/
+  );
+});
+
+test('correlation cross-check requires runtime or separately verified model/operator diversity', () => {
+  const origin = {
+    ...profile('verifier.origin', 'a', 'b'),
+    runtime_id: 'runtime.shared',
+    model_family: 'family.unverified',
+    operator_domain: 'operator.unverified'
+  };
+  const candidates = [
+    {
+      ...profile('verifier.one', 'c', 'd'),
+      method_id: 'method.reconstruct',
+      runtime_id: 'runtime.shared',
+      model_family: 'family.unverified',
+      operator_domain: 'operator.unverified'
+    },
+    {
+      ...profile('verifier.two', 'e', 'f'),
+      method_id: 'method.adversarial',
+      runtime_id: 'runtime.shared',
+      model_family: 'family.unverified',
+      operator_domain: 'operator.unverified'
+    }
+  ];
+  assert.throws(
+    () => compileAssuranceWorkOrder({
+      decision: adaptiveDecision(),
+      originVerifierProfile: origin,
+      verifierCandidates: candidates,
+      checkCosts: costs(),
+      budgetLimits: {
+        maxChecks: 8,
+        maxComputeUnits: 100,
+        maxExternalCostUnits: 20,
+        maxElapsedMs: 2_000
+      },
+      randomIntFn: () => 0
+    }),
+    /no meaningfully independent verifier for check: correlation-aware-cross-check/
+  );
+});
+
 test('work order fails before scheduling when assurance budget is insufficient', () => {
   assert.throws(
     () => compileAssuranceWorkOrder({
