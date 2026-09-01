@@ -162,3 +162,37 @@ test('expired, future, overlong and tampered lifecycle commands fail closed', ()
     }
   }, pair), /digest mismatch|signature/);
 });
+
+
+test('lifecycle command rejects unknown envelope, statement, target, and trust-pin fields', () => {
+  const pair = issuer();
+  const signed = command(pair);
+
+  assert.throws(
+    () => verify({ ...signed, surprise: true }, pair),
+    /unsupported field/
+  );
+  assert.throws(
+    () => verify({
+      ...signed,
+      statement: { ...signed.statement, surprise: true }
+    }, pair),
+    /unsupported field/
+  );
+  assert.throws(
+    () => verify({
+      ...signed,
+      statement: {
+        ...signed.statement,
+        target: { ...signed.statement.target, surprise: true }
+      }
+    }, pair),
+    /unsupported field/
+  );
+  assert.throws(
+    () => verify(signed, pair, {
+      trustPins: [{ ...pin(pair), surprise: true }]
+    }),
+    /unsupported field/
+  );
+});
