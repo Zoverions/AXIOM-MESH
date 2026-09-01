@@ -1,12 +1,12 @@
 # Human, Entity, and Societal Fabric — Integration Index
 
-**Status:** documentation integration index; no capability promotion
+**Status:** active architecture and inert implementation workstream; no capability promotion
 
 **Updated:** 2026-09-01
 
 ## Purpose
 
-This index is the entry point for the Human, Entity, and Societal Fabric workstream. It links the existing approved personal-entity designs with the new compute, intelligence, rights, Studio/Lab, Mirror Institution, information-circulation, and roadmap material without changing current runnable claims.
+This index is the entry point for the Human, Entity, and Societal Fabric workstream. It links the existing approved personal-entity designs with the compute, intelligence, rights, Studio/Lab, Mirror Institution, information-circulation, roadmap, and first inert implementation material without changing current runnable claims.
 
 `mesh/config/capabilities.json` remains authoritative for runnable status.
 
@@ -14,6 +14,7 @@ This index is the entry point for the Human, Entity, and Societal Fabric workstr
 
 - [`superpowers/specs/2026-08-31-entity-agency-provenance-human-baseline-design.md`](superpowers/specs/2026-08-31-entity-agency-provenance-human-baseline-design.md) — human sovereign baseline, agency provenance, voice separation, protest/dissent, and informed relational deliberation.
 - [`superpowers/specs/2026-08-31-personal-entity-resource-governance-design.md`](superpowers/specs/2026-08-31-personal-entity-resource-governance-design.md) — Resource Governance Plane, sovereignty reserve, priority/pressure states, resource envelopes/observations, long-history blockers, and promotion evidence.
+- [`superpowers/specs/2026-08-31-dual-surface-capability-completeness-design.md`](superpowers/specs/2026-08-31-dual-surface-capability-completeness-design.md) — human-facing and machine-facing capability completeness and naming separation.
 
 ## New architecture integration
 
@@ -36,6 +37,20 @@ These new documents extend rather than replace:
 - [`architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md`](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md)
 - [`architecture/contracts/compute-node-profile.v1.schema.json`](architecture/contracts/compute-node-profile.v1.schema.json)
 
+## Current inert implementation slice
+
+Task 1 of the foundation implementation plan now has source, tests, and JSON Schema mirrors on `feat/entity-agency-provenance-v0` for:
+
+- `axiom-agency-provenance.v0`;
+- `axiom-human-sovereign-baseline.v0`;
+- `axiom-relational-deliberation.v0`.
+
+The validators use deterministic canonical digests and strict exact-shape validation. The contracts preserve `authority_effect=none`, `network_effect=none`, and `runtime_activation=false`; agency/deliberation v0 fixtures also require `contains_secret_material=false`. A blocking protest requires a separately referenced stop right rather than creating veto authority from the protest label.
+
+Focused local semantic/schema verification was 14/14 green before push. Full repository CI remains separately authoritative and must pass before this slice is treated as integrated.
+
+These files add no Gateway route, model invocation, runtime activation, external effect, credential, production policy mapping, or capability-registry promotion.
+
 ## Roadmap and execution
 
 - [`ROADMAP-EXTENSION-HUMAN-ENTITY-SOCIETAL-FABRIC.md`](ROADMAP-EXTENSION-HUMAN-ENTITY-SOCIETAL-FABRIC.md) — phased HES-0 through HES-7 roadmap.
@@ -45,7 +60,7 @@ These new documents extend rather than replace:
 
 ## First implementation order
 
-1. agency provenance / human baseline / deliberation semantic+schema parity;
+1. agency provenance / human baseline / deliberation semantic+schema parity — **source/tests/schemas pushed; full CI pending**;
 2. Resource Envelope / Observation contracts;
 3. deterministic pressure evaluator + sovereignty reserve;
 4. dormant obligations / trigger matching;
@@ -57,19 +72,19 @@ These new documents extend rather than replace:
 
 ## Canonical owner synchronization
 
-When the work is executed from a full local checkout, review and link this workstream from the canonical owners where applicable:
+Before merge, a full local checkout should review and link this workstream from the canonical owners where applicable:
 
 - `docs/README.md` — documentation navigation/reading paths;
 - `docs/ROADMAP.md` — parent roadmap reference to the HES extension;
 - `docs/MASTER-TODO.md` — parent queue reference to the HES execution queue;
 - `docs/rebuild/PRODUCT-DEFINITION.md` — expanded Studio/Lab/entity/intelligence/mirror product boundaries;
 - `docs/rebuild/REQUIREMENTS.md` — dual-surface, sovereignty, resource, rights/privacy, and routing requirements;
-- `docs/PROJECT-STATUS-2026.md` — explicitly list these capabilities as specified/planned/research rather than implemented;
-- `docs/whitepapers_and_research/WHITEPAPER.md` — integrate the stable architectural principles after review;
+- `docs/PROJECT-STATUS-2026.md` — distinguish specified/planned/research from implemented inert contracts;
+- `docs/whitepapers_and_research/WHITEPAPER.md` — integrate stable architectural principles after review;
 - relevant threat-model and release/non-claim documents as implementation changes occur.
 
-Do not modify generated/current capability status or market claims merely to make the documentation look internally complete. Current truth outranks roadmap coherence.
+These large owner documents should be changed through ordinary local Git patch review, not wholesale replacement from truncated remote reads. Do not modify generated/current capability status or market claims merely to make the documentation look internally complete. Current truth outranks roadmap coherence.
 
 ## Containment boundary
 
-Public documentation must remain generic. Do not place personal private-state details, confidential reference-application mechanics, credentials, private legal material, or identifying personal deployment content into public fixtures, schemas, logs, commits, or examples.
+Public documentation and fixtures remain generic. Do not place personal private-state details, confidential reference-application mechanics, credentials, private legal material, or identifying personal deployment content into public fixtures, schemas, logs, commits, or examples.
