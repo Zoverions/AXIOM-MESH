@@ -1,0 +1,59 @@
+{
+  "schema": "axiom-cross-domain-data-residency-and-disclosure-profile.v1",
+  "status": "experimental interoperability architecture; no legal-compliance claim",
+  "purpose": "Define how data, claims, proofs, and metadata may cross institutional or jurisdictional boundaries while preserving local residency, minimization, selective disclosure, and explicit authority semantics.",
+  "data_classes": [
+    "public",
+    "institution_internal",
+    "confidential",
+    "regulated",
+    "highly_sensitive",
+    "derived_metadata",
+    "cryptographic_proof_only"
+  ],
+  "residency_modes": [
+    "unrestricted",
+    "named_jurisdictions_only",
+    "named_institutions_only",
+    "local_domain_only",
+    "local_device_or_enclave_only",
+    "air_gapped_only"
+  ],
+  "disclosure_modes": [
+    "full_record",
+    "redacted_record",
+    "field_subset",
+    "predicate_only",
+    "proof_only",
+    "aggregate_only",
+    "metadata_only",
+    "no_export"
+  ],
+  "core_invariants": [
+    "data residency and disclosure scope are separate dimensions",
+    "a valid proof does not imply permission to disclose the underlying record",
+    "recipient recognition does not expand sender-side disclosure authority",
+    "cross-domain transfer requires exact purpose, audience, data class, residency, retention, and disclosure checks",
+    "privacy constraints compose conservatively by intersection",
+    "derived metadata is classified independently because metadata can itself be sensitive",
+    "offline or air-gapped transfer retains the same residency and disclosure obligations",
+    "local policy may narrow an imported recognition or disclosure profile",
+    "encrypted export does not by itself make an otherwise prohibited transfer permissible",
+    "proof-only and predicate-only modes should be preferred when they satisfy the relying party's legitimate verification need"
+  ],
+  "enforcement_points": [
+    "Studio export planning",
+    "portable trust package assembly",
+    "proof-bearing assertion adapter",
+    "cross-domain recognition boundary",
+    "deployment/runtime egress admission",
+    "offline transfer staging",
+    "retention/deletion lifecycle"
+  ],
+  "nonclaims": [
+    "This profile does not determine legal data residency obligations in any jurisdiction.",
+    "Encryption, tokenization, or pseudonymization does not automatically remove legal or ethical sensitivity.",
+    "Selective disclosure does not imply zero metadata leakage.",
+    "This profile does not create a universal privacy policy."
+  ]
+}
