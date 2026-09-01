@@ -278,19 +278,28 @@ async function runBarrierRace(t, {
   assert.equal(outcome.allowed, false, 'stale capability must not reach the effect');
   assert.equal(outcome.error.code, expectedErrorCode);
   assert.equal(outcome.error.status, 403);
-  assert.match(
-    outcome.error.details?.currentness_prerequisite_decision_digest ?? '',
-    /^[a-f0-9]{64}$/,
-    'denial must expose the exact currentness prerequisite decision digest'
-  );
-  assert.equal(
-    outcome.error.details?.retained_checkpoint_digest,
-    applied.successor_checkpoint_digest
-  );
   assert.equal(
     builtinInvocations,
     0,
     'Sandbox builtin must not be invoked after currentness denial'
+  );
+
+  const events = await client.call('events.list', {
+    query: { after: 0, limit: 100 }
+  });
+  const failedEvent = events.events.find(event => (
+    event.kind === 'intent.failed'
+    && event.subject === boundary.intent.intent_id
+  ));
+  assert.ok(failedEvent, 'terminal Grid evidence must contain intent.failed');
+  assert.match(
+    failedEvent.payload.error.evidence?.currentness_prerequisite_decision_digest ?? '',
+    /^[a-f0-9]{64}$/,
+    'terminal failure evidence must bind the exact currentness prerequisite decision'
+  );
+  assert.equal(
+    failedEvent.payload.error.evidence?.retained_checkpoint_digest,
+    applied.successor_checkpoint_digest
   );
 
   assert.equal(
