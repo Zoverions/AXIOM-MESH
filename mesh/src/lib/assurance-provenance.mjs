@@ -6,6 +6,7 @@ import {
 } from './canonical.mjs';
 
 export const ASSURANCE_PROVENANCE_SCHEMA = 'axiom-assurance-provenance-bundle.v1';
+export const ASSURANCE_PROVENANCE_RECORD_KIND = 'assurance.provenance.recorded';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]*(?:-[A-Za-z0-9_.:-]+)*$/;
@@ -136,4 +137,14 @@ export function assuranceProvenanceIntentEvidence(
     });
   }
   return Object.freeze(evidence);
+}
+
+
+export function assuranceProvenanceMemoryInput(rawBundle) {
+  const bundle = normalizeAssuranceProvenanceBundle(rawBundle);
+  return Object.freeze({
+    kind: ASSURANCE_PROVENANCE_RECORD_KIND,
+    content: bundle,
+    metadata: Object.freeze({})
+  });
 }
