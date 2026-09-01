@@ -1,0 +1,103 @@
+{
+  "schema": "axiom-interoperability-augmentation-profile.v1",
+  "status": "experimental integration surface; not production promoted",
+  "purpose": "Allow external agent platforms, gateways, identity systems, runtimes, and services to selectively invoke AXIOM-MESH trust mechanisms without replacing their native protocol, UX, scheduler, identity layer, or application model.",
+  "design_rule": "Augment weak guarantees at explicit boundaries; do not require platform replacement and do not allow adapter convenience to bypass Mesh authority invariants.",
+  "integration_modes": [
+    {
+      "id": "advisory-only",
+      "description": "External system sends metadata or candidate evidence for analysis, ranking, anomaly detection, or preflight guidance.",
+      "mesh_authority_effect": "none",
+      "examples": [
+        "risk scoring",
+        "evidence quality assessment",
+        "candidate endpoint review",
+        "policy preview"
+      ]
+    },
+    {
+      "id": "verification-service",
+      "description": "External system asks Mesh to validate identity, delegation, currentness, provenance, receipt, or evidence bindings.",
+      "mesh_authority_effect": "none",
+      "examples": [
+        "credential verification",
+        "delegation attenuation check",
+        "receipt verification",
+        "provenance chain inspection"
+      ]
+    },
+    {
+      "id": "policy-decision-point",
+      "description": "External system presents an exact bounded request and asks Mesh for a local allow/deny/step-up decision.",
+      "mesh_authority_effect": "bounded decision only",
+      "requirements": [
+        "exact principal",
+        "resource/audience",
+        "action",
+        "purpose",
+        "destination",
+        "policy version",
+        "expiry/currentness",
+        "causal scope where composition matters"
+      ]
+    },
+    {
+      "id": "consequential-effect-gate",
+      "description": "External platform retains orchestration, but consequential effects execute only after a Mesh-verifiable grant/decision is satisfied at the effect boundary.",
+      "mesh_authority_effect": "bounded grant or deny",
+      "requirements": [
+        "no ambient adapter authority",
+        "no protocol-derived authority",
+        "revocation rechecked before effect",
+        "receipt/evidence emitted"
+      ]
+    },
+    {
+      "id": "evidence-and-audit-backplane",
+      "description": "External platform sends execution receipts, artifacts, approvals, and provenance to a Mesh-compatible evidence layer for later verification and dispute review.",
+      "mesh_authority_effect": "none",
+      "examples": [
+        "tamper-evident receipts",
+        "cross-platform provenance",
+        "selective disclosure",
+        "dispute bundles"
+      ]
+    },
+    {
+      "id": "recovery-and-continuity-assist",
+      "description": "External platform can use Mesh continuity proofs, key-rotation history, backup/recovery attestations, or user-controlled continuity state while preserving stronger proof requirements for privileged restoration.",
+      "mesh_authority_effect": "none unless separately admitted by recovery policy"
+    }
+  ],
+  "external_value_propositions": [
+    "Add fail-closed authorization without rewriting the external runtime.",
+    "Add attenuation-only delegation around systems that support only coarse roles/scopes.",
+    "Add purpose, destination, budget, audience/resource, and expiry binding.",
+    "Add cross-protocol authority preservation across MCP, A2A, native APIs, and future adapters.",
+    "Add causal composition controls for individually valid actions that become unsafe in sequence.",
+    "Add portable, independently verifiable receipts and evidence packs.",
+    "Add identity-continuity and service-key rotation separation without requiring a single identity standard.",
+    "Add optional strong verification while preserving low-friction advisory uses for weaker signals.",
+    "Add governed recovery, revocation, and currentness checks around platforms with weak lifecycle semantics.",
+    "Add red-team negative-test fixtures that external implementations can run without adopting AXIOM internals."
+  ],
+  "prohibited_patterns": [
+    "external platform name or reputation becoming local authority",
+    "adapter installation granting effects",
+    "discovery or identity verification becoming permission",
+    "Mesh verification silently overriding external deny/revocation state",
+    "token passthrough or credential forwarding without audience/resource binding",
+    "protocol switching widening scope",
+    "requiring full Mesh adoption where a narrow verification or policy service is sufficient"
+  ],
+  "compatibility_targets": [
+    "MCP gateways and servers",
+    "A2A-compatible agent systems",
+    "agent runtimes and orchestrators",
+    "identity and delegation systems",
+    "workflow engines",
+    "institutional applications",
+    "developer tooling and package ecosystems",
+    "audit/compliance systems"
+  ]
+}
