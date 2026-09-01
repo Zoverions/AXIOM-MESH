@@ -1,0 +1,61 @@
+{
+  "schema": "axiom-cross-domain-revocation-and-reliance-profile.v1",
+  "status": "experimental interoperability architecture; no legal/treaty authority claim",
+  "purpose": "Propagate bounded revocation, withdrawal, compromise, and recognition-narrowing signals across institutional trust domains while preserving historical reliance evidence and preventing remote notices from becoming local authority.",
+  "event_types": [
+    "credential_revoked",
+    "credential_suspended",
+    "issuer_key_compromised",
+    "verifier_compromised",
+    "recognition_withdrawn",
+    "recognition_narrowed",
+    "trust_anchor_rotated",
+    "trust_anchor_compromised",
+    "policy_superseded",
+    "institution_dissolved_or_succeeded"
+  ],
+  "core_invariants": [
+    "remote revocation or compromise evidence can invalidate future reliance but does not retroactively rewrite what was known at an earlier decision time",
+    "receipt of a remote notice does not itself authorize local punishment, remediation, or unrelated state changes",
+    "revocation scope must be exact: subject, claim class, key, verifier, recognition edge, policy, or institution",
+    "compromise of a root/trust anchor is a wider recovery class than compromise of one leaf/service key",
+    "withdrawal of recognition stops future reliance under that edge after the locally accepted effective time but preserves historical reliance receipts",
+    "stale or unverifiable revocation state is explicit and fails according to local consequence policy",
+    "offline nodes retain last-known status and reconcile later; they do not claim currentness they could not check",
+    "conflicting revocation/status assertions remain visible until local trust policy resolves them",
+    "cross-domain propagation is evidence distribution, not transitive authority"
+  ],
+  "status_effects": [
+    {
+      "status": "current",
+      "use": "may satisfy currentness checks if other policy conditions pass"
+    },
+    {
+      "status": "suspended",
+      "use": "deny or hold new reliance according to local policy"
+    },
+    {
+      "status": "revoked",
+      "use": "deny new reliance"
+    },
+    {
+      "status": "compromised",
+      "use": "deny affected trust path and invoke appropriate recovery/revalidation"
+    },
+    {
+      "status": "withdrawn",
+      "use": "deny future reliance on the withdrawn recognition relationship"
+    },
+    {
+      "status": "unknown",
+      "use": "deny, hold, or downgrade to advisory according to local consequence policy"
+    }
+  ],
+  "historical_rule": "A reliance receipt records the exact evidence, recognition edge, policy, currentness state, and decision time. Later revocation annotates or supersedes future admissibility; it does not mutate the original receipt.",
+  "nonclaims": [
+    "A remote revocation feed is not globally authoritative merely because it is signed.",
+    "Revocation does not automatically determine legal liability, fault, or remedy.",
+    "This profile does not define one global revocation network or consensus system.",
+    "A local institution may impose stricter currentness requirements."
+  ]
+}
