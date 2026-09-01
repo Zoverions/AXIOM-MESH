@@ -1,0 +1,48 @@
+{
+  "schema": "axiom-cross-domain-disclosure-decision.v1",
+  "decision_id": "disclosure:university-a-to-college-b-prereq-001",
+  "source_domain": "institution:university-a",
+  "recipient_domain": "institution:college-b",
+  "subject_binding": "subject:student-123",
+  "purpose": "prerequisite-review",
+  "data_class": "regulated",
+  "requested_disclosure": "full_record",
+  "allowed_disclosure": "proof_only",
+  "residency": {
+    "mode": "named_institutions_only",
+    "allowed_jurisdictions": [
+      "CA-ON"
+    ],
+    "allowed_institutions": [
+      "institution:university-a",
+      "institution:college-b"
+    ],
+    "destination_satisfied": true
+  },
+  "retention": {
+    "max_seconds": 86400,
+    "recipient_may_retain": false,
+    "deletion_or_expiry_ref": "retention:proof-verification-24h"
+  },
+  "proof_substitution": {
+    "available": true,
+    "profile_ref": "proof:course-completion-predicate-v1",
+    "preferred_over_full_disclosure": true
+  },
+  "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evidence_refs": [
+    "recognition:university-a-college-b-01",
+    "policy:data-minimization-v1"
+  ],
+  "decided_at": "2026-09-01T18:10:00.000Z",
+  "authority": {
+    "recognition_grants_disclosure": false,
+    "encryption_grants_disclosure": false,
+    "proof_verification_grants_underlying_record_access": false,
+    "decision_grants_unrelated_authority": false
+  },
+  "limitations": [
+    "Recipient may verify the prerequisite predicate but is not authorized to access the underlying transcript.",
+    "Jurisdiction and institutional identifiers are illustrative policy labels, not legal determinations."
+  ]
+}
