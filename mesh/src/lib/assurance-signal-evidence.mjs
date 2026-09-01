@@ -28,7 +28,7 @@ const SOURCE_CLASSES = new Set([
   'independently-verified',
   'entity-assurance'
 ]);
-const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]*(?:-[A-Za-z0-9_.:-]+)*$/;
+const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const EVIDENCE_FIELDS = new Set([
   'schema',
