@@ -40,6 +40,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/community/RED-TEAM-CHALLENGE.md',
   'docs/architecture/AGENT-COMMONS.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
+  'docs/architecture/AGENT-WORKTREE-STORAGE-PLANE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
   'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
