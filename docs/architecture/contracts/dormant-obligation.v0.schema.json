@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/dormant-obligation.v0.schema.json",
+  "title": "AXIOM Dormant Obligation v0",
+  "description": "Inert persistent-orientation record. Trigger satisfaction yields only a normal re-admission input and never grants execution authority or activates a runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","obligation_id","principal_id","direction_ref","provenance_ref","trigger","priority_class","authority_scope_ref","resource_profile_ref","task_template_ref","normal_readmission_required","created_at","not_before_at","expires_at","state","contains_secret_material","authority_effect","network_effect","runtime_activation"],
+  "properties": {
+    "schema": {"const": "axiom-dormant-obligation.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "obligation_id": {"$ref": "#/$defs/id"},
+    "principal_id": {"$ref": "#/$defs/id"},
+    "direction_ref": {"$ref": "#/$defs/id"},
+    "provenance_ref": {"$ref": "#/$defs/id"},
+    "trigger": {"$ref": "#/$defs/trigger"},
+    "priority_class": {"enum": ["P1","P2","P3","P4"]},
+    "authority_scope_ref": {"$ref": "#/$defs/id"},
+    "resource_profile_ref": {"$ref": "#/$defs/id"},
+    "task_template_ref": {"$ref": "#/$defs/id"},
+    "normal_readmission_required": {"const": true},
+    "created_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "not_before_at": {"oneOf": [{"type": "string", "format": "date-time", "maxLength": 64}, {"type": "null"}]},
+    "expires_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "state": {"enum": ["dormant","completed","cancelled","expired"]},
+    "contains_secret_material": {"const": false},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "runtime_activation": {"const": false}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind","matcher_ref","due_at"],
+      "properties": {
+        "kind": {"enum": ["event","deadline","condition-change","protest","resource-health","maintenance","reflection"]},
+        "matcher_ref": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "due_at": {"oneOf": [{"type": "string", "format": "date-time", "maxLength": 64}, {"type": "null"}]}
+      },
+      "allOf": [
+        {"if":{"properties":{"kind":{"const":"deadline"}},"required":["kind"]},"then":{"properties":{"matcher_ref":{"type":"null"},"due_at":{"type":"string","format":"date-time","maxLength":64}}}},
+        {"if":{"properties":{"kind":{"not":{"const":"deadline"}}},"required":["kind"]},"then":{"properties":{"matcher_ref":{"$ref":"#/$defs/id"},"due_at":{"type":"null"}}}}
+      ]
+    }
+  }
+}
