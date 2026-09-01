@@ -8,9 +8,11 @@ import {
 import {
   ValidationError,
   canonicalJson,
-  digestObject,
-  sha256
+  digestObject
 } from './canonical.mjs';
+import {
+  machineCurrentnessControllerKeyId
+} from './machine-currentness-controller-key-lifecycle.mjs';
 import {
   MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
   normalizeMachinePrincipalCurrentness
@@ -72,7 +74,7 @@ function privateKey(value, label) {
 }
 
 function keyId(key) {
-  return sha256(key.export({ type: 'spki', format: 'der' }));
+  return machineCurrentnessControllerKeyId(key);
 }
 
 function checkpointStatement(currentness, controllerKeyId) {
