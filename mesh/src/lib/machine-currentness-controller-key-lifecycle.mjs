@@ -231,16 +231,18 @@ function verifyEnvelope(raw, {
   label,
   trustedRootPublicKey,
   signatureField,
-  digestField
+  digestField,
+  normalizeStatement
 }) {
   const value = exact(raw, keys, label);
   if (value.schema !== schema) throw new ValidationError(`${label} schema is unsupported`);
+  const statement = normalizeStatement(value.statement);
   const statementDigest = digest(value.statement_digest, `${label} statement digest`);
-  if (statementDigest !== digestObject(value.statement)) {
+  if (statementDigest !== digestObject(statement)) {
     throw new ValidationError(`${label} statement digest mismatch`);
   }
   const root = parsePublicKey(trustedRootPublicKey, `trusted ${label} root public key`);
-  if (value.statement.root_key_id !== machineCurrentnessControllerKeyId(root)) {
+  if (statement.root_key_id !== machineCurrentnessControllerKeyId(root)) {
     throw new ValidationError(`${label} root key substitution`);
   }
   const signature = assertString(value[signatureField], `${label} signature`, {
@@ -250,14 +252,14 @@ function verifyEnvelope(raw, {
   });
   const valid = verify(
     null,
-    Buffer.from(canonicalJson({ schema, statement: value.statement, statement_digest: statementDigest })),
+    Buffer.from(canonicalJson({ schema, statement, statement_digest: statementDigest })),
     root,
     Buffer.from(signature, 'base64url')
   );
   if (!valid) throw new ValidationError(`${label} root signature is invalid`);
   const signed = Object.freeze({
     schema,
-    statement: value.statement,
+    statement,
     statement_digest: statementDigest,
     [signatureField]: signature
   });
@@ -340,17 +342,16 @@ export function verifyMachineCurrentnessControllerKeyCredential(raw, {
   expectedDomainId,
   expectedPrincipalId
 } = {}) {
-  const statement = normalizeCredentialStatement(
-    exact(raw, CREDENTIAL_KEYS, 'machine currentness controller key credential').statement
-  );
   const verified = verifyEnvelope(raw, {
     schema: MACHINE_CURRENTNESS_CONTROLLER_KEY_CREDENTIAL_SCHEMA,
     keys: CREDENTIAL_KEYS,
     label: 'machine currentness controller key credential',
     trustedRootPublicKey,
     signatureField: 'root_signature',
-    digestField: 'credential_digest'
+    digestField: 'credential_digest',
+    normalizeStatement: normalizeCredentialStatement
   });
+  const statement = verified.statement;
   if (expectedDomainId !== undefined && statement.domain_id !== expectedDomainId) {
     throw new ValidationError('machine currentness controller credential belongs to a different domain');
   }
@@ -527,17 +528,16 @@ export function verifyMachineCurrentnessControllerKeyRevocation(raw, {
   trustedRootPublicKey,
   credential
 } = {}) {
-  const statement = normalizeRevocationStatement(
-    exact(raw, REVOCATION_KEYS, 'machine currentness controller key revocation').statement
-  );
   const verified = verifyEnvelope(raw, {
     schema: MACHINE_CURRENTNESS_CONTROLLER_KEY_REVOCATION_SCHEMA,
     keys: REVOCATION_KEYS,
     label: 'machine currentness controller key revocation',
     trustedRootPublicKey,
     signatureField: 'root_signature',
-    digestField: 'revocation_digest'
+    digestField: 'revocation_digest',
+    normalizeStatement: normalizeRevocationStatement
   });
+  const statement = verified.statement;
   if (credential !== undefined) {
     const bound = verifyMachineCurrentnessControllerKeyCredential(credential, {
       trustedRootPublicKey
