@@ -21,6 +21,9 @@ const CATALOG = JSON.parse(readFileSync(
 const RUNTIME = CATALOG.entries.find(
   entry => entry.entry_id === 'runtime:hermes-agent:research'
 );
+const SECOND_RUNTIME = CATALOG.entries.find(
+  entry => entry.entry_id === 'runtime:openclaw:research'
+);
 const NOW = '2026-09-01T12:00:00.000Z';
 
 function issuer() {
@@ -31,7 +34,7 @@ function operational() {
   return generateKeyPairSync('ed25519');
 }
 
-function principal(id = 'agent.verifier-candidate') {
+function principal(id = 'agent.verifier-candidate', runtimeEntry = RUNTIME) {
   return {
     id,
     type: 'agent',
@@ -41,7 +44,7 @@ function principal(id = 'agent.verifier-candidate') {
     lifetime: 'session',
     expires_at: '2026-09-03T12:00:00.000Z',
     runtime: {
-      id: RUNTIME.subject.subject_id,
+      id: runtimeEntry.subject.subject_id,
       kind: 'local-process',
       software_digest: 'a'.repeat(64)
     },
@@ -61,14 +64,14 @@ function principal(id = 'agent.verifier-candidate') {
   };
 }
 
-function profile(id = 'agent.verifier-candidate') {
+function profile(id = 'agent.verifier-candidate', runtimeEntry = RUNTIME) {
   return {
     schema: VERIFIER_PROFILE_SCHEMA,
     verifier_id: id,
     context_digest: 'b'.repeat(64),
     evidence_set_digest: 'c'.repeat(64),
     method_id: 'method.independent-review',
-    runtime_id: RUNTIME.subject.subject_id,
+    runtime_id: runtimeEntry.subject.subject_id,
     model_family: 'family.unverified',
     operator_domain: 'operator.unverified'
   };
@@ -115,7 +118,7 @@ test('catalog presence alone cannot create a verifier candidate admission', () =
   assert.throws(
     () => admitVerifierCandidate({
       profile: profile(),
-      catalogEntry: RUNTIME,
+      catalogEntry: runtimeEntry,
       credentialHistory: [],
       trustedIssuerPublicKey: issuerPair.publicKey,
       at: NOW
@@ -204,10 +207,16 @@ test('candidate broker rejects self-asserted model-family or operator diversity'
 test('admitted work-order compiler accepts only admitted origin and reviewer identities', () => {
   const issuerPair = issuer();
 
-  function makeAdmission(id, contextChar, evidenceChar, methodId) {
+  function makeAdmission(
+    id,
+    contextChar,
+    evidenceChar,
+    methodId,
+    runtimeEntry = RUNTIME
+  ) {
     const operationalPair = operational();
     const machineCredential = createMachineIdentityCredential({
-      principal: principal(id),
+      principal: principal(id, runtimeEntry),
       issuerId: 'issuer.verifier-candidate',
       issuerPrivateKey: issuerPair.privateKey,
       operationalPublicKey: operationalPair.publicKey,
@@ -218,7 +227,7 @@ test('admitted work-order compiler accepts only admitted origin and reviewer ide
     });
     return admitVerifierCandidate({
       profile: {
-        ...profile(id),
+        ...profile(id, runtimeEntry),
         context_digest: contextChar.repeat(64),
         evidence_set_digest: evidenceChar.repeat(64),
         method_id: methodId
@@ -238,7 +247,13 @@ test('admitted work-order compiler accepts only admitted origin and reviewer ide
   );
   const reviewers = [
     makeAdmission('agent.verifier-one', '3', '4', 'method.reconstruct'),
-    makeAdmission('agent.verifier-two', '5', '6', 'method.adversarial')
+    makeAdmission(
+      'agent.verifier-two',
+      '5',
+      '6',
+      'method.adversarial',
+      SECOND_RUNTIME
+    )
   ];
 
   const decision = createAdaptiveAssuranceEvaluator({
