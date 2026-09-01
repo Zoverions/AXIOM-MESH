@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/relational-deliberation.v0.schema.json",
+  "title": "AXIOM Relational Deliberation v0",
+  "description": "Inert deliberation record keeping evidence/competence, affected-party standing, and legitimate decision authority separate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","deliberation_id","subject_ref","question","participants","positions","conflicts","stakes","unknown_refs","learning_requests","protest_refs","recommendations","decision_authority_ref","reconsideration_trigger_refs","outcome","created_at","updated_at","contains_secret_material","authority_effect","network_effect","runtime_activation"],
+  "properties": {
+    "schema": {"const": "axiom-relational-deliberation.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "deliberation_id": {"$ref": "#/$defs/id"},
+    "subject_ref": {"$ref": "#/$defs/id"},
+    "question": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "participants": {"$ref": "#/$defs/nonEmptyIdList"},
+    "positions": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/position"}},
+    "conflicts": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/conflict"}},
+    "stakes": {"$ref": "#/$defs/stakes"},
+    "unknown_refs": {"$ref": "#/$defs/idList"},
+    "learning_requests": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/learningRequest"}},
+    "protest_refs": {"$ref": "#/$defs/idList"},
+    "recommendations": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/recommendation"}},
+    "decision_authority_ref": {"$ref": "#/$defs/nullableId"},
+    "reconsideration_trigger_refs": {"$ref": "#/$defs/idList"},
+    "outcome": {"enum": ["agreement","acknowledged-disagreement","human-decision-with-counterpart-dissent","counterpart-decision-with-human-dissent","joint-decision","deferred-pending-evidence","escalated","no-decision"]},
+    "created_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "updated_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "contains_secret_material": {"const": false},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "runtime_activation": {"const": false}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "nullableId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "idList": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "nonEmptyIdList": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "position": {
+      "type": "object", "additionalProperties": false,
+      "required": ["principal_id","position_ref","confidence","uncertainty_ref","evidence_refs","competency_claim_refs","affected_party_standing_ref"],
+      "properties": {"principal_id":{"$ref":"#/$defs/id"},"position_ref":{"$ref":"#/$defs/id"},"confidence":{"enum":["unknown","low","medium","high"]},"uncertainty_ref":{"$ref":"#/$defs/nullableId"},"evidence_refs":{"$ref":"#/$defs/idList"},"competency_claim_refs":{"$ref":"#/$defs/idList"},"affected_party_standing_ref":{"$ref":"#/$defs/nullableId"}}
+    },
+    "conflict": {"type":"object","additionalProperties":false,"required":["principal_id","conflict_ref"],"properties":{"principal_id":{"$ref":"#/$defs/id"},"conflict_ref":{"$ref":"#/$defs/id"}}},
+    "stakes": {"type":"object","additionalProperties":false,"required":["consequence_class","affected_party_refs"],"properties":{"consequence_class":{"enum":["low","moderate","high","critical"]},"affected_party_refs":{"$ref":"#/$defs/idList"}}},
+    "learningRequest": {"type":"object","additionalProperties":false,"required":["principal_id","need_ref","reason_ref","evidence_quality_required","source_refs","time_budget_seconds","cost_budget_units","delay_safe","completion_evidence_ref"],"properties":{"principal_id":{"$ref":"#/$defs/id"},"need_ref":{"$ref":"#/$defs/id"},"reason_ref":{"$ref":"#/$defs/nullableId"},"evidence_quality_required":{"enum":["preliminary","corroborated","independent","authoritative"]},"source_refs":{"$ref":"#/$defs/idList"},"time_budget_seconds":{"type":"integer","minimum":0,"maximum":604800},"cost_budget_units":{"type":"integer","minimum":0,"maximum":1000000000},"delay_safe":{"type":"boolean"},"completion_evidence_ref":{"$ref":"#/$defs/nullableId"}}},
+    "recommendation": {"type":"object","additionalProperties":false,"required":["principal_id","recommendation_ref"],"properties":{"principal_id":{"$ref":"#/$defs/id"},"recommendation_ref":{"$ref":"#/$defs/id"}}}
+  }
+}
