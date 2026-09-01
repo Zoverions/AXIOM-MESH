@@ -137,7 +137,7 @@ Accepted source classes are deliberately limited to measurement,
 policy-derived, independently verified, and entity-assurance evidence. Acting-agent
 self-declarations are not an accepted evidence class. Source labels alone are still
 insufficient: the resolver also requires the exact upstream source-verification
-digest to appear in a broker-supplied admitted verification set.
+digest to appear in a broker-supplied binding map that preserves the verification digest, source identity, and source class.
 
 Every risk signal requires current attributable evidence backed by an admitted
 upstream verification. Missing, stale, expired, future-dated, unsupported-source,
@@ -152,6 +152,31 @@ aggregation.
 The resulting resolution is digest-bound and non-authorizing. It can construct the
 ordinary adaptive-assurance input, but it cannot grant authority or bypass the
 normal policy path.
+
+## Assurance source broker
+
+`mesh/src/lib/assurance-source-broker.mjs` provides a runtime-local admission
+boundary for upstream AXIOM verification results.
+
+The broker can currently admit:
+
+- a satisfied entity-assurance decision; and
+- a measurement-source package that passes the existing signed measurement-source
+  verification path.
+
+Broker admissions remain non-authorizing and carry the upstream verification
+digest, source identity, source class, and relevant upstream policy/schema binding.
+The broker tracks live admissions internally, so a cloned or lookalike admission
+object cannot be converted back into verified-source bindings.
+
+The resulting binding map preserves
+`verification digest -> { source_id, source_class }`. The signal resolver requires
+all three values to match. A valid verification digest therefore cannot be
+laundered into a different source identity or evidence class.
+
+This live admission marker is intentionally process-local. Durable cross-restart
+or cross-node admission requires a future signed/Grid-attested admission record
+rather than serializing and trusting the runtime marker.
 
 ## Verifier independence evidence
 
@@ -266,23 +291,29 @@ verifier-independence contract is carried through the assurance provenance artif
 and should only become an active requirement through an explicit future Intent
 contract/schema change and corresponding migration, tests, and review.
 
-## Next integration gates
+## Remaining integration gates
 
 Before this primitive can affect live orchestration:
 
-1. bind its input signals to reviewed, attributable sources;
-2. connect its output to an orchestration contract that can prove requested checks
-   were actually performed;
-3. define independence/correlation evidence for parallel verifier lines;
-4. bind assurance decisions and completed-check evidence into plan provenance and
-   Grid receipts;
-5. add aggregate compute, inference-cost, API-cost, storage, bandwidth, effect-count,
-   and device-time budgets;
-6. add cancellation and recursion limits so assurance cannot expand indefinitely;
-7. test strategic reputation gaming, Sybil splitting, correlated-model agreement,
-   memory poisoning, provenance poisoning, and verifier targeting;
-8. separately review any UI that reveals risk signals or audit outcomes for
-   information leakage.
+1. replace the runtime-local broker marker with a durable signed/Grid-attested
+   source-admission record for cross-restart and cross-node use;
+2. source verifier candidates from an independently governed runtime/provider
+   catalog and bind catalog admission to verifier profiles;
+3. connect compiled work orders to an orchestrator that can execute checks and
+   return completion receipts without letting the acting agent select its verifier;
+4. bind completed assurance provenance into Grid receipts and any future live
+   execution record while preserving its non-authorizing role;
+5. extend budgets to attributable inference/provider/API/storage/bandwidth,
+   external-effect, human-attention, and device-time accounting;
+6. add orchestration-level cancellation, retry, and recursion ceilings;
+7. adversarially test strategic reputation cultivation, candidate-pool capture,
+   verifier targeting, correlated-model failure, memory/context poisoning,
+   provenance poisoning, and Sybil splitting;
+8. separately review any native UI that reveals risk signals, verifier selection,
+   or audit outcomes for information leakage; and
+9. update the capability registry, executable evidence bindings, generated status,
+   and governing-document markers atomically before any canonical capability
+   promotion.
 
 Until those gates are satisfied, adaptive assurance remains an experimental,
 non-authorizing primitive.
