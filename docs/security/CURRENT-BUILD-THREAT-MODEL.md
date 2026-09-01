@@ -568,6 +568,13 @@ Independent review should treat these as invariants, not best-effort goals:
     greater scrutiny unless a separately reviewed resolution policy proves a safer
     rule.
 
+The current Intent/Grid `minimum_independent_verifiers` assessment counts
+distinct verifier actors. It does not by itself prove meaningful independence of
+context, evidence set, method, runtime, model family, or operator domain. The
+experimental adaptive-assurance verifier-independence contract does not silently
+change that live semantics; stronger independence must be introduced through an
+explicit future contract/evidence requirement and reviewed migration.
+
 ## Residual risk and non-claims
 
 The repository does not claim defense against a malicious host administrator,
