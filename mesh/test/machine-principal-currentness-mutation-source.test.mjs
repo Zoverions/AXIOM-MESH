@@ -237,7 +237,10 @@ test('expected successor sequence principal identity and effective chronology ar
     /principal/i
   );
   assert.throws(
-    () => apply(f, command(f, { effectiveAt: '2026-09-01T17:00:00.000Z' })),
+    () => apply(f, command(f, {
+      issuedAt: '2026-09-01T16:59:59.000Z',
+      effectiveAt: '2026-09-01T17:00:00.000Z'
+    })),
     /(advance|chronolog)/i
   );
   assert.throws(
