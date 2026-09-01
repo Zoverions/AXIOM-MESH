@@ -128,6 +128,12 @@ export async function verifyReleaseReadiness() {
       'workflows',
       'chain-verification-benchmark.yml'
     ),
+    currentnessWorkflow: join(
+      REPOSITORY_ROOT,
+      '.github',
+      'workflows',
+      'machine-principal-currentness.yml'
+    ),
     repositoryIgnore: join(REPOSITORY_ROOT, '.gitignore')
   };
   const [
@@ -343,6 +349,7 @@ export async function verifyReleaseReadiness() {
   const governedWorkflows = [
     'chain-verification-benchmark.yml',
     'kernel.yml',
+    'machine-principal-currentness.yml',
     'windows.yml'
   ];
   if (canonicalJson(activeWorkflows) !== canonicalJson(governedWorkflows)) {
@@ -375,6 +382,7 @@ export async function verifyReleaseReadiness() {
     paths.workflow,
     paths.windowsWorkflow,
     paths.benchmarkWorkflow,
+    paths.currentnessWorkflow,
     paths.repositoryIgnore,
     ...CANONICAL_DOCUMENTS.map(path => join(REPOSITORY_ROOT, path))
   ]);
