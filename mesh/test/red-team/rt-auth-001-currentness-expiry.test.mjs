@@ -56,7 +56,7 @@ test('RT-AUTH-001 reproduces stale machine authority when principal expires befo
 
   // Keep the expiry barrier inside both the Gateway request budget and the
   // Hypervisor -> Sandbox dependency timeout without weakening either limit.
-  const expiresAt = new Date(Date.now() + 4_000).toISOString();
+  const expiresAt = new Date(Date.now() + 2_000).toISOString();
   let stack;
   const originalFetch = globalThis.fetch;
   let intercepted = false;
