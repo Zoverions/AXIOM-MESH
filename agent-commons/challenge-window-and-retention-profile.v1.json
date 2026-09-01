@@ -1,0 +1,58 @@
+{
+  "schema": "axiom-challenge-window-and-retention-profile.v1",
+  "status": "experimental assurance/finality architecture; no production promotion",
+  "purpose": "Define provisional/finality states, challenge windows, evidence-retention floors, and transition rules so later review remains possible without retaining every byte forever.",
+  "finality_states": [
+    "provisional",
+    "accepted_local",
+    "challengeable",
+    "stayed",
+    "appealed",
+    "reversed",
+    "superseded",
+    "expired",
+    "finalized"
+  ],
+  "challenge_window": {
+    "rule": "Each challengeable event declares who may challenge, opening time, closing time, escalation target, and evidence that must remain available until the window and any active appeal conclude.",
+    "default_effect": "A challenge changes review/finality state; it does not itself authorize rollback, punishment, or compensation."
+  },
+  "retention_classes": [
+    "ephemeral",
+    "minimum_receipt",
+    "reviewable",
+    "appeal_preserved",
+    "legal_or_policy_hold",
+    "archival"
+  ],
+  "retention_invariants": [
+    "evidence required for an open challenge or appeal cannot be deleted merely because an ordinary retention period elapsed",
+    "legal/policy hold must be explicit, scoped, reviewable, and separately authorized",
+    "retention can be minimized by replacing raw material with sufficient digests, receipts, redactions, or proofs only where reviewability is preserved",
+    "retention policy does not authorize disclosure",
+    "deletion policy does not authorize destruction of evidence subject to an active challenge, appeal, rollback dependency, or hold",
+    "finalization may reduce future retention obligations but never permits silent rewriting of historical records",
+    "expired challenge windows do not make a claim objectively true; they only change procedural state",
+    "finality remains separate from assurance"
+  ],
+  "optimistic_execution": {
+    "allowed_only_if": [
+      "effect is reversible or compensable under a separately validated profile",
+      "challenge window is explicit",
+      "rollback/correction path is predeclared",
+      "required evidence remains retained",
+      "consequence policy permits provisional effect"
+    ],
+    "forbidden_for": [
+      "irreversible effects lacking pre-execution required assurance",
+      "actions whose rollback path depends on unavailable external authority",
+      "effects whose challenge evidence would be destroyed by execution"
+    ]
+  },
+  "nonclaims": [
+    "This profile does not define legal limitation periods or court deadlines.",
+    "Finalized does not mean infallible or unchallengeable under every external process.",
+    "Retention classes do not determine lawful retention in any jurisdiction.",
+    "This profile does not promote optimistic execution as a current production capability."
+  ]
+}
