@@ -110,13 +110,13 @@ export function admitMeasurementSourcePackage({
   return makeAdmission(body);
 }
 
-export function collectBrokerVerifiedSourceDigests(admissions) {
+export function collectBrokerVerifiedSourceBindings(admissions) {
   if (!Array.isArray(admissions) || admissions.length < 1 || admissions.length > 4096) {
     throw new ValidationError(
       'assurance source broker admissions must contain 1-4096 items'
     );
   }
-  const result = new Set();
+  const result = new Map();
   for (const admission of admissions) {
     if (!admission || typeof admission !== 'object' || !LIVE_ADMISSIONS.has(admission)) {
       throw new ValidationError(
@@ -126,10 +126,27 @@ export function collectBrokerVerifiedSourceDigests(admissions) {
     if (admission.schema !== ASSURANCE_SOURCE_ADMISSION_SCHEMA) {
       throw new ValidationError('assurance source broker admission schema is invalid');
     }
-    result.add(digest(
+    const verificationDigest = digest(
       admission.source_verification_digest,
       'assurance source broker admission verification digest'
-    ));
+    );
+    const existing = result.get(verificationDigest);
+    const binding = Object.freeze({
+      source_id: admission.source_id,
+      source_class: admission.source_class
+    });
+    if (
+      existing
+      && (
+        existing.source_id !== binding.source_id
+        || existing.source_class !== binding.source_class
+      )
+    ) {
+      throw new ValidationError(
+        'assurance source broker verification digest maps to conflicting source bindings'
+      );
+    }
+    result.set(verificationDigest, binding);
   }
   return result;
 }
