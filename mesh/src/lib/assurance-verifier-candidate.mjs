@@ -15,6 +15,12 @@ import {
 import {
   compileAssuranceWorkOrder
 } from './assurance-work-order.mjs';
+import {
+  requireLiveAdaptiveAssuranceDecision
+} from './adaptive-assurance.mjs';
+import {
+  requireLiveAssuranceSignalResolution
+} from './assurance-signal-evidence.mjs';
 
 export const VERIFIER_CANDIDATE_ADMISSION_SCHEMA =
   'axiom-verifier-candidate-admission.v1';
@@ -150,10 +156,23 @@ export function collectAdmittedVerifierProfiles(admissions) {
 }
 
 export function compileAdmittedAssuranceWorkOrder({
+  decision,
+  signalResolution,
   originVerifierAdmission,
   verifierCandidateAdmissions,
   ...options
 } = {}) {
+  const adaptiveDecision = requireLiveAdaptiveAssuranceDecision(decision);
+  const resolution = requireLiveAssuranceSignalResolution(signalResolution);
+  if (
+    adaptiveDecision.task_id !== resolution.task_id
+    || adaptiveDecision.input_provenance_digest !== resolution.resolution_digest
+  ) {
+    throw new ValidationError(
+      'admitted assurance work order decision does not match its signal provenance'
+    );
+  }
+
   const origin = requireLiveCandidateAdmission(originVerifierAdmission);
   const candidates = collectAdmittedVerifierProfiles(verifierCandidateAdmissions);
   if (candidates.some(item => item.verifier_id === origin.verifier_profile.verifier_id)) {
@@ -163,6 +182,7 @@ export function compileAdmittedAssuranceWorkOrder({
   }
   return compileAssuranceWorkOrder({
     ...options,
+    decision: adaptiveDecision,
     originVerifierProfile: origin.verifier_profile,
     verifierCandidates: candidates
   });
