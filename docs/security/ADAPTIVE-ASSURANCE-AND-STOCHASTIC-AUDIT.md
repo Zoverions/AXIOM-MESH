@@ -174,9 +174,24 @@ The resulting binding map preserves
 all three values to match. A valid verification digest therefore cannot be
 laundered into a different source identity or evidence class.
 
-This live admission marker is intentionally process-local. Durable cross-restart
-or cross-node admission requires a future signed/Grid-attested admission record
-rather than serializing and trusting the runtime marker.
+Live admissions remain process-local and cannot be serialized as trust.
+
+For durable cross-restart or cross-node use,
+`buildDurableAssuranceSourceAdmission` converts only a live broker admission into
+a Grid-signed canonical receipt. The durable statement binds source identity,
+source class, upstream verification digest/schema/policy, the original live
+admission digest, issuance and expiry, and explicit no-authority/no-execution
+effects.
+
+Durable receipts have a maximum seven-day lifetime and are independently verified
+against a trusted Grid public key. Wrong-key, tampered, future-dated, expired, or
+overlong receipts fail closed. Verified durable receipts reconstruct the same
+`verification digest -> { source_id, source_class }` binding map without relying
+on the original process-local marker.
+
+A Grid signature proves that the trusted Grid signed the admission statement. It
+does not prove the underlying observation is true beyond the scope established by
+the upstream verifier.
 
 ## Verifier independence evidence
 
@@ -295,8 +310,9 @@ contract/schema change and corresponding migration, tests, and review.
 
 Before this primitive can affect live orchestration:
 
-1. replace the runtime-local broker marker with a durable signed/Grid-attested
-   source-admission record for cross-restart and cross-node use;
+1. define rotation/revocation and Grid-chain anchoring policy for durable source
+   admissions, including how active receipts are invalidated after upstream trust
+   changes;
 2. source verifier candidates from an independently governed runtime/provider
    catalog and bind catalog admission to verifier profiles;
 3. connect compiled work orders to an orchestrator that can execute checks and
