@@ -118,7 +118,7 @@ test('catalog presence alone cannot create a verifier candidate admission', () =
   assert.throws(
     () => admitVerifierCandidate({
       profile: profile(),
-      catalogEntry: runtimeEntry,
+      catalogEntry: RUNTIME,
       credentialHistory: [],
       trustedIssuerPublicKey: issuerPair.publicKey,
       at: NOW
@@ -232,7 +232,7 @@ test('admitted work-order compiler accepts only admitted origin and reviewer ide
         evidence_set_digest: evidenceChar.repeat(64),
         method_id: methodId
       },
-      catalogEntry: RUNTIME,
+      catalogEntry: runtimeEntry,
       credentialHistory: [machineCredential],
       trustedIssuerPublicKey: issuerPair.publicKey,
       at: NOW
