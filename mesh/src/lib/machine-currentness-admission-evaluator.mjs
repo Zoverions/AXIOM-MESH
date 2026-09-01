@@ -104,6 +104,10 @@ export async function evaluateRetainedMachineCurrentnessAdmission({
     currentnessObservedAt: checkpoint.statement.observed_at,
     controllerCredentialDigest: lifecycleVerified.controller_credential_digest,
     controllerKeyEpoch: lifecycleVerified.controller_key_epoch,
+    admissionDigest,
+    currentnessEvidenceDigest: evaluated.currentness_evidence_digest,
+    effectCurrentnessEvaluationDigest:
+      evaluated.effect_currentness_evaluation_digest,
     evaluatedAt: nowDate.toISOString()
   });
   return Object.freeze({
