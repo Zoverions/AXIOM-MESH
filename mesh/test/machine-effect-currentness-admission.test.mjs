@@ -8,8 +8,9 @@ import {
   createAgentCurrentnessCheckpoint,
   evaluateAgentCurrentnessAtEffect
 } from '../src/lib/agent-trust-currentness-checkpoint.mjs';
+import { evaluateMachineEffectAuthorityCurrentness } from '../src/lib/machine-effect-currentness-admission.mjs';
 
-const HUMANS = new Set(['owner.currentness-test']);
+const HUMANS = new Set(['owner.currentness-test', 'owner.currentness-other']);
 const ISSUED_AT = '2026-08-31T20:00:00.000Z';
 const EVALUATED_AT = '2026-08-31T20:00:10.000Z';
 const EFFECT_AT = '2026-08-31T20:00:20.000Z';
@@ -76,6 +77,16 @@ function activeCurrentnessFixture(principal = machinePrincipal()) {
   return { principal, issuer, observer, credential, checkpoint };
 }
 
+function verifiedCapabilityClaims(principal) {
+  return {
+    subject: principal.id,
+    principal_type: principal.type,
+    sponsor: principal.sponsor,
+    authority_digest: principal.authority_digest,
+    runtime_id: principal.runtime.id
+  };
+}
+
 test('effect-time currentness exposes the exact active principal authority digest it verified', () => {
   const f = activeCurrentnessFixture();
   const currentness = evaluateAgentCurrentnessAtEffect({
@@ -98,4 +109,60 @@ test('effect-time currentness exposes the exact active principal authority diges
     currentness.active_principal_authority_digest,
     f.credential.statement.principal_authority_digest
   );
+});
+
+test('late authority-currentness gate passes only when current authority exactly matches issued capability authority', () => {
+  const principal = machinePrincipal();
+  const decision = evaluateMachineEffectAuthorityCurrentness({
+    verifiedCapabilityClaims: verifiedCapabilityClaims(principal),
+    currentPrincipal: principal,
+    effectAt: EFFECT_AT
+  });
+
+  assert.equal(decision.allow, true);
+  assert.equal(decision.code, 'machine_effect_authority_current');
+  assert.equal(decision.principal_id, principal.id);
+  assert.equal(decision.capability_authority_digest, principal.authority_digest);
+  assert.equal(decision.current_authority_digest, principal.authority_digest);
+  assert.equal(decision.effect_at, EFFECT_AT);
+  assert.equal(decision.effect_admission_authorized, false);
+  assert.equal(decision.authority_effect, 'none');
+});
+
+test('late authority-currentness gate denies an issued capability after the principal authority changes', () => {
+  const issuedPrincipal = machinePrincipal();
+  const narrowedPrincipal = machinePrincipal({
+    scopes: ['intent:execute:limited']
+  });
+  assert.notEqual(issuedPrincipal.authority_digest, narrowedPrincipal.authority_digest);
+
+  const decision = evaluateMachineEffectAuthorityCurrentness({
+    verifiedCapabilityClaims: verifiedCapabilityClaims(issuedPrincipal),
+    currentPrincipal: narrowedPrincipal,
+    effectAt: EFFECT_AT
+  });
+
+  assert.equal(decision.allow, false);
+  assert.equal(decision.code, 'machine_authority_stale');
+  assert.equal(decision.principal_id, issuedPrincipal.id);
+  assert.equal(decision.capability_authority_digest, issuedPrincipal.authority_digest);
+  assert.equal(decision.current_authority_digest, narrowedPrincipal.authority_digest);
+  assert.equal(decision.effect_admission_authorized, false);
+  assert.equal(decision.authority_effect, 'none');
+});
+
+test('late authority-currentness gate fails closed when no current principal authority is available', () => {
+  const issuedPrincipal = machinePrincipal();
+  const decision = evaluateMachineEffectAuthorityCurrentness({
+    verifiedCapabilityClaims: verifiedCapabilityClaims(issuedPrincipal),
+    currentPrincipal: null,
+    effectAt: EFFECT_AT
+  });
+
+  assert.equal(decision.allow, false);
+  assert.equal(decision.code, 'machine_principal_currentness_missing');
+  assert.equal(decision.principal_id, issuedPrincipal.id);
+  assert.equal(decision.current_authority_digest, null);
+  assert.equal(decision.effect_admission_authorized, false);
+  assert.equal(decision.authority_effect, 'none');
 });
