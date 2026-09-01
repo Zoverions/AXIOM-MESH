@@ -17,7 +17,7 @@ export const ASSURANCE_SOURCE_ADMISSION_RECEIPT_SCHEMA =
 export const ASSURANCE_SOURCE_ADMISSION_STATEMENT_SCHEMA =
   'axiom-assurance-source-admission-statement.v1';
 
-const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]*(?:-[A-Za-z0-9_.:-]+)*$/;
+const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const LIVE_ADMISSIONS = new WeakSet();
 const MAX_DURABLE_ADMISSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
