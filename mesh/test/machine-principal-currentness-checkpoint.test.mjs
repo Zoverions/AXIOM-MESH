@@ -6,6 +6,9 @@ import {
   MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA
 } from '../src/lib/machine-principal-currentness.mjs';
 import {
+  machineCurrentnessControllerKeyId
+} from '../src/lib/machine-currentness-controller-key-lifecycle.mjs';
+import {
   createMachinePrincipalCurrentnessCheckpoint,
   validateMachinePrincipalCurrentnessCheckpointTransition,
   verifyMachinePrincipalCurrentnessCheckpoint,
@@ -58,6 +61,10 @@ test('controller-signed lifecycle checkpoint verifies and remains non-authorizin
   });
   assert.equal(verified.statement.sequence, 1);
   assert.equal(verified.statement.status, 'active');
+  assert.equal(
+    verified.statement.controller_key_id,
+    machineCurrentnessControllerKeyId(controller.publicKey)
+  );
   assert.equal('admission_digest' in verified.statement, false);
   assert.equal(verified.statement.authority_effect, 'none');
   assert.equal(verified.statement.execution_authority_granted, false);
