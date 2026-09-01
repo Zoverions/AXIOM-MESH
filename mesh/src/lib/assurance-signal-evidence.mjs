@@ -6,6 +6,7 @@ import {
 } from './canonical.mjs';
 import {
   ADAPTIVE_ASSURANCE_INPUT_SCHEMA,
+  createAdaptiveAssuranceEvaluator,
   evaluateAdaptiveAssurance
 } from './adaptive-assurance.mjs';
 
@@ -194,6 +195,7 @@ export function resolveAdaptiveAssuranceSignals({
   policy,
   evidence,
   verifiedSourceBindings,
+  randomIntFn,
   now
 } = {}) {
   const task = id(taskId, 'assurance signal resolution taskId');
@@ -386,7 +388,10 @@ export function evaluateAdaptiveAssuranceFromEvidence({
     verifiedSourceBindings,
     now
   });
-  const decision = evaluateAdaptiveAssurance(
+  const evaluator = randomIntFn === undefined
+    ? evaluateAdaptiveAssurance
+    : createAdaptiveAssuranceEvaluator({ randomIntFn });
+  const decision = evaluator(
     built.input,
     { inputProvenanceDigest: built.resolution.resolution_digest }
   );
