@@ -1,0 +1,45 @@
+{
+  "schema": "axiom-federated-recognition-composition.v1",
+  "status": "experimental interoperability architecture; no federation authority claim",
+  "purpose": "Compose many bilateral recognition relationships without converting graph reachability into trust, authority, membership, eligibility, or universal equivalence.",
+  "graph_semantics": {
+    "node": "institution or trust domain",
+    "edge": "explicit bilateral recognition profile",
+    "path": "discoverable evidence about possible recognition relationships only",
+    "local_rule": "Only an explicitly adopted local edge or locally approved recognition-set entry may satisfy recognition policy."
+  },
+  "invariants": [
+    "graph path existence is not trust",
+    "shortest path is not strongest path",
+    "multiple agreeing paths are corroborative evidence only",
+    "no automatic transitive trust",
+    "local institutions choose which external edges or recognition sets they adopt",
+    "recognition-set membership does not grant runtime authority, membership, office, or eligibility",
+    "revocation or withdrawal of one edge does not rewrite unrelated bilateral relationships",
+    "conflicting recognition paths remain visible and locally resolved",
+    "assurance degrades to the weakest required accepted edge unless local policy demands stronger evidence",
+    "privacy restrictions compose by intersection, not union",
+    "purpose scopes compose by intersection, not union"
+  ],
+  "recognition_set": {
+    "meaning": "A reusable list of bilateral profiles that a local institution may review and adopt as a convenience.",
+    "authority_effect": "none",
+    "adoption_rule": "Importing or discovering a recognition set never activates its members."
+  },
+  "risk_controls": [
+    "cycle detection",
+    "stale-edge detection",
+    "withdrawn-edge exclusion",
+    "purpose intersection",
+    "privacy intersection",
+    "assurance-floor check",
+    "explicit local adoption",
+    "conflict surfacing",
+    "path provenance"
+  ],
+  "nonclaims": [
+    "This profile does not create a supranational authority, federation government, accreditation authority, or universal trust fabric.",
+    "A federation graph is not a reputation score.",
+    "Path discovery may aid routing and interoperability planning without satisfying a proof requirement."
+  ]
+}

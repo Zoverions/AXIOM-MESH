@@ -1,0 +1,65 @@
+{
+  "schema": "axiom-federated-recognition-view.v1",
+  "view_id": "federation-view:education-region-01",
+  "local_party": "institution:university-a",
+  "edges": [
+    {
+      "edge_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "party_a": "institution:university-a",
+      "party_b": "institution:college-b",
+      "active": true,
+      "purposes": [
+        "prerequisite-review"
+      ],
+      "privacy_constraints": [
+        "minimum-disclosure"
+      ],
+      "assurance_profile_refs": [
+        "assurance:ordinary-credential-v1"
+      ]
+    },
+    {
+      "edge_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "party_a": "institution:college-b",
+      "party_b": "institution:college-c",
+      "active": true,
+      "purposes": [
+        "prerequisite-review"
+      ],
+      "privacy_constraints": [
+        "minimum-disclosure"
+      ],
+      "assurance_profile_refs": [
+        "assurance:ordinary-credential-v1"
+      ]
+    }
+  ],
+  "candidate_paths": [
+    {
+      "path_id": "path:a-b-c",
+      "nodes": [
+        "institution:university-a",
+        "institution:college-b",
+        "institution:college-c"
+      ],
+      "edge_digests": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "purpose": "prerequisite-review",
+      "status": "discoverable_only",
+      "may_satisfy_local_recognition": false
+    }
+  ],
+  "adopted_edge_digests": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "authority": {
+    "path_grants_trust": false,
+    "path_grants_authority": false,
+    "set_membership_grants_recognition": false
+  },
+  "limitations": [
+    "University A has not recognized College C merely because a path exists through College B."
+  ]
+}
