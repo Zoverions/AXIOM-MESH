@@ -14,6 +14,8 @@ export const ADAPTIVE_ASSURANCE_UI_SCHEMA = 'axiom-adaptive-assurance-ui.v1';
 const RISK_CLASSES = new Set(['low', 'medium', 'high', 'critical']);
 const UI_PHASES = new Set(['pre-execution', 'post-execution']);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
+const HEX_DIGEST = /^[a-f0-9]{64}$/;
+const LIVE_ADAPTIVE_DECISIONS = new WeakSet();
 
 const SIGNAL_FIELDS = Object.freeze([
   'consequence',
@@ -61,6 +63,7 @@ const MIN_CHALLENGE_BPS = Object.freeze({
 const INPUT_FIELDS = new Set([
   'schema',
   'task_id',
+  'input_provenance_digest',
   'risk_class',
   'signals',
   'reputation_score',
@@ -230,7 +233,10 @@ export function createAdaptiveAssuranceEvaluator({ randomIntFn = randomInt } = {
     throw new ValidationError('adaptive assurance evaluator requires randomIntFn');
   }
 
-  return function evaluateAdaptiveAssurance(raw) {
+  return function evaluateAdaptiveAssurance(
+    raw,
+    { inputProvenanceDigest = null } = {}
+  ) {
     const input = normalizeAdaptiveAssuranceInput(raw);
     const baseRiskScore = weightedRisk(input.signals);
     const reputationEffect = reputationAdjustment(
@@ -252,9 +258,17 @@ export function createAdaptiveAssuranceEvaluator({ randomIntFn = randomInt } = {
 
     const challengeTriggered = sampleBps < probabilityBps;
     const selectedTier = challengeTriggered ? nextTier(deterministicTier) : deterministicTier;
+    const provenanceDigest = inputProvenanceDigest === null
+      ? null
+      : assertString(
+        inputProvenanceDigest,
+        'adaptive assurance inputProvenanceDigest',
+        { min: 64, max: 64, pattern: HEX_DIGEST }
+      );
     const body = Object.freeze({
       schema: ADAPTIVE_ASSURANCE_DECISION_SCHEMA,
       task_id: input.task_id,
+      input_provenance_digest: provenanceDigest,
       risk_class: input.risk_class,
       policy_floor: input.policy_floor,
       base_risk_score: baseRiskScore,
@@ -271,7 +285,7 @@ export function createAdaptiveAssuranceEvaluator({ randomIntFn = randomInt } = {
       delegation_effect: 'none'
     });
 
-    return Object.freeze({
+    const result = Object.freeze({
       ...body,
       decision_digest: digestObject(body),
       internal_audit: Object.freeze({
@@ -279,6 +293,8 @@ export function createAdaptiveAssuranceEvaluator({ randomIntFn = randomInt } = {
         sample_bps: sampleBps
       })
     });
+    LIVE_ADAPTIVE_DECISIONS.add(result);
+    return result;
   };
 }
 
@@ -318,6 +334,13 @@ export function validateAdaptiveAssuranceDecision(raw) {
     max: 192,
     pattern: ID
   });
+  if (value.input_provenance_digest !== null) {
+    assertString(
+      value.input_provenance_digest,
+      'adaptive assurance decision input_provenance_digest',
+      { min: 64, max: 64, pattern: HEX_DIGEST }
+    );
+  }
   if (!RISK_CLASSES.has(value.risk_class)) {
     throw new ValidationError('adaptive assurance decision risk_class is unsupported');
   }
@@ -382,11 +405,21 @@ export function validateAdaptiveAssuranceDecision(raw) {
   const decisionDigest = assertString(
     value.decision_digest,
     'adaptive assurance decision decision_digest',
-    { min: 64, max: 64, pattern: /^[a-f0-9]{64}$/ }
+    { min: 64, max: 64, pattern: HEX_DIGEST }
   );
   const { decision_digest: _decisionDigest, internal_audit: _internalAudit, ...body } = value;
   if (digestObject(body) !== decisionDigest) {
     throw new ValidationError('adaptive assurance decision_digest mismatch');
+  }
+  return value;
+}
+
+export function requireLiveAdaptiveAssuranceDecision(raw) {
+  const value = validateAdaptiveAssuranceDecision(raw);
+  if (!LIVE_ADAPTIVE_DECISIONS.has(value)) {
+    throw new ValidationError(
+      'adaptive assurance safe path requires a live evaluator decision'
+    );
   }
   return value;
 }
