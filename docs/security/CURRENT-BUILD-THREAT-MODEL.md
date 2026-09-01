@@ -561,6 +561,12 @@ Independent review should treat these as invariants, not best-effort goals:
 25. Independent verification claims require evidence of meaningful independence
     of context, evidence, method, runtime, or reviewer; repeated correlated votes
     are not sufficient by themselves.
+26. Adaptive-assurance signals that can alter scrutiny require attributable,
+    current, policy-accepted evidence; missing or stale required signal evidence
+    cannot default to a lower-risk value.
+27. Conflicting risk-increasing assurance evidence resolves conservatively toward
+    greater scrutiny unless a separately reviewed resolution policy proves a safer
+    rule.
 
 ## Residual risk and non-claims
 
