@@ -169,6 +169,28 @@ export function evaluateMachineIntent(principal, {
   };
 }
 
+export function machineCapabilityExpiryEpoch(principal, {
+  now = new Date(),
+  capabilityTtlSeconds
+} = {}) {
+  if (!(now instanceof Date) || Number.isNaN(now.valueOf())) {
+    throw new ValidationError('Machine capability now must be a valid Date');
+  }
+  if (!Number.isSafeInteger(capabilityTtlSeconds) || capabilityTtlSeconds < 1) {
+    throw new ValidationError('Machine capability TTL must be a positive safe integer');
+  }
+  const normalized = normalizeMachinePrincipalDefinition(principal, { now });
+  const nowEpoch = Math.floor(now.valueOf() / 1000);
+  const ttlExpiry = nowEpoch + capabilityTtlSeconds;
+  if (!normalized.expires_at) return ttlExpiry;
+
+  const authorityExpiry = Math.floor(new Date(normalized.expires_at).valueOf() / 1000);
+  if (authorityExpiry <= nowEpoch) {
+    throw new ValidationError('Machine principal authority expires before a capability can be issued');
+  }
+  return Math.min(ttlExpiry, authorityExpiry);
+}
+
 export function machinePrincipalAuthorityFacts(principal) {
   const normalized = normalizeMachinePrincipalDefinition(principal);
   return {
@@ -176,6 +198,7 @@ export function machinePrincipalAuthorityFacts(principal) {
     principal_type: normalized.type,
     sponsor: normalized.sponsor,
     lifetime: normalized.lifetime,
+    ...(normalized.expires_at ? { expires_at: normalized.expires_at } : {}),
     runtime_id: normalized.runtime.id,
     runtime_kind: normalized.runtime.kind,
     authority_digest: normalized.authority_digest,
