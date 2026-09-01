@@ -1,0 +1,147 @@
+{
+  "schema": "axiom-machine-authority-currentness-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "rt-auth-001-signed-authority-currentness-lab",
+  "scope": "Signed append-only current-authority heads and deny-only late capability comparison for machine principals. This separates authority currentness from identity/key currentness and from normal authorization policy. No accepted Sandbox effect-path promotion is claimed.",
+  "core_invariant": "A cryptographically valid capability is not sufficient for a new effect when the trusted latest authority head for its subject is revoked, stale, missing, too old, or names a different authority digest. Identity continuity and discovery evidence cannot substitute for this authority-currentness decision, and a passing currentness check cannot itself grant an effect.",
+  "separation_of_evidence_planes": [
+    {
+      "plane": "identity-currentness",
+      "proves": "Under the exact retained issuer evidence, a specific machine identity credential/key was active at a bounded time.",
+      "does_not_prove": [
+        "that the principal still has the same operational authority",
+        "that an action is authorized",
+        "that a capability may be executed"
+      ]
+    },
+    {
+      "plane": "authority-currentness",
+      "proves": "Under one explicitly trusted authority-source key and retained latest-head expectation, the current authority state is active with one exact authority digest, or revoked.",
+      "does_not_prove": [
+        "identity/key currentness",
+        "authorization policy satisfaction",
+        "delegation ancestry",
+        "effect execution"
+      ]
+    },
+    {
+      "plane": "authorization",
+      "proves": "The normal policy/approval/constraint path permitted a specific proposed effect under its own evidence and rules.",
+      "does_not_prove": [
+        "that cached authority remains current unless currentness was checked",
+        "runtime or external-world truth"
+      ]
+    }
+  ],
+  "attack_classes": [
+    {
+      "id": "post-issuance-authority-change",
+      "risks": [
+        "scope narrowing after capability issuance",
+        "purpose or destination narrowing after capability issuance",
+        "sponsor replacement or invalidation",
+        "runtime binding replacement",
+        "complete principal revocation"
+      ],
+      "controls": [
+        "authority digest binds the complete normalized machine authority profile",
+        "signed authority head may replace the active digest without mutating machine identity",
+        "late capability gate compares the issued digest with the verified latest active digest",
+        "digest mismatch denies rather than re-authorizes"
+      ]
+    },
+    {
+      "id": "authority-head-rollback",
+      "risks": [
+        "present a previously valid head after a narrowing or revocation",
+        "truncate the signed checkpoint chain",
+        "reuse an old signed active state"
+      ],
+      "controls": [
+        "monotonic sequence",
+        "exact predecessor digest",
+        "stable source/principal binding",
+        "caller-provided expected latest checkpoint digest",
+        "bounded evidence-age ceiling"
+      ],
+      "remaining_gap": "The lab contract does not yet define the accepted runtime mechanism that durably retains/distributes the expected latest head to Sandbox."
+    },
+    {
+      "id": "authority-source-substitution",
+      "risks": [
+        "attacker signs an alternate current head",
+        "protocol/discovery metadata is treated as a trusted authority source",
+        "identity signer is silently promoted into authority signer"
+      ],
+      "controls": [
+        "explicit caller-trusted Ed25519 authority-source key",
+        "authority-source key digest inside the signed statement",
+        "identity_currentness_claimed=false",
+        "authorization_policy_evaluated=false"
+      ],
+      "remaining_gap": "Source-key provisioning, rotation, threshold policy and jurisdictional governance remain deployment-policy decisions."
+    },
+    {
+      "id": "currentness-becomes-authorization",
+      "risks": [
+        "a valid current authority digest is treated as permission",
+        "currentness bypasses normal policy or approvals",
+        "a signed checkpoint becomes a bearer capability"
+      ],
+      "controls": [
+        "effect_admission_authorized=false",
+        "authority_effect=none",
+        "delegation_effect=none",
+        "late gate is documented and implemented as a deny-only prerequisite"
+      ]
+    },
+    {
+      "id": "identity-authority-conflation",
+      "risks": [
+        "machine identity credential rotation is used to smuggle an authority change",
+        "identity currentness is interpreted as current authority"
+      ],
+      "controls": [
+        "machine identity history already requires principal_authority_digest continuity across key rotation",
+        "authority changes use a separate signed authority-currentness chain",
+        "effect-time identity currentness exposes its bound authority digest for later cross-plane consistency checks"
+      ]
+    }
+  ],
+  "implemented_evidence": [
+    "mesh/src/lib/machine-authority-currentness-checkpoint.mjs",
+    "mesh/src/lib/machine-effect-currentness-admission.mjs",
+    "mesh/test/machine-authority-currentness-checkpoint.test.mjs",
+    "mesh/test/machine-effect-currentness-admission.test.mjs",
+    "agent-commons/contracts/machine-authority-currentness-checkpoint.v1.schema.json",
+    "agent-commons/authority-laundering-negative-fixtures.json"
+  ],
+  "known_nonclaims": [
+    "No revocation bypass has been independently reproduced against the accepted AXIOM-MESH runtime.",
+    "The signed authority-currentness lab is not yet consulted by the accepted Gateway -> Hypervisor -> Sandbox -> Grid effect path.",
+    "The authority-source signer is not automatically the machine identity issuer, DNS/AID identity, MCP/A2A peer, runtime attester, sponsor, or repository identity.",
+    "A passing authority-currentness check does not authorize an effect.",
+    "The lab does not claim a global currentness oracle or universal revocation service.",
+    "No capability registry promotion or production deployment is created by this work."
+  ],
+  "next_gates": [
+    "define a rollback-resistant accepted-runtime source for the retained latest authority head",
+    "define source-key provisioning/rotation and optional threshold or multi-source authority policies without hard-coding one governance model",
+    "bind signed authority currentness as late as safely possible into the Sandbox effect path",
+    "compose identity currentness and authority currentness without allowing either to mint authorization",
+    "bind exact consulted authority-currentness checkpoint digest and decision into Sandbox/Grid terminal evidence",
+    "run deterministic issue-capability -> replace/revoke authority -> attempt-effect falsification fixtures",
+    "obtain independent reproduction or NOT_REPRODUCED evidence before any security claim is promoted"
+  ],
+  "boundaries": {
+    "accepted_effect_path_integration": false,
+    "runtime_latest_head_retention_defined": false,
+    "global_currentness_claimed": false,
+    "identity_currentness_claimed_by_authority_head": false,
+    "authorization_policy_evaluated_by_authority_head": false,
+    "effect_admission_authorized": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "capability_promotion_enabled": false
+  }
+}
