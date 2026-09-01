@@ -108,5 +108,27 @@
     "These fixtures do not claim any listed failure is currently exploitable in AXIOM-MESH.",
     "These fixtures do not authorize testing of third-party systems.",
     "A NOT_REPRODUCED result with exact environment and limitations is a valid outcome."
-  ]
+  ],
+  "current_repository_assessment": {
+    "assessed_commit": "1c7ced824e909be28dd3dd45a7fd3648b1849f90",
+    "assessed_at": "2026-09-01",
+    "result": "ARCHITECTURE_LIMITED_NOT_REPRODUCED",
+    "evidence": [
+      "Hypervisor evaluates machine-principal authority and binds sponsor, authority_digest, runtime_id, intent, plan, policy, tool and destination into the short-lived capability.",
+      "Sandbox verifies capability signature/TTL, intent and plan binding, policy, destination, durable Grid consumption, replay and subject before the builtin effect.",
+      "The reviewed Sandbox execution path does not consult a live machine-principal registry or revocation/currentness source immediately before effect.",
+      "The repository contains signed agent-currentness checkpoint and effect-evaluation primitives, but their fixed semantics explicitly state effect_admission_authorized=false and they are not wired into Sandbox.",
+      "The bearer principal registry is normalized from configured API-token entries; no supported live revoke/remove/narrow mutation path was identified at this effect boundary."
+    ],
+    "interpretation": "The static scout hypothesis is valid as an architecture concern, but revoke/remove/narrow/sponsor/runtime TOCTOU cannot presently be claimed as a reproduced production bypass because the reviewed runtime does not expose the required authoritative mutation path.",
+    "independently_reproduced": false,
+    "vulnerability_confirmed": false,
+    "next_gate": "Bind a separately reviewed authoritative currentness source into late effect admission, then deterministically test capability issuance -> authority mutation -> first effect. Expiry may be tested earlier because machine-principal expires_at already exists without inventing a mutable registry.",
+    "promotion_constraints": [
+      "Do not weaken capability TTL, signature, replay, plan, destination, subject or durable-consumption checks to make the test possible.",
+      "Do not treat the currentness laboratory as runtime authority merely because it can evaluate signed evidence.",
+      "Do not add a synthetic-only authority source and report its behavior as a production vulnerability.",
+      "Preserve bounded NOT_REPRODUCED and architecture-limited outcomes as valid evidence."
+    ]
+  }
 }
