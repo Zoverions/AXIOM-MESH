@@ -550,6 +550,10 @@ Independent review should treat these as invariants, not best-effort goals:
 21. The accepted Grid store is selected explicitly, not through a runtime toggle;
     the disabled candidate and S3F transport-capable store remain unselected.
 22. Communication does not convey authority. Consensus does not convey authority.
+    Assignment does not convey authority. A collective cannot manufacture a
+    capability absent from an exact valid authority chain to the actual executor;
+    shared state and peer artifacts remain non-authorizing unless separately
+    admitted through the normal AXIOM authority path.
 23. Adaptive assurance cannot reduce a mandatory policy/risk floor, grant authority,
     or make reputation an exemption from scrutiny.
 24. Stochastic assurance may only increase scrutiny. Exact sampling thresholds and
@@ -557,10 +561,6 @@ Independent review should treat these as invariants, not best-effort goals:
 25. Independent verification claims require evidence of meaningful independence
     of context, evidence, method, runtime, or reviewer; repeated correlated votes
     are not sufficient by themselves.
-    Assignment does not convey authority. A collective cannot manufacture a
-    capability absent from an exact valid authority chain to the actual executor;
-    shared state and peer artifacts remain non-authorizing unless separately
-    admitted through the normal AXIOM authority path.
 
 ## Residual risk and non-claims
 
