@@ -185,7 +185,8 @@ effects.
 
 Durable receipts have a maximum seven-day lifetime and are independently verified
 against a trusted Grid public key. Wrong-key, tampered, future-dated, expired, or
-overlong receipts fail closed. Verified durable receipts reconstruct the same
+overlong receipts fail closed. The revocation-aware durable collector verifies the
+receipt and a current signed revocation snapshot before reconstructing the same
 `verification digest -> { source_id, source_class }` binding map without relying
 on the original process-local marker.
 
