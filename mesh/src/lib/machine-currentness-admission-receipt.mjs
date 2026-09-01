@@ -1,13 +1,8 @@
 import {
-  createPublicKey,
-  verify as verifyBytes
-} from 'node:crypto';
-
-import {
   ValidationError,
-  canonicalJson,
   digestObject
 } from './canonical.mjs';
+import { verifyObjectSignature } from './identity.mjs';
 
 export const MACHINE_CURRENTNESS_ADMISSION_RECEIPT_SCHEMA =
   'axiom-machine-currentness-admission-receipt.v1';
@@ -41,16 +36,6 @@ function requireTimestamp(value, label) {
 
 function requireDigest(value, label) {
   return requireString(value, label, { max: 64, pattern: DIGEST });
-}
-
-function publicKey(value, label) {
-  try {
-    const key = value?.type === 'public' ? value : createPublicKey(value);
-    if (key.asymmetricKeyType !== 'ed25519') throw new Error();
-    return key;
-  } catch {
-    throw new ValidationError(`${label} must be Ed25519`);
-  }
 }
 
 export function machineCurrentnessAdmissionBindingDigest({
@@ -203,29 +188,7 @@ export function verifyMachineCurrentnessAdmissionReceipt(raw, {
     throw new ValidationError('Machine currentness admission receipt widens its non-authorizing boundary');
   }
 
-  const key = publicKey(gridPublicKey, 'Machine currentness admission Grid public key');
-  const signatureValue = receipt.signature;
-  let signature;
-  if (typeof signatureValue === 'string') {
-    signature = Buffer.from(signatureValue, 'base64url');
-  } else if (
-    signatureValue
-    && typeof signatureValue === 'object'
-    && typeof signatureValue.signature === 'string'
-  ) {
-    signature = Buffer.from(signatureValue.signature, 'base64url');
-  } else {
-    throw new ValidationError('Machine currentness admission Grid signature is invalid');
-  }
-  if (
-    signature.length === 0
-    || !verifyBytes(
-      null,
-      Buffer.from(canonicalJson(statement)),
-      key,
-      signature
-    )
-  ) {
+  if (!verifyObjectSignature(statement, receipt.signature, gridPublicKey)) {
     throw new ValidationError('Machine currentness admission Grid signature verification failed');
   }
 
