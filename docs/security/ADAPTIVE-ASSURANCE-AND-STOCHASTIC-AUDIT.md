@@ -231,6 +231,41 @@ orchestrator must not be allowed to populate the pool with nominally distinct bu
 operator-controlled replicas and then claim diversity. Runtime integration must
 source candidate profiles from an independently governed runtime/provider catalog.
 
+## Intent/Grid evidence binding
+
+`mesh/src/lib/assurance-provenance.mjs` binds the adaptive-assurance lineage into
+one non-authorizing provenance artifact.
+
+A provenance bundle can represent either a planned or completed assurance path and
+binds:
+
+- task ID;
+- selected assurance tier;
+- signal-resolution digest;
+- adaptive-assurance decision digest;
+- work-order digest;
+- satisfied completion digest when completed;
+- explicit no-authority and no-execution effects.
+
+A completed provenance bundle cannot exist without a satisfied completion digest,
+and a planned bundle cannot carry or claim completion.
+
+The bundle can be converted into an ordinary Intent evidence entry with obligation
+`adaptive-assurance-provenance`. This does **not** make adaptive assurance an
+implicit requirement. The active Intent contract must explicitly name that
+obligation before an attestation may use the artifact.
+
+### Existing independence limitation
+
+The current Intent/Grid assessment's `minimum_independent_verifiers` mechanism
+counts distinct verifier actors. It does not by itself prove independence of
+context, evidence set, method, runtime, model family, or operator domain.
+
+That current behavior remains unchanged by this experimental branch. The stronger
+verifier-independence contract is carried through the assurance provenance artifact
+and should only become an active requirement through an explicit future Intent
+contract/schema change and corresponding migration, tests, and review.
+
 ## Next integration gates
 
 Before this primitive can affect live orchestration:
