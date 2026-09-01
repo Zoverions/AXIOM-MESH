@@ -28,7 +28,7 @@ function principal() {
     roles: ['researcher'],
     scopes: ['intent:execute'],
     lifetime: 'session',
-    expires_at: '2026-09-01T00:00:00.000Z',
+    expires_at: '2099-01-01T00:00:00.000Z',
     runtime: {
       id: 'runtime.sender.1',
       kind: 'local-process',

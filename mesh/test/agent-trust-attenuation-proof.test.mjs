@@ -319,7 +319,7 @@ function realPassportFixture() {
     roles: ['researcher'],
     scopes: ['intent:execute'],
     lifetime: 'session',
-    expires_at: '2026-09-01T00:00:00.000Z',
+    expires_at: '2099-01-01T00:00:00.000Z',
     runtime: { id: 'runtime.current.1', kind: 'local-process', software_digest: 'b'.repeat(64) },
     constraints: {
       actions: ['system.echo'],
