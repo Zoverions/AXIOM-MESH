@@ -6,7 +6,7 @@ import {
 } from '../src/lib/entity-assurance.mjs';
 import {
   admitEntityAssuranceSource,
-  collectBrokerVerifiedSourceDigests
+  collectBrokerVerifiedSourceBindings
 } from '../src/lib/assurance-source-broker.mjs';
 
 const NOW = '2026-09-01T12:00:00.000Z';
@@ -59,8 +59,11 @@ test('source broker admits a satisfied upstream entity-assurance decision', () =
   assert.equal(admission.truth_established, false);
   assert.match(admission.source_verification_digest, /^[a-f0-9]{64}$/);
 
-  const digests = collectBrokerVerifiedSourceDigests([admission]);
-  assert.equal(digests.has(admission.source_verification_digest), true);
+  const bindings = collectBrokerVerifiedSourceBindings([admission]);
+  assert.deepEqual(bindings.get(admission.source_verification_digest), {
+    source_id: 'source.entity-assurance',
+    source_class: 'entity-assurance'
+  });
 });
 
 test('source broker refuses an unsatisfied upstream entity-assurance decision', () => {
@@ -86,7 +89,7 @@ test('lookalike or cloned admissions cannot manufacture verified source status',
   });
   const forged = { ...admission };
   assert.throws(
-    () => collectBrokerVerifiedSourceDigests([forged]),
+    () => collectBrokerVerifiedSourceBindings([forged]),
     /only live admissions/
   );
 });
