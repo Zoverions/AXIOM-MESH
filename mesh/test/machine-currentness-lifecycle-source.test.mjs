@@ -382,3 +382,60 @@ test('narrowed state cannot reactivate through authority-update', async t => {
     /authority-update is permitted only from active to active/
   );
 });
+
+
+test('terminal revoke compromise and expire preserve the last authority digest', async t => {
+  for (const mutationKind of ['revoke', 'compromise', 'expire']) {
+    await t.test(mutationKind, async st => {
+      const f = await fixture(st);
+      const mutation = command(f, {
+        commandId: `mutation.fixture.terminal-${mutationKind}`,
+        mutationKind,
+        resultingAuthorityDigest: AUTHORITY_B,
+        reasonCode: 'terminal-transition'
+      });
+      await assert.rejects(
+        applyMachinePrincipalCurrentnessMutation({
+          currentnessStore: f.store,
+          mutationCommand: mutation,
+          trustedMutationAuthorityPublicKey: f.mutationAuthority.publicKey,
+          currentnessControllerPrivateKey: f.currentnessController.privateKey,
+          trustedCurrentnessControllerPublicKey: f.currentnessController.publicKey,
+          at: '2026-09-01T18:10:02.000Z'
+        }),
+        /must preserve the last authority digest/
+      );
+    });
+  }
+});
+
+test('mutation authority and checkpoint controller must remain cryptographically distinct roles', async t => {
+  const f = await fixture(t);
+  const sameKeyMutation = createMachineCurrentnessMutationCommand({
+    commandId: 'mutation.fixture.same-key-role',
+    principalId: 'agent.mutation.fixture',
+    principalType: 'agent',
+    predecessorCheckpointDigest: f.store.retainedHead().checkpoint_digest,
+    expectedSuccessorSequence: 2,
+    mutationKind: 'authority-update',
+    resultingAuthorityDigest: AUTHORITY_B,
+    issuedAt: '2026-09-01T18:10:01.000Z',
+    effectiveAt: '2026-09-01T18:10:02.000Z',
+    expiresAt: '2026-09-01T18:11:00.000Z',
+    reasonCode: 'same-key-role',
+    mutationAuthorityPrivateKey: f.currentnessController.privateKey,
+    trustedMutationAuthorityPublicKey: f.currentnessController.publicKey
+  });
+
+  await assert.rejects(
+    applyMachinePrincipalCurrentnessMutation({
+      currentnessStore: f.store,
+      mutationCommand: sameKeyMutation,
+      trustedMutationAuthorityPublicKey: f.currentnessController.publicKey,
+      currentnessControllerPrivateKey: f.currentnessController.privateKey,
+      trustedCurrentnessControllerPublicKey: f.currentnessController.publicKey,
+      at: '2026-09-01T18:10:02.000Z'
+    }),
+    /must be distinct/
+  );
+});
