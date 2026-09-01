@@ -1,0 +1,30 @@
+{
+  "schema": "axiom-recognition-reliance-receipt.v1",
+  "receipt_id": "reliance:university-a-prereq-001",
+  "local_party": "institution:university-a",
+  "recognition_edge_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "claim_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "currentness_status": "current",
+  "currentness_evidence_refs": [
+    "status:college-b-before-compromise"
+  ],
+  "decision_time": "2026-09-01T17:40:00.000Z",
+  "decision": "accepted_as_prerequisite_evidence",
+  "later_status_annotations": [
+    {
+      "status_event_ref": "status:college-b-key-compromise-001",
+      "observed_at": "2026-09-01T17:56:00.000Z",
+      "future_reliance_effect": "deny_pending_revalidation"
+    }
+  ],
+  "authority": {
+    "receipt_grants_authority": false,
+    "receipt_is_reusable_grant": false,
+    "later_notice_rewrites_decision": false
+  },
+  "limitations": [
+    "Receipt records a historical reliance decision, not continuing authority.",
+    "Later compromise blocks future reliance according to local policy but does not falsify the original record."
+  ]
+}
