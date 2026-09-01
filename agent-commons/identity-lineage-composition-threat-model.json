@@ -31,11 +31,14 @@
     "root keys are not required for ordinary service traffic",
     "service-specific keys isolate compromise and rotation blast radius",
     "endpoint-key replacement does not silently replace persistent identity",
+    "endpoint-key replacement does not automatically transfer grants bound to the retired key",
+    "platform-specific service credentials are audience/service bound and cannot be replayed as cross-platform authority",
     "lineage evidence never mints scopes, capabilities, grants, or permissions",
     "delegation cannot widen authority beyond its parent and cannot substitute for a local grant",
     "stale endpoint or lineage evidence fails closed at a consequential effect boundary",
     "protocol transitions cannot widen action, purpose, destination, audience, resource, budget, or expiry",
-    "root compromise is a distinct recovery class from service-key compromise"
+    "root compromise is a distinct recovery class from service-key compromise",
+    "pre-compromise lineage requires explicit revalidation or a separate local recovery policy after root compromise"
   ],
   "negative_cases": [
     "service-key-rotation-root-stable",
@@ -44,7 +47,10 @@
     "cross-service-delegation-replay",
     "endpoint-proof-as-allow",
     "protocol-switch-authority-laundering",
-    "root-compromise-vs-service-compromise"
+    "root-compromise-vs-service-compromise",
+    "endpoint-rotation-does-not-inherit-old-grant",
+    "platform-credential-isolation",
+    "root-compromise-invalidates-unrevalidated-lineage"
   ],
   "nonclaims": [
     "This profile does not make a DID an endpoint-discovery primitive.",
