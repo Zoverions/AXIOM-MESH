@@ -1,0 +1,23 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"axiom-entity-layer-stack.v0",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","version","status","stack_id","foundation_id","foundation_digest","active_layers","suspended_layer_ids","superseded_layer_ids","created_at","updated_at","authority_effect","network_effect","runtime_activation"],
+  "properties":{
+    "schema":{"const":"axiom-entity-layer-stack.v0"},
+    "version":{"const":0},
+    "status":{"const":"inert-contract-laboratory"},
+    "stack_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "foundation_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "foundation_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "active_layers":{"type":"array","maxItems":64,"items":{"type":"object","additionalProperties":false,"required":["layer_id","layer_digest","precedence"],"properties":{"layer_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},"layer_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"precedence":{"type":"integer","minimum":0}}}},
+    "suspended_layer_ids":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}},
+    "superseded_layer_ids":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}},
+    "created_at":{"type":"string","format":"date-time","maxLength":64},
+    "updated_at":{"type":"string","format":"date-time","maxLength":64},
+    "authority_effect":{"const":"none"},
+    "network_effect":{"const":"none"},
+    "runtime_activation":{"const":false}
+  }
+}
