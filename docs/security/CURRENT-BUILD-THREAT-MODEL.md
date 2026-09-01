@@ -567,6 +567,15 @@ Independent review should treat these as invariants, not best-effort goals:
 27. Conflicting risk-increasing assurance evidence resolves conservatively toward
     greater scrutiny unless a separately reviewed resolution policy proves a safer
     rule.
+28. Durable assurance-source admissions remain non-authorizing and do not establish
+    truth merely because the Grid signed them; source identity, class, upstream
+    verification digest, lifetime, and trusted Grid key must all verify.
+
+Durable assurance-source admissions currently use bounded expiry but do not yet
+have a separately modeled upstream-revocation propagation mechanism. A still-valid
+receipt may therefore outlive a newly revoked upstream source or trust root until
+expiry unless a future revocation/chain policy invalidates it earlier. This is an
+explicit residual risk, not a current revocation claim.
 
 The current Intent/Grid `minimum_independent_verifiers` assessment counts
 distinct verifier actors. It does not by itself prove meaningful independence of
