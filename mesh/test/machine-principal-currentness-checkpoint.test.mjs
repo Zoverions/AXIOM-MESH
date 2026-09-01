@@ -3,8 +3,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
 import {
-  MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
-  machinePrincipalAdmissionDigest
+  MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA
 } from '../src/lib/machine-principal-currentness.mjs';
 import {
   createMachinePrincipalCurrentnessCheckpoint,
@@ -13,46 +12,34 @@ import {
 } from '../src/lib/machine-principal-currentness-checkpoint.mjs';
 
 const AUTHORITY = 'a'.repeat(64);
-const INTENT = 'b'.repeat(64);
-const PLAN = 'c'.repeat(64);
-
-function admission(capabilityId = 'cap_1') {
-  return machinePrincipalAdmissionDigest({
-    principalId: 'agent.fixture.1',
-    principalType: 'agent',
-    authorityDigest: AUTHORITY,
-    capabilityId,
-    intentDigest: INTENT,
-    planDigest: PLAN,
-    effectDestination: 'local'
-  });
-}
 
 function currentness({
   sequence = 1,
   status = 'active',
   sourceHead = 'd'.repeat(64),
   predecessorHead = null,
-  admissionDigest = admission()
+  observedAt = sequence === 1
+    ? '2026-09-01T17:00:00.000Z'
+    : '2026-09-01T17:00:01.000Z',
+  authorityDigest = AUTHORITY
 } = {}) {
   return {
     schema: MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
     principal_id: 'agent.fixture.1',
     principal_type: 'agent',
-    authority_digest: AUTHORITY,
+    authority_digest: authorityDigest,
     status,
     sequence,
-    observed_at: '2026-09-01T17:00:00.000Z',
+    observed_at: observedAt,
     source_head_digest: sourceHead,
     predecessor_head_digest: predecessorHead,
-    admission_digest: admissionDigest,
     authority_effect: 'none',
     execution_authority_granted: false,
     global_currentness_claimed: false
   };
 }
 
-test('controller-signed currentness checkpoint verifies and remains non-authorizing', () => {
+test('controller-signed lifecycle checkpoint verifies and remains non-authorizing', () => {
   const controller = generateKeyPairSync('ed25519');
   const checkpoint = createMachinePrincipalCurrentnessCheckpoint({
     currentness: currentness(),
@@ -66,6 +53,7 @@ test('controller-signed currentness checkpoint verifies and remains non-authoriz
   });
   assert.equal(verified.statement.sequence, 1);
   assert.equal(verified.statement.status, 'active');
+  assert.equal('admission_digest' in verified.statement, false);
   assert.equal(verified.statement.authority_effect, 'none');
   assert.equal(verified.statement.execution_authority_granted, false);
   assert.equal(verified.statement.global_currentness_claimed, false);
@@ -103,7 +91,7 @@ test('tampered checkpoint statement or digest is rejected', () => {
   }), /checkpoint digest mismatch/);
 });
 
-test('transitions advance exactly one sequence and chain predecessor head', () => {
+test('transitions advance exactly one sequence, chain predecessor head, and advance observed time', () => {
   const controller = generateKeyPairSync('ed25519');
   const first = createMachinePrincipalCurrentnessCheckpoint({
     currentness: currentness({ sequence: 1, sourceHead: '1'.repeat(64) }),
@@ -114,7 +102,8 @@ test('transitions advance exactly one sequence and chain predecessor head', () =
     currentness: currentness({
       sequence: 2,
       sourceHead: '2'.repeat(64),
-      predecessorHead: '1'.repeat(64)
+      predecessorHead: '1'.repeat(64),
+      observedAt: '2026-09-01T17:00:01.000Z'
     }),
     controllerPrivateKey: controller.privateKey,
     trustedControllerPublicKey: controller.publicKey
@@ -128,34 +117,83 @@ test('transitions advance exactly one sequence and chain predecessor head', () =
   assert.equal(transition.current_sequence, 2);
   assert.equal(transition.authority_effect, 'none');
 
-  const bad = createMachinePrincipalCurrentnessCheckpoint({
+  const badSequence = createMachinePrincipalCurrentnessCheckpoint({
     currentness: currentness({
       sequence: 3,
       sourceHead: '3'.repeat(64),
-      predecessorHead: '1'.repeat(64)
+      predecessorHead: '1'.repeat(64),
+      observedAt: '2026-09-01T17:00:02.000Z'
     }),
     controllerPrivateKey: controller.privateKey,
     trustedControllerPublicKey: controller.publicKey
   });
   assert.throws(() => validateMachinePrincipalCurrentnessCheckpointTransition(
     first,
-    bad,
+    badSequence,
     { trustedControllerPublicKey: controller.publicKey }
-  ), /advance by one|predecessor/);
-});
+  ), /advance by one/);
 
-test('retained checkpoints reject rollback and same-sequence equivocation', () => {
-  const controller = generateKeyPairSync('ed25519');
-  const retained = createMachinePrincipalCurrentnessCheckpoint({
-    currentness: currentness({ sequence: 2, sourceHead: '2'.repeat(64) }),
+  const nonAdvancingTime = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness({
+      sequence: 2,
+      sourceHead: '4'.repeat(64),
+      predecessorHead: '1'.repeat(64),
+      observedAt: '2026-09-01T17:00:00.000Z'
+    }),
     controllerPrivateKey: controller.privateKey,
     trustedControllerPublicKey: controller.publicKey
   });
-  const older = createMachinePrincipalCurrentnessCheckpoint({
+  assert.throws(() => validateMachinePrincipalCurrentnessCheckpointTransition(
+    first,
+    nonAdvancingTime,
+    { trustedControllerPublicKey: controller.publicKey }
+  ), /chronologically/);
+});
+
+test('authority digest may change across a valid lifecycle successor', () => {
+  const controller = generateKeyPairSync('ed25519');
+  const first = createMachinePrincipalCurrentnessCheckpoint({
     currentness: currentness({ sequence: 1, sourceHead: '1'.repeat(64) }),
     controllerPrivateKey: controller.privateKey,
     trustedControllerPublicKey: controller.publicKey
   });
+  const narrowed = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness({
+      sequence: 2,
+      status: 'narrowed',
+      authorityDigest: 'f'.repeat(64),
+      sourceHead: '2'.repeat(64),
+      predecessorHead: '1'.repeat(64),
+      observedAt: '2026-09-01T17:00:01.000Z'
+    }),
+    controllerPrivateKey: controller.privateKey,
+    trustedControllerPublicKey: controller.publicKey
+  });
+  const result = validateMachinePrincipalCurrentnessCheckpointTransition(
+    first,
+    narrowed,
+    { trustedControllerPublicKey: controller.publicKey }
+  );
+  assert.equal(result.valid, true);
+});
+
+test('retained checkpoints reject rollback and same-sequence equivocation', () => {
+  const controller = generateKeyPairSync('ed25519');
+  const first = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness({ sequence: 1, sourceHead: '1'.repeat(64) }),
+    controllerPrivateKey: controller.privateKey,
+    trustedControllerPublicKey: controller.publicKey
+  });
+  const retained = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: currentness({
+      sequence: 2,
+      sourceHead: '2'.repeat(64),
+      predecessorHead: '1'.repeat(64)
+    }),
+    controllerPrivateKey: controller.privateKey,
+    trustedControllerPublicKey: controller.publicKey
+  });
+  const older = first;
   assert.throws(() => verifyMachinePrincipalCurrentnessCheckpoint(older, {
     trustedControllerPublicKey: controller.publicKey,
     retainedCheckpoint: retained
@@ -165,7 +203,8 @@ test('retained checkpoints reject rollback and same-sequence equivocation', () =
     currentness: currentness({
       sequence: 2,
       sourceHead: '9'.repeat(64),
-      admissionDigest: admission('cap_other')
+      predecessorHead: '1'.repeat(64),
+      authorityDigest: 'f'.repeat(64)
     }),
     controllerPrivateKey: controller.privateKey,
     trustedControllerPublicKey: controller.publicKey
