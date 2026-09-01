@@ -484,6 +484,10 @@ Additional adaptive-assurance abuse cases include:
 - Sybil splitting across principals to reset task-level scrutiny;
 - correlated sub-agents or identical model/context replicas being misrepresented
   as independent verification;
+- catalog-only, expired, revoked, runtime-substituted, or cloned/lookalike
+  verifier candidates being admitted to the stochastic reviewer pool;
+- unverified model-family or operator-domain labels being used to manufacture
+  apparent verifier diversity;
 - a verifier selected by, or fully predictable to, the acting principal;
 - memory/context poisoning steering an agent toward a permitted but wrong action
   while ordinary authorization remains valid;
@@ -574,6 +578,9 @@ Independent review should treat these as invariants, not best-effort goals:
     signature and monotonically higher sequence are not themselves global-
     currentness proof; retained-currentness and key-rotation policy remain
     independently required.
+30. Runtime/provider catalog presence is not verifier admission. Stochastic
+    reviewer selection requires an active identity-bound candidate path, and
+    unverified model-family/operator-domain labels cannot increase independence.
 
 Durable assurance-source admissions now support bounded, Grid-signed revocation
 snapshots that can invalidate either an admission digest or its upstream source-
