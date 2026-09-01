@@ -334,6 +334,61 @@ class MachinePrincipalCurrentnessStore {
   }
 }
 
+
+export async function readMachinePrincipalCurrentnessRetainedHead({
+  statePath,
+  trustedControllerPublicKey,
+  expectedPrincipalId,
+  expectedPrincipalType,
+  maxStateBytes,
+  maxCheckpointBytes
+} = {}) {
+  const normalizedPath = requireStatePath(statePath);
+  const limits = Object.freeze({
+    maxStateBytes: boundedPositiveInteger(
+      maxStateBytes,
+      DEFAULT_MAX_STATE_BYTES,
+      HARD_MAX_STATE_BYTES,
+      'Machine principal currentness read-only maximum state bytes'
+    ),
+    maxCheckpointBytes: boundedPositiveInteger(
+      maxCheckpointBytes,
+      DEFAULT_MAX_CHECKPOINT_BYTES,
+      HARD_MAX_CHECKPOINT_BYTES,
+      'Machine principal currentness read-only maximum checkpoint bytes'
+    )
+  });
+  const trust = Object.freeze({
+    trustedControllerPublicKey,
+    expectedPrincipalId: requirePrincipalId(expectedPrincipalId),
+    expectedPrincipalType: requirePrincipalType(expectedPrincipalType)
+  });
+
+  const disk = await readVerifiedState(normalizedPath, limits, trust);
+  const head = disk.checkpoints.at(-1) ?? null;
+  return Object.freeze({
+    valid: true,
+    retained_latest_checkpoint: head,
+    checkpoint_count: disk.checkpoints.length,
+    durable_head_checkpoint_sequence: head ? checkpointSequence(head) : null,
+    durable_head_checkpoint_digest: head?.checkpoint_digest ?? null,
+    durable_source_head_digest: head?.statement.source_head_digest ?? null,
+    principal_id: head?.statement.principal_id ?? trust.expectedPrincipalId,
+    principal_type: head?.statement.principal_type ?? trust.expectedPrincipalType,
+    local_durable_retention_observed: true,
+    state_path_disclosed: false,
+    writer_memory_consulted: false,
+    state_mutation_performed: false,
+    storage_rollback_proof_claimed: false,
+    hardware_monotonicity_claimed: false,
+    external_witness_claimed: false,
+    global_currentness_claimed: false,
+    authority_effect: 'none',
+    execution_authority_granted: false,
+    capability_promotion_effect: 'none'
+  });
+}
+
 export async function openMachinePrincipalCurrentnessStore({
   statePath,
   trustedControllerPublicKey,
