@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "mesh/src/sandbox/server.mjs"
+      - "mesh/test/machine-principal-e2e.test.mjs"
       - "mesh/test/red-team/rt-auth-001-currentness-expiry.test.mjs"
       - ".github/workflows/rt-auth-001-expiry-hotfix.yml"
 
@@ -30,3 +31,5 @@ jobs:
           check-latest: false
       - name: Run real four-service expiry race regression
         run: node --test mesh/test/red-team/rt-auth-001-currentness-expiry.test.mjs
+      - name: Run existing machine-principal behavioral compatibility suite
+        run: node --test mesh/test/machine-principal-e2e.test.mjs
