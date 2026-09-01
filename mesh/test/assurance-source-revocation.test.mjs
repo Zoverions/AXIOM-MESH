@@ -13,6 +13,7 @@ import {
 import {
   assertDurableAssuranceSourceAdmissionNotRevoked,
   buildAssuranceSourceRevocationSnapshot,
+  collectNonRevokedDurableVerifiedSourceBindings,
   verifyAssuranceSourceRevocationSnapshot
 } from '../src/lib/assurance-source-revocation.mjs';
 
@@ -144,6 +145,49 @@ test('non-revoked admission can bind to a verified snapshot without claiming glo
   assert.equal(result.global_currentness_claimed, false);
   assert.equal(result.authority_effect, 'none');
   assert.equal(result.revocation_sequence, 6);
+});
+
+test('durable binding collection requires a current non-revoked snapshot', () => {
+  const { identity, publicKey } = signingIdentity();
+  const receipt = durable(identity);
+  const snapshot = buildAssuranceSourceRevocationSnapshot({
+    identity,
+    sequence: 10,
+    issuedAt: '2026-09-01T13:00:00.000Z',
+    expiresAt: '2026-09-02T13:00:00.000Z'
+  });
+
+  const result = collectNonRevokedDurableVerifiedSourceBindings(
+    [receipt],
+    snapshot,
+    publicKey,
+    { now: '2026-09-01T14:00:00.000Z', minimumSequence: 10 }
+  );
+  assert.deepEqual(result.bindings.get(receipt.statement.source_verification_digest), {
+    source_id: 'source.revocation',
+    source_class: 'entity-assurance'
+  });
+  assert.equal(result.revocation_sequence, 10);
+  assert.equal(result.global_currentness_claimed, false);
+  assert.equal(result.authority_effect, 'none');
+});
+
+test('retained minimum sequence rejects an older valid revocation snapshot', () => {
+  const { identity, publicKey } = signingIdentity();
+  const snapshot = buildAssuranceSourceRevocationSnapshot({
+    identity,
+    sequence: 11,
+    issuedAt: '2026-09-01T13:00:00.000Z',
+    expiresAt: '2026-09-02T13:00:00.000Z'
+  });
+  assert.throws(
+    () => verifyAssuranceSourceRevocationSnapshot(
+      snapshot,
+      publicKey,
+      { now: '2026-09-01T14:00:00.000Z', minimumSequence: 12 }
+    ),
+    /below the retained minimum/
+  );
 });
 
 test('revocation snapshots reject wrong keys, tampering, future state, and expiry', () => {
