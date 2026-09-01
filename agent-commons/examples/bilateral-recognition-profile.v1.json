@@ -1,0 +1,75 @@
+{
+  "schema": "axiom-bilateral-recognition-profile.v1",
+  "recognition_id": "recognition:university-a-college-b-01",
+  "party_a": "institution:university-a",
+  "party_b": "institution:college-b",
+  "recognized_claims": [
+    {
+      "claim_class": "credential:course-completion",
+      "issuer_party": "institution:university-a",
+      "relying_party": "institution:college-b",
+      "purposes": [
+        "prerequisite-review"
+      ],
+      "evidence_profile_refs": [
+        "evidence:course-completion-v1"
+      ],
+      "verifier_profile_refs": [
+        "verify:credential-v1"
+      ],
+      "local_effect_authority": false
+    }
+  ],
+  "assurance": {
+    "minimum_profile_refs": [
+      "assurance:ordinary-credential-v1"
+    ],
+    "may_narrow_locally": true
+  },
+  "privacy": {
+    "allowed_disclosures": [
+      "course identifier",
+      "completion status"
+    ],
+    "prohibited_disclosures": [
+      "full transcript unless separately required and authorized"
+    ],
+    "data_minimization_required": true
+  },
+  "currentness": {
+    "revocation_required": true,
+    "freshness_profile_refs": [
+      "freshness:credential-status-24h"
+    ],
+    "offline_stale_behavior": "downgrade_to_advisory_only"
+  },
+  "reservations": [
+    "Recognition does not establish program admission or degree equivalence."
+  ],
+  "amendment": {
+    "process_ref": "process:bilateral-recognition-amendment-v1",
+    "material_widening_requires_renewed_acceptance": true
+  },
+  "valid_from": "2026-09-01T17:50:00.000Z",
+  "expires_at": "2027-09-01T17:50:00.000Z",
+  "withdrawal": {
+    "party_a_may_withdraw": true,
+    "party_b_may_withdraw": true,
+    "notice_policy_ref": "policy:30-day-notice-except-security",
+    "historical_evidence_preserved": true
+  },
+  "dispute": {
+    "review_profile_ref": "review:bilateral-recognition-dispute-v1",
+    "remedy_requires_separate_authority": true
+  },
+  "authority": {
+    "recognition_grants_runtime_authority": false,
+    "recognition_grants_membership": false,
+    "recognition_grants_eligibility": false,
+    "automatic_transitive_trust": false
+  },
+  "limitations": [
+    "Recognition is purpose-bound and does not establish universal credential equivalence.",
+    "College B retains local admission and prerequisite policy."
+  ]
+}
