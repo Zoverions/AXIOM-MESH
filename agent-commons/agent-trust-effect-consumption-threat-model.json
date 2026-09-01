@@ -1,0 +1,79 @@
+{
+  "schema": "axiom-agent-effect-consumption-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a5b-pre-effect-consumption",
+  "scope": "One fixed read-system-facts pre-effect consumption gate over an exact A4 handoff, exact A1 executor identity, and fresh retained A6 currentness evidence. The slice persists one signed hash-addressed consumed record and still performs no target effect.",
+  "core_invariant": "Fresh identity/currentness evidence and a signed handoff are still not an effect. Before any later read-system-facts adapter may run, the exact handoff must have a durable one-time consumed record. A restart, replay, conflicting writer, stale currentness input, identity substitution, or ambiguous persisted state must never restore spendable work.",
+  "attack_classes": [
+    {
+      "id": "handoff-substitution",
+      "risks": ["replace task input", "replace sender", "replace intended executor", "change action after signature"],
+      "controls": ["full A4 signature/evidence reverification", "exact handoff digest binding", "fixed agent.read-system-facts action", "exact input digest binding"]
+    },
+    {
+      "id": "executor-identity-substitution",
+      "risks": ["present a different A1 executor credential", "reuse another principal credential", "decouple executor currentness from handoff identity"],
+      "controls": ["A1 credential verification", "credential digest must equal A4 intended_executor_identity_digest", "principal must equal A4 intended_executor_id", "A6 active credential digest must equal the exact executor credential"]
+    },
+    {
+      "id": "stale-or-revoked-effect-currentness",
+      "risks": ["reuse a stale active checkpoint", "substitute an older retained head", "omit revocation evidence", "evaluate after the effect"],
+      "controls": ["reuse A6 evaluateAgentCurrentnessSetAtEffect", "exact retained latest checkpoint digest", "effect-time reevaluation", "hard maximum freshness inherited from A6", "deny-dominant sender and executor checks"]
+    },
+    {
+      "id": "double-consumption-and-replay",
+      "risks": ["consume the same handoff twice", "change consumption id to obtain another spend", "resume after crash following consume"],
+      "controls": ["storage key excludes caller consumption id", "exclusive create of one hash-derived record path", "any existing or ambiguous record blocks a new consume", "resume_after_recovery_allowed=false"]
+    },
+    {
+      "id": "persistence-ambiguity",
+      "risks": ["partial write", "unreadable record after commit", "rollback by deleting local state", "state-root path substitution"],
+      "controls": ["write through exclusive file handle", "file sync before success", "read-back and signature/digest reverification", "missing/unreadable retained digest fails closed", "absolute canonical non-symlink state root", "hash-derived child path only"]
+    },
+    {
+      "id": "store-signer-substitution",
+      "risks": ["forge consumed record", "replace store verification key", "tamper with semantic claims after signing"],
+      "controls": ["Ed25519 store signature", "store public-key digest bound into statement", "statement digest", "content-addressed record digest", "strict unknown-field rejection"]
+    },
+    {
+      "id": "semantic-elevation",
+      "risks": ["treat consumed record as effect proof", "treat consume as authorization", "claim global currentness", "claim production persistence or media durability"],
+      "controls": ["effect_executed=false", "effect_admission_authorized=false", "global_currentness_claimed=false", "media_durability_claimed=false", "production_persistence_claimed=false", "authority_effect=none", "delegation_effect=none"]
+    }
+  ],
+  "known_nonclaims": [
+    "This record does not authorize or execute read-system-facts.",
+    "This slice does not provide Linux containment or an effect-specific executor receipt.",
+    "This slice does not prove global revocation/currentness.",
+    "This slice does not provide distributed consensus, replicated persistence, hardware monotonic storage, or media-survival guarantees.",
+    "The caller chooses the dedicated state root; the module only constrains the derived child path beneath that root.",
+    "A separately retained exact record digest is required to detect later local deletion/rollback after restart.",
+    "This slice does not alter Gateway, Hypervisor, Sandbox, Grid routes, policy, capability registry, MCP/A2A transport, deployment, or production authority."
+  ],
+  "next_gates": [
+    "add a separate short-lived fixed-operation effect-admission object bound to this exact consumption record",
+    "rebuild fixed hosted-Linux read-system-facts containment on current main",
+    "execute only after consumed record and effect-boundary currentness have been independently reverified",
+    "emit an executor-originated effect-specific receipt",
+    "compose A5a plus the exact effect receipt into A5b without inferring task success",
+    "obtain exact-head protected Linux effect evidence and independent effect-path review before any promotion decision"
+  ],
+  "boundaries": {
+    "effect_executed": false,
+    "effect_admission_authorized": false,
+    "consume_before_effect_committed": true,
+    "resume_after_recovery_allowed": false,
+    "global_currentness_claimed": false,
+    "production_persistence_claimed": false,
+    "media_durability_claimed": false,
+    "network_effect": false,
+    "process_effect": false,
+    "target_filesystem_effect": false,
+    "control_state_filesystem_effect": true,
+    "credential_access": false,
+    "secret_access": false,
+    "capability_promotion_enabled": false,
+    "authority_effect": "none",
+    "delegation_effect": "none"
+  }
+}
