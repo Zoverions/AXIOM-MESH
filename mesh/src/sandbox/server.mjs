@@ -202,20 +202,28 @@ export async function createSandboxService(config = meshConfig(), {
           execution_epoch: executionEpoch
         });
       }
+      let retained;
+      const source = machineCurrentness.source;
       const store = machineCurrentness.store;
-      if (
-        !store
-        || typeof store.verifyState !== 'function'
-        || typeof store.retainedHead !== 'function'
-      ) {
-        throw new AxiomError(
-          'machine_currentness_unavailable',
-          'Required machine-principal currentness source is unavailable',
-          503
-        );
-      }
       try {
-        await store.verifyState();
+        if (source && typeof source.resolveRetainedHead === 'function') {
+          const resolved = await source.resolveRetainedHead({
+            principalId: intent.principal.id,
+            principalType: intent.principal.type
+          });
+          retained = resolved?.retained_latest_checkpoint ?? null;
+        } else if (
+          store
+          && typeof store.verifyState === 'function'
+          && typeof store.retainedHead === 'function'
+        ) {
+          await store.verifyState();
+          retained = store.retainedHead();
+        } else {
+          throw new ValidationError(
+            'Required machine-principal currentness source is not configured'
+          );
+        }
       } catch (error) {
         throw new AxiomError(
           'machine_currentness_unavailable',
@@ -224,7 +232,6 @@ export async function createSandboxService(config = meshConfig(), {
           { cause_code: error?.code ?? 'currentness_state_verification_failed' }
         );
       }
-      const retained = store.retainedHead();
       if (!retained) {
         throw new AxiomError(
           'machine_currentness_unavailable',
