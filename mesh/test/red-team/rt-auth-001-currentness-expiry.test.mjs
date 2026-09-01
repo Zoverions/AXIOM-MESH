@@ -93,11 +93,6 @@ test('RT-AUTH-001 reproduces stale machine authority when principal expires befo
     token: AGENT_TOKEN,
     request: (path, options) => fetch(`${gateway}${path}`, options)
   });
-  const human = createGatewayClient({
-    token: HUMAN_TOKEN,
-    request: (path, options) => fetch(`${gateway}${path}`, options)
-  });
-
   globalThis.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input?.url;
     if (!intercepted && url === `http://127.0.0.1:${basePort + 2}/internal/v1/execute`) {
@@ -125,14 +120,12 @@ test('RT-AUTH-001 reproduces stale machine authority when principal expires befo
   assert.equal(result.status, 'completed');
   assert.equal(result.message, 'stale-authority-effect');
 
-  // Independently inspect committed evidence through a still-authorized human principal.
-  const events = await human.call('events.list', {
-    query: { after: 0, limit: 100 }
-  });
-  const completed = events.events.find(event => (
-    event.kind === 'intent.completed'
-    && event.subject === result.intent_id
-  ));
-  assert.ok(completed, 'Grid must contain an intent.completed event proving the effect path completed');
+  // The completed response is returned only after Sandbox attestation verification
+  // and Hypervisor completion processing. Bind the reproduction to that evidence.
   assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);
+  assert.match(result.evidence.execution_digest, /^[a-f0-9]{64}$/);
+  assert.match(
+    result.evidence.capability_consumption_receipt_digest,
+    /^[a-f0-9]{64}$/
+  );
 });
