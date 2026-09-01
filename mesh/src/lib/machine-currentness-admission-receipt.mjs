@@ -3,6 +3,10 @@ import {
   digestObject
 } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
+import {
+  MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA,
+  machinePrincipalAdmissionDigest
+} from './machine-principal-currentness.mjs';
 
 export const MACHINE_CURRENTNESS_ADMISSION_RECEIPT_SCHEMA =
   'axiom-machine-currentness-admission-receipt.v1';
@@ -10,11 +14,53 @@ export const MACHINE_CURRENTNESS_ADMISSION_RECEIPT_SCHEMA =
 const DIGEST = /^[a-f0-9]{64}$/;
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 
+const RECEIPT_KEYS = new Set([
+  'statement',
+  'signature',
+  'receipt_digest'
+]);
+
+const STATEMENT_KEYS = new Set([
+  'schema',
+  'issuer',
+  'principal_id',
+  'principal_type',
+  'authority_digest',
+  'capability_id',
+  'intent_digest',
+  'plan_digest',
+  'effect_destination',
+  'retained_checkpoint_digest',
+  'retained_source_head_digest',
+  'currentness_sequence',
+  'currentness_observed_at',
+  'controller_credential_digest',
+  'controller_key_epoch',
+  'admission_digest',
+  'currentness_evidence_digest',
+  'effect_currentness_evaluation_digest',
+  'admission_binding_digest',
+  'evaluated_at',
+  'currentness_result',
+  'authority_effect',
+  'execution_authority_granted',
+  'capability_promotion_effect',
+  'global_currentness_claimed'
+]);
+
 function requireObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError(`${label} must be an object`);
   }
   return value;
+}
+
+function rejectUnknownKeys(value, allowed, label) {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      throw new ValidationError(`${label} contains unsupported field: ${key}`);
+    }
+  }
 }
 
 function requireString(value, label, { max = 256, pattern = null } = {}) {
@@ -36,6 +82,60 @@ function requireTimestamp(value, label) {
 
 function requireDigest(value, label) {
   return requireString(value, label, { max: 64, pattern: DIGEST });
+}
+
+function requirePositiveInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new ValidationError(`${label} is invalid`);
+  }
+  return value;
+}
+
+function canonicalAdmissionDigest({
+  principalId,
+  principalType,
+  authorityDigest,
+  capabilityId,
+  intentDigest,
+  planDigest,
+  effectDestination
+}) {
+  return machinePrincipalAdmissionDigest({
+    principalId,
+    principalType,
+    authorityDigest,
+    capabilityId,
+    intentDigest,
+    planDigest,
+    effectDestination
+  });
+}
+
+function canonicalEvaluationDigest({
+  admissionDigest,
+  currentnessEvidenceDigest,
+  currentnessSequence,
+  retainedSourceHeadDigest
+}) {
+  return digestObject({
+    schema: MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA,
+    admission_digest: requireDigest(
+      admissionDigest,
+      'Machine currentness admission canonical admission digest'
+    ),
+    currentness_evidence_digest: requireDigest(
+      currentnessEvidenceDigest,
+      'Machine currentness admission currentness evidence digest'
+    ),
+    currentness_sequence: requirePositiveInteger(
+      currentnessSequence,
+      'Machine currentness admission sequence'
+    ),
+    currentness_head_digest: requireDigest(
+      retainedSourceHeadDigest,
+      'Machine currentness admission retained source head digest'
+    )
+  });
 }
 
 export function machineCurrentnessAdmissionBindingDigest({
@@ -97,16 +197,72 @@ export function createMachineCurrentnessAdmissionReceipt({
   currentnessObservedAt,
   controllerCredentialDigest,
   controllerKeyEpoch,
+  admissionDigest,
+  currentnessEvidenceDigest,
+  effectCurrentnessEvaluationDigest,
   evaluatedAt = new Date().toISOString()
 } = {}) {
   if (!identity || typeof identity.signObject !== 'function' || identity.service !== 'grid') {
     throw new ValidationError('Machine currentness admission receipt requires Grid signing identity');
   }
-  if (!Number.isSafeInteger(currentnessSequence) || currentnessSequence < 1) {
-    throw new ValidationError('Machine currentness admission sequence is invalid');
+
+  const sequence = requirePositiveInteger(
+    currentnessSequence,
+    'Machine currentness admission sequence'
+  );
+  const controllerEpoch = requirePositiveInteger(
+    controllerKeyEpoch,
+    'Machine currentness admission controller key epoch'
+  );
+
+  const expectedAdmissionDigest = canonicalAdmissionDigest({
+    principalId,
+    principalType,
+    authorityDigest,
+    capabilityId,
+    intentDigest,
+    planDigest,
+    effectDestination
+  });
+  if (
+    requireDigest(admissionDigest, 'Machine currentness admission digest')
+    !== expectedAdmissionDigest
+  ) {
+    throw new ValidationError(
+      'Machine currentness admission receipt admission digest does not match canonical effect admission'
+    );
   }
-  if (!Number.isSafeInteger(controllerKeyEpoch) || controllerKeyEpoch < 1) {
-    throw new ValidationError('Machine currentness admission controller key epoch is invalid');
+
+  const evidenceDigest = requireDigest(
+    currentnessEvidenceDigest,
+    'Machine currentness admission currentness evidence digest'
+  );
+  const expectedEvaluationDigest = canonicalEvaluationDigest({
+    admissionDigest,
+    currentnessEvidenceDigest: evidenceDigest,
+    currentnessSequence: sequence,
+    retainedSourceHeadDigest
+  });
+  if (
+    requireDigest(
+      effectCurrentnessEvaluationDigest,
+      'Machine currentness admission effect currentness evaluation digest'
+    ) !== expectedEvaluationDigest
+  ) {
+    throw new ValidationError(
+      'Machine currentness admission receipt evaluation digest does not match canonical currentness evaluation'
+    );
+  }
+
+  const observedAt = requireTimestamp(
+    currentnessObservedAt,
+    'Machine currentness admission observed_at'
+  );
+  const evaluated = requireTimestamp(evaluatedAt, 'Machine currentness admission evaluated_at');
+  if (Date.parse(observedAt) > Date.parse(evaluated)) {
+    throw new ValidationError(
+      'Machine currentness admission currentness observation cannot occur after evaluation'
+    );
   }
 
   const admissionBindingDigest = machineCurrentnessAdmissionBindingDigest({
@@ -133,18 +289,18 @@ export function createMachineCurrentnessAdmissionReceipt({
     effect_destination: effectDestination,
     retained_checkpoint_digest: retainedCheckpointDigest,
     retained_source_head_digest: retainedSourceHeadDigest,
-    currentness_sequence: currentnessSequence,
-    currentness_observed_at: requireTimestamp(
-      currentnessObservedAt,
-      'Machine currentness admission observed_at'
-    ),
+    currentness_sequence: sequence,
+    currentness_observed_at: observedAt,
     controller_credential_digest: requireDigest(
       controllerCredentialDigest,
       'Machine currentness admission controller credential digest'
     ),
-    controller_key_epoch: controllerKeyEpoch,
+    controller_key_epoch: controllerEpoch,
+    admission_digest: admissionDigest,
+    currentness_evidence_digest: evidenceDigest,
+    effect_currentness_evaluation_digest: effectCurrentnessEvaluationDigest,
     admission_binding_digest: admissionBindingDigest,
-    evaluated_at: requireTimestamp(evaluatedAt, 'Machine currentness admission evaluated_at'),
+    evaluated_at: evaluated,
     currentness_result: 'active-and-current',
     authority_effect: 'none',
     execution_authority_granted: false,
@@ -170,11 +326,21 @@ export function verifyMachineCurrentnessAdmissionReceipt(raw, {
   expectedEffectDestination,
   expectedRetainedCheckpointDigest = null,
   expectedRetainedSourceHeadDigest = null,
+  expectedAdmissionDigest = null,
+  expectedCurrentnessEvidenceDigest = null,
+  expectedEffectCurrentnessEvaluationDigest = null,
   maxAgeMs,
   now = new Date()
 } = {}) {
   const receipt = requireObject(raw, 'Machine currentness admission receipt');
+  rejectUnknownKeys(receipt, RECEIPT_KEYS, 'Machine currentness admission receipt');
   const statement = requireObject(receipt.statement, 'Machine currentness admission receipt statement');
+  rejectUnknownKeys(
+    statement,
+    STATEMENT_KEYS,
+    'Machine currentness admission receipt statement'
+  );
+
   if (statement.schema !== MACHINE_CURRENTNESS_ADMISSION_RECEIPT_SCHEMA || statement.issuer !== 'grid') {
     throw new ValidationError('Machine currentness admission receipt identity is invalid');
   }
@@ -195,6 +361,49 @@ export function verifyMachineCurrentnessAdmissionReceipt(raw, {
   const signed = { statement, signature: receipt.signature };
   if (receipt.receipt_digest !== digestObject(signed)) {
     throw new ValidationError('Machine currentness admission receipt digest mismatch');
+  }
+
+  const canonicalAdmission = canonicalAdmissionDigest({
+    principalId: statement.principal_id,
+    principalType: statement.principal_type,
+    authorityDigest: statement.authority_digest,
+    capabilityId: statement.capability_id,
+    intentDigest: statement.intent_digest,
+    planDigest: statement.plan_digest,
+    effectDestination: statement.effect_destination
+  });
+  if (
+    requireDigest(statement.admission_digest, 'Machine currentness admission digest')
+    !== canonicalAdmission
+  ) {
+    throw new ValidationError(
+      'Machine currentness admission receipt admission digest is not canonical'
+    );
+  }
+
+  const currentnessSequence = requirePositiveInteger(
+    statement.currentness_sequence,
+    'Machine currentness admission sequence'
+  );
+  const currentnessEvidenceDigest = requireDigest(
+    statement.currentness_evidence_digest,
+    'Machine currentness admission currentness evidence digest'
+  );
+  const canonicalEvaluation = canonicalEvaluationDigest({
+    admissionDigest: statement.admission_digest,
+    currentnessEvidenceDigest,
+    currentnessSequence,
+    retainedSourceHeadDigest: statement.retained_source_head_digest
+  });
+  if (
+    requireDigest(
+      statement.effect_currentness_evaluation_digest,
+      'Machine currentness admission effect currentness evaluation digest'
+    ) !== canonicalEvaluation
+  ) {
+    throw new ValidationError(
+      'Machine currentness admission receipt evaluation digest is not canonical'
+    );
   }
 
   const expectedBinding = machineCurrentnessAdmissionBindingDigest({
@@ -232,21 +441,49 @@ export function verifyMachineCurrentnessAdmissionReceipt(raw, {
   ) {
     throw new ValidationError('Machine currentness admission retained source head mismatch');
   }
-  if (!Number.isSafeInteger(statement.currentness_sequence) || statement.currentness_sequence < 1) {
-    throw new ValidationError('Machine currentness admission sequence is invalid');
+  if (
+    expectedAdmissionDigest !== null
+    && statement.admission_digest !== expectedAdmissionDigest
+  ) {
+    throw new ValidationError('Machine currentness admission canonical admission digest mismatch');
   }
-  if (!Number.isSafeInteger(statement.controller_key_epoch) || statement.controller_key_epoch < 1) {
-    throw new ValidationError('Machine currentness admission controller key epoch is invalid');
+  if (
+    expectedCurrentnessEvidenceDigest !== null
+    && statement.currentness_evidence_digest !== expectedCurrentnessEvidenceDigest
+  ) {
+    throw new ValidationError('Machine currentness admission currentness evidence digest mismatch');
   }
+  if (
+    expectedEffectCurrentnessEvaluationDigest !== null
+    && statement.effect_currentness_evaluation_digest
+      !== expectedEffectCurrentnessEvaluationDigest
+  ) {
+    throw new ValidationError('Machine currentness admission evaluation digest mismatch');
+  }
+
+  requirePositiveInteger(
+    statement.controller_key_epoch,
+    'Machine currentness admission controller key epoch'
+  );
   requireDigest(
     statement.controller_credential_digest,
     'Machine currentness admission controller credential digest'
   );
-  requireTimestamp(statement.currentness_observed_at, 'Machine currentness admission observed_at');
+
+  const observedAt = new Date(requireTimestamp(
+    statement.currentness_observed_at,
+    'Machine currentness admission observed_at'
+  ));
   const evaluatedAt = new Date(requireTimestamp(
     statement.evaluated_at,
     'Machine currentness admission evaluated_at'
   ));
+  if (observedAt.valueOf() > evaluatedAt.valueOf()) {
+    throw new ValidationError(
+      'Machine currentness admission currentness observation cannot occur after evaluation'
+    );
+  }
+
   const nowDate = now instanceof Date ? now : new Date(now);
   if (Number.isNaN(nowDate.valueOf())) {
     throw new ValidationError('Machine currentness admission verification time is invalid');
@@ -262,10 +499,14 @@ export function verifyMachineCurrentnessAdmissionReceipt(raw, {
   return Object.freeze({
     valid: true,
     receipt_digest: receipt.receipt_digest,
+    admission_digest: statement.admission_digest,
+    currentness_evidence_digest: statement.currentness_evidence_digest,
+    effect_currentness_evaluation_digest:
+      statement.effect_currentness_evaluation_digest,
     admission_binding_digest: statement.admission_binding_digest,
     retained_checkpoint_digest: statement.retained_checkpoint_digest,
     retained_source_head_digest: statement.retained_source_head_digest,
-    currentness_sequence: statement.currentness_sequence,
+    currentness_sequence: currentnessSequence,
     controller_credential_digest: statement.controller_credential_digest,
     controller_key_epoch: statement.controller_key_epoch,
     evaluated_at: statement.evaluated_at,
