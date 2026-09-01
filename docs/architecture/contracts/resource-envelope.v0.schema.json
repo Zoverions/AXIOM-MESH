@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/resource-envelope.v0.schema.json",
+  "title": "AXIOM Resource Envelope v0",
+  "description": "Inert finite resource budget and inheritance contract. It grants no authority, performs no reservation, and activates no runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","envelope_id","subject_ref","principal_id","host_ref","priority_class","parent_envelope_ref","inheritance","hard_ceilings","soft_targets","measurement_freshness_ms","required_observation_kinds","degradation_policy_refs","fallback_refs","checkpoint_required","cancellable","reservation_expires_at","source_policy_ref","created_at","expires_at","contains_secret_material","authority_effect","network_effect","runtime_activation"],
+  "properties": {
+    "schema": {"const": "axiom-resource-envelope.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "envelope_id": {"$ref": "#/$defs/id"},
+    "subject_ref": {"$ref": "#/$defs/id"},
+    "principal_id": {"$ref": "#/$defs/id"},
+    "host_ref": {"$ref": "#/$defs/id"},
+    "priority_class": {"enum": ["P0","P1","P2","P3","P4"]},
+    "parent_envelope_ref": {"$ref": "#/$defs/nullableId"},
+    "inheritance": {"$ref": "#/$defs/inheritance"},
+    "hard_ceilings": {"$ref": "#/$defs/resources"},
+    "soft_targets": {"$ref": "#/$defs/resources"},
+    "measurement_freshness_ms": {"type": "integer", "minimum": 1, "maximum": 86400000},
+    "required_observation_kinds": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"enum": ["cpu","memory","accelerator","storage","io","network","battery","thermal","energy","cost"]}},
+    "degradation_policy_refs": {"$ref": "#/$defs/idList"},
+    "fallback_refs": {"$ref": "#/$defs/idList"},
+    "checkpoint_required": {"type": "boolean"},
+    "cancellable": {"type": "boolean"},
+    "reservation_expires_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "source_policy_ref": {"$ref": "#/$defs/id"},
+    "created_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "expires_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "contains_secret_material": {"const": false},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "runtime_activation": {"const": false}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "nullableId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "idList": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_millis","memory_bytes","accelerator_memory_bytes","durable_storage_bytes","scratch_storage_bytes","io_bytes","network_bytes","network_requests","model_calls","input_units","output_units","concurrency","wall_time_ms","monetary_cost_units","energy_millijoules","process_count","thread_count","file_descriptors"],
+      "properties": {
+        "cpu_millis": {"type":"integer","minimum":0},
+        "memory_bytes": {"type":"integer","minimum":0},
+        "accelerator_memory_bytes": {"type":"integer","minimum":0},
+        "durable_storage_bytes": {"type":"integer","minimum":0},
+        "scratch_storage_bytes": {"type":"integer","minimum":0},
+        "io_bytes": {"type":"integer","minimum":0},
+        "network_bytes": {"type":"integer","minimum":0},
+        "network_requests": {"type":"integer","minimum":0},
+        "model_calls": {"type":"integer","minimum":0},
+        "input_units": {"type":"integer","minimum":0},
+        "output_units": {"type":"integer","minimum":0},
+        "concurrency": {"type":"integer","minimum":0},
+        "wall_time_ms": {"type":"integer","minimum":0},
+        "monetary_cost_units": {"type":"integer","minimum":0},
+        "energy_millijoules": {"type":"integer","minimum":0},
+        "process_count": {"type":"integer","minimum":0},
+        "thread_count": {"type":"integer","minimum":0},
+        "file_descriptors": {"type":"integer","minimum":0}
+      }
+    },
+    "inheritance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode","parent_budget_accounting","child_authorization_ref"],
+      "properties": {
+        "mode": {"enum": ["root","inherited","separately-authorized-child"]},
+        "parent_budget_accounting": {"enum": ["not-applicable","counts-against-parent","separate-authorized-budget"]},
+        "child_authorization_ref": {"$ref": "#/$defs/nullableId"}
+      },
+      "allOf": [
+        {"if":{"properties":{"mode":{"const":"root"}},"required":["mode"]},"then":{"properties":{"parent_budget_accounting":{"const":"not-applicable"},"child_authorization_ref":{"type":"null"}}}},
+        {"if":{"properties":{"mode":{"const":"inherited"}},"required":["mode"]},"then":{"properties":{"parent_budget_accounting":{"const":"counts-against-parent"},"child_authorization_ref":{"type":"null"}}}},
+        {"if":{"properties":{"mode":{"const":"separately-authorized-child"}},"required":["mode"]},"then":{"properties":{"parent_budget_accounting":{"const":"separate-authorized-budget"},"child_authorization_ref":{"$ref":"#/$defs/id"}}}}
+      ]
+    }
+  }
+}
