@@ -15,6 +15,11 @@ import {
   MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
   normalizeMachinePrincipalCurrentness
 } from './machine-principal-currentness.mjs';
+import {
+  assertMachineCurrentnessControllerKeyUsableAt,
+  machineCurrentnessControllerKeyId,
+  verifyMachineCurrentnessControllerKeyCredential
+} from './machine-currentness-controller-key-lifecycle.mjs';
 
 export const MACHINE_PRINCIPAL_CURRENTNESS_CHECKPOINT_SCHEMA =
   'axiom-machine-principal-currentness-checkpoint.v1';
@@ -277,4 +282,64 @@ function assertProgressRelativeToRetained(retained, current) {
       'Machine principal currentness equivocation detected at retained sequence'
     );
   }
+}
+
+
+export function verifyMachinePrincipalCurrentnessCheckpointWithControllerLifecycle(raw, {
+  controllerCredential,
+  trustedControllerRootPublicKey,
+  successorControllerCredential = null,
+  controllerRevocation = null,
+  expectedControllerDomainId = 'axiom.machine-currentness.v1',
+  expectedControllerPrincipalId,
+  expectedPrincipalId,
+  expectedPrincipalType,
+  retainedCheckpoint = null
+} = {}) {
+  const credential = verifyMachineCurrentnessControllerKeyCredential(controllerCredential, {
+    trustedRootPublicKey: trustedControllerRootPublicKey,
+    expectedDomainId: expectedControllerDomainId,
+    expectedPrincipalId: expectedControllerPrincipalId
+  });
+  const claimedControllerKeyId = raw?.statement?.controller_key_id;
+  if (
+    typeof claimedControllerKeyId !== 'string'
+    || claimedControllerKeyId !== credential.statement.operational_key_id
+  ) {
+    throw new ValidationError(
+      'Machine principal currentness checkpoint controller credential does not match signed controller key'
+    );
+  }
+  const observedAt = raw?.statement?.observed_at;
+  const usable = assertMachineCurrentnessControllerKeyUsableAt(controllerCredential, {
+    trustedRootPublicKey: trustedControllerRootPublicKey,
+    at: observedAt,
+    successorCredential: successorControllerCredential,
+    revocation: controllerRevocation,
+    expectedDomainId: expectedControllerDomainId,
+    expectedPrincipalId: expectedControllerPrincipalId
+  });
+  if (machineCurrentnessControllerKeyId(usable.operational_public_key) !== claimedControllerKeyId) {
+    throw new ValidationError(
+      'Machine principal currentness controller lifecycle resolved a different operational key'
+    );
+  }
+  const checkpoint = verifyMachinePrincipalCurrentnessCheckpoint(raw, {
+    trustedControllerPublicKey: usable.operational_public_key,
+    expectedPrincipalId,
+    expectedPrincipalType,
+    retainedCheckpoint
+  });
+  return Object.freeze({
+    checkpoint,
+    controller_credential_digest: credential.credential_digest,
+    controller_key_epoch: credential.statement.key_epoch,
+    controller_operational_key_id: credential.statement.operational_key_id,
+    controller_lifecycle_checked_at: checkpoint.statement.observed_at,
+    controller_wall_clock_signing_time_proved: false,
+    execution_authority_granted: false,
+    authority_effect: 'none',
+    capability_promotion_effect: 'none',
+    global_currentness_claimed: false
+  });
 }
