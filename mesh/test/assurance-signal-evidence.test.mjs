@@ -11,6 +11,8 @@ import {
 
 const NOW = '2026-09-01T12:00:00.000Z';
 const DIGEST = 'a'.repeat(64);
+const SOURCE_VERIFICATION_DIGEST = 'b'.repeat(64);
+const VERIFIED_SOURCES = new Set([SOURCE_VERIFICATION_DIGEST]);
 
 function policy(overrides = {}) {
   return {
@@ -49,6 +51,7 @@ function evidence({
     source_id: sourceId,
     source_class: sourceClass,
     basis_digest: DIGEST,
+    source_verification_digest: SOURCE_VERIFICATION_DIGEST,
     observed_at: observedAt,
     expires_at: expiresAt,
     non_authorizing: true
@@ -87,6 +90,7 @@ test('missing current risk evidence fails closed instead of defaulting safe', ()
       taskId: 'task.signal-example',
       policy: policy(),
       evidence: completeEvidence().filter(item => item.signal !== 'anomaly'),
+      verifiedSourceDigests: VERIFIED_SOURCES,
       now: NOW
     }),
     /anomaly/
@@ -121,6 +125,7 @@ test('expired, stale, future, and unsupported-source evidence cannot satisfy a s
         taskId: 'task.signal-example',
         policy: policy(),
         evidence: items,
+        verifiedSourceDigests: VERIFIED_SOURCES,
         now: NOW
       }),
       /anomaly/
@@ -140,6 +145,7 @@ test('expired, stale, future, and unsupported-source evidence cannot satisfy a s
       taskId: 'task.signal-example',
       policy: policy(),
       evidence: unsupported,
+      verifiedSourceDigests: VERIFIED_SOURCES,
       now: NOW
     }),
     /source_class/
@@ -159,6 +165,7 @@ test('conflicting risk evidence resolves toward the higher observed risk', () =>
     taskId: 'task.signal-example',
     policy: policy(),
     evidence: items,
+    verifiedSourceDigests: VERIFIED_SOURCES,
     now: NOW
   });
   assert.equal(resolution.signals.consequence, 95);
@@ -180,6 +187,7 @@ test('conflicting reputation resolves toward less friction rather than trust inf
     taskId: 'task.signal-example',
     policy: policy(),
     evidence: items,
+    verifiedSourceDigests: VERIFIED_SOURCES,
     now: NOW
   });
   assert.equal(resolution.reputation_score, 35);
@@ -192,12 +200,32 @@ test('sourced resolution builds the ordinary adaptive-assurance input without gr
     riskClass: 'medium',
     signalPolicy: policy(),
     evidence: completeEvidence(),
+    verifiedSourceDigests: VERIFIED_SOURCES,
     now: NOW
   });
   assert.equal(built.input.schema, 'axiom-adaptive-assurance-input.v1');
   assert.equal(built.input.risk_class, 'medium');
   assert.equal(built.resolution.authority_effect, 'none');
   assert.match(built.resolution.resolution_digest, /^[a-f0-9]{64}$/);
+});
+
+
+test('otherwise valid signal evidence is ignored when its upstream verification was not admitted', () => {
+  const items = completeEvidence().map(item => (
+    item.signal === 'anomaly'
+      ? { ...item, source_verification_digest: 'c'.repeat(64) }
+      : item
+  ));
+  assert.throws(
+    () => resolveAdaptiveAssuranceSignals({
+      taskId: 'task.signal-example',
+      policy: policy(),
+      evidence: items,
+      verifiedSourceDigests: VERIFIED_SOURCES,
+      now: NOW
+    }),
+    /anomaly/
+  );
 });
 
 test('acting-agent self declarations are not accepted as an evidence class', () => {
