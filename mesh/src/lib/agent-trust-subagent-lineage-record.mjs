@@ -40,6 +40,7 @@ const STATEMENT_KEYS = new Set([
   'delegate_id',
   'lineage_authority_id',
   'lineage_authority_key_id',
+  'delegation_admission',
   'delegation_admission_digest',
   'attenuation_proof_digest',
   'parent_ceiling_digest',
@@ -220,6 +221,10 @@ function normalizeStatement(raw) {
     lineage_authority_key_id: digest(
       value.lineage_authority_key_id,
       'subagent lineage record lineage_authority_key_id'
+    ),
+    delegation_admission: assertPlainObject(
+      value.delegation_admission,
+      'subagent lineage record delegation_admission'
     ),
     delegation_admission_digest: digest(
       value.delegation_admission_digest,
@@ -430,6 +435,7 @@ export function createSubagentLineageRecord({
     delegate_id: composition.admission.statement.delegate_id,
     lineage_authority_id: lineageAuthorityId,
     lineage_authority_key_id: subagentLineageAuthorityKeyId(authorityPublicKey),
+    delegation_admission: composition.admission,
     delegation_admission_digest: composition.admission.admission_digest,
     attenuation_proof_digest: composition.admission.statement.attenuation_proof_digest,
     parent_ceiling_digest: composition.admission.statement.parent_ceiling_digest,
@@ -535,10 +541,7 @@ export function verifySubagentLineageRecord(raw, {
     expectedLineageAuthorityId
   );
   const composition = verifyComposition({
-    delegationAdmission: {
-      schema: raw.statement === undefined ? undefined : undefined,
-      ...arguments[1]?.delegationAdmission
-    },
+    delegationAdmission: verified.statement.delegation_admission,
     admissionAuthorityPublicKey,
     attenuationProof,
     delegatorPublicKey,
