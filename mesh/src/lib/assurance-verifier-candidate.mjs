@@ -114,6 +114,20 @@ export function admitVerifierCandidate({
   return admission;
 }
 
+function requireLiveCandidateAdmission(admission) {
+  if (
+    !admission
+    || typeof admission !== 'object'
+    || !LIVE_CANDIDATE_ADMISSIONS.has(admission)
+    || admission.schema !== VERIFIER_CANDIDATE_ADMISSION_SCHEMA
+  ) {
+    throw new ValidationError(
+      'verifier candidate pool accepts only live broker admissions'
+    );
+  }
+  return admission;
+}
+
 export function collectAdmittedVerifierProfiles(admissions) {
   if (!Array.isArray(admissions) || admissions.length < 1 || admissions.length > 256) {
     throw new ValidationError(
@@ -122,17 +136,8 @@ export function collectAdmittedVerifierProfiles(admissions) {
   }
   const profiles = [];
   const ids = new Set();
-  for (const admission of admissions) {
-    if (
-      !admission
-      || typeof admission !== 'object'
-      || !LIVE_CANDIDATE_ADMISSIONS.has(admission)
-      || admission.schema !== VERIFIER_CANDIDATE_ADMISSION_SCHEMA
-    ) {
-      throw new ValidationError(
-        'verifier candidate pool accepts only live broker admissions'
-      );
-    }
+  for (const rawAdmission of admissions) {
+    const admission = requireLiveCandidateAdmission(rawAdmission);
     if (ids.has(admission.verifier_profile.verifier_id)) {
       throw new ValidationError(
         'verifier candidate pool contains duplicate verifier identity'
@@ -145,13 +150,20 @@ export function collectAdmittedVerifierProfiles(admissions) {
 }
 
 export function compileAdmittedAssuranceWorkOrder({
+  originVerifierAdmission,
   verifierCandidateAdmissions,
   ...options
 } = {}) {
+  const origin = requireLiveCandidateAdmission(originVerifierAdmission);
+  const candidates = collectAdmittedVerifierProfiles(verifierCandidateAdmissions);
+  if (candidates.some(item => item.verifier_id === origin.verifier_profile.verifier_id)) {
+    throw new ValidationError(
+      'admitted assurance work order candidate pool includes the origin verifier'
+    );
+  }
   return compileAssuranceWorkOrder({
     ...options,
-    verifierCandidates: collectAdmittedVerifierProfiles(
-      verifierCandidateAdmissions
-    )
+    originVerifierProfile: origin.verifier_profile,
+    verifierCandidates: candidates
   });
 }
