@@ -1,0 +1,51 @@
+{
+  "schema": "axiom-social-presentation-transformation-policy.v0",
+  "version": 0,
+  "status": "inert-local-rendering-contract",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "canonical_source_mutation": false,
+  "modes": [
+    "show-original",
+    "mask-selected-terms",
+    "soften-local-rendering",
+    "summarize-before-reveal",
+    "warning-before-reveal"
+  ],
+  "receipt": {
+    "schema": "axiom-social-presentation-transformation-receipt.v0",
+    "source_digest_required": true,
+    "rendered_digest_required": true,
+    "presentation_policy_digest_required": true,
+    "mode_required": true,
+    "transformed_at_required": true,
+    "owner_scope": "local",
+    "authority_effect": "none",
+    "network_effect": "none"
+  },
+  "original_access": {
+    "available_when_lawful_and_safe": true,
+    "maximum_user_actions": 1,
+    "transformed_view_may_disable_original_access": false,
+    "curator_may_disable_original_access": false
+  },
+  "authorship": {
+    "transformed_rendering_is_author_exact_words": false,
+    "transformed_rendering_is_canonical_source": false,
+    "transformed_rendering_may_be_exported_as_author_source": false,
+    "transformed_rendering_may_be_quoted_as_exact_without_reveal": false
+  },
+  "scope": {
+    "user_preference_only": true,
+    "third_party_visibility_effect": false,
+    "network_distribution_effect": false,
+    "source_author_notification_required": false
+  },
+  "non_claims": {
+    "softened_text_preserves_every_nuance": false,
+    "summary_is_equivalent_to_source": false,
+    "masking_changes_author_record": false,
+    "local_transform_is_author_intent": false
+  }
+}
