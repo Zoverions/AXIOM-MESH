@@ -1,0 +1,109 @@
+{
+  "schema": "axiom-dispute-mediation-remediation-profile.v1",
+  "status": "experimental coordination architecture; no adjudicative or legal-authority claim",
+  "purpose": "Provide reusable dispute, mediation, cure, negotiated remediation, settlement-candidate, and escalation semantics without turning a mediator, reviewer, or dispute engine into an authority root.",
+  "states": [
+    "opened",
+    "evidence_collection",
+    "positions_recorded",
+    "mediation_active",
+    "remediation_proposed",
+    "settlement_candidate",
+    "settled_by_parties",
+    "escalated",
+    "withdrawn",
+    "closed_unresolved"
+  ],
+  "roles": [
+    {
+      "id": "claimant",
+      "may": [
+        "state claim",
+        "submit evidence",
+        "propose remedy",
+        "challenge evidence"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "respondent",
+      "may": [
+        "state response",
+        "submit evidence",
+        "counterclaim",
+        "propose remedy"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "mediator",
+      "may": [
+        "summarize positions",
+        "identify common ground",
+        "propose compromise",
+        "request clarification",
+        "suggest phased or reversible remedy"
+      ],
+      "must_not": [
+        "unilaterally impose remedy",
+        "mint authority",
+        "silently change obligations"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "reviewer",
+      "may": [
+        "assess evidence quality",
+        "record findings",
+        "identify unresolved facts",
+        "recommend escalation"
+      ],
+      "authority_effect": "none"
+    }
+  ],
+  "core_invariants": [
+    "dispute state never creates punishment or remedy authority",
+    "a mediator proposal is advisory unless a separate valid process explicitly grants a bounded adjudicative role",
+    "competing evidence is preserved rather than collapsed into a single narrative without basis",
+    "uncertainty is explicit",
+    "settlement candidates require explicit acceptance by affected parties",
+    "material settlement terms require the same renewed acceptance protections as material contract amendments",
+    "remedies that create consequential effects re-enter the ordinary local authority path",
+    "withdrawal from mediation does not erase evidence or extinguish external rights/remedies",
+    "urgent risk containment may proceed only through separately preauthorized safety mechanisms"
+  ],
+  "evidence_model": [
+    "claim evidence",
+    "counter-evidence",
+    "independent verification",
+    "known facts",
+    "contested facts",
+    "unknown facts",
+    "procedural history",
+    "proposed remedies and their side effects"
+  ],
+  "negotiated_remediation_principles": [
+    "prefer reversible remedies where outcomes are uncertain",
+    "prefer the narrowest intervention that addresses the substantiated harm",
+    "separate acknowledgement/apology/correction from coercive remedy authority",
+    "surface asymmetric costs and risks",
+    "allow phased settlement with checkpoints",
+    "preserve appeal or escalation where appropriate",
+    "do not infer bad faith solely from refusal to settle"
+  ],
+  "escalation_targets": [
+    "existing institutional review process",
+    "contract-defined arbitration or adjudication process",
+    "human governance body",
+    "legal process",
+    "technical incident-response process",
+    "security containment process"
+  ],
+  "nonclaims": [
+    "This profile does not create a court, arbitrator, regulator, or legal judgment.",
+    "This profile does not determine truth merely because a majority of agents agree.",
+    "This profile does not authorize asset seizure, penalties, suspension, or coercive enforcement.",
+    "This profile does not replace emergency safety controls."
+  ]
+}
