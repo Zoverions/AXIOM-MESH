@@ -664,3 +664,82 @@ test('current retained authority permits the effect and binds currentness eviden
     /^[a-f0-9]{64}$/
   );
 });
+
+
+test('required currentness source unavailable fails closed after consumption and before builtin', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-currentness-unavailable-'));
+  const lease = await reserveProductionPortBlock('axiom-currentness-unavailable-');
+  const basePort = lease.base_port;
+  const controller = generateKeyPairSync('ed25519');
+  let stack;
+  let builtinInvocations = 0;
+
+  t.after(async () => {
+    try {
+      await stack?.stop();
+    } finally {
+      await lease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  stack = await startDevelopmentStack({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`,
+    rateLimitCapacity: 1_000,
+    rateLimitRefillPerSecond: 1_000,
+    apiTokens: apiTokens()
+  }, {
+    sandbox: {
+      machineCurrentness: {
+        required: true,
+        store: null,
+        trustedControllerPublicKey: controller.publicKey,
+        maxEvidenceAgeMs: 60_000
+      },
+      executeBuiltin: args => {
+        builtinInvocations += 1;
+        return executeSandboxBuiltin(args);
+      }
+    }
+  });
+
+  const grid = stack.services.find(service => service.name === 'grid');
+  const client = createGatewayClient({
+    token: AGENT_TOKEN,
+    request: (path, options) => fetch(`http://127.0.0.1:${basePort}${path}`, options),
+    defaultTimeoutMs: 15_000
+  });
+
+  const outcome = await client.call('intents.submit', {
+    body: {
+      action: 'system.echo',
+      input: { message: 'must-not-run-without-currentness' },
+      purpose: 'test.conformance'
+    },
+    idempotencyKey: 'currentness-unavailable-0001'
+  }).then(
+    value => ({ allowed: true, value }),
+    error => ({ allowed: false, error })
+  );
+
+  assert.equal(outcome.allowed, false);
+  assert.equal(outcome.error.code, 'machine_currentness_unavailable');
+  assert.equal(outcome.error.status, 503);
+  assert.equal(builtinInvocations, 0);
+
+  const consumed = grid.store.db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM events
+    WHERE kind = 'capability.consumed'
+  `).get().count;
+  assert.equal(consumed, 1, 'capability must be durably burned before currentness-source failure');
+});
