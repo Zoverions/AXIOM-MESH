@@ -69,6 +69,45 @@ function normalizeCost(raw, check) {
   });
 }
 
+function eligibleForCheck(check, item, origin) {
+  if (!item.independence.meaningful_independence) return false;
+
+  if (check === 'independent-context-verification') {
+    return (
+      item.independence.independent_context
+      || item.independence.independent_evidence
+    );
+  }
+  if (check === 'adversarial-review') {
+    return (
+      item.candidate.method_id !== origin.method_id
+      && (
+        item.independence.independent_context
+        || item.independence.independent_evidence
+      )
+    );
+  }
+  if (check === 'provenance-review') {
+    return item.independence.independent_evidence;
+  }
+  if (check === 'correlation-aware-cross-check') {
+    return (
+      item.candidate.runtime_id !== origin.runtime_id
+      || (
+        item.candidate.model_family !== 'family.unverified'
+        && origin.model_family !== 'family.unverified'
+        && item.candidate.model_family !== origin.model_family
+      )
+      || (
+        item.candidate.operator_domain !== 'operator.unverified'
+        && origin.operator_domain !== 'operator.unverified'
+        && item.candidate.operator_domain !== origin.operator_domain
+      )
+    );
+  }
+  return true;
+}
+
 function randomIndex(length, randomIntFn) {
   if (!Number.isSafeInteger(length) || length < 1) {
     throw new ValidationError('assurance work selection requires at least one candidate');
@@ -149,7 +188,7 @@ export function compileAssuranceWorkOrder({
         candidate,
         independence: evaluateVerifierIndependence(origin, candidate)
       }))
-      .filter(item => item.independence.meaningful_independence);
+      .filter(item => eligibleForCheck(check, item, origin));
 
     if (!eligible.length) {
       throw new ValidationError(
