@@ -18,6 +18,7 @@ const NOW = new Date('2026-09-01T16:00:00.000Z');
 function admission(overrides = {}) {
   return machinePrincipalAdmissionDigest({
     principalId: 'agent.fixture.1',
+    principalType: 'agent',
     authorityDigest: AUTHORITY,
     capabilityId: 'cap_fixture_1',
     intentDigest: INTENT,
@@ -31,6 +32,7 @@ function proof(overrides = {}) {
   return {
     schema: MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
     principal_id: 'agent.fixture.1',
+    principal_type: 'agent',
     authority_digest: AUTHORITY,
     status: 'active',
     sequence: 7,
@@ -49,6 +51,7 @@ function evaluate(currentness, overrides = {}) {
   return evaluateMachinePrincipalCurrentness({
     currentness,
     expectedPrincipalId: 'agent.fixture.1',
+    expectedPrincipalType: 'agent',
     expectedAuthorityDigest: AUTHORITY,
     expectedAdmissionDigest: admission(),
     now: NOW,
@@ -87,8 +90,15 @@ test('authority narrowing invalidates an otherwise live old capability digest', 
   });
 });
 
-test('currentness evidence is bound to principal and exact pending admission', () => {
-  assert.equal(evaluate(proof({ principal_id: 'agent.other' })).code, 'machine_currentness_principal_mismatch');
+test('currentness evidence is bound to principal type and exact pending admission', () => {
+  assert.equal(
+    evaluate(proof({ principal_id: 'agent.other' })).code,
+    'machine_currentness_principal_mismatch'
+  );
+  assert.equal(
+    evaluate(proof({ principal_type: 'service' })).code,
+    'machine_currentness_principal_type_mismatch'
+  );
   assert.equal(
     evaluate(proof({ admission_digest: admission({ capabilityId: 'cap_other' }) })).code,
     'machine_currentness_admission_mismatch'
@@ -111,7 +121,11 @@ test('stale, future-dated, rollback, and equivocation currentness fail closed', 
   );
 });
 
-test('currentness evidence cannot claim authority or global currentness', () => {
+test('currentness schema rejects unsupported fields and authority/global-currentness claims', () => {
+  assert.throws(
+    () => normalizeMachinePrincipalCurrentness(proof({ surprise: true })),
+    /unsupported field/
+  );
   assert.throws(
     () => normalizeMachinePrincipalCurrentness(proof({ authority_effect: 'grant' })),
     /non-authorizing/
