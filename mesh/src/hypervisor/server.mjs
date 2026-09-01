@@ -510,9 +510,28 @@ export async function createHypervisorService(config = meshConfig()) {
       }
       return { httpStatus: 201, body: result };
     } catch (error) {
+      const currentnessFailureEvidence = (
+        typeof error?.code === 'string'
+        && error.code.startsWith('machine_currentness_')
+        && error.details
+        && typeof error.details === 'object'
+        && !Array.isArray(error.details)
+        && typeof error.details.currentness_prerequisite_decision_digest === 'string'
+        && /^[a-f0-9]{64}$/.test(error.details.currentness_prerequisite_decision_digest)
+        && typeof error.details.retained_checkpoint_digest === 'string'
+        && /^[a-f0-9]{64}$/.test(error.details.retained_checkpoint_digest)
+      ) ? {
+        currentness_prerequisite_decision_digest:
+          error.details.currentness_prerequisite_decision_digest,
+        retained_checkpoint_digest:
+          error.details.retained_checkpoint_digest
+      } : null;
       const failure = {
         code: error.code ?? 'execution_failed',
-        message: error.message
+        message: error.message,
+        ...(currentnessFailureEvidence ? {
+          evidence: currentnessFailureEvidence
+        } : {})
       };
       try {
         await commit(traceId, intent.principal.id, [{
