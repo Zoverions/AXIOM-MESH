@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-entity-foundation.v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema","version","status","foundation_id","entity_id","lineage_root_id","profile","core_contract_refs",
+    "recovery_policy_ref","privacy_policy_ref","personal_grounding_present","worldview_layers_present",
+    "disposition_layers_present","provider_binding_present","created_at","authority_effect","network_effect","runtime_activation"
+  ],
+  "properties": {
+    "schema": {"const": "axiom-entity-foundation.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "foundation_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "entity_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "lineage_root_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "profile": {"const": "blank-egg"},
+    "core_contract_refs": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}},
+    "recovery_policy_ref": {"anyOf": [{"type": "null"},{"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}]},
+    "privacy_policy_ref": {"anyOf": [{"type": "null"},{"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}]},
+    "personal_grounding_present": {"const": false},
+    "worldview_layers_present": {"const": false},
+    "disposition_layers_present": {"const": false},
+    "provider_binding_present": {"const": false},
+    "created_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "runtime_activation": {"const": false}
+  }
+}
