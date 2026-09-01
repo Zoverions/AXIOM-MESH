@@ -150,14 +150,14 @@ test('low-privilege machine cannot enumerate global registries and malformed que
 
   await assert.rejects(
     () => admin.call('events.list', { query: { after: 'abc' } }),
-    error => error.code === 'validation_error' && error.status === 400
+    error => error.code === 'invalid_parameter' && error.status === 400
   );
   await assert.rejects(
     () => admin.call('events.list', { query: { after: '-1' } }),
-    error => error.code === 'validation_error' && error.status === 400
+    error => error.code === 'invalid_parameter' && error.status === 400
   );
   await assert.rejects(
     () => admin.call('capsules.list', { query: { limit: 101 } }),
-    error => error.code === 'validation_error' && error.status === 400
+    error => error.code === 'invalid_parameter' && error.status === 400
   );
 });

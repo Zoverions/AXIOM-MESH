@@ -197,7 +197,6 @@ export async function createGatewayService(config = meshConfig()) {
     }
     return currentOperations(traceId);
   });
-
   router.add('GET', '/v1/metrics', async ({ traceId, principal }) => {
     if (
       !hasScope(principal, 'operations:read')
@@ -609,13 +608,14 @@ function requireScope(principal, scope) {
 }
 
 function boundedIntegerQuery(value, fallback, { label, min, max }) {
-  if (value === null || value === '') return fallback;
+  if (value === null) return fallback;
+  const message = `${label} must be an integer between ${min} and ${max}`;
   if (!/^(0|[1-9][0-9]*)$/.test(value)) {
-    throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
+    throw new AxiomError('invalid_parameter', message, 400);
   }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
-    throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
+    throw new AxiomError('invalid_parameter', message, 400);
   }
   return parsed;
 }
