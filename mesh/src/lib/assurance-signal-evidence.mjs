@@ -189,7 +189,7 @@ export function resolveAdaptiveAssuranceSignals({
   taskId,
   policy,
   evidence,
-  verifiedSourceDigests,
+  verifiedSourceBindings,
   now
 } = {}) {
   const task = id(taskId, 'assurance signal resolution taskId');
@@ -198,13 +198,23 @@ export function resolveAdaptiveAssuranceSignals({
   if (!Array.isArray(evidence) || evidence.length > 4096) {
     throw new ValidationError('assurance signal resolution evidence must contain at most 4096 items');
   }
-  if (!(verifiedSourceDigests instanceof Set) || verifiedSourceDigests.size < 1) {
+  if (!(verifiedSourceBindings instanceof Map) || verifiedSourceBindings.size < 1) {
     throw new ValidationError(
-      'assurance signal resolution requires a non-empty verifiedSourceDigests Set'
+      'assurance signal resolution requires a non-empty verifiedSourceBindings Map'
     );
   }
-  for (const item of verifiedSourceDigests) {
-    digest(item, 'assurance signal resolution verifiedSourceDigests');
+  for (const [verificationDigest, binding] of verifiedSourceBindings) {
+    digest(verificationDigest, 'assurance signal resolution verified source digest');
+    const sourceBinding = assertPlainObject(
+      binding,
+      'assurance signal resolution verified source binding'
+    );
+    id(sourceBinding.source_id, 'assurance signal resolution verified source_id');
+    if (!SOURCE_CLASSES.has(sourceBinding.source_class)) {
+      throw new ValidationError(
+        'assurance signal resolution verified source_class is unsupported'
+      );
+    }
   }
   const normalized = evidence.map(normalizeAssuranceSignalEvidence);
   const evidenceIds = normalized.map(item => item.evidence_id);
@@ -220,7 +230,9 @@ export function resolveAdaptiveAssuranceSignals({
   const nowMs = new Date(evaluationTime).valueOf();
   const eligible = normalized.filter(item => (
     normalizedPolicy.accepted_source_classes.includes(item.source_class)
-    && verifiedSourceDigests.has(item.source_verification_digest)
+    && verifiedSourceBindings.has(item.source_verification_digest)
+    && verifiedSourceBindings.get(item.source_verification_digest).source_id === item.source_id
+    && verifiedSourceBindings.get(item.source_verification_digest).source_class === item.source_class
     && isCurrent(item, nowMs, normalizedPolicy.maximum_age_ms)
   ));
 
@@ -295,14 +307,14 @@ export function buildAdaptiveAssuranceInputFromEvidence({
   policyFloor,
   signalPolicy,
   evidence,
-  verifiedSourceDigests,
+  verifiedSourceBindings,
   now
 } = {}) {
   const resolution = resolveAdaptiveAssuranceSignals({
     taskId,
     policy: signalPolicy,
     evidence,
-    verifiedSourceDigests,
+    verifiedSourceBindings,
     now
   });
   return Object.freeze({
