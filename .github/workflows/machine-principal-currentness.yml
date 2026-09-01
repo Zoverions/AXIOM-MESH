@@ -1,0 +1,50 @@
+name: Machine Principal Effect Currentness
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "mesh/src/lib/machine-currentness-controller-key-lifecycle.mjs"
+      - "mesh/src/lib/machine-currentness-admission-receipt.mjs"
+      - "mesh/src/lib/machine-currentness-admission-evaluator.mjs"
+      - "mesh/src/lib/machine-principal-currentness.mjs"
+      - "mesh/src/lib/machine-principal-currentness-checkpoint.mjs"
+      - "mesh/src/lib/machine-principal-currentness-store.mjs"
+      - "mesh/test/machine-currentness-controller-key-lifecycle.test.mjs"
+      - "mesh/test/machine-currentness-admission-receipt.test.mjs"
+      - "mesh/test/machine-currentness-admission-evaluator.test.mjs"
+      - "mesh/test/machine-principal-currentness.test.mjs"
+      - "mesh/test/machine-principal-currentness-checkpoint.test.mjs"
+      - "mesh/test/machine-principal-currentness-store.test.mjs"
+      - "docs/security/MACHINE-PRINCIPAL-EFFECT-CURRENTNESS.md"
+      - ".github/workflows/machine-principal-currentness.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: machine-principal-currentness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-currentness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+          check-latest: false
+      - name: Run machine-principal currentness regressions
+        run: >-
+          node --test
+          mesh/test/machine-currentness-controller-key-lifecycle.test.mjs
+          mesh/test/machine-currentness-admission-receipt.test.mjs
+          mesh/test/machine-currentness-admission-evaluator.test.mjs
+          mesh/test/machine-principal-currentness.test.mjs
+          mesh/test/machine-principal-currentness-checkpoint.test.mjs
+          mesh/test/machine-principal-currentness-store.test.mjs
