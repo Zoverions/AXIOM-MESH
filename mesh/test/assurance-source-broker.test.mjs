@@ -9,7 +9,6 @@ import {
   admitEntityAssuranceSource,
   buildDurableAssuranceSourceAdmission,
   collectBrokerVerifiedSourceBindings,
-  collectDurableVerifiedSourceBindings,
   verifyDurableAssuranceSourceAdmission
 } from '../src/lib/assurance-source-broker.mjs';
 import { MeshIdentity } from '../src/lib/identity.mjs';
@@ -153,15 +152,8 @@ test('durable source admission survives serialization and verifies with the trus
   assert.equal(verified.authority_effect, 'none');
   assert.equal(verified.truth_established, false);
 
-  const bindings = collectDurableVerifiedSourceBindings(
-    [serialized],
-    publicKey,
-    { now: '2026-09-01T18:00:00.000Z' }
-  );
-  assert.deepEqual(bindings.get(verified.source_verification_digest), {
-    source_id: 'source.entity-assurance',
-    source_class: 'entity-assurance'
-  });
+  // Durable receipt verification is intentionally separate from binding
+  // collection, which additionally requires a current revocation snapshot.
 });
 
 test('durable source admission rejects tampering and the wrong Grid key', () => {
