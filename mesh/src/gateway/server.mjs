@@ -14,6 +14,7 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { signedFetch } from '../lib/client.mjs';
+import { readDelegationInspector } from '../lib/delegation-inspector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
   dependencyFailure,
@@ -182,6 +183,23 @@ export async function createGatewayService(config = meshConfig()) {
       runtime: { grid },
       capability_counts: capabilityCounts
     };
+  });
+
+  router.add('GET', '/v1/delegations', async ({ url, principal }) => {
+    if (url.search) {
+      throw new ValidationError('Delegation inspector does not accept query parameters');
+    }
+    if (principal.schema === 'axiom-machine-principal.v1') {
+      throw new AxiomError(
+        'forbidden',
+        'Delegation inspection is limited to the human owner surface',
+        403
+      );
+    }
+    return readDelegationInspector({
+      data_dir: config.dataDir,
+      owner: principal.id
+    });
   });
 
   router.add('GET', '/v1/operations', async ({ traceId, principal }) => {

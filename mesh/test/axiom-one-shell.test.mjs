@@ -17,7 +17,7 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.status, 'experimental-local-preview');
   assert.equal(result.surfaces, 8);
-  assert.equal(result.gateway_routes, 15);
+  assert.equal(result.gateway_routes, 16);
   assert.equal(result.bind_host, '127.0.0.1');
   assert.equal(result.gateway_target, 'same-origin-relative-v1');
   assert.equal(result.token_persistence, 'memory-only');

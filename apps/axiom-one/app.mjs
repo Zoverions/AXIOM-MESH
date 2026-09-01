@@ -890,6 +890,7 @@ async function renderShare() {
 async function renderExplore() {
   const resources = [
     ['Node status', 'status.get'],
+    ['Delegations', 'delegations.get'],
     ['Capabilities', 'capabilities.list'],
     ['Operations', 'operations.get'],
     ['Owner-local Social', 'social.get'],
@@ -914,7 +915,11 @@ async function renderExplore() {
       output.replaceChildren(notice(`Loading ${label}…`));
       try {
         const response = await state.client.call(route);
-        output.replaceChildren(rawDetails(label, response, true));
+        output.replaceChildren(
+          route === 'delegations.get'
+            ? renderDelegationInspector(response)
+            : rawDetails(label, response, true)
+        );
         announce(`${label} loaded`);
       } catch (error) {
         output.replaceChildren(errorBox(error, `${label} is unavailable`));
@@ -930,6 +935,130 @@ async function renderExplore() {
     actions,
     output
   );
+}
+
+function renderDelegationInspector(response) {
+  if (response?.configured !== true) {
+    return element('div', { className: 'stack' }, [
+      card('Delegation inspector', 'No delegation root authority is configured for this owner. No delegated authority is presented as active.', {
+        wide: true,
+        badge: ['Not configured', 'good']
+      }),
+      notice('This is a read-only evidence surface. It cannot grant, revoke, approve, execute, or widen authority.'),
+      rawDetails('Raw delegation snapshot', response, true)
+    ]);
+  }
+
+  const grants = Array.isArray(response.grants) ? response.grants : [];
+  const revocations = Array.isArray(response.revocations) ? response.revocations : [];
+  const root = response.root_authority ?? {};
+  const grantCards = grants.length
+    ? element('div', { className: 'stack' }, grants.map(grant => {
+      const lifecycle = grant.lifecycle?.state ?? 'unknown';
+      const resolution = grant.current_resolution;
+      const effective = resolution?.effective_authority ?? null;
+      const active = lifecycle === 'active' && effective !== null;
+      const chain = Array.isArray(resolution?.chain)
+        ? [response.owner, ...resolution.chain.map(item => item.delegate)].join(' → ')
+        : `${grant.delegator ?? 'unknown'} → ${grant.delegate ?? 'unknown'}`;
+      const authority = effective ?? grant.authority ?? {};
+      const facts = element('dl', { className: 'fact-list' }, [
+        element('dt', { text: 'State' }),
+        element('dd', { text: delegationStateLabel(lifecycle) }),
+        element('dt', { text: 'Assurance floor' }),
+        element('dd', { text: authority.required_assurance ?? 'unavailable' }),
+        element('dt', { text: 'Actions' }),
+        element('dd', { text: delegationValues(authority.actions) }),
+        element('dt', { text: 'Purposes' }),
+        element('dd', { text: delegationValues(authority.purposes) }),
+        element('dt', { text: 'Data scopes' }),
+        element('dd', { text: delegationValues(authority.data_scopes) }),
+        element('dt', { text: 'Destinations' }),
+        element('dd', { text: delegationValues(authority.destinations) }),
+        element('dt', { text: 'Budgets' }),
+        element('dd', { text: delegationBudgetSummary(authority.budgets) }),
+        element('dt', { text: 'Subdelegation' }),
+        element('dd', {
+          text: authority.delegation?.allowed
+            ? `Allowed, maximum remaining depth ${authority.delegation.max_depth}`
+            : 'Not allowed'
+        }),
+        element('dt', { text: 'Expires' }),
+        element('dd', { text: authority.expires_at ?? 'unavailable' })
+      ]);
+      return element('article', { className: 'card full' }, [
+        element('span', {
+          className: `badge ${active ? 'good' : lifecycle === 'revoked' ? 'danger' : 'pending'}`,
+          text: delegationStateLabel(lifecycle)
+        }),
+        element('h2', { text: chain }),
+        element('p', { text: `Grant ${grant.id ?? 'unknown'} · parent ${grant.parent_grant_id ?? 'root authority'}` }),
+        active
+          ? notice('Current effective authority is shown below only because the existing resolver validated the full active chain. execution_authority_granted remains false.')
+          : notice('Historical delegation evidence remains visible, but this grant is not presented as current effective authority.'),
+        facts,
+        grant.attenuation
+          ? rawDetails('Attenuation from parent authority', grant.attenuation)
+          : empty('No current attenuation projection is claimed for this inactive grant.'),
+        rawDetails('Authority and provenance evidence', {
+          grant_digest: grant.grant_digest ?? null,
+          authority_digest: grant.authority?.authority_digest ?? null,
+          chain_digest: resolution?.chain_digest ?? null,
+          lifecycle: grant.lifecycle ?? null,
+          declared_authority: grant.authority ?? null,
+          effective_authority: effective,
+          execution_authority_granted: resolution?.execution_authority_granted ?? false
+        })
+      ]);
+    }))
+    : empty('No delegation grants are recorded for this owner.');
+
+  return element('div', { className: 'stack' }, [
+    card('Delegation inspector',
+      `Root holder ${root.holder ?? response.owner ?? 'unknown'} · evaluated ${response.evaluated_at ?? 'time unavailable'}.`, {
+        wide: true,
+        badge: ['Read only', 'good']
+      }),
+    grid([
+      metricCard('Grants', String(response.ledger?.grant_count ?? grants.length), 'Persisted delegation grants'),
+      metricCard('Revocations', String(response.ledger?.revocation_count ?? revocations.length), 'Persisted revocation records'),
+      metricCard('Execution authority', response.execution_authority_granted === false ? 'None' : 'Unexpected', 'Inspector does not grant execution authority')
+    ]),
+    notice('This owner-scoped view reconstructs provenance from the append-only delegation ledger. It has no grant, revoke, approve, or execute controls.'),
+    grantCards,
+    rawDetails('Ledger and root provenance', {
+      root_authority: response.root_authority,
+      ledger: response.ledger,
+      revocations,
+      snapshot_digest: response.digest,
+      execution_authority_granted: response.execution_authority_granted
+    }),
+    rawDetails('Raw delegation snapshot', response)
+  ]);
+}
+
+function delegationStateLabel(state) {
+  return {
+    active: 'Active',
+    revoked: 'Revoked',
+    expired: 'Expired',
+    not_active: 'Not active yet'
+  }[state] ?? 'Unresolved';
+}
+
+function delegationValues(values) {
+  return Array.isArray(values) && values.length ? values.join(', ') : 'None';
+}
+
+function delegationBudgetSummary(budgets) {
+  if (!budgets || typeof budgets !== 'object') return 'Unavailable';
+  return [
+    `${budgets.max_requests_per_minute ?? '?'} requests/min`,
+    `${budgets.max_concurrent_requests ?? '?'} concurrent`,
+    `${budgets.max_execution_ms ?? '?'} ms execution`,
+    `${budgets.max_request_bytes ?? '?'} B request`,
+    `${budgets.max_response_bytes ?? '?'} B response`
+  ].join(' · ');
 }
 
 function humanExplanation(model, rawLabel, raw, actions = []) {

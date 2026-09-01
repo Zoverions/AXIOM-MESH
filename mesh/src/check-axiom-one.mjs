@@ -20,6 +20,7 @@ const EXPECTED_SURFACES = Object.freeze([
 ]);
 const EXPECTED_ROUTES = Object.freeze([
   'status.get',
+  'delegations.get',
   'capabilities.list',
   'operations.get',
   'intents.submit',
@@ -394,6 +395,20 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (socialMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One owner-local Social surface is incomplete');
   }
+  const delegationMarkers = [
+    "['Delegations', 'delegations.get']",
+    'Delegation inspector',
+    'Current effective authority',
+    'Attenuation from parent authority',
+    'execution_authority_granted'
+  ];
+  if (delegationMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One delegation inspector surface is incomplete');
+  }
+  if (
+    /delegations\.(grant|revoke|approve|execute)/.test(app)
+    || /action:\s*'delegation\./.test(app)
+  ) throw new ValidationError('AXIOM One delegation inspector gained a mutation surface');
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
     || !worker.includes('!SHELL_ASSETS.includes(url.pathname)')

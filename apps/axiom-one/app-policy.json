@@ -58,6 +58,7 @@
   ],
   "gateway_routes": [
     "status.get",
+    "delegations.get",
     "capabilities.list",
     "operations.get",
     "intents.submit",
