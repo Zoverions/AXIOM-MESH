@@ -1,0 +1,207 @@
+{
+  "schema": "axiom-agent-security-landscape-snapshot.v1",
+  "observed_at": "2026-09-01",
+  "purpose": "Track current external work relevant to AXIOM-MESH interoperability and identify reusable mechanisms, gaps, and non-adoption decisions. This is an evidence snapshot, not endorsement or standards status.",
+  "papers_and_standards": [
+    {
+      "name": "MCP 2026-07-28",
+      "kind": "protocol specification",
+      "signals": [
+        "stateless core",
+        "issuer validation",
+        "credential isolation by issuer",
+        "header-routable authorization",
+        "extension framework"
+      ],
+      "axiom_take": [
+        "preserve protocol neutrality",
+        "bind resource/audience and issuer",
+        "do not depend on transport sessions for authority state"
+      ]
+    },
+    {
+      "name": "Bounded Agents / Agentic Principal Chain",
+      "kind": "research paper",
+      "signals": [
+        "attenuating delegation",
+        "composition closure",
+        "intent binding",
+        "off-model authorization"
+      ],
+      "axiom_take": [
+        "adopt composition-aware negative checks",
+        "scope history causally rather than trusting transport sessions",
+        "do not require APC vocabulary or runtime"
+      ]
+    },
+    {
+      "name": "Intent-Governed Tool Authorization",
+      "kind": "research paper",
+      "signals": [
+        "intent as monotone narrowing",
+        "intent-tool consistency",
+        "server-side enforcement"
+      ],
+      "axiom_take": [
+        "intent can narrow verified authority",
+        "intent never creates authority"
+      ]
+    },
+    {
+      "name": "ToolGuardian",
+      "kind": "research paper",
+      "signals": [
+        "separate characterization from policy judgment",
+        "multi-tool composition",
+        "deterministic auditable enforcement"
+      ],
+      "axiom_take": [
+        "preserve evidence disposition lanes",
+        "allow heterogeneous characterization sources",
+        "do not require ASP"
+      ]
+    },
+    {
+      "name": "AI Agent Authorization Integration Framework",
+      "kind": "IETF Internet-Draft",
+      "signals": [
+        "progressive deployment",
+        "cross-domain identity",
+        "consent evidence",
+        "multi-hop delegation",
+        "policy-centric authorization"
+      ],
+      "axiom_take": [
+        "support selective augmentation profiles",
+        "keep consent/delegation/identity/evidence distinct",
+        "do not hard-code OAuth or Rego"
+      ]
+    },
+    {
+      "name": "Agent Identity Framework",
+      "kind": "IETF Internet-Draft",
+      "signals": [
+        "identity",
+        "authorization",
+        "attestation",
+        "evidence",
+        "trust separated into layers"
+      ],
+      "axiom_take": [
+        "retain plane separation",
+        "avoid universal trust score"
+      ]
+    },
+    {
+      "name": "OpenA2A Agent Authorization Protocol",
+      "kind": "IETF Internet-Draft",
+      "signals": [
+        "scoped capability grants",
+        "delegation",
+        "revocation propagation",
+        "federation"
+      ],
+      "axiom_take": [
+        "treat as adapter/interoperability input, not Mesh core dependency"
+      ]
+    },
+    {
+      "name": "Kindred Agent Identity Framework",
+      "kind": "IETF Internet-Draft",
+      "signals": [
+        "token exchange",
+        "SPIFFE workload identity",
+        "delegation depth",
+        "real-time revocation"
+      ],
+      "axiom_take": [
+        "reuse lifecycle and attenuation test ideas without importing authorization tiers as universal semantics"
+      ]
+    }
+  ],
+  "repositories": [
+    {
+      "name": "agentgateway/agentgateway",
+      "observed_activity": "active through 2026-09-01",
+      "focus": [
+        "agentic proxy",
+        "MCP",
+        "gateway routing"
+      ],
+      "opportunity": "Offer Mesh as optional policy/evidence/composition sidecar for high-consequence routes rather than competing gateway."
+    },
+    {
+      "name": "airlock-protocol/airlock",
+      "observed_activity": "active through 2026-08-20",
+      "focus": [
+        "identity",
+        "scoped delegation",
+        "tamper-evident audit"
+      ],
+      "opportunity": "Interop verification fixtures and delegation attenuation checks."
+    },
+    {
+      "name": "motebit/motebit",
+      "observed_activity": "active through 2026-08-25",
+      "focus": [
+        "sovereign agents",
+        "persistent identity",
+        "execution receipts",
+        "boundary governance"
+      ],
+      "opportunity": "Receipt portability, continuity, sovereign recovery, and runtime-neutral governance interoperability."
+    },
+    {
+      "name": "git-agentic/pkg-registry",
+      "observed_activity": "active August 2026",
+      "focus": [
+        "package provenance",
+        "deny-by-default install sandbox",
+        "SBOM",
+        "signed attestations"
+      ],
+      "opportunity": "Treat package provenance as strong supply-chain evidence while keeping install authority separate."
+    },
+    {
+      "name": "DunkelCloud/ToolMesh",
+      "observed_activity": "active through 2026-08-23",
+      "focus": [
+        "MCP gateway",
+        "authorization",
+        "credential injection",
+        "audit",
+        "output policy"
+      ],
+      "opportunity": "Augment with causal composition, purpose/destination/budget binding, and portable evidence verification."
+    },
+    {
+      "name": "obsign/obsign",
+      "observed_activity": "created 2026-08-20",
+      "focus": [
+        "signed policy",
+        "delegation audit",
+        "offline evidence packs",
+        "MCP gateway"
+      ],
+      "opportunity": "Cross-verify evidence packs and policy provenance while preserving independent authorization semantics."
+    }
+  ],
+  "gaps_axiom_can_fill": [
+    "protocol-neutral authority normalization across MCP, A2A, native APIs and future runtimes",
+    "causal composition controls that survive protocol and transport transitions",
+    "evidence disposition lanes so weak signals remain useful without authority laundering",
+    "selective sidecar adoption instead of requiring platform replacement",
+    "portable negative-test fixtures for identity/discovery/delegation-to-authority failures",
+    "resource, purpose, destination, budget, expiry and policy-version binding in one bounded decision",
+    "identity continuity separated from endpoint-key currency",
+    "user-centric recovery where advisory continuity hints can assist recovery but privileged restoration still requires stronger proof",
+    "receipts that distinguish authorization decision, execution evidence and external-world truth claims"
+  ],
+  "non_goals": [
+    "replace MCP, A2A, OAuth, SPIFFE, DID, agent gateways or runtime frameworks",
+    "create a universal reputation score",
+    "require cryptographic verification for every low-consequence advisory signal",
+    "let external standards or popularity override local policy",
+    "claim external projects have vulnerabilities merely because AXIOM carries negative fixtures"
+  ]
+}
