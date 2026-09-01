@@ -54,8 +54,9 @@ test('RT-AUTH-001 reproduces stale machine authority when principal expires befo
   const lease = await reserveProductionPortBlock('axiom-rt-auth-001-expiry-');
   const basePort = lease.base_port;
 
-  // Give stack startup room on loaded CI while keeping the race bounded.
-  const expiresAt = new Date(Date.now() + 15_000).toISOString();
+  // Keep the expiry barrier inside the existing 10-second request budget.
+  // Hosted CI stack startup is complete before the intercepted execute call.
+  const expiresAt = new Date(Date.now() + 8_000).toISOString();
   let stack;
   const originalFetch = globalThis.fetch;
   let intercepted = false;
