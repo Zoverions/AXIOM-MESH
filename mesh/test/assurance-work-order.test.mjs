@@ -27,12 +27,12 @@ function adaptiveDecision() {
   });
 }
 
-function profile(id, variant) {
+function profile(id, contextDigest = 'a', evidenceDigest = 'b') {
   return {
     schema: VERIFIER_PROFILE_SCHEMA,
     verifier_id: id,
-    context_digest: D(variant),
-    evidence_set_digest: D(String.fromCharCode(variant.charCodeAt(0) + 1)),
+    context_digest: D(contextDigest),
+    evidence_set_digest: D(evidenceDigest),
     method_id: `method.${id}`,
     runtime_id: `runtime.${id}`,
     model_family: `family.${id}`,
@@ -73,12 +73,12 @@ function costs() {
 test('work order assigns required machine checks to meaningfully independent verifiers', () => {
   const result = compileAssuranceWorkOrder({
     decision: adaptiveDecision(),
-    originVerifierProfile: profile('verifier.origin', 'a'),
+    originVerifierProfile: profile('verifier.origin', 'a', 'b'),
     verifierCandidates: [
-      profile('verifier.one', 'c'),
-      profile('verifier.two', 'e'),
-      profile('verifier.three', 'g'),
-      profile('verifier.four', 'i')
+      profile('verifier.one', 'c', 'd'),
+      profile('verifier.two', 'e', 'f'),
+      profile('verifier.three', '1', '2'),
+      profile('verifier.four', '3', '4')
     ],
     checkCosts: costs(),
     budgetLimits: {
@@ -99,12 +99,12 @@ test('work order assigns required machine checks to meaningfully independent ver
 test('work order prefers verifier diversity before reusing a verifier', () => {
   const result = compileAssuranceWorkOrder({
     decision: adaptiveDecision(),
-    originVerifierProfile: profile('verifier.origin', 'a'),
+    originVerifierProfile: profile('verifier.origin', 'a', 'b'),
     verifierCandidates: [
-      profile('verifier.one', 'c'),
-      profile('verifier.two', 'e'),
-      profile('verifier.three', 'g'),
-      profile('verifier.four', 'i')
+      profile('verifier.one', 'c', 'd'),
+      profile('verifier.two', 'e', 'f'),
+      profile('verifier.three', '1', '2'),
+      profile('verifier.four', '3', '4')
     ],
     checkCosts: costs(),
     budgetLimits: {
@@ -120,7 +120,7 @@ test('work order prefers verifier diversity before reusing a verifier', () => {
 });
 
 test('correlated candidate replicas cannot satisfy machine verification', () => {
-  const origin = profile('verifier.origin', 'a');
+  const origin = profile('verifier.origin', 'a', 'b');
   const correlated = {
     ...origin,
     verifier_id: 'verifier.replica',
@@ -148,12 +148,12 @@ test('work order fails before scheduling when assurance budget is insufficient',
   assert.throws(
     () => compileAssuranceWorkOrder({
       decision: adaptiveDecision(),
-      originVerifierProfile: profile('verifier.origin', 'a'),
+      originVerifierProfile: profile('verifier.origin', 'a', 'b'),
       verifierCandidates: [
-        profile('verifier.one', 'c'),
-        profile('verifier.two', 'e'),
-        profile('verifier.three', 'g'),
-        profile('verifier.four', 'i')
+        profile('verifier.one', 'c', 'd'),
+        profile('verifier.two', 'e', 'f'),
+        profile('verifier.three', '1', '2'),
+        profile('verifier.four', '3', '4')
       ],
       checkCosts: costs(),
       budgetLimits: {
@@ -171,10 +171,10 @@ test('work order fails before scheduling when assurance budget is insufficient',
 test('work order is stochastic across eligible verifier candidates without exposing a random sample', () => {
   const args = {
     decision: adaptiveDecision(),
-    originVerifierProfile: profile('verifier.origin', 'a'),
+    originVerifierProfile: profile('verifier.origin', 'a', 'b'),
     verifierCandidates: [
-      profile('verifier.one', 'c'),
-      profile('verifier.two', 'e')
+      profile('verifier.one', 'c', 'd'),
+      profile('verifier.two', 'e', 'f')
     ],
     checkCosts: costs(),
     budgetLimits: {
