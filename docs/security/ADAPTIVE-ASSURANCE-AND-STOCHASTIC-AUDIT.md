@@ -115,6 +115,59 @@ occurred.
 
 Users should not normally have to choose a raw number of agents.
 
+## Verifier independence evidence
+
+Parallel verification now has an explicit evidence contract in
+`mesh/src/lib/verifier-independence.mjs`.
+
+Two verifier profiles are compared across context, evidence set, method, runtime,
+model family, and operator domain. Distinct verifier IDs are necessary but not
+sufficient. Meaningful independence requires at least two differing dimensions,
+a different context or evidence basis, and a different method/runtime/model-family
+path.
+
+This deliberately rejects the common failure mode where several replicas with the
+same evidence and context are counted as independent because they produced separate
+votes.
+
+The independence result is non-authorizing and digest-bound.
+
+## Completed-check receipts
+
+`mesh/src/lib/assurance-check-receipt.mjs` defines receipts that bind:
+
+- the exact assurance decision digest;
+- task ID;
+- check ID;
+- verifier profile digest;
+- optional verifier-independence digest;
+- pass, fail, or inconclusive result;
+- start and completion timestamps;
+- artifact digests.
+
+The completion evaluator is fail-closed: a required check that is absent, failed,
+or inconclusive cannot satisfy the assurance set. A receipt proves only the
+declared verifier output and artifact binding; it does not create effect authority.
+
+## Bounded assurance work
+
+`mesh/src/lib/assurance-work-budget.mjs` introduces a finite resource envelope for
+verification itself.
+
+The first budget dimensions are:
+
+- number of checks;
+- generic compute units;
+- external-cost units;
+- elapsed verification time.
+
+Any overrun fails with `assurance_work_budget_exceeded`. The budget is
+non-authorizing and is intended to prevent recursive review from becoming an
+unbounded inference or latency loop.
+
+Future runtime integration should replace or extend generic units with attributable
+provider/model/device accounting where available.
+
 ## Next integration gates
 
 Before this primitive can affect live orchestration:
