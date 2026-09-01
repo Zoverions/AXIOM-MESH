@@ -1,0 +1,49 @@
+{
+  "schema": "axiom-circle-grid-head-cas-policy.v0",
+  "version": 0,
+  "status": "internal-grid-projection-candidate",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "requirements": {
+    "parent_persistence_candidate_validation_required": true,
+    "existing_grid_database_only": true,
+    "existing_signed_grid_chain_only": true,
+    "full_grid_chain_preflight_required": true,
+    "single_circle_persistence_event_per_append": true,
+    "atomic_head_compare_and_set_inside_grid_transaction": true,
+    "signed_prior_event_is_authoritative_cas_basis": true,
+    "projection_must_match_latest_signed_event": true,
+    "durable_event_id_lookup_required": true,
+    "exact_replay_returns_existing_event": true,
+    "conflicting_event_id_reuse_rejected": true,
+    "stale_or_skipped_circle_head_rejected": true,
+    "projection_rebuilt_from_signed_grid_events": true,
+    "restart_reconstruction_required": true,
+    "multi_handle_serialization_required": true,
+    "request_replay_guard_counts_as_durable_persistence": false,
+    "separate_circle_database_created": false,
+    "public_grid_route": false,
+    "gateway_route": false,
+    "hypervisor_action": false,
+    "runtime_authority": false,
+    "portable_authority": false
+  },
+  "projection": {
+    "table": "circle_persistence_heads",
+    "primary_key": "circle_id",
+    "head_value": "binding_digest",
+    "source_of_truth": "signed_grid_events",
+    "rebuildable": true
+  },
+  "non_claims": [
+    "actor-authorization",
+    "governance-legitimacy",
+    "historical-truth",
+    "complete-history",
+    "legal-authority",
+    "execution-authority",
+    "portable-authority",
+    "distributed-consensus"
+  ]
+}

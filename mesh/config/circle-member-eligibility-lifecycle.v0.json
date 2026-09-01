@@ -1,0 +1,70 @@
+{
+  "schema": "axiom-circle-member-eligibility-policy.v0",
+  "version": 0,
+  "status": "inert-member-eligibility-history",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "requirements": {
+    "historical_membership_acceptance_required": true,
+    "exact_circle_membership_principal_binding": true,
+    "append_only_event_digest_chain": true,
+    "strict_event_chronology": true,
+    "future_events_prohibited": true,
+    "status_changes_are_monotonic_restrictions": true,
+    "membership_resume_supported": false,
+    "role_widening_supported": false,
+    "role_narrowing_only": true,
+    "role_narrowing_uses_charter_active_at_event": true,
+    "terminal_exit_binds_core_exit_record": true,
+    "current_core_snapshot_must_match_derived_head": true,
+    "historical_state_resolution_required": true,
+    "credential_lifecycle_bound_to_acceptance_identity": true,
+    "credential_eligibility_requires_active_membership": true,
+    "credential_eligibility_requires_active_credential": true,
+    "required_role_mode_checked_at_use_time": true,
+    "authenticated_principal_must_match_membership_principal": true,
+    "caller_authenticated_principal_is_external_assurance": true,
+    "eligibility_assessment_mints_runtime_authority": false,
+    "eligibility_assessment_mints_portable_authority": false,
+    "eligibility_assessment_mints_external_effect_authority": false
+  },
+  "event_kinds": [
+    "membership-suspend",
+    "membership-revoke",
+    "membership-exit",
+    "role-narrow"
+  ],
+  "schemas": {
+    "lifecycle": "axiom-circle-member-eligibility-lifecycle.v0",
+    "event": "axiom-circle-member-eligibility-event.v0",
+    "resolved_state": "axiom-circle-member-resolved-state.v0",
+    "credential_eligibility": "axiom-circle-member-credential-eligibility.v0"
+  },
+  "output": {
+    "policy_digest_required": true,
+    "historical_ledger_digest_required": true,
+    "membership_lifecycle_digest_required": true,
+    "credential_lifecycle_digest_required_for_credential_use": true,
+    "current_state_is_local_derivation": true,
+    "runtime_authority": false,
+    "portable_authority": false,
+    "external_effect_authority": false,
+    "authority_effect": "none",
+    "network_effect": "none"
+  },
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "credential-possession",
+    "credential-issuance-authority",
+    "role-grant-authority",
+    "membership-resume-authority",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "trusted-wall-clock",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority"
+  ]
+}

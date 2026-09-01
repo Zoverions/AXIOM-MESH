@@ -1,0 +1,96 @@
+{
+  "schema": "axiom-circle-self-protective-lifecycle-mutation-threat-review.v0",
+  "version": 0,
+  "status": "inert-self-protective-lifecycle-mutation-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "threat": "self-service-principal-impersonation",
+      "mitigations": ["exact-membership-principal-binding", "fresh-pre-mutation-credential-possession", "trusted-hypervisor-attestation"],
+      "residual_limitation": "Credential possession is technical key-control evidence and does not prove human identity, legal identity, or authorized human custody."
+    },
+    {
+      "threat": "stale-pre-mutation-state",
+      "mitigations": ["grid-head-read-during-preparation-and-authorization", "exact-pre-lifecycle-digests", "possession-attestation-bound-to-pre-head"],
+      "residual_limitation": "A lifecycle head can still advance after authorization and before a future commit; runtime integration must retain Grid compare-and-set at the commit boundary."
+    },
+    {
+      "threat": "bundled-hidden-mutation",
+      "mitigations": ["exactly-one-lifecycle-domain-may-change", "exactly-one-event-append", "prior-event-prefix-immutable", "non-event-lifecycle-records-immutable"],
+      "residual_limitation": "The contract authorizes one lifecycle-head mutation only; it does not authorize or validate unrelated Circle records outside that lifecycle-head effect."
+    },
+    {
+      "threat": "authority-restoration-laundering",
+      "mitigations": ["role-widening-denied", "membership-resume-denied", "credential-resume-denied", "recovery-admission-denied"],
+      "residual_limitation": "Future restoration or recovery flows require separate admission semantics and cannot inherit this contraction-only authorization."
+    },
+    {
+      "threat": "credential-issuance-or-rotation-laundering",
+      "mitigations": ["credential-records-must-remain-byte-equivalent", "device-records-must-remain-byte-equivalent", "recovery-records-must-remain-byte-equivalent"],
+      "residual_limitation": "This contract cannot create replacement credentials; members who lose every usable credential require a separate recovery path."
+    },
+    {
+      "threat": "self-revocation-race",
+      "mitigations": ["possession-proved-against-pre-mutation-head", "authorizing-credential-may-be-target", "proposed-head-advances-from-exact-pre-head"],
+      "residual_limitation": "The authorization proves the credential was usable before contraction; a future commit must atomically advance the lifecycle head so no stale pre-mutation grant can win afterward."
+    },
+    {
+      "threat": "device-compromise-denial-of-service",
+      "mitigations": ["self-service-membership-binding", "fresh-credential-possession", "device-compromise-is-contraction-only"],
+      "residual_limitation": "A party controlling a member credential can intentionally disable that member's device; this contract does not distinguish protective action from coerced or malicious self-denial."
+    },
+    {
+      "threat": "administrative-or-third-party-revocation-laundering",
+      "mitigations": ["self-service-only", "membership-revoke-excluded", "authenticated-principal-must-equal-target-membership-principal"],
+      "residual_limitation": "Administrative revocation and other coercive governance actions remain undefined and require separate due-process and authority semantics."
+    },
+    {
+      "threat": "cross-circle-or-cross-membership-substitution",
+      "mitigations": ["current-grid-head-identity-binding", "exact-lifecycle-identity-binding", "possession-attestation-circle-membership-principal-binding"],
+      "residual_limitation": "Cross-Circle recognition and delegated administrative authority remain outside this local self-service contract."
+    },
+    {
+      "threat": "wall-clock-manipulation",
+      "mitigations": ["canonical-parent-lifecycle-validation", "bounded-possession-attestation-age", "grid-head-causality-required-for-future-commit"],
+      "residual_limitation": "Local timestamps and freshness windows do not establish a globally trusted real-world clock."
+    },
+    {
+      "threat": "authorization-as-execution-laundering",
+      "mitigations": ["grid-commit-performed-false", "no-runtime-route", "assessment-authority-flags-false", "parent-grid-head-record-not-authorization-proof"],
+      "residual_limitation": "A future service path must compose this authorization with the existing Grid lifecycle-head CAS rather than treating the assessment as a write capability."
+    }
+  ],
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "authorized-human-custody",
+    "credential-issuance-authority",
+    "credential-rotation-authority",
+    "credential-resume-authority",
+    "membership-resume-authority",
+    "membership-revocation-authority",
+    "role-grant-authority",
+    "recovery-admission-authority",
+    "administrative-authority",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "trusted-global-time",
+    "grid-commit-authority",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "compose-self-protective-authorization-with-atomic-grid-lifecycle-head-cas",
+    "ensure-possession-bound-self-protective-path-is-the-sole-service-level-contraction-route",
+    "separate-recovery-and-new-credential-issuance-admission",
+    "separate-administrative-revocation-and-due-process-semantics",
+    "member-side-key-custody-and-signing-without-secret-export",
+    "gateway-hypervisor-grid-route-design-preserving-existing-authority-boundary",
+    "accessible-member-facing-contraction-confirmation-denial-and-recovery-explanations",
+    "independent-security-privacy-device-loss-coercion-sybil-recovery-governance-review"
+  ]
+}

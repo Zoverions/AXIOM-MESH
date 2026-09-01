@@ -1,0 +1,59 @@
+{
+  "schema": "axiom-circle-grid-persistence-policy.v0",
+  "version": 0,
+  "status": "inert-grid-admission-contract",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "grid_event_kind": "circle.historical.binding.persist.requested",
+  "event_id_prefix": "circle_binding_",
+  "requirements": {
+    "validated_historical_binding_required": true,
+    "deterministic_event_id_from_binding_digest": true,
+    "event_subject_is_exact_circle_id": true,
+    "expected_prior_circle_head_required": true,
+    "expected_prior_circle_head_must_equal_binding_predecessor": true,
+    "new_circle_head_is_binding_digest": true,
+    "ledger_prefix_digest_through_binding_required": true,
+    "charter_lifecycle_prefix_digest_through_governing_charter_required": true,
+    "retry_payload_stable_after_charter_and_ledger_extension": true,
+    "exact_replay_distinguished_from_conflicting_reuse": true,
+    "global_grid_chain_is_reused": true,
+    "separate_circle_database_created": false,
+    "request_replay_guard_counts_as_durable_persistence": false,
+    "grid_chain_verification_required_for_receipt": true,
+    "candidate_may_grant_runtime_authority": false,
+    "receipt_may_grant_runtime_authority": false
+  },
+  "schemas": {
+    "payload": "axiom-circle-grid-persistence-payload.v0",
+    "candidate": "axiom-circle-grid-persistence-candidate.v0",
+    "receipt": "axiom-circle-grid-persistence-receipt.v0"
+  },
+  "replay_states": [
+    "new",
+    "exact-replay",
+    "conflict"
+  ],
+  "runtime_integration": {
+    "live_grid_append": false,
+    "gateway_route": false,
+    "hypervisor_action": false,
+    "grid_route": false,
+    "grid_materialized_projection": false,
+    "grid_event_lookup_by_id": false,
+    "uses_existing_signed_grid_chain": true
+  },
+  "output": {
+    "policy_digest_required": true,
+    "historical_policy_digest_required": true,
+    "charter_policy_digest_required": true,
+    "charter_lifecycle_prefix_digest_required": true,
+    "historical_ledger_prefix_digest_required": true,
+    "binding_digest_required": true,
+    "runtime_authority": false,
+    "portable_authority": false,
+    "authority_effect": "none",
+    "network_effect": "none"
+  }
+}
