@@ -23,6 +23,8 @@
 
 ### Task 1: Agency provenance / human baseline / deliberation contract parity
 
+**Status:** implemented on `feat/entity-agency-provenance-v0`; focused local verification 14/14 green; repository CI pending at time of update.
+
 **Files:**
 - Create/modify focused validators under `mesh/src/lib/` following existing contract-validator conventions.
 - Create schemas under `docs/architecture/contracts/`.
@@ -32,12 +34,12 @@
 - Produces deterministic `validate*()` + digest helpers for the three approved v0 records.
 - No runtime/Gateway integration.
 
-- [ ] Write exact-shape failing tests for human-proxy, counterpart-voice, joint, worker-execution, protest, stop-right, and deliberation cases.
-- [ ] Run focused tests and confirm failure before implementation.
-- [ ] Implement minimal strict validators and canonical digests using repository-native helpers.
-- [ ] Add JSON Schemas mirroring semantic invariants, including `authority_effect=none`, `network_effect=none`, and `runtime_activation=false` where specified.
-- [ ] Run focused tests plus `npm test`.
-- [ ] Commit as one reviewable semantic-contract change.
+- [x] Write exact-shape failing tests for human-proxy, counterpart-voice, joint, worker-execution, protest, stop-right, and deliberation cases.
+- [x] Run focused tests and confirm failure before implementation.
+- [x] Implement minimal strict validators and canonical digests using repository-native helpers.
+- [x] Add JSON Schemas mirroring semantic invariants, including `authority_effect=none`, `network_effect=none`, and `runtime_activation=false` where specified.
+- [ ] Run focused tests plus full repository `npm test` on an authoritative checkout/CI.
+- [x] Push as a reviewable semantic-contract slice.
 
 ### Task 2: Resource Envelope / Observation contract laboratory
 
