@@ -7,13 +7,13 @@ import { createSandboxService } from './sandbox/server.mjs';
 import { createHypervisorService } from './hypervisor/server.mjs';
 import { createGatewayService } from './gateway/server.mjs';
 
-export async function startDevelopmentStack(overrides = {}) {
+export async function startDevelopmentStack(overrides = {}, runtimeOptions = {}) {
   const config = meshConfig(overrides);
   const credentials = await bootstrap(config);
   await recoverStaleGridRuntimeLock(config.dataDir);
   const services = [
     await createGridService(config),
-    await createSandboxService(config),
+    await createSandboxService(config, runtimeOptions.sandbox),
     await createHypervisorService(config),
     await createGatewayService(config)
   ];

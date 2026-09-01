@@ -8,7 +8,13 @@ import {
   verifySignedRequest
 } from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
-import { AxiomError, assertPlainObject, digestObject, newId } from '../lib/canonical.mjs';
+import {
+  AxiomError,
+  ValidationError,
+  assertPlainObject,
+  digestObject,
+  newId
+} from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
@@ -23,10 +29,40 @@ import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
 import { executeSandboxBuiltin } from './education-executor.mjs';
+import {
+  evaluateMachineEffectCurrentnessCheckpointPrerequisite
+} from '../lib/machine-effect-currentness-checkpoint-adapter.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 
-export async function createSandboxService(config = meshConfig()) {
+export async function createSandboxService(config = meshConfig(), {
+  machineCurrentness = null,
+  beforeMachineEffectAdmission = null,
+  executeBuiltin = executeSandboxBuiltin
+} = {}) {
+  if (
+    config.environment !== 'test'
+    && (
+      beforeMachineEffectAdmission !== null
+      || executeBuiltin !== executeSandboxBuiltin
+    )
+  ) {
+    throw new ValidationError(
+      'Sandbox effect-admission test hooks are forbidden outside the test environment'
+    );
+  }
+  if (
+    beforeMachineEffectAdmission !== null
+    && typeof beforeMachineEffectAdmission !== 'function'
+  ) {
+    throw new ValidationError(
+      'Sandbox beforeMachineEffectAdmission hook must be a function when provided'
+    );
+  }
+  if (typeof executeBuiltin !== 'function') {
+    throw new ValidationError('Sandbox executeBuiltin dependency must be a function');
+  }
+
   const identity = await ensureMeshIdentity(config.dataDir, 'sandbox', { create: config.autoBootstrap });
   identity.transport = config.transport.enabled
     ? await loadTransportRuntime({
@@ -148,8 +184,122 @@ export async function createSandboxService(config = meshConfig()) {
     if (claims.subject !== intent.principal.id) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
     }
+
+    let machineCurrentnessPrerequisite = null;
+    if (
+      intent.principal.schema === 'axiom-machine-principal.v1'
+      && machineCurrentness?.required === true
+    ) {
+      if (typeof beforeMachineEffectAdmission === 'function') {
+        await beforeMachineEffectAdmission({
+          traceId,
+          intent,
+          plan,
+          capability: input.capability,
+          claims,
+          consumption_receipt: input.consumption_receipt,
+          consumption_receipt_digest: consumption.receipt_digest,
+          execution_epoch: executionEpoch
+        });
+      }
+      const store = machineCurrentness.store;
+      if (
+        !store
+        || typeof store.verifyState !== 'function'
+        || typeof store.retainedHead !== 'function'
+      ) {
+        throw new AxiomError(
+          'machine_currentness_unavailable',
+          'Required machine-principal currentness source is unavailable',
+          503
+        );
+      }
+      try {
+        await store.verifyState();
+      } catch (error) {
+        throw new AxiomError(
+          'machine_currentness_unavailable',
+          'Required machine-principal currentness state could not be verified',
+          503,
+          { cause_code: error?.code ?? 'currentness_state_verification_failed' }
+        );
+      }
+      const retained = store.retainedHead();
+      if (!retained) {
+        throw new AxiomError(
+          'machine_currentness_unavailable',
+          'Required machine-principal retained currentness head is unavailable',
+          503
+        );
+      }
+      if (
+        typeof machineCurrentness.trustedControllerPublicKey === 'undefined'
+        || !Number.isSafeInteger(machineCurrentness.maxEvidenceAgeMs)
+        || machineCurrentness.maxEvidenceAgeMs < 0
+        || typeof claims.authority_digest !== 'string'
+        || !DIGEST.test(claims.authority_digest)
+        || typeof claims.effect_destination !== 'string'
+        || claims.effect_destination.length === 0
+      ) {
+        throw new AxiomError(
+          'machine_currentness_configuration_invalid',
+          'Machine-principal currentness admission configuration is invalid',
+          503
+        );
+      }
+
+      try {
+        machineCurrentnessPrerequisite =
+          evaluateMachineEffectCurrentnessCheckpointPrerequisite({
+            currentnessCheckpoint: retained,
+            retainedLatestCheckpoint: retained,
+            trustedControllerPublicKey: machineCurrentness.trustedControllerPublicKey,
+            expectedPrincipalId: intent.principal.id,
+            expectedPrincipalType: intent.principal.type,
+            expectedAuthorityDigest: claims.authority_digest,
+            capabilityId: claims.jti,
+            intentDigest,
+            planDigest: claims.plan_digest,
+            effectDestination: claims.effect_destination,
+            effectAt: new Date().toISOString(),
+            maxEvidenceAgeMs: machineCurrentness.maxEvidenceAgeMs
+          });
+      } catch (error) {
+        throw new AxiomError(
+          'machine_currentness_invalid',
+          'Machine-principal currentness prerequisite could not be verified',
+          403,
+          { cause_code: error?.code ?? 'currentness_prerequisite_verification_failed' }
+        );
+      }
+      if (!machineCurrentnessPrerequisite.allow) {
+        throw new AxiomError(
+          machineCurrentnessPrerequisite.code,
+          'Machine-principal authority is not current enough for this effect',
+          403,
+          {
+            currentness_prerequisite_decision_digest:
+              machineCurrentnessPrerequisite.prerequisite_decision_digest,
+            retained_checkpoint_digest:
+              machineCurrentnessPrerequisite.currentness_checkpoint_digest
+          }
+        );
+      }
+    } else if (typeof beforeMachineEffectAdmission === 'function') {
+      await beforeMachineEffectAdmission({
+        traceId,
+        intent,
+        plan,
+        capability: input.capability,
+        claims,
+        consumption_receipt: input.consumption_receipt,
+        consumption_receipt_digest: consumption.receipt_digest,
+        execution_epoch: executionEpoch
+      });
+    }
+
     const startedAt = new Date().toISOString();
-    const builtinResult = executeSandboxBuiltin({
+    const builtinResult = executeBuiltin({
       tool: claims.tool,
       intent,
       assurance: plan.assurance
@@ -174,6 +324,16 @@ export async function createSandboxService(config = meshConfig()) {
         : {}),
       capability_id: claims.jti,
       capability_consumption_receipt_digest: consumption.receipt_digest,
+      ...(machineCurrentnessPrerequisite ? {
+        machine_currentness_prerequisite_decision_digest:
+          machineCurrentnessPrerequisite.prerequisite_decision_digest,
+        machine_currentness_checkpoint_digest:
+          machineCurrentnessPrerequisite.currentness_checkpoint_digest,
+        machine_currentness_head_digest:
+          machineCurrentnessPrerequisite.currentness_head_digest,
+        machine_currentness_evaluation_digest:
+          machineCurrentnessPrerequisite.effect_currentness_evaluation_digest
+      } : {}),
       sandbox_execution_epoch: executionEpoch,
       tool: claims.tool,
       policy_digest: claims.policy_digest,
