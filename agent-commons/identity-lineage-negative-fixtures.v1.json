@@ -99,6 +99,57 @@
         "recovery_class": "root_compromise",
         "authority": "none"
       }
+    },
+    {
+      "id": "endpoint-rotation-does-not-inherit-old-grant",
+      "given": {
+        "root": "root:A",
+        "service": "svc:alpha",
+        "old_key": "k1",
+        "new_key": "k2",
+        "old_grant_bound_key": "k1",
+        "lineage_continuity": "valid",
+        "new_endpoint_proof": "valid"
+      },
+      "attempt": "reuse a grant bound to the retired endpoint key after service-key rotation",
+      "expect": {
+        "decision": "deny",
+        "requires_fresh_or_rebound_grant": true,
+        "authority": "none"
+      }
+    },
+    {
+      "id": "platform-credential-isolation",
+      "given": {
+        "root": "root:A",
+        "alpha_service_credential": "cred:alpha",
+        "beta_service": "svc:beta",
+        "alpha_credential_valid": true
+      },
+      "attempt": "present a valid platform-specific credential from alpha as authority/evidence for beta",
+      "expect": {
+        "decision": "deny",
+        "cross_platform_reuse": "forbidden",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "root-compromise-invalidates-unrevalidated-lineage",
+      "given": {
+        "root": "root:A",
+        "root_state": "compromised",
+        "service": "svc:alpha",
+        "service_key": "k2",
+        "service_key_state": "current",
+        "delegation_issued_before_compromise": true
+      },
+      "attempt": "continue treating pre-compromise lineage as sufficient continuity after root compromise",
+      "expect": {
+        "decision": "deny",
+        "recovery_class": "root_compromise",
+        "requires_reestablished_root_or_local_recovery_policy": true,
+        "authority": "none"
+      }
     }
   ]
 }
