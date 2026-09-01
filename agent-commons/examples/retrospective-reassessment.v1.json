@@ -1,0 +1,48 @@
+{
+  "schema": "axiom-retrospective-reassessment.v1",
+  "reassessment_id": "reassessment:payment-claim-001",
+  "original_event_id": "event:payment-claim-001",
+  "original_event_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "assurance_at_execution": {
+    "identity": "achieved",
+    "authority": "achieved",
+    "execution": "achieved",
+    "evidence": "achieved",
+    "independent_verification": "unknown",
+    "currentness": "achieved",
+    "privacy": "achieved"
+  },
+  "reviewer": {
+    "reviewer_id": "verifier:independent-02",
+    "reviewer_type": "independent_verifier"
+  },
+  "review_authority": {
+    "authority_type": "review_only",
+    "authority_ref": "policy:institution-alpha-review-v1",
+    "scope": "Assess evidence and publish a linked reassessment record only."
+  },
+  "reviewed_evidence_refs": [
+    "evidence:original-receipt",
+    "evidence:independent-bank-proof"
+  ],
+  "review_method": "Reproduce the bounded payment predicate using an independent verifier and compare the exact original claim digest.",
+  "reviewed_at": "2026-09-01T18:20:00.000Z",
+  "review_assurance": {
+    "identity": "achieved",
+    "evidence": "achieved",
+    "independent_verification": "achieved",
+    "currentness": "achieved"
+  },
+  "outcome": "corroborated",
+  "challenge_status": "challengeable",
+  "superseding_or_corrective_links": [],
+  "authority": {
+    "reassessment_grants_runtime_authority": false,
+    "reassessment_rewrites_original_assurance": false,
+    "reviewer_may_delete_original_event": false
+  },
+  "limitations": [
+    "The later independent verification does not retroactively change the assurance recorded at execution.",
+    "This review does not authorize a new payment or other consequential effect."
+  ]
+}

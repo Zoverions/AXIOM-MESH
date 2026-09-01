@@ -1,0 +1,48 @@
+{
+  "schema": "axiom-retrospective-reassessment.v1",
+  "reassessment_id": "reassessment:credential-claim-002",
+  "original_event_id": "event:credential-claim-001",
+  "original_event_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "assurance_at_execution": {
+    "identity": "achieved",
+    "authority": "achieved",
+    "evidence": "achieved",
+    "independent_verification": "unknown",
+    "currentness": "unknown"
+  },
+  "reviewer": {
+    "reviewer_id": "reviewer:institution-beta-01",
+    "reviewer_type": "institutional_review"
+  },
+  "review_authority": {
+    "authority_type": "review_only",
+    "authority_ref": "policy:institution-beta-appeal-v1",
+    "scope": "Review challenged credential evidence and issue a linked correction."
+  },
+  "reviewed_evidence_refs": [
+    "evidence:credential-original",
+    "evidence:issuer-correction"
+  ],
+  "review_method": "Compare issuer correction against the original exact credential and recognition-edge digest.",
+  "reviewed_at": "2026-09-01T18:25:00.000Z",
+  "review_assurance": {
+    "identity": "achieved",
+    "evidence": "achieved",
+    "independent_verification": "achieved",
+    "currentness": "achieved"
+  },
+  "outcome": "superseded_by_correction",
+  "challenge_status": "superseded",
+  "superseding_or_corrective_links": [
+    "event:credential-claim-correction-002"
+  ],
+  "authority": {
+    "reassessment_grants_runtime_authority": false,
+    "reassessment_rewrites_original_assurance": false,
+    "reviewer_may_delete_original_event": false
+  },
+  "limitations": [
+    "The original event remains part of the append-only history.",
+    "Any consequential correction requires its own current authority and policy decision."
+  ]
+}
