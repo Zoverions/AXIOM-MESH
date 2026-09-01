@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   VERIFIER_PROFILE_SCHEMA,
-  evaluateVerifierIndependence
+  evaluateVerifierIndependence,
+  normalizeVerifierProfile
 } from '../src/lib/verifier-independence.mjs';
 import {
   ASSURANCE_CHECK_RECEIPT_SCHEMA,
@@ -43,6 +44,20 @@ test('meaningful verifier independence requires more than a second vote', () => 
   assert.equal(result.authority_effect, 'none');
   assert.ok(result.differing_dimensions.includes('context_digest'));
   assert.ok(result.differing_dimensions.includes('evidence_set_digest'));
+});
+
+test('normalized verifier profiles can be re-normalized but tampered digests fail closed', () => {
+  const normalized = normalizeVerifierProfile(profile());
+  const repeated = normalizeVerifierProfile(normalized);
+  assert.equal(repeated.profile_digest, normalized.profile_digest);
+
+  assert.throws(
+    () => normalizeVerifierProfile({
+      ...normalized,
+      profile_digest: 'f'.repeat(64)
+    }),
+    /profile_digest mismatch/
+  );
 });
 
 test('correlated replicas are not misclassified as independent', () => {
