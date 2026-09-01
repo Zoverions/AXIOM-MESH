@@ -42,16 +42,26 @@ function requireObject(value, label) {
 
 function publicKey(value, label) {
   try {
-    return createPublicKey(value);
-  } catch {
+    const key = value?.type === 'public' ? value : createPublicKey(value);
+    if (key.type !== 'public' || key.asymmetricKeyType !== 'ed25519') {
+      throw new ValidationError(`${label} must be Ed25519`);
+    }
+    return key;
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
     throw new ValidationError(`${label} is invalid`);
   }
 }
 
 function privateKey(value, label) {
   try {
-    return createPrivateKey(value);
-  } catch {
+    const key = value?.type === 'private' ? value : createPrivateKey(value);
+    if (key.type !== 'private' || key.asymmetricKeyType !== 'ed25519') {
+      throw new ValidationError(`${label} must be Ed25519`);
+    }
+    return key;
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
     throw new ValidationError(`${label} is invalid`);
   }
 }
