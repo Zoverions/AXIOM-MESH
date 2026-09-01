@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   evaluateMachineIntent,
+  machineCapabilityExpiryEpoch,
   machinePrincipalAuthorityFacts,
   normalizeMachinePrincipalDefinition
 } from '../src/lib/machine-principal.mjs';
@@ -56,6 +57,7 @@ test('machine principal v1 canonicalizes authority and binds a human sponsor', (
     principal_type: 'agent',
     sponsor: 'owner.alice',
     lifetime: 'session',
+    expires_at: '2099-01-01T00:00:00.000Z',
     runtime_id: 'runtime.hermes.local.1',
     runtime_kind: 'local-process',
     authority_digest: principal.authority_digest,
@@ -225,4 +227,40 @@ test('non-persistent machine principals expire explicitly and persistent princip
     }), options),
     /must not set expires_at/
   );
+});
+
+
+test('machine capability expiry cannot outlive non-persistent principal authority', () => {
+  const now = new Date('2026-08-09T20:00:00.000Z');
+  const principal = fixture({ expires_at: '2026-08-09T20:00:05.000Z' });
+  assert.equal(machineCapabilityExpiryEpoch(principal, {
+    now,
+    capabilityTtlSeconds: 30
+  }), Math.floor(new Date(principal.expires_at).valueOf() / 1000));
+
+  assert.equal(machineCapabilityExpiryEpoch(principal, {
+    now,
+    capabilityTtlSeconds: 2
+  }), Math.floor(now.valueOf() / 1000) + 2);
+});
+
+test('persistent machine principal capability expiry remains TTL bounded', () => {
+  const now = new Date('2026-08-09T20:00:00.000Z');
+  const principal = fixture({
+    lifetime: 'persistent',
+    expires_at: undefined
+  });
+  assert.equal(machineCapabilityExpiryEpoch(principal, {
+    now,
+    capabilityTtlSeconds: 30
+  }), Math.floor(now.valueOf() / 1000) + 30);
+});
+
+test('machine capability issuance fails closed when authority expires within current JWT second', () => {
+  const now = new Date('2026-08-09T20:00:00.900Z');
+  const principal = fixture({ expires_at: '2026-08-09T20:00:00.950Z' });
+  assert.throws(() => machineCapabilityExpiryEpoch(principal, {
+    now,
+    capabilityTtlSeconds: 30
+  }), /expires before a capability can be issued/);
 });
