@@ -3,6 +3,7 @@ import {
   assertString,
   digestObject
 } from './canonical.mjs';
+import { verifyObjectSignature } from './identity.mjs';
 import {
   evaluateEntityAssurance
 } from './entity-assurance.mjs';
@@ -11,10 +12,15 @@ import {
 } from './measurement-source-envelope.mjs';
 
 export const ASSURANCE_SOURCE_ADMISSION_SCHEMA = 'axiom-assurance-source-admission.v1';
+export const ASSURANCE_SOURCE_ADMISSION_RECEIPT_SCHEMA =
+  'axiom-assurance-source-admission-receipt.v1';
+export const ASSURANCE_SOURCE_ADMISSION_STATEMENT_SCHEMA =
+  'axiom-assurance-source-admission-statement.v1';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]*(?:-[A-Za-z0-9_.:-]+)*$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const LIVE_ADMISSIONS = new WeakSet();
+const MAX_DURABLE_ADMISSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 function id(value, label) {
   return assertString(value, label, { min: 1, max: 192, pattern: ID });
@@ -149,4 +155,230 @@ export function collectBrokerVerifiedSourceBindings(admissions) {
     result.set(verificationDigest, binding);
   }
   return result;
+}
+
+
+function canonicalTimestamp(value, label) {
+  const text = assertString(value, label, { min: 24, max: 24 });
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== text) {
+    throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
+  }
+  return text;
+}
+
+export function buildDurableAssuranceSourceAdmission(
+  liveAdmission,
+  {
+    identity,
+    issuedAt,
+    expiresAt
+  } = {}
+) {
+  if (!liveAdmission || typeof liveAdmission !== 'object' || !LIVE_ADMISSIONS.has(liveAdmission)) {
+    throw new ValidationError(
+      'durable assurance source admission requires a live broker admission'
+    );
+  }
+  if (!identity || typeof identity.signObject !== 'function') {
+    throw new ValidationError(
+      'durable assurance source admission requires a signing identity'
+    );
+  }
+  const issued = canonicalTimestamp(
+    issuedAt,
+    'durable assurance source admission issuedAt'
+  );
+  const expires = canonicalTimestamp(
+    expiresAt,
+    'durable assurance source admission expiresAt'
+  );
+  const issuedMs = new Date(issued).valueOf();
+  const expiresMs = new Date(expires).valueOf();
+  if (expiresMs <= issuedMs) {
+    throw new ValidationError(
+      'durable assurance source admission expiresAt must follow issuedAt'
+    );
+  }
+  if (expiresMs - issuedMs > MAX_DURABLE_ADMISSION_LIFETIME_MS) {
+    throw new ValidationError(
+      'durable assurance source admission lifetime exceeds seven days'
+    );
+  }
+
+  const statement = Object.freeze({
+    schema: ASSURANCE_SOURCE_ADMISSION_STATEMENT_SCHEMA,
+    source_id: liveAdmission.source_id,
+    source_class: liveAdmission.source_class,
+    source_verification_digest: liveAdmission.source_verification_digest,
+    upstream_schema: liveAdmission.upstream_schema,
+    upstream_policy_digest: liveAdmission.upstream_policy_digest,
+    ...(liveAdmission.upstream_subject_id
+      ? { upstream_subject_id: liveAdmission.upstream_subject_id }
+      : {}),
+    admission_digest: liveAdmission.admission_digest,
+    issued_at: issued,
+    expires_at: expires,
+    truth_established: false,
+    authority_effect: 'none',
+    execution_effect: 'none'
+  });
+
+  const envelope = Object.freeze({
+    schema: ASSURANCE_SOURCE_ADMISSION_RECEIPT_SCHEMA,
+    statement,
+    attestation: identity.signObject(statement)
+  });
+  return Object.freeze({
+    ...envelope,
+    receipt_digest: digestObject(envelope)
+  });
+}
+
+export function validateDurableAssuranceSourceAdmission(receipt) {
+  if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) {
+    throw new ValidationError('durable assurance source admission must be an object');
+  }
+  if (receipt.schema !== ASSURANCE_SOURCE_ADMISSION_RECEIPT_SCHEMA) {
+    throw new ValidationError('durable assurance source admission schema is invalid');
+  }
+  const statement = receipt.statement;
+  if (
+    !statement
+    || typeof statement !== 'object'
+    || Array.isArray(statement)
+    || statement.schema !== ASSURANCE_SOURCE_ADMISSION_STATEMENT_SCHEMA
+  ) {
+    throw new ValidationError('durable assurance source admission statement is invalid');
+  }
+  if (
+    statement.truth_established !== false
+    || statement.authority_effect !== 'none'
+    || statement.execution_effect !== 'none'
+  ) {
+    throw new ValidationError(
+      'durable assurance source admission activation boundary is invalid'
+    );
+  }
+  id(statement.source_id, 'durable assurance source admission source_id');
+  if (!['measurement', 'entity-assurance'].includes(statement.source_class)) {
+    throw new ValidationError(
+      'durable assurance source admission source_class is unsupported'
+    );
+  }
+  digest(
+    statement.source_verification_digest,
+    'durable assurance source admission source_verification_digest'
+  );
+  digest(statement.upstream_policy_digest, 'durable assurance source admission upstream_policy_digest');
+  digest(statement.admission_digest, 'durable assurance source admission admission_digest');
+  id(statement.upstream_schema, 'durable assurance source admission upstream_schema');
+  if (statement.upstream_subject_id !== undefined) {
+    id(statement.upstream_subject_id, 'durable assurance source admission upstream_subject_id');
+  }
+  const issued = canonicalTimestamp(
+    statement.issued_at,
+    'durable assurance source admission issued_at'
+  );
+  const expires = canonicalTimestamp(
+    statement.expires_at,
+    'durable assurance source admission expires_at'
+  );
+  const lifetime = new Date(expires).valueOf() - new Date(issued).valueOf();
+  if (lifetime <= 0 || lifetime > MAX_DURABLE_ADMISSION_LIFETIME_MS) {
+    throw new ValidationError('durable assurance source admission lifetime is invalid');
+  }
+  digest(receipt.receipt_digest, 'durable assurance source admission receipt_digest');
+  const { receipt_digest: _receiptDigest, ...envelope } = receipt;
+  if (digestObject(envelope) !== receipt.receipt_digest) {
+    throw new ValidationError(
+      'durable assurance source admission receipt_digest mismatch'
+    );
+  }
+  return receipt;
+}
+
+export function verifyDurableAssuranceSourceAdmission(
+  receipt,
+  gridPublicKey,
+  { now } = {}
+) {
+  validateDurableAssuranceSourceAdmission(receipt);
+  if (!gridPublicKey) {
+    throw new ValidationError(
+      'durable assurance source admission requires a trusted Grid public key'
+    );
+  }
+  const evaluatedAt = canonicalTimestamp(
+    now,
+    'durable assurance source admission verification now'
+  );
+  if (receipt.statement.issued_at > evaluatedAt) {
+    throw new ValidationError(
+      'durable assurance source admission is future-dated'
+    );
+  }
+  if (receipt.statement.expires_at <= evaluatedAt) {
+    throw new ValidationError(
+      'durable assurance source admission is expired'
+    );
+  }
+  const valid = verifyObjectSignature(
+    receipt.statement,
+    receipt.attestation,
+    gridPublicKey
+  );
+  if (!valid) {
+    throw new ValidationError(
+      'durable assurance source admission signature is invalid'
+    );
+  }
+  return Object.freeze({
+    valid: true,
+    receipt_digest: receipt.receipt_digest,
+    source_id: receipt.statement.source_id,
+    source_class: receipt.statement.source_class,
+    source_verification_digest: receipt.statement.source_verification_digest,
+    expires_at: receipt.statement.expires_at,
+    truth_established: false,
+    authority_effect: 'none'
+  });
+}
+
+export function collectDurableVerifiedSourceBindings(
+  receipts,
+  gridPublicKey,
+  { now } = {}
+) {
+  if (!Array.isArray(receipts) || receipts.length < 1 || receipts.length > 4096) {
+    throw new ValidationError(
+      'durable assurance source receipts must contain 1-4096 items'
+    );
+  }
+  const bindings = new Map();
+  for (const receipt of receipts) {
+    const verified = verifyDurableAssuranceSourceAdmission(
+      receipt,
+      gridPublicKey,
+      { now }
+    );
+    const binding = Object.freeze({
+      source_id: verified.source_id,
+      source_class: verified.source_class
+    });
+    const prior = bindings.get(verified.source_verification_digest);
+    if (
+      prior
+      && (
+        prior.source_id !== binding.source_id
+        || prior.source_class !== binding.source_class
+      )
+    ) {
+      throw new ValidationError(
+        'durable assurance source verification digest maps to conflicting bindings'
+      );
+    }
+    bindings.set(verified.source_verification_digest, binding);
+  }
+  return bindings;
 }
