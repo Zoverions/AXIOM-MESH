@@ -103,7 +103,7 @@ function parsePublicKey(value, label) {
 
 function keyId(value) {
   const key = parsePublicKey(value, 'Machine currentness mutation authority public key');
-  return sha256(key.export({ type: 'spki', format: 'der' }));
+  return sha256(key.export({ type: 'spki', format: 'pem' }).toString());
 }
 
 function normalizeStatement(raw) {
