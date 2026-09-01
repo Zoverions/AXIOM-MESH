@@ -5,7 +5,8 @@ import {
 } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
 import {
-  validateDurableAssuranceSourceAdmission
+  validateDurableAssuranceSourceAdmission,
+  verifyDurableAssuranceSourceAdmission
 } from './assurance-source-broker.mjs';
 
 export const ASSURANCE_SOURCE_REVOCATION_SCHEMA =
@@ -142,11 +143,16 @@ export function validateAssuranceSourceRevocationSnapshot(snapshot) {
 export function verifyAssuranceSourceRevocationSnapshot(
   snapshot,
   gridPublicKey,
-  { now } = {}
+  { now, minimumSequence = 1 } = {}
 ) {
   validateAssuranceSourceRevocationSnapshot(snapshot);
   if (!gridPublicKey) {
     throw new ValidationError('assurance source revocation requires a trusted Grid public key');
+  }
+  if (!Number.isSafeInteger(minimumSequence) || minimumSequence < 1) {
+    throw new ValidationError(
+      'assurance source revocation minimumSequence must be a positive integer'
+    );
   }
   const evaluatedAt = timestamp(now, 'assurance source revocation verification now');
   if (snapshot.statement.issued_at > evaluatedAt) {
@@ -154,6 +160,11 @@ export function verifyAssuranceSourceRevocationSnapshot(
   }
   if (snapshot.statement.expires_at <= evaluatedAt) {
     throw new ValidationError('assurance source revocation snapshot is expired');
+  }
+  if (snapshot.statement.sequence < minimumSequence) {
+    throw new ValidationError(
+      'assurance source revocation snapshot sequence is below the retained minimum'
+    );
   }
   if (!verifyObjectSignature(snapshot.statement, snapshot.attestation, gridPublicKey)) {
     throw new ValidationError('assurance source revocation signature is invalid');
@@ -176,13 +187,13 @@ export function assertDurableAssuranceSourceAdmissionNotRevoked(
   receipt,
   snapshot,
   gridPublicKey,
-  { now } = {}
+  { now, minimumSequence = 1 } = {}
 ) {
   validateDurableAssuranceSourceAdmission(receipt);
   const verified = verifyAssuranceSourceRevocationSnapshot(
     snapshot,
     gridPublicKey,
-    { now }
+    { now, minimumSequence }
   );
   if (
     verified.revoked_admission_digests.includes(receipt.statement.admission_digest)
@@ -197,6 +208,67 @@ export function assertDurableAssuranceSourceAdmissionNotRevoked(
     source_verification_digest: receipt.statement.source_verification_digest,
     revocation_snapshot_digest: verified.snapshot_digest,
     revocation_sequence: verified.sequence,
+    global_currentness_claimed: false,
+    authority_effect: 'none'
+  });
+}
+
+
+export function collectNonRevokedDurableVerifiedSourceBindings(
+  receipts,
+  snapshot,
+  gridPublicKey,
+  { now, minimumSequence = 1 } = {}
+) {
+  if (!Array.isArray(receipts) || receipts.length < 1 || receipts.length > 4096) {
+    throw new ValidationError(
+      'non-revoked durable assurance source receipts must contain 1-4096 items'
+    );
+  }
+  const verifiedSnapshot = verifyAssuranceSourceRevocationSnapshot(
+    snapshot,
+    gridPublicKey,
+    { now, minimumSequence }
+  );
+  const bindings = new Map();
+  for (const receipt of receipts) {
+    const verifiedReceipt = verifyDurableAssuranceSourceAdmission(
+      receipt,
+      gridPublicKey,
+      { now }
+    );
+    if (
+      verifiedSnapshot.revoked_admission_digests.includes(
+        receipt.statement.admission_digest
+      )
+      || verifiedSnapshot.revoked_source_verification_digests.includes(
+        verifiedReceipt.source_verification_digest
+      )
+    ) {
+      throw new ValidationError('durable assurance source admission is revoked');
+    }
+    const binding = Object.freeze({
+      source_id: verifiedReceipt.source_id,
+      source_class: verifiedReceipt.source_class
+    });
+    const prior = bindings.get(verifiedReceipt.source_verification_digest);
+    if (
+      prior
+      && (
+        prior.source_id !== binding.source_id
+        || prior.source_class !== binding.source_class
+      )
+    ) {
+      throw new ValidationError(
+        'durable assurance source verification digest maps to conflicting bindings'
+      );
+    }
+    bindings.set(verifiedReceipt.source_verification_digest, binding);
+  }
+  return Object.freeze({
+    bindings,
+    revocation_snapshot_digest: verifiedSnapshot.snapshot_digest,
+    revocation_sequence: verifiedSnapshot.sequence,
     global_currentness_claimed: false,
     authority_effect: 'none'
   });
