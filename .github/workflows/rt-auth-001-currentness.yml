@@ -9,6 +9,7 @@ on:
       - "mesh/src/lib/machine-effect-currentness-admission.mjs"
       - "mesh/test/machine-authority-currentness-checkpoint.test.mjs"
       - "mesh/test/machine-effect-currentness-admission.test.mjs"
+      - "mesh/test/red-team/rt-auth-001-currentness-expiry.test.mjs"
       - ".github/workflows/rt-auth-001-currentness.yml"
 
 permissions:
@@ -36,3 +37,4 @@ jobs:
           node --test
           mesh/test/machine-authority-currentness-checkpoint.test.mjs
           mesh/test/machine-effect-currentness-admission.test.mjs
+          mesh/test/red-team/rt-auth-001-currentness-expiry.test.mjs
