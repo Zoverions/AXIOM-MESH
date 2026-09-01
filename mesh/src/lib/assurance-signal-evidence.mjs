@@ -40,6 +40,7 @@ const EVIDENCE_FIELDS = new Set([
   'source_id',
   'source_class',
   'basis_digest',
+  'source_verification_digest',
   'observed_at',
   'expires_at',
   'non_authorizing'
@@ -118,6 +119,10 @@ export function normalizeAssuranceSignalEvidence(raw) {
     source_id: id(value.source_id, 'assurance signal evidence source_id'),
     source_class: value.source_class,
     basis_digest: digest(value.basis_digest, 'assurance signal evidence basis_digest'),
+    source_verification_digest: digest(
+      value.source_verification_digest,
+      'assurance signal evidence source_verification_digest'
+    ),
     observed_at: observedAt,
     expires_at: expiresAt,
     non_authorizing: true
@@ -184,6 +189,7 @@ export function resolveAdaptiveAssuranceSignals({
   taskId,
   policy,
   evidence,
+  verifiedSourceDigests,
   now
 } = {}) {
   const task = id(taskId, 'assurance signal resolution taskId');
@@ -191,6 +197,14 @@ export function resolveAdaptiveAssuranceSignals({
   const evaluationTime = timestamp(now, 'assurance signal resolution now');
   if (!Array.isArray(evidence) || evidence.length > 4096) {
     throw new ValidationError('assurance signal resolution evidence must contain at most 4096 items');
+  }
+  if (!(verifiedSourceDigests instanceof Set) || verifiedSourceDigests.size < 1) {
+    throw new ValidationError(
+      'assurance signal resolution requires a non-empty verifiedSourceDigests Set'
+    );
+  }
+  for (const item of verifiedSourceDigests) {
+    digest(item, 'assurance signal resolution verifiedSourceDigests');
   }
   const normalized = evidence.map(normalizeAssuranceSignalEvidence);
   const evidenceIds = normalized.map(item => item.evidence_id);
@@ -206,6 +220,7 @@ export function resolveAdaptiveAssuranceSignals({
   const nowMs = new Date(evaluationTime).valueOf();
   const eligible = normalized.filter(item => (
     normalizedPolicy.accepted_source_classes.includes(item.source_class)
+    && verifiedSourceDigests.has(item.source_verification_digest)
     && isCurrent(item, nowMs, normalizedPolicy.maximum_age_ms)
   ));
 
@@ -280,12 +295,14 @@ export function buildAdaptiveAssuranceInputFromEvidence({
   policyFloor,
   signalPolicy,
   evidence,
+  verifiedSourceDigests,
   now
 } = {}) {
   const resolution = resolveAdaptiveAssuranceSignals({
     taskId,
     policy: signalPolicy,
     evidence,
+    verifiedSourceDigests,
     now
   });
   return Object.freeze({
