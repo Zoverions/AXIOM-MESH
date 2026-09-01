@@ -306,6 +306,18 @@ profile and independence digests, estimated costs, external obligations, and the
 budget snapshot. It explicitly has `authority_effect: none` and
 `execution_effect: none`.
 
+Independence is check-specific rather than a single generic vote count:
+
+- independent-context verification requires a different context or evidence basis;
+- adversarial review additionally requires a different review method;
+- provenance review requires a different evidence set;
+- correlation-aware cross-check requires a different verified runtime, or a
+  separately verified model-family/operator-domain distinction; and
+- stochastic supplemental audit still requires meaningful baseline independence.
+
+This prevents an inexpensive kind of diversity from being reused as evidence for a
+different, stronger independence claim.
+
 Candidate-pool admission remains a separate trust boundary. A compromised
 orchestrator must not be allowed to populate the pool with nominally distinct but
 operator-controlled replicas and then claim diversity. Runtime integration must
