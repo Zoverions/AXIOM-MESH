@@ -1,0 +1,32 @@
+name: Machine Principal Currentness Mutation Source
+
+on:
+  pull_request:
+    branches: ["security/effect-admission-currentness-v1"]
+    paths:
+      - "mesh/src/lib/machine-principal-currentness-mutation-source.mjs"
+      - "mesh/test/machine-principal-currentness-mutation-source.test.mjs"
+      - ".github/workflows/machine-principal-currentness-mutation-source.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: machine-principal-currentness-mutation-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-currentness-mutation-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+          check-latest: false
+      - name: Run authorized currentness mutation source regression
+        run: node --test mesh/test/machine-principal-currentness-mutation-source.test.mjs
