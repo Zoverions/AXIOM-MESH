@@ -115,6 +115,41 @@ occurred.
 
 Users should not normally have to choose a raw number of agents.
 
+## Attributable signal provenance
+
+`mesh/src/lib/assurance-signal-evidence.mjs` adds a provenance boundary in front
+of the allocator. Risk and reputation values are not trusted merely because an
+agent, orchestrator, or peer supplies a number.
+
+Each accepted signal observation binds:
+
+- task ID;
+- signal name and bounded value;
+- confidence;
+- source identity and source class;
+- basis digest;
+- observation time and optional expiry;
+- a non-authorizing marker;
+- a canonical evidence digest.
+
+Accepted source classes are deliberately limited to measurement,
+policy-derived, independently verified, and entity-assurance evidence. Acting-agent
+self-declarations are not an accepted evidence class.
+
+Every risk signal requires current attributable evidence. Missing, stale, expired,
+future-dated, or unsupported-source observations fail closed rather than defaulting
+to a low-risk value.
+
+When multiple valid sources disagree on a risk-increasing signal, resolution uses
+the highest observed risk value. It does not average a high-risk observation away.
+When reputation sources disagree, resolution selects the lower reputation score,
+because reputation is friction-reducing and therefore must not inflate through
+aggregation.
+
+The resulting resolution is digest-bound and non-authorizing. It can construct the
+ordinary adaptive-assurance input, but it cannot grant authority or bypass the
+normal policy path.
+
 ## Verifier independence evidence
 
 Parallel verification now has an explicit evidence contract in
