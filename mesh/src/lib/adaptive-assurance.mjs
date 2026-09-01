@@ -298,12 +298,12 @@ export function projectAdaptiveAssuranceForUi(decision, { phase = 'pre-execution
   const projection = {
     schema: ADAPTIVE_ASSURANCE_UI_SCHEMA,
     task_id: value.task_id,
-    level: value.ui_level,
+    ui_level: value.ui_level,
     selected_tier: value.selected_tier,
     required_checks: structuredClone(value.required_checks),
     explanation: value.risk_class === 'critical'
       ? 'Critical assurance floor applies because this task is classified as critical.'
-      : 'Assurance effort reflects consequence, uncertainty, reversibility, authority, provenance, anomaly, context-integrity, and correlation signals.',
+      : 'Assurance effort reflects consequence, uncertainty, irreversibility, authority exposure, provenance weakness, anomaly, context-integrity, and correlation signals.',
     authority_effect: 'none'
   };
 
