@@ -8,7 +8,13 @@ import {
   verifySignedRequest
 } from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
-import { AxiomError, assertPlainObject, digestObject, newId } from '../lib/canonical.mjs';
+import {
+  AxiomError,
+  ValidationError,
+  assertPlainObject,
+  digestObject,
+  newId
+} from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
@@ -34,6 +40,29 @@ export async function createSandboxService(config = meshConfig(), {
   beforeMachineEffectAdmission = null,
   executeBuiltin = executeSandboxBuiltin
 } = {}) {
+  if (
+    config.environment !== 'test'
+    && (
+      beforeMachineEffectAdmission !== null
+      || executeBuiltin !== executeSandboxBuiltin
+    )
+  ) {
+    throw new ValidationError(
+      'Sandbox effect-admission test hooks are forbidden outside the test environment'
+    );
+  }
+  if (
+    beforeMachineEffectAdmission !== null
+    && typeof beforeMachineEffectAdmission !== 'function'
+  ) {
+    throw new ValidationError(
+      'Sandbox beforeMachineEffectAdmission hook must be a function when provided'
+    );
+  }
+  if (typeof executeBuiltin !== 'function') {
+    throw new ValidationError('Sandbox executeBuiltin dependency must be a function');
+  }
+
   const identity = await ensureMeshIdentity(config.dataDir, 'sandbox', { create: config.autoBootstrap });
   identity.transport = config.transport.enabled
     ? await loadTransportRuntime({
