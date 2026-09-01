@@ -203,6 +203,31 @@ unbounded inference or latency loop.
 Future runtime integration should replace or extend generic units with attributable
 provider/model/device accounting where available.
 
+## Diverse stochastic work-order compilation
+
+`mesh/src/lib/assurance-work-order.mjs` compiles an internal work order from an
+adaptive-assurance decision without executing it.
+
+The compiler separates ordinary policy/human obligations from machine-verifiable
+checks. For machine checks it:
+
+- rejects the originating verifier as its own independent reviewer;
+- requires meaningful verifier independence under the verifier-profile contract;
+- prefers unused independent verifiers before reusing one;
+- chooses stochastically among eligible candidates;
+- charges estimated check cost against the bounded assurance-work budget;
+- fails closed when no independent verifier or sufficient budget exists.
+
+The resulting work order binds task, assurance decision, selected tier, verifier
+profile and independence digests, estimated costs, external obligations, and the
+budget snapshot. It explicitly has `authority_effect: none` and
+`execution_effect: none`.
+
+Candidate-pool admission remains a separate trust boundary. A compromised
+orchestrator must not be allowed to populate the pool with nominally distinct but
+operator-controlled replicas and then claim diversity. Runtime integration must
+source candidate profiles from an independently governed runtime/provider catalog.
+
 ## Next integration gates
 
 Before this primitive can affect live orchestration:
