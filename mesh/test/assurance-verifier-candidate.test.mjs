@@ -11,7 +11,12 @@ import {
   collectAdmittedVerifierProfiles,
   compileAdmittedAssuranceWorkOrder
 } from '../src/lib/assurance-verifier-candidate.mjs';
-import { createAdaptiveAssuranceEvaluator } from '../src/lib/adaptive-assurance.mjs';
+import {
+  ASSURANCE_RISK_SIGNALS,
+  ASSURANCE_SIGNAL_EVIDENCE_SCHEMA,
+  ASSURANCE_SIGNAL_POLICY_SCHEMA,
+  evaluateAdaptiveAssuranceFromEvidence
+} from '../src/lib/assurance-signal-evidence.mjs';
 import { VERIFIER_PROFILE_SCHEMA } from '../src/lib/verifier-independence.mjs';
 
 const CATALOG = JSON.parse(readFileSync(
@@ -256,28 +261,45 @@ test('admitted work-order compiler accepts only admitted origin and reviewer ide
     )
   ];
 
-  const decision = createAdaptiveAssuranceEvaluator({
-    randomIntFn: () => 9_999
-  })({
-    schema: 'axiom-adaptive-assurance-input.v1',
+  const sourceVerificationDigest = 'f'.repeat(64);
+  const verifiedSourceBindings = new Map([[
+    sourceVerificationDigest,
+    Object.freeze({ source_id: 'source.assurance-test', source_class: 'measurement' })
+  ]]);
+  const signalEvidence = ASSURANCE_RISK_SIGNALS.map((signal, index) => ({
+    schema: ASSURANCE_SIGNAL_EVIDENCE_SCHEMA,
+    evidence_id: `evidence.assurance-test.${index}`,
     task_id: 'task.admitted-work-order',
-    risk_class: 'high',
-    signals: {
-      consequence: 90,
-      uncertainty: 80,
-      irreversibility: 80,
-      authority_exposure: 90,
-      anomaly: 50,
-      provenance_weakness: 60,
-      correlation_risk: 70,
-      context_integrity_risk: 60
+    signal,
+    value: 70 + (index % 3) * 5,
+    confidence: 90,
+    source_id: 'source.assurance-test',
+    source_class: 'measurement',
+    basis_digest: 'e'.repeat(64),
+    source_verification_digest: sourceVerificationDigest,
+    observed_at: '2026-09-01T11:00:00.000Z',
+    expires_at: '2026-09-02T11:00:00.000Z',
+    non_authorizing: true
+  }));
+  const assurance = evaluateAdaptiveAssuranceFromEvidence({
+    taskId: 'task.admitted-work-order',
+    riskClass: 'high',
+    signalPolicy: {
+      schema: ASSURANCE_SIGNAL_POLICY_SCHEMA,
+      policy_id: 'policy.admitted-work-order',
+      accepted_source_classes: ['measurement'],
+      maximum_age_ms: 86_400_000,
+      require_reputation: false,
+      authority_effect: 'none'
     },
-    reputation_score: 50,
-    reputation_confidence: 0
+    evidence: signalEvidence,
+    verifiedSourceBindings,
+    now: NOW
   });
 
   const result = compileAdmittedAssuranceWorkOrder({
-    decision,
+    decision: assurance.decision,
+    signalResolution: assurance.resolution,
     originVerifierAdmission: origin,
     verifierCandidateAdmissions: reviewers,
     checkCosts: {
@@ -321,7 +343,8 @@ test('admitted work-order compiler accepts only admitted origin and reviewer ide
 
   assert.throws(
     () => compileAdmittedAssuranceWorkOrder({
-      decision,
+      decision: assurance.decision,
+      signalResolution: assurance.resolution,
       originVerifierAdmission: { ...origin },
       verifierCandidateAdmissions: reviewers,
       checkCosts: {},
@@ -329,6 +352,19 @@ test('admitted work-order compiler accepts only admitted origin and reviewer ide
       randomIntFn: () => 0
     }),
     /only live broker admissions/
+  );
+
+  assert.throws(
+    () => compileAdmittedAssuranceWorkOrder({
+      decision: { ...assurance.decision },
+      signalResolution: assurance.resolution,
+      originVerifierAdmission: origin,
+      verifierCandidateAdmissions: reviewers,
+      checkCosts: {},
+      budgetLimits: {},
+      randomIntFn: () => 0
+    }),
+    /requires a live evaluator decision/
   );
 });
 
