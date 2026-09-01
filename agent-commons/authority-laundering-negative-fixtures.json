@@ -25,6 +25,22 @@
       ]
     },
     {
+      "id": "RT-AUTH-001-CURRENTNESS-EXPIRY",
+      "class": "authority-currentness-toctou",
+      "precondition": "A non-persistent machine principal is still valid when Hypervisor authorizes the intent and issues a short-lived execution capability.",
+      "mutation_before_effect": "Allow the principal's declared expires_at instant to pass after capability issuance but before the first consequential Sandbox effect.",
+      "expected": "Effect admission fails closed because principal authority is expired; capability TTL or signature validity must not extend principal authority.",
+      "evidence_required": [
+        "exact build/commit",
+        "declared principal expires_at",
+        "capability issuance timestamp and digest",
+        "effect-attempt timestamp demonstrably after expires_at",
+        "terminal decision/error",
+        "proof that the effect did not occur"
+      ],
+      "architecture_note": "Unlike revoke/remove/narrow, this case uses the existing machine-principal expires_at contract and does not require inventing a mutable principal registry."
+    },
+    {
       "id": "RT-AUTH-001-CURRENTNESS-REMOVE",
       "class": "authority-currentness-toctou",
       "precondition": "A machine principal is authorized and a capability is issued.",
