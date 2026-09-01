@@ -1,0 +1,120 @@
+{
+  "schema": "axiom-evidence-disposition-profile.v1",
+  "status": "experimental; protocol-neutral; not production promoted",
+  "purpose": "Preserve the usefulness of weak, provisional, unverified, stale, external, heuristic, reputational, model-derived, or otherwise non-authoritative signals without allowing them to masquerade as authority-critical proof.",
+  "principle": "Evidence quality is contextual. A signal can be useful without being sufficient for identity, authorization, execution, legal, or external-truth claims.",
+  "lanes": [
+    {
+      "id": "advisory",
+      "examples": [
+        "discovery hints",
+        "ranking",
+        "recommendation",
+        "routing preference",
+        "anomaly score",
+        "model judgment",
+        "reputation hint",
+        "cached metadata",
+        "unverified external claim"
+      ],
+      "may_influence": [
+        "what to inspect next",
+        "which verifier to call",
+        "which candidate endpoint to try",
+        "UI warnings",
+        "search/ranking",
+        "preflight questions",
+        "human review priority"
+      ],
+      "must_not_do": [
+        "mint authority",
+        "satisfy mandatory proof",
+        "override revocation",
+        "override fresher verified state",
+        "prove external-world truth"
+      ]
+    },
+    {
+      "id": "corroborative",
+      "examples": [
+        "independent but non-authoritative attestations",
+        "secondary observations",
+        "cross-source consistency"
+      ],
+      "may_influence": [
+        "confidence",
+        "review priority",
+        "whether stronger verification is requested"
+      ],
+      "must_not_do": [
+        "replace a required authoritative verifier",
+        "widen a grant",
+        "convert absence of proof into proof"
+      ]
+    },
+    {
+      "id": "verified_input",
+      "examples": [
+        "validated identity proof",
+        "validated delegation artifact",
+        "validated resource binding",
+        "validated policy state"
+      ],
+      "may_influence": [
+        "authorization inputs",
+        "currentness checks",
+        "policy evaluation"
+      ],
+      "must_not_do": [
+        "self-authorize merely because verification succeeded"
+      ]
+    },
+    {
+      "id": "authoritative_decision",
+      "examples": [
+        "local bounded grant",
+        "explicit approval decision",
+        "policy admission"
+      ],
+      "may_influence": [
+        "whether a consequential effect is admitted"
+      ],
+      "must_not_do": [
+        "claim more than its scope, purpose, destination, budget, audience or expiry"
+      ]
+    },
+    {
+      "id": "execution_evidence",
+      "examples": [
+        "receipt",
+        "artifact digest",
+        "effect record"
+      ],
+      "may_influence": [
+        "audit",
+        "post-hoc verification",
+        "dispute review"
+      ],
+      "must_not_do": [
+        "retroactively authorize an effect",
+        "prove arbitrary external truth without an appropriate witness or oracle"
+      ]
+    }
+  ],
+  "promotion_rule": "Moving evidence from advisory/corroborative use into a required proof position requires an explicit verifier, trust policy, freshness rule, scope binding, and failure mode. Promotion is never implicit.",
+  "demotion_rule": "Evidence that is stale, unverifiable, revoked, ambiguous, context-shifted, or outside its intended scope may remain useful as advisory context but loses authority-critical standing.",
+  "positive_uses": [
+    "Use DNS/AID/DID/repository or community metadata to find candidate endpoints or identities before stronger checks.",
+    "Use model or reputation signals to prioritize review, not to grant permission.",
+    "Use stale-but-benign metadata as a hint for recovery or investigation while refusing it at the effect boundary.",
+    "Use external claims to form hypotheses and select tests without treating those claims as established facts.",
+    "Use partial continuity evidence to reconnect user experience while requiring stronger proof before privileged recovery."
+  ],
+  "anti_patterns": [
+    "treating advisory confidence as authorization confidence",
+    "turning discovery success into permission",
+    "letting reputation or popularity satisfy proof requirements",
+    "using stale verified state to override fresher denial or revocation",
+    "requiring expensive verification for low-consequence advisory uses where no protected effect depends on it"
+  ]
+}
