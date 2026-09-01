@@ -23,6 +23,7 @@ import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
 import { executeSandboxBuiltin } from './education-executor.mjs';
+import { evaluateMachineEffectAuthorityCurrentness } from '../lib/machine-effect-currentness-admission.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 
@@ -147,6 +148,16 @@ export async function createSandboxService(config = meshConfig()) {
     }
     if (claims.subject !== intent.principal.id) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
+    }
+    if (intent.principal.schema === 'axiom-machine-principal.v1') {
+      const currentness = evaluateMachineEffectAuthorityCurrentness({
+        verifiedCapabilityClaims: claims,
+        currentPrincipal: intent.principal,
+        effectAt: new Date().toISOString()
+      });
+      if (!currentness.allow) {
+        throw new AxiomError(currentness.code, currentness.reason, 403);
+      }
     }
     const startedAt = new Date().toISOString();
     const builtinResult = executeSandboxBuiltin({
