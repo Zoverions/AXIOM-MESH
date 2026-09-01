@@ -320,7 +320,7 @@ test('descendant lineage link requires exact parent record depth principal and a
     concurrent: 1,
     cost: 20,
     validFrom: '2026-09-01T17:10:00.000Z',
-    expiresAt: '2026-09-01T18:00:00.000Z'
+    expiresAt: '2026-09-01T19:00:00.000Z'
   });
   const second = fixture({
     delegatorId: first.delegateId,
