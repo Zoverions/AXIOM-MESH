@@ -11,9 +11,6 @@ import {
   digestObject
 } from './canonical.mjs';
 import {
-  machineCurrentnessControllerKeyId
-} from './machine-currentness-controller-key-lifecycle.mjs';
-import {
   MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
   normalizeMachinePrincipalCurrentness
 } from './machine-principal-currentness.mjs';
