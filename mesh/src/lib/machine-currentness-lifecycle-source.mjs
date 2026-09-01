@@ -3,8 +3,12 @@ import {
   createMachinePrincipalCurrentnessCheckpoint
 } from './machine-principal-currentness-checkpoint.mjs';
 import {
+  machineCurrentnessMutationAuthorityKeyId,
   verifyMachineCurrentnessMutationCommand
 } from './machine-currentness-mutation-command.mjs';
+import {
+  machineCurrentnessControllerKeyId
+} from './machine-currentness-controller-key-lifecycle.mjs';
 
 const TERMINAL_STATUSES = new Set(['revoked', 'compromised', 'expired']);
 
@@ -22,9 +26,12 @@ function requireStore(value) {
   return value;
 }
 
-function transitionAllowed(previousStatus, command) {
+function transitionAllowed(previous, command) {
+  const previousStatus = previous.status;
+  const previousAuthorityDigest = previous.authority_digest;
   const kind = command.statement.mutation_kind;
   const nextStatus = command.statement.resulting_status;
+  const nextAuthorityDigest = command.statement.resulting_authority_digest;
   if (TERMINAL_STATUSES.has(previousStatus)) {
     throw new ValidationError(
       'Machine currentness terminal lifecycle state cannot be reactivated or mutated in v1'
@@ -51,6 +58,14 @@ function transitionAllowed(previousStatus, command) {
   }
   if (kind === 'expire' && nextStatus !== 'expired') {
     throw new ValidationError('Machine currentness expire mutation must result in expired status');
+  }
+  if (
+    ['revoke', 'compromise', 'expire'].includes(kind)
+    && nextAuthorityDigest !== previousAuthorityDigest
+  ) {
+    throw new ValidationError(
+      `Machine currentness ${kind} mutation must preserve the last authority digest`
+    );
   }
 }
 
@@ -82,7 +97,16 @@ export async function applyMachinePrincipalCurrentnessMutation({
     at
   });
 
-  transitionAllowed(previous.status, command);
+  if (
+    machineCurrentnessMutationAuthorityKeyId(trustedMutationAuthorityPublicKey)
+    === machineCurrentnessControllerKeyId(trustedCurrentnessControllerPublicKey)
+  ) {
+    throw new ValidationError(
+      'Machine currentness mutation authority and checkpoint controller keys must be distinct'
+    );
+  }
+
+  transitionAllowed(previous, command);
 
   if (command.statement.effective_at <= previous.observed_at) {
     throw new ValidationError(
