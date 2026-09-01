@@ -16,7 +16,7 @@ import { AssuranceWorkBudget } from './assurance-work-budget.mjs';
 
 export const ASSURANCE_WORK_ORDER_SCHEMA = 'axiom-assurance-work-order.v1';
 
-const CHECK_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]*(?:-[A-Za-z0-9_.:-]+)*$/;
+const CHECK_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const MACHINE_CHECKS = new Set([
   'independent-context-verification',
   'adversarial-review',
