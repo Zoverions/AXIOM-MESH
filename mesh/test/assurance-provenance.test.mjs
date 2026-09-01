@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   ASSURANCE_PROVENANCE_SCHEMA,
+  ASSURANCE_PROVENANCE_RECORD_KIND,
   assuranceProvenanceIntentEvidence,
+  assuranceProvenanceMemoryInput,
   buildAssuranceProvenanceBundle,
   normalizeAssuranceProvenanceBundle
 } from '../src/lib/assurance-provenance.mjs';
@@ -95,6 +97,26 @@ test('provenance becomes Intent evidence only as an explicit evidence artifact',
     artifact_type: ASSURANCE_PROVENANCE_SCHEMA,
     ref: 'grid://assurance/task.provenance'
   });
+});
+
+test('assurance provenance stores through ordinary memory input without authority fields', () => {
+  const bundle = buildAssuranceProvenanceBundle({
+    taskId: 'task.provenance',
+    phase: 'completed',
+    selectedTier: 'A3',
+    signalResolutionDigest: D('a'),
+    assuranceDecisionDigest: D('b'),
+    workOrderDigest: D('c'),
+    completionDigest: D('d'),
+    completionSatisfied: true
+  });
+  const memoryInput = assuranceProvenanceMemoryInput(bundle);
+  assert.equal(memoryInput.kind, ASSURANCE_PROVENANCE_RECORD_KIND);
+  assert.equal(memoryInput.content.provenance_digest, bundle.provenance_digest);
+  assert.deepEqual(memoryInput.metadata, {});
+  assert.equal('capability' in memoryInput, false);
+  assert.equal('approval' in memoryInput, false);
+  assert.equal('execution' in memoryInput, false);
 });
 
 test('planned provenance cannot masquerade as completed provenance', () => {
