@@ -570,12 +570,22 @@ Independent review should treat these as invariants, not best-effort goals:
 28. Durable assurance-source admissions remain non-authorizing and do not establish
     truth merely because the Grid signed them; source identity, class, upstream
     verification digest, lifetime, and trusted Grid key must all verify.
+29. Durable source bindings require a verified revocation snapshot. A valid
+    signature and monotonically higher sequence are not themselves global-
+    currentness proof; retained-currentness and key-rotation policy remain
+    independently required.
 
-Durable assurance-source admissions currently use bounded expiry but do not yet
-have a separately modeled upstream-revocation propagation mechanism. A still-valid
-receipt may therefore outlive a newly revoked upstream source or trust root until
-expiry unless a future revocation/chain policy invalidates it earlier. This is an
-explicit residual risk, not a current revocation claim.
+Durable assurance-source admissions now support bounded, Grid-signed revocation
+snapshots that can invalidate either an admission digest or its upstream source-
+verification digest before receipt expiry. Durable binding collection requires a
+verified non-revoked snapshot, and a caller-supplied retained minimum sequence can
+reject an older snapshot.
+
+This does **not** establish global currentness or complete rollback resistance.
+A caller that loses or fails to retain its newest known sequence could accept an
+older still-valid signed snapshot. Grid-key rotation/revocation, cross-node
+currentness distribution, and binding these snapshots to the Grid continuity/public-
+witness model remain separate gates.
 
 The current Intent/Grid `minimum_independent_verifiers` assessment counts
 distinct verifier actors. It does not by itself prove meaningful independence of
