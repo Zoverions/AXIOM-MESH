@@ -31,7 +31,6 @@ function operational() {
 
 function principal(id = 'agent.verifier-candidate') {
   return {
-    schema: 'axiom-machine-principal.v1',
     id,
     type: 'agent',
     sponsor: 'owner.verifier-candidate',
@@ -173,6 +172,30 @@ test('cloned candidate admission cannot be laundered into the verifier pool', ()
   assert.throws(
     () => collectAdmittedVerifierProfiles([{ ...admission }]),
     /only live broker admissions/
+  );
+});
+
+test('candidate broker rejects self-asserted model-family or operator diversity', () => {
+  const { issuerPair, credential } = fixture();
+  assert.throws(
+    () => admitVerifierCandidate({
+      profile: { ...profile(), model_family: 'family.claimed-diverse' },
+      catalogEntry: RUNTIME,
+      credentialHistory: [credential],
+      trustedIssuerPublicKey: issuerPair.publicKey,
+      at: NOW
+    }),
+    /cannot self-assert model_family/
+  );
+  assert.throws(
+    () => admitVerifierCandidate({
+      profile: { ...profile(), operator_domain: 'operator.claimed-diverse' },
+      catalogEntry: RUNTIME,
+      credentialHistory: [credential],
+      trustedIssuerPublicKey: issuerPair.publicKey,
+      at: NOW
+    }),
+    /cannot self-assert model_family/
   );
 });
 
