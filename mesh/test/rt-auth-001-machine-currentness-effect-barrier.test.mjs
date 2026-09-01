@@ -552,3 +552,115 @@ test('control: without the A6.4 late gate, retained revocation after durable con
     1
   );
 });
+
+
+test('current retained authority permits the effect and binds currentness evidence into terminal result', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-currentness-positive-'));
+  const lease = await reserveProductionPortBlock('axiom-currentness-positive-');
+  const basePort = lease.base_port;
+  const controller = generateKeyPairSync('ed25519');
+
+  const normalizedPrincipal = normalizeMachinePrincipalDefinition(rawMachinePrincipal(), {
+    knownHumanPrincipals: new Set([HUMAN_ID])
+  });
+  const authorityA = normalizedPrincipal.authority_digest;
+  const observedAt = new Date(Date.now() - 250).toISOString();
+  const genesis = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: {
+      schema: 'axiom-machine-principal-currentness.v1',
+      principal_id: AGENT_ID,
+      principal_type: 'agent',
+      authority_digest: authorityA,
+      status: 'active',
+      sequence: 1,
+      observed_at: observedAt,
+      source_head_digest: digestObject({
+        schema: 'axiom-currentness-positive-genesis.v1',
+        principal_id: AGENT_ID,
+        authority_digest: authorityA,
+        observed_at: observedAt
+      }),
+      predecessor_head_digest: null,
+      authority_effect: 'none',
+      execution_authority_granted: false,
+      global_currentness_claimed: false
+    },
+    controllerPrivateKey: controller.privateKey,
+    trustedControllerPublicKey: controller.publicKey
+  });
+  const currentnessStore = await openMachinePrincipalCurrentnessStore({
+    statePath: join(dataDir, 'machine-currentness', 'positive.jsonl'),
+    trustedControllerPublicKey: controller.publicKey,
+    expectedPrincipalId: AGENT_ID,
+    expectedPrincipalType: 'agent'
+  });
+  await currentnessStore.retain(genesis);
+
+  let stack;
+  t.after(async () => {
+    try {
+      await stack?.stop();
+    } finally {
+      await lease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  stack = await startDevelopmentStack({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`,
+    rateLimitCapacity: 1_000,
+    rateLimitRefillPerSecond: 1_000,
+    apiTokens: apiTokens()
+  }, {
+    sandbox: {
+      machineCurrentness: {
+        required: true,
+        store: currentnessStore,
+        trustedControllerPublicKey: controller.publicKey,
+        maxEvidenceAgeMs: 60_000
+      }
+    }
+  });
+
+  const client = createGatewayClient({
+    token: AGENT_TOKEN,
+    request: (path, options) => fetch(`http://127.0.0.1:${basePort}${path}`, options),
+    defaultTimeoutMs: 15_000
+  });
+  const result = await client.call('intents.submit', {
+    body: {
+      action: 'system.echo',
+      input: { message: 'current-authority-allowed' },
+      purpose: 'test.conformance'
+    },
+    idempotencyKey: 'currentness-positive-0001'
+  });
+
+  assert.equal(result.status, 'completed');
+  assert.equal(result.message, 'current-authority-allowed');
+  assert.match(
+    result.evidence.machine_currentness?.prerequisite_decision_digest ?? '',
+    /^[a-f0-9]{64}$/
+  );
+  assert.equal(
+    result.evidence.machine_currentness?.checkpoint_digest,
+    genesis.checkpoint_digest
+  );
+  assert.equal(
+    result.evidence.machine_currentness?.head_digest,
+    genesis.statement.source_head_digest
+  );
+  assert.match(
+    result.evidence.machine_currentness?.evaluation_digest ?? '',
+    /^[a-f0-9]{64}$/
+  );
+});
