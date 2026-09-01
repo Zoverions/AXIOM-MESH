@@ -485,6 +485,16 @@
       "family": "operations",
       "status": "experimental",
       "summary": "Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete."
+    },
+    {
+      "id": "security.adaptive-assurance",
+      "family": "security",
+      "status": "experimental",
+      "summary": "Non-authorizing adaptive assurance evaluator preserves risk-class assurance floors, uses bounded reputation effects, incorporates consequence/uncertainty/irreversibility/authority/anomaly/provenance/correlation/context-integrity signals, and can only escalate scrutiny through cryptographically sampled stochastic supplemental audit. Live orchestration integration remains gated.",
+      "evidence": [
+        "mesh/test/adaptive-assurance.test.mjs",
+        "docs/security/ADAPTIVE-ASSURANCE-AND-STOCHASTIC-AUDIT.md"
+      ]
     }
   ]
 }
