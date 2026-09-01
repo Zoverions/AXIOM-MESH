@@ -8,10 +8,15 @@ import {
   createAgentCurrentnessCheckpoint,
   evaluateAgentCurrentnessAtEffect
 } from '../src/lib/agent-trust-currentness-checkpoint.mjs';
-import { evaluateMachineEffectAuthorityCurrentness } from '../src/lib/machine-effect-currentness-admission.mjs';
+import { createMachineAuthorityCurrentnessCheckpoint } from '../src/lib/machine-authority-currentness-checkpoint.mjs';
+import {
+  evaluateMachineEffectAuthorityCheckpointAdmission,
+  evaluateMachineEffectAuthorityCurrentness
+} from '../src/lib/machine-effect-currentness-admission.mjs';
 
 const HUMANS = new Set(['owner.currentness-test', 'owner.currentness-other']);
 const ISSUED_AT = '2026-08-31T20:00:00.000Z';
+const AUTHORITY_T0 = '2026-08-31T20:00:05.000Z';
 const EVALUATED_AT = '2026-08-31T20:00:10.000Z';
 const EFFECT_AT = '2026-08-31T20:00:20.000Z';
 
@@ -165,4 +170,74 @@ test('late authority-currentness gate fails closed when no current principal aut
   assert.equal(decision.current_authority_digest, null);
   assert.equal(decision.effect_admission_authorized, false);
   assert.equal(decision.authority_effect, 'none');
+});
+
+test('signed authority head is verified and bound directly into the late capability gate', () => {
+  const source = generateKeyPairSync('ed25519');
+  const principal = machinePrincipal();
+  const checkpoint = createMachineAuthorityCurrentnessCheckpoint({
+    checkpointId: 'authority-head.admission.1',
+    checkpointSequence: 1,
+    authoritySourceId: 'authority-source.admission.1',
+    authoritySourcePrivateKey: source.privateKey,
+    principalId: principal.id,
+    currentAuthorityDigest: principal.authority_digest,
+    evaluatedAt: EVALUATED_AT
+  });
+
+  const decision = evaluateMachineEffectAuthorityCheckpointAdmission({
+    verifiedCapabilityClaims: verifiedCapabilityClaims(principal),
+    authorityCheckpoint: checkpoint,
+    trustedAuthoritySourcePublicKey: source.publicKey,
+    expectedLatestCheckpointDigest: checkpoint.checkpoint_digest,
+    effectAt: EFFECT_AT
+  });
+
+  assert.equal(decision.allow, true);
+  assert.equal(decision.code, 'machine_effect_authority_current');
+  assert.equal(decision.authority_currentness_source_verified, true);
+  assert.equal(decision.authority_checkpoint_digest, checkpoint.checkpoint_digest);
+  assert.equal(decision.current_authority_digest, principal.authority_digest);
+  assert.equal(decision.effect_admission_authorized, false);
+  assert.equal(decision.authority_effect, 'none');
+});
+
+test('signed successor authority head makes an older issued capability stale without changing machine identity', () => {
+  const source = generateKeyPairSync('ed25519');
+  const issuedPrincipal = machinePrincipal();
+  const narrowedPrincipal = machinePrincipal({ scopes: ['intent:execute:limited'] });
+  const first = createMachineAuthorityCurrentnessCheckpoint({
+    checkpointId: 'authority-head.admission.1',
+    checkpointSequence: 1,
+    authoritySourceId: 'authority-source.admission.1',
+    authoritySourcePrivateKey: source.privateKey,
+    principalId: issuedPrincipal.id,
+    currentAuthorityDigest: issuedPrincipal.authority_digest,
+    evaluatedAt: AUTHORITY_T0
+  });
+  const second = createMachineAuthorityCurrentnessCheckpoint({
+    checkpointId: 'authority-head.admission.2',
+    checkpointSequence: 2,
+    previousCheckpoint: first,
+    authoritySourceId: 'authority-source.admission.1',
+    authoritySourcePrivateKey: source.privateKey,
+    principalId: issuedPrincipal.id,
+    currentAuthorityDigest: narrowedPrincipal.authority_digest,
+    evaluatedAt: EVALUATED_AT
+  });
+
+  const decision = evaluateMachineEffectAuthorityCheckpointAdmission({
+    verifiedCapabilityClaims: verifiedCapabilityClaims(issuedPrincipal),
+    authorityCheckpoint: second,
+    trustedAuthoritySourcePublicKey: source.publicKey,
+    expectedLatestCheckpointDigest: second.checkpoint_digest,
+    effectAt: EFFECT_AT
+  });
+
+  assert.equal(decision.allow, false);
+  assert.equal(decision.code, 'machine_authority_stale');
+  assert.equal(decision.authority_currentness_source_verified, true);
+  assert.equal(decision.authority_checkpoint_digest, second.checkpoint_digest);
+  assert.equal(decision.capability_authority_digest, issuedPrincipal.authority_digest);
+  assert.equal(decision.current_authority_digest, narrowedPrincipal.authority_digest);
 });
