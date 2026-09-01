@@ -3,6 +3,9 @@ import { ValidationError, digestObject } from './canonical.mjs';
 export const MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA =
   'axiom-machine-principal-currentness.v1';
 
+export const MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA =
+  'axiom-machine-principal-effect-currentness-evaluation.v1';
+
 const DIGEST = /^[a-f0-9]{64}$/;
 const STATUS = new Set(['active', 'narrowed', 'revoked', 'compromised', 'expired']);
 const PRINCIPAL_TYPES = new Set(['agent', 'service']);
@@ -16,7 +19,6 @@ const CURRENTNESS_KEYS = new Set([
   'observed_at',
   'source_head_digest',
   'predecessor_head_digest',
-  'admission_digest',
   'authority_effect',
   'execution_authority_granted',
   'global_currentness_claimed'
@@ -43,6 +45,10 @@ function requireString(value, label, { max = 256, pattern = null } = {}) {
     throw new ValidationError(`${label} is invalid`);
   }
   return value;
+}
+
+function requireDigest(value, label) {
+  return requireString(value, label, { max: 64, pattern: DIGEST });
 }
 
 function requireTimestamp(value, label) {
@@ -77,6 +83,25 @@ export function normalizeMachinePrincipalCurrentness(value) {
   if (!PRINCIPAL_TYPES.has(principalType)) {
     throw new ValidationError('Machine principal currentness principal_type is invalid');
   }
+
+  const sequence = requireSequence(raw.sequence);
+  const predecessorHeadDigest = raw.predecessor_head_digest === null
+    ? null
+    : requireDigest(
+        raw.predecessor_head_digest,
+        'Machine principal currentness predecessor_head_digest'
+      );
+  if (sequence === 1 && predecessorHeadDigest !== null) {
+    throw new ValidationError(
+      'Machine principal currentness genesis sequence cannot name a predecessor'
+    );
+  }
+  if (sequence > 1 && predecessorHeadDigest === null) {
+    throw new ValidationError(
+      'Machine principal currentness non-genesis sequence requires predecessor_head_digest'
+    );
+  }
+
   const normalized = {
     schema: MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA,
     principal_id: requireString(raw.principal_id, 'Machine principal currentness principal_id', {
@@ -84,31 +109,18 @@ export function normalizeMachinePrincipalCurrentness(value) {
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     }),
     principal_type: principalType,
-    authority_digest: requireString(
+    authority_digest: requireDigest(
       raw.authority_digest,
-      'Machine principal currentness authority_digest',
-      { max: 64, pattern: DIGEST }
+      'Machine principal currentness authority_digest'
     ),
     status,
-    sequence: requireSequence(raw.sequence),
+    sequence,
     observed_at: requireTimestamp(raw.observed_at, 'Machine principal currentness observed_at'),
-    source_head_digest: requireString(
+    source_head_digest: requireDigest(
       raw.source_head_digest,
-      'Machine principal currentness source_head_digest',
-      { max: 64, pattern: DIGEST }
+      'Machine principal currentness source_head_digest'
     ),
-    predecessor_head_digest: raw.predecessor_head_digest === null
-      ? null
-      : requireString(
-          raw.predecessor_head_digest,
-          'Machine principal currentness predecessor_head_digest',
-          { max: 64, pattern: DIGEST }
-        ),
-    admission_digest: requireString(
-      raw.admission_digest,
-      'Machine principal currentness admission_digest',
-      { max: 64, pattern: DIGEST }
-    ),
+    predecessor_head_digest: predecessorHeadDigest,
     authority_effect: raw.authority_effect,
     execution_authority_granted: raw.execution_authority_granted,
     global_currentness_claimed: raw.global_currentness_claimed
@@ -142,19 +154,10 @@ export function machinePrincipalAdmissionDigest({
     schema: 'axiom-machine-principal-effect-admission.v1',
     principal_id: requireString(principalId, 'Effect admission principal id', { max: 160 }),
     principal_type: normalizedType,
-    authority_digest: requireString(authorityDigest, 'Effect admission authority digest', {
-      max: 64,
-      pattern: DIGEST
-    }),
+    authority_digest: requireDigest(authorityDigest, 'Effect admission authority digest'),
     capability_id: requireString(capabilityId, 'Effect admission capability id', { max: 192 }),
-    intent_digest: requireString(intentDigest, 'Effect admission intent digest', {
-      max: 64,
-      pattern: DIGEST
-    }),
-    plan_digest: requireString(planDigest, 'Effect admission plan digest', {
-      max: 64,
-      pattern: DIGEST
-    }),
+    intent_digest: requireDigest(intentDigest, 'Effect admission intent digest'),
+    plan_digest: requireDigest(planDigest, 'Effect admission plan digest'),
     effect_destination: requireString(
       effectDestination,
       'Effect admission destination',
@@ -174,7 +177,11 @@ export function evaluateMachinePrincipalCurrentness({
   retainedSequence = null,
   retainedHeadDigest = null
 } = {}) {
-  const proof = normalizeMachinePrincipalCurrentness(currentness);
+  const state = normalizeMachinePrincipalCurrentness(currentness);
+  const admissionDigest = requireDigest(
+    expectedAdmissionDigest,
+    'Machine principal effect admission digest'
+  );
   const nowDate = now instanceof Date ? now : new Date(now);
   if (Number.isNaN(nowDate.valueOf())) {
     throw new ValidationError('Machine principal currentness evaluation time is invalid');
@@ -183,23 +190,20 @@ export function evaluateMachinePrincipalCurrentness({
     throw new ValidationError('Machine principal currentness maxAgeMs must be a non-negative integer');
   }
 
-  if (proof.principal_id !== expectedPrincipalId) {
+  if (state.principal_id !== expectedPrincipalId) {
     return deny('machine_currentness_principal_mismatch');
   }
-  if (proof.principal_type !== expectedPrincipalType) {
+  if (state.principal_type !== expectedPrincipalType) {
     return deny('machine_currentness_principal_type_mismatch');
   }
-  if (proof.authority_digest !== expectedAuthorityDigest) {
+  if (state.authority_digest !== expectedAuthorityDigest) {
     return deny('machine_currentness_authority_changed');
   }
-  if (proof.admission_digest !== expectedAdmissionDigest) {
-    return deny('machine_currentness_admission_mismatch');
-  }
-  if (proof.status !== 'active') {
-    return deny(`machine_currentness_${proof.status}`);
+  if (state.status !== 'active') {
+    return deny(`machine_currentness_${state.status}`);
   }
 
-  const ageMs = nowDate.valueOf() - new Date(proof.observed_at).valueOf();
+  const ageMs = nowDate.valueOf() - new Date(state.observed_at).valueOf();
   if (ageMs < 0 || ageMs > maxAgeMs) {
     return deny('machine_currentness_stale');
   }
@@ -208,24 +212,32 @@ export function evaluateMachinePrincipalCurrentness({
     if (!Number.isSafeInteger(retainedSequence) || retainedSequence < 1) {
       throw new ValidationError('Machine principal retained currentness sequence is invalid');
     }
-    if (proof.sequence < retainedSequence) {
+    if (state.sequence < retainedSequence) {
       return deny('machine_currentness_rollback');
     }
     if (
-      proof.sequence === retainedSequence
+      state.sequence === retainedSequence
       && retainedHeadDigest !== null
-      && proof.source_head_digest !== retainedHeadDigest
+      && state.source_head_digest !== retainedHeadDigest
     ) {
       return deny('machine_currentness_equivocation');
     }
   }
 
+  const currentnessEvidenceDigest = digestObject(state);
+  const evaluationCore = Object.freeze({
+    schema: MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA,
+    admission_digest: admissionDigest,
+    currentness_evidence_digest: currentnessEvidenceDigest,
+    currentness_sequence: state.sequence,
+    currentness_head_digest: state.source_head_digest
+  });
+
   return Object.freeze({
     allow: true,
     code: 'machine_currentness_satisfied',
-    currentness_sequence: proof.sequence,
-    currentness_head_digest: proof.source_head_digest,
-    currentness_evidence_digest: digestObject(proof),
+    ...evaluationCore,
+    effect_currentness_evaluation_digest: digestObject(evaluationCore),
     authority_effect: 'none',
     execution_authority_granted: false,
     global_currentness_claimed: false
