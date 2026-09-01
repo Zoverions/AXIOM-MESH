@@ -39,7 +39,7 @@ function apiTokens(expiresAt) {
         budgets: {
           max_requests_per_minute: 30,
           max_concurrent_requests: 1,
-          max_execution_ms: 2_000,
+          max_execution_ms: 5_000,
           max_request_bytes: 65_536,
           max_response_bytes: 262_144
         },
