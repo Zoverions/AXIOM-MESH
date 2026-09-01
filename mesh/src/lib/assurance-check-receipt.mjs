@@ -8,7 +8,7 @@ import {
 export const ASSURANCE_CHECK_RECEIPT_SCHEMA = 'axiom-assurance-check-receipt.v1';
 export const ASSURANCE_COMPLETION_SCHEMA = 'axiom-assurance-completion.v1';
 
-const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]*(?:-[A-Za-z0-9_.:-]+)*$/;
+const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CHECK_RESULTS = new Set(['pass', 'fail', 'inconclusive']);
 
