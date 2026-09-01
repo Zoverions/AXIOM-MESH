@@ -49,7 +49,7 @@ function apiTokens(expiresAt) {
   };
 }
 
-test('RT-AUTH-001 reproduces stale machine authority when principal expires before Sandbox effect', async t => {
+test('RT-AUTH-001 fails closed when machine principal expires before Sandbox effect', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-rt-auth-001-expiry-'));
   const lease = await reserveProductionPortBlock('axiom-rt-auth-001-expiry-');
   const basePort = lease.base_port;
@@ -105,27 +105,22 @@ test('RT-AUTH-001 reproduces stale machine authority when principal expires befo
     return originalFetch(input, init);
   };
 
-  const result = await agent.call('intents.submit', {
+  const error = await agent.call('intents.submit', {
     body: {
       action: 'system.echo',
       input: { message: 'stale-authority-effect' },
       purpose: 'test.conformance'
     },
     idempotencyKey: 'rt-auth-001-expiry-race-0001'
-  });
+  }).then(
+    () => { throw new Error('post-expiry effect was unexpectedly allowed'); },
+    failure => failure
+  );
 
   assert.equal(intercepted, true, 'test must intercept the real Hypervisor -> Sandbox execute request');
   assert.ok(releasedAfterExpiryAt, 'test must record release after expiry');
   assert.ok(new Date(releasedAfterExpiryAt) > new Date(expiresAt));
-  assert.equal(result.status, 'completed');
-  assert.equal(result.message, 'stale-authority-effect');
+  assert.equal(error.code, 'machine_principal_currentness_invalid');
+  assert.equal(error.status, 403);
 
-  // The completed response is returned only after Sandbox attestation verification
-  // and Hypervisor completion processing. Bind the reproduction to that evidence.
-  assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);
-  assert.match(result.evidence.execution_digest, /^[a-f0-9]{64}$/);
-  assert.match(
-    result.evidence.capability_consumption_receipt_digest,
-    /^[a-f0-9]{64}$/
-  );
 });
