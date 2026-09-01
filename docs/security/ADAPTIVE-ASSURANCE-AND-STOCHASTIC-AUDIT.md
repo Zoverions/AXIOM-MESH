@@ -253,6 +253,39 @@ unbounded inference or latency loop.
 Future runtime integration should replace or extend generic units with attributable
 provider/model/device accounting where available.
 
+## Verifier candidate admission
+
+`mesh/src/lib/assurance-verifier-candidate.mjs` adds an admission boundary in
+front of stochastic verifier selection.
+
+A raw runtime/provider catalog entry is **not** sufficient. Candidate admission
+requires:
+
+- a valid pinned `agent-runtime` catalog entry;
+- a verifier profile whose runtime ID matches that catalog subject;
+- a cryptographically verified machine-identity credential history;
+- active machine-identity currentness under the supplied issuer evidence;
+- exact principal/verifier identity binding; and
+- exact runtime-ID binding between credential, profile, and catalog entry.
+
+The admission records the active credential/key epoch, principal authority digest,
+runtime/software binding, sponsor, and catalog digest while remaining explicitly
+non-authorizing and non-executing.
+
+Catalog presence still grants no authority and does not prove the runtime is
+uncompromised. Machine-identity currentness is scoped to the supplied issuer
+evidence and explicitly does not claim global currentness.
+
+The current candidate admission does **not** verify `model_family` or
+`operator_domain`. Until separate evidence exists, both must use shared
+`*.unverified` sentinel values. A candidate therefore cannot manufacture apparent
+diversity by changing those labels.
+
+The production-safe work-order wrapper requires a live admitted origin verifier and
+live admitted candidate reviewers. Cloned/lookalike admissions are rejected. The
+lower-level raw-profile compiler remains a laboratory primitive and must not be
+treated as equivalent to candidate admission.
+
 ## Diverse stochastic work-order compilation
 
 `mesh/src/lib/assurance-work-order.mjs` compiles an internal work order from an
@@ -320,9 +353,10 @@ Before this primitive can affect live orchestration:
 1. bind signed revocation snapshots to Grid continuity/currentness anchors and
    define Grid-key rotation/revocation semantics so an old valid snapshot cannot
    masquerade as the newest trusted state;
-2. source verifier candidates from an independently governed runtime/provider
-   catalog and bind catalog admission to verifier profiles;
-3. connect compiled work orders to an orchestrator that can execute checks and
+2. add separately evidenced model-family and operator-domain bindings so stronger
+   correlation independence can be established without relying only on runtime
+   diversity;
+3. connect admitted compiled work orders to an orchestrator that can execute checks and
    return completion receipts without letting the acting agent select its verifier;
 4. bind completed assurance provenance into Grid receipts and any future live
    execution record while preserving its non-authorizing role;
