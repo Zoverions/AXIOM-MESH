@@ -5,6 +5,7 @@ import {
   assertStringArray
 } from './canonical.mjs';
 
+const ID = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$/;
 const STATES = new Set([
   'pending','fulfilled','failed','unknown','disputed','cure_pending','waived','terminated'
 ]);
@@ -14,9 +15,12 @@ export function assessObligation(rawObligation, rawObservation) {
   const observation = assertPlainObject(rawObservation, 'observation');
 
   const obligationId = assertString(obligation.obligation_id, 'obligation.obligation_id', {
-    min: 1, max: 192
+    min: 1, max: 192, pattern: ID
   });
-  if (observation.obligation_id !== obligationId) {
+  const observedObligationId = assertString(observation.obligation_id, 'observation.obligation_id', {
+    min: 1, max: 192, pattern: ID
+  });
+  if (observedObligationId !== obligationId) {
     throw new ValidationError('observation obligation_id mismatch');
   }
 
@@ -35,6 +39,7 @@ export function assessObligation(rawObligation, rawObservation) {
     return Object.freeze({
       obligation_id: obligationId,
       state: 'claimed_breach',
+      evidence_refs: Object.freeze([...evidenceRefs]),
       remedy_authority_effect: 'none',
       reason: 'breach_claim_requires_review'
     });
@@ -44,6 +49,7 @@ export function assessObligation(rawObligation, rawObservation) {
     return Object.freeze({
       obligation_id: obligationId,
       state: 'in_dispute',
+      evidence_refs: Object.freeze([...evidenceRefs]),
       remedy_authority_effect: 'none',
       reason: 'dispute_blocks_automatic_remedy'
     });
