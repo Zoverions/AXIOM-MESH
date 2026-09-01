@@ -32,6 +32,7 @@ import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/p
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
   evaluateMachineIntent,
+  machineCapabilityExpiryEpoch,
   machinePrincipalAuthorityFacts,
   normalizeMachinePrincipalDefinition
 } from '../lib/machine-principal.mjs';
@@ -342,7 +343,8 @@ export async function createHypervisorService(config = meshConfig()) {
     }
     const plan = buildPlan(intent, decision, { approval });
     const boundPlanDigest = planDigest(plan);
-    const now = Math.floor(Date.now() / 1000);
+    const capabilityNow = new Date();
+    const now = Math.floor(capabilityNow.valueOf() / 1000);
     const capabilityClaims = {
       iss: identity.service,
       aud: 'sandbox',
@@ -350,7 +352,12 @@ export async function createHypervisorService(config = meshConfig()) {
       principal_type: intent.principal.type,
       jti: newId('cap'),
       nbf: now - 1,
-      exp: now + config.capabilityTtlSeconds,
+      exp: machineAuthority
+        ? machineCapabilityExpiryEpoch(intent.principal, {
+            now: capabilityNow,
+            capabilityTtlSeconds: config.capabilityTtlSeconds
+          })
+        : now + config.capabilityTtlSeconds,
       intent_digest: digestObject(intent),
       invocation_digest: invocationDigest,
       ...(effectDestination ? { effect_destination: effectDestination } : {}),
@@ -361,7 +368,8 @@ export async function createHypervisorService(config = meshConfig()) {
       ...(machineAuthority ? {
         sponsor: machineAuthority.sponsor,
         authority_digest: machineAuthority.authority_digest,
-        runtime_id: machineAuthority.runtime_id
+        runtime_id: machineAuthority.runtime_id,
+        ...(machineAuthority.expires_at ? { principal_expires_at: machineAuthority.expires_at } : {})
       } : {})
     };
     const capability = issueCapability(identity, capabilityClaims);
