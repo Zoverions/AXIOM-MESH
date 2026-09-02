@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-capability-surfaces.v0",
+  "title": "AXIOM Capability Surface Registry v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "registry_id",
+    "executable_registry_ref",
+    "discovery_grants_authority",
+    "entries",
+    "created_at",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-capability-surfaces.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-contract-laboratory" },
+    "registry_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+    },
+    "executable_registry_ref": {
+      "const": "mesh/config/capabilities.json"
+    },
+    "discovery_grants_authority": { "const": false },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capability_id",
+          "lifecycle",
+          "human",
+          "machine",
+          "executable_capability_ref",
+          "evidence_refs",
+          "authority_boundary",
+          "non_claims"
+        ],
+        "properties": {
+          "capability_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+          },
+          "lifecycle": {
+            "enum": [
+              "conceptual",
+              "specified",
+              "implemented",
+              "tested",
+              "enabled",
+              "exposed",
+              "pilot-proven",
+              "production-promoted",
+              "marketed"
+            ]
+          },
+          "human": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["product", "section", "label", "description"],
+            "properties": {
+              "product": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "section": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "label": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "description": { "type": "string", "minLength": 1, "maxLength": 1024 }
+            }
+          },
+          "machine": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schema_ids", "read_surfaces", "action_surfaces"],
+            "properties": {
+              "schema_ids": {
+                "type": "array",
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+                }
+              },
+              "read_surfaces": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+                }
+              },
+              "action_surfaces": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+                }
+              }
+            }
+          },
+          "executable_capability_ref": { "type": ["string", "null"] },
+          "evidence_refs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+            }
+          },
+          "authority_boundary": {
+            "const": "discovery-only-no-authority"
+          },
+          "non_claims": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "lifecycle": { "enum": ["conceptual", "specified"] }
+              },
+              "required": ["lifecycle"]
+            },
+            "then": {
+              "properties": {
+                "executable_capability_ref": { "const": null }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "lifecycle": {
+                  "enum": [
+                    "implemented",
+                    "tested",
+                    "enabled",
+                    "exposed",
+                    "pilot-proven",
+                    "production-promoted",
+                    "marketed"
+                  ]
+                }
+              },
+              "required": ["lifecycle"]
+            },
+            "then": {
+              "properties": {
+                "executable_capability_ref": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+                },
+                "evidence_refs": { "minItems": 1 }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  }
+}
