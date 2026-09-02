@@ -10,11 +10,13 @@ const RUNNER = new URL(
   '../src/run-linux-resource-enforcement-drill.mjs',
   import.meta.url
 );
+const PACKAGE = new URL('../package.json', import.meta.url);
 
 test('real G3 effect code uses fixed Linux binaries, no shell, and no caller command surface', async () => {
-  const [drill, runner] = await Promise.all([
+  const [drill, runner, packageJson] = await Promise.all([
     readFile(DRILL, 'utf8'),
-    readFile(RUNNER, 'utf8')
+    readFile(RUNNER, 'utf8'),
+    readFile(PACKAGE, 'utf8')
   ]);
   assert.match(drill, /const SYSTEMCTL = '\/usr\/bin\/systemctl'/);
   assert.match(drill, /const SLEEP = '\/usr\/bin\/sleep'/);
@@ -32,4 +34,14 @@ test('real G3 effect code uses fixed Linux binaries, no shell, and no caller com
   assert.doesNotMatch(runner, /process\.argv\.slice\(4/);
   assert.doesNotMatch(runner, /process\.argv\[[4-9]/);
   assert.doesNotMatch(runner, /\bcommand\b|\bexecutable\b/i);
+
+  const scripts = JSON.parse(packageJson).scripts;
+  assert.equal(
+    scripts['host-resource-enforcement:drill'],
+    'node src/run-linux-resource-enforcement-drill.mjs'
+  );
+  assert.doesNotMatch(
+    scripts.check,
+    /host-resource-enforcement:drill|run-linux-resource-enforcement-drill/
+  );
 });
