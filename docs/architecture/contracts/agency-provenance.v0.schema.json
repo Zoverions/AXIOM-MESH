@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agency-provenance.v0.schema.json",
+  "title": "AXIOM Agency Provenance v0",
+  "description": "Inert record separating intent, cognition, decision, authorization, execution, attribution, and protest across principals. It grants no authority and activates no runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","provenance_id","subject_ref","intent","cognition","decision","authorization","execution","attribution","protests","created_at","updated_at","contains_secret_material","authority_effect","network_effect","runtime_activation"],
+  "properties": {
+    "schema": {"const": "axiom-agency-provenance.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "provenance_id": {"$ref": "#/$defs/id"},
+    "subject_ref": {"$ref": "#/$defs/id"},
+    "intent": {"$ref": "#/$defs/stage"},
+    "cognition": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/stage"}},
+    "decision": {"$ref": "#/$defs/stage"},
+    "authorization": {"$ref": "#/$defs/stage"},
+    "execution": {"$ref": "#/$defs/stage"},
+    "attribution": {"$ref": "#/$defs/stage"},
+    "protests": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/protest"}},
+    "created_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "updated_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "contains_secret_material": {"const": false},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "runtime_activation": {"const": false}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "nullableId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id","role","mode","basis_ref","claimed_position"],
+      "properties": {
+        "principal_id": {"$ref": "#/$defs/id"},
+        "role": {"$ref": "#/$defs/id"},
+        "mode": {"enum": ["direct","delegated","joint","advisory","none"]},
+        "basis_ref": {"$ref": "#/$defs/nullableId"},
+        "claimed_position": {"enum": ["own","represented","joint","none"]}
+      },
+      "allOf": [{"if": {"properties": {"mode": {"const": "joint"}}}, "then": {"properties": {"claimed_position": {"const": "joint"}}}}]
+    },
+    "protest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protest_id","principal_id","kind","target_stage","target_ref","reason_code","reason_ref","severity","requested_remedy","stop_right_ref","status","created_at"],
+      "properties": {
+        "protest_id": {"$ref": "#/$defs/id"},
+        "principal_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["dissent","objection","blocking_protest"]},
+        "target_stage": {"enum": ["intent","cognition","decision","authorization","execution","attribution","protest","deliberation"]},
+        "target_ref": {"$ref": "#/$defs/id"},
+        "reason_code": {"$ref": "#/$defs/id"},
+        "reason_ref": {"$ref": "#/$defs/nullableId"},
+        "severity": {"enum": ["notice","concern","high","critical"]},
+        "requested_remedy": {"enum": ["record-only","explain","correct","reconsider","stay","revoke","other"]},
+        "stop_right_ref": {"$ref": "#/$defs/nullableId"},
+        "status": {"enum": ["open","acknowledged","resolved","rejected","withdrawn","superseded"]},
+        "created_at": {"type": "string", "format": "date-time", "maxLength": 64}
+      },
+      "allOf": [{"if": {"properties": {"kind": {"const": "blocking_protest"}}, "required": ["kind"]}, "then": {"properties": {"stop_right_ref": {"$ref": "#/$defs/id"}}}}]
+    }
+  }
+}

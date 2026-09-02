@@ -1,0 +1,31 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"axiom-entity-lineage-event.v0",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","version","status","event_id","event_type","lineage_root_id","parent_entity_id","parent_foundation_id","parent_foundation_digest","parent_stack_id","parent_stack_digest","child_entity_id","child_foundation_id","child_foundation_digest","child_stack_id","child_stack_digest","copied_active_layer_ids","forked_at","subjective_identity_claim","authority_effect","network_effect","runtime_activation"],
+  "properties":{
+    "schema":{"const":"axiom-entity-lineage-event.v0"},
+    "version":{"const":0},
+    "status":{"const":"inert-contract-laboratory"},
+    "event_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "event_type":{"const":"fork"},
+    "lineage_root_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "parent_entity_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "parent_foundation_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "parent_foundation_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "parent_stack_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "parent_stack_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "child_entity_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "child_foundation_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "child_foundation_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "child_stack_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "child_stack_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "copied_active_layer_ids":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}},
+    "forked_at":{"type":"string","format":"date-time","maxLength":64},
+    "subjective_identity_claim":{"const":"unspecified"},
+    "authority_effect":{"const":"none"},
+    "network_effect":{"const":"none"},
+    "runtime_activation":{"const":false}
+  }
+}
