@@ -5,7 +5,7 @@ on:
     branches: ["feat/recursive-agent-lineage-convergence"]
     paths:
       - "mesh/src/lib/agent-improvement-experiment.mjs"
-      - "mesh/test/agent-improvement-experiment.test.mjs"
+      - "mesh/test/agent-improvement-experiment*.test.mjs"
       - ".github/workflows/agent-improvement-experiment-tdd.yml"
   workflow_dispatch:
 
@@ -24,6 +24,6 @@ jobs:
         with:
           node-version: "24.18.0"
           package-manager-cache: false
-      - name: Run improvement experiment contract
+      - name: Run improvement experiment contracts
         working-directory: mesh
-        run: node --test --test-reporter=spec test/agent-improvement-experiment.test.mjs
+        run: node --test --test-reporter=spec test/agent-improvement-experiment*.test.mjs
