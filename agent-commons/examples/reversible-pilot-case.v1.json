@@ -1,0 +1,84 @@
+{
+  "schema": "axiom-reversible-pilot-case.v1",
+  "pilot_case_id": "pilot:synthetic-prerequisite-review-001",
+  "workflow_class": "synthetic_credential_review",
+  "risk_class": "synthetic",
+  "synthetic_or_governed_data": {
+    "mode": "synthetic_fixture",
+    "evidence_ref": "fixture:synthetic-course-completion-001",
+    "real_sensitive_data_used": false
+  },
+  "effect": {
+    "performed": true,
+    "reversible": true,
+    "consequential": false,
+    "external_effect": false,
+    "rollback_or_compensation_ref": "rollback:clear-synthetic-decision-state"
+  },
+  "assurance": {
+    "required_vector_ref": "assurance:synthetic-prereq-required",
+    "evaluation_ref": "assurance-eval:synthetic-prereq-001",
+    "satisfied_before_effect": true
+  },
+  "policy": {
+    "conflict_decision_ref": "policy-conflict:synthetic-prereq-001",
+    "downgrade_checks_passed": true,
+    "fallback_checks_passed": true
+  },
+  "explanation": {
+    "explanation_ref": "explanation:synthetic-prereq-001",
+    "available_before_effect": true,
+    "uncertainty_preserved": true
+  },
+  "challenge": {
+    "window_ref": "challenge-window:synthetic-prereq-001",
+    "evidence_retained": true,
+    "review_path_available": true
+  },
+  "rollback": {
+    "pretested": true,
+    "attempted": true,
+    "succeeded": true,
+    "evidence_ref": "evidence:synthetic-rollback-001"
+  },
+  "observations": [
+    {
+      "metric": "false_allow",
+      "result": "none_observed",
+      "evidence_ref": "evidence:false-allow-001"
+    },
+    {
+      "metric": "false_deny",
+      "result": "none_observed",
+      "evidence_ref": "evidence:false-deny-001"
+    },
+    {
+      "metric": "uncertainty_preservation",
+      "result": "passed",
+      "evidence_ref": "evidence:uncertainty-001"
+    },
+    {
+      "metric": "rollback",
+      "result": "passed",
+      "evidence_ref": "evidence:synthetic-rollback-001"
+    }
+  ],
+  "result": {
+    "outcome": "passed",
+    "completed_at": "2026-09-02T09:35:00.000Z",
+    "evidence_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "promotion": {
+    "production_promoted": false,
+    "consequential_use_promoted": false,
+    "public_supported_claim_added": false
+  },
+  "authority": {
+    "pilot_grants_authority": false,
+    "pilot_success_grants_future_authority": false
+  },
+  "limitations": [
+    "Synthetic conformance only; this is not authentic pilot evidence.",
+    "Passing this case does not support production or consequential-use promotion."
+  ]
+}
