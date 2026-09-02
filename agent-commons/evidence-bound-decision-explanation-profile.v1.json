@@ -1,0 +1,60 @@
+{
+  "schema": "axiom-evidence-bound-decision-explanation-profile.v1",
+  "status": "experimental explanation architecture; extends but does not replace the existing bounded AXIOM One human-explanation slice",
+  "purpose": "Provide machine- and human-readable explanations for allow/deny/hold/advisory outcomes that are traceable to exact policy, assurance, evidence, currentness, and conflict records without inventing certainty or relying on hidden model reasoning.",
+  "outcome_classes": [
+    "allow_candidate",
+    "denied",
+    "hold_pending",
+    "advisory_only",
+    "unresolved_conflict",
+    "appeal_or_exception_required"
+  ],
+  "certainty_states": [
+    "established_for_declared_scope",
+    "supported_but_incomplete",
+    "unknown",
+    "conflicted",
+    "stale",
+    "failed_check",
+    "not_evaluated"
+  ],
+  "explanation_parts": [
+    "decision",
+    "primary_reasons",
+    "required_but_unsatisfied_conditions",
+    "satisfied_conditions",
+    "uncertainties",
+    "conflicts",
+    "evidence_refs",
+    "policy_refs",
+    "assurance_summary",
+    "currentness_summary",
+    "next_safe_actions",
+    "appeal_or_review_path",
+    "limitations"
+  ],
+  "core_invariants": [
+    "explanation is derived from recorded decision inputs and outputs, not private chain-of-thought",
+    "an explanation cannot upgrade certainty beyond the underlying evidence state",
+    "unknown, stale, conflicted, and failed checks remain visibly distinct",
+    "denials name the blocking condition without exposing secrets or unnecessary sensitive data",
+    "holds explain what is missing and what safe event could resolve the hold",
+    "appeal or exception paths are presented as options, not promises of success",
+    "machine-readable reason codes remain stable even when human wording is localized or simplified",
+    "explanation must not imply that policy, evidence, assurance, finality, or recognition are authority when they are not",
+    "model-generated prose, if used as a presentation layer, may paraphrase but cannot add new factual reasons or hide recorded reasons",
+    "friendly UI may simplify language but must not conceal denial, uncertainty, conflict, degraded state, external transfer, cost, or irreversibility"
+  ],
+  "privacy_rules": [
+    "do not echo raw credentials, secrets, private prompts, hidden policy internals, or unnecessary personal data",
+    "prefer stable references, bounded summaries, and redacted evidence labels",
+    "recipient-facing explanations reveal only reasons appropriate to that recipient's disclosure scope"
+  ],
+  "nonclaims": [
+    "This profile does not reveal private chain-of-thought.",
+    "This profile does not guarantee user comprehension without human testing.",
+    "An explanation does not change the underlying decision.",
+    "This profile does not promote the broader explanation layer as a current production capability."
+  ]
+}
