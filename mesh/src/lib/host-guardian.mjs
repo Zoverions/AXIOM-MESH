@@ -11,6 +11,7 @@ const LOCAL_AUTHORITIES = new Set(['local_owner', 'local_guardian']);
 export class HostGuardian {
   #policyProvider;
   #measurementProvider;
+  #effectController;
   #clock;
   #maxAgeMs;
   #maxFutureSkewMs;
@@ -20,6 +21,7 @@ export class HostGuardian {
   constructor({
     policyProvider,
     measurementProvider,
+    effectController = undefined,
     clock = () => new Date().toISOString(),
     maxAgeMs = 5_000,
     maxFutureSkewMs = 1_000
@@ -30,11 +32,24 @@ export class HostGuardian {
     if (typeof measurementProvider !== 'function') {
       throw new ValidationError('measurementProvider must be a function');
     }
+    if (
+      effectController !== undefined
+      && (
+        !effectController
+        || typeof effectController !== 'object'
+        || typeof effectController.requestStopAll !== 'function'
+      )
+    ) {
+      throw new ValidationError(
+        'effectController must expose requestStopAll(event)'
+      );
+    }
     if (typeof clock !== 'function') {
       throw new ValidationError('clock must be a function');
     }
     this.#policyProvider = policyProvider;
     this.#measurementProvider = measurementProvider;
+    this.#effectController = effectController;
     this.#clock = clock;
     this.#maxAgeMs = maxAgeMs;
     this.#maxFutureSkewMs = maxFutureSkewMs;
@@ -51,6 +66,7 @@ export class HostGuardian {
   pause(authority) {
     requireLocalAuthority(authority);
     this.#paused = true;
+    this.#requestStopAll('local_pause');
   }
 
   resume(authority) {
@@ -65,6 +81,9 @@ export class HostGuardian {
       authority
     });
     this.#state = result.state;
+    if (result.changed && this.#state !== GUARDIAN_STATES.NORMAL) {
+      this.#requestStopAll('guardian_state_change');
+    }
     return result;
   }
 
@@ -110,6 +129,14 @@ export class HostGuardian {
     } catch {
       return this.#denial('measurement_unavailable', policySet.revision);
     }
+  }
+
+  #requestStopAll(reason) {
+    if (!this.#effectController) return;
+    this.#effectController.requestStopAll({
+      reason,
+      guardian_state: this.#state
+    });
   }
 
   #denial(reason, policyRevision = undefined) {
