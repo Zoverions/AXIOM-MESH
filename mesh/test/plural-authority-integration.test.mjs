@@ -21,6 +21,18 @@ test('stage lineage mismatch fails closed',async()=>{
   assert.throws(()=>validatePluralAuthorityScenario(v),/action_ref mismatch/);
 });
 
+test('unexpected stage key fails closed',async()=>{
+  const v=JSON.parse(await readFile(url,'utf8'));
+  v.stages.unreviewed_effect={
+    record_ref:'effect:unreviewed-001',
+    outcome:'allow_candidate',
+    authority_effect:'none',
+    scenario_ref:v.scenario_id,
+    action_ref:v.action_id
+  };
+  assert.throws(()=>validatePluralAuthorityScenario(v),/unsupported stage/);
+});
+
 test('unknown assurance cannot be laundered into allow explanation',async()=>{
   const v=JSON.parse(await readFile(url,'utf8'));
   v.stages.decision_explanation.outcome='allow_candidate';
