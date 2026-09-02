@@ -1,0 +1,57 @@
+{
+  "schema": "axiom-reversible-low-consequence-pilot-profile.v1",
+  "status": "synthetic/controlled pilot architecture only; not authentic production-pilot evidence",
+  "purpose": "Bind plural-authority, assurance, conflict, explanation, challenge, reassessment, rollback, and evidence-retention semantics into reversible low-consequence workflows before any consequential use.",
+  "eligible_workflow_classes": [
+    "synthetic_credential_review",
+    "local_preview_or_simulation",
+    "reversible_local_metadata_change",
+    "test_only_cross_domain_recognition",
+    "non-authoritative proof_verification",
+    "sandboxed contract_negotiation",
+    "reversible notification_or_draft_generation"
+  ],
+  "prohibited_workflow_classes": [
+    "irreversible financial transfer",
+    "production legal or regulatory decision",
+    "discipline custody liberty or eligibility decision",
+    "real clinical diagnosis or treatment decision",
+    "public authority enforcement",
+    "credential issuance with real-world legal effect",
+    "production access grant to sensitive system",
+    "self-expanding agent authority"
+  ],
+  "pilot_entry_gates": [
+    "synthetic or separately governed low-risk data",
+    "explicit scope and named participants where human participants exist",
+    "reversible or safely compensable effect",
+    "rollback/correction path tested before execution",
+    "exact assurance requirements recorded",
+    "policy conflict/downgrade checks passed",
+    "evidence-bound explanation available",
+    "challenge window and retained evidence defined",
+    "no capability-registry or public-supported claim promotion",
+    "independent review remains a separate gate for any later consequential promotion"
+  ],
+  "required_observations": [
+    "false allow",
+    "false deny",
+    "hold-pending resolution quality",
+    "uncertainty preservation",
+    "policy conflict visibility",
+    "fallback/downgrade resistance",
+    "rollback success",
+    "reassessment/correction integrity",
+    "human comprehension where humans participate",
+    "privacy/minimization behavior",
+    "operator burden",
+    "latency and resource cost"
+  ],
+  "promotion_rule": "Passing this profile demonstrates only that the experimental workflow behaved as expected under the tested low-consequence conditions. It does not promote the workflow, mechanism, domain, or infrastructure to production or consequential use.",
+  "nonclaims": [
+    "Synthetic conformance is not authentic pilot evidence.",
+    "A successful reversible pilot does not establish safety for irreversible or high-consequence use.",
+    "This profile does not waive existing production-readiness, independent-security-review, legal/governance, accessibility, or domain-specific gates.",
+    "Pilot success does not create authority."
+  ]
+}
