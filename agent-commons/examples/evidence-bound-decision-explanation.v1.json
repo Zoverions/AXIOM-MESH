@@ -1,0 +1,119 @@
+{
+  "schema": "axiom-evidence-bound-decision-explanation.v1",
+  "explanation_id": "explanation:credential-check-001",
+  "decision_ref": "policy-conflict:cross-domain-proof-001",
+  "outcome": "hold_pending",
+  "headline": "The credential cannot be accepted yet because its current status could not be verified.",
+  "primary_reasons": [
+    {
+      "code": "CURRENTNESS_UNKNOWN",
+      "category": "currentness",
+      "certainty": "unknown",
+      "summary": "The required external status check is unavailable, so currentness is unknown.",
+      "evidence_refs": [
+        "status:last-known-credential-state"
+      ],
+      "policy_refs": [
+        "policy:credential-currentness-required"
+      ],
+      "sensitive": false
+    }
+  ],
+  "required_but_unsatisfied_conditions": [
+    {
+      "code": "FRESH_STATUS_REQUIRED",
+      "category": "assurance",
+      "certainty": "unknown",
+      "summary": "This decision requires current revocation/status evidence before acceptance.",
+      "evidence_refs": [],
+      "policy_refs": [
+        "assurance:credential-currentness-floor"
+      ],
+      "sensitive": false
+    }
+  ],
+  "satisfied_conditions": [
+    {
+      "code": "IDENTITY_VERIFIED",
+      "category": "identity",
+      "certainty": "established_for_declared_scope",
+      "summary": "The presented credential is bound to the expected subject under the checked profile.",
+      "evidence_refs": [
+        "evidence:holder-binding"
+      ],
+      "policy_refs": [
+        "verify:credential-v1"
+      ],
+      "sensitive": false
+    }
+  ],
+  "uncertainties": [
+    {
+      "code": "STATUS_SERVICE_UNAVAILABLE",
+      "category": "dependency",
+      "certainty": "unknown",
+      "summary": "The external status source could not be reached during this check.",
+      "evidence_refs": [
+        "evidence:dependency-unavailable"
+      ],
+      "policy_refs": [],
+      "sensitive": false
+    }
+  ],
+  "conflicts": [],
+  "assurance_summary": {
+    "required_dimensions": [
+      "identity",
+      "authority",
+      "evidence",
+      "currentness"
+    ],
+    "achieved_dimensions": [
+      "identity",
+      "authority",
+      "evidence"
+    ],
+    "failed_dimensions": [],
+    "unknown_dimensions": [
+      "currentness"
+    ]
+  },
+  "currentness_summary": {
+    "state": "unknown",
+    "checked_refs": [
+      "status:last-known-credential-state"
+    ]
+  },
+  "next_safe_actions": [
+    {
+      "action_code": "RETRY_STATUS_CHECK",
+      "summary": "Retry the currentness check when the approved status source is available.",
+      "authority_effect": "none"
+    },
+    {
+      "action_code": "REQUEST_REVIEW",
+      "summary": "Use the institution's review path if the hold cannot be resolved normally.",
+      "authority_effect": "none"
+    }
+  ],
+  "appeal_or_review_path": {
+    "available": true,
+    "summary": "A review may consider additional evidence but does not guarantee acceptance.",
+    "reference": "review:credential-appeal-v1"
+  },
+  "presentation": {
+    "generated_from_recorded_fields_only": true,
+    "private_chain_of_thought_included": false,
+    "may_hide_uncertainty": false,
+    "may_add_unrecorded_reasons": false
+  },
+  "authority": {
+    "explanation_grants_authority": false,
+    "appeal_path_grants_success": false,
+    "human_friendly_wording_changes_decision": false
+  },
+  "limitations": [
+    "The explanation summarizes recorded policy/evidence state and does not reveal private reasoning.",
+    "Review or retry may change the current decision only through a new recorded evaluation."
+  ]
+}
