@@ -16,7 +16,7 @@ For example:
 - reassessment overwrites the original record;
 - pilot success is mistaken for promotion.
 
-The integration harness exists to catch those failures.
+The integration harness exists to catch those failures as the component joins become mechanically representable.
 
 ## Required chain
 
@@ -33,17 +33,20 @@ Every scenario binds one exact scenario ID and action ID across:
 
 Every stage remains non-authoritative.
 
-## Cross-stage invariants
+## Current mechanically enforced invariants
 
-The harness verifies that:
+The v1 validator currently enforces that:
 
-- recognition cannot widen disclosure;
-- unknown required assurance remains visible later;
-- deny/hold states cannot be laundered into allow;
-- challenge appends rather than mutates;
-- reassessment appends rather than rewrites;
-- pilot success remains non-promotional;
-- all stages bind the same action lineage.
+- only the eight declared stage types are accepted; unknown stages fail closed;
+- all required stages are present and bind the same scenario/action lineage;
+- every stage remains explicitly non-authoritative;
+- unknown required assurance cannot be rendered as a success explanation;
+- earlier deny/hold states cannot be laundered into an allow explanation;
+- challenge/reassessment lineage is append-only and historical rewrite is forbidden;
+- production, consequential-use, and public-supported-claim promotion flags remain false;
+- neither the scenario nor successful conformance creates authority.
+
+The scenario also carries explicit cross-stage assertions such as recognition not widening disclosure. Those assertions are conformance claims to be joined to the underlying component records as the harness evolves; setting an assertion to `true` is not itself mechanical proof of the corresponding component relationship.
 
 ## Why this matters
 
@@ -57,7 +60,7 @@ correct explanation + hidden blocker
 correct pilot + false production claim
 ```
 
-The integration harness tests the **composition contract**, not just individual validators.
+The integration harness tests the **composition contract**, not just individual validators. Its claims should remain no stronger than the joins it can actually recompute.
 
 ## Promotion firewall
 
