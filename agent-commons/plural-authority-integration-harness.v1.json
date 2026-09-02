@@ -1,0 +1,31 @@
+{
+  "schema": "axiom-plural-authority-integration-harness.v1",
+  "status": "synthetic conformance architecture only; no production promotion",
+  "purpose": "Exercise the full plural-authority chain as one bounded scenario and detect semantic mismatches between recognition, disclosure, assurance, policy conflict, explanation, challenge, reassessment, and reversible-pilot layers.",
+  "required_stages": [
+    "recognition",
+    "disclosure",
+    "assurance",
+    "policy_conflict",
+    "decision_explanation",
+    "challenge_window",
+    "reassessment",
+    "pilot_result"
+  ],
+  "invariants": [
+    "every stage references the same scenario and action lineage",
+    "a deny/hold at an earlier stage cannot become allow at a later stage without an explicit new evaluation",
+    "authority_effect must remain none for all evidence/explanation/reassessment/pilot records",
+    "unknown assurance must remain visible in explanation",
+    "disclosure may narrow recognition but recognition may not widen disclosure",
+    "challenge and reassessment append to the lineage and never rewrite earlier state",
+    "pilot success cannot promote production or consequential use",
+    "cross-stage contradictions fail the conformance scenario"
+  ],
+  "nonclaims": [
+    "This harness does not replace component tests.",
+    "This harness does not establish production readiness.",
+    "This harness does not create authority.",
+    "Synthetic success does not substitute for authentic pilot evidence."
+  ]
+}
