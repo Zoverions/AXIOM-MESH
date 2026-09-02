@@ -58,6 +58,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/personal-agent-pack.v1.schema.json',
   'docs/architecture/contracts/personal-agent-pack.v2.schema.json',
   'docs/architecture/contracts/personal-model-adaptation-authorization.v1.schema.json',
+  'docs/architecture/contracts/resource-envelope.v0.schema.json',
+  'docs/architecture/contracts/resource-observation.v0.schema.json',
   'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
