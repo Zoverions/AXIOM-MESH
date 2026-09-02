@@ -22,7 +22,7 @@ function principal(overrides = {}) {
     roles: ['researcher'],
     scopes: ['intent:execute'],
     lifetime: 'session',
-    expires_at: '2026-09-01T00:00:00.000Z',
+    expires_at: '2099-01-01T00:00:00.000Z',
     runtime: {
       id: 'runtime.fixture.1',
       kind: 'local-process',
@@ -308,7 +308,7 @@ test('credential lifetime cannot exceed a non-persistent machine principal and u
   assert.throws(() => genesis({
     issuer,
     operational: keys(),
-    overrides: { expiresAt: '2026-09-02T00:00:00.000Z' }
+    overrides: { expiresAt: '2100-01-01T00:00:00.000Z' }
   }), /cannot outlive its machine principal/);
 
   const credential = genesis({ issuer, operational: keys() });
