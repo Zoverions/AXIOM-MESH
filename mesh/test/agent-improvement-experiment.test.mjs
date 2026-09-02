@@ -241,6 +241,7 @@ test('C2 self-certification remains insufficient even with many same-lineage eva
     proposal_id: 'improvement.workflow.1',
     target_surface: 'workflow-topology',
     consequence_class: 'C2',
+    resources: { ...proposal().resources, max_evaluation_runs: 10 },
     rollback: { ref: 'artifact.workflow.rollback', digest: D('9') }
   });
 
