@@ -213,3 +213,48 @@ test('remote constraints can narrow but cannot make the guardian bypass local st
   });
   assert.equal(attemptedWiden.reason, 'locally_paused');
 });
+
+test('pause and non-normal transitions request stop of active contribution leases', () => {
+  const stops = [];
+  const guardian = new HostGuardian({
+    policyProvider: async () => policySet(),
+    measurementProvider: async () => bundle(),
+    clock: () => NOW,
+    effectController: {
+      requestStopAll(event) {
+        stops.push(event);
+      }
+    }
+  });
+  guardian.pause('local_owner');
+  assert.deepEqual(stops, [{
+    reason: 'local_pause',
+    guardian_state: GUARDIAN_STATES.NORMAL
+  }]);
+  guardian.resume('local_owner');
+  assert.equal(stops.length, 1);
+  guardian.transition('DEGRADED', 'local_guardian');
+  assert.deepEqual(stops[1], {
+    reason: 'guardian_state_change',
+    guardian_state: GUARDIAN_STATES.DEGRADED
+  });
+});
+
+test('effect-stop dispatch failure is visible while admission remains fail-closed', async () => {
+  const guardian = new HostGuardian({
+    policyProvider: async () => policySet(),
+    measurementProvider: async () => bundle(),
+    clock: () => NOW,
+    effectController: {
+      requestStopAll() {
+        throw new Error('stop dispatch unavailable');
+      }
+    }
+  });
+  assert.throws(() => guardian.pause('local_owner'), /stop dispatch unavailable/);
+  assert.equal(guardian.paused, true);
+  assert.equal(
+    (await guardian.evaluate({ request: request() })).reason,
+    'locally_paused'
+  );
+});
