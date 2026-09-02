@@ -7,6 +7,12 @@
 **Active build at snapshot:** `0.12.0-dev.3`  
 **Authority effect:** none
 
+> This document preserves the August 31 observation. The active convergence policy is
+> [Project-State Consolidation Map Design](./2026-08-31-project-state-consolidation-map-design.md),
+> and its current executable queue is the
+> [Project-State Consolidation Map Plan](../plans/2026-08-31-project-state-consolidation-map.md).
+> Later counts and dispositions belong there; the facts below remain point-in-time provenance.
+
 ## Purpose
 
 This document is the first manual output of the proposed AXIOM Steward. It answers “where is the project now?” without pretending that branch names, pull-request prose, CI badges, or provider mergeability are truth.
