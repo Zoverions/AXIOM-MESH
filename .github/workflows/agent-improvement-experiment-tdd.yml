@@ -6,6 +6,8 @@ on:
     paths:
       - "mesh/src/lib/agent-improvement-experiment*.mjs"
       - "mesh/test/agent-improvement-experiment*.test.mjs"
+      - "docs/superpowers/specs/2026-09-01-agent-improvement-experiment-v0-design.md"
+      - "docs/superpowers/plans/2026-09-01-agent-improvement-experiment-v0.md"
       - ".github/workflows/agent-improvement-experiment-tdd.yml"
   workflow_dispatch:
 
@@ -14,11 +16,21 @@ permissions:
 
 jobs:
   contract:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    name: contract (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-15
+          - macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -26,4 +38,25 @@ jobs:
           package-manager-cache: false
       - name: Run improvement experiment contracts
         working-directory: mesh
-        run: node --test --test-reporter=spec test/agent-improvement-experiment*.test.mjs
+        run: node --test --test-reporter=spec test/agent-improvement-experiment-adversarial.test.mjs test/agent-improvement-experiment.test.mjs
+
+  repository-gates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact current-build source setup
+        run: npm run setup:install
+      - name: Run complete kernel checks
+        working-directory: mesh
+        run: npm run check
+      - name: Run release verification
+        working-directory: mesh
+        run: npm run release:verify
