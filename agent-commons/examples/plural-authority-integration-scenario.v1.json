@@ -1,0 +1,90 @@
+{
+  "schema": "axiom-plural-authority-scenario.v1",
+  "scenario_id": "scenario:synthetic-prerequisite-hold-001",
+  "action_id": "action:synthetic-prerequisite-review-001",
+  "stages": {
+    "recognition": {
+      "record_ref": "recognition:university-a-college-b-01",
+      "outcome": "recognized_for_prerequisite_review",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "disclosure": {
+      "record_ref": "disclosure:proof-only-prereq-001",
+      "outcome": "proof_only",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "assurance": {
+      "record_ref": "assurance-eval:synthetic-prereq-001",
+      "outcome": "unknown_required",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "policy_conflict": {
+      "record_ref": "policy-conflict:synthetic-prereq-001",
+      "outcome": "narrowed",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "decision_explanation": {
+      "record_ref": "explanation:synthetic-prereq-001",
+      "outcome": "hold_pending",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "challenge_window": {
+      "record_ref": "challenge-window:synthetic-prereq-001",
+      "outcome": "challengeable",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "reassessment": {
+      "record_ref": "reassessment:synthetic-prereq-001",
+      "outcome": "corroborated",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    },
+    "pilot_result": {
+      "record_ref": "pilot:synthetic-prerequisite-review-001",
+      "outcome": "passed",
+      "authority_effect": "none",
+      "scenario_ref": "scenario:synthetic-prerequisite-hold-001",
+      "action_ref": "action:synthetic-prerequisite-review-001"
+    }
+  },
+  "lineage": {
+    "append_only": true,
+    "challenge_appends": true,
+    "reassessment_appends": true,
+    "historical_rewrite_allowed": false
+  },
+  "cross_stage_assertions": {
+    "recognition_does_not_widen_disclosure": true,
+    "unknown_assurance_visible_in_explanation": true,
+    "deny_or_hold_not_laundered_to_allow": true,
+    "challenge_does_not_create_authority": true,
+    "reassessment_does_not_rewrite_history": true,
+    "pilot_does_not_promote": true
+  },
+  "promotion": {
+    "production_promoted": false,
+    "consequential_use_promoted": false,
+    "public_supported_claim_added": false
+  },
+  "authority": {
+    "scenario_grants_authority": false,
+    "successful_conformance_grants_authority": false
+  },
+  "limitations": [
+    "Synthetic integration scenario only.",
+    "Referenced component records are illustrative lineage bindings, not production evidence."
+  ]
+}
