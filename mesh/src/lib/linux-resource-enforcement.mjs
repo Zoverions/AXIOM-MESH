@@ -67,7 +67,7 @@ export function compileLinuxResourceEnforcement(input) {
     request_digest: requestDigest
   };
   const guardianBindingDigest = digestObject(guardianBinding);
-  const unitName = `mesh-contribution-${guardianBindingDigest.slice(0, 24)}.scope`;
+  const unitName = `mesh-contribution-${guardianBindingDigest.slice(0, 24)}.service`;
   const cpuQuota = cpuQuotaPercent(request.resources.cpu_millis);
   const properties = [
     'CPUAccounting=yes',
@@ -80,7 +80,6 @@ export function compileLinuxResourceEnforcement(input) {
     `RuntimeMaxSec=${leaseSeconds}`
   ];
   const argvPrefix = [
-    '--scope',
     '--quiet',
     '--collect',
     `--unit=${unitName}`,
