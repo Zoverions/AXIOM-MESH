@@ -48,6 +48,7 @@
     "network-boundary:verify": "node src/network-boundary.mjs",
     "audit:verify-full": "node src/verify-grid-chain.mjs",
     "node-scheduling:drill": "node src/node-scheduling-drill.mjs",
+    "host-resource-enforcement:drill": "node src/run-linux-resource-enforcement-drill.mjs",
     "online-sync": "node src/online-causal-sync.mjs",
     "online-sync:drill": "node src/online-causal-sync-drill.mjs",
     "provider:start": "node src/provider-supervisor.mjs",
