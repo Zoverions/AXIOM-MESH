@@ -40,7 +40,7 @@ function request(overrides = {}) {
   };
 }
 
-test('compiler binds an allowed Guardian decision to exact systemd/cgroup limits', () => {
+test('compiler binds an allowed Guardian decision to exact transient-service limits', () => {
   const output = compileLinuxResourceEnforcement({
     decision: decision(),
     request: request(),
@@ -50,7 +50,8 @@ test('compiler binds an allowed Guardian decision to exact systemd/cgroup limits
   assert.equal(output.format, 'linux.resource-enforcement.v1');
   assert.equal(output.backend, 'systemd-cgroup-v2');
   assert.equal(output.executable, '/usr/bin/systemd-run');
-  assert.match(output.unit_name, /^mesh-contribution-[a-f0-9]{24}\.scope$/);
+  assert.match(output.unit_name, /^mesh-contribution-[a-f0-9]{24}\.service$/);
+  assert.equal(output.argv_prefix.includes('--scope'), false);
   assert.ok(output.argv_prefix.includes('--property=CPUQuota=25%'));
   assert.ok(output.argv_prefix.includes('--property=MemoryMax=268435456'));
   assert.ok(output.argv_prefix.includes('--property=TasksMax=32'));
@@ -176,6 +177,7 @@ test('prepare path asks Guardian for the exact request and compiles only a local
   assert.deepEqual(observed, { request: requested, remoteConstraints });
   assert.equal(output.allowed, true);
   assert.equal(output.enforcement.executable, '/usr/bin/systemd-run');
+  assert.match(output.enforcement.unit_name, /\.service$/);
 });
 
 test('prepare path preserves Guardian denial and produces no enforcement descriptor', async () => {
