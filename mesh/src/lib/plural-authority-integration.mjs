@@ -41,6 +41,12 @@ export function validatePluralAuthorityScenario(raw){
   id(v.action_id,'action_id');
 
   const stages=assertPlainObject(v.stages,'stages');
+  const allowedStages=new Set(STAGES);
+  for(const stage of Object.keys(stages)){
+    if(!allowedStages.has(stage)){
+      throw new ValidationError(`unsupported stage ${stage}`);
+    }
+  }
   for(const stage of STAGES){
     if(!Object.hasOwn(stages,stage)){
       throw new ValidationError(`missing required stage ${stage}`);
