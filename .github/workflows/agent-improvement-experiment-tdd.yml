@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: ["feat/recursive-agent-lineage-convergence"]
     paths:
-      - "mesh/src/lib/agent-improvement-experiment.mjs"
+      - "mesh/src/lib/agent-improvement-experiment*.mjs"
       - "mesh/test/agent-improvement-experiment*.test.mjs"
       - ".github/workflows/agent-improvement-experiment-tdd.yml"
   workflow_dispatch:
