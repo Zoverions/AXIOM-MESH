@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/resource-observation.v0.schema.json",
+  "title": "AXIOM Resource Observation v0",
+  "description": "Inert attributable expiring resource measurement. It neither proves capacity beyond the stated evidence nor grants placement, reservation, authority, or runtime activation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","observation_id","observer_principal_id","host_ref","kind","observation_status","observed_at","expires_at","measurement_method","evidence_ref","values","limitations","contains_secret_material","authority_effect","network_effect","runtime_activation"],
+  "properties": {
+    "schema": {"const": "axiom-resource-observation.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "observation_id": {"$ref": "#/$defs/id"},
+    "observer_principal_id": {"$ref": "#/$defs/id"},
+    "host_ref": {"$ref": "#/$defs/id"},
+    "kind": {"enum": ["cpu","memory","accelerator","storage","io","network","battery","thermal","energy","cost"]},
+    "observation_status": {"enum": ["measured","verified","failed","stale"]},
+    "observed_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "expires_at": {"type": "string", "format": "date-time", "maxLength": 64},
+    "measurement_method": {"$ref": "#/$defs/id"},
+    "evidence_ref": {"$ref": "#/$defs/id"},
+    "values": {"type": "object"},
+    "limitations": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 512}},
+    "contains_secret_material": {"const": false},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "runtime_activation": {"const": false}
+  },
+  "allOf": [
+    {"if":{"properties":{"observation_status":{"enum":["failed","stale"]}},"required":["observation_status"]},"then":{"properties":{"values":{"type":"object","maxProperties":0}}}},
+    {"if":{"properties":{"kind":{"const":"cpu"},"observation_status":{"enum":["measured","verified"]}},"required":["kind","observation_status"]},"then":{"properties":{"values":{"$ref":"#/$defs/cpuValues"}}}},
+    {"if":{"properties":{"kind":{"const":"memory"},"observation_status":{"enum":["measured","verified"]}},"required":["kind","observation_status"]},"then":{"properties":{"values":{"$ref":"#/$defs/memoryValues"}}}},
+    {"if":{"properties":{"kind":{"const":"storage"},"observation_status":{"enum":["measured","verified"]}},"required":["kind","observation_status"]},"then":{"properties":{"values":{"$ref":"#/$defs/storageValues"}}}}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "nonnegative": {"type":"integer","minimum":0},
+    "cpuValues": {"type":"object","additionalProperties":false,"required":["cpu_load_millis","cpu_available_millis"],"properties":{"cpu_load_millis":{"$ref":"#/$defs/nonnegative"},"cpu_available_millis":{"$ref":"#/$defs/nonnegative"}}},
+    "memoryValues": {"type":"object","additionalProperties":false,"required":["memory_used_bytes","memory_free_bytes"],"properties":{"memory_used_bytes":{"$ref":"#/$defs/nonnegative"},"memory_free_bytes":{"$ref":"#/$defs/nonnegative"}}},
+    "storageValues": {"type":"object","additionalProperties":false,"required":["storage_total_bytes","storage_free_bytes"],"properties":{"storage_total_bytes":{"$ref":"#/$defs/nonnegative"},"storage_free_bytes":{"$ref":"#/$defs/nonnegative"}}}
+  }
+}
