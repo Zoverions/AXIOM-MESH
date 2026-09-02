@@ -5,6 +5,7 @@ on:
     branches: ["feat/recursive-agent-lineage-convergence"]
     paths:
       - "mesh/src/lib/agent-improvement-experiment*.mjs"
+      - "mesh/src/check-docs.mjs"
       - "mesh/test/agent-improvement-experiment*.test.mjs"
       - "docs/superpowers/specs/2026-09-01-agent-improvement-experiment-v0-design.md"
       - "docs/superpowers/plans/2026-09-01-agent-improvement-experiment-v0.md"
