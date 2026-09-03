@@ -41,3 +41,8 @@ test('evidence schemas reject truth and execution-authority shortcuts', () => {
   assert.throws(()=>validateEvidenceAssertion({...node('assertion:x','assertion','X'),execution_authority:['effect:x']}),/execution authority/);
   assert.throws(()=>validateEvidenceLink({...link('link:x','assertion:x','assertion:y','proves')}),/relation/);
 });
+
+test('evidence context validates focus ids as namespaced references before lookup', () => {
+  const assertions=[node('assertion:h','hypothesis','Hypothesis A')];
+  assert.throws(()=>buildEvidenceContext({assertions,links:[],focus_ids:['not-namespaced']}),/focus_ids\[0\] must be a namespaced reference/);
+});

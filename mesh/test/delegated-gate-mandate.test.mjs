@@ -13,3 +13,5 @@ test('resource ceilings are enforced before a delegated gate may clear',()=>{ass
 test('delegated gate requests reject inferred preferences and undeclared request fields',()=>{assert.throws(()=>evaluateDelegatedGateMandate(mandate(),{...req,learned_preference:'always approve'},{now:'2026-09-03T12:00:00.000Z'}),/unknown field learned_preference/);});
 
 test('mandate schema rejects execution grants and unrestricted delegation',()=>{assert.throws(()=>validateDelegatedGateMandate({...mandate(),execution_authority:['health.read']}),/execution authority/);const widened=mandate();widened.delegation={mode:'unrestricted'};assert.throws(()=>validateDelegatedGateMandate(widened),/delegation/);});
+
+test('mandate destinations must be namespaced references',()=>{const invalid=mandate();invalid.destinations=['clinic-without-namespace'];assert.throws(()=>validateDelegatedGateMandate(invalid),/destinations\[0\] must be a namespaced reference/);});

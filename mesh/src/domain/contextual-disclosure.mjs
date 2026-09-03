@@ -83,13 +83,23 @@ export function selectMinimumSufficientProjection({request,available_claims,avai
   }
 
   const allowedFields = new Set(policy.allowed_raw_fields);
-  const disclosed_fields = {};
+  const disclosedEntries = [];
   const withheld_fields = [];
   const reasonCodes = new Set();
   for (const field of request.requested_fields) {
-    if (allowedFields.has(field) && Object.hasOwn(available_fields,field)) disclosed_fields[field] = available_fields[field];
-    else { withheld_fields.push(field); reasonCodes.add('raw_field_not_authorized'); }
+    if (!allowedFields.has(field)) {
+      withheld_fields.push(field);
+      reasonCodes.add('raw_field_not_authorized');
+      continue;
+    }
+    if (!Object.hasOwn(available_fields,field)) {
+      withheld_fields.push(field);
+      reasonCodes.add('raw_field_unavailable');
+      continue;
+    }
+    disclosedEntries.push([field, available_fields[field]]);
   }
+  const disclosed_fields = Object.fromEntries(disclosedEntries);
   if (satisfiedCount < request.required_claims.length) reasonCodes.add('required_claim_unavailable');
   if (selected.length || withheld_fields.length) reasonCodes.add('minimum_sufficient_projection_applied');
 
