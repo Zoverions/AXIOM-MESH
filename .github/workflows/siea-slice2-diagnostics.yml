@@ -1,0 +1,89 @@
+name: SIEA Slice 2 Diagnostics
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "mesh/**"
+      - "docs/**"
+      - ".github/workflows/siea-slice2-diagnostics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    name: focused-${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: access-decision
+            target: test/information-access-decision.test.mjs
+          - name: migration
+            target: test/sovereign-information-grid-migration.test.mjs
+          - name: grid-store
+            target: test/sovereign-information-grid-store.test.mjs
+          - name: mandate-lifecycle
+            target: test/sovereign-information-mandate-lifecycle.test.mjs
+          - name: access
+            target: test/sovereign-information-access.test.mjs
+          - name: portability
+            target: test/sovereign-information-portability.test.mjs
+          - name: portability-store
+            target: test/sovereign-information-portability-store.test.mjs
+          - name: adversarial
+            target: test/sovereign-information-grid-adversarial.test.mjs
+          - name: nonpromotion
+            target: test/sovereign-information-grid-nonpromotion.test.mjs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact source setup
+        run: npm run setup:install
+      - name: Run focused test
+        working-directory: mesh
+        run: node --test --test-reporter=spec "${{ matrix.target }}"
+
+  docs:
+    name: docs-check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact source setup
+        run: npm run setup:install
+      - name: Verify canonical documentation
+        working-directory: mesh
+        run: npm run docs:check
+
+  release:
+    name: release-verify-only
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact source setup
+        run: npm run setup:install
+      - name: Run release verification only
+        working-directory: mesh
+        run: npm run release:verify
