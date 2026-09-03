@@ -98,12 +98,14 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-08-31-selective-interposition-native-reference-agent-design.md',
   'docs/superpowers/specs/2026-09-02-deployment-capability-engine-v0-design.md',
   'docs/superpowers/specs/2026-09-02-sovereign-host-deployment-shared-embodiment-design.md',
+  'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
   'docs/superpowers/plans/2026-08-29-self-bundle-continuity-v0.md',
   'docs/superpowers/plans/2026-08-29-cognitive-topology-v0.md',
   'docs/superpowers/plans/2026-08-30-sovereign-intelligence-selection-v0.md',
+  'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -316,6 +318,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'authority_effect: none',
     '## Threats covered in v0'
   ],
+  'docs/rebuild/REQUIREMENTS.md': [
+    'SIEA-01',
+    'SIEA-05',
+    'SIEA-08',
+    'SIEA-12'
+  ],
   'docs/rebuild/SOURCE-TRACEABILITY.md': [
     '## Current implementation trace',
     '## Archived source boundary'
@@ -369,6 +377,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Severity and activation',
     '## Signed evidence and CI gate',
     '## Residual limitations and pilot repetition'
+  ],
+  'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md': [
+    'Risk is not prohibition',
+    'Security gates and human interruptions are independent',
+    'Privacy must hold against correlation, not merely direct disclosure',
+    'Cross-domain knowledge is permitted; cross-domain dossiers are not the default mechanism',
+    'Provenance is not truth',
+    'available != reviewed'
   ],
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
     '## Current-build setup boundary',
