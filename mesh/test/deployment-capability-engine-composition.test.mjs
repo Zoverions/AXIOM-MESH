@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { digestObject } from '../src/lib/canonical.mjs';
-import { validateDeploymentSpec } from '../src/lib/deployment-capability-engine.mjs';
+import {
+  resolveDeploymentPlan,
+  validateDeploymentSpec
+} from '../src/lib/deployment-capability-engine.mjs';
 
 const NOW = '2026-09-02T23:55:00.000Z';
 const CREATED = '2026-09-02T23:54:00.000Z';
@@ -337,6 +340,10 @@ function context() {
   };
 }
 
+function rejection(plan, bindingId) {
+  return plan.rejected_bindings.find((item) => item.binding_id === bindingId);
+}
+
 test('provider artifacts are bound by exact digest', () => {
   const ctx = context();
   ctx.provider_artifacts['provider.synthetic.add'] = providerArtifact(
@@ -392,4 +399,99 @@ test('binding identities are unique and one provider identity cannot conflict', 
     provider_digest: digestObject(providerArtifact('provider.synthetic.add', { variant: 'other' }))
   };
   assert.throws(() => validateDeploymentSpec(conflicting, context()), /provider.*conflict|conflict.*provider|provider.*digest/i);
+});
+
+test('resolver reuses installed capability and selects one compatible addition', () => {
+  const plan = resolveDeploymentPlan(spec(), context());
+  assert.equal(plan.schema, 'axiom-deployment-plan.v0');
+  assert.equal(plan.version, 0);
+  assert.deepEqual(plan.satisfied_existing, ['capability.present']);
+  assert.deepEqual(plan.selected_bindings, ['binding.synthetic.add']);
+  assert.deepEqual(plan.unsatisfied_capabilities, []);
+  assert.deepEqual(plan.owner_choices, []);
+  assert.equal(plan.authority_effect, 'none');
+  assert.equal(plan.network_effect, 'none');
+  assert.equal(plan.runtime_activation, false);
+  assert.equal(plan.execution_authorized, false);
+});
+
+test('resolver rejects offline, locality, and replacement hard conflicts before preferences', () => {
+  const offline = spec();
+  offline.desired.preferences.offline_required = true;
+  offline.provider_bindings[0].requires_network = true;
+  const offlinePlan = resolveDeploymentPlan(offline, context());
+  assert.ok(rejection(offlinePlan, 'binding.synthetic.add').reason_codes.includes('offline-conflict'));
+  assert.ok(offlinePlan.unsatisfied_capabilities.includes('capability.add'));
+
+  const local = spec();
+  local.desired.preferences.locality = 'local-only';
+  local.provider_bindings[0].provider_kind = 'external-service';
+  const localPlan = resolveDeploymentPlan(local, context());
+  assert.ok(rejection(localPlan, 'binding.synthetic.add').reason_codes.includes('locality-conflict'));
+
+  const replacement = spec();
+  replacement.provider_bindings[0].replacement_required = true;
+  const replacementPlan = resolveDeploymentPlan(replacement, context());
+  assert.ok(rejection(replacementPlan, 'binding.synthetic.add').reason_codes.includes('replacement-forbidden'));
+});
+
+test('resolver rejects a binding whose resource request exceeds the accepted envelope', () => {
+  const document = spec();
+  document.provider_bindings[0].resource_request.memory_bytes = 16 * 1024 * 1024 * 1024;
+  const plan = resolveDeploymentPlan(document, context());
+  assert.ok(rejection(plan, 'binding.synthetic.add').reason_codes.includes('resource-envelope-conflict'));
+  assert.ok(plan.unsatisfied_capabilities.includes('capability.add'));
+});
+
+test('resolver reports an unsatisfied required capability when no provider fits', () => {
+  const document = spec();
+  document.desired.required_capabilities.push('capability.missing');
+  const plan = resolveDeploymentPlan(document, context());
+  assert.ok(plan.unsatisfied_capabilities.includes('capability.missing'));
+  assert.ok(plan.reason_codes.includes('no-compatible-provider'));
+});
+
+test('equivalent compatible additions become a stable owner choice instead of an invented ranking', () => {
+  const document = spec();
+  const ctx = context();
+  const artifact = providerArtifact('provider.synthetic.add.b');
+  document.provider_bindings.push(binding({
+    bindingId: 'binding.synthetic.add.b',
+    providerRef: 'provider.synthetic.add.b',
+    artifact
+  }));
+  ctx.provider_artifacts['provider.synthetic.add.b'] = artifact;
+
+  const plan = resolveDeploymentPlan(document, ctx);
+  assert.deepEqual(plan.selected_bindings, []);
+  assert.equal(plan.owner_choices.length, 1);
+  assert.equal(plan.owner_choices[0].capability_id, 'capability.add');
+  assert.deepEqual(plan.owner_choices[0].binding_ids, [
+    'binding.synthetic.add',
+    'binding.synthetic.add.b'
+  ]);
+  assert.deepEqual(plan.owner_choices[0].reason_codes, [
+    'insufficient-ranking-evidence',
+    'owner-choice-required'
+  ]);
+  assert.ok(plan.reason_codes.includes('owner-choice-required'));
+  assert.ok(plan.reason_codes.includes('insufficient-ranking-evidence'));
+});
+
+test('set-like input permutations produce the same semantic deployment and plan digests', () => {
+  const firstDocument = spec();
+  const secondDocument = spec();
+  secondDocument.desired.roles.reverse();
+  secondDocument.desired.required_capabilities.reverse();
+  secondDocument.resource_observations.reverse();
+  secondDocument.host_policy_refs.reverse();
+  secondDocument.provider_bindings.reverse();
+
+  const first = resolveDeploymentPlan(firstDocument, context());
+  const second = resolveDeploymentPlan(secondDocument, context());
+  assert.equal(first.deployment_spec_digest, second.deployment_spec_digest);
+  assert.equal(first.plan_digest, second.plan_digest);
+  assert.deepEqual(first.satisfied_existing, second.satisfied_existing);
+  assert.deepEqual(first.selected_bindings, second.selected_bindings);
+  assert.deepEqual(first.unsatisfied_capabilities, second.unsatisfied_capabilities);
 });
