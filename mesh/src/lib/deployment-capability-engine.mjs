@@ -430,23 +430,29 @@ function compareDownstreamRequest(left, right) {
 function evaluateHostSovereigntyIfPresent(context, binding) {
   const collection = context.host_sovereignty_evidence;
   if (collection === undefined) return null;
-  const evidenceByBinding = plainObject(
-    collection,
-    'context.host_sovereignty_evidence'
-  );
-  if (!Object.hasOwn(evidenceByBinding, binding.binding_id)) return null;
-  const evidence = plainObject(
-    evidenceByBinding[binding.binding_id],
-    `context.host_sovereignty_evidence.${binding.binding_id}`
-  );
-  return evaluateContribution({
-    policy: evidence.policy,
-    reserve: evidence.reserve,
-    runtime: evidence.runtime,
-    request: evidence.request,
-    guardianState: evidence.guardian_state,
-    remoteConstraints: evidence.remote_constraints
-  });
+
+  try {
+    const evidenceByBinding = plainObject(
+      collection,
+      'context.host_sovereignty_evidence'
+    );
+    if (!Object.hasOwn(evidenceByBinding, binding.binding_id)) return null;
+    const evidence = plainObject(
+      evidenceByBinding[binding.binding_id],
+      `context.host_sovereignty_evidence.${binding.binding_id}`
+    );
+    return evaluateContribution({
+      policy: evidence.policy,
+      reserve: evidence.reserve,
+      runtime: evidence.runtime,
+      request: evidence.request,
+      guardianState: evidence.guardian_state,
+      remoteConstraints: evidence.remote_constraints
+    });
+  } catch (error) {
+    if (!(error instanceof ValidationError)) throw error;
+    return Object.freeze({ allowed: false });
+  }
 }
 
 function addOwnerChoice(ownerChoices, capabilityId, bindings, globalReasons) {
