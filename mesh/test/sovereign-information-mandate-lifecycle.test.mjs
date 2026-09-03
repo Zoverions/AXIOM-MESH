@@ -101,6 +101,22 @@ test('revocation is a signed append-only transition and survives restart', async
   assert.equal(f.store.verifyChain().valid, true);
 });
 
+test('future-dated revocation fails closed and does not append a revocation event', async t => {
+  const f = await fixture(t);
+  f.store.recordDelegatedGateMandate({ actor: 'principal:patient', traceId: 'trace:mandate-record', mandate: mandate() });
+  assert.throws(() => f.store.revokeDelegatedGateMandate({
+    actor: 'principal:patient',
+    traceId: 'trace:mandate-future-revoke',
+    mandateId: 'mandate:clinical-routine',
+    revokedAt: '2099-01-01T00:00:00.000Z',
+    reason: 'future-dated-invalid'
+  }), /future|revocation timestamp/i);
+  assert.equal(
+    f.store.listEvents({ after: 0, limit: 100 }).filter(event => event.kind === 'siea.delegated-mandate.revoked').length,
+    0
+  );
+});
+
 test('a revoked mandate cannot be silently reactivated and exact duplicate revocation is idempotent', async t => {
   const f = await fixture(t);
   f.store.recordDelegatedGateMandate({ actor: 'principal:patient', traceId: 'trace:mandate-record', mandate: mandate() });
