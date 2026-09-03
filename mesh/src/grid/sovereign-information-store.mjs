@@ -309,6 +309,9 @@ export class SovereignInformationGridStore extends GridStore {
 
   applyMandateRevocation(event) {
     const payload = validateRevocationPayload(event.payload);
+    if (Date.parse(payload.revoked_at) > Date.parse(event.occurred_at)) {
+      throw new ValidationError('Delegated gate mandate revocation timestamp cannot be in the future');
+    }
     const row = this.db.prepare('SELECT * FROM siea_objects WHERE storage_id = ?').get(payload.storage_id);
     if (!row || row.object_kind !== 'delegated-gate-mandate') {
       throw new ValidationError('Delegated gate mandate materialized state is missing');
