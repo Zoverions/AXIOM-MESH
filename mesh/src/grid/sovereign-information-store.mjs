@@ -322,6 +322,7 @@ export class SovereignInformationGridStore extends GridStore {
   }
 
   applyMaterializedEvent(event) {
+    if (!this.sieaReady) return super.applyMaterializedEvent(event);
     if (event.kind === MANDATE_REVOKED_EVENT) return this.applyMandateRevocation(event);
     const kind = EVENT_TO_KIND.get(event.kind);
     if (!kind) return super.applyMaterializedEvent(event);
