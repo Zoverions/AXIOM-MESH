@@ -31,6 +31,8 @@ Repository independence is deliberate. It allows Education's Flutter/mobile/desk
 
 Independence does **not** mean compatibility is optional. Axiom Education is a declared downstream consumer and should be continuously verified against the Mesh interfaces it actually uses.
 
+The current Mesh/Education convergence is synchronized: AXIOM-MESH contains the governed learner-memory/write/self-read substrate, and Axiom Education independently records the merged Mesh provenance while retaining byte-pinned runtime contracts and its Gateway semantic-seam binding. That synchronization is a current compatibility checkpoint, not a permanent promise that future Mesh changes require no downstream review.
+
 ### AXIOM Circles
 
 **Current location:** contracts, roadmap, and development surfaces in AXIOM-MESH  
@@ -97,7 +99,9 @@ That registry should identify, for each consumer:
 - relevant release/update trigger classes;
 - whether a Mesh change requires downstream retest, migration, review, or no action.
 
-This prevents the current failure mode where a downstream repository can remain internally green against an old pin while Mesh `main` has moved beyond or lost the referenced integration surface.
+This prevents the failure mode where a downstream repository can remain internally green against an old pin while Mesh `main` has moved beyond or lost the referenced integration surface.
+
+The current `application-catalog.json` establishes application identity and relationship metadata, while the documentation-impact policy begins enforcing review obligations for Education-consumed Mesh paths. A fuller inverse downstream registry with independently verified downstream revision/evidence fields remains future work and must not be implied by the catalogue alone.
 
 ## Change-impact classes
 
@@ -152,7 +156,7 @@ Axiom Education should use this ledger for capabilities such as Sovereign Vault/
 
 A new or changed feature is not complete when code and tests pass if the feature materially changes what users, operators, agents, application developers, or downstream repositories need to know.
 
-The project should map implementation changes to documentation families.
+The project maps implementation changes to documentation families.
 
 | Change family | Documentation that must be reviewed |
 |---|---|
@@ -163,12 +167,31 @@ The project should map implementation changes to documentation families.
 | roadmap completion/new work | roadmap, master todo/status ownership docs |
 | operations/install/update | installation, production, recovery, operator manuals |
 | API/contract | contract docs, client guide, downstream compatibility profiles |
-| Education-consumed Mesh change | Mesh downstream registry plus Axiom Education compatibility/adoption evidence |
+| Education-consumed Mesh change | Mesh downstream model plus Axiom Education compatibility/adoption evidence |
 | network/node behavior | node/operator docs, security/network docs, community-testnet guidance |
 
-CI should compute a documentation/downstream impact requirement from changed paths and declared semantic classes, then reject a pull request that omits a required family unless an explicit machine-readable `not-applicable` justification is present.
+The first executable synchronization layer is:
 
-A documentation touch is not automatically sufficient. The longer-term gate should validate semantic anchors generated from machine-readable capability, route, version, compatibility, install, and product-surface registries so stale prose cannot be hidden behind an unrelated edit.
+- `mesh/config/documentation-impact-policy.json` — machine-readable high-risk path-to-document-family rules;
+- `mesh/src/check-documentation-impact.mjs` — strict policy validation plus base-to-head changed-path evaluation;
+- protected PR verification — the Clean Kernel `verify` job evaluates the pull request base/head before the rest of the kernel verification.
+
+The initial enforced scope covers:
+
+- host-install target/policy/planner surfaces;
+- Education-consumed Mesh contracts/runtime paths;
+- service-network policy;
+- capability registry/evidence-binding status;
+- the first-class application catalogue; and
+- the documentation-impact policy/checker itself.
+
+For each triggered rule, every required documentation group must contain at least one changed canonical path in the same pull request. A code-only change to one of those high-drift surfaces therefore fails rather than relying on a later manual documentation cleanup.
+
+This v1 gate is intentionally narrower than the full documentation vision. It proves that required document families were reviewed/touched; it does **not** by itself prove that the changed prose is semantically complete or correct. Existing generated capability/status/network checks and semantic document anchors continue to provide deeper checks for the surfaces they already understand. The impact policy should expand only when ownership rules are specific enough to avoid meaningless documentation churn.
+
+There is currently no machine-readable `not-applicable` waiver path in this v1 checker. If a future exception mechanism is added, it must carry an explicit justification and must not become a generic bypass.
+
+Cross-repository consequences remain independent evidence obligations. A Mesh PR touching an Education-consumed surface can be required to update the Mesh-side downstream/current-state documentation, but AXIOM-MESH CI does not silently mutate or self-approve the separate Axiom-Education repository. When the semantic class requires downstream verification, Axiom Education must produce its own compatibility change and CI evidence before the combined state is described as synchronized.
 
 ## Installer/application catalogue
 
