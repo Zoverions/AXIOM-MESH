@@ -2,11 +2,13 @@ import {
   AxiomError,
   ValidationError,
   assertPlainObject,
+  assertString,
   digestObject,
   newId
 } from '../lib/canonical.mjs';
 import { GridStore } from './store.mjs';
 import {
+  assertIsoTimestamp,
   assertNoUnknownKeys,
   assertReference
 } from '../domain/sovereign-information-common.mjs';
@@ -33,6 +35,7 @@ const EVENT_TO_KIND = new Map([
   ['siea.evidence-review.recorded', 'evidence-review'],
   ['siea.delegated-mandate.recorded', 'delegated-gate-mandate']
 ]);
+const MANDATE_REVOKED_EVENT = 'siea.delegated-mandate.revoked';
 
 const PAYLOAD_KEYS = new Set([
   'storage_id',
@@ -40,6 +43,13 @@ const PAYLOAD_KEYS = new Set([
   'object',
   'object_digest',
   'lifecycle_status',
+  'authorization'
+]);
+const REVOCATION_PAYLOAD_KEYS = new Set([
+  'storage_id',
+  'mandate_id',
+  'revoked_at',
+  'reason',
   'authorization'
 ]);
 const AUTHORIZATION_KEYS = new Set(['authority_ref', 'verifier_ref']);
@@ -101,6 +111,17 @@ function validateMaterializedPayload(kind, payload) {
   return payload;
 }
 
+function validateRevocationPayload(payload) {
+  assertPlainObject(payload, 'SIEA mandate revocation payload');
+  assertNoUnknownKeys(payload, 'SIEA mandate revocation payload', REVOCATION_PAYLOAD_KEYS);
+  assertReference(payload.storage_id, 'SIEA mandate revocation payload.storage_id');
+  assertReference(payload.mandate_id, 'SIEA mandate revocation payload.mandate_id');
+  assertIsoTimestamp(payload.revoked_at, 'SIEA mandate revocation payload.revoked_at');
+  assertString(payload.reason, 'SIEA mandate revocation payload.reason', { max: 512 });
+  validateAuthorization(payload.authorization);
+  return payload;
+}
+
 export class SovereignInformationGridStore extends GridStore {
   constructor({ mutationVerifier, informationAccessDecisionVerifier, ...options }) {
     super(options);
@@ -141,6 +162,7 @@ export class SovereignInformationGridStore extends GridStore {
   appendEvents({ traceId, actor, events }) {
     if (!Array.isArray(events)) return super.appendEvents({ traceId, actor, events });
     const prepared = events.map(event => {
+      if (event?.kind === MANDATE_REVOKED_EVENT) return this.prepareMandateRevocationEvent(actor, event);
       const kind = EVENT_TO_KIND.get(event?.kind);
       if (!kind) return event;
       return this.prepareSieaEvent(actor, kind, event);
@@ -148,28 +170,37 @@ export class SovereignInformationGridStore extends GridStore {
     return super.appendEvents({ traceId, actor, events: prepared });
   }
 
-  prepareSieaEvent(actor, kind, event) {
+  mutationAuthorization(actor, { operation, object_kind, object_ref, object_digest }) {
     if (!this.sieaMutationVerifier) {
       throw new ValidationError('SIEA mutation verifier is unavailable');
     }
-    assertPlainObject(event, 'SIEA event');
-    const payload = assertPlainObject(event.payload, 'SIEA event payload');
-    const object = validateObject(kind, payload.object);
-    const objectDigest = digestObject(object);
     const verification = this.sieaMutationVerifier({
       actor,
-      operation: event.kind,
-      object_kind: kind,
-      object_ref: logicalReference(kind, object),
-      object_digest: objectDigest
+      operation,
+      object_kind,
+      object_ref,
+      object_digest
     });
     assertPlainObject(verification, 'SIEA mutation verification');
     if (verification.allowed !== true) {
       throw new AxiomError('siea_mutation_denied', 'Sovereign information mutation was denied', 403);
     }
-    const authorization = validateAuthorization({
+    return validateAuthorization({
       authority_ref: verification.authority_ref,
       verifier_ref: verification.verifier_ref
+    });
+  }
+
+  prepareSieaEvent(actor, kind, event) {
+    assertPlainObject(event, 'SIEA event');
+    const payload = assertPlainObject(event.payload, 'SIEA event payload');
+    const object = validateObject(kind, payload.object);
+    const objectDigest = digestObject(object);
+    const authorization = this.mutationAuthorization(actor, {
+      operation: event.kind,
+      object_kind: kind,
+      object_ref: logicalReference(kind, object),
+      object_digest: objectDigest
     });
     const preparedPayload = {
       storage_id: payload.storage_id,
@@ -188,7 +219,39 @@ export class SovereignInformationGridStore extends GridStore {
     };
   }
 
+  prepareMandateRevocationEvent(actor, event) {
+    assertPlainObject(event, 'SIEA mandate revocation event');
+    const raw = assertPlainObject(event.payload, 'SIEA mandate revocation event payload');
+    const current = this.findSieaByLogicalRef('delegated-gate-mandate', raw.mandate_id);
+    if (!current || current.storage_id !== raw.storage_id) {
+      throw new AxiomError('siea_mandate_not_found', 'Delegated gate mandate was not found', 404);
+    }
+    const authorization = this.mutationAuthorization(actor, {
+      operation: MANDATE_REVOKED_EVENT,
+      object_kind: 'delegated-gate-mandate',
+      object_ref: current.object.mandate_id,
+      object_digest: current.object_digest
+    });
+    const prepared = {
+      storage_id: raw.storage_id,
+      mandate_id: raw.mandate_id,
+      revoked_at: raw.revoked_at,
+      reason: raw.reason,
+      authorization
+    };
+    validateRevocationPayload(prepared);
+    return {
+      kind: MANDATE_REVOKED_EVENT,
+      subject: raw.storage_id,
+      payload: prepared,
+      ...(event.event_id ? { event_id: event.event_id } : {})
+    };
+  }
+
   applyMaterializedEvent(event) {
+    if (event.kind === MANDATE_REVOKED_EVENT) {
+      return this.applyMandateRevocation(event);
+    }
     const kind = EVENT_TO_KIND.get(event.kind);
     if (!kind) return super.applyMaterializedEvent(event);
     const payload = validateMaterializedPayload(kind, event.payload);
@@ -212,6 +275,41 @@ export class SovereignInformationGridStore extends GridStore {
       payload.lifecycle_status,
       existing?.created_at ?? event.occurred_at,
       event.occurred_at
+    );
+  }
+
+  applyMandateRevocation(event) {
+    const payload = validateRevocationPayload(event.payload);
+    const row = this.db.prepare('SELECT * FROM siea_objects WHERE storage_id = ?').get(payload.storage_id);
+    if (!row || row.object_kind !== 'delegated-gate-mandate') {
+      throw new ValidationError('Delegated gate mandate materialized state is missing');
+    }
+    const mandate = this.openJson('siea_objects', 'object_json', row.storage_id, row.object_json);
+    if (mandate.mandate_id !== payload.mandate_id) {
+      throw new ValidationError('Delegated gate mandate revocation target does not match materialized state');
+    }
+    if (mandate.revocation.revoked) {
+      if (mandate.revocation.revoked_at === payload.revoked_at && mandate.revocation.reason === payload.reason) return;
+      throw new ValidationError('Delegated gate mandate has conflicting revocation history');
+    }
+    const updated = {
+      ...mandate,
+      revocation: {
+        revoked: true,
+        revoked_at: payload.revoked_at,
+        reason: payload.reason
+      }
+    };
+    validateDelegatedGateMandate(updated);
+    this.db.prepare(`
+      UPDATE siea_objects
+      SET object_json = ?, object_digest = ?, lifecycle_status = 'revoked', updated_at = ?
+      WHERE storage_id = ?
+    `).run(
+      this.protectJson('siea_objects', 'object_json', row.storage_id, updated),
+      digestObject(updated),
+      event.occurred_at,
+      row.storage_id
     );
   }
 
@@ -260,6 +358,66 @@ export class SovereignInformationGridStore extends GridStore {
       throw new ValidationError('New delegated gate mandate must not begin revoked');
     }
     return this.recordObject({ actor, traceId, kind: 'delegated-gate-mandate', object: mandate });
+  }
+
+  revokeDelegatedGateMandate({ actor, traceId, mandateId, revokedAt, reason }) {
+    assertReference(mandateId, 'mandateId');
+    assertIsoTimestamp(revokedAt, 'revokedAt');
+    assertString(reason, 'reason', { max: 512 });
+    const current = this.findSieaByLogicalRef('delegated-gate-mandate', mandateId);
+    if (!current) {
+      throw new AxiomError('siea_mandate_not_found', 'Delegated gate mandate was not found', 404);
+    }
+    if (current.object.revocation.revoked) {
+      if (
+        current.object.revocation.revoked_at === revokedAt
+        && current.object.revocation.reason === reason
+      ) {
+        const existingEvent = this.listEvents({ after: 0, limit: 500 }).find(event => (
+          event.kind === MANDATE_REVOKED_EVENT
+          && event.subject === current.storage_id
+          && event.payload.mandate_id === mandateId
+          && event.payload.revoked_at === revokedAt
+          && event.payload.reason === reason
+        ));
+        if (existingEvent) return existingEvent;
+      }
+      throw new AxiomError('state_conflict', 'Delegated gate mandate is already revoked with different state', 409);
+    }
+    const appended = this.appendEvents({
+      traceId,
+      actor,
+      events: [{
+        kind: MANDATE_REVOKED_EVENT,
+        subject: current.storage_id,
+        payload: {
+          storage_id: current.storage_id,
+          mandate_id: mandateId,
+          revoked_at: revokedAt,
+          reason
+        }
+      }]
+    });
+    return appended[0];
+  }
+
+  getDelegatedGateMandateEffectiveState(mandateId, { now }) {
+    assertReference(mandateId, 'mandateId');
+    assertIsoTimestamp(now, 'now');
+    const row = this.findSieaByLogicalRef('delegated-gate-mandate', mandateId);
+    if (!row) {
+      throw new AxiomError('siea_mandate_not_found', 'Delegated gate mandate was not found', 404);
+    }
+    let status = 'active';
+    if (row.object.revocation.revoked || row.lifecycle_status === 'revoked') status = 'revoked';
+    else if (Date.parse(now) < Date.parse(row.object.starts_at)) status = 'not-started';
+    else if (Date.parse(now) >= Date.parse(row.object.expires_at)) status = 'expired';
+    return {
+      status,
+      mandate: row.object,
+      object_digest: row.object_digest,
+      storage_id: row.storage_id
+    };
   }
 
   recordObject({ actor, traceId, kind, object }) {
