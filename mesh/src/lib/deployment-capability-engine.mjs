@@ -18,6 +18,7 @@ import { validateRuntimeConnectorCatalogEntry } from './runtime-connector-fabric
 export const DESIRED_DEPLOYMENT_SCHEMA = 'axiom-desired-deployment.v0';
 export const DEPLOYMENT_PROVIDER_BINDING_SCHEMA = 'axiom-deployment-provider-binding.v0';
 export const DEPLOYMENT_SPEC_SCHEMA = 'axiom-deployment-spec.v0';
+export const DEPLOYMENT_PLAN_SCHEMA = 'axiom-deployment-plan.v0';
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -218,7 +219,7 @@ export function validateDeploymentSpec(document, context = {}) {
     schema: DEPLOYMENT_SPEC_SCHEMA,
     deployment_id: desired.deployment_id,
     target_host_ref: desired.target_host_ref,
-    deployment_spec_digest: digestObject(document),
+    deployment_spec_digest: semanticDeploymentSpecDigest(document),
     execution_authorized: false,
     authority_effect: 'none',
     network_effect: 'none',
@@ -228,7 +229,191 @@ export function validateDeploymentSpec(document, context = {}) {
 
 export function deploymentSpecDigest(document, context = {}) {
   validateDeploymentSpec(document, context);
-  return digestObject(document);
+  return semanticDeploymentSpecDigest(document);
+}
+
+export function resolveDeploymentPlan(document, context = {}) {
+  const validation = validateDeploymentSpec(document, context);
+  const desired = document.desired;
+  const rejected = [];
+  const rejectedIds = new Set();
+  const globalReasons = new Set();
+
+  for (const binding of [...document.provider_bindings].sort(compareBindingId)) {
+    const reasons = hardConstraintReasons(binding, document);
+    if (reasons.length === 0) continue;
+    rejectedIds.add(binding.binding_id);
+    for (const reason of reasons) globalReasons.add(reason);
+    rejected.push(Object.freeze({
+      binding_id: binding.binding_id,
+      reason_codes: Object.freeze(reasons)
+    }));
+  }
+
+  const satisfiedExisting = new Set();
+  const selectedBindings = new Set();
+  const unsatisfiedCapabilities = new Set();
+  const ownerChoices = [];
+  const bindings = [...document.provider_bindings].sort(compareBindingId);
+
+  for (const capabilityId of [...desired.required_capabilities].sort()) {
+    const compatible = bindings.filter((binding) => (
+      !rejectedIds.has(binding.binding_id)
+      && binding.capability_ids.includes(capabilityId)
+      && ['installed-available', 'available-not-installed'].includes(
+        binding.presence_state
+      )
+    ));
+    const installed = compatible.filter(
+      (binding) => binding.presence_state === 'installed-available'
+    );
+
+    if (desired.preferences.reuse_existing && installed.length === 1) {
+      satisfiedExisting.add(capabilityId);
+      globalReasons.add('existing-capability-reused');
+      continue;
+    }
+
+    const candidates = desired.preferences.reuse_existing
+      ? compatible.filter(
+        (binding) => binding.presence_state === 'available-not-installed'
+      )
+      : compatible;
+
+    if (desired.preferences.reuse_existing && installed.length > 1) {
+      addOwnerChoice(ownerChoices, capabilityId, installed, globalReasons);
+      continue;
+    }
+
+    if (candidates.length === 1) {
+      selectedBindings.add(candidates[0].binding_id);
+      continue;
+    }
+    if (candidates.length > 1) {
+      addOwnerChoice(ownerChoices, capabilityId, candidates, globalReasons);
+      continue;
+    }
+
+    unsatisfiedCapabilities.add(capabilityId);
+    globalReasons.add('no-compatible-provider');
+  }
+
+  const draft = Object.freeze({
+    schema: DEPLOYMENT_PLAN_SCHEMA,
+    version: 0,
+    deployment_id: desired.deployment_id,
+    target_host_ref: desired.target_host_ref,
+    deployment_spec_digest: validation.deployment_spec_digest,
+    satisfied_existing: Object.freeze([...satisfiedExisting].sort()),
+    selected_bindings: Object.freeze([...selectedBindings].sort()),
+    unsatisfied_capabilities: Object.freeze(
+      [...unsatisfiedCapabilities].sort()
+    ),
+    rejected_bindings: Object.freeze(rejected),
+    downstream_plan_requests: Object.freeze([]),
+    consequences: Object.freeze([]),
+    owner_choices: Object.freeze(ownerChoices),
+    reason_codes: Object.freeze([...globalReasons].sort()),
+    authority_effect: 'none',
+    network_effect: 'none',
+    runtime_activation: false,
+    execution_authorized: false
+  });
+
+  return Object.freeze({
+    ...draft,
+    plan_digest: digestObject(draft)
+  });
+}
+
+function addOwnerChoice(ownerChoices, capabilityId, bindings, globalReasons) {
+  const reasonCodes = Object.freeze([
+    'insufficient-ranking-evidence',
+    'owner-choice-required'
+  ]);
+  ownerChoices.push(Object.freeze({
+    capability_id: capabilityId,
+    binding_ids: Object.freeze(bindings.map((item) => item.binding_id).sort()),
+    reason_codes: reasonCodes
+  }));
+  globalReasons.add('insufficient-ranking-evidence');
+  globalReasons.add('owner-choice-required');
+}
+
+function hardConstraintReasons(binding, document) {
+  const reasons = new Set();
+  const preferences = document.desired.preferences;
+
+  if (preferences.offline_required && binding.requires_network) {
+    reasons.add('offline-conflict');
+  }
+  if (
+    preferences.locality === 'local-only'
+    && binding.provider_kind === 'external-service'
+  ) {
+    reasons.add('locality-conflict');
+  }
+  if (binding.replacement_required && !preferences.allow_replacement) {
+    reasons.add('replacement-forbidden');
+  }
+  if (RESOURCE_FIELDS.some((field) => (
+    binding.resource_request[field]
+    > document.resource_envelope.hard_ceilings[field]
+  ))) {
+    reasons.add('resource-envelope-conflict');
+  }
+
+  return [...reasons].sort();
+}
+
+function semanticDeploymentSpecDigest(document) {
+  const normalized = {
+    ...document,
+    desired: {
+      ...document.desired,
+      roles: [...document.desired.roles].sort(),
+      required_capabilities: [...document.desired.required_capabilities].sort()
+    },
+    resource_envelope: normalizeResourceEnvelopeForDigest(
+      document.resource_envelope
+    ),
+    resource_observations: [...document.resource_observations]
+      .map((observation) => digestObject(observation))
+      .sort(),
+    host_policy_refs: [...document.host_policy_refs]
+      .map((item) => ({ ...item }))
+      .sort(compareHostPolicyRef),
+    provider_bindings: [...document.provider_bindings]
+      .map((binding) => ({
+        ...binding,
+        capability_ids: [...binding.capability_ids].sort(),
+        evidence_refs: [...binding.evidence_refs].sort()
+      }))
+      .sort(compareBindingId)
+  };
+  return digestObject(normalized);
+}
+
+function normalizeResourceEnvelopeForDigest(envelope) {
+  return {
+    ...envelope,
+    required_observation_kinds: [
+      ...envelope.required_observation_kinds
+    ].sort(),
+    degradation_policy_refs: [...envelope.degradation_policy_refs].sort(),
+    fallback_refs: [...envelope.fallback_refs].sort()
+  };
+}
+
+function compareBindingId(left, right) {
+  return left.binding_id.localeCompare(right.binding_id);
+}
+
+function compareHostPolicyRef(left, right) {
+  return (
+    left.policy_kind.localeCompare(right.policy_kind)
+    || left.policy_ref.localeCompare(right.policy_ref)
+  );
 }
 
 function validateDesiredShape(document) {
