@@ -7,6 +7,7 @@ import test from 'node:test';
 import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { GridStore } from '../src/grid/store.mjs';
+import { runSovereignInformationMigrations } from '../src/grid/sovereign-information-migrations.mjs';
 import { SovereignInformationGridStore } from '../src/grid/sovereign-information-store.mjs';
 
 async function fixture(t, Store = GridStore) {
@@ -62,4 +63,16 @@ test('SIEA store creates metadata-minimized state through a separate layered mig
   `).get();
   assert.equal(migration.version, 1);
   assert.equal(migration.name, 'sovereign-information-materialized-state');
+});
+
+test('SIEA extension migration ledger fails closed on checksum drift', async t => {
+  const { store } = await fixture(t, SovereignInformationGridStore);
+  store.db.prepare(`
+    UPDATE sovereign_information_schema_migrations
+    SET checksum = ? WHERE version = 1
+  `).run('0'.repeat(64));
+  assert.throws(
+    () => runSovereignInformationMigrations(store.db),
+    /Sovereign information migration 1 does not match the runtime checksum/
+  );
 });
