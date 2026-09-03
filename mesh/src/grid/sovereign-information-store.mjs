@@ -7,6 +7,7 @@ import {
   newId
 } from '../lib/canonical.mjs';
 import { GridStore } from './store.mjs';
+import { runSovereignInformationMigrations } from './sovereign-information-migrations.mjs';
 import {
   assertIsoTimestamp,
   assertNoUnknownKeys,
@@ -138,6 +139,15 @@ function unavailable() {
 }
 
 export class SovereignInformationGridStore extends GridStore {
+  initialize() {
+    this.sieaReady = false;
+    super.initialize();
+    this.sieaMigrations = runSovereignInformationMigrations(this.db);
+    this.migrateSovereignInformationProtectedColumns();
+    this.sieaReady = true;
+    this.rebuildSovereignInformationMaterializedState();
+  }
+
   constructor({ mutationVerifier, informationAccessDecisionVerifier, ...options }) {
     super(options);
     this.sieaMutationVerifier = typeof mutationVerifier === 'function' ? mutationVerifier : null;
@@ -146,8 +156,19 @@ export class SovereignInformationGridStore extends GridStore {
       : null;
   }
 
+  getStatus() {
+    return {
+      ...super.getStatus(),
+      sovereign_information_schema_version: this.sieaMigrations?.version ?? 0
+    };
+  }
+
   migrateProtectedColumns() {
     super.migrateProtectedColumns();
+    if (this.sieaReady) this.migrateSovereignInformationProtectedColumns();
+  }
+
+  migrateSovereignInformationProtectedColumns() {
     this.transaction(() => {
       const rows = this.db.prepare('SELECT storage_id, object_json FROM siea_objects').all();
       for (const row of rows) {
@@ -170,8 +191,26 @@ export class SovereignInformationGridStore extends GridStore {
   }
 
   rebuildMaterializedState() {
-    this.transaction(() => this.db.exec('DELETE FROM siea_objects'));
-    super.rebuildMaterializedState();
+    if (!this.sieaReady) return super.rebuildMaterializedState();
+    this.transaction(() => this.clearSovereignInformationMaterializedState());
+    return super.rebuildMaterializedState();
+  }
+
+  rebuildSovereignInformationMaterializedState() {
+    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
+    this.transaction(() => {
+      this.clearSovereignInformationMaterializedState();
+      for (const row of rows) {
+        const event = this.decodeEventRow(row);
+        if (EVENT_TO_KIND.has(event.kind) || event.kind === MANDATE_REVOKED_EVENT) {
+          this.applyMaterializedEvent(event);
+        }
+      }
+    });
+  }
+
+  clearSovereignInformationMaterializedState() {
+    this.db.exec('DELETE FROM siea_objects');
   }
 
   appendEvents({ traceId, actor, events }) {
@@ -223,6 +262,9 @@ export class SovereignInformationGridStore extends GridStore {
     }
     if (existing && existing.storage_id !== payload.storage_id) {
       throw new AxiomError('state_conflict', 'Sovereign information logical object changed storage identity', 409);
+    }
+    if (!existing && payload.lifecycle_status !== 'active') {
+      throw new ValidationError('Recorded sovereign information object must begin active');
     }
     const authorization = this.mutationAuthorization(actor, {
       operation: event.kind,
