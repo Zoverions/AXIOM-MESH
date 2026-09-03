@@ -18,7 +18,11 @@ function fixture() {
       controllers: ['institution:hospital'],
       affected_parties: [],
       beneficiaries: ['principal:patient'],
+      permitted_recipients: ['principal:care-team'],
       reviewers: [],
+      auditors: [],
+      decision_users: ['principal:clinician'],
+      challengers: ['principal:patient'],
       disclosure_authorities: ['policy:health-access-v1'],
       retention_authorities: ['policy:health-retention-v1']
     },
@@ -44,12 +48,15 @@ function fixture() {
   };
 }
 
-test('information rights preserve independent subject, author, custody, control, and disclosure relationships', () => {
+test('information rights preserve independent subject, author, custody, control, recipient, decision, challenge, and disclosure relationships', () => {
   const value = validateInformationRightsEnvelope(fixture());
   assert.deepEqual(value.relationships.subjects, ['principal:patient']);
   assert.deepEqual(value.relationships.originators, ['principal:clinician']);
   assert.deepEqual(value.relationships.custodians, ['institution:hospital']);
   assert.deepEqual(value.relationships.controllers, ['institution:hospital']);
+  assert.deepEqual(value.relationships.permitted_recipients, ['principal:care-team']);
+  assert.deepEqual(value.relationships.decision_users, ['principal:clinician']);
+  assert.deepEqual(value.relationships.challengers, ['principal:patient']);
   assert.deepEqual(value.relationships.disclosure_authorities, ['policy:health-access-v1']);
 });
 
