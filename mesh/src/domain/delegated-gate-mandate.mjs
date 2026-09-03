@@ -43,7 +43,8 @@ export function validateDelegatedGateMandate(mandate) {
   assertReference(mandate.mandate_id,'mandate_id');
   assertReference(mandate.grantor,'grantor');
   assertReference(mandate.delegate,'delegate');
-  for (const field of ['domains','actions','purposes','data_classes','destinations','allowed_gate_decisions','escalation_conditions','retention_constraints']) requireStrings(mandate[field],field);
+  for (const field of ['domains','actions','purposes','data_classes','allowed_gate_decisions','escalation_conditions','retention_constraints']) requireStrings(mandate[field],field);
+  for (const [index,destination] of requireStrings(mandate.destinations,'destinations').entries()) assertReference(destination,`destinations[${index}]`);
   assertEnum(mandate.assurance_ceiling,'assurance_ceiling',ASSURANCE_SET);
   assertPlainObject(mandate.resource_ceilings,'resource_ceilings');
   assertNoUnknownKeys(mandate.resource_ceilings,'resource_ceilings',RESOURCE_KEYS);
