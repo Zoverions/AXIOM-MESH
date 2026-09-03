@@ -38,5 +38,6 @@ test('Grid schema migration creates metadata-minimized sovereign information mat
     assert.equal(columns.includes(forbidden), false);
   }
   const migration = store.db.prepare('SELECT version, name FROM schema_migrations WHERE version = 11').get();
-  assert.deepEqual(migration, { version: 11, name: 'sovereign-information-materialized-state' });
+  assert.equal(migration.version, 11);
+  assert.equal(migration.name, 'sovereign-information-materialized-state');
 });
