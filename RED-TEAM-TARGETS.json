@@ -30,7 +30,9 @@
     "kernel",
     "provider-boundary",
     "recovery-rotation",
-    "release-governance"
+    "release-governance",
+    "interoperability-authority",
+    "resilience-degraded-mode"
   ],
   "targets": [
     {
@@ -126,6 +128,32 @@
         "mesh/config/capabilities.json",
         "agent-discovery.json",
         "README.md"
+      ]
+    },
+    {
+      "id": "RT-AUTH-009",
+      "review_scope": "interoperability-authority",
+      "title": "Exact-effect authorization must survive protocol translation",
+      "claim_boundary": "Valid OAuth, WIMSE, MCP, A2A, discovery, delegation, or holder-bound evidence may inform authorization but must not authorize a broader or different effect than the exact current action, structured arguments, destination/resource, purpose, budget, and authority state permit.",
+      "challenge_question": "Can action arguments, audience/resource, destination, purpose, budget, serialization, protocol path, or currentness be changed after an authorization decision while a downstream path still treats the original token, delegation, or protocol metadata as sufficient authority?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "mesh/config/capabilities.json",
+        "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md",
+        "docs/superpowers/plans/2026-09-03-exact-effect-and-degraded-mode-red-team-slice.md"
+      ]
+    },
+    {
+      "id": "RT-RES-010",
+      "review_scope": "resilience-degraded-mode",
+      "title": "Frontier-provider loss must not remove or widen governance controls",
+      "claim_boundary": "Provider diversity is not assumed to equal failure-domain diversity. Total or correlated frontier-cloud inference loss may reduce intelligence, but local policy/currentness, shutdown/revocation, credential custody, evidence verification, audit/recovery access, and operator control must not disappear or widen authority merely because external inference is unavailable.",
+      "challenge_question": "Can simultaneous provider failure, a shared upstream dependency, recovery from outage, or loss of the local model disable mandatory governance controls, revive stale queued work, widen authority, or cause the system to claim redundancy that its known failure domains do not support?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md",
+        "docs/PRODUCTION-GRADE.md",
+        "docs/superpowers/plans/2026-09-03-exact-effect-and-degraded-mode-red-team-slice.md"
       ]
     }
   ],
