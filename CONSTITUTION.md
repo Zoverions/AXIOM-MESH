@@ -63,6 +63,22 @@ enlarge policy authority.
 Permitted high-risk effects require explicit approval from an independent
 authenticated principal.
 
+Consequence classification is not authorization. Higher consequence raises the
+required assurance burden; it does not by itself require denial. A human or
+digital delegate may satisfy a gate only within an explicit applicable mandate
+and policy. End-user interruption is required only where the active
+authority/policy requires it. Until successor assurance semantics are
+implemented, verified, and promoted, existing executable high-risk approval
+requirements remain in force.
+
+Information relationships are likewise non-collapsible: being the subject,
+originator, custodian, controller, reviewer, or institutional holder of
+information does not by itself create every access, disclosure, deletion,
+retention, or reliance right. Provenance establishes attributable history, not
+truth. Consequential systems must preserve challenge, correction,
+contradictory evidence, and explicit uncertainty rather than silently promoting
+the current narrative into fact.
+
 Every mutation must remain attributable, signed, hash-linked, exportable within
 its lawful and consented scope, and subject to a visible recovery and dispute
 path. Installation, discovery, invitation, connection, or payment never grants

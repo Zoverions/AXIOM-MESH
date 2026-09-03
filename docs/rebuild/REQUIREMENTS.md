@@ -186,6 +186,23 @@ state.
 | ECON-07 | No contract or tokenomics module may be described as audited without an independent artifact tied to exact source and deployed bytecode. | Release-claim gate. |
 | ECON-08 | Frontier economic experiments MUST use test value only and MUST NOT custody real user funds. | Environment and key-policy checks. |
 
+## Sovereign information, evidence, privacy, and authority
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| SIEA-01 | Consequential information MUST represent subject, originator, custodian, controller, affected-party, beneficiary, disclosure-authority, and retention-authority relationships independently where applicable; no single relationship creates universal ownership or access. | Information-rights schema/negative tests. |
+| SIEA-02 | Provenance, signature, attestation, institutional status, consensus, or confidence MUST NOT be represented as proof that an assertion is true. | Evidence-schema and forbidden-field tests. |
+| SIEA-03 | Consequential evidence workflows MUST preserve retrievable supporting evidence, contradictory evidence, missing evidence, alternative explanations, challenge, correction, and supersession relationships. | Evidence-context adversarial tests. |
+| SIEA-04 | Known, acquired, integrity-verified, indexed, machine-reviewed, human-reviewed, relied-upon, disclosed, challenged, and adjudicated states MUST remain explicitly distinguishable. | Review-state tests. |
+| SIEA-05 | Consequence classification MUST determine minimum assurance requirements, not permission. High-consequence authorized actions MAY proceed when the applicable authority and required safeguards are satisfied. | Assurance evaluator and authority-separation tests. |
+| SIEA-06 | A delegated gate mandate MUST be purpose-, action-, domain-, data-, destination-, assurance-, time-, and revocation-bounded and MUST NOT silently expand from inferred user preference. | Mandate scope/expiry/revocation tests. |
+| SIEA-07 | Contextual disclosure SHOULD prefer the minimum sufficient claim/proof over unrelated raw profile data, subject to applicable authority, law, and policy. | Projection minimization tests. |
+| SIEA-08 | Identity, credential, reputation, risk, review state, or institutional role MUST NOT independently mint execution authority. | Cross-cutting authority-confusion tests. |
+| SIEA-09 | Personalization data MUST NOT become externally disclosable merely because a local agent possesses or derived it. | Disclosure unknown-field/minimization tests. |
+| SIEA-10 | Collective analytics SHOULD avoid stable cross-domain person identifiers and raw cross-domain dossiers by default; production privacy mechanisms require separate threat-model, reconstruction, composition, and independent-review evidence. | Future privacy-lab promotion gate; current non-claim tests. |
+| SIEA-11 | Domain adapters MAY impose stronger lawful/privacy/safety requirements but MUST NOT bypass or weaken non-waivable substrate protections. | Domain-adapter property tests before promotion. |
+| SIEA-12 | Real Health, Justice, Work/Payroll, Education, Finance, or Government deployments MUST remain disabled until exact legal, privacy, security, accessibility, operational, support, incident, jurisdictional, and independent-review boundaries are evidenced for the deployment. | Domain-specific signed promotion dossier; synthetic evidence is insufficient. |
+
 ## Regulated and high-impact domains
 
 | ID | Requirement | Acceptance evidence |
