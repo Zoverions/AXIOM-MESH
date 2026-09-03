@@ -19,6 +19,10 @@ import {
   validateEvidenceReviewState
 } from '../domain/evidence-graph.mjs';
 import { validateDelegatedGateMandate } from '../domain/delegated-gate-mandate.mjs';
+import {
+  assertInformationAccessDecisionBinds,
+  validateInformationAccessDecision
+} from '../domain/information-access-decision.mjs';
 
 const OBJECT_KINDS = new Set([
   'information-rights',
@@ -35,6 +39,7 @@ const EVENT_TO_KIND = new Map([
   ['siea.evidence-review.recorded', 'evidence-review'],
   ['siea.delegated-mandate.recorded', 'delegated-gate-mandate']
 ]);
+const KIND_TO_EVENT = new Map([...EVENT_TO_KIND.entries()].map(([eventKind, objectKind]) => [objectKind, eventKind]));
 const MANDATE_REVOKED_EVENT = 'siea.delegated-mandate.revoked';
 
 const PAYLOAD_KEYS = new Set([
@@ -55,6 +60,12 @@ const REVOCATION_PAYLOAD_KEYS = new Set([
 const AUTHORIZATION_KEYS = new Set(['authority_ref', 'verifier_ref']);
 const LIFECYCLE = new Set(['active', 'revoked', 'expired', 'superseded']);
 const HEX_64 = /^[a-f0-9]{64}$/;
+const STORAGE_ID = /^siea_[A-Za-z0-9-]{8,100}$/;
+const READ_RIGHTS = new Set(['inspect-metadata', 'inspect-full-content']);
+
+function validateStorageId(value, name = 'storage_id') {
+  return assertString(value, name, { max: 160, pattern: STORAGE_ID });
+}
 
 function validateObject(kind, object) {
   switch (kind) {
@@ -95,7 +106,7 @@ function validateAuthorization(value) {
 function validateMaterializedPayload(kind, payload) {
   assertPlainObject(payload, 'SIEA event payload');
   assertNoUnknownKeys(payload, 'SIEA event payload', PAYLOAD_KEYS);
-  assertReference(payload.storage_id, 'SIEA event payload.storage_id');
+  validateStorageId(payload.storage_id, 'SIEA event payload.storage_id');
   if (!OBJECT_KINDS.has(payload.object_kind) || payload.object_kind !== kind) {
     throw new ValidationError('SIEA event object kind does not match event kind');
   }
@@ -114,12 +125,16 @@ function validateMaterializedPayload(kind, payload) {
 function validateRevocationPayload(payload) {
   assertPlainObject(payload, 'SIEA mandate revocation payload');
   assertNoUnknownKeys(payload, 'SIEA mandate revocation payload', REVOCATION_PAYLOAD_KEYS);
-  assertReference(payload.storage_id, 'SIEA mandate revocation payload.storage_id');
+  validateStorageId(payload.storage_id, 'SIEA mandate revocation payload.storage_id');
   assertReference(payload.mandate_id, 'SIEA mandate revocation payload.mandate_id');
   assertIsoTimestamp(payload.revoked_at, 'SIEA mandate revocation payload.revoked_at');
   assertString(payload.reason, 'SIEA mandate revocation payload.reason', { max: 512 });
   validateAuthorization(payload.authorization);
   return payload;
+}
+
+function unavailable() {
+  throw new AxiomError('siea_object_unavailable', 'Sovereign information object unavailable', 404);
 }
 
 export class SovereignInformationGridStore extends GridStore {
@@ -194,12 +209,25 @@ export class SovereignInformationGridStore extends GridStore {
   prepareSieaEvent(actor, kind, event) {
     assertPlainObject(event, 'SIEA event');
     const payload = assertPlainObject(event.payload, 'SIEA event payload');
+    validateStorageId(payload.storage_id, 'SIEA event payload.storage_id');
     const object = validateObject(kind, payload.object);
     const objectDigest = digestObject(object);
+    const ref = logicalReference(kind, object);
+    const existing = this.#findSieaByLogicalRef(kind, ref);
+    const storageCollision = this.db.prepare('SELECT object_kind FROM siea_objects WHERE storage_id = ?').get(payload.storage_id);
+    if (storageCollision && (!existing || existing.storage_id !== payload.storage_id)) {
+      throw new AxiomError('state_conflict', 'Sovereign information storage identifier is already in use', 409);
+    }
+    if (existing && immutableKind(kind)) {
+      throw new AxiomError('state_conflict', 'Sovereign information object already exists', 409, { object_kind: kind });
+    }
+    if (existing && existing.storage_id !== payload.storage_id) {
+      throw new AxiomError('state_conflict', 'Sovereign information logical object changed storage identity', 409);
+    }
     const authorization = this.mutationAuthorization(actor, {
       operation: event.kind,
       object_kind: kind,
-      object_ref: logicalReference(kind, object),
+      object_ref: ref,
       object_digest: objectDigest
     });
     const preparedPayload = {
@@ -222,9 +250,12 @@ export class SovereignInformationGridStore extends GridStore {
   prepareMandateRevocationEvent(actor, event) {
     assertPlainObject(event, 'SIEA mandate revocation event');
     const raw = assertPlainObject(event.payload, 'SIEA mandate revocation event payload');
-    const current = this.findSieaByLogicalRef('delegated-gate-mandate', raw.mandate_id);
+    const current = this.#findSieaByLogicalRef('delegated-gate-mandate', raw.mandate_id);
     if (!current || current.storage_id !== raw.storage_id) {
       throw new AxiomError('siea_mandate_not_found', 'Delegated gate mandate was not found', 404);
+    }
+    if (current.object.revocation.revoked) {
+      throw new AxiomError('state_conflict', 'Delegated gate mandate is already revoked', 409);
     }
     const authorization = this.mutationAuthorization(actor, {
       operation: MANDATE_REVOKED_EVENT,
@@ -249,9 +280,7 @@ export class SovereignInformationGridStore extends GridStore {
   }
 
   applyMaterializedEvent(event) {
-    if (event.kind === MANDATE_REVOKED_EVENT) {
-      return this.applyMandateRevocation(event);
-    }
+    if (event.kind === MANDATE_REVOKED_EVENT) return this.applyMandateRevocation(event);
     const kind = EVENT_TO_KIND.get(event.kind);
     if (!kind) return super.applyMaterializedEvent(event);
     const payload = validateMaterializedPayload(kind, event.payload);
@@ -294,11 +323,7 @@ export class SovereignInformationGridStore extends GridStore {
     }
     const updated = {
       ...mandate,
-      revocation: {
-        revoked: true,
-        revoked_at: payload.revoked_at,
-        reason: payload.reason
-      }
+      revocation: { revoked: true, revoked_at: payload.revoked_at, reason: payload.reason }
     };
     validateDelegatedGateMandate(updated);
     this.db.prepare(`
@@ -313,7 +338,7 @@ export class SovereignInformationGridStore extends GridStore {
     );
   }
 
-  decodedSieaRows(kind) {
+  #decodedSieaRows(kind) {
     if (kind !== undefined && !OBJECT_KINDS.has(kind)) {
       throw new ValidationError('unsupported sovereign information object kind');
     }
@@ -326,8 +351,8 @@ export class SovereignInformationGridStore extends GridStore {
     }));
   }
 
-  findSieaByLogicalRef(kind, ref) {
-    return this.decodedSieaRows(kind).find(row => logicalReference(kind, row.object) === ref) ?? null;
+  #findSieaByLogicalRef(kind, ref) {
+    return this.#decodedSieaRows(kind).find(row => logicalReference(kind, row.object) === ref) ?? null;
   }
 
   recordInformationRightsEnvelope({ actor, traceId, envelope }) {
@@ -341,7 +366,7 @@ export class SovereignInformationGridStore extends GridStore {
   recordEvidenceLink({ actor, traceId, link }) {
     validateEvidenceLink(link);
     for (const ref of [link.from_ref, link.to_ref]) {
-      if (!this.findSieaByLogicalRef('evidence-assertion', ref)) {
+      if (!this.#findSieaByLogicalRef('evidence-assertion', ref)) {
         throw new ValidationError('Evidence link endpoint is not durably present');
       }
     }
@@ -364,23 +389,21 @@ export class SovereignInformationGridStore extends GridStore {
     assertReference(mandateId, 'mandateId');
     assertIsoTimestamp(revokedAt, 'revokedAt');
     assertString(reason, 'reason', { max: 512 });
-    const current = this.findSieaByLogicalRef('delegated-gate-mandate', mandateId);
+    const current = this.#findSieaByLogicalRef('delegated-gate-mandate', mandateId);
     if (!current) {
       throw new AxiomError('siea_mandate_not_found', 'Delegated gate mandate was not found', 404);
     }
     if (current.object.revocation.revoked) {
-      if (
-        current.object.revocation.revoked_at === revokedAt
-        && current.object.revocation.reason === reason
-      ) {
-        const existingEvent = this.listEvents({ after: 0, limit: 500 }).find(event => (
-          event.kind === MANDATE_REVOKED_EVENT
-          && event.subject === current.storage_id
-          && event.payload.mandate_id === mandateId
-          && event.payload.revoked_at === revokedAt
-          && event.payload.reason === reason
-        ));
-        if (existingEvent) return existingEvent;
+      if (current.object.revocation.revoked_at === revokedAt && current.object.revocation.reason === reason) {
+        const row = this.db.prepare(`
+          SELECT * FROM events
+          WHERE kind = ? AND subject = ?
+          ORDER BY seq DESC LIMIT 1
+        `).get(MANDATE_REVOKED_EVENT, current.storage_id);
+        if (row) {
+          const existingEvent = this.decodeEventRow(row);
+          if (existingEvent.payload.revoked_at === revokedAt && existingEvent.payload.reason === reason) return existingEvent;
+        }
       }
       throw new AxiomError('state_conflict', 'Delegated gate mandate is already revoked with different state', 409);
     }
@@ -404,7 +427,7 @@ export class SovereignInformationGridStore extends GridStore {
   getDelegatedGateMandateEffectiveState(mandateId, { now }) {
     assertReference(mandateId, 'mandateId');
     assertIsoTimestamp(now, 'now');
-    const row = this.findSieaByLogicalRef('delegated-gate-mandate', mandateId);
+    const row = this.#findSieaByLogicalRef('delegated-gate-mandate', mandateId);
     if (!row) {
       throw new AxiomError('siea_mandate_not_found', 'Delegated gate mandate was not found', 404);
     }
@@ -412,18 +435,107 @@ export class SovereignInformationGridStore extends GridStore {
     if (row.object.revocation.revoked || row.lifecycle_status === 'revoked') status = 'revoked';
     else if (Date.parse(now) < Date.parse(row.object.starts_at)) status = 'not-started';
     else if (Date.parse(now) >= Date.parse(row.object.expires_at)) status = 'expired';
+    return { status, mandate: row.object, object_digest: row.object_digest, storage_id: row.storage_id };
+  }
+
+  readSovereignInformationObject({ requester, objectRef, purpose, right, decision, now }) {
+    if (!READ_RIGHTS.has(right)) throw new ValidationError('Sovereign information read right is unsupported');
+    const row = this.#authorizeRead({ requester, objectRef, purpose, right, decision, now });
+    return this.#projectAuthorizedRow(row, right);
+  }
+
+  listAuthorizedSovereignInformation({ requester, purpose, right, decisions, now, limit = 100 }) {
+    if (!READ_RIGHTS.has(right)) throw new ValidationError('Sovereign information read right is unsupported');
+    if (!Array.isArray(decisions) || decisions.length > 100) {
+      throw new ValidationError('decisions must be an array with at most 100 items');
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new ValidationError('limit must be an integer from 1 to 100');
+    }
+    const authorized = [];
+    const seen = new Set();
+    for (const decision of decisions) {
+      let objectRef;
+      try {
+        objectRef = validateInformationAccessDecision(decision).object_ref;
+      } catch {
+        unavailable();
+      }
+      const row = this.#authorizeRead({ requester, objectRef, purpose, right, decision, now });
+      if (seen.has(row.storage_id)) continue;
+      seen.add(row.storage_id);
+      authorized.push(row);
+    }
+    authorized.sort((left, rightRow) => {
+      const leftRef = logicalReference(left.object_kind, left.object);
+      const rightRef = logicalReference(rightRow.object_kind, rightRow.object);
+      return leftRef.localeCompare(rightRef);
+    });
+    const truncated = authorized.length > limit;
     return {
-      status,
-      mandate: row.object,
-      object_digest: row.object_digest,
-      storage_id: row.storage_id
+      items: authorized.slice(0, limit).map(row => this.#projectAuthorizedRow(row, right)),
+      truncated
     };
+  }
+
+  #authorizeRead({ requester, objectRef, purpose, right, decision, now }) {
+    if (!this.informationAccessDecisionVerifier) {
+      throw new ValidationError('SIEA access-decision verifier is unavailable');
+    }
+    let validated;
+    try {
+      validated = validateInformationAccessDecision(decision);
+      const verification = this.informationAccessDecisionVerifier(validated, {
+        requester,
+        object_ref: objectRef,
+        purpose,
+        right,
+        now
+      });
+      assertPlainObject(verification, 'SIEA access-decision verification');
+      if (verification.valid !== true) unavailable();
+    } catch (error) {
+      if (error instanceof AxiomError && error.code === 'siea_object_unavailable') throw error;
+      unavailable();
+    }
+
+    const candidates = this.#decodedSieaRows().filter(row => (
+      logicalReference(row.object_kind, row.object) === objectRef
+      && row.object_digest === validated.object_digest
+    ));
+    if (candidates.length !== 1) unavailable();
+    const row = candidates[0];
+    try {
+      assertInformationAccessDecisionBinds(validated, {
+        requester,
+        object_ref: objectRef,
+        purpose,
+        right,
+        object_digest: row.object_digest
+      }, { now });
+    } catch {
+      unavailable();
+    }
+    return row;
+  }
+
+  #projectAuthorizedRow(row, right) {
+    const metadata = {
+      object_ref: logicalReference(row.object_kind, row.object),
+      object_kind: row.object_kind,
+      object_digest: row.object_digest,
+      lifecycle_status: row.lifecycle_status,
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+    if (right === 'inspect-full-content') return { ...metadata, object: row.object };
+    return metadata;
   }
 
   recordObject({ actor, traceId, kind, object }) {
     validateObject(kind, object);
     const ref = logicalReference(kind, object);
-    const existing = this.findSieaByLogicalRef(kind, ref);
+    const existing = this.#findSieaByLogicalRef(kind, ref);
     const objectDigest = digestObject(object);
     if (existing && immutableKind(kind)) {
       throw new AxiomError('state_conflict', 'Sovereign information object already exists', 409, { object_kind: kind });
@@ -432,7 +544,7 @@ export class SovereignInformationGridStore extends GridStore {
       throw new AxiomError('state_conflict', 'Sovereign information object already exists unchanged', 409, { object_kind: kind });
     }
     const storageId = existing?.storage_id ?? newId('siea');
-    const eventKind = [...EVENT_TO_KIND.entries()].find(([, value]) => value === kind)?.[0];
+    const eventKind = KIND_TO_EVENT.get(kind);
     if (!eventKind) throw new ValidationError('Sovereign information event mapping is unavailable');
     const appended = this.appendEvents({
       traceId,
