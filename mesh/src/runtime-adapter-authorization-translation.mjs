@@ -1,6 +1,8 @@
 import {
   ValidationError,
-  assertPlainObject
+  assertPlainObject,
+  canonicalJson,
+  sha256
 } from './lib/canonical.mjs';
 import {
   createSyntheticReferenceRequest
@@ -12,13 +14,16 @@ const SUPPORTED_EXTERNAL_TRANSLATION_FIELDS = Object.freeze([
   'idempotencyKey',
   'inputSha256',
   'principalId',
-  'requestId'
+  'requestId',
+  'structuredArguments'
 ]);
 const SUPPORTED_EXTERNAL_TRANSLATION_FIELD_SET = new Set(
   SUPPORTED_EXTERNAL_TRANSLATION_FIELDS
 );
 
 const AUTHORIZATION_DETAIL_TYPE = 'axiom-runtime-effect.v1';
+const EFFECT_INPUT_COMMITMENT_SCHEMA = 'axiom-effect-input-commitment.v1';
+const REFERENCE_INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
 const SUPPORTED_AUTHORIZATION_DETAIL_FIELDS = Object.freeze([
   'axiom_action',
   'credential_handles',
@@ -42,6 +47,18 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
   if (unsupported.length > 0) {
     throw new ValidationError(
       `unsupported authorization translation fields: ${unsupported.join(', ')}`
+    );
+  }
+
+  const hasStructuredArguments = Object.hasOwn(source, 'structuredArguments');
+  if (hasStructuredArguments && Object.hasOwn(source, 'inputSha256')) {
+    throw new ValidationError(
+      'structuredArguments and inputSha256 cannot both be supplied'
+    );
+  }
+  if (hasStructuredArguments && !Object.hasOwn(source, 'authorization_details')) {
+    throw new ValidationError(
+      'structuredArguments require recognized authorization_details'
     );
   }
 
@@ -88,10 +105,22 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
 
   const {
     authorization_details: ignoredAuthorizationDetails,
+    structuredArguments,
     ...requestMechanics
   } = source;
   void ignoredAuthorizationDetails;
-  const nativeRequest = createSyntheticReferenceRequest(requestMechanics);
+
+  const inputSha256 = hasStructuredArguments
+    ? createStructuredInputCommitment({
+        axiomAction: detail.axiom_action,
+        structuredArguments
+      })
+    : requestMechanics.inputSha256;
+
+  const nativeRequest = createSyntheticReferenceRequest({
+    ...requestMechanics,
+    ...(inputSha256 === undefined ? {} : { inputSha256 })
+  });
   return {
     ...nativeRequest,
     runtime_operation: detail.runtime_operation,
@@ -100,4 +129,17 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
     destinations: detail.destinations,
     credential_handles: detail.credential_handles
   };
+}
+
+function createStructuredInputCommitment({ axiomAction, structuredArguments }) {
+  const argumentsObject = assertPlainObject(
+    structuredArguments,
+    'structured arguments'
+  );
+  return sha256(canonicalJson({
+    schema: EFFECT_INPUT_COMMITMENT_SCHEMA,
+    axiom_action: axiomAction,
+    input_schema_ref: REFERENCE_INPUT_SCHEMA_REF,
+    arguments: argumentsObject
+  }));
 }
