@@ -70,6 +70,14 @@ test('validates a private authority-neutral non-transferable derived claim', () 
   );
 });
 
+test('accepts stable lowercase underscore reason codes used by contextual evaluation', () => {
+  const value = validateDerivedReputationClaim(claim({
+    result: 'unresolved',
+    reason_codes: ['criterion_completeness_unverified']
+  }));
+  assert.deepEqual(value.reason_codes, ['criterion_completeness_unverified']);
+});
+
 test('requires complete criterion evidence before representing not-met', () => {
   assert.throws(
     () => validateDerivedReputationClaim(claim({ result: 'not-met' })),
