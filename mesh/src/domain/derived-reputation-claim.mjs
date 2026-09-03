@@ -19,7 +19,7 @@ export const DERIVED_REPUTATION_CLAIM_ENVELOPE_SCHEMA = 'axiom-derived-reputatio
 
 const DOMAIN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const HEX_256 = /^[a-f0-9]{64}$/;
-const REASON_CODE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const REASON_CODE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
 const RESULTS = new Set(['met', 'not-demonstrated', 'not-met', 'unresolved']);
 const COMPLETENESS = new Set(['bounded-selected-evidence', 'verified-complete-for-criterion']);
 const ROOT_KEYS = new Set([
