@@ -71,7 +71,9 @@ export function buildEvidenceContext({assertions,links,focus_ids}) {
     linkIds.add(link.link_id);
     if (!assertionIds.has(link.from_ref) || !assertionIds.has(link.to_ref)) throw new ValidationError('evidence link endpoint is missing from assertions');
   }
-  const included = new Set(assertUniqueStrings(focus_ids,'focus_ids',{min:1}));
+  const focusIds = assertUniqueStrings(focus_ids,'focus_ids',{min:1});
+  for (const [index,id] of focusIds.entries()) assertReference(id,`focus_ids[${index}]`);
+  const included = new Set(focusIds);
   for (const id of included) if (!assertionIds.has(id)) throw new ValidationError(`unknown focus_id ${id}`);
   let changed = true;
   while (changed) {
