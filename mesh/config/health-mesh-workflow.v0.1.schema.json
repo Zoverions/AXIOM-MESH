@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:health-mesh-workflow:v0.1",
+  "title": "AXIOM Health Mesh Workflow v0.1",
+  "description": "Planning-only Health workflow profile. It grants no runtime or clinical authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "workflow_id",
+    "maximum_autonomy_level",
+    "clinical_envelope_ref",
+    "steps",
+    "escalation_policy",
+    "runtime_authority_granted",
+    "clinical_authorization_claimed"
+  ],
+  "properties": {
+    "schema": {"const": "axiom-health-mesh-workflow.v0.1"},
+    "workflow_id": {"type": "string", "pattern": "^health-workflow:[a-z0-9._-]+$"},
+    "maximum_autonomy_level": {"enum": ["H0", "H1", "H2", "H3", "H4", "H5"]},
+    "clinical_envelope_ref": {"type": "string", "minLength": 1, "maxLength": 512},
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step_id", "kind", "autonomy_level", "consequential", "separate_authority_required"],
+        "properties": {
+          "step_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+          "kind": {"enum": ["observe", "analyze", "recommend", "supervised-effect", "routine-effect", "emergency-request", "review", "handoff"]},
+          "autonomy_level": {"enum": ["H0", "H1", "H2", "H3", "H4", "H5"]},
+          "consequential": {"type": "boolean"},
+          "separate_authority_required": {"type": "boolean"},
+          "supervision_required": {"type": "boolean"},
+          "device_refs": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 512}, "uniqueItems": true},
+          "model_refs": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 512}, "uniqueItems": true}
+        }
+      }
+    },
+    "escalation_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supervision_loss_cannot_raise_autonomy",
+        "emergency_authority_is_separate",
+        "uncertain_physical_effects_are_not_retried"
+      ],
+      "properties": {
+        "supervision_loss_cannot_raise_autonomy": {"const": true},
+        "emergency_authority_is_separate": {"const": true},
+        "uncertain_physical_effects_are_not_retried": {"const": true},
+        "safe_failure_states": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {"enum": ["halt", "human-review", "safe-local-shutdown", "reconcile-uncertain-outcome"]},
+          "uniqueItems": true
+        }
+      }
+    },
+    "runtime_authority_granted": {"const": false},
+    "clinical_authorization_claimed": {"const": false}
+  }
+}
