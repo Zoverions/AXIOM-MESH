@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "axiom-desired-deployment.v0",
+  "$id": "https://axiom.invalid/schemas/desired-deployment-v0.schema.json",
   "title": "AXIOM Desired Deployment v0",
   "type": "object",
   "additionalProperties": false,

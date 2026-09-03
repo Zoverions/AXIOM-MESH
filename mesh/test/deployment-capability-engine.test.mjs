@@ -471,9 +471,9 @@ test('schemas lock exact inert identities and executable boundary', async () => 
     readSchema('../config/deployment-provider-binding-v0.schema.json'),
     readSchema('../config/deployment-spec-v0.schema.json')
   ]);
-  assert.equal(desiredSchema.$id, 'axiom-desired-deployment.v0');
-  assert.equal(bindingSchema.$id, 'axiom-deployment-provider-binding.v0');
-  assert.equal(specSchema.$id, 'axiom-deployment-spec.v0');
+  assert.equal(desiredSchema.$id, 'https://axiom.invalid/schemas/desired-deployment-v0.schema.json');
+  assert.equal(bindingSchema.$id, 'https://axiom.invalid/schemas/deployment-provider-binding-v0.schema.json');
+  assert.equal(specSchema.$id, 'https://axiom.invalid/schemas/deployment-spec-v0.schema.json');
   for (const schema of [desiredSchema, bindingSchema, specSchema]) {
     assert.equal(schema.additionalProperties, false);
     assert.equal(schema.properties.authority_effect.const, 'none');

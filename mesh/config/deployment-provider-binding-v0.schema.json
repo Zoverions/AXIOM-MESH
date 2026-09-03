@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "axiom-deployment-provider-binding.v0",
+  "$id": "https://axiom.invalid/schemas/deployment-provider-binding-v0.schema.json",
   "title": "AXIOM Deployment Provider Binding v0",
   "type": "object",
   "additionalProperties": false,
