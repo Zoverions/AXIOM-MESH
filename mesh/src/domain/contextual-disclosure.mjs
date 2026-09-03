@@ -16,8 +16,8 @@ function validateClaim(claim) {
   assertNoUnknownKeys(claim,'available claim',CLAIM_KEYS);
   assertReference(claim.claim_id,'claim_id');
   assertString(claim.predicate,'predicate',{max:256});
-  if (claim.value === undefined || typeof claim.value === 'function' || typeof claim.value === 'symbol') throw new ValidationError('claim value is invalid');
-  for (const [i,ref] of assertUniqueStrings(claim.evidence_refs,'evidence_refs').entries()) assertReference(ref,`evidence_refs[${i}]`);
+  if (typeof claim.value !== 'boolean') throw new ValidationError('claim value must be boolean in Slice 1');
+  for (const [i,ref] of assertUniqueStrings(claim.evidence_refs,'evidence_refs',{min:1}).entries()) assertReference(ref,`evidence_refs[${i}]`);
   validateFieldNames(claim.derived_from_fields,'derived_from_fields');
   return claim;
 }
@@ -62,7 +62,15 @@ export function validateContextualDisclosureResult(result) {
 export function selectMinimumSufficientProjection({request,available_claims,available_fields,policy}) {
   validateContextualDisclosureRequest(request);
   if (!Array.isArray(available_claims)) throw new ValidationError('available_claims must be an array');
-  for (const claim of available_claims) validateClaim(claim);
+  const claimIds = new Set();
+  const predicates = new Set();
+  for (const claim of available_claims) {
+    validateClaim(claim);
+    if (claimIds.has(claim.claim_id)) throw new ValidationError(`duplicate claim_id ${claim.claim_id}`);
+    if (predicates.has(claim.predicate)) throw new ValidationError(`duplicate predicate ${claim.predicate} is ambiguous`);
+    claimIds.add(claim.claim_id);
+    predicates.add(claim.predicate);
+  }
   assertPlainObject(available_fields,'available_fields');
   validatePolicy(policy);
 
@@ -70,7 +78,7 @@ export function selectMinimumSufficientProjection({request,available_claims,avai
   const selected = [];
   let satisfiedCount = 0;
   for (const predicate of request.required_claims) {
-    const claim = available_claims.find(item => item.predicate === predicate && allowedClaims.has(item.predicate));
+    const claim = available_claims.find(item => item.predicate === predicate && item.value === true && allowedClaims.has(item.predicate));
     if (claim) { selected.push(claim.claim_id); satisfiedCount += 1; }
   }
 
