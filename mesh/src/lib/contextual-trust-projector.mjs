@@ -81,11 +81,11 @@ export class ContextualTrustProjector {
     });
     const { projection_result, presentation_envelope } = buildReputationPresentation({
       query,
-      claimEnvelope: derived_claim_envelope,
+      derivedClaimEnvelope: derived_claim_envelope,
       claimPublicKey: this.claimSigner.publicKey,
       disclosureRequest,
       projectionPolicy,
-      presenterIdentity: this.presentationSigner,
+      signer: this.presentationSigner,
       now
     });
 
