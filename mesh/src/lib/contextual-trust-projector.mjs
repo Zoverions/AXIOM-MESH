@@ -71,7 +71,8 @@ export class ContextualTrustProjector {
       query,
       objects,
       criterionEvaluator,
-      accessDecisionDigests
+      accessDecisionDigests,
+      now
     });
     const derived_claim_envelope = signDerivedReputationClaim(claim, this.claimSigner);
     const { projection_result, presentation_envelope } = buildReputationPresentation({
