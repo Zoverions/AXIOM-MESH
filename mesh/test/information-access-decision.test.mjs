@@ -50,7 +50,7 @@ test('access decision rejects unknown fields and execution-authority shortcuts',
   assert.throws(() => validateInformationAccessDecision({ ...decision(), execution_authority: ['read:anything'] }), /execution authority/);
 });
 
-test('only exact unexpired allow decisions are consumable', () => {
+test('only exact currently-active allow decisions are consumable', () => {
   const value = assertInformationAccessDecisionBinds(decision(), expected, {
     now: '2026-09-03T12:05:00.000Z'
   });
@@ -76,6 +76,9 @@ test('only exact unexpired allow decisions are consumable', () => {
   assert.throws(() => assertInformationAccessDecisionBinds(
     decision({ decision: 'uncertain' }), expected, { now: '2026-09-03T12:05:00.000Z' }
   ), /does not allow access/);
+  assert.throws(() => assertInformationAccessDecisionBinds(
+    decision(), expected, { now: '2026-09-03T11:59:59.999Z' }
+  ), /not active yet/);
   assert.throws(() => assertInformationAccessDecisionBinds(
     decision(), expected, { now: '2026-09-03T12:10:00.000Z' }
   ), /expired/);
