@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/desired-deployment-v0.schema.json",
+  "title": "AXIOM Desired Deployment v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "deployment_id",
+    "target_host_ref",
+    "roles",
+    "required_capabilities",
+    "preferences",
+    "created_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-desired-deployment.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-desire" },
+    "deployment_id": { "$ref": "#/$defs/id" },
+    "target_host_ref": { "$ref": "#/$defs/id" },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "personal-node",
+          "cognition-provider",
+          "storage-provider",
+          "backup-provider",
+          "compute-worker",
+          "agent-execution-worker",
+          "interface-endpoint",
+          "embodiment-endpoint",
+          "infrastructure-only"
+        ]
+      }
+    },
+    "required_capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "locality",
+        "priority",
+        "reuse_existing",
+        "offline_required",
+        "allow_replacement"
+      ],
+      "properties": {
+        "locality": {
+          "enum": ["local-only", "prefer-local", "hybrid", "cloud-allowed"]
+        },
+        "priority": {
+          "enum": ["cost", "balanced", "performance", "intelligence"]
+        },
+        "reuse_existing": { "type": "boolean" },
+        "offline_required": { "type": "boolean" },
+        "allow_replacement": { "type": "boolean" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+    }
+  }
+}
