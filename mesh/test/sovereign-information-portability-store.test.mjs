@@ -71,7 +71,15 @@ async function fixture(t, options = {}) {
 }
 
 function record(store, ref) {
-  return store.recordInformationRightsEnvelope({ actor: 'principal:author', traceId: `trace:${ref.replaceAll(':', '-')}`, envelope: rights(ref) });
+  const receipt = store.recordInformationRightsEnvelope({
+    actor: 'principal:author',
+    traceId: `trace:${ref.replaceAll(':', '-')}`,
+    envelope: rights(ref)
+  });
+  const row = store.db.prepare(
+    'SELECT object_digest FROM siea_objects WHERE storage_id = ?'
+  ).get(receipt.subject);
+  return { receipt, object_digest: row.object_digest };
 }
 
 test('export requires one exact verified export decision per returned object and leaks no denied-object count', async t => {
@@ -79,7 +87,7 @@ test('export requires one exact verified export decision per returned object and
   const visible = record(store, 'record:visible');
   record(store, 'record:hidden');
   const bundle = store.exportSovereignInformation({
-    requester: 'principal:user', purpose: 'personal-export', decisions: [exportDecision('record:visible', visible.payload.object_digest)], now: at, createdAt: at
+    requester: 'principal:user', purpose: 'personal-export', decisions: [exportDecision('record:visible', visible.object_digest)], now: at, createdAt: at
   });
   assert.equal(bundle.records.length, 1);
   assert.equal(bundle.records[0].object.object_ref, 'record:visible');
@@ -91,12 +99,12 @@ test('export fails closed without verifier or with an invalid per-object decisio
   const noVerifier = await fixture(t, { noAccessVerifier: true });
   const receipt = record(noVerifier, 'record:no-verifier');
   assert.throws(() => noVerifier.exportSovereignInformation({
-    requester: 'principal:user', purpose: 'personal-export', decisions: [exportDecision('record:no-verifier', receipt.payload.object_digest)], now: at, createdAt: at
+    requester: 'principal:user', purpose: 'personal-export', decisions: [exportDecision('record:no-verifier', receipt.object_digest)], now: at, createdAt: at
   }), /access-decision verifier.*unavailable/i);
 
   const store = await fixture(t);
   const good = record(store, 'record:wrong-digest');
-  const bad = { ...exportDecision('record:wrong-digest', good.payload.object_digest), object_digest: 'b'.repeat(64) };
+  const bad = { ...exportDecision('record:wrong-digest', good.object_digest), object_digest: 'b'.repeat(64) };
   assert.throws(() => store.exportSovereignInformation({ requester: 'principal:user', purpose: 'personal-export', decisions: [bad], now: at, createdAt: at }), /object unavailable|access decision/i);
 });
 
