@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { CONTEXTUAL_DISCLOSURE_REQUEST_SCHEMA, selectMinimumSufficientProjection, validateContextualDisclosureRequest } from '../src/domain/contextual-disclosure.mjs';
+
+function request(){return {schema:CONTEXTUAL_DISCLOSURE_REQUEST_SCHEMA,request_id:'disclosure-request:1',requester:'institution:clinic',subject_ref:'principal:professional',purpose:'professional-access-check',required_claims:['professional-licence-active'],requested_fields:['licence_number','home_address'],verifier_policy_ref:'policy:clinic-access-v1',created_at:'2026-09-03T12:00:00.000Z'};}
+
+test('minimum sufficient projection satisfies a credential requirement without revealing unrelated raw profile fields',()=>{const result=selectMinimumSufficientProjection({request:request(),available_claims:[{claim_id:'claim:licensed',predicate:'professional-licence-active',value:true,evidence_refs:['credential:licence-1'],derived_from_fields:['licence_number','licence_status']}],available_fields:{licence_number:'SECRET-LICENCE-NUMBER',home_address:'PRIVATE-HOME-ADDRESS'},policy:{allowed_claims:['professional-licence-active'],allowed_raw_fields:[],required_authority_ref:'policy:disclosure-v1'}});assert.equal(result.status,'satisfied');assert.deepEqual(result.selected_claim_ids,['claim:licensed']);assert.deepEqual(result.disclosed_fields,{});assert.deepEqual(new Set(result.withheld_fields),new Set(['licence_number','home_address']));assert.equal(result.authority_ref,'policy:disclosure-v1');});
+
+test('requester desire does not justify raw disclosure without policy authority',()=>{const result=selectMinimumSufficientProjection({request:request(),available_claims:[],available_fields:{home_address:'PRIVATE-HOME-ADDRESS'},policy:{allowed_claims:[],allowed_raw_fields:[],required_authority_ref:'policy:disclosure-v1'}});assert.equal(result.status,'escalation');assert.deepEqual(result.disclosed_fields,{});assert.ok(result.reason_codes.includes('required_claim_unavailable'));});
+
+test('contextual disclosure request cannot carry an execution grant',()=>{assert.throws(()=>validateContextualDisclosureRequest({...request(),capability_grant:'grant:1'}),/execution authority/);});
