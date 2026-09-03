@@ -86,7 +86,10 @@ function record(store, ref, subject) {
     traceId: `trace:${ref.replaceAll(':', '-')}`,
     envelope: envelope(ref, subject)
   });
-  return { object_digest: receipt.payload.object_digest };
+  const row = store.db.prepare(
+    'SELECT object_digest FROM siea_objects WHERE storage_id = ?'
+  ).get(receipt.subject);
+  return { object_digest: row.object_digest };
 }
 
 test('read fails closed when the independent access-decision verifier is unavailable', async t => {
