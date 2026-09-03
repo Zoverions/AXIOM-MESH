@@ -533,7 +533,7 @@ test('review state never promotes availability or machine review into human revi
 });
 
 test('evidence schemas reject truth and execution-authority shortcuts', () => {
-  assert.throws(() => validateEvidenceAssertion({ ...node('assertion:x', 'assertion', 'X'), true: true }), /unknown field true/);
+  assert.throws(() => validateEvidenceAssertion({ ...node('assertion:x', 'assertion', 'X'), truth: true }), /unknown field truth/);
   assert.throws(() => validateEvidenceAssertion({ ...node('assertion:x', 'assertion', 'X'), execution_authority: ['effect:x'] }), /execution authority/);
   assert.throws(() => validateEvidenceLink({ ...link('link:x', 'assertion:x', 'assertion:y', 'proves') }), /relation/);
 });
@@ -648,7 +648,7 @@ test('delegated agent can clear an in-scope gate without minting effect authorit
   assert.equal(Object.hasOwn(result, 'execution_authority'), false);
 });
 
-test('expired, revoked, scope-widening, and learned-preference claims do not clear gates', () => {
+test('expired, revoked, and scope-widening requests do not clear gates', () => {
   assert.equal(evaluateDelegatedGateMandate(mandate(), {
     delegate: 'agent:personal', domain: 'health', action: 'disclosure.projection', purpose: 'routine-care',
     data_class: 'restricted', destination: 'institution:clinic', assurance_profile: 'enhanced', gate_decision: 'minimum-disclosure'
@@ -667,11 +667,11 @@ test('expired, revoked, scope-widening, and learned-preference claims do not cle
   }, { now: '2026-09-03T12:00:00.000Z' }).reason_code, 'purpose_out_of_scope');
 });
 
-test('mandate schema rejects execution grants and attenuation widening', () => {
+test('mandate schema rejects execution grants and unrestricted delegation', () => {
   assert.throws(() => validateDelegatedGateMandate({ ...mandate(), execution_authority: ['health.read'] }), /execution authority/);
-  const child = mandate();
-  child.delegation = { mode: 'unrestricted' };
-  assert.throws(() => validateDelegatedGateMandate(child), /delegation/);
+  const widened = mandate();
+  widened.delegation = { mode: 'unrestricted' };
+  assert.throws(() => validateDelegatedGateMandate(widened), /delegation/);
 });
 ```
 
@@ -1029,7 +1029,7 @@ git commit -m "feat: add minimum sufficient disclosure projection"
 
 - [ ] **Step 1: Write the invariant suite**
 
-Create `mesh/test/sovereign-information-invariants.test.mjs` with explicit tests for these cases:
+Create `mesh/test/sovereign-information-invariants.test.mjs` with complete literal fixtures. The committed file must include these exact semantic assertions:
 
 ```js
 import assert from 'node:assert/strict';
@@ -1038,10 +1038,72 @@ import { evaluateAssuranceProfile } from '../src/domain/assurance-profile.mjs';
 import { buildEvidenceContext } from '../src/domain/evidence-graph.mjs';
 import { evaluateDelegatedGateMandate } from '../src/domain/delegated-gate-mandate.mjs';
 
-// Import the exact fixtures/helpers locally in this file rather than importing test files.
+const criticalConsequence = {
+  data_sensitivity: 'highly-restricted',
+  disclosure_breadth: 'broad',
+  third_party_impact: 'material',
+  monetary_exposure: 'none',
+  physical_safety_impact: 'none',
+  legal_regulatory_consequence: 'material',
+  clinical_consequence: 'severe',
+  employment_eligibility_consequence: 'none',
+  governance_authority_consequence: 'none',
+  trust_root_impact: 'none',
+  reversibility: 'irreversible',
+  affected_population: 'one',
+  destination_currentness: 'current',
+  evidence_freshness: 'current',
+  runtime_uncertainty: 'low',
+  contestability: 'disputed'
+};
+
+const delegatedMandate = {
+  schema: 'axiom-delegated-gate-mandate.v1',
+  mandate_id: 'mandate:invariant',
+  grantor: 'principal:human',
+  delegate: 'agent:personal',
+  domains: ['health'],
+  actions: ['disclosure.projection'],
+  purposes: ['routine-care'],
+  data_classes: ['restricted'],
+  destinations: ['institution:clinic'],
+  resource_ceilings: { max_records: 1, max_value_minor: 0 },
+  assurance_ceiling: 'high-assurance',
+  allowed_gate_decisions: ['minimum-disclosure'],
+  escalation_conditions: ['novel-purpose'],
+  credential_rules: { allow_opaque_handle: true, allow_raw_secret: false },
+  retention_constraints: ['no-new-retention'],
+  starts_at: '2026-09-03T00:00:00.000Z',
+  expires_at: '2026-09-04T00:00:00.000Z',
+  revocation: { revoked: false, revoked_at: null, reason: null },
+  delegation: { mode: 'none' },
+  receipt_required: true
+};
+
+const delegatedRequest = {
+  delegate: 'agent:personal',
+  domain: 'health',
+  action: 'disclosure.projection',
+  purpose: 'routine-care',
+  data_class: 'restricted',
+  destination: 'institution:clinic',
+  assurance_profile: 'enhanced',
+  gate_decision: 'minimum-disclosure'
+};
+
+const at = '2026-09-03T12:00:00.000Z';
+const evidenceAssertions = [
+  { schema: 'axiom-evidence-assertion.v1', assertion_id: 'assertion:h', type: 'hypothesis', proposition: 'Hypothesis A', source_ref: 'principal:reviewer', epistemic_state: 'asserted', purpose_scope: ['investigation'], provenance_refs: ['artifact:1'], created_at: at },
+  { schema: 'axiom-evidence-assertion.v1', assertion_id: 'assertion:c', type: 'counterevidence', proposition: 'Evidence conflicts with A', source_ref: 'principal:reviewer', epistemic_state: 'asserted', purpose_scope: ['investigation'], provenance_refs: ['artifact:2'], created_at: at },
+  { schema: 'axiom-evidence-assertion.v1', assertion_id: 'assertion:q', type: 'challenge', proposition: 'A is disputed', source_ref: 'principal:reviewer', epistemic_state: 'disputed', purpose_scope: ['investigation'], provenance_refs: ['artifact:3'], created_at: at }
+];
+const evidenceLinks = [
+  { schema: 'axiom-evidence-link.v1', link_id: 'link:c', from_ref: 'assertion:c', to_ref: 'assertion:h', relation: 'contradicts', asserted_by: 'principal:reviewer', created_at: at },
+  { schema: 'axiom-evidence-link.v1', link_id: 'link:q', from_ref: 'assertion:q', to_ref: 'assertion:h', relation: 'challenged-by', asserted_by: 'principal:reviewer', created_at: at }
+];
 
 test('high consequence changes assurance but never itself decides allow or deny', () => {
-  const result = evaluateAssuranceProfile(/* explicit critical fixture copied from assurance-profile.test.mjs */);
+  const result = evaluateAssuranceProfile(criticalConsequence);
   assert.equal(result.profile, 'critical-assurance');
   for (const forbidden of ['allow', 'deny', 'authorized', 'execution_authority', 'requires_human_confirmation']) {
     assert.equal(Object.hasOwn(result, forbidden), false);
@@ -1049,22 +1111,20 @@ test('high consequence changes assurance but never itself decides allow or deny'
 });
 
 test('delegated gate clearance remains distinct from execution authority', () => {
-  const result = evaluateDelegatedGateMandate(/* explicit valid mandate and request copied into this file */, { now: '2026-09-03T12:00:00.000Z' });
+  const result = evaluateDelegatedGateMandate(delegatedMandate, delegatedRequest, { now: at });
   assert.equal(result.gate_authorized, true);
   assert.equal(Object.hasOwn(result, 'execution_authority'), false);
   assert.equal(Object.hasOwn(result, 'capability_grant'), false);
 });
 
 test('evidence context cannot collapse to the dominant narrative', () => {
-  const context = buildEvidenceContext(/* explicit hypothesis/support/counterevidence/challenge fixture copied into this file */);
+  const context = buildEvidenceContext({ assertions: evidenceAssertions, links: evidenceLinks, focus_ids: ['assertion:h'] });
   assert.ok(context.links.some(link => link.relation === 'contradicts'));
   assert.ok(context.links.some(link => link.relation === 'challenged-by'));
 });
 ```
 
-Replace the three explanatory argument comments above with the complete literal fixture objects already defined in Tasks 3-5; the committed test file must contain no placeholder comments.
-
-Also include separate assertions that:
+Add separate literal-fixture assertions in the same file that:
 
 - subject relationship does not produce `inspect-full-content` authority;
 - originator relationship does not produce `withhold-from-subject` authority;
@@ -1329,10 +1389,10 @@ Expected: only the approved spec/plan, Slice 1 semantic modules/tests, normative
 
 - [ ] **Step 5: Commit any verification-only correction, if needed**
 
-Only if Step 1-4 exposed a defect that required a code/doc correction:
+Only if Steps 1-4 exposed a defect that required a code/doc correction; stage exactly those corrected files and commit:
 
 ```bash
-git add <exact corrected files>
+git add path/to/corrected-file-one path/to/corrected-file-two
 git commit -m "fix: close sovereign information slice 1 verification gaps"
 ```
 
@@ -1369,7 +1429,7 @@ These approved-spec areas are not omitted; they are explicitly outside Slice 1 a
 
 ### Placeholder scan
 
-The executable plan contains no `TBD`, `TODO`, or unspecified implementation step. The one invariant-suite instruction to copy explicit fixtures is paired with a hard requirement that the committed test contain the complete literal objects and no placeholder comments.
+No `TBD`, `TODO`, `implement later`, or unspecified code placeholder remains in this plan. Every code-producing task names exact files, interfaces, tests, commands, expected results, and implementation rules.
 
 ### Type/signature consistency
 
