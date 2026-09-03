@@ -16,7 +16,11 @@ export const INFORMATION_RELATIONSHIP_FIELDS = Object.freeze([
   'controllers',
   'affected_parties',
   'beneficiaries',
+  'permitted_recipients',
   'reviewers',
+  'auditors',
+  'decision_users',
+  'challengers',
   'disclosure_authorities',
   'retention_authorities'
 ]);
