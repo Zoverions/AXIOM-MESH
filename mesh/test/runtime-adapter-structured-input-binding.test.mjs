@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { canonicalJson, sha256 } from '../src/lib/canonical.mjs';
-import { createSyntheticReferenceRequest } from '../src/runtime-adapter-conformance.mjs';
+import {
+  translateSyntheticExternalAuthorizationRequest
+} from '../src/runtime-adapter-authorization-translation.mjs';
 
 const ACTION = 'adapter.reference.echo';
 const INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
@@ -13,6 +15,24 @@ function expectedCommitment(structuredArguments) {
     input_schema_ref: INPUT_SCHEMA_REF,
     arguments: structuredArguments
   }));
+}
+
+function translatedRequest({ suffix, structuredArguments }) {
+  return translateSyntheticExternalAuthorizationRequest({
+    requestId: `request:rt-auth-011-${suffix}`,
+    principalId: 'principal:rt-auth-011',
+    grantId: 'grant:rt-auth-011-order',
+    idempotencyKey: `idempotency:rt-auth-011-${suffix}`,
+    structuredArguments,
+    authorization_details: [{
+      type: 'axiom-runtime-effect.v1',
+      runtime_operation: 'reference.echo',
+      axiom_action: ACTION,
+      requested_scopes: ['synthetic.read'],
+      destinations: ['local:reference'],
+      credential_handles: ['credential:synthetic-reference']
+    }]
+  });
 }
 
 test('structured input commitment is domain-separated and object-order stable', () => {
@@ -31,20 +51,8 @@ test('structured input commitment is domain-separated and object-order stable', 
     message: 'hello'
   };
 
-  const requestA = createSyntheticReferenceRequest({
-    requestId: 'request:rt-auth-011-order-a',
-    principalId: 'principal:rt-auth-011',
-    grantId: 'grant:rt-auth-011-order',
-    idempotencyKey: 'idempotency:rt-auth-011-order-a',
-    structuredArguments: first
-  });
-  const requestB = createSyntheticReferenceRequest({
-    requestId: 'request:rt-auth-011-order-b',
-    principalId: 'principal:rt-auth-011',
-    grantId: 'grant:rt-auth-011-order',
-    idempotencyKey: 'idempotency:rt-auth-011-order-b',
-    structuredArguments: reordered
-  });
+  const requestA = translatedRequest({ suffix: 'order-a', structuredArguments: first });
+  const requestB = translatedRequest({ suffix: 'order-b', structuredArguments: reordered });
 
   assert.equal(requestA.input_sha256, expectedCommitment(first));
   assert.equal(requestB.input_sha256, expectedCommitment(reordered));
