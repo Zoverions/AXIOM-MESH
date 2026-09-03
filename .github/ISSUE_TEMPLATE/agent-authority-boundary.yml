@@ -1,5 +1,5 @@
 name: Agent authority-boundary finding
-description: Report a reproducible non-sensitive case where capability, discovery, connectivity, evidence, or tooling appears to become authority incorrectly.
+description: Report a reproducible non-sensitive case where capability, discovery, connectivity, evidence, tooling, protocol translation, or degraded operation appears to become authority incorrectly.
 title: "[agent-red-team] "
 body:
   - type: markdown
@@ -13,7 +13,7 @@ body:
 
         If you started from `RED-TEAM-TARGETS.json`, choose the matching catalog target below. A catalog target is a bounded falsification surface, not a confirmed vulnerability, severity assessment, or authorization to test a third party. Reports that do not map cleanly to a catalog target are still allowed.
 
-        Current claim boundary: the supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Repository discovery, agent skills, certificates, connectivity, credentials, and technical capability do not create authority by themselves.
+        Current claim boundary: the supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Repository discovery, agent skills, certificates, connectivity, credentials, technical capability, external protocol artifacts, and failover state do not create authority by themselves.
 
   - type: dropdown
     id: finding_type
@@ -28,6 +28,8 @@ body:
         - Alternate path around Gateway -> Hypervisor -> Sandbox -> Grid
         - Evidence or signature overclaim
         - Discovery or metadata claim drift
+        - Protocol translation widens or detaches authority
+        - Degraded mode removes controls or widens authority
         - Advisory tooling becomes a shadow authorizer
         - Other authority-boundary mismatch
     validations:
@@ -48,6 +50,8 @@ body:
         - RT-PROV-006 - Unknown external destinations must stay unresolved and closed
         - RT-REC-007 - Recovery and rotation must not restore revoked authority
         - RT-REL-008 - Claims must not outrun built, enabled, exposed, or promoted state
+        - RT-AUTH-009 - Exact-effect authorization must survive protocol translation
+        - RT-RES-010 - Frontier-provider loss must not remove or widen governance controls
     validations:
       required: false
 
@@ -64,8 +68,8 @@ body:
     id: expected_boundary
     attributes:
       label: Expected authority boundary
-      description: State what should have been denied, constrained, separated, or represented differently.
-      placeholder: "Example: discovery should reveal only requestable capability metadata and must not grant execution authority."
+      description: State what should have been denied, constrained, separated, preserved, or represented differently.
+      placeholder: "Example: a valid delegated token with mutated action arguments should still be denied at the protected effect boundary."
     validations:
       required: true
 
@@ -97,7 +101,7 @@ body:
     id: impact
     attributes:
       label: Why this matters
-      description: Explain what authority, legitimacy, evidence, or claim boundary could be affected if the finding is valid.
+      description: Explain what authority, legitimacy, resilience, evidence, or claim boundary could be affected if the finding is valid.
     validations:
       required: false
 
@@ -108,5 +112,5 @@ body:
       options:
         - label: I have not included secrets, credentials, private data, or weaponized exploit details.
           required: true
-        - label: I understand that AXIOM-MESH is currently a production candidate, not production-promoted, and I am not treating repository discovery as execution authority.
+        - label: I understand that AXIOM-MESH is currently a production candidate, not production-promoted, and I am not treating repository discovery, protocol artifacts, connectivity, credentials, or degraded-mode operation as execution authority.
           required: true

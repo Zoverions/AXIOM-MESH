@@ -12,7 +12,9 @@ const expectedScopes = [
   'kernel',
   'provider-boundary',
   'recovery-rotation',
-  'release-governance'
+  'release-governance',
+  'interoperability-authority',
+  'resilience-degraded-mode'
 ];
 
 async function text(path) {
