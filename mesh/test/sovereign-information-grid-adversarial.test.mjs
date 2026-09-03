@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { digestObject } from '../src/lib/canonical.mjs';
 import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { SovereignInformationGridStore } from '../src/grid/sovereign-information-store.mjs';
@@ -47,6 +48,29 @@ test('SIEA object bodies and relationship principals are not stored in plaintext
   for (const forbidden of ['subject','controller','owner','principal','requester','object_ref']) assert.equal(columns.includes(forbidden), false);
   const bytes = await readFile(f.path);
   assert.equal(bytes.includes(Buffer.from('principal:patient-secret')), false);
+});
+
+test('recorded SIEA events cannot forge an initial revoked, expired, or superseded lifecycle', async t => {
+  const f = await fixture(t);
+  for (const lifecycle_status of ['revoked', 'expired', 'superseded']) {
+    const object = { ...rights(), object_ref: `record:forged-${lifecycle_status}` };
+    assert.throws(() => f.store.appendEvents({
+      traceId: `trace:forged-${lifecycle_status}`,
+      actor: 'principal:clinician-secret',
+      events: [{
+        kind: 'siea.information-rights.recorded',
+        subject: `siea_aaaaaaaa-aaaa-aaaa-aaaa-${lifecycle_status.padEnd(12, 'a').slice(0, 12)}`,
+        payload: {
+          storage_id: `siea_aaaaaaaa-aaaa-aaaa-aaaa-${lifecycle_status.padEnd(12, 'a').slice(0, 12)}`,
+          object_kind: 'information-rights',
+          object,
+          object_digest: digestObject(object),
+          lifecycle_status
+        }
+      }]
+    }), /initial lifecycle|must begin active|lifecycle/i);
+  }
+  assert.equal(f.store.db.prepare('SELECT COUNT(*) AS count FROM siea_objects').get().count, 0);
 });
 
 test('contradictory evidence and revocation state survive restart rebuild', async t => {
