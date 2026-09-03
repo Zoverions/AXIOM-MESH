@@ -81,12 +81,12 @@ async function fixture(t, { withAccessVerifier = true } = {}) {
 }
 
 function record(store, ref, subject) {
-  store.recordInformationRightsEnvelope({
+  const receipt = store.recordInformationRightsEnvelope({
     actor: 'principal:clinician',
     traceId: `trace:${ref.replaceAll(':', '-')}`,
     envelope: envelope(ref, subject)
   });
-  return store.findSieaByLogicalRef('information-rights', ref);
+  return { object_digest: receipt.payload.object_digest };
 }
 
 test('read fails closed when the independent access-decision verifier is unavailable', async t => {
