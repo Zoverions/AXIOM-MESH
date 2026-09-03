@@ -304,6 +304,12 @@ export function resolveDeploymentPlan(document, context = {}) {
     globalReasons.add('no-compatible-provider');
   }
 
+  const projected = projectDownstreamPlans(
+    bindings.filter((binding) => selectedBindings.has(binding.binding_id)),
+    context,
+    globalReasons
+  );
+
   const draft = Object.freeze({
     schema: DEPLOYMENT_PLAN_SCHEMA,
     version: 0,
@@ -316,8 +322,8 @@ export function resolveDeploymentPlan(document, context = {}) {
       [...unsatisfiedCapabilities].sort()
     ),
     rejected_bindings: Object.freeze(rejected),
-    downstream_plan_requests: Object.freeze([]),
-    consequences: Object.freeze([]),
+    downstream_plan_requests: projected.requests,
+    consequences: projected.consequences,
     owner_choices: Object.freeze(ownerChoices),
     reason_codes: Object.freeze([...globalReasons].sort()),
     authority_effect: 'none',
@@ -330,6 +336,95 @@ export function resolveDeploymentPlan(document, context = {}) {
     ...draft,
     plan_digest: digestObject(draft)
   });
+}
+
+function projectDownstreamPlans(bindings, context, globalReasons) {
+  const requests = [];
+  const consequences = [];
+  const providerArtifacts = plainObject(
+    context.provider_artifacts,
+    'context.provider_artifacts'
+  );
+
+  for (const binding of [...bindings].sort(compareBindingId)) {
+    consequences.push(Object.freeze({
+      binding_id: binding.binding_id,
+      provider_ref: binding.provider_ref,
+      presence_state: binding.presence_state,
+      requires_network: binding.requires_network,
+      requires_privileged_change: binding.requires_privileged_change,
+      requires_reboot: binding.requires_reboot,
+      data_egress_possible: binding.data_egress_possible,
+      replacement_required: binding.replacement_required
+    }));
+
+    const requestKinds = [];
+    if (
+      binding.provider_kind === 'install-profile'
+      || binding.requires_privileged_change
+    ) {
+      requestKinds.push([
+        'host-install-plan',
+        'downstream-install-plan-required'
+      ]);
+    }
+
+    if (binding.provider_kind === 'runtime-catalog-entry') {
+      const artifact = providerArtifacts[binding.provider_ref];
+      validateRuntimeConnectorCatalogEntry(artifact);
+      if (artifact.integration_class === 'agent-runtime') {
+        requestKinds.push([
+          'runtime-acquisition-plan',
+          'downstream-runtime-plan-required'
+        ]);
+      } else if (artifact.integration_class === 'model-provider') {
+        requestKinds.push([
+          'model-acquisition-plan',
+          'downstream-model-plan-required'
+        ]);
+      }
+    }
+
+    if (binding.provider_kind === 'adapter') {
+      requestKinds.push([
+        'adapter-configuration-plan',
+        'downstream-adapter-plan-required'
+      ]);
+    }
+
+    for (const [kind, reason] of requestKinds) {
+      globalReasons.add(reason);
+      requests.push(Object.freeze({
+        kind,
+        binding_id: binding.binding_id,
+        provider_ref: binding.provider_ref,
+        provider_digest: binding.provider_digest,
+        capability_ids: Object.freeze([...binding.capability_ids].sort()),
+        evidence_refs: Object.freeze([...binding.evidence_refs].sort()),
+        requirements: Object.freeze({
+          presence_state: binding.presence_state,
+          requires_network: binding.requires_network,
+          requires_privileged_change: binding.requires_privileged_change,
+          requires_reboot: binding.requires_reboot,
+          data_egress_possible: binding.data_egress_possible,
+          replacement_required: binding.replacement_required
+        })
+      }));
+    }
+  }
+
+  requests.sort(compareDownstreamRequest);
+  return Object.freeze({
+    requests: Object.freeze(requests),
+    consequences: Object.freeze(consequences)
+  });
+}
+
+function compareDownstreamRequest(left, right) {
+  return (
+    left.binding_id.localeCompare(right.binding_id)
+    || left.kind.localeCompare(right.kind)
+  );
 }
 
 function evaluateHostSovereigntyIfPresent(context, binding) {
