@@ -10,10 +10,31 @@ const REVOCATION_KEYS = new Set(['revoked','revoked_at','reason']);
 const DELEGATION_KEYS = new Set(['mode']);
 const CREDENTIAL_KEYS = new Set(['allow_opaque_handle','allow_raw_secret']);
 const RESOURCE_KEYS = new Set(['max_records','max_value_minor']);
+const REQUEST_KEYS = new Set(['delegate','domain','action','purpose','data_class','destination','assurance_profile','gate_decision','resource_usage']);
+const REQUEST_RESOURCE_KEYS = new Set(['records','value_minor']);
 
 function requireStrings(values,name,{min=1}={}) { return assertUniqueStrings(values,name,{min}); }
 function inScope(value, values){ return values.includes(value); }
 function no(reason_code){ return { gate_authorized:false, reason_code }; }
+
+function validateDelegatedGateRequest(request) {
+  assertAuthorityNeutral(request,'delegated gate request');
+  assertNoUnknownKeys(request,'delegated gate request',REQUEST_KEYS);
+  assertReference(request.delegate,'request.delegate');
+  assertString(request.domain,'request.domain',{max:128});
+  assertString(request.action,'request.action',{max:256});
+  assertString(request.purpose,'request.purpose',{max:256});
+  assertString(request.data_class,'request.data_class',{max:128});
+  assertReference(request.destination,'request.destination');
+  assertEnum(request.assurance_profile,'request.assurance_profile',ASSURANCE_SET);
+  assertString(request.gate_decision,'request.gate_decision',{max:256});
+  assertPlainObject(request.resource_usage,'request.resource_usage');
+  assertNoUnknownKeys(request.resource_usage,'request.resource_usage',REQUEST_RESOURCE_KEYS);
+  for (const field of REQUEST_RESOURCE_KEYS) {
+    if (!Number.isInteger(request.resource_usage[field]) || request.resource_usage[field] < 0) throw new ValidationError(`request.resource_usage.${field} must be a non-negative integer`);
+  }
+  return request;
+}
 
 export function validateDelegatedGateMandate(mandate) {
   assertAuthorityNeutral(mandate,'delegated gate mandate');
@@ -54,6 +75,7 @@ export function validateDelegatedGateMandate(mandate) {
 
 export function evaluateDelegatedGateMandate(mandate, request, {now}) {
   validateDelegatedGateMandate(mandate);
+  validateDelegatedGateRequest(request);
   assertIsoTimestamp(now,'now');
   if (request.delegate !== mandate.delegate) return no('delegate_mismatch');
   if (Date.parse(now) < Date.parse(mandate.starts_at)) return no('mandate_not_started');
@@ -64,6 +86,8 @@ export function evaluateDelegatedGateMandate(mandate, request, {now}) {
   if (!inScope(request.purpose,mandate.purposes)) return no('purpose_out_of_scope');
   if (!inScope(request.data_class,mandate.data_classes)) return no('data_class_out_of_scope');
   if (!inScope(request.destination,mandate.destinations)) return no('destination_out_of_scope');
+  if (request.resource_usage.records > mandate.resource_ceilings.max_records) return no('resource_records_exceeds_ceiling');
+  if (request.resource_usage.value_minor > mandate.resource_ceilings.max_value_minor) return no('resource_value_exceeds_ceiling');
   const requested = ASSURANCE.indexOf(request.assurance_profile);
   const ceiling = ASSURANCE.indexOf(mandate.assurance_ceiling);
   if (requested === -1 || requested > ceiling) return no('assurance_exceeds_ceiling');
