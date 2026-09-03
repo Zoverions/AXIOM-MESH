@@ -1,0 +1,19 @@
+{
+  "schema": "axiom-shelf-node-profile.v1",
+  "version": 1,
+  "id": "shelf-node",
+  "base_install_profile": "infrastructure-node",
+  "platform": "linux",
+  "distro_id": "ubuntu",
+  "distro_version": "24.04",
+  "architecture": "x64",
+  "host_class": "appliance",
+  "power_class": "mains",
+  "public_ingress_default": false,
+  "axiom_egress_default": "deny",
+  "mesh_enrollment": "explicit-separate-step",
+  "installation_grants_authority": false,
+  "shared_contribution_enabled": false,
+  "display_required": true,
+  "display_network_required": false
+}

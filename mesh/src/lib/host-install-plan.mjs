@@ -35,6 +35,13 @@ const EXPECTED_STAGES = Object.freeze([
   'human-handoff',
   'optional-integrations'
 ]);
+const HOST_IDENTITY_KEYS = Object.freeze([
+  'platform',
+  'architecture',
+  'distro_id',
+  'distro_version',
+  'init_system'
+]);
 
 export function validateHostInstallPolicy(policy = installPolicy, targets = installTargets) {
   exactObject(policy, 'Host install policy', EXACT_POLICY_KEYS);
@@ -206,6 +213,7 @@ export function buildHostInstallPlan({
     status: HOST_INSTALL_PLAN_STATUS,
     profile_id: profileId,
     target_status: target.status,
+    host: Object.fromEntries(HOST_IDENTITY_KEYS.map(key => [key, hostFacts[key]])),
     host_candidate_compatible: blockers.length === 0,
     blockers,
     host_facts_digest: hostFactsDigest,
@@ -270,6 +278,7 @@ export function validateHostInstallPlan(plan, { policy = installPolicy, targets 
     || plan.network?.mesh_enrollment !== 'not-performed'
     || plan.provisioning?.signed_release_manifest_verified !== false
   ) throw new ValidationError('Host install plan weakens the non-mutating boundary');
+  validateHostIdentity(plan.host);
 
   const { plan_digest: claimedDigest, ...planCore } = plan;
   if (claimedDigest !== digestObject(planCore)) {
@@ -316,6 +325,15 @@ function validateHostFacts(facts, requiredFacts) {
   for (const key of ['memory_bytes', 'root_filesystem_free_bytes']) {
     if (!Number.isFinite(facts[key]) || facts[key] < 0) {
       throw new ValidationError(`Host numeric fact is invalid: ${key}`);
+    }
+  }
+}
+
+function validateHostIdentity(host) {
+  exactObject(host, 'Host install plan identity', HOST_IDENTITY_KEYS);
+  for (const key of HOST_IDENTITY_KEYS) {
+    if (typeof host[key] !== 'string' || !host[key].length) {
+      throw new ValidationError(`Host install plan identity is invalid: ${key}`);
     }
   }
 }
