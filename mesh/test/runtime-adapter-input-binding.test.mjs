@@ -30,8 +30,15 @@ test('signed runtime grant binds the exact consequential input digest', async ()
     signer: grantAuthority.signer,
     inputSha256: AUTHORIZED_INPUT_SHA256
   });
-  adapter.registerGrant(grant);
 
+  const tamperedGrant = structuredClone(grant);
+  tamperedGrant.input_sha256 = MUTATED_INPUT_SHA256;
+  assert.throws(
+    () => adapter.registerGrant(tamperedGrant),
+    /Grant signature is invalid/
+  );
+
+  adapter.registerGrant(grant);
   const result = await adapter.execute(createSyntheticReferenceRequest({
     requestId: 'request:rt-auth-010-mutated-input',
     principalId: grant.principal_id,
