@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-deployment-provider-binding.v0",
+  "title": "AXIOM Deployment Provider Binding v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "binding_id",
+    "provider_kind",
+    "provider_ref",
+    "provider_digest",
+    "capability_ids",
+    "host_ref",
+    "presence_state",
+    "resource_request",
+    "requires_network",
+    "requires_privileged_change",
+    "requires_reboot",
+    "data_egress_possible",
+    "replacement_required",
+    "evidence_refs",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-deployment-provider-binding.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-provider-binding" },
+    "binding_id": { "$ref": "#/$defs/id" },
+    "provider_kind": {
+      "enum": [
+        "existing-host-component",
+        "runtime-catalog-entry",
+        "local-service",
+        "external-service",
+        "adapter",
+        "install-profile"
+      ]
+    },
+    "provider_ref": { "$ref": "#/$defs/id" },
+    "provider_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "capability_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "host_ref": { "$ref": "#/$defs/id" },
+    "presence_state": {
+      "enum": [
+        "installed-available",
+        "installed-unavailable",
+        "available-not-installed",
+        "unknown"
+      ]
+    },
+    "resource_request": { "$ref": "#/$defs/resources" },
+    "requires_network": { "type": "boolean" },
+    "requires_privileged_change": { "type": "boolean" },
+    "requires_reboot": { "type": "boolean" },
+    "data_egress_possible": { "type": "boolean" },
+    "replacement_required": { "type": "boolean" },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_millis",
+        "memory_bytes",
+        "accelerator_memory_bytes",
+        "durable_storage_bytes",
+        "scratch_storage_bytes",
+        "io_bytes",
+        "network_bytes",
+        "network_requests",
+        "model_calls",
+        "input_units",
+        "output_units",
+        "concurrency",
+        "wall_time_ms",
+        "monetary_cost_units",
+        "energy_millijoules",
+        "process_count",
+        "thread_count",
+        "file_descriptors"
+      ],
+      "properties": {
+        "cpu_millis": { "$ref": "#/$defs/count" },
+        "memory_bytes": { "$ref": "#/$defs/count" },
+        "accelerator_memory_bytes": { "$ref": "#/$defs/count" },
+        "durable_storage_bytes": { "$ref": "#/$defs/count" },
+        "scratch_storage_bytes": { "$ref": "#/$defs/count" },
+        "io_bytes": { "$ref": "#/$defs/count" },
+        "network_bytes": { "$ref": "#/$defs/count" },
+        "network_requests": { "$ref": "#/$defs/count" },
+        "model_calls": { "$ref": "#/$defs/count" },
+        "input_units": { "$ref": "#/$defs/count" },
+        "output_units": { "$ref": "#/$defs/count" },
+        "concurrency": { "$ref": "#/$defs/count" },
+        "wall_time_ms": { "$ref": "#/$defs/count" },
+        "monetary_cost_units": { "$ref": "#/$defs/count" },
+        "energy_millijoules": { "$ref": "#/$defs/count" },
+        "process_count": { "$ref": "#/$defs/count" },
+        "thread_count": { "$ref": "#/$defs/count" },
+        "file_descriptors": { "$ref": "#/$defs/count" }
+      }
+    }
+  }
+}
