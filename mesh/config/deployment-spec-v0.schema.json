@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-deployment-spec.v0",
+  "title": "AXIOM Deployment Spec v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "desired",
+    "resource_envelope",
+    "resource_observations",
+    "host_policy_refs",
+    "capability_surface_ref",
+    "provider_bindings",
+    "created_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation",
+    "execution_authorized"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-deployment-spec.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-deployment-spec" },
+    "desired": { "$ref": "desired-deployment-v0.schema.json" },
+    "resource_envelope": { "type": "object" },
+    "resource_observations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "type": "object" }
+    },
+    "host_policy_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["policy_kind", "policy_ref", "policy_digest"],
+        "properties": {
+          "policy_kind": {
+            "enum": [
+              "host-profile",
+              "contribution-policy",
+              "sovereignty-reserve"
+            ]
+          },
+          "policy_ref": { "$ref": "#/$defs/id" },
+          "policy_digest": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "capability_surface_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry_id", "registry_digest"],
+      "properties": {
+        "registry_id": { "$ref": "#/$defs/id" },
+        "registry_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "provider_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": { "$ref": "deployment-provider-binding-v0.schema.json" }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "execution_authorized": { "const": false }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
