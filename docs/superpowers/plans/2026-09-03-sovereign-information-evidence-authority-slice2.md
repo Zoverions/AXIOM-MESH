@@ -43,7 +43,7 @@ Use a deliberately unpromoted `SovereignInformationGridStore` subclass of the su
 The subclass gives Slice 2 real use of:
 
 - SQLite WAL + `synchronous=FULL`;
-- existing migrations;
+- the existing core Grid schema and an independently checksummed SIEA extension-migration ledger;
 - encrypted protected JSON columns;
 - `appendEvents()` transactional writes;
 - signed hash-linked event receipts;
@@ -54,9 +54,15 @@ The subclass gives Slice 2 real use of:
 
 The supported runtime continues to instantiate its current `GridStore`; the new subclass is test/research infrastructure until a later explicit promotion.
 
+### Layered migration correction
+
+Implementation verification established that optional Grid subsystems must not advance the ordinary core `schema_version`. Existing social storage already follows this rule through its own extension migration ledger, and multiple core/social compatibility tests require ordinary `GridStore` to remain at core schema 10.
+
+Therefore Slice 2 uses a separate `sovereign_information_schema_migrations` ledger with SIEA schema version 1. The core `mesh/src/grid/migrations.mjs` remains unchanged from the Slice 1 parent/current `main`. This preserves the no-promotion boundary while retaining checksum-verified migration and restart behavior for the SIEA subclass.
+
 ## Storage model
 
-Add migration **v11** with materialized tables only. The authoritative history remains the immutable Grid event chain.
+Add SIEA extension migration **v1** with materialized tables only. The authoritative history remains the immutable Grid event chain. Core Grid remains schema **10**.
 
 ### `siea_objects`
 
@@ -91,6 +97,8 @@ Add exact supported materialization events:
 
 Every event payload must validate the Slice 1 object before insertion/materialization.
 
+Newly recorded SIEA objects must begin with lifecycle state `active`; revocation, expiry, or supersession cannot be forged into an initial recorded event. Lifecycle contraction is represented through its specific append-only transition semantics.
+
 No event kind may contain an effect/capability/Sandbox grant.
 
 ## Access-decision boundary
@@ -116,7 +124,7 @@ Required fields:
 
 The store does not create this decision and does not treat a bare authority-ref string as sufficient. A constructor-injected verifier validates authenticity/currentness. **No verifier means fail closed.**
 
-The retrieval method checks the decision binds exactly to requester, target object, purpose, requested right, and current object digest, and that it is `allow` and unexpired.
+The retrieval method checks the decision binds exactly to requester, target object, purpose, requested right, and current object digest, and that it is `allow`, has become effective, and is unexpired.
 
 This separates:
 
@@ -145,6 +153,7 @@ Single-object read:
 - revocation is append-only via `siea.delegated-mandate.revoked`;
 - a revoked mandate can never be returned to active under the same `mandate_id`;
 - duplicate revocation is idempotent only when the revocation state is byte-equivalent, otherwise conflict;
+- a revocation timestamp cannot be later than the signed Grid event that records it;
 - effective state is expired when `expires_at <= now` even if the materialized row was stored active;
 - expired/revoked mandates are never considered valid gate authority.
 
@@ -192,29 +201,31 @@ TDD requirements:
 - canonical timestamps;
 - exact object/digest binding;
 - `deny` and `uncertain` cannot be consumed as reads;
+- future-issued decisions cannot be consumed before `issued_at`;
 - no execution-authority fields;
 - verifier callback required by consuming store APIs.
 
 Commit: `feat: add bounded information access decisions`
 
-### Task 2 — Grid migration and protected storage
+### Task 2 — layered SIEA migration and protected storage
 
-**Modify:**
-- `mesh/src/grid/migrations.mjs`
-- `mesh/src/grid/_store-core.mjs`
-
-**Create test:**
+**Create:**
+- `mesh/src/grid/sovereign-information-migrations.mjs`
 - `mesh/test/sovereign-information-grid-migration.test.mjs`
+
+**Do not modify for promotion:**
+- core `mesh/src/grid/migrations.mjs` must remain at schema 10 and must not create SIEA tables for ordinary `GridStore`.
 
 Requirements:
 
-- migration v11 `sovereign-information-materialized-state`;
-- encrypted `object_json` protected-column registration;
+- SIEA extension migration v1 `sovereign-information-materialized-state`;
+- independent checksum-verified `sovereign_information_schema_migrations` ledger;
+- encrypted `object_json` migration/restart handling in the SIEA subclass;
 - no plaintext relationship/principal indexes;
-- migration checksum/restart compatibility;
+- ordinary Grid and social stores retain their existing core schema expectations;
 - wrong-key/tamper behavior inherited and exercised.
 
-Commit: `feat: add sovereign information Grid migration`
+Commit: `feat: layer sovereign information schema`
 
 ### Task 3 — unpromoted Grid subclass + event materialization
 
@@ -225,8 +236,10 @@ Commit: `feat: add sovereign information Grid migration`
 Requirements:
 
 - subclass current supported `GridStore`;
+- extension schema initializes only for the SIEA subclass;
 - preflight exact SIEA event kinds;
 - validate Slice 1 objects before append;
+- newly recorded objects begin active;
 - materialize only through `appendEvents()` transaction;
 - return existing signed Grid event envelope as mutation receipt;
 - duplicate/conflicting immutable IDs fail closed;
@@ -259,6 +272,7 @@ Tests:
 - active before expiry;
 - expired after expiry;
 - revoked immediately;
+- future-dated revocation fails closed relative to the signed event time;
 - no un-revoke under same ID;
 - replay/idempotence behavior bounded;
 - revocation event and materialized state commit atomically.
@@ -277,7 +291,7 @@ Tests:
 - no verifier => fail closed;
 - bad signature/currentness from verifier => fail closed;
 - correct decision but wrong requester/object/purpose/right/digest => fail closed;
-- `deny|uncertain` => no disclosure;
+- future-issued, expired, `deny`, or `uncertain` decision => no disclosure;
 - hidden objects do not affect returned counts/truncation;
 - metadata-only decisions do not leak full relationship/body data;
 - full-content decision returns only exact target.
@@ -327,7 +341,8 @@ Cover:
 - no subject/controller/principal relationship value appears in unprotected SIEA columns;
 - revoked/expired mandate remains unusable after restart;
 - contradictory evidence remains retrievable after rebuild;
-- access-decision mismatch does not reveal object existence.
+- access-decision mismatch does not reveal object existence;
+- forged initial revoked/expired/superseded recorded state fails closed.
 
 Commit: `test: adversarially verify sovereign information Grid state`
 
@@ -349,6 +364,7 @@ Verify:
 - no Gateway route added;
 - no provider/network call in new modules;
 - new store subclass is not current runtime default;
+- core Grid migration bytes remain unchanged from the parent/current supported state;
 - current high-risk executable approval remains unchanged.
 
 Commit: `docs: register governed sovereign information Grid state`
