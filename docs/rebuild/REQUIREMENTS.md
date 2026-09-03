@@ -202,6 +202,11 @@ state.
 | SIEA-10 | Collective analytics SHOULD avoid stable cross-domain person identifiers and raw cross-domain dossiers by default; production privacy mechanisms require separate threat-model, reconstruction, composition, and independent-review evidence. | Future privacy-lab promotion gate; current non-claim tests. |
 | SIEA-11 | Domain adapters MAY impose stronger lawful/privacy/safety requirements but MUST NOT bypass or weaken non-waivable substrate protections. | Domain-adapter property tests before promotion. |
 | SIEA-12 | Real Health, Justice, Work/Payroll, Education, Finance, or Government deployments MUST remain disabled until exact legal, privacy, security, accessibility, operational, support, incident, jurisdictional, and independent-review boundaries are evidenced for the deployment. | Domain-specific signed promotion dossier; synthetic evidence is insufficient. |
+| SIEA-13 | Reputation queries MUST bind exact subject, domain, purpose, criterion, verifier policy, evidence window, review floor, requester, and expiry; no universal person/entity reputation score is permitted. | Query validation and no-score tests. |
+| SIEA-14 | Reputation evidence MUST be bound to the queried subject through information-rights relationships and exact-purpose policy rather than inferred from free-form proposition text. | Cross-subject/domain/purpose tests. |
+| SIEA-15 | Challenged, disputed, stale, future, unavailable, or insufficiently reviewed evidence MUST NOT silently satisfy a clean contextual reputation claim; uncertainty remains explicit. | Challenge/currentness/review tests. |
+| SIEA-16 | Negative or absence-style reputation conclusions MUST NOT be represented as complete `not-met` claims without separately verified criterion-completeness evidence. | Completeness/absence tests. |
+| SIEA-17 | External reputation presentations MUST be audience-, purpose-, subject-, domain-, criterion-, and time-bound, privacy-minimized by default, non-transferable, and non-authorizing. | Presentation replay/privacy/authority tests. |
 
 ## Regulated and high-impact domains
 
