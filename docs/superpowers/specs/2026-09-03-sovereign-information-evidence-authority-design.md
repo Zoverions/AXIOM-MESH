@@ -1,6 +1,6 @@
 # Sovereign Information, Evidence, Privacy, and Authority — Design
 
-**Status:** concept approved; canonical written design awaiting review; documentation-only; no capability promotion
+**Status:** approved architecture; documentation-only; no capability promotion
 
 **Date:** 2026-09-03
 
