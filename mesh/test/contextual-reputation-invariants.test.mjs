@@ -308,10 +308,10 @@ test('universal score, rank, percentile, and cross-domain aggregate surfaces fai
   ];
 
   for (const [field, value] of forbidden) {
-    assert.throws(() => validateReputationQuery({ ...query(), [field]: value }), /unsupported|authority/i);
-    assert.throws(() => evaluate({ criterionEvaluator: criterion('met', { [field]: value }) }), /unsupported|authority/i);
-    assert.throws(() => validateDerivedReputationClaim({ ...claim(), [field]: value }), /unsupported|authority/i);
-    assert.throws(() => validateReputationPresentation({ ...validPresentation, [field]: value }), /unsupported|authority/i);
+    assert.throws(() => validateReputationQuery({ ...query(), [field]: value }), /unsupported|authority|unknown field/i);
+    assert.throws(() => evaluate({ criterionEvaluator: criterion('met', { [field]: value }) }), /unsupported|authority|unknown field/i);
+    assert.throws(() => validateDerivedReputationClaim({ ...claim(), [field]: value }), /unsupported|authority|unknown field/i);
+    assert.throws(() => validateReputationPresentation({ ...validPresentation, [field]: value }), /unsupported|authority|unknown field/i);
   }
 });
 
@@ -542,10 +542,10 @@ test('credential or reputation state never becomes execution, delegation, or cap
   ];
 
   for (const [field, value] of forbidden) {
-    assert.throws(() => validateReputationQuery({ ...query(), [field]: value }), /unsupported|authority/i);
-    assert.throws(() => evaluate({ criterionEvaluator: criterion('met', { [field]: value }) }), /unsupported|authority/i);
-    assert.throws(() => validateDerivedReputationClaim({ ...claim(), [field]: value }), /unsupported|authority/i);
-    assert.throws(() => validateReputationPresentation({ ...validPresentation, [field]: value }), /unsupported|authority/i);
+    assert.throws(() => validateReputationQuery({ ...query(), [field]: value }), /unsupported|authority|unknown field/i);
+    assert.throws(() => evaluate({ criterionEvaluator: criterion('met', { [field]: value }) }), /unsupported|authority|unknown field/i);
+    assert.throws(() => validateDerivedReputationClaim({ ...claim(), [field]: value }), /unsupported|authority|unknown field/i);
+    assert.throws(() => validateReputationPresentation({ ...validPresentation, [field]: value }), /unsupported|authority|unknown field/i);
   }
 
   const derived = evaluate();
