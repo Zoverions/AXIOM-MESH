@@ -1,0 +1,296 @@
+import {
+  AxiomError,
+  ValidationError,
+  assertPlainObject,
+  digestObject,
+  newId
+} from '../lib/canonical.mjs';
+import { GridStore } from './store.mjs';
+import {
+  assertNoUnknownKeys,
+  assertReference
+} from '../domain/sovereign-information-common.mjs';
+import { validateInformationRightsEnvelope } from '../domain/information-rights.mjs';
+import {
+  validateEvidenceAssertion,
+  validateEvidenceLink,
+  validateEvidenceReviewState
+} from '../domain/evidence-graph.mjs';
+import { validateDelegatedGateMandate } from '../domain/delegated-gate-mandate.mjs';
+
+const OBJECT_KINDS = new Set([
+  'information-rights',
+  'evidence-assertion',
+  'evidence-link',
+  'evidence-review',
+  'delegated-gate-mandate'
+]);
+
+const EVENT_TO_KIND = new Map([
+  ['siea.information-rights.recorded', 'information-rights'],
+  ['siea.evidence-assertion.recorded', 'evidence-assertion'],
+  ['siea.evidence-link.recorded', 'evidence-link'],
+  ['siea.evidence-review.recorded', 'evidence-review'],
+  ['siea.delegated-mandate.recorded', 'delegated-gate-mandate']
+]);
+
+const PAYLOAD_KEYS = new Set([
+  'storage_id',
+  'object_kind',
+  'object',
+  'object_digest',
+  'lifecycle_status',
+  'authorization'
+]);
+const AUTHORIZATION_KEYS = new Set(['authority_ref', 'verifier_ref']);
+const LIFECYCLE = new Set(['active', 'revoked', 'expired', 'superseded']);
+const HEX_64 = /^[a-f0-9]{64}$/;
+
+function validateObject(kind, object) {
+  switch (kind) {
+    case 'information-rights': return validateInformationRightsEnvelope(object);
+    case 'evidence-assertion': return validateEvidenceAssertion(object);
+    case 'evidence-link': return validateEvidenceLink(object);
+    case 'evidence-review': return validateEvidenceReviewState(object);
+    case 'delegated-gate-mandate': return validateDelegatedGateMandate(object);
+    default: throw new ValidationError('unsupported sovereign information object kind');
+  }
+}
+
+function logicalReference(kind, object) {
+  switch (kind) {
+    case 'information-rights': return object.object_ref;
+    case 'evidence-assertion': return object.assertion_id;
+    case 'evidence-link': return object.link_id;
+    case 'evidence-review': return object.object_ref;
+    case 'delegated-gate-mandate': return object.mandate_id;
+    default: throw new ValidationError('unsupported sovereign information object kind');
+  }
+}
+
+function immutableKind(kind) {
+  return kind === 'evidence-assertion'
+    || kind === 'evidence-link'
+    || kind === 'delegated-gate-mandate';
+}
+
+function validateAuthorization(value) {
+  assertPlainObject(value, 'SIEA mutation authorization');
+  assertNoUnknownKeys(value, 'SIEA mutation authorization', AUTHORIZATION_KEYS);
+  assertReference(value.authority_ref, 'SIEA mutation authorization.authority_ref');
+  assertReference(value.verifier_ref, 'SIEA mutation authorization.verifier_ref');
+  return value;
+}
+
+function validateMaterializedPayload(kind, payload) {
+  assertPlainObject(payload, 'SIEA event payload');
+  assertNoUnknownKeys(payload, 'SIEA event payload', PAYLOAD_KEYS);
+  assertReference(payload.storage_id, 'SIEA event payload.storage_id');
+  if (!OBJECT_KINDS.has(payload.object_kind) || payload.object_kind !== kind) {
+    throw new ValidationError('SIEA event object kind does not match event kind');
+  }
+  const object = validateObject(kind, payload.object);
+  const digest = digestObject(object);
+  if (typeof payload.object_digest !== 'string' || !HEX_64.test(payload.object_digest) || payload.object_digest !== digest) {
+    throw new ValidationError('SIEA event object digest is invalid');
+  }
+  if (!LIFECYCLE.has(payload.lifecycle_status)) {
+    throw new ValidationError('SIEA event lifecycle status is invalid');
+  }
+  validateAuthorization(payload.authorization);
+  return payload;
+}
+
+export class SovereignInformationGridStore extends GridStore {
+  constructor({ mutationVerifier, informationAccessDecisionVerifier, ...options }) {
+    super(options);
+    this.sieaMutationVerifier = typeof mutationVerifier === 'function' ? mutationVerifier : null;
+    this.informationAccessDecisionVerifier = typeof informationAccessDecisionVerifier === 'function'
+      ? informationAccessDecisionVerifier
+      : null;
+  }
+
+  migrateProtectedColumns() {
+    super.migrateProtectedColumns();
+    this.transaction(() => {
+      const rows = this.db.prepare('SELECT storage_id, object_json FROM siea_objects').all();
+      for (const row of rows) {
+        if (this.protector.isProtected(row.object_json)) {
+          this.openJson('siea_objects', 'object_json', row.storage_id, row.object_json);
+          continue;
+        }
+        let value;
+        try {
+          value = JSON.parse(row.object_json);
+        } catch {
+          throw new ValidationError('Legacy siea_objects.object_json value is not valid JSON');
+        }
+        this.db.prepare('UPDATE siea_objects SET object_json = ? WHERE storage_id = ?').run(
+          this.protectJson('siea_objects', 'object_json', row.storage_id, value),
+          row.storage_id
+        );
+      }
+    });
+  }
+
+  rebuildMaterializedState() {
+    this.transaction(() => this.db.exec('DELETE FROM siea_objects'));
+    super.rebuildMaterializedState();
+  }
+
+  appendEvents({ traceId, actor, events }) {
+    if (!Array.isArray(events)) return super.appendEvents({ traceId, actor, events });
+    const prepared = events.map(event => {
+      const kind = EVENT_TO_KIND.get(event?.kind);
+      if (!kind) return event;
+      return this.prepareSieaEvent(actor, kind, event);
+    });
+    return super.appendEvents({ traceId, actor, events: prepared });
+  }
+
+  prepareSieaEvent(actor, kind, event) {
+    if (!this.sieaMutationVerifier) {
+      throw new ValidationError('SIEA mutation verifier is unavailable');
+    }
+    assertPlainObject(event, 'SIEA event');
+    const payload = assertPlainObject(event.payload, 'SIEA event payload');
+    const object = validateObject(kind, payload.object);
+    const objectDigest = digestObject(object);
+    const verification = this.sieaMutationVerifier({
+      actor,
+      operation: event.kind,
+      object_kind: kind,
+      object_ref: logicalReference(kind, object),
+      object_digest: objectDigest
+    });
+    assertPlainObject(verification, 'SIEA mutation verification');
+    if (verification.allowed !== true) {
+      throw new AxiomError('siea_mutation_denied', 'Sovereign information mutation was denied', 403);
+    }
+    const authorization = validateAuthorization({
+      authority_ref: verification.authority_ref,
+      verifier_ref: verification.verifier_ref
+    });
+    const preparedPayload = {
+      storage_id: payload.storage_id,
+      object_kind: kind,
+      object,
+      object_digest: objectDigest,
+      lifecycle_status: payload.lifecycle_status,
+      authorization
+    };
+    validateMaterializedPayload(kind, preparedPayload);
+    return {
+      kind: event.kind,
+      subject: payload.storage_id,
+      payload: preparedPayload,
+      ...(event.event_id ? { event_id: event.event_id } : {})
+    };
+  }
+
+  applyMaterializedEvent(event) {
+    const kind = EVENT_TO_KIND.get(event.kind);
+    if (!kind) return super.applyMaterializedEvent(event);
+    const payload = validateMaterializedPayload(kind, event.payload);
+    const existing = this.db.prepare('SELECT created_at FROM siea_objects WHERE storage_id = ?').get(payload.storage_id);
+    this.db.prepare(`
+      INSERT INTO siea_objects(
+        storage_id, object_kind, object_json, object_digest,
+        lifecycle_status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(storage_id) DO UPDATE SET
+        object_kind = excluded.object_kind,
+        object_json = excluded.object_json,
+        object_digest = excluded.object_digest,
+        lifecycle_status = excluded.lifecycle_status,
+        updated_at = excluded.updated_at
+    `).run(
+      payload.storage_id,
+      kind,
+      this.protectJson('siea_objects', 'object_json', payload.storage_id, payload.object),
+      payload.object_digest,
+      payload.lifecycle_status,
+      existing?.created_at ?? event.occurred_at,
+      event.occurred_at
+    );
+  }
+
+  decodedSieaRows(kind) {
+    if (kind !== undefined && !OBJECT_KINDS.has(kind)) {
+      throw new ValidationError('unsupported sovereign information object kind');
+    }
+    const rows = kind === undefined
+      ? this.db.prepare('SELECT * FROM siea_objects ORDER BY created_at, storage_id').all()
+      : this.db.prepare('SELECT * FROM siea_objects WHERE object_kind = ? ORDER BY created_at, storage_id').all(kind);
+    return rows.map(row => ({
+      ...row,
+      object: this.openJson('siea_objects', 'object_json', row.storage_id, row.object_json)
+    }));
+  }
+
+  findSieaByLogicalRef(kind, ref) {
+    return this.decodedSieaRows(kind).find(row => logicalReference(kind, row.object) === ref) ?? null;
+  }
+
+  recordInformationRightsEnvelope({ actor, traceId, envelope }) {
+    return this.recordObject({ actor, traceId, kind: 'information-rights', object: envelope });
+  }
+
+  recordEvidenceAssertion({ actor, traceId, assertion }) {
+    return this.recordObject({ actor, traceId, kind: 'evidence-assertion', object: assertion });
+  }
+
+  recordEvidenceLink({ actor, traceId, link }) {
+    validateEvidenceLink(link);
+    for (const ref of [link.from_ref, link.to_ref]) {
+      if (!this.findSieaByLogicalRef('evidence-assertion', ref)) {
+        throw new ValidationError('Evidence link endpoint is not durably present');
+      }
+    }
+    return this.recordObject({ actor, traceId, kind: 'evidence-link', object: link });
+  }
+
+  recordEvidenceReview({ actor, traceId, review }) {
+    return this.recordObject({ actor, traceId, kind: 'evidence-review', object: review });
+  }
+
+  recordDelegatedGateMandate({ actor, traceId, mandate }) {
+    validateDelegatedGateMandate(mandate);
+    if (mandate.revocation.revoked) {
+      throw new ValidationError('New delegated gate mandate must not begin revoked');
+    }
+    return this.recordObject({ actor, traceId, kind: 'delegated-gate-mandate', object: mandate });
+  }
+
+  recordObject({ actor, traceId, kind, object }) {
+    validateObject(kind, object);
+    const ref = logicalReference(kind, object);
+    const existing = this.findSieaByLogicalRef(kind, ref);
+    const objectDigest = digestObject(object);
+    if (existing && immutableKind(kind)) {
+      throw new AxiomError('state_conflict', 'Sovereign information object already exists', 409, { object_kind: kind });
+    }
+    if (existing && existing.object_digest === objectDigest) {
+      throw new AxiomError('state_conflict', 'Sovereign information object already exists unchanged', 409, { object_kind: kind });
+    }
+    const storageId = existing?.storage_id ?? newId('siea');
+    const eventKind = [...EVENT_TO_KIND.entries()].find(([, value]) => value === kind)?.[0];
+    if (!eventKind) throw new ValidationError('Sovereign information event mapping is unavailable');
+    const appended = this.appendEvents({
+      traceId,
+      actor,
+      events: [{
+        kind: eventKind,
+        subject: storageId,
+        payload: {
+          storage_id: storageId,
+          object_kind: kind,
+          object,
+          object_digest: objectDigest,
+          lifecycle_status: 'active'
+        }
+      }]
+    });
+    return appended[0];
+  }
+}
