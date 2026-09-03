@@ -358,7 +358,10 @@ test('capability surface reference binds registry identity and exact digest', ()
 
 test('host policy references bind exact artifacts by digest', () => {
   const ctx = context();
-  ctx.host_policy_artifacts['host-profile.synthetic'] = hostProfile({ capabilities: ['compute', 'storage'] });
+  ctx.host_policy_artifacts['contribution-policy.synthetic'] = {
+    ...contributionPolicy(),
+    enabled: false
+  };
   assert.throws(() => validateDeploymentSpec(spec(), ctx), /host policy.*digest|digest.*host policy/i);
 });
 
