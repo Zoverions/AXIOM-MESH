@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  createSyntheticReferenceRequest
-} from '../src/runtime-adapter-conformance.mjs';
+  translateSyntheticExternalAuthorizationRequest
+} from '../src/runtime-adapter-authorization-translation.mjs';
 
 test('external authorization constraints cannot silently disappear during request translation', () => {
   assert.throws(
-    () => createSyntheticReferenceRequest({
+    () => translateSyntheticExternalAuthorizationRequest({
       requestId: 'request:rt-auth-009-unknown-constraint',
       principalId: 'principal:rt-auth-009',
       grantId: 'grant:rt-auth-009',
