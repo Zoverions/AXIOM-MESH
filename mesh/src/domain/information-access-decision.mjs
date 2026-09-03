@@ -67,6 +67,9 @@ export function assertInformationAccessDecisionBinds(value, expected, { now }) {
   if (decision.decision !== 'allow') {
     throw new ValidationError('information access decision does not allow access');
   }
+  if (Date.parse(now) < Date.parse(decision.issued_at)) {
+    throw new ValidationError('information access decision is not active yet');
+  }
   if (Date.parse(now) >= Date.parse(decision.expires_at)) {
     throw new ValidationError('information access decision expired');
   }
