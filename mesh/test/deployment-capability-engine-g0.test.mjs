@@ -336,3 +336,22 @@ test('Resource Envelope evidence alone is never coerced into G0 runtime or reque
   assert.deepEqual(plan.selected_bindings, ['binding.g0']);
   assert.equal(plan.rejected_bindings.length, 0);
 });
+
+test('malformed explicit G0 evidence fails the affected binding closed instead of aborting resolution', () => {
+  const { spec, context } = fixture();
+  const malformed = completeG0Evidence();
+  delete malformed.runtime.user_idle;
+  context.host_sovereignty_evidence = { 'binding.g0': malformed };
+
+  let plan;
+  assert.doesNotThrow(() => {
+    plan = resolveDeploymentPlan(spec, context);
+  });
+
+  const rejected = plan.rejected_bindings.find((item) => item.binding_id === 'binding.g0');
+  assert.ok(rejected);
+  assert.ok(rejected.reason_codes.includes('host-sovereignty-conflict'));
+  assert.deepEqual(plan.selected_bindings, []);
+  assert.ok(plan.unsatisfied_capabilities.includes('capability.g0'));
+  assert.equal(plan.execution_authorized, false);
+});
