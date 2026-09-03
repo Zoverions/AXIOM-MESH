@@ -9,6 +9,7 @@ import {
   validateCapabilitySurfaceRegistry
 } from './capability-surfaces.mjs';
 import {
+  evaluateContribution,
   normalizeContributionPolicy,
   normalizeHostProfile,
   normalizeSovereigntyReserve
@@ -240,13 +241,18 @@ export function resolveDeploymentPlan(document, context = {}) {
   const globalReasons = new Set();
 
   for (const binding of [...document.provider_bindings].sort(compareBindingId)) {
-    const reasons = hardConstraintReasons(binding, document);
-    if (reasons.length === 0) continue;
+    const reasons = new Set(hardConstraintReasons(binding, document));
+    const hostDecision = evaluateHostSovereigntyIfPresent(context, binding);
+    if (hostDecision !== null && !hostDecision.allowed) {
+      reasons.add('host-sovereignty-conflict');
+    }
+    const reasonCodes = [...reasons].sort();
+    if (reasonCodes.length === 0) continue;
     rejectedIds.add(binding.binding_id);
-    for (const reason of reasons) globalReasons.add(reason);
+    for (const reason of reasonCodes) globalReasons.add(reason);
     rejected.push(Object.freeze({
       binding_id: binding.binding_id,
-      reason_codes: Object.freeze(reasons)
+      reason_codes: Object.freeze(reasonCodes)
     }));
   }
 
@@ -323,6 +329,28 @@ export function resolveDeploymentPlan(document, context = {}) {
   return Object.freeze({
     ...draft,
     plan_digest: digestObject(draft)
+  });
+}
+
+function evaluateHostSovereigntyIfPresent(context, binding) {
+  const collection = context.host_sovereignty_evidence;
+  if (collection === undefined) return null;
+  const evidenceByBinding = plainObject(
+    collection,
+    'context.host_sovereignty_evidence'
+  );
+  if (!Object.hasOwn(evidenceByBinding, binding.binding_id)) return null;
+  const evidence = plainObject(
+    evidenceByBinding[binding.binding_id],
+    `context.host_sovereignty_evidence.${binding.binding_id}`
+  );
+  return evaluateContribution({
+    policy: evidence.policy,
+    reserve: evidence.reserve,
+    runtime: evidence.runtime,
+    request: evidence.request,
+    guardianState: evidence.guardian_state,
+    remoteConstraints: evidence.remote_constraints
   });
 }
 
