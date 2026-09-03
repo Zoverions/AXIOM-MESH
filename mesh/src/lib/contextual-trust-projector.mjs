@@ -53,13 +53,14 @@ export class ContextualTrustProjector {
       throw new ValidationError('accessDecisions must be an array');
     }
 
-    const objects = this.store.listAuthorizedSovereignInformation({
+    const authorized = this.store.listAuthorizedSovereignInformation({
       requester: query.requester,
       purpose: query.purpose,
       right: 'inspect-full-content',
       decisions: accessDecisions,
       now
     });
+    const objects = authorized.items;
 
     const accessDecisionDigests = accessDecisions.map(decision =>
       digestObject(validateInformationAccessDecision(decision))
