@@ -98,7 +98,7 @@ Those exclusions are deliberate. Node Zero proves the host lifecycle and boundar
 │              AXIOM Host Guardian              │
 │                                               │
 │  local host profile and willingness           │
-│  cgroup/systemd resource ceilings              │
+│  cgroup/systemd resource ceilings             │
 │  service supervision                          │
 │  network-policy projection                    │
 │  update / rollback controller                 │
@@ -119,22 +119,22 @@ The display application is never part of Mesh authority. It is an appliance work
 
 ## 5. Boot and failure model
 
-The normal boot path is:
+The normal boot topology is:
 
 ```text
 UEFI/firmware
   -> Ubuntu bootloader/kernel
-  -> local filesystems
-  -> AXIOM Host Guardian
-  -> AXIOM runtime units
-  -> shelf-display unit
+  -> local filesystems + systemd
+       ├── shelf-display unit
+       └── AXIOM Host Guardian
+             └── AXIOM runtime units
 ```
 
-The display and Mesh runtime are siblings under host supervision, not a parent/child dependency chain.
+The display is intentionally outside the Mesh dependency chain. Guardian failure keeps AXIOM runtime participation failed closed or quarantined but does not prevent the display from starting from its local last-known-good content generation.
 
 The first physical fail-safe invariant is:
 
-> Loss of Internet connectivity, loss of all remote AXIOM services, failure of Mesh enrollment, or crash of the local AXIOM runtime must not prevent the host from booting and cycling the last-known-good local book-cover set.
+> Loss of Internet connectivity, loss of all remote AXIOM services, failure of Mesh enrollment, crash of the local AXIOM runtime, or failure of Host Guardian must not prevent the host from booting and cycling the last-known-good local book-cover set.
 
 The second invariant is:
 
@@ -181,6 +181,8 @@ Canonical locations:
 Secrets must never appear in repository content, image layers, shell history, journald fields intentionally emitted by AXIOM, install receipts, telemetry, or display content.
 
 `/var/lib/axiom-secrets` is root-owned with explicit per-service projection. The display workload receives no AXIOM Mesh private keys.
+
+Because v0 permits unattended boot without requiring full-disk encryption or TPM sealing, Unix permissions alone are **not** claimed to protect node credentials from an attacker who steals the disk and performs offline access. The v0 node identity must therefore remain narrowly authorized and revocable, with key rotation/revocation included in operations. Full-disk encryption and hardware-backed sealing remain later assurance upgrades or may be enabled on Node Zero if the hardware/operator workflow supports them without defeating unattended recovery goals.
 
 ## 7. Linux identities and service isolation
 
@@ -493,6 +495,8 @@ Because Node Zero has a public-facing physical display but no reason to expose n
 
 This machine should be safe to wipe and rebuild without loss of irreplaceable user information.
 
+The v0 theft boundary is explicit: without required FDE/TPM sealing, physical possession of the storage device may expose locally stored node credentials to an offline attacker. Therefore Node Zero must hold no high-value user corpus or broad Mesh authority, and its node identity must support prompt quarantine/revocation and replacement. The project must not describe v0 as protecting secrets against offline disk theft unless FDE or equivalent protection is actually enabled and tested on that machine.
+
 ## 18. Testing strategy
 
 Implementation follows test-first development.
@@ -529,13 +533,14 @@ Run the profile against clean Ubuntu 24.04 x86_64 disposable hosts and prove:
 5. display workload starts automatically;
 6. disconnecting network does not stop display;
 7. killing Mesh services does not stop display;
-8. killing display does not widen Mesh authority and display restarts safely;
-9. valid update activates exact new release;
-10. tampered update is rejected before activation;
-11. safe rollback returns to exact prior release;
-12. unsupported rollback fails closed;
-13. interrupted install/update leaves an inspectable recoverable state;
-14. decommission can remove runtime without silently destroying data/keys unless explicitly selected.
+8. killing Host Guardian keeps Mesh failed closed/quarantined while display remains available;
+9. killing display does not widen Mesh authority and display restarts safely;
+10. valid update activates exact new release;
+11. tampered update is rejected before activation;
+12. safe rollback returns to exact prior release;
+13. unsupported rollback fails closed;
+14. interrupted install/update leaves an inspectable recoverable state;
+15. decommission can remove runtime without silently destroying data/keys unless explicitly selected.
 
 ### 18.3 Physical Node Zero drills
 
@@ -547,6 +552,7 @@ After VM validation, run and record on the actual shelf machine:
 - router/Internet outage;
 - forced display-process kill;
 - forced AXIOM service kill;
+- forced Guardian failure with Mesh fail-closed behavior;
 - bounded disk-pressure test;
 - update and safe rollback;
 - power loss during normal operation;
@@ -587,7 +593,7 @@ The first host profile may advance only when executable evidence demonstrates, o
 - deny-by-default network behavior;
 - explicit enrollment separation;
 - reboot persistence;
-- local display independence from Mesh/network availability;
+- local display independence from Mesh/network/Guardian availability;
 - valid update and tampered-update rejection;
 - safe rollback or explicit restore requirement;
 - local recovery;
@@ -601,7 +607,7 @@ One successful household machine remains pilot evidence, not proof of universal 
 
 ## 21. Future evolution
 
-If Node Zero proves stable, the same logical profile can evolve without changing Mesh authority semantics:
+If Node Zero proves stable, the same logical profile can evolve without changing Mesh authority semantics.
 
 ### H1 — immutable host image
 
@@ -637,6 +643,6 @@ Each remains a bounded profile over the same authority and host-sovereignty prin
 
 ## 22. Completion definition
 
-Node Zero v0 is complete when an ordinary Ubuntu 24.04 LTS x86_64 machine can be converted from a clean supported host into a recoverable AXIOM Shelf Node using an exact verified installation bundle; boots unattended; continuously displays the last-known-good local book-cover set; runs the bounded AXIOM Mesh foundation under least-privilege host controls; does not auto-enroll or auto-grant authority; survives ordinary process, network, update, reboot, and power-failure drills; and produces enough exact evidence to reproduce and audit what happened.
+Node Zero v0 is complete when an ordinary Ubuntu 24.04 LTS x86_64 machine can be converted from a clean supported host into a recoverable AXIOM Shelf Node using an exact verified installation bundle; boots unattended; continuously displays the last-known-good local book-cover set; runs the bounded AXIOM Mesh foundation under least-privilege host controls; does not auto-enroll or auto-grant authority; survives ordinary process, Guardian, network, update, reboot, and power-failure drills; and produces enough exact evidence to reproduce and audit what happened.
 
 Until those conditions are demonstrated, this remains an architectural and implementation candidate, not a production host claim.
