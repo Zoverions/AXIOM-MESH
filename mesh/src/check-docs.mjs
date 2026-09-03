@@ -106,6 +106,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-08-29-cognitive-topology-v0.md',
   'docs/superpowers/plans/2026-08-30-sovereign-intelligence-selection-v0.md',
   'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice1.md',
+  'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice2.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
