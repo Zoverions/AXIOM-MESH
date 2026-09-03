@@ -232,6 +232,21 @@ const NODE_SCHEDULING_SQL = `
   ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
 ${NODE_SCHEDULING_TABLES_SQL}`;
 
+const SOVEREIGN_INFORMATION_SQL = `
+  CREATE TABLE IF NOT EXISTS siea_objects (
+    storage_id TEXT PRIMARY KEY,
+    object_kind TEXT NOT NULL,
+    object_json TEXT NOT NULL,
+    object_digest TEXT NOT NULL,
+    lifecycle_status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS siea_objects_kind_status_idx
+  ON siea_objects(object_kind, lifecycle_status, updated_at);
+`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -340,6 +355,14 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
         ['discovery_json', 'TEXT']
       ]);
       db.exec(NODE_SCHEDULING_TABLES_SQL);
+    }
+  },
+  {
+    version: 11,
+    name: 'sovereign-information-materialized-state',
+    source: SOVEREIGN_INFORMATION_SQL,
+    up(db) {
+      db.exec(SOVEREIGN_INFORMATION_SQL);
     }
   }
 ]);
