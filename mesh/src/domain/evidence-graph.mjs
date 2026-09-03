@@ -10,7 +10,7 @@ const STATES = new Set(['asserted','corroborated','disputed','superseded','adjud
 const RELATIONS = new Set(['supports','contradicts','weakens','corroborates','derived-from','observed-by','asserted-by','reviewed-by','relied-upon-by','challenged-by','corrected-by','superseded-by','alternative-to','missing-from','produced-by','disclosed-to','sealed-under','adjudicated-by']);
 const ASSERTION_KEYS = new Set(['schema','assertion_id','type','proposition','source_ref','epistemic_state','purpose_scope','provenance_refs','created_at']);
 const LINK_KEYS = new Set(['schema','link_id','from_ref','to_ref','relation','asserted_by','created_at']);
-const REVIEW_KEYS = new Set(['schema','object_ref','known','acquired','integrity_verified','indexed','machine_reviewed','human_reviewed','relied_upon','disclosed','challenged','updated_at']);
+const REVIEW_KEYS = new Set(['schema','object_ref','known','available','acquired','integrity_verified','indexed','machine_reviewed','human_reviewed','relied_upon','disclosed','challenged','adjudicated','updated_at']);
 
 function validateRefs(values, name) {
   for (const [index,value] of assertUniqueStrings(values,name).entries()) assertReference(value,`${name}[${index}]`);
@@ -49,7 +49,7 @@ export function validateEvidenceReviewState(review) {
   assertNoUnknownKeys(review,'evidence review state',REVIEW_KEYS);
   if (review.schema !== EVIDENCE_REVIEW_SCHEMA) throw new ValidationError('evidence review state has unsupported schema');
   assertReference(review.object_ref,'object_ref');
-  for (const key of ['known','acquired','integrity_verified','indexed','machine_reviewed','human_reviewed','relied_upon','disclosed','challenged']) {
+  for (const key of ['known','available','acquired','integrity_verified','indexed','machine_reviewed','human_reviewed','relied_upon','disclosed','challenged','adjudicated']) {
     if (typeof review[key] !== 'boolean') throw new ValidationError(`${key} must be boolean`);
   }
   assertIsoTimestamp(review.updated_at,'updated_at');
