@@ -175,7 +175,7 @@ test('signed reference conformance covers all negative cases without production 
   const result = verifyRuntimeAdapterReferenceConformanceEvidence(evidence);
 
   assert.equal(result.valid, true);
-  assert.equal(result.check_count, 28);
+  assert.equal(result.check_count, 29);
   assert.equal(result.external_runtime_loaded, false);
   assert.equal(result.external_effects_performed, false);
   assert.equal(result.production_conformance_claimed, false);

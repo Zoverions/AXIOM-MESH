@@ -46,6 +46,7 @@ const CHECK_NAMES = Object.freeze([
   'scope_widening_denied',
   'destination_widening_denied',
   'credential_widening_denied',
+  'input_mismatch_denied',
   'future_grant_denied',
   'expired_grant_denied',
   'revoked_grant_denied',
@@ -101,6 +102,7 @@ const GRANT_FIELDS = Object.freeze([
   'adapter_id',
   'runtime_id',
   'axiom_action',
+  'input_sha256',
   'scopes',
   'destinations',
   'credential_handles',
@@ -677,6 +679,9 @@ export class SyntheticReferenceRuntimeAdapter {
     if (consumedBy && consumedBy !== request.request_id) {
       return denied('grant-consumed', mapping);
     }
+    if (grant.input_sha256 !== request.input_sha256) {
+      return denied('input-mismatch', mapping);
+    }
     return { ok: true, mapping, grant };
   }
 
@@ -937,21 +942,23 @@ export async function runRuntimeAdapterReferenceConformance({
   });
   adapter.registerGrant(replayGrant);
   const grantReplayRejected = rejects(() => adapter.registerGrant(replayGrant));
+  const rawSecret = 'sk-synthetic-plaintext-must-not-appear';
+  const primaryInputSha256 = sha256(`synthetic input\n${rawSecret}`);
   const grant = signedGrant({
     grantId: 'grant:reference-primary',
     principalId,
     adapterId: manifest.adapter_id,
     runtimeId: manifest.runtime.runtime_id,
-    now
+    now,
+    inputSha256: primaryInputSha256
   });
   adapter.registerGrant(grant);
-  const rawSecret = 'sk-synthetic-plaintext-must-not-appear';
   const base = referenceRequest({
     requestId: 'request:reference-valid',
     principalId,
     grantId: grant.grant_id,
     idempotencyKey: 'idempotency:reference-valid-0001',
-    inputSha256: sha256(`synthetic input\n${rawSecret}`)
+    inputSha256: primaryInputSha256
   });
   const completed = await adapter.execute(base);
   const replay = await adapter.execute(base);
@@ -1014,6 +1021,23 @@ export async function runRuntimeAdapterReferenceConformance({
     }),
     credential_handles: ['credential:synthetic-reference', 'credential:admin']
   });
+
+  const inputMismatchGrant = signedGrant({
+    grantId: 'grant:input-mismatch',
+    principalId,
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now,
+    inputSha256: sha256('synthetic authorized input')
+  });
+  adapter.registerGrant(inputMismatchGrant);
+  const inputMismatch = await adapter.execute(referenceRequest({
+    requestId: 'request:input-mismatch',
+    principalId,
+    grantId: inputMismatchGrant.grant_id,
+    idempotencyKey: 'idempotency:input-mismatch-0001',
+    inputSha256: sha256('synthetic mutated input')
+  }));
 
   const futureGrant = signedGrant({
     grantId: 'grant:future',
@@ -1193,6 +1217,8 @@ export async function runRuntimeAdapterReferenceConformance({
     credential_widening_denied:
       credentialWidening.state === 'denied'
       && credentialWidening.code === 'credential-handle-not-mapped',
+    input_mismatch_denied:
+      inputMismatch.state === 'denied' && inputMismatch.code === 'input-mismatch',
     future_grant_denied:
       future.state === 'denied' && future.code === 'grant-not-yet-valid',
     expired_grant_denied:
@@ -1377,7 +1403,8 @@ function referenceGrant({
   signer,
   scopes = ['synthetic.read'],
   destinations = ['local:reference'],
-  credentialHandles = ['credential:synthetic-reference']
+  credentialHandles = ['credential:synthetic-reference'],
+  inputSha256 = sha256('synthetic reference input')
 }) {
   if (!signer || typeof signer.signObject !== 'function') {
     throw new ValidationError('Synthetic grant signer is required');
@@ -1389,6 +1416,7 @@ function referenceGrant({
     adapter_id: adapterId,
     runtime_id: runtimeId,
     axiom_action: 'adapter.reference.echo',
+    input_sha256: inputSha256,
     scopes,
     destinations,
     credential_handles: credentialHandles,
@@ -1461,6 +1489,7 @@ function validateGrant(grant) {
   ]);
   if (
     grant.schema !== 'axiom-runtime-adapter-grant.v1'
+    || !DIGEST.test(grant.input_sha256 ?? '')
     || !canonicalTimestamp(grant.issued_at)
     || !canonicalTimestamp(grant.expires_at)
     || Date.parse(grant.expires_at) <= Date.parse(grant.issued_at)
