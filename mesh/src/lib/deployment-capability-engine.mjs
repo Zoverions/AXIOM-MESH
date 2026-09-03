@@ -4,12 +4,16 @@ import {
   requireFreshResourceObservations,
   validateResourceObservation
 } from './resource-observation.mjs';
-import { validateCapabilitySurfaceRegistry } from './capability-surfaces.mjs';
+import {
+  capabilitySurfacesDigest,
+  validateCapabilitySurfaceRegistry
+} from './capability-surfaces.mjs';
 import {
   normalizeContributionPolicy,
   normalizeHostProfile,
   normalizeSovereigntyReserve
 } from './host-sovereignty.mjs';
+import { validateRuntimeConnectorCatalogEntry } from './runtime-connector-fabric-contracts.mjs';
 
 export const DESIRED_DEPLOYMENT_SCHEMA = 'axiom-desired-deployment.v0';
 export const DEPLOYMENT_PROVIDER_BINDING_SCHEMA = 'axiom-deployment-provider-binding.v0';
@@ -112,6 +116,12 @@ export function validateDeploymentSpec(document, context = {}) {
   validateSpecShape(document);
   const desired = validateDesiredDeployment(document.desired);
   validateResourceEnvelope(document.resource_envelope);
+  if (document.resource_envelope.host_ref !== desired.target_host_ref) {
+    throw new ValidationError(
+      'resource envelope host does not match desired deployment host'
+    );
+  }
+
   for (const observation of document.resource_observations) {
     validateResourceObservation(observation);
   }
@@ -127,17 +137,60 @@ export function validateDeploymentSpec(document, context = {}) {
     'context.capability_surface'
   );
   validateCapabilitySurfaceRegistry(capabilitySurface);
+  if (capabilitySurface.registry_id !== document.capability_surface_ref.registry_id) {
+    throw new ValidationError('capability surface registry identity mismatch');
+  }
+  if (
+    capabilitySurfacesDigest(capabilitySurface)
+    !== document.capability_surface_ref.registry_digest
+  ) {
+    throw new ValidationError('capability surface registry digest mismatch');
+  }
 
   const providerArtifacts = plainObject(
     context.provider_artifacts,
     'context.provider_artifacts'
   );
+  const bindingIds = new Set();
+  const providerIdentities = new Map();
   for (const binding of document.provider_bindings) {
     validateDeploymentProviderBinding(binding);
+    if (binding.host_ref !== desired.target_host_ref) {
+      throw new ValidationError(
+        `provider binding host does not match desired deployment host for ${binding.binding_id}`
+      );
+    }
+    if (bindingIds.has(binding.binding_id)) {
+      throw new ValidationError(
+        `duplicate deployment provider binding ${binding.binding_id}`
+      );
+    }
+    bindingIds.add(binding.binding_id);
+
+    const priorProviderDigest = providerIdentities.get(binding.provider_ref);
+    if (
+      priorProviderDigest !== undefined
+      && priorProviderDigest !== binding.provider_digest
+    ) {
+      throw new ValidationError(
+        `provider identity conflict for ${binding.provider_ref}`
+      );
+    }
+    providerIdentities.set(binding.provider_ref, binding.provider_digest);
+
     if (!Object.hasOwn(providerArtifacts, binding.provider_ref)) {
       throw new ValidationError(
         `provider artifact is missing for ${binding.provider_ref}`
       );
+    }
+    const artifact = providerArtifacts[binding.provider_ref];
+    if (digestObject(artifact) !== binding.provider_digest) {
+      throw new ValidationError(
+        `provider artifact digest mismatch for ${binding.provider_ref}`
+      );
+    }
+    if (binding.provider_kind === 'runtime-catalog-entry') {
+      validateRuntimeConnectorCatalogEntry(artifact);
     }
   }
 
@@ -153,6 +206,11 @@ export function validateDeploymentSpec(document, context = {}) {
       );
     }
     validateHostPolicyArtifact(policyRef.policy_kind, artifact);
+    if (digestObject(artifact) !== policyRef.policy_digest) {
+      throw new ValidationError(
+        `host policy artifact digest mismatch for ${policyRef.policy_ref}`
+      );
+    }
   }
 
   return Object.freeze({
