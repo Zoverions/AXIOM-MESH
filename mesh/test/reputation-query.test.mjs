@@ -45,7 +45,7 @@ test('rejects universal score and ranking surfaces', () => {
   ]) {
     assert.throws(
       () => validateReputationQuery({ ...fixture(), [key]: value }),
-      /unsupported fields/
+      new RegExp(`contains unknown field ${key}`)
     );
   }
 });
