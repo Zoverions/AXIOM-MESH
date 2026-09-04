@@ -19,11 +19,13 @@ test('digital immune agents remain non-authoritative sensors', async () => {
 test('high-impact immune actions require progression beyond advisory model output', async () => {
   const profile = JSON.parse(await readFile(url, 'utf8'));
   const advisory = profile.decision_lanes.find(({ id }) => id === 'advisory');
+  assert.ok(advisory, 'advisory decision lane must exist');
   assert.ok(advisory.prohibited_effects.includes('permanent_block'));
   assert.ok(advisory.prohibited_effects.includes('credential_revocation'));
   assert.ok(advisory.prohibited_effects.includes('policy_mutation'));
 
   const confirmed = profile.decision_lanes.find(({ id }) => id === 'confirmed');
+  assert.ok(confirmed, 'confirmed decision lane must exist');
   assert.ok(confirmed.allowed_effects.includes('add_regression_fixture'));
   assert.ok(confirmed.prohibited_effects.includes('silent_permanent_blacklist'));
 });
