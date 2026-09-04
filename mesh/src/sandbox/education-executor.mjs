@@ -1,6 +1,6 @@
 import { createEducationLearnerAppendMutation } from '../domain/education-learner-append-mutation.mjs';
 import { createEducationLearnerProgressQuery } from '../domain/education-learner-progress-query.mjs';
-import { executeBuiltin as executeCurrentBuiltin } from './social-executor.mjs';
+import { executeBuiltin as executeCurrentBuiltin } from './circle-executor.mjs';
 
 /**
  * Narrow education extensions over the current Sandbox executor stack.
@@ -8,8 +8,8 @@ import { executeBuiltin as executeCurrentBuiltin } from './social-executor.mjs';
  * Education learner writes reuse the existing mutation-validator tool. Native
  * learner self-reads use one exact domain-specific builtin that produces only an
  * attested Grid query descriptor. All other tool/action combinations delegate
- * without modification to the current Social+core executor so Education cannot
- * regress or bypass newer Sandbox behavior.
+ * without modification to the current Circle+Social+core executor so Education
+ * cannot regress or bypass newer Sandbox behavior.
  */
 export function executeSandboxBuiltin({ tool, intent, assurance }) {
   if (

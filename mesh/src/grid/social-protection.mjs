@@ -1,5 +1,8 @@
 import { ValidationError } from '../lib/canonical.mjs';
 import {
+  reencryptCircleProtectedColumns
+} from './circle-protection.mjs';
+import {
   reencryptRemoteSocialProtectedColumns
 } from './remote-social-protection.mjs';
 
@@ -65,11 +68,17 @@ export function reencryptSocialProtectedColumns({ db, sourceProtector, targetPro
     sourceProtector,
     targetProtector
   });
+  const circle = reencryptCircleProtectedColumns({
+    db,
+    sourceProtector,
+    targetProtector
+  });
   return {
-    protected_values: values + remote.protected_values,
+    protected_values: values + remote.protected_values + circle.protected_values,
     tables: {
       ...tables,
-      ...remote.tables
+      ...remote.tables,
+      ...circle.tables
     }
   };
 }
