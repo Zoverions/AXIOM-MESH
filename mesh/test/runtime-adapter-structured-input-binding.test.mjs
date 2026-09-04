@@ -14,14 +14,21 @@ import {
 const NOW = Date.UTC(2026, 8, 3, 23, 5, 0);
 const ACTION = 'adapter.reference.echo';
 const INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
+const PURPOSE = 'test.conformance';
 const PRINCIPAL_ID = 'principal:rt-auth-011';
 
 function expectedCommitment(structuredArguments) {
-  return sha256(canonicalJson({
+  const structuredInputSha256 = sha256(canonicalJson({
     schema: 'axiom-effect-input-commitment.v1',
     axiom_action: ACTION,
     input_schema_ref: INPUT_SCHEMA_REF,
     arguments: structuredArguments
+  }));
+  return sha256(canonicalJson({
+    schema: 'axiom-effect-purpose-commitment.v1',
+    axiom_action: ACTION,
+    purpose: PURPOSE,
+    input_sha256: structuredInputSha256
   }));
 }
 
@@ -30,6 +37,7 @@ function authorizationDetail() {
     type: 'axiom-runtime-effect.v1',
     runtime_operation: 'reference.echo',
     axiom_action: ACTION,
+    purpose: PURPOSE,
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference']
