@@ -14,18 +14,102 @@
     "immune_tolerance": "avoid treating unfamiliar but benign behavior as malicious solely because it differs from prior patterns"
   },
   "agent_roles": [
-    {"id":"sentinel","function":"Observe inputs, tool metadata, retrieved content, protocol messages, model context, and behavior for suspicious patterns.","authority_effect":"none"},
-    {"id":"cross_examiner","function":"Generate adversarial interpretations and test whether suspicious instructions are data, policy, or attempted control.","authority_effect":"none"},
-    {"id":"provenance_checker","function":"Inspect source, signature, lineage, freshness, substitution, and context boundaries.","authority_effect":"none"},
-    {"id":"behavior_monitor","function":"Compare requested actions, destinations, budgets, and causal history against expected policy and prior admitted intent.","authority_effect":"none"},
-    {"id":"canary","function":"Exercise suspicious content or tools in an isolated disposable environment to observe attempted side effects.","authority_effect":"none_outside_disposable_lab"},
-    {"id":"memory_curator","function":"Promote confirmed incidents into signatures, regression fixtures, and threat intelligence while preserving provenance and uncertainty.","authority_effect":"none"}
+    {
+      "id": "sentinel",
+      "function": "Observe inputs, tool metadata, retrieved content, protocol messages, model context, and behavior for suspicious patterns.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "cross_examiner",
+      "function": "Generate adversarial interpretations and test whether suspicious instructions are data, policy, or attempted control.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "provenance_checker",
+      "function": "Inspect source, signature, lineage, freshness, substitution, and context boundaries.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "behavior_monitor",
+      "function": "Compare requested actions, destinations, budgets, and causal history against expected policy and prior admitted intent.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "canary",
+      "function": "Exercise suspicious content or tools in an isolated disposable environment to observe attempted side effects.",
+      "authority_effect": "none_outside_disposable_lab"
+    },
+    {
+      "id": "memory_curator",
+      "function": "Promote confirmed incidents into signatures, regression fixtures, and threat intelligence while preserving provenance and uncertainty.",
+      "authority_effect": "none"
+    }
   ],
-  "signal_classes": ["prompt_injection","indirect_prompt_injection","tool_description_poisoning","retrieval_poisoning","instruction_hierarchy_confusion","credential_exfiltration_attempt","authority_laundering","delegation_amplification","protocol_switch_bypass","unexpected_egress","data_exfiltration_pattern","malicious_artifact","supply_chain_substitution","semantic_drift","behavioral_anomaly","coordinated_memetic_or_instructional_contamination"],
+  "signal_classes": [
+    "prompt_injection",
+    "indirect_prompt_injection",
+    "tool_description_poisoning",
+    "retrieval_poisoning",
+    "instruction_hierarchy_confusion",
+    "credential_exfiltration_attempt",
+    "authority_laundering",
+    "delegation_amplification",
+    "protocol_switch_bypass",
+    "unexpected_egress",
+    "data_exfiltration_pattern",
+    "malicious_artifact",
+    "supply_chain_substitution",
+    "semantic_drift",
+    "behavioral_anomaly",
+    "coordinated_memetic_or_instructional_contamination"
+  ],
   "decision_lanes": [
-    {"id":"advisory","description":"One or more immune agents flag a concern.","allowed_effects":["annotate","rank","warn","request_more_verification","send_to_quarantine_lab"],"prohibited_effects":["mint_authority","permanent_block","credential_revocation","policy_mutation"]},
-    {"id":"corroborated","description":"Independent detectors or deterministic evidence agree on a threat hypothesis.","allowed_effects":["step_up_verification","narrow_budget","require_human_or_independent_review","temporary_quarantine"],"prohibited_effects":["self_modify_core_policy","irreversible_external_effect"]},
-    {"id":"confirmed","description":"A bounded verifier, reproducible test, or authorized review confirms the incident.","allowed_effects":["apply_preapproved_containment","emit_incident_evidence","add_regression_fixture","invoke_separate_revocation_or_recovery_process"],"prohibited_effects":["unbounded_self_replication","silent_permanent_blacklist","global_reputation_penalty"]}
+    {
+      "id": "advisory",
+      "description": "One or more immune agents flag a concern.",
+      "allowed_effects": [
+        "annotate",
+        "rank",
+        "warn",
+        "request_more_verification",
+        "send_to_quarantine_lab"
+      ],
+      "prohibited_effects": [
+        "mint_authority",
+        "permanent_block",
+        "credential_revocation",
+        "policy_mutation"
+      ]
+    },
+    {
+      "id": "corroborated",
+      "description": "Independent detectors or deterministic evidence agree on a threat hypothesis.",
+      "allowed_effects": [
+        "step_up_verification",
+        "narrow_budget",
+        "require_human_or_independent_review",
+        "temporary_quarantine"
+      ],
+      "prohibited_effects": [
+        "self_modify_core_policy",
+        "irreversible_external_effect"
+      ]
+    },
+    {
+      "id": "confirmed",
+      "description": "A bounded verifier, reproducible test, or authorized review confirms the incident.",
+      "allowed_effects": [
+        "apply_preapproved_containment",
+        "emit_incident_evidence",
+        "add_regression_fixture",
+        "invoke_separate_revocation_or_recovery_process"
+      ],
+      "prohibited_effects": [
+        "unbounded_self_replication",
+        "silent_permanent_blacklist",
+        "global_reputation_penalty"
+      ]
+    }
   ],
   "core_invariants": [
     "No single model or defensive agent is a root of trust.",
@@ -37,6 +121,18 @@
     "Attack intelligence may propagate; authority does not propagate with it.",
     "Content from one trust domain must not silently rewrite system instructions, policy, credentials, or long-term memory."
   ],
-  "anti_autoimmunity": ["detector diversity to reduce correlated false positives","independent confirmation before high-impact containment","appeal/review path for quarantined principals or artifacts","expiry and reassessment for signatures and reputation-like signals","separation between suspiciousness, guilt, identity, and authority","synthetic benign challenge sets to test overblocking"],
-  "nonclaims": ["The term mind virus is treated here as shorthand for propagating malicious or contaminating instructions, narratives, artifacts, or behavioral patterns; it is not a clinical claim.","Agent detectors cannot guarantee prompt-injection detection.","This profile does not authorize autonomous retaliation against external systems.","This profile does not create a universal reputation or blacklist system."]
+  "anti_autoimmunity": [
+    "detector diversity to reduce correlated false positives",
+    "independent confirmation before high-impact containment",
+    "appeal/review path for quarantined principals or artifacts",
+    "expiry and reassessment for signatures and reputation-like signals",
+    "separation between suspiciousness, guilt, identity, and authority",
+    "synthetic benign challenge sets to test overblocking"
+  ],
+  "nonclaims": [
+    "The term mind virus is treated here as shorthand for propagating malicious or contaminating instructions, narratives, artifacts, or behavioral patterns; it is not a clinical claim.",
+    "Agent detectors cannot guarantee prompt-injection detection.",
+    "This profile does not authorize autonomous retaliation against external systems.",
+    "This profile does not create a universal reputation or blacklist system."
+  ]
 }
