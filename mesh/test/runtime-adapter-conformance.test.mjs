@@ -121,7 +121,7 @@ test('synthetic adapter completes only an exact granted request and signs a rece
   );
 });
 
-test('synthetic single-use grant rejects the same request under a fresh idempotency key', async () => {
+test('synthetic single-use grant rejects same-request replays outside the cached idempotency path', async () => {
   const manifest = createSyntheticReferenceAdapterManifest({
     sourceRevision: REVISION
   });
@@ -155,6 +155,71 @@ test('synthetic single-use grant rejects the same request under a fresh idempote
   });
   assert.equal(replayWithFreshIdempotency.state, 'denied');
   assert.equal(replayWithFreshIdempotency.code, 'grant-consumed');
+
+  const replayWithChangedInput = await adapter.execute({
+    ...request,
+    idempotency_key: 'idempotency:test-same-request-replay-0003',
+    input_sha256: 'a'.repeat(64)
+  });
+  assert.equal(replayWithChangedInput.state, 'denied');
+  assert.equal(replayWithChangedInput.code, 'grant-consumed');
+});
+
+test('synthetic single-use grant admits at most one concurrent execution occurrence', async () => {
+  const manifest = createSyntheticReferenceAdapterManifest({
+    sourceRevision: REVISION
+  });
+  const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const adapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => NOW,
+    grantAuthority: grantAuthority.verifier
+  });
+  const grant = createSyntheticReferenceGrant({
+    grantId: 'grant:test-concurrent-single-use',
+    principalId: 'principal:test-owner',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: grantAuthority.signer
+  });
+  adapter.registerGrant(grant);
+  const request = createSyntheticReferenceRequest({
+    requestId: 'request:test-concurrent-single-use',
+    principalId: grant.principal_id,
+    grantId: grant.grant_id,
+    idempotencyKey: 'idempotency:test-concurrent-single-use-0001'
+  });
+
+  let releaseFirst;
+  let signalFirstEntered;
+  let effectBoundaryEntries = 0;
+  const firstEntered = new Promise(resolve => {
+    signalFirstEntered = resolve;
+  });
+  const holdFirst = new Promise(resolve => {
+    releaseFirst = resolve;
+  });
+  const firstPromise = adapter.execute(request, {
+    beforeEffect: async () => {
+      effectBoundaryEntries += 1;
+      signalFirstEntered();
+      await holdFirst;
+    }
+  });
+  await firstEntered;
+
+  const second = await adapter.execute({
+    ...request,
+    idempotency_key: 'idempotency:test-concurrent-single-use-0002'
+  });
+  releaseFirst();
+  const first = await firstPromise;
+
+  assert.equal(first.state, 'completed');
+  assert.equal(second.state, 'denied');
+  assert.equal(second.code, 'grant-consumed');
+  assert.equal(effectBoundaryEntries, 1);
 });
 
 test('synthetic receipt verification rejects a valid signature from an unpinned signer', async () => {
