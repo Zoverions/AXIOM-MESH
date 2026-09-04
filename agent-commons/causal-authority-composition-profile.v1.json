@@ -1,0 +1,100 @@
+{
+  "schema": "axiom-causal-authority-composition-profile.v1",
+  "status": "experimental interoperability profile; not production promoted",
+  "core_invariant": "A request must remain inside a verified local grant and a pre-bound intent, and must remain safe in composition with prior actions sharing the same causal authority scope.",
+  "rationale": "Transport sessions are not trusted security boundaries. Composition state follows a causal_scope_id so changing protocol, reconnecting, or splitting transport sessions cannot automatically erase the relevant authority history.",
+  "inputs": {
+    "verified_grant": "Cryptographically or otherwise independently verified before this semantic evaluator is called.",
+    "bound_intent": "Application-bound narrowing context. Intent may reduce but never expand grant authority.",
+    "request": "Exact principal, resource/audience, action, purpose, destination, policy digest, protocol and causal scope.",
+    "history": "Prior admitted actions keyed to causal_scope_id rather than transport session.",
+    "restrictions": "Explicit prohibited ordered action compositions."
+  },
+  "normative_properties": [
+    "identity/discovery/protocol metadata have no authority effect",
+    "resource or audience mismatch fails closed",
+    "policy-version mismatch fails closed",
+    "intent is monotone narrowing only",
+    "protocol transitions do not reset causal composition history",
+    "individually admissible actions can still be denied when their composition is prohibited",
+    "composition restrictions are explicit and auditable rather than inferred by an LLM",
+    "absence of a verified grant or bound intent is not silently repaired by stronger identity evidence"
+  ],
+  "research_alignment": [
+    {
+      "source": "MCP 2026-07-28 authorization hardening",
+      "retained": [
+        "resource/audience binding",
+        "issuer separation",
+        "no token passthrough",
+        "step-up remains authorization-specific"
+      ],
+      "rejected": [
+        "treating protocol authentication as sufficient local effect authority"
+      ]
+    },
+    {
+      "source": "Bounded Agents / Agentic Principal Chain, arXiv:2608.15888",
+      "retained": [
+        "attenuation",
+        "conjunctive admission",
+        "composition restrictions",
+        "intent binding",
+        "off-model enforcement"
+      ],
+      "extended": [
+        "composition state follows causal authority scope, not only a transport session, reducing session-splitting evasion"
+      ],
+      "rejected": [
+        "importing APC as a required Mesh runtime or authority vocabulary"
+      ]
+    },
+    {
+      "source": "Intent-Governed Tool Authorization, arXiv:2606.22916",
+      "retained": [
+        "intent can narrow static policy",
+        "intent-tool consistency",
+        "server-side enforcement"
+      ],
+      "rejected": [
+        "intent as an authority source"
+      ]
+    },
+    {
+      "source": "ToolGuardian, arXiv:2607.21835",
+      "retained": [
+        "separate evidence characterization from deterministic policy",
+        "composition-aware authorization"
+      ],
+      "rejected": [
+        "requiring ASP or any specific policy engine in the Mesh core"
+      ]
+    },
+    {
+      "source": "IETF draft-liu-ai-agent-authorization-integration-00",
+      "retained": [
+        "cross-domain identity",
+        "consent evidence",
+        "multi-hop delegation as separate composable inputs"
+      ],
+      "rejected": [
+        "hard-coding OAuth as the Mesh authority substrate"
+      ]
+    },
+    {
+      "source": "IETF draft-sharif-agent-identity-framework-01",
+      "retained": [
+        "separation of identity, authorization, attestation, evidence and trust"
+      ],
+      "rejected": [
+        "collapsing trust into a universal scalar or reputation score"
+      ]
+    }
+  ],
+  "limitations": [
+    "The semantic evaluator does not verify signatures or tokens itself.",
+    "Composition restrictions must be authored; unknown harmful combinations are not magically inferred.",
+    "Causal scope continuity must itself be integrity-bound by the calling authority path.",
+    "This profile does not claim standards conformance or production readiness."
+  ]
+}
