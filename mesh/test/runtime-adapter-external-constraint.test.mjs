@@ -18,6 +18,7 @@ function recognizedAuthorizationDetails(overrides = {}) {
     type: 'axiom-runtime-effect.v1',
     runtime_operation: 'reference.echo',
     axiom_action: 'adapter.reference.echo',
+    purpose: 'test.conformance',
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference'],
@@ -52,13 +53,13 @@ test('recognized external authorization details map exactly into native effect c
 test('recognized authorization detail types still reject unmapped constraint axes', () => {
   assert.throws(
     () => translateSyntheticExternalAuthorizationRequest(externalRequest({
-      suffix: 'unmapped-purpose',
-      grantId: 'grant:rt-auth-009-unmapped-purpose',
+      suffix: 'unmapped-budget',
+      grantId: 'grant:rt-auth-009-unmapped-budget',
       authorizationDetails: recognizedAuthorizationDetails({
-        purpose: 'security-review'
+        budget: { max_cost_micros: 1 }
       })
     })),
-    /unsupported authorization detail fields: purpose/
+    /unsupported authorization detail fields: budget/
   );
 });
 
