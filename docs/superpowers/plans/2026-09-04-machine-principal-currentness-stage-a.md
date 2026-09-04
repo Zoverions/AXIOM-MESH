@@ -4,7 +4,7 @@
 
 **Goal:** Reconstruct the current-main machine-principal lifecycle-currentness foundation so AXIOM can retain and verify the latest signed lifecycle authority state and evaluate it against one exact pending effect admission without changing Sandbox or granting effect authority.
 
-**Architecture:** Build four focused current-main modules: lifecycle/currentness semantics, signed controller-bound checkpoints, a durable retained-head store, and an exact retained-head effect-currentness evaluator. Reuse current `canonical.mjs`, Agent Trust identity/currentness evidence, and the delegation-root durable-store pattern instead of forward-porting the stale #1420/#1444 runtime stack. Stage A stops before lifecycle mutation and before Gateway/Hypervisor/Sandbox/Grid integration.
+**Architecture:** Build four focused current-main modules: lifecycle/currentness semantics, signed controller-bound checkpoints, a durable retained-head store, and an exact retained-head effect-currentness evaluator. Reuse current `canonical.mjs`, Agent Trust identity/currentness evidence, and the delegation-root durable-store pattern instead of forward-porting stale #1420/#1444 runtime wiring. Stage A stops before lifecycle mutation and before Gateway/Hypervisor/Sandbox/Grid integration.
 
 **Tech Stack:** Node.js ESM; Node `crypto` Ed25519; Node `fs/promises`; `node:test`; existing AXIOM canonicalization/digest helpers; existing Agent Trust machine-identity/currentness verifier; current repository CI (`npm run check`, Clean Kernel, Windows/macOS compatibility, CodeQL).
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Approved reconstruction baseline: `6170bb13d077ec5f5752853ef23da71dc3798cee`. At execution start, re-read protected `main`; if it advanced, rebase/carry the approved spec and plan onto the new exact main head before writing tests.
+- Approved reconstruction baseline: `6170bb13d077ec5f5752853ef23da71dc3798cee`. At execution start, re-read protected `main`; if it advanced, carry the approved spec and plan onto the new exact main head before writing tests.
 - Historical #1420/#1440/#1444 code is provenance only. Do not merge or cherry-pick the stale A6 stack wholesale.
 - Currentness evidence is not authority. Every introduced projection must preserve `authority_effect: 'none'`, `execution_authority_granted: false`, and `global_currentness_claimed: false`.
 - `active` and `narrowed` are potentially usable only when the retained authority digest exactly equals the pending capability-bound authority digest. `revoked`, `compromised`, and `expired` are non-usable terminal states for Stage A.
@@ -34,6 +34,7 @@ Create:
 - `mesh/src/lib/machine-principal-currentness-checkpoint.mjs` — controller-currentness trust resolution plus checkpoint sign/verify/transition.
 - `mesh/src/lib/machine-principal-currentness-store.mjs` — canonical JSONL retained-head store.
 - `mesh/src/lib/machine-principal-effect-currentness.mjs` — actual retained-head resolver and exact pending-admission prerequisite evaluator.
+- `mesh/test/helpers/machine-currentness-fixtures.mjs` — shared deterministic Stage A cryptographic/currentness fixtures only.
 - `mesh/test/machine-principal-currentness.test.mjs`
 - `mesh/test/machine-principal-currentness-checkpoint.test.mjs`
 - `mesh/test/machine-principal-currentness-store.test.mjs`
@@ -42,7 +43,7 @@ Create:
 
 Modify:
 
-- `mesh/src/check-docs.mjs` — register this plan, its approved design, and the Stage A security boundary document.
+- `mesh/src/check-docs.mjs` — register the Stage A plan, approved design, and security boundary document.
 
 Do not add a dedicated GitHub workflow in Stage A. Existing protected workflows remain authoritative.
 
@@ -57,16 +58,16 @@ Do not add a dedicated GitHub workflow in Stage A. Existing protected workflows 
 **Interfaces:**
 - Consumes: `ValidationError`, `assertPlainObject`, `assertString`, `digestObject` from `mesh/src/lib/canonical.mjs`.
 - Produces:
-  - `MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA`
-  - `MACHINE_PRINCIPAL_EFFECT_ADMISSION_SCHEMA`
-  - `MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA`
+  - `MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA = 'axiom-machine-principal-currentness.v1'`
+  - `MACHINE_PRINCIPAL_EFFECT_ADMISSION_SCHEMA = 'axiom-machine-principal-effect-admission.v1'`
+  - `MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA = 'axiom-machine-principal-effect-currentness-evaluation.v1'`
   - `normalizeMachinePrincipalCurrentness(value)`
   - `machinePrincipalAdmissionDigest(input)`
   - `evaluateMachinePrincipalCurrentness(input)`
 
 - [ ] **Step 1: Write the failing semantic test file**
 
-Create `mesh/test/machine-principal-currentness.test.mjs` with these helpers and first tests:
+Create `mesh/test/machine-principal-currentness.test.mjs`:
 
 ```js
 import assert from 'node:assert/strict';
@@ -98,7 +99,7 @@ function lifecycleState(overrides = {}) {
     observed_at: T0,
     source_head_digest: HEAD_1,
     predecessor_head_digest: null,
-    controller_id: 'service.currentness-controller',
+    controller_id: 'service.machine-currentness-controller',
     controller_key_id: CONTROLLER_KEY,
     controller_credential_digest: CREDENTIAL,
     controller_key_epoch: 1,
@@ -164,11 +165,7 @@ test('narrowed state is usable only for the exact narrowed authority digest', ()
   assert.equal(staleA.allow, false);
   assert.equal(staleA.code, 'machine_currentness_authority_changed');
 });
-```
 
-Add explicit tests in the same file for:
-
-```js
 for (const status of ['revoked', 'compromised', 'expired']) {
   test(`${status} lifecycle state fails closed`, () => {
     const result = evaluateMachinePrincipalCurrentness({
@@ -209,7 +206,7 @@ test('future and stale evidence have distinct stable denials', () => {
 });
 ```
 
-Also add one `assert.throws` for each of: unsupported field, unsupported schema, invalid principal type, malformed digest, sequence zero, genesis with predecessor, non-genesis without predecessor, non-canonical timestamp, malformed controller metadata, and each attempted nonclaim elevation.
+Add explicit `assert.throws` tests for unsupported field, unsupported schema, invalid principal type, malformed digest, sequence zero, genesis with predecessor, non-genesis without predecessor, non-canonical UTC timestamp, malformed controller metadata, and each attempted nonclaim elevation.
 
 - [ ] **Step 2: Run RED**
 
@@ -221,18 +218,14 @@ Expected: FAIL because `mesh/src/lib/machine-principal-currentness.mjs` is missi
 
 - [ ] **Step 3: Implement the minimal strict semantic core**
 
-Use these exact schemas:
+Use these exact schemas and exact lifecycle keys:
 
 ```js
 export const MACHINE_PRINCIPAL_CURRENTNESS_SCHEMA = 'axiom-machine-principal-currentness.v1';
 export const MACHINE_PRINCIPAL_EFFECT_ADMISSION_SCHEMA = 'axiom-machine-principal-effect-admission.v1';
 export const MACHINE_PRINCIPAL_EFFECT_CURRENTNESS_EVALUATION_SCHEMA =
   'axiom-machine-principal-effect-currentness-evaluation.v1';
-```
 
-Allow exactly these lifecycle-state fields:
-
-```js
 const CURRENTNESS_KEYS = new Set([
   'schema', 'principal_id', 'principal_type', 'authority_digest', 'status',
   'sequence', 'observed_at', 'source_head_digest', 'predecessor_head_digest',
@@ -269,22 +262,17 @@ if (ageMs < 0) return deny('machine_currentness_future');
 if (ageMs > maxAgeMs) return deny('machine_currentness_stale');
 ```
 
-On success, compute `currentness_evidence_digest = digestObject(state)` and `effect_currentness_evaluation_digest = digestObject({ schema, admission_digest, currentness_evidence_digest, currentness_sequence, currentness_head_digest })`. Return `allow:true` but keep authority nonclaims false/none.
+On success compute `currentness_evidence_digest = digestObject(state)` and `effect_currentness_evaluation_digest = digestObject({ schema, admission_digest, currentness_evidence_digest, currentness_sequence, currentness_head_digest })`. Return `allow:true` while preserving the fixed nonclaims.
 
-- [ ] **Step 4: Run GREEN**
+- [ ] **Step 4: Run GREEN and commit**
 
 ```bash
 node --test mesh/test/machine-principal-currentness.test.mjs
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit Task 1**
-
-```bash
 git add mesh/src/lib/machine-principal-currentness.mjs mesh/test/machine-principal-currentness.test.mjs
 git commit -m "feat: add machine principal currentness semantics"
 ```
+
+Expected: test PASS before commit.
 
 ---
 
@@ -292,38 +280,135 @@ git commit -m "feat: add machine principal currentness semantics"
 
 **Files:**
 - Create: `mesh/src/lib/machine-principal-currentness-checkpoint.mjs`
+- Create: `mesh/test/helpers/machine-currentness-fixtures.mjs`
 - Create: `mesh/test/machine-principal-currentness-checkpoint.test.mjs`
 - Reuse unchanged: `mesh/src/lib/agent-trust-machine-identity.mjs`
 - Reuse unchanged: `mesh/src/lib/agent-trust-currentness-checkpoint.mjs`
 
 **Interfaces:**
 - Consumes Task 1 `normalizeMachinePrincipalCurrentness`.
-- Consumes current `evaluateAgentCurrentnessAtEffect`, `verifyMachineIdentityCredentialHistory`, and `machineIdentityKeyId`.
+- Consumes existing `createMachineIdentityCredential`, `verifyMachineIdentityCredentialHistory`, `machineIdentityKeyId`, `createAgentCurrentnessCheckpoint`, and `evaluateAgentCurrentnessAtEffect`.
 - Produces `resolveMachineCurrentnessControllerTrust`, `createMachinePrincipalCurrentnessCheckpoint`, `verifyMachinePrincipalCurrentnessCheckpoint`, and `validateMachinePrincipalCurrentnessCheckpointTransition`.
+- Test helper produces deterministic `controllerEvidenceFixture()`, `controllerTrustFixture()`, and `targetLifecycleState()` for Tasks 2-4.
 
-- [ ] **Step 1: Write controller fixture helpers in the new test file**
+- [ ] **Step 1: Create the deterministic shared fixture file**
 
-At the top of `mesh/test/machine-principal-currentness-checkpoint.test.mjs`, import the existing Agent Trust machine identity/currentness creation helpers used by `mesh/test/agent-trust-currentness-checkpoint.test.mjs`. Then define these local helpers completely in this file:
+Create `mesh/test/helpers/machine-currentness-fixtures.mjs` with these imports/constants/helpers:
 
 ```js
-import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
-import test from 'node:test';
+import { normalizeMachinePrincipalDefinition } from '../../src/lib/machine-principal.mjs';
+import { createMachineIdentityCredential } from '../../src/lib/agent-trust-machine-identity.mjs';
+import { createAgentCurrentnessCheckpoint } from '../../src/lib/agent-trust-currentness-checkpoint.mjs';
+import {
+  createMachinePrincipalCurrentnessCheckpoint,
+  resolveMachineCurrentnessControllerTrust
+} from '../../src/lib/machine-principal-currentness-checkpoint.mjs';
 
-const T0 = '2026-09-04T18:00:00.000Z';
-const T1 = '2026-09-04T18:10:00.000Z';
-const T2 = '2026-09-04T18:20:00.000Z';
+export const T0 = '2026-09-04T18:00:00.000Z';
+export const T1 = '2026-09-04T18:10:00.000Z';
+export const T2 = '2026-09-04T18:20:00.000Z';
+export const T3 = '2026-09-04T18:30:00.000Z';
+export const AUTH_A = 'a'.repeat(64);
+export const AUTH_B = 'b'.repeat(64);
+export const PRINCIPAL_ID = 'agent.currentness.stage-a';
+const HUMANS = new Set(['owner.alice']);
 
-function keys() {
+export function keys() {
   return generateKeyPairSync('ed25519');
 }
 
-function targetState(controllerTrust, overrides = {}) {
+export function controllerEvidenceFixture() {
+  const issuer = keys();
+  const observer = keys();
+  const controllerOperational = keys();
+  const controller = normalizeMachinePrincipalDefinition({
+    id: 'service.machine-currentness-controller',
+    type: 'service',
+    sponsor: 'owner.alice',
+    roles: ['researcher'],
+    scopes: ['intent:execute'],
+    lifetime: 'session',
+    expires_at: '2099-01-01T00:00:00.000Z',
+    runtime: {
+      id: 'runtime.machine-currentness-controller',
+      kind: 'local-process',
+      software_digest: '9'.repeat(64)
+    },
+    constraints: {
+      actions: ['system.echo'],
+      purposes: ['test.conformance'],
+      destinations: ['local'],
+      budgets: {
+        max_requests_per_minute: 10,
+        max_concurrent_requests: 2,
+        max_execution_ms: 5_000,
+        max_request_bytes: 65_536,
+        max_response_bytes: 262_144
+      },
+      delegation: { allowed: false, max_depth: 0 }
+    }
+  }, {
+    knownHumanPrincipals: HUMANS,
+    now: new Date(T0)
+  });
+
+  const credential = createMachineIdentityCredential({
+    principal: controller,
+    issuerId: 'identity.machine-currentness-controller',
+    issuerPrivateKey: issuer.privateKey,
+    operationalPublicKey: controllerOperational.publicKey,
+    keyEpoch: 1,
+    issuedAt: T0,
+    validFrom: T0,
+    expiresAt: '2026-09-05T00:00:00.000Z',
+    knownHumanPrincipals: HUMANS
+  });
+
+  const currentnessCheckpoint = createAgentCurrentnessCheckpoint({
+    checkpointId: 'controller.currentness.cp.1',
+    checkpointSequence: 1,
+    credentialHistory: [credential],
+    revocations: [],
+    trustedIssuerPublicKey: issuer.publicKey,
+    observerId: 'observer.local.currentness',
+    observerPrivateKey: observer.privateKey,
+    evaluatedAt: T1
+  });
+
+  return {
+    issuer,
+    observer,
+    controllerOperational,
+    credentialHistory: [credential],
+    revocations: [],
+    currentnessCheckpoint,
+    expectedLatestCheckpointDigest: currentnessCheckpoint.checkpoint_digest
+  };
+}
+
+export function controllerTrustFixture() {
+  const fixture = controllerEvidenceFixture();
+  const controllerTrust = resolveMachineCurrentnessControllerTrust({
+    currentnessCheckpoint: fixture.currentnessCheckpoint,
+    trustedObserverPublicKey: fixture.observer.publicKey,
+    credentialHistory: fixture.credentialHistory,
+    revocations: fixture.revocations,
+    trustedIssuerPublicKey: fixture.issuer.publicKey,
+    expectedLatestCheckpointDigest: fixture.expectedLatestCheckpointDigest,
+    expectedControllerPrincipalId: 'service.machine-currentness-controller',
+    evaluatedAt: T2,
+    maxAgeMs: 60 * 60 * 1000
+  });
+  return { ...fixture, controllerTrust };
+}
+
+export function targetLifecycleState(controllerTrust, overrides = {}) {
   return {
     schema: 'axiom-machine-principal-currentness.v1',
-    principal_id: 'agent.currentness.stage-a',
+    principal_id: PRINCIPAL_ID,
     principal_type: 'agent',
-    authority_digest: 'a'.repeat(64),
+    authority_digest: AUTH_A,
     status: 'active',
     sequence: 1,
     observed_at: T2,
@@ -339,61 +424,75 @@ function targetState(controllerTrust, overrides = {}) {
     ...overrides
   };
 }
-```
 
-For the controller evidence fixture, copy the **existing public test-helper construction pattern** from `mesh/test/agent-trust-currentness-checkpoint.test.mjs` without changing its semantics: create one `service` machine-principal identity credential for principal `service.machine-currentness-controller`, signed by a test issuer; create one retained Agent Trust currentness checkpoint for that credential at `T1`; retain the issuer/observer public keys and the operational private key. Name the returned helper `controllerEvidenceFixture()` and make it return exactly:
-
-```js
-{
-  issuer,
-  observer,
-  controllerOperational,
-  credentialHistory,
-  revocations: [],
-  currentnessCheckpoint,
-  expectedLatestCheckpointDigest: currentnessCheckpoint.checkpoint_digest
+export function signedTargetCheckpoint({ controllerTrust, controllerOperational, overrides = {} }) {
+  return createMachinePrincipalCurrentnessCheckpoint({
+    currentness: targetLifecycleState(controllerTrust, overrides),
+    controllerPrivateKey: controllerOperational.privateKey,
+    controllerTrust
+  });
 }
 ```
 
-Do not invent a second controller credential format in this task.
+- [ ] **Step 2: Write the failing checkpoint test**
 
-- [ ] **Step 2: Write the first failing checkpoint test**
+Create `mesh/test/machine-principal-currentness-checkpoint.test.mjs`:
 
 ```js
-test('active controller evidence resolves the exact signing key and checkpoint stays non-authorizing', () => {
-  const fixture = controllerEvidenceFixture();
-  const controllerTrust = resolveMachineCurrentnessControllerTrust({
-    currentnessCheckpoint: fixture.currentnessCheckpoint,
-    trustedObserverPublicKey: fixture.observer.publicKey,
-    credentialHistory: fixture.credentialHistory,
-    revocations: fixture.revocations,
-    trustedIssuerPublicKey: fixture.issuer.publicKey,
-    expectedLatestCheckpointDigest: fixture.expectedLatestCheckpointDigest,
-    expectedControllerPrincipalId: 'service.machine-currentness-controller',
-    evaluatedAt: T2,
-    maxAgeMs: 60 * 60 * 1000
-  });
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  createMachinePrincipalCurrentnessCheckpoint,
+  resolveMachineCurrentnessControllerTrust,
+  validateMachinePrincipalCurrentnessCheckpointTransition,
+  verifyMachinePrincipalCurrentnessCheckpoint
+} from '../src/lib/machine-principal-currentness-checkpoint.mjs';
+import {
+  AUTH_B,
+  PRINCIPAL_ID,
+  T3,
+  controllerEvidenceFixture,
+  controllerTrustFixture,
+  signedTargetCheckpoint,
+  targetLifecycleState
+} from './helpers/machine-currentness-fixtures.mjs';
 
-  const checkpoint = createMachinePrincipalCurrentnessCheckpoint({
-    currentness: targetState(controllerTrust),
-    controllerPrivateKey: fixture.controllerOperational.privateKey,
-    controllerTrust
-  });
-
+test('active controller evidence resolves exact signing key and checkpoint stays non-authorizing', () => {
+  const fixture = controllerTrustFixture();
+  const checkpoint = signedTargetCheckpoint(fixture);
   const verified = verifyMachinePrincipalCurrentnessCheckpoint(checkpoint, {
-    controllerTrust,
-    expectedPrincipalId: 'agent.currentness.stage-a',
+    controllerTrust: fixture.controllerTrust,
+    expectedPrincipalId: PRINCIPAL_ID,
     expectedPrincipalType: 'agent'
   });
-
   assert.equal(verified.checkpoint_digest, checkpoint.checkpoint_digest);
-  assert.equal(verified.statement.controller_credential_digest, controllerTrust.controller_credential_digest);
+  assert.equal(verified.statement.controller_credential_digest, fixture.controllerTrust.controller_credential_digest);
   assert.equal(verified.authority_effect, 'none');
   assert.equal(verified.execution_authority_granted, false);
 });
+
+test('valid transition advances sequence/head/time while allowing authority narrowing', () => {
+  const fixture = controllerTrustFixture();
+  const first = signedTargetCheckpoint(fixture);
+  const second = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: targetLifecycleState(fixture.controllerTrust, {
+      authority_digest: AUTH_B,
+      status: 'narrowed',
+      sequence: 2,
+      observed_at: T3,
+      predecessor_head_digest: first.statement.source_head_digest,
+      source_head_digest: '2'.repeat(64)
+    }),
+    controllerPrivateKey: fixture.controllerOperational.privateKey,
+    controllerTrust: fixture.controllerTrust
+  });
+  assert.equal(validateMachinePrincipalCurrentnessCheckpointTransition(first, second, {
+    controllerTrust: fixture.controllerTrust
+  }).valid, true);
+});
 ```
 
-Add negatives for controller currentness revoked/expired/not-yet-valid; stale/mismatched expected latest controller checkpoint; controller operational key substitution; controller credential digest/key epoch mismatch; target principal substitution; state/statement/signature/checkpoint digest tamper; unknown fields; invalid sequence transition; wrong predecessor source head; non-advancing observation time.
+Add negatives for wrong expected latest controller currentness checkpoint, revoked/expired controller evidence, controller operational key substitution, controller credential digest/key epoch mismatch, target principal/type substitution, statement/signature/checkpoint digest tamper, unsupported fields, sequence not `+1`, wrong predecessor source head, and non-advancing observation time.
 
 - [ ] **Step 3: Run RED**
 
@@ -401,11 +500,11 @@ Add negatives for controller currentness revoked/expired/not-yet-valid; stale/mi
 node --test mesh/test/machine-principal-currentness-checkpoint.test.mjs
 ```
 
-Expected: FAIL because the new checkpoint module is missing.
+Expected: FAIL because the checkpoint module is missing.
 
-- [ ] **Step 4: Implement `resolveMachineCurrentnessControllerTrust`**
+- [ ] **Step 4: Implement controller trust resolution exactly over existing Agent Trust currentness evidence**
 
-Accept exactly:
+`resolveMachineCurrentnessControllerTrust()` accepts exactly:
 
 ```js
 {
@@ -421,7 +520,22 @@ Accept exactly:
 }
 ```
 
-Call the existing `evaluateAgentCurrentnessAtEffect` with the same credential history/revocation/currentness checkpoint and exact latest checkpoint digest. Require its result to be `active`. Verify the machine identity credential history with `verifyMachineIdentityCredentialHistory`, find the exact credential named by the currentness result, and require principal id, operational key id, and key epoch equality.
+Call:
+
+```js
+const check = evaluateAgentCurrentnessAtEffect({
+  checkpoint: currentnessCheckpoint,
+  trustedObserverPublicKey,
+  credentialHistory,
+  revocations,
+  trustedIssuerPublicKey,
+  expectedLatestCheckpointDigest,
+  effectAt: evaluatedAt,
+  maxEvidenceAgeMs: maxAgeMs
+});
+```
+
+Require `check.known_active_under_retained_evidence === true`. Verify the credential history with `verifyMachineIdentityCredentialHistory`, requiring `expectedPrincipalId: expectedControllerPrincipalId`; find the credential whose `credential_digest === check.active_credential_digest`; require its key epoch and operational key ID to equal `currentnessCheckpoint.statement.current_key_epoch` and `.current_operational_key_id`.
 
 Return exactly:
 
@@ -440,9 +554,9 @@ Return exactly:
 }
 ```
 
-- [ ] **Step 5: Implement checkpoint sign/verify/transition**
+- [ ] **Step 5: Implement Ed25519 checkpoint sign/verify/transition**
 
-Use Ed25519 and canonical JSON. Envelope fields are exactly:
+Envelope:
 
 ```js
 {
@@ -454,9 +568,9 @@ Use Ed25519 and canonical JSON. Envelope fields are exactly:
 }
 ```
 
-The statement is the Task 1 normalized lifecycle state; it contains no admission/effect fields. Require its controller id/key/credential/epoch to equal `controllerTrust`. Require the signing private key's derived public key ID to equal `controllerTrust.controller_key_id`.
+The statement is Task 1's normalized lifecycle state. It contains no admission/effect-specific fields. Require controller id/key/credential/epoch to equal `controllerTrust`, and derive the signing public key ID with existing `machineIdentityKeyId` so a substituted private key cannot sign.
 
-Transition validation requires:
+Transition requirements:
 
 ```text
 same principal id/type
@@ -465,16 +579,18 @@ predecessor_head_digest exactly previous source_head_digest
 observed_at strictly advances
 ```
 
-Authority digest and lifecycle status may change; Stage B needs that later.
+Do not require authority digest or lifecycle status equality.
 
-- [ ] **Step 6: Run focused tests and commit**
+- [ ] **Step 6: Run GREEN and commit**
 
 ```bash
 node --test \
   mesh/test/machine-principal-currentness.test.mjs \
   mesh/test/machine-principal-currentness-checkpoint.test.mjs
-
-git add mesh/src/lib/machine-principal-currentness-checkpoint.mjs mesh/test/machine-principal-currentness-checkpoint.test.mjs
+git add \
+  mesh/src/lib/machine-principal-currentness-checkpoint.mjs \
+  mesh/test/helpers/machine-currentness-fixtures.mjs \
+  mesh/test/machine-principal-currentness-checkpoint.test.mjs
 git commit -m "feat: add signed machine currentness checkpoints"
 ```
 
@@ -487,16 +603,16 @@ Expected: tests PASS before commit.
 **Files:**
 - Create: `mesh/src/lib/machine-principal-currentness-store.mjs`
 - Create: `mesh/test/machine-principal-currentness-store.test.mjs`
+- Reuse test helper: `mesh/test/helpers/machine-currentness-fixtures.mjs`
 - Reference unchanged: `mesh/src/lib/delegation-root-attestation-key-currentness-store.mjs`
-- Reference unchanged: `mesh/test/delegation-root-attestation-key-currentness-store.test.mjs`
 
 **Interfaces:**
 - Consumes Task 2 checkpoint verification/transition.
 - Produces `openMachinePrincipalCurrentnessStore(options)` and store methods `snapshot()`, `verifyState()`, `retainedHead()`, `retain(checkpoint)`.
 
-- [ ] **Step 1: Write complete local durable-store fixture helpers**
+- [ ] **Step 1: Write the durable-store test fixture and tests**
 
-In `mesh/test/machine-principal-currentness-store.test.mjs`, use the Task 2 controller fixture construction and define:
+Create `mesh/test/machine-principal-currentness-store.test.mjs`. Reuse `controllerTrustFixture`, `signedTargetCheckpoint`, `targetLifecycleState`, `AUTH_B`, `PRINCIPAL_ID`, `T3`, and create a sequence-2 narrowed checkpoint with predecessor/source-head continuity. Use this local temp helper:
 
 ```js
 async function tempState(t, suffix = 'state.jsonl') {
@@ -509,43 +625,33 @@ function openOptions(statePath, fixture, extra = {}) {
   return {
     statePath,
     controllerTrust: fixture.controllerTrust,
-    expectedPrincipalId: fixture.principalId,
+    expectedPrincipalId: PRINCIPAL_ID,
     expectedPrincipalType: 'agent',
     ...extra
   };
 }
 ```
 
-Define `checkpointFixture()` in the same test file by constructing controller trust exactly as Task 2, then create:
+Write separate tests for:
 
-- `checkpoint1`: active authority A, sequence 1, no predecessor;
-- `checkpoint2`: narrowed authority B, sequence 2, predecessor source head = checkpoint1 source head;
-- `checkpoint3`: sequence 3 successor of checkpoint2;
-- `conflictingCheckpoint1`: independently signed sequence 1 with a different source head.
+1. retain + reopen preserves exact head and only local-durability claims;
+2. exact duplicate is `already-retained`;
+3. same-sequence/different-digest equivocation fails;
+4. older checkpoint after sequence 2 fails rollback;
+5. first retained checkpoint must be sequence 1;
+6. sequence gap fails;
+7. wrong predecessor fails;
+8. torn trailing JSONL fails;
+9. non-canonical JSON fails;
+10. symlink/non-regular path fails;
+11. checkpoint byte bound fails;
+12. total state byte bound fails;
+13. active disk/memory divergence fails;
+14. tampered signed retained checkpoint fails;
+15. retained history beginning at sequence >1 fails as truncated;
+16. source has `await handle.sync()` and no `appendFile(`.
 
-Use fixed `T1 < T2 < T3 < T4` timestamps. Return the four checkpoints, controller trust, principal id, and authority digests.
-
-- [ ] **Step 2: Write store invariants as failing tests**
-
-The positive test must assert exact local-durability nonclaims after retain and reopen. Add individual tests for:
-
-1. exact duplicate -> `already-retained`;
-2. same sequence/different digest -> equivocation rejection;
-3. older checkpoint after advancement -> rollback rejection;
-4. empty store requires sequence 1;
-5. sequence gap rejection;
-6. wrong predecessor rejection;
-7. torn trailing JSONL rejection;
-8. non-canonical JSON rejection;
-9. symlink/non-regular state rejection;
-10. bounded checkpoint bytes;
-11. bounded total state bytes;
-12. active disk/memory divergence rejection;
-13. tampered signed retained checkpoint rejection;
-14. locally truncated history beginning at sequence >1 rejection;
-15. source contains `await handle.sync()` and does not use `appendFile(`.
-
-- [ ] **Step 3: Run RED**
+- [ ] **Step 2: Run RED**
 
 ```bash
 node --test mesh/test/machine-principal-currentness-store.test.mjs
@@ -553,21 +659,20 @@ node --test mesh/test/machine-principal-currentness-store.test.mjs
 
 Expected: FAIL because the store module is missing.
 
-- [ ] **Step 4: Implement the store by adapting current delegation-root storage mechanics**
+- [ ] **Step 3: Implement the store using current delegation-root storage mechanics**
 
 Use:
 
 ```js
 export const MACHINE_PRINCIPAL_CURRENTNESS_STORE_SCHEMA =
   'axiom-machine-principal-currentness-store.v1';
-
 const DEFAULT_MAX_STATE_BYTES = 64 * 1024 * 1024;
 const HARD_MAX_STATE_BYTES = 512 * 1024 * 1024;
 const DEFAULT_MAX_CHECKPOINT_BYTES = 2 * 1024 * 1024;
 const HARD_MAX_CHECKPOINT_BYTES = 16 * 1024 * 1024;
 ```
 
-Trusted open options are exactly:
+Open options:
 
 ```js
 {
@@ -580,43 +685,40 @@ Trusted open options are exactly:
 }
 ```
 
-Required open flow:
+Open flow:
 
 ```text
-create missing file with mode 0600 under directory mode 0700
--> require regular non-symlink
+create missing 0600 state file in 0700 directory
+-> require regular non-symlink file
 -> enforce max state bytes
 -> require newline-terminated canonical JSONL
--> verify every signed checkpoint
--> require sequence 1 genesis
--> verify every transition
+-> verify every checkpoint
+-> require sequence-1 genesis
+-> validate every transition
 -> retain exact verified history in memory
 ```
 
-Required `retain()` flow:
+`retain()` flow:
 
 ```text
 verify candidate
--> re-read and verify disk
--> require disk history == active in-memory history
--> enforce sequence/rollback/equivocation rules
--> append canonical JSON line with opened file handle
+-> re-read/verify disk
+-> require disk history == active memory history
+-> enforce next-sequence/rollback/equivocation rules
+-> append canonical JSON line through open file handle
 -> await handle.sync()
--> close handle
--> update in-memory history
+-> close
+-> update memory
 ```
 
-`retainedHead()` has no parameters and returns only the actual latest verified checkpoint or `null`.
+`retainedHead()` takes no arguments and returns only the actual latest verified checkpoint or `null`.
 
-Store projections include `local_durable_retention_claimed:true`, but `storage_rollback_proof_claimed:false`, `hardware_monotonicity_claimed:false`, `global_currentness_claimed:false`, `authority_effect:'none'`, and `execution_authority_granted:false`.
-
-- [ ] **Step 5: Run GREEN and commit**
+- [ ] **Step 4: Run GREEN and commit**
 
 ```bash
 node --test \
   mesh/test/machine-principal-currentness-checkpoint.test.mjs \
   mesh/test/machine-principal-currentness-store.test.mjs
-
 git add mesh/src/lib/machine-principal-currentness-store.mjs mesh/test/machine-principal-currentness-store.test.mjs
 git commit -m "feat: add durable machine currentness store"
 ```
@@ -630,26 +732,48 @@ Expected: tests PASS before commit.
 **Files:**
 - Create: `mesh/src/lib/machine-principal-effect-currentness.mjs`
 - Create: `mesh/test/machine-principal-effect-currentness.test.mjs`
+- Reuse helper: `mesh/test/helpers/machine-currentness-fixtures.mjs`
 
 **Interfaces:**
 - Consumes Task 1 admission/currentness evaluator and Task 3 `verifyState()` / `retainedHead()`.
 - Produces `resolveRetainedMachinePrincipalCurrentnessHead(input)` and `evaluateRetainedMachinePrincipalEffectCurrentness(input)`.
 
-- [ ] **Step 1: Define the test fixture in the evaluator test file**
+- [ ] **Step 1: Write the local retained-store fixture in the evaluator test**
 
-In `mesh/test/machine-principal-effect-currentness.test.mjs`, define `retainedFixture(t, { status = 'active', authorityDigest = AUTH_A } = {})` completely by:
+Create `mesh/test/machine-principal-effect-currentness.test.mjs` with:
 
-1. constructing controller trust using the same Task 2 fixture construction;
-2. opening a temp Task 3 store;
-3. creating one signed checkpoint with the requested `status` and authority digest;
-4. retaining it;
-5. returning `{ store, checkpoint, principalId, controllerTrust }`.
+```js
+async function retainedFixture(t, {
+  status = 'active',
+  authorityDigest = AUTH_A
+} = {}) {
+  const fixture = controllerTrustFixture();
+  const dir = await mkdtemp(join(tmpdir(), 'axiom-machine-effect-currentness-'));
+  t.after(async () => rm(dir, { recursive: true, force: true }));
+  const store = await openMachinePrincipalCurrentnessStore({
+    statePath: join(dir, 'state.jsonl'),
+    controllerTrust: fixture.controllerTrust,
+    expectedPrincipalId: PRINCIPAL_ID,
+    expectedPrincipalType: 'agent'
+  });
+  const checkpoint = createMachinePrincipalCurrentnessCheckpoint({
+    currentness: targetLifecycleState(fixture.controllerTrust, {
+      status,
+      authority_digest: authorityDigest
+    }),
+    controllerPrivateKey: fixture.controllerOperational.privateKey,
+    controllerTrust: fixture.controllerTrust
+  });
+  await store.retain(checkpoint);
+  return { ...fixture, store, checkpoint, principalId: PRINCIPAL_ID };
+}
+```
 
-For the narrowed tests, construct/retain active A checkpoint 1 followed by narrowed B checkpoint 2 so the store has real retained progression, not a synthetic isolated sequence-2 object.
+For narrowed-B tests, create active-A checkpoint 1, retain it, then create and retain sequence-2 narrowed-B with proper predecessor/source-head progression before evaluation.
 
 - [ ] **Step 2: Write failing exact-head tests**
 
-Control case:
+Control:
 
 ```js
 test('exact retained active authority satisfies currentness prerequisite only', async t => {
@@ -663,10 +787,9 @@ test('exact retained active authority satisfies currentness prerequisite only', 
     intentDigest: 'e'.repeat(64),
     planDigest: 'f'.repeat(64),
     effectDestination: 'sandbox:builtin:stage-a',
-    now: '2026-09-04T19:30:30.000Z',
+    now: '2026-09-04T18:20:30.000Z',
     maxCurrentnessAgeMs: 60_000
   });
-
   assert.equal(result.allow, true);
   assert.equal(result.code, 'machine_currentness_satisfied');
   assert.equal(result.retained_checkpoint_digest, fixture.checkpoint.checkpoint_digest);
@@ -692,7 +815,7 @@ empty required store -> machine_currentness_unavailable
 invalid durable state -> ValidationError; never ALLOW
 ```
 
-Also prove older signed and newer-unretained checkpoint objects cannot affect evaluation: the public evaluator has no checkpoint/head/state-path/trust-root argument.
+Also assert the public evaluator accepts no checkpoint, path, head digest, or trust-key argument, so an older signed object or newer unretained object cannot displace the store's actual head.
 
 - [ ] **Step 3: Run RED**
 
@@ -700,9 +823,9 @@ Also prove older signed and newer-unretained checkpoint objects cannot affect ev
 node --test mesh/test/machine-principal-effect-currentness.test.mjs
 ```
 
-Expected: FAIL because the effect-currentness module is missing.
+Expected: FAIL because the evaluator module is missing.
 
-- [ ] **Step 4: Implement the retained-head resolver**
+- [ ] **Step 4: Implement retained-head resolver**
 
 Signature:
 
@@ -714,11 +837,9 @@ export async function resolveRetainedMachinePrincipalCurrentnessHead({
 } = {})
 ```
 
-Require `verifyState()` and `retainedHead()`. Call `await verifyState()` before reading the head. If no head exists, return `{ available:false, ...nonclaims }`.
+Require `verifyState()` and `retainedHead()`. Call `await verifyState()` first. Empty store returns `available:false` with nonclaims. Available store returns exact checkpoint/source-head/sequence/principal/type/authority/status/observed-at/controller credential/key epoch, plus nonclaims.
 
-For an available head, return exact checkpoint/source-head/sequence/principal/type/authority/status/observed-at/controller credential/key epoch plus fixed nonclaims. Do not accept a caller checkpoint, path, or trust key.
-
-- [ ] **Step 5: Implement exact pending-admission evaluation**
+- [ ] **Step 5: Implement exact pending-admission evaluator**
 
 Signature:
 
@@ -737,11 +858,9 @@ export async function evaluateRetainedMachinePrincipalEffectCurrentness({
 } = {})
 ```
 
-Compute Task 1's exact `machinePrincipalAdmissionDigest`, resolve the store's actual head, reconstruct the normalized currentness statement from the retained checkpoint, call Task 1's evaluator, and on success bind exact retained checkpoint/source-head/controller evidence fields into the returned prerequisite evidence.
+Compute Task 1's exact admission digest, resolve only the actual retained head, call Task 1's pure evaluator, and bind the exact retained checkpoint/source-head/controller evidence fields into successful prerequisite evidence. Never translate store verification failure into ALLOW.
 
-Do not catch a store `ValidationError` and translate it to ALLOW.
-
-- [ ] **Step 6: Run all focused Stage A tests and commit**
+- [ ] **Step 6: Run all focused tests and commit**
 
 ```bash
 node --test \
@@ -749,7 +868,6 @@ node --test \
   mesh/test/machine-principal-currentness-checkpoint.test.mjs \
   mesh/test/machine-principal-currentness-store.test.mjs \
   mesh/test/machine-principal-effect-currentness.test.mjs
-
 git add mesh/src/lib/machine-principal-effect-currentness.mjs mesh/test/machine-principal-effect-currentness.test.mjs
 git commit -m "feat: add retained machine effect currentness evaluator"
 ```
@@ -784,10 +902,9 @@ test('currentness prerequisite cannot become bearer or execution authority', asy
     intentDigest: 'e'.repeat(64),
     planDigest: 'f'.repeat(64),
     effectDestination: 'sandbox:builtin:stage-a',
-    now: '2026-09-04T19:30:30.000Z',
+    now: '2026-09-04T18:20:30.000Z',
     maxCurrentnessAgeMs: 60_000
   });
-
   assert.equal(currentness.allow, true);
   assert.equal(currentness.execution_authority_granted, false);
   assert.equal(currentness.authority_effect, 'none');
@@ -797,7 +914,7 @@ test('currentness prerequisite cannot become bearer or execution authority', asy
 });
 ```
 
-Add a static-source test that reads the four new Stage A modules and rejects imports from `sandbox/`, `hypervisor/`, `gateway/`, Grid execution modules, capability issuance modules, and runtime-adapter effect modules.
+Add a source-reading test over the four new `mesh/src/lib/machine-principal*currentness*.mjs` files that rejects imports containing `/sandbox/`, `/hypervisor/`, `/gateway/`, `runtime-adapter`, capability issuance, or Grid execution paths.
 
 - [ ] **Step 2: Run the focused regression**
 
@@ -805,31 +922,38 @@ Add a static-source test that reads the four new Stage A modules and rejects imp
 node --test mesh/test/machine-principal-effect-currentness.test.mjs
 ```
 
-Expected: PASS if Tasks 1-4 preserved the design. If it fails, fix only the exact authority-looking field/import and rerun.
+Expected: PASS. If it fails, return to the task that introduced the exact offending field/import; do not weaken the regression.
 
 - [ ] **Step 3: Create the Stage A security boundary document**
 
-`docs/security/MACHINE-PRINCIPAL-EFFECT-CURRENTNESS.md` must contain these statements verbatim or equivalently without widening them:
+`docs/security/MACHINE-PRINCIPAL-EFFECT-CURRENTNESS.md` must state:
 
 ```markdown
+# Machine-principal effect-currentness — Stage A
+
 Status: experimental current-main semantic/storage foundation; non-authorizing; not wired into Sandbox.
 
+## Lifecycle semantics
 active: potentially usable with exact retained authority match.
 narrowed: potentially usable only for the new exact narrowed authority digest.
 revoked / compromised / expired: non-usable terminal states.
+Lifecycle expiry is represented by an explicit retained expired successor.
 
+## Retained-head boundary
 Signed but unretained evidence is not the retained latest head.
 Request data cannot choose the store path, trust root, or an older checkpoint.
 
+## Explicit non-claims
 Stage A does not authorize effects, mutate lifecycle state, wire Sandbox, prove global currentness, prove hostile-host rollback resistance, reproduce RT-AUTH-001, or certify WIMSE/MCP/A2A behavior.
 
-Next gate Stage B: separately authorized lifecycle mutation source.
-Next gate Stage C: durable consume -> pre-effect barrier -> latest-head evaluation -> deterministic revoke/narrow race.
+## Next gates
+Stage B: separately authorized lifecycle mutation source.
+Stage C: durable consume -> pre-effect barrier -> latest-head evaluation -> deterministic revoke/narrow race.
 ```
 
 - [ ] **Step 4: Register supported documentation**
 
-Add exactly these entries to `CANONICAL_DOCUMENTS` in `mesh/src/check-docs.mjs`, each in its corresponding section:
+Add exactly these entries to `CANONICAL_DOCUMENTS` in `mesh/src/check-docs.mjs`, in their existing security/spec/plan sections:
 
 ```js
 'docs/security/MACHINE-PRINCIPAL-EFFECT-CURRENTNESS.md',
@@ -848,7 +972,6 @@ node --test \
   mesh/test/machine-principal-currentness-checkpoint.test.mjs \
   mesh/test/machine-principal-currentness-store.test.mjs \
   mesh/test/machine-principal-effect-currentness.test.mjs
-
 git add \
   docs/security/MACHINE-PRINCIPAL-EFFECT-CURRENTNESS.md \
   docs/superpowers/specs/2026-09-04-machine-principal-currentness-reconstruction-design.md \
@@ -865,7 +988,7 @@ Expected: docs check and focused tests PASS before commit.
 ### Task 6: Full Verification and Draft Review Candidate
 
 **Files:**
-- No new implementation surface unless verification exposes a concrete Stage A defect.
+- No new implementation files.
 
 **Interfaces:**
 - Produces an exact-head draft PR candidate; does not authorize merge or Stage B.
@@ -877,15 +1000,15 @@ cd mesh
 npm run check
 ```
 
-Expected: PASS. This executes setup, policy/contracts, registry/status/docs checks, and the complete Node test suite.
+Expected: PASS. If it fails, stop and return to the owning Task 1-5; do not progress to PR creation until `npm run check` is green.
 
-- [ ] **Step 2: Verify the diff contains no effect-path wiring**
+- [ ] **Step 2: Verify the diff contains only Stage A paths**
 
 ```bash
 git diff --name-only main...HEAD
 ```
 
-Allowed paths are only:
+Allowed paths:
 
 ```text
 docs/security/MACHINE-PRINCIPAL-EFFECT-CURRENTNESS.md
@@ -896,13 +1019,14 @@ mesh/src/lib/machine-principal-currentness.mjs
 mesh/src/lib/machine-principal-currentness-checkpoint.mjs
 mesh/src/lib/machine-principal-currentness-store.mjs
 mesh/src/lib/machine-principal-effect-currentness.mjs
+mesh/test/helpers/machine-currentness-fixtures.mjs
 mesh/test/machine-principal-currentness.test.mjs
 mesh/test/machine-principal-currentness-checkpoint.test.mjs
 mesh/test/machine-principal-currentness-store.test.mjs
 mesh/test/machine-principal-effect-currentness.test.mjs
 ```
 
-Any other changed path is a stop-and-review condition, not an automatic acceptance.
+Any other path is a stop-and-review condition.
 
 - [ ] **Step 3: Verify nonclaims mechanically**
 
@@ -916,20 +1040,9 @@ grep -R "authority_effect" \
   mesh/src/lib/machine-principal-effect-currentness.mjs
 ```
 
-Expected: all exposed Stage A execution-authority fields are false and all authority-effect fields are `none`.
+Expected: every exposed Stage A execution-authority field is false and every authority-effect field is `none`.
 
-- [ ] **Step 4: If verification exposes a concrete Stage A defect, fix only that defect and commit it**
-
-After the exact fix, rerun its focused test and `cd mesh && npm run check`, then commit:
-
-```bash
-git add <the exact files changed by the verified defect fix>
-git commit -m "test: harden machine currentness boundary"
-```
-
-The `<the exact files changed by the verified defect fix>` shell token is not to be copied literally: stage only files actually modified for the observed defect. Do not add Stage B or Stage C work under this step.
-
-- [ ] **Step 5: Open a draft PR against protected `main`**
+- [ ] **Step 4: Open a draft PR against protected `main`**
 
 Title exactly:
 
@@ -937,7 +1050,7 @@ Title exactly:
 security: reconstruct machine-principal currentness foundation
 ```
 
-Body must include:
+Body:
 
 ```markdown
 ## Scope
@@ -961,7 +1074,7 @@ Stage A only: strict machine lifecycle-currentness state, controller-bound signe
 
 Keep the PR draft until exact-head protected checks and review complete.
 
-- [ ] **Step 6: Require protected CI on the exact PR head**
+- [ ] **Step 5: Require protected CI on the exact PR head**
 
 Require success for:
 
@@ -973,9 +1086,9 @@ CodeQL: actions + javascript-typescript
 
 Do not reuse a result from an earlier candidate SHA.
 
-- [ ] **Step 7: Review exact Stage A semantics**
+- [ ] **Step 6: Review exact Stage A semantics**
 
-The review checklist is:
+Review checklist:
 
 ```text
 narrowed B can satisfy a B-bound prerequisite
@@ -988,9 +1101,9 @@ no currentness artifact becomes bearer authority
 no runtime effect path changed
 ```
 
-- [ ] **Step 8: State the bounded completion result**
+- [ ] **Step 7: State the bounded completion result**
 
-Only after exact-head protected CI and review are green, use this completion statement:
+Only after exact-head protected CI and review are green:
 
 ```text
 Stage A machine-principal currentness foundation is review-complete on the exact candidate. It provides non-authorizing retained lifecycle currentness evidence and exact pending-admission prerequisite evaluation. It does not wire the effect path or classify the external revoke/narrow race beyond ARCHITECTURE-LIMITED / NOT REPRODUCED.
