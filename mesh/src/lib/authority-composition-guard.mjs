@@ -54,12 +54,12 @@ function stringSet(raw, label, { maxItems = 128 } = {}) {
   return Object.freeze(canonical);
 }
 
-function orderedStringList(raw, label, { maxItems = 16 } = {}) {
+function orderedIdList(raw, label, { maxItems = 16 } = {}) {
   if (!Array.isArray(raw) || raw.length > maxItems) {
-    throw new ValidationError(`${label} must be an array of at most ${maxItems} strings`);
+    throw new ValidationError(`${label} must be an array of at most ${maxItems} action IDs`);
   }
   return Object.freeze(raw.map((entry, index) =>
-    assertString(entry, `${label}[${index}]`, { min: 1, max: 256 })
+    id(entry, `${label}[${index}]`)
   ));
 }
 
@@ -145,7 +145,7 @@ function normalizeRestrictions(raw) {
   }
   return Object.freeze(raw.map((entry, index) => {
     const value = exactObject(entry, ['id', 'ordered_actions'], `composition restrictions[${index}]`);
-    const actions = orderedStringList(value.ordered_actions, `composition restrictions[${index}].ordered_actions`, { maxItems: 16 });
+    const actions = orderedIdList(value.ordered_actions, `composition restrictions[${index}].ordered_actions`, { maxItems: 16 });
     if (actions.length < 2) {
       throw new ValidationError('composition restriction must contain at least two actions');
     }
