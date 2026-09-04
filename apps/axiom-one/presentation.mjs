@@ -32,6 +32,26 @@ const ACTION_BOUNDARIES = Object.freeze({
   'export.create': Object.freeze({
     consequence: 'local-selective-export-write',
     confirmations: Object.freeze([])
+  }),
+  'social.actor.create': Object.freeze({
+    consequence: 'durable-local-social-identity-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.persona.create': Object.freeze({
+    consequence: 'durable-local-social-persona-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.create': Object.freeze({
+    consequence: 'durable-local-social-publication-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.supersede': Object.freeze({
+    consequence: 'durable-local-social-publication-supersession',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.retract': Object.freeze({
+    consequence: 'durable-local-social-publication-retraction',
+    confirmations: Object.freeze([])
   })
 });
 
