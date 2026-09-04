@@ -17,7 +17,7 @@ function grant(overrides = {}) {
     resources: ['resource:records'],
     actions: ['records.read', 'records.summarize', 'send.external'],
     purposes: ['user-summary'],
-    destinations: ['destination:local', 'destination:external'],
+    destinations: ['destination:external', 'destination:local'],
     expires_at: '2026-09-01T07:55:00.000Z',
     policy_digest: POLICY,
     ...overrides
