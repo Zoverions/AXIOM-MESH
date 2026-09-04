@@ -88,10 +88,15 @@ After Stage A is merged and green, reconstruct A6.3 on current `main`.
 
 At minimum support retained transitions:
 
-- active authority A -> active narrowed authority B;
+- active authority A -> narrowed authority B;
+- narrowed authority B -> further narrowed authority C;
 - active/narrowed -> revoked;
 - active/narrowed -> compromised;
-- explicit expiry if retained-expiry is the selected canonical model.
+- active/narrowed -> expired through an explicit retained `expire` transition.
+
+`narrowed` remains an operational lifecycle state under the new exact reduced authority digest. It is not synonymous with revoked. A capability bound to predecessor authority A must fail after narrowing to B because A no longer matches the retained authority digest; a later capability correctly issued under B may satisfy the currentness prerequisite while status remains `narrowed`.
+
+Expiry uses one canonical lifecycle rule in this programme: expiry that changes machine-principal lifecycle authority is represented by an explicit retained `expired` successor. Independent credential/checkpoint validity and evidence-freshness limits may still expire by time without creating a lifecycle mutation.
 
 Mutation authority, currentness signing authority, storage, and ordinary effect authorization remain separate roles.
 
@@ -104,7 +109,7 @@ Only after Stages A and B are current-main green:
 3. mutate and durably retain newer machine-principal authority state;
 4. resolve the latest retained head;
 5. evaluate currentness against the exact pending admission;
-6. deny stale/revoked/narrowed authority before effect invocation;
+6. deny stale/revoked/changed authority before effect invocation;
 7. prove the consumed capability remains burned;
 8. preserve exact evidence in terminal receipts/attestations.
 
@@ -142,16 +147,21 @@ Required semantic fields:
 - observed-at timestamp;
 - predecessor source-head digest;
 - source-head digest;
-- controller operational key id / credential binding needed to verify the statement;
+- `controller_id`;
+- `controller_key_id`;
+- `controller_credential_digest`;
+- `controller_key_epoch`;
 - fixed evidence/non-authority claims.
 
-Initial lifecycle statuses should preserve the historical accepted vocabulary unless current repository semantics require a narrower set:
+Initial lifecycle statuses are:
 
 - `active`;
 - `narrowed`;
 - `revoked`;
 - `compromised`;
 - `expired`.
+
+`active` and `narrowed` are potentially usable states, subject to exact retained-authority equality and every other admission requirement. `revoked`, `compromised`, and `expired` are non-usable terminal states in this first programme slice.
 
 Stage A does not provide an API that changes these states. Test fixtures may construct valid signed sequences strictly through internal test helpers.
 
@@ -182,7 +192,7 @@ It must bind at minimum:
 - authority digest;
 - lifecycle status;
 - observed-at;
-- controller identity/key binding;
+- controller id/key id/credential digest/key epoch;
 - statement digest;
 - signature;
 - checkpoint digest;
@@ -194,6 +204,7 @@ Verification must reject:
 - malformed/canonicalization-invalid data;
 - signature substitution;
 - controller key substitution;
+- controller credential/epoch substitution;
 - principal substitution;
 - authority/status/source-head tampering;
 - invalid predecessor or sequence progression.
@@ -208,8 +219,9 @@ Where current `main` already has suitable machine-identity or operational-key li
 
 Required verification properties:
 
-- trusted root or explicitly configured trust source is static repository/deployment configuration, not caller input;
-- checkpoint signer key must match the expected controller identity and epoch;
+- trusted controller root/public key or equivalent root trust binding is static deployment/repository configuration, not caller input;
+- checkpoint signer key must match the expected controller identity and key epoch;
+- checkpoint controller credential digest must match the credential actually verified;
 - revoked/compromised/stale controller credentials cannot validate a checkpoint when controller currentness is required;
 - controller-key verification does not imply authority to mutate machine-principal lifecycle state;
 - controller-key verification does not imply authority to execute the pending effect.
@@ -279,7 +291,7 @@ No caller-controlled filesystem path belongs in the effect admission request. St
 
 The lifecycle head is operation-independent. The evaluator binds it to one exact pending effect admission without mutating the lifecycle checkpoint.
 
-Canonical pending admission input should contain at minimum:
+Canonical pending admission input contains at minimum:
 
 - principal id;
 - principal type;
@@ -290,15 +302,15 @@ Canonical pending admission input should contain at minimum:
 - exact effect destination/tool identifier;
 - evaluation timestamp plus explicit clock-assurance/freshness policy.
 
-If current repository runtime contracts bind additional exact-effect dimensions that are necessary to prevent authority widening, the Stage A implementation must include those dimensions rather than preserving an obsolete historical field set.
+During implementation, inspect the current runtime admission/capability contracts. If current `main` binds additional exact-effect dimensions required to prevent widening, those dimensions become part of the canonical Stage A admission digest rather than preserving an obsolete historical field set.
 
 The evaluator must:
 
 1. resolve/verify the retained latest head;
 2. verify current controller trust as required;
 3. require principal/type equality;
-4. require an allowed lifecycle status;
-5. require retained authority digest equality with the capability-bound authority digest for the control case;
+4. require lifecycle status `active` or `narrowed`;
+5. require retained authority digest equality with the capability-bound authority digest;
 6. enforce freshness/future-time rules;
 7. compute a deterministic canonical admission digest;
 8. compute a deterministic currentness-evidence digest;
@@ -312,12 +324,14 @@ It must deny for at least:
 - controller verification failure;
 - wrong principal/type;
 - stale/future evidence;
-- authority digest mismatch;
-- `narrowed`, `revoked`, `compromised`, or `expired` state when the pending capability is bound to the predecessor authority;
+- authority digest mismatch, including predecessor authority A after narrowing to B;
+- `revoked`, `compromised`, or `expired` lifecycle state;
 - unrecognized status;
 - malformed or unreproducible admission binding;
 - older signed head when the retained store has advanced;
 - signed but unretained candidate head presented externally.
+
+A `narrowed` retained state with exact authority digest B may satisfy the currentness prerequisite for a later correctly B-bound admission. It may never validate a predecessor A-bound admission.
 
 A successful Stage A evaluator means only:
 
@@ -378,6 +392,11 @@ Requirements:
 - no assumption that host wall clock is externally attested;
 - clock-assurance limitations preserved in evidence/nonclaims.
 
+Two different time concepts must remain separate:
+
+1. lifecycle status changes such as `expired` are explicit retained lifecycle transitions in Stage B;
+2. controller credential validity, checkpoint validity, and evidence freshness are evaluated against time and may independently make evidence unusable without mutating lifecycle state.
+
 Stage A should reuse the repository's current deterministic-clock patterns rather than reintroduce test fixtures whose validity silently decays with wall time.
 
 ## 10. Failure semantics
@@ -392,7 +411,7 @@ Stable denial classes should distinguish, at minimum:
 - controller untrusted/stale/revoked;
 - principal mismatch;
 - authority changed;
-- lifecycle not active for the bound authority;
+- lifecycle terminal/non-usable;
 - evidence stale/future;
 - admission binding invalid.
 
@@ -456,6 +475,7 @@ At minimum:
 - lifecycle-status tamper;
 - source-head tamper;
 - controller key substitution;
+- controller credential/epoch substitution;
 - bad signature;
 - unknown fields;
 - non-canonical statement/digest mismatch.
@@ -480,8 +500,8 @@ At minimum:
 ### Resolver/evaluator
 
 - exact active authority/head control case succeeds as prerequisite evidence only;
-- authority digest changed -> deny;
-- narrowed status -> deny old authority;
+- narrowed authority B with a correctly B-bound admission succeeds as prerequisite evidence only;
+- predecessor authority A after retained narrowing to B -> deny by authority mismatch;
 - revoked -> deny;
 - compromised -> deny;
 - expired -> deny;
@@ -507,12 +527,14 @@ When Stage B begins, it must enforce:
 - exact predecessor retained-head binding;
 - exact successor sequence;
 - attenuation proof for `narrow`;
+- explicit retained `expire` transition for lifecycle expiry;
 - no principal/type substitution;
 - no widening via actions/scopes/purposes/destinations/budgets/delegation/approval/assurance/runtime binding;
 - stale predecessor/replay rejection;
 - deny-dominant competing successor handling;
 - success only after signed successor is durably retained;
-- terminal states do not silently reactivate;
+- `revoked`, `compromised`, and `expired` do not silently reactivate;
+- `narrowed` may narrow further but may never widen;
 - mutation command/receipt grants no ordinary effect authority.
 
 Stage B is separately reviewed because it introduces a write/authority boundary that Stage A intentionally lacks.
@@ -614,11 +636,12 @@ Stage A is complete only when, on an exact current-main-derived candidate:
 3. a durable retained-head store survives restart and rejects rollback/equivocation/torn/non-canonical state;
 4. the evaluator resolves the actual retained latest head rather than accepting an arbitrary caller head;
 5. exact pending-admission binding is deterministic;
-6. active exact authority can produce prerequisite evidence;
-7. changed/narrowed/revoked/compromised/expired/stale/mismatched state fails closed;
-8. every introduced currentness artifact remains explicitly non-authorizing;
-9. no Sandbox/runtime effect path has been changed;
-10. focused tests and protected repository CI are green on the exact candidate;
-11. claim language remains `ARCHITECTURE-LIMITED / NOT REPRODUCED` for the external race.
+6. `active` exact authority can produce prerequisite evidence;
+7. `narrowed` exact current authority can produce prerequisite evidence only for the narrowed authority digest;
+8. predecessor/changed, revoked, compromised, expired, stale, or mismatched state fails closed;
+9. every introduced currentness artifact remains explicitly non-authorizing;
+10. no Sandbox/runtime effect path has been changed;
+11. focused tests and protected repository CI are green on the exact candidate;
+12. claim language remains `ARCHITECTURE-LIMITED / NOT REPRODUCED` for the external race.
 
 Only then should Stage B receive an implementation design/plan against the resulting current `main`.
