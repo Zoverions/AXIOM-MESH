@@ -97,6 +97,18 @@
         "test_name": "Circle decisions and tasks cannot mint runtime execution authority"
       },
       "notes": "Circle decisions and tasks are governance/collaboration records for local evaluation. They do not directly mint Sandbox authority."
+    },
+    {
+      "id": "external.shared-state-write",
+      "kind": "external-writable-shared-state",
+      "writers": ["constrained-machine-principal"],
+      "readers": ["external-agent", "human", "constrained-machine-principal"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/emergent-coordination-e2e.test.mjs",
+        "test_name": "external shared-state content cannot widen a constrained machine principal"
+      },
+      "notes": "Any externally writable shared state can function as an emergent communications edge. Content from such a surface may carry coordination, commands, approvals, delegation claims, or peer state, but it cannot widen local AXIOM authority or substitute for exact current effect authorization."
     }
   ]
 }
