@@ -65,7 +65,7 @@ export function validatePortableTrustPackage(raw, { now = new Date() } = {}) {
     max: 32,
     pattern: /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/
   });
-  timestamp(value.created_at, 'created_at');
+  const createdAt = timestamp(value.created_at, 'created_at');
   const expiresAt = timestamp(value.expires_at, 'expires_at');
   assertString(value.purpose, 'purpose', { min: 1, max: 256 });
 
@@ -198,13 +198,18 @@ export function validatePortableTrustPackage(raw, { now = new Date() } = {}) {
 
   const nowMs = now instanceof Date ? now.valueOf() : new Date(now).valueOf();
   if (!Number.isFinite(nowMs)) throw new ValidationError('now is invalid');
-  const createdMs = new Date(value.created_at).valueOf();
+  const createdMs = new Date(createdAt).valueOf();
   const expiresMs = new Date(expiresAt).valueOf();
+  if (expiresMs <= createdMs) {
+    throw new ValidationError('expires_at must follow created_at');
+  }
+  const packageAgeMs = nowMs - createdMs;
 
   const checks = Object.freeze({
     not_expired: expiresMs > nowMs,
     age_within_policy:
-      Math.floor((nowMs - createdMs) / 1000) <= importPolicy.max_package_age_seconds,
+      packageAgeMs >= 0 &&
+      packageAgeMs <= importPolicy.max_package_age_seconds * 1000,
     signatures_verified: value.signatures.every(({ verified }) => verified === true)
   });
 
