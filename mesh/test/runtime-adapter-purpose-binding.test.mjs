@@ -17,7 +17,7 @@ const NOW = Date.UTC(2026, 8, 4, 1, 0, 0);
 const ACTION = 'adapter.reference.echo';
 const PURPOSE = 'test.conformance';
 const PRINCIPAL_ID = 'principal:rt-auth-014';
-const DEFAULT_INPUT_SHA256 = sha256('synthetic-reference-input');
+const DEFAULT_INPUT_SHA256 = sha256('synthetic reference input');
 
 function expectedPurposeCommitment(purpose, inputSha256 = DEFAULT_INPUT_SHA256) {
   return sha256(canonicalJson({
