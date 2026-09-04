@@ -112,6 +112,48 @@ test('budget commitment is stable across equivalent object key order', () => {
   assert.equal(first.input_sha256, second.input_sha256);
 });
 
+test('budget schema is closed-world, complete, and positive-safe-integer bounded', () => {
+  assert.throws(
+    () => translateSyntheticExternalAuthorizationRequest(externalRequest({
+      suffix: 'unknown-budget-field',
+      grantId: 'grant:rt-auth-015-unknown-budget-field',
+      detail: authorizationDetail({
+        budget: { ...BUDGET, max_cost_micros: 1 }
+      })
+    })),
+    /unsupported authorization budget fields: max_cost_micros/
+  );
+
+  const missing = { ...BUDGET };
+  delete missing.max_response_bytes;
+  assert.throws(
+    () => translateSyntheticExternalAuthorizationRequest(externalRequest({
+      suffix: 'missing-budget-field',
+      grantId: 'grant:rt-auth-015-missing-budget-field',
+      detail: authorizationDetail({ budget: missing })
+    })),
+    /missing authorization budget fields: max_response_bytes/
+  );
+
+  for (const [suffix, maxExecutionMs] of [
+    ['zero', 0],
+    ['negative', -1],
+    ['fractional', 1.5],
+    ['unsafe', Number.MAX_SAFE_INTEGER + 1]
+  ]) {
+    assert.throws(
+      () => translateSyntheticExternalAuthorizationRequest(externalRequest({
+        suffix: `invalid-budget-${suffix}`,
+        grantId: `grant:rt-auth-015-invalid-budget-${suffix}`,
+        detail: authorizationDetail({
+          budget: { ...BUDGET, max_execution_ms: maxExecutionMs }
+        })
+      })),
+      /external authorization detail budget max_execution_ms must be a positive safe integer/
+    );
+  }
+});
+
 test('budget widening cannot reuse the signed effect grant', async () => {
   const manifest = createSyntheticReferenceAdapterManifest();
   const grantAuthority = createSyntheticReferenceGrantAuthority();
