@@ -8,6 +8,7 @@ test('evidence disposition preserves useful advisory signals without authority l
   const profile = JSON.parse(await readFile(url, 'utf8'));
   assert.equal(profile.schema, 'axiom-evidence-disposition-profile.v1');
   assert.match(profile.principle, /useful without being sufficient/i);
+  assert.ok(Array.isArray(profile.lanes), 'evidence disposition lanes must be an array');
 
   const advisory = profile.lanes.find(({ id }) => id === 'advisory');
   assert.ok(advisory);
