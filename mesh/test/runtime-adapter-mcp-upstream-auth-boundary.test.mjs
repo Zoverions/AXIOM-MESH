@@ -13,11 +13,11 @@ import {
 } from '../src/runtime-adapter-conformance.mjs';
 
 const FIXTURE = JSON.parse(readFileSync(
-  new URL('./fixtures/rt-auth-015-mcp-upstream-auth.json', import.meta.url),
+  new URL('./fixtures/rt-mcp-auth-001-upstream-auth.json', import.meta.url),
   'utf8'
 ));
 const NOW = Date.UTC(2026, 8, 4, 8, 20, 0);
-const PRINCIPAL_ID = 'principal:rt-auth-015';
+const PRINCIPAL_ID = 'principal:rt-mcp-auth-001';
 const EXPECTED_CASE_IDS = [
   'empty-auth-object-no-grant',
   'oauth-fallback-no-grant',
@@ -42,7 +42,7 @@ function authorizationDetail(overrides = {}) {
 }
 
 function mcpRequest({
-  id = 'mcp:rt-auth-015',
+  id = 'mcp:rt-mcp-auth-001',
   method = 'tools/call',
   meta = {},
   argumentsObject = { message: 'hello' }
@@ -62,15 +62,15 @@ function mcpRequest({
 function translate({
   suffix,
   principalId = PRINCIPAL_ID,
-  grantId = `grant:rt-auth-015-${suffix}`,
+  grantId = `grant:rt-mcp-auth-001-${suffix}`,
   detail = authorizationDetail(),
   request = mcpRequest()
 }) {
   return translateSyntheticMcpToolCallAuthorizationRequest({
-    requestId: `request:rt-auth-015-${suffix}`,
+    requestId: `request:rt-mcp-auth-001-${suffix}`,
     principalId,
     grantId,
-    idempotencyKey: `idempotency:rt-auth-015-${suffix}`,
+    idempotencyKey: `idempotency:rt-mcp-auth-001-${suffix}`,
     authorization_details: [detail],
     mcpRequest: request
   });
@@ -92,7 +92,7 @@ async function assertNoGrantCannotAuthorize(vector) {
   const translated = translate({
     suffix: vector.id,
     request: mcpRequest({
-      id: `mcp:rt-auth-015-${vector.id}`,
+      id: `mcp:rt-mcp-auth-001-${vector.id}`,
       meta: vector.upstream_metadata
     })
   });
@@ -112,9 +112,9 @@ async function assertNoGrantCannotAuthorize(vector) {
   assert.equal(result.receipt.external_effect_performed, false);
 }
 
-test('RT-AUTH-015 fixture is complete and bounded to the MCP upstream-auth threat', () => {
-  assert.equal(FIXTURE.schema, 'axiom-rt-auth-015-mcp-upstream-auth.v1');
-  assert.equal(FIXTURE.target, 'RT-AUTH-015');
+test('RT-MCP-AUTH-001 fixture is complete and bounded to the MCP upstream-auth threat', () => {
+  assert.equal(FIXTURE.schema, 'axiom-rt-mcp-auth-001-upstream-auth.v1');
+  assert.equal(FIXTURE.target, 'RT-MCP-AUTH-001');
   assert.match(FIXTURE.invariant, /outside the AXIOM authority boundary/i);
   assert.deepEqual(
     FIXTURE.cases.map((vector) => vector.id),
@@ -123,7 +123,7 @@ test('RT-AUTH-015 fixture is complete and bounded to the MCP upstream-auth threa
 });
 
 for (const vector of FIXTURE.cases) {
-  test(`RT-AUTH-015 ${vector.id}`, async () => {
+  test(`RT-MCP-AUTH-001 ${vector.id}`, async () => {
     switch (vector.mode) {
       case 'inert-upstream-auth-no-grant': {
         await assertNoGrantCannotAuthorize(vector);
@@ -134,7 +134,7 @@ for (const vector of FIXTURE.cases) {
           () => translate({
             suffix: `${vector.id}-list`,
             request: mcpRequest({
-              id: `mcp:rt-auth-015-${vector.id}-list`,
+              id: `mcp:rt-mcp-auth-001-${vector.id}-list`,
               method: 'tools/list',
               meta: vector.upstream_metadata
             })
@@ -146,7 +146,7 @@ for (const vector of FIXTURE.cases) {
       }
       case 'scope-injection-denied': {
         const { adapter, grantAuthority, manifest } = harness();
-        const grantId = `grant:rt-auth-015-${vector.id}`;
+        const grantId = `grant:rt-mcp-auth-001-${vector.id}`;
         const translated = translate({
           suffix: vector.id,
           grantId,
@@ -154,7 +154,7 @@ for (const vector of FIXTURE.cases) {
             requested_scopes: vector.requested_scopes
           }),
           request: mcpRequest({
-            id: `mcp:rt-auth-015-${vector.id}`,
+            id: `mcp:rt-mcp-auth-001-${vector.id}`,
             meta: vector.upstream_metadata
           })
         });
@@ -176,13 +176,13 @@ for (const vector of FIXTURE.cases) {
       }
       case 'principal-substitution-denied': {
         const { adapter, grantAuthority, manifest } = harness();
-        const grantId = `grant:rt-auth-015-${vector.id}`;
+        const grantId = `grant:rt-mcp-auth-001-${vector.id}`;
         const translated = translate({
           suffix: vector.id,
           principalId: vector.attempted_principal_id,
           grantId,
           request: mcpRequest({
-            id: `mcp:rt-auth-015-${vector.id}`,
+            id: `mcp:rt-mcp-auth-001-${vector.id}`,
             meta: vector.upstream_metadata
           })
         });
@@ -203,7 +203,7 @@ for (const vector of FIXTURE.cases) {
         return;
       }
       default:
-        assert.fail(`unsupported RT-AUTH-015 fixture mode: ${vector.mode}`);
+        assert.fail(`unsupported RT-MCP-AUTH-001 fixture mode: ${vector.mode}`);
     }
   });
 }
