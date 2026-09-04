@@ -71,7 +71,7 @@ export function validatePortableVerificationBundle(raw, { now = new Date() } = {
     max: 32,
     pattern: /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/
   });
-  timestamp(value.created_at, 'created_at');
+  const createdAt = timestamp(value.created_at, 'created_at');
   const expiresAt = timestamp(value.expires_at, 'expires_at');
 
   const assertionProfiles = assertStringArray(
@@ -122,6 +122,9 @@ export function validatePortableVerificationBundle(raw, { now = new Date() } = {
     maxItems: 128,
     itemMax: 64
   });
+  if (anchors.length === 0) {
+    throw new ValidationError('trust_material requires trust_anchor_digests');
+  }
   for (const [index, anchor] of anchors.entries()) {
     digest(anchor, `trust_anchor_digests[${index}]`);
   }
@@ -186,14 +189,16 @@ export function validatePortableVerificationBundle(raw, { now = new Date() } = {
   const nowMs = now instanceof Date ? now.valueOf() : new Date(now).valueOf();
   if (!Number.isFinite(nowMs)) throw new ValidationError('now is invalid');
 
-  const createdMs = new Date(value.created_at).valueOf();
+  const createdMs = new Date(createdAt).valueOf();
   const expiresMs = new Date(expiresAt).valueOf();
   const allowUntilMs = new Date(allowUntil).valueOf();
+  const bundleAgeMs = nowMs - createdMs;
 
   const checks = Object.freeze({
     bundle_not_expired: expiresMs > nowMs,
     bundle_age_within_policy:
-      Math.floor((nowMs - createdMs) / 1000) <= freshness.max_bundle_age_seconds,
+      bundleAgeMs >= 0 &&
+      bundleAgeMs <= freshness.max_bundle_age_seconds * 1000,
     offline_window_open: !offline.allowed || allowUntilMs > nowMs
   });
 
