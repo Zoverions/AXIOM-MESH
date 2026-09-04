@@ -4,6 +4,7 @@ import {
   createSyntheticReferenceAdapterManifest,
   createSyntheticReferenceGrantAuthority,
   createSyntheticReferenceGrant,
+  createSyntheticReferenceReceiptAuthority,
   createSyntheticReferenceRequest,
   runRuntimeAdapterReferenceConformance,
   SyntheticReferenceRuntimeAdapter,
@@ -51,9 +52,11 @@ test('synthetic adapter completes only an exact granted request and signs a rece
     sourceRevision: REVISION
   });
   const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const receiptAuthority = createSyntheticReferenceReceiptAuthority();
   const adapter = new SyntheticReferenceRuntimeAdapter({
     manifest,
     now: () => NOW,
+    receiptSigner: receiptAuthority.signer,
     grantAuthority: grantAuthority.verifier
   });
   const installation = adapter.install();
@@ -81,7 +84,10 @@ test('synthetic adapter completes only an exact granted request and signs a rece
     idempotencyKey: 'idempotency:test-exact-0001'
   });
   const result = await adapter.execute(request);
-  const receipt = verifySyntheticReferenceReceipt(result.receipt);
+  const receipt = verifySyntheticReferenceReceipt(
+    result.receipt,
+    receiptAuthority.verifier
+  );
 
   assert.equal(result.state, 'completed');
   assert.equal(result.replayed, false);
@@ -107,7 +113,10 @@ test('synthetic adapter completes only an exact granted request and signs a rece
   const unexpectedField = structuredClone(result.receipt);
   unexpectedField.execution.secret = 'forbidden';
   assert.throws(
-    () => verifySyntheticReferenceReceipt(unexpectedField),
+    () => verifySyntheticReferenceReceipt(
+      unexpectedField,
+      receiptAuthority.verifier
+    ),
     /fields are invalid/
   );
 });
@@ -153,9 +162,12 @@ test('synthetic receipt verification rejects a valid signature from an unpinned 
     sourceRevision: REVISION
   });
   const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const trustedReceiptAuthority = createSyntheticReferenceReceiptAuthority();
+  const attackerReceiptAuthority = createSyntheticReferenceReceiptAuthority();
   const trustedAdapter = new SyntheticReferenceRuntimeAdapter({
     manifest,
     now: () => NOW,
+    receiptSigner: trustedReceiptAuthority.signer,
     grantAuthority: grantAuthority.verifier
   });
   const trustedGrant = createSyntheticReferenceGrant({
@@ -177,6 +189,7 @@ test('synthetic receipt verification rejects a valid signature from an unpinned 
   const attackerAdapter = new SyntheticReferenceRuntimeAdapter({
     manifest,
     now: () => NOW,
+    receiptSigner: attackerReceiptAuthority.signer,
     grantAuthority: grantAuthority.verifier
   });
   const attackerGrant = createSyntheticReferenceGrant({
@@ -195,13 +208,18 @@ test('synthetic receipt verification rejects a valid signature from an unpinned 
     idempotencyKey: 'idempotency:test-attacker-receipt-0001'
   }));
 
-  const trustedReceiptAuthority = structuredClone(trusted.receipt.signer);
   assert.equal(
-    verifySyntheticReferenceReceipt(trusted.receipt, trustedReceiptAuthority).valid,
+    verifySyntheticReferenceReceipt(
+      trusted.receipt,
+      trustedReceiptAuthority.verifier
+    ).valid,
     true
   );
   assert.throws(
-    () => verifySyntheticReferenceReceipt(attacker.receipt, trustedReceiptAuthority),
+    () => verifySyntheticReferenceReceipt(
+      attacker.receipt,
+      trustedReceiptAuthority.verifier
+    ),
     /signer/i
   );
 });
