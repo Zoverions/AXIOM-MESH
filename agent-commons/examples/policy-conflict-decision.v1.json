@@ -1,0 +1,96 @@
+{
+  "schema": "axiom-policy-conflict-decision.v1",
+  "decision_id": "policy-conflict:cross-domain-proof-001",
+  "action_id": "action:verify-external-credential",
+  "policy_layers": [
+    {
+      "layer_id": "layer:kernel",
+      "source_type": "kernel",
+      "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "non_waivable": true,
+      "effect": "allow",
+      "minimum_assurance_rank": 3,
+      "allowed_values": [
+        "proof_only",
+        "predicate_only"
+      ]
+    },
+    {
+      "layer_id": "layer:institution",
+      "source_type": "institution",
+      "policy_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "non_waivable": false,
+      "effect": "allow",
+      "minimum_assurance_rank": 4,
+      "allowed_values": [
+        "proof_only"
+      ]
+    },
+    {
+      "layer_id": "layer:adapter",
+      "source_type": "adapter",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "non_waivable": false,
+      "effect": "allow",
+      "minimum_assurance_rank": 2,
+      "allowed_values": [
+        "proof_only",
+        "full_record"
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "conflict_id": "conflict:adapter-assurance-downgrade",
+      "conflict_class": "minimum_assurance_lowering",
+      "layer_refs": [
+        "layer:institution",
+        "layer:adapter"
+      ],
+      "description": "Adapter supports a weaker assurance floor than the institution requires.",
+      "resolved": true
+    },
+    {
+      "conflict_id": "conflict:adapter-disclosure-widening",
+      "conflict_class": "allowlist_widening",
+      "layer_refs": [
+        "layer:kernel",
+        "layer:institution",
+        "layer:adapter"
+      ],
+      "description": "Adapter can transmit full records, but the composed policy permits proof_only only.",
+      "resolved": true
+    }
+  ],
+  "fallback": {
+    "requested": true,
+    "candidate_id": "adapter:fallback-verifier-02",
+    "independently_eligible": true,
+    "same_or_stricter_policy": true
+  },
+  "resolution": {
+    "outcome": "narrowed",
+    "effective_effect": "allow",
+    "effective_minimum_assurance_rank": 4,
+    "effective_allowed_values": [
+      "proof_only"
+    ],
+    "unresolved_reason": null
+  },
+  "exception": {
+    "present": false,
+    "authority_ref": null,
+    "scope": null,
+    "expires_at": null,
+    "review_ref": null
+  },
+  "authority": {
+    "conflict_resolution_grants_authority": false,
+    "exception_presence_grants_success": false,
+    "fallback_grants_authority": false
+  },
+  "limitations": [
+    "The decision describes composed policy eligibility only; ordinary action authority is still required.",
+    "Current production policy merge semantics remain implemented in mesh/src/lib/policy.mjs."
+  ]
+}
