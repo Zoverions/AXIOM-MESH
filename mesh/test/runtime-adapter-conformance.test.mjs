@@ -4,6 +4,7 @@ import {
   createSyntheticReferenceAdapterManifest,
   createSyntheticReferenceGrantAuthority,
   createSyntheticReferenceGrant,
+  createSyntheticReferenceReceiptAuthority,
   createSyntheticReferenceRequest,
   runRuntimeAdapterReferenceConformance,
   SyntheticReferenceRuntimeAdapter,
@@ -51,9 +52,11 @@ test('synthetic adapter completes only an exact granted request and signs a rece
     sourceRevision: REVISION
   });
   const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const receiptAuthority = createSyntheticReferenceReceiptAuthority();
   const adapter = new SyntheticReferenceRuntimeAdapter({
     manifest,
     now: () => NOW,
+    receiptSigner: receiptAuthority.signer,
     grantAuthority: grantAuthority.verifier
   });
   const installation = adapter.install();
@@ -81,7 +84,10 @@ test('synthetic adapter completes only an exact granted request and signs a rece
     idempotencyKey: 'idempotency:test-exact-0001'
   });
   const result = await adapter.execute(request);
-  const receipt = verifySyntheticReferenceReceipt(result.receipt);
+  const receipt = verifySyntheticReferenceReceipt(
+    result.receipt,
+    receiptAuthority.verifier
+  );
 
   assert.equal(result.state, 'completed');
   assert.equal(result.replayed, false);
@@ -107,8 +113,179 @@ test('synthetic adapter completes only an exact granted request and signs a rece
   const unexpectedField = structuredClone(result.receipt);
   unexpectedField.execution.secret = 'forbidden';
   assert.throws(
-    () => verifySyntheticReferenceReceipt(unexpectedField),
+    () => verifySyntheticReferenceReceipt(
+      unexpectedField,
+      receiptAuthority.verifier
+    ),
     /fields are invalid/
+  );
+});
+
+test('synthetic single-use grant rejects same-request replays outside the cached idempotency path', async () => {
+  const manifest = createSyntheticReferenceAdapterManifest({
+    sourceRevision: REVISION
+  });
+  const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const adapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => NOW,
+    grantAuthority: grantAuthority.verifier
+  });
+  const grant = createSyntheticReferenceGrant({
+    grantId: 'grant:test-same-request-replay',
+    principalId: 'principal:test-owner',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: grantAuthority.signer
+  });
+  adapter.registerGrant(grant);
+  const request = createSyntheticReferenceRequest({
+    requestId: 'request:test-same-request-replay',
+    principalId: grant.principal_id,
+    grantId: grant.grant_id,
+    idempotencyKey: 'idempotency:test-same-request-replay-0001'
+  });
+  const first = await adapter.execute(request);
+  assert.equal(first.state, 'completed');
+
+  const replayWithFreshIdempotency = await adapter.execute({
+    ...request,
+    idempotency_key: 'idempotency:test-same-request-replay-0002'
+  });
+  assert.equal(replayWithFreshIdempotency.state, 'denied');
+  assert.equal(replayWithFreshIdempotency.code, 'grant-consumed');
+
+  const replayWithChangedInput = await adapter.execute({
+    ...request,
+    idempotency_key: 'idempotency:test-same-request-replay-0003',
+    input_sha256: 'a'.repeat(64)
+  });
+  assert.equal(replayWithChangedInput.state, 'denied');
+  assert.equal(replayWithChangedInput.code, 'grant-consumed');
+});
+
+test('synthetic single-use grant admits at most one concurrent execution occurrence', async () => {
+  const manifest = createSyntheticReferenceAdapterManifest({
+    sourceRevision: REVISION
+  });
+  const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const adapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => NOW,
+    grantAuthority: grantAuthority.verifier
+  });
+  const grant = createSyntheticReferenceGrant({
+    grantId: 'grant:test-concurrent-single-use',
+    principalId: 'principal:test-owner',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: grantAuthority.signer
+  });
+  adapter.registerGrant(grant);
+  const request = createSyntheticReferenceRequest({
+    requestId: 'request:test-concurrent-single-use',
+    principalId: grant.principal_id,
+    grantId: grant.grant_id,
+    idempotencyKey: 'idempotency:test-concurrent-single-use-0001'
+  });
+
+  let releaseFirst;
+  let signalFirstEntered;
+  let effectBoundaryEntries = 0;
+  const firstEntered = new Promise(resolve => {
+    signalFirstEntered = resolve;
+  });
+  const holdFirst = new Promise(resolve => {
+    releaseFirst = resolve;
+  });
+  const firstPromise = adapter.execute(request, {
+    beforeEffect: async () => {
+      effectBoundaryEntries += 1;
+      signalFirstEntered();
+      await holdFirst;
+    }
+  });
+  await firstEntered;
+
+  const second = await adapter.execute({
+    ...request,
+    idempotency_key: 'idempotency:test-concurrent-single-use-0002'
+  });
+  releaseFirst();
+  const first = await firstPromise;
+
+  assert.equal(first.state, 'completed');
+  assert.equal(second.state, 'denied');
+  assert.equal(second.code, 'grant-consumed');
+  assert.equal(effectBoundaryEntries, 1);
+});
+
+test('synthetic receipt verification rejects a valid signature from an unpinned signer', async () => {
+  const manifest = createSyntheticReferenceAdapterManifest({
+    sourceRevision: REVISION
+  });
+  const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const trustedReceiptAuthority = createSyntheticReferenceReceiptAuthority();
+  const attackerReceiptAuthority = createSyntheticReferenceReceiptAuthority();
+  const trustedAdapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => NOW,
+    receiptSigner: trustedReceiptAuthority.signer,
+    grantAuthority: grantAuthority.verifier
+  });
+  const trustedGrant = createSyntheticReferenceGrant({
+    grantId: 'grant:test-trusted-receipt',
+    principalId: 'principal:test-owner',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: grantAuthority.signer
+  });
+  trustedAdapter.registerGrant(trustedGrant);
+  const trusted = await trustedAdapter.execute(createSyntheticReferenceRequest({
+    requestId: 'request:test-trusted-receipt',
+    principalId: trustedGrant.principal_id,
+    grantId: trustedGrant.grant_id,
+    idempotencyKey: 'idempotency:test-trusted-receipt-0001'
+  }));
+
+  const attackerAdapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => NOW,
+    receiptSigner: attackerReceiptAuthority.signer,
+    grantAuthority: grantAuthority.verifier
+  });
+  const attackerGrant = createSyntheticReferenceGrant({
+    grantId: 'grant:test-attacker-receipt',
+    principalId: 'principal:test-owner',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: grantAuthority.signer
+  });
+  attackerAdapter.registerGrant(attackerGrant);
+  const attacker = await attackerAdapter.execute(createSyntheticReferenceRequest({
+    requestId: 'request:test-attacker-receipt',
+    principalId: attackerGrant.principal_id,
+    grantId: attackerGrant.grant_id,
+    idempotencyKey: 'idempotency:test-attacker-receipt-0001'
+  }));
+
+  assert.equal(
+    verifySyntheticReferenceReceipt(
+      trusted.receipt,
+      trustedReceiptAuthority.verifier
+    ).valid,
+    true
+  );
+  assert.throws(
+    () => verifySyntheticReferenceReceipt(
+      attacker.receipt,
+      trustedReceiptAuthority.verifier
+    ),
+    /signer/i
   );
 });
 

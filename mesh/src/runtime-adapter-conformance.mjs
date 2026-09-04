@@ -489,6 +489,17 @@ export function createSyntheticReferenceGrantAuthority() {
   });
 }
 
+export function createSyntheticReferenceReceiptAuthority() {
+  const signer = identity('runtime-adapter-reference-receipt');
+  return Object.freeze({
+    signer,
+    verifier: Object.freeze({
+      key_id: signer.keyId,
+      public_key_pem: publicPem(signer)
+    })
+  });
+}
+
 export class SyntheticReferenceRuntimeAdapter {
   constructor({
     manifest = createSyntheticReferenceAdapterManifest(),
@@ -511,6 +522,10 @@ export class SyntheticReferenceRuntimeAdapter {
     this.manifest = structuredClone(manifest);
     this.now = now;
     this.receiptSigner = receiptSigner;
+    this.receiptAuthority = Object.freeze({
+      key_id: receiptSigner.keyId,
+      public_key_pem: publicPem(receiptSigner)
+    });
     this.grantSignerKeyId = grantAuthority.key_id;
     this.grantVerificationKey = grantVerificationKey;
     this.grants = new Map();
@@ -585,6 +600,7 @@ export class SyntheticReferenceRuntimeAdapter {
     if (!authorization.ok) {
       return this.#store(request, fingerprint, this.#finish(request, authorization));
     }
+    this.consumedGrants.set(request.grant_id, request.request_id);
     if (typeof beforeEffect === 'function') {
       await beforeEffect({ adapter: this, request: structuredClone(request) });
     }
@@ -595,11 +611,10 @@ export class SyntheticReferenceRuntimeAdapter {
         mapping: authorization.mapping
       }));
     }
-    authorization = this.#authorize(request);
+    authorization = this.#authorize(request, { allowConsumedByRequest: true });
     if (!authorization.ok) {
       return this.#store(request, fingerprint, this.#finish(request, authorization));
     }
-    this.consumedGrants.set(request.grant_id, request.request_id);
 
     if (request.simulation === 'transport-loss-after-dispatch') {
       return this.#store(request, fingerprint, this.#finish(request, {
@@ -629,7 +644,7 @@ export class SyntheticReferenceRuntimeAdapter {
     ) ?? null;
   }
 
-  #authorize(request) {
+  #authorize(request, { allowConsumedByRequest = false } = {}) {
     const mapping = this.#mapping(request.runtime_operation);
     if (!mapping) return denied('unmapped-operation', mapping);
     if (mapping.axiom_action !== request.axiom_action) {
@@ -676,9 +691,10 @@ export class SyntheticReferenceRuntimeAdapter {
         )
     ) return denied('fresh-fallback-grant-required', mapping);
     const consumedBy = this.consumedGrants.get(grant.grant_id);
-    if (consumedBy && consumedBy !== request.request_id) {
-      return denied('grant-consumed', mapping);
-    }
+    if (
+      consumedBy
+      && (!allowConsumedByRequest || consumedBy !== request.request_id)
+    ) return denied('grant-consumed', mapping);
     if (grant.input_sha256 !== request.input_sha256) {
       return denied('input-mismatch', mapping);
     }
@@ -761,7 +777,7 @@ export class SyntheticReferenceRuntimeAdapter {
       ...unsigned,
       attestation: this.receiptSigner.signObject(unsigned)
     };
-    verifySyntheticReferenceReceipt(receipt);
+    verifySyntheticReferenceReceipt(receipt, this.receiptAuthority);
     return {
       state,
       code,
@@ -771,7 +787,7 @@ export class SyntheticReferenceRuntimeAdapter {
   }
 }
 
-export function verifySyntheticReferenceReceipt(receipt) {
+export function verifySyntheticReferenceReceipt(receipt, expectedReceiptAuthority) {
   exactKeys(receipt, 'Synthetic runtime adapter receipt', [
     'schema',
     'contract',
@@ -846,6 +862,10 @@ export function verifySyntheticReferenceReceipt(receipt) {
     'digest',
     'signature'
   ]);
+  exactKeys(expectedReceiptAuthority, 'Synthetic runtime adapter receipt authority', [
+    'key_id',
+    'public_key_pem'
+  ]);
   if (
     receipt.schema !== REFERENCE_RECEIPT_SCHEMA
     || receipt.contract.contract_id !== RUNTIME_ADAPTER_CONTRACT_ID
@@ -878,13 +898,18 @@ export function verifySyntheticReferenceReceipt(receipt) {
       && !DIGEST.test(receipt.effect.output_sha256 ?? '')
     )
   ) throw new ValidationError('Synthetic runtime adapter receipt is invalid');
-  const key = parsePublicKey(receipt.signer?.public_key_pem);
+  const key = parsePublicKey(expectedReceiptAuthority.public_key_pem);
   if (
-    receipt.signer?.key_id !== receipt.attestation?.key_id
-    || !receipt.signer.key_id.endsWith(
-      `:${sha256(receipt.signer.public_key_pem).slice(0, 16)}`
+    typeof expectedReceiptAuthority.key_id !== 'string'
+    || !expectedReceiptAuthority.key_id.endsWith(
+      `:${sha256(expectedReceiptAuthority.public_key_pem).slice(0, 16)}`
     )
-  ) throw new ValidationError('Synthetic runtime adapter receipt signer is invalid');
+  ) throw new ValidationError('Synthetic runtime adapter receipt authority is invalid');
+  if (
+    receipt.signer?.key_id !== expectedReceiptAuthority.key_id
+    || receipt.signer?.public_key_pem !== expectedReceiptAuthority.public_key_pem
+    || receipt.attestation?.key_id !== expectedReceiptAuthority.key_id
+  ) throw new ValidationError('Synthetic runtime adapter receipt signer is not trusted');
   const unsigned = structuredClone(receipt);
   delete unsigned.attestation;
   if (!verifyObjectSignature(unsigned, receipt.attestation, key)) {
@@ -913,9 +938,11 @@ export async function runRuntimeAdapterReferenceConformance({
     sourceRevision: revision
   });
   const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const receiptAuthority = createSyntheticReferenceReceiptAuthority();
   const adapter = new SyntheticReferenceRuntimeAdapter({
     manifest,
     now: () => now,
+    receiptSigner: receiptAuthority.signer,
     grantAuthority: grantAuthority.verifier
   });
   const signedGrant = options => referenceGrant({
@@ -962,6 +989,10 @@ export async function runRuntimeAdapterReferenceConformance({
   });
   const completed = await adapter.execute(base);
   const replay = await adapter.execute(base);
+  const sameRequestFreshIdempotency = await adapter.execute({
+    ...base,
+    idempotency_key: 'idempotency:reference-valid-0002'
+  });
   const reusedGrant = await adapter.execute(referenceRequest({
     requestId: 'request:reference-reused-grant',
     principalId,
@@ -1175,6 +1206,27 @@ export async function runRuntimeAdapterReferenceConformance({
 
   const tamperedReceipt = structuredClone(completed.receipt);
   tamperedReceipt.execution.state = 'failed';
+  const alternateReceiptAuthority = createSyntheticReferenceReceiptAuthority();
+  const alternateAdapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => now,
+    receiptSigner: alternateReceiptAuthority.signer,
+    grantAuthority: grantAuthority.verifier
+  });
+  const alternateGrant = signedGrant({
+    grantId: 'grant:alternate-receipt-signer',
+    principalId,
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now
+  });
+  alternateAdapter.registerGrant(alternateGrant);
+  const alternateReceipt = await alternateAdapter.execute(referenceRequest({
+    requestId: 'request:alternate-receipt-signer',
+    principalId,
+    grantId: alternateGrant.grant_id,
+    idempotencyKey: 'idempotency:alternate-receipt-signer-0001'
+  }));
   const malformed = {
     ...referenceRequest({
       requestId: 'request:malformed',
@@ -1198,7 +1250,10 @@ export async function runRuntimeAdapterReferenceConformance({
     unsigned_grant_rejected: unsignedGrantRejected,
     grant_replay_rejected: grantReplayRejected,
     grant_single_use_enforced:
-      reusedGrant.state === 'denied' && reusedGrant.code === 'grant-consumed',
+      reusedGrant.state === 'denied'
+      && reusedGrant.code === 'grant-consumed'
+      && sameRequestFreshIdempotency.state === 'denied'
+      && sameRequestFreshIdempotency.code === 'grant-consumed',
     valid_synthetic_request_completed: completed.state === 'completed',
     no_external_effect_claimed:
       completed.receipt.external_effect_performed === false,
@@ -1245,7 +1300,14 @@ export async function runRuntimeAdapterReferenceConformance({
       && uncertain.code === 'transport-lost-after-dispatch',
     malformed_request_rejected: await rejectsAsync(() => adapter.execute(malformed)),
     receipt_tampering_rejected:
-      rejects(() => verifySyntheticReferenceReceipt(tamperedReceipt)),
+      rejects(() => verifySyntheticReferenceReceipt(
+        tamperedReceipt,
+        receiptAuthority.verifier
+      ))
+      && rejects(() => verifySyntheticReferenceReceipt(
+        alternateReceipt.receipt,
+        receiptAuthority.verifier
+      )),
     receipt_excludes_secret_material:
       !canonicalJson(completed.receipt).includes(rawSecret)
       && !canonicalJson(completed.receipt).includes('credential:synthetic-reference'),
