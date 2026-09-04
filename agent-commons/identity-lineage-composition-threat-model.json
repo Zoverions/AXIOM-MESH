@@ -1,0 +1,65 @@
+{
+  "schema": "axiom-identity-lineage-composition-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "status": "experimental interoperability profile; no production promotion claimed",
+  "scope": "Composition of first-hop endpoint evidence, longer-lived identity continuity/delegation evidence, accountable operator or organization credentials, and local authorization. The profile is protocol-neutral and does not require DID resolution, AID, PKA, DNSSEC, DANE, OAuth, MCP, or any single identity system.",
+  "core_invariant": "Endpoint currency, identity continuity, accountability, and authorization are separate evidence/decision planes. Success in any identity or discovery plane MUST NOT create local effect authority.",
+  "planes": [
+    {
+      "id": "endpoint_currency",
+      "answers": "Which key/endpoint is currently evidenced?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "identity_continuity",
+      "answers": "What longer-lived identity lineage is evidenced across service-key rotation?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "accountability",
+      "answers": "What operator or organization credential stands behind the identity?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "authorization",
+      "answers": "What exact action may this principal perform here and now?",
+      "authority_effect": "bounded_local_grant_only"
+    }
+  ],
+  "composition_pattern": "stable root identity -> signed attenuation-only service delegation -> service-specific identity/key -> platform-local identity or endpoint proof -> local policy evaluation -> bounded grant -> effect",
+  "required_properties": [
+    "root keys are not required for ordinary service traffic",
+    "service-specific keys isolate compromise and rotation blast radius",
+    "endpoint-key replacement does not silently replace persistent identity",
+    "endpoint-key replacement does not automatically transfer grants bound to the retired key",
+    "platform-specific service credentials are audience/service bound and cannot be replayed as cross-platform authority",
+    "lineage evidence never mints scopes, capabilities, grants, or permissions",
+    "delegation cannot widen authority beyond its parent and cannot substitute for a local grant",
+    "stale endpoint or lineage evidence fails closed at a consequential effect boundary",
+    "protocol transitions cannot widen action, purpose, destination, audience, resource, budget, or expiry",
+    "root compromise is a distinct recovery class from service-key compromise",
+    "pre-compromise lineage requires explicit revalidation or a separate local recovery policy after root compromise"
+  ],
+  "negative_cases": [
+    "service-key-rotation-root-stable",
+    "stale-endpoint-current-delegation",
+    "valid-lineage-no-local-grant",
+    "cross-service-delegation-replay",
+    "endpoint-proof-as-allow",
+    "protocol-switch-authority-laundering",
+    "root-compromise-vs-service-compromise",
+    "endpoint-rotation-does-not-inherit-old-grant",
+    "platform-credential-isolation",
+    "root-compromise-invalidates-unrevalidated-lineage"
+  ],
+  "nonclaims": [
+    "This profile does not make a DID an endpoint-discovery primitive.",
+    "This profile does not require a generic identity document in first-hop discovery.",
+    "This profile does not claim DNS or any identity proof is globally current.",
+    "This profile does not grant legal identity, personhood, reputation, truth, execution authority, or delegation authority."
+  ],
+  "provenance": [
+    "Agent Community agent-identity-discovery issue #115 operational composition input from Aporia/keureyes, 2026-09-01.",
+    "AXIOM-MESH RT-AUTH-001 and Security Agent Cell Pilot #1."
+  ]
+}
