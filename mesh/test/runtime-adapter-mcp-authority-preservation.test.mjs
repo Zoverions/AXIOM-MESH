@@ -32,6 +32,7 @@ test('MCP projection preserves widened signed constraints for native denial', as
       type: 'axiom-runtime-effect.v1',
       runtime_operation: 'reference.echo',
       axiom_action: 'adapter.reference.write',
+      purpose: 'test.conformance',
       requested_scopes: ['synthetic.read'],
       destinations: ['local:reference'],
       credential_handles: ['credential:synthetic-reference']
