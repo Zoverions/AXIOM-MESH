@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-portable-trust-package-profile.v1",
+  "status": "experimental portability/security architecture; no production promotion",
+  "purpose": "Move contracts, capsules, verifier bundles, policy profiles, evidence, and other trust-relevant artifacts between connected, intermittently connected, and air-gapped environments without treating provenance, signatures, witnesses, or successful import as authority.",
+  "package_properties": [
+    "content-addressed artifact manifest",
+    "relative traversal-safe paths",
+    "artifact type and confidentiality labels",
+    "source/provenance references",
+    "one or more verified signatures over the manifest",
+    "optional independent witness or transparency evidence",
+    "explicit package expiry and maximum import age",
+    "mandatory quarantined inert import state",
+    "mandatory local review and fresh policy check before activation"
+  ],
+  "import_pipeline": [
+    "receive package through approved transport",
+    "do not auto-open active content",
+    "verify outer package framing",
+    "verify artifact digests",
+    "verify signer identities and signature profiles",
+    "verify optional witnesses independently",
+    "import into quarantined inert storage",
+    "scan/inspect according to artifact classes",
+    "resolve local trust and policy requirements",
+    "compare against currently installed/adopted versions",
+    "surface diffs, conflicts, stale dependencies, and privilege changes",
+    "obtain explicit local admission",
+    "install or activate only the admitted subset",
+    "emit import/admission receipt"
+  ],
+  "witness_types": [
+    "transparency_log_inclusion",
+    "independent_build_reproduction",
+    "institutional_attestation",
+    "multi_party_review",
+    "supply_chain_attestation",
+    "timestamp_or_archive_witness"
+  ],
+  "critical_distinctions": [
+    "signed != safe",
+    "signed != current",
+    "signed != authorized",
+    "witnessed != authorized",
+    "imported != installed",
+    "installed != activated",
+    "activated != universally trusted"
+  ],
+  "air_gap_rules": [
+    "removable-media or courier transport is treated as untrusted ingress",
+    "no autorun or executable interpretation during transfer validation",
+    "transfer workstation should be lower-trust than protected enclave where feasible",
+    "evidence may cross through one-way or separately governed export paths",
+    "return-channel artifacts receive the same quarantine process",
+    "revocation/currentness unavailable across the air gap remains explicitly stale"
+  ],
+  "nonclaims": [
+    "This profile does not prescribe a ZIP/TAR/container format.",
+    "This profile does not define a new digital signature algorithm.",
+    "Witnesses improve evidence but do not mint local authority.",
+    "A valid package can still contain malicious or inappropriate content."
+  ]
+}
