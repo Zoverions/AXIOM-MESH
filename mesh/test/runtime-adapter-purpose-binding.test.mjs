@@ -9,6 +9,7 @@ import {
   createSyntheticReferenceAdapterManifest,
   createSyntheticReferenceGrant,
   createSyntheticReferenceGrantAuthority,
+  createSyntheticReferenceRequest,
   SyntheticReferenceRuntimeAdapter
 } from '../src/runtime-adapter-conformance.mjs';
 
@@ -59,6 +60,24 @@ test('recognized external purpose is bound into the signed input commitment', ()
   assert.equal(translated.input_sha256, expectedPurposeCommitment(PURPOSE));
   assert.equal(Object.hasOwn(translated, 'purpose'), false);
   assert.equal(canonicalJson(translated).includes(PURPOSE), false);
+});
+
+test('purpose binding uses the native synthetic default input digest', () => {
+  const nativeRequest = createSyntheticReferenceRequest({
+    requestId: 'request:rt-auth-014-native-default',
+    principalId: PRINCIPAL_ID,
+    grantId: 'grant:rt-auth-014-native-default',
+    idempotencyKey: 'idempotency:rt-auth-014-native-default-0001'
+  });
+  const translated = translateSyntheticExternalAuthorizationRequest(externalRequest({
+    suffix: 'native-default',
+    grantId: 'grant:rt-auth-014-native-default'
+  }));
+
+  assert.equal(
+    translated.input_sha256,
+    expectedPurposeCommitment(PURPOSE, nativeRequest.input_sha256)
+  );
 });
 
 test('recognized exact-effect authorization requires an explicit purpose', () => {
