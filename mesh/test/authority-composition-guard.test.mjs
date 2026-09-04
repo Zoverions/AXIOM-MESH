@@ -111,6 +111,16 @@ test('ordered restrictions preserve non-lexicographic order and repeated actions
   assert.ok(result.reasons.includes('composition-blocked:read-send-read'));
 });
 
+test('composition restriction actions use the same canonical ID grammar as runtime actions', () => {
+  assert.throws(() => evaluateAuthorityComposition({
+    grant: grant(),
+    intent: intent(),
+    request: request(),
+    restrictions: [{ id: 'invalid-action-token', ordered_actions: ['records.read', 'send external'] }],
+    now: NOW
+  }), /ordered_actions\[1\]/);
+});
+
 test('transport or protocol session splitting does not erase causal authority history', () => {
   const result = evaluateAuthorityComposition({
     grant: grant(),
