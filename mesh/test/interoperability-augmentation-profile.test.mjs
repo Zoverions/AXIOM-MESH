@@ -8,6 +8,7 @@ test('augmentation profile supports selective adoption without platform replacem
   const profile = JSON.parse(await readFile(url, 'utf8'));
   assert.equal(profile.schema, 'axiom-interoperability-augmentation-profile.v1');
   assert.match(profile.design_rule, /do not require platform replacement/i);
+  assert.ok(Array.isArray(profile.integration_modes), 'integration_modes must be an array');
   assert.ok(profile.integration_modes.some(({ id }) => id === 'verification-service'));
   assert.ok(profile.integration_modes.some(({ id }) => id === 'policy-decision-point'));
   assert.ok(profile.integration_modes.some(({ id }) => id === 'evidence-and-audit-backplane'));
@@ -16,6 +17,7 @@ test('augmentation profile supports selective adoption without platform replacem
 
 test('augmentation cannot become an authority bypass', async () => {
   const profile = JSON.parse(await readFile(url, 'utf8'));
+  assert.ok(Array.isArray(profile.integration_modes), 'integration_modes must be an array');
   for (const required of [
     'adapter installation granting effects',
     'discovery or identity verification becoming permission',
