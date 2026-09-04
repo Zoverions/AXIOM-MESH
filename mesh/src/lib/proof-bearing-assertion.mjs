@@ -71,8 +71,13 @@ export function validateProofBearingAssertion(raw, { now = new Date() } = {}) {
   id(value.audience, 'audience');
   id(value.resource, 'resource');
   id(value.purpose, 'purpose');
-  timestamp(value.issued_at, 'issued_at');
+  const issuedAt = timestamp(value.issued_at, 'issued_at');
   const expiresAt = timestamp(value.expires_at, 'expires_at');
+  const issuedAtMs = new Date(issuedAt).valueOf();
+  const expiresAtMs = new Date(expiresAt).valueOf();
+  if (expiresAtMs <= issuedAtMs) {
+    throw new ValidationError('expires_at must follow issued_at');
+  }
   digest(value.public_inputs_digest, 'public_inputs_digest');
   digest(value.proof_digest, 'proof_digest');
 
@@ -129,7 +134,7 @@ export function validateProofBearingAssertion(raw, { now = new Date() } = {}) {
     audience_checked: result.checked_audience === true,
     resource_checked: result.checked_resource === true,
     expiry_checked: result.checked_expiry === true,
-    not_expired: new Date(expiresAt).valueOf() > nowMs
+    not_expired: expiresAtMs > nowMs
   });
 
   return Object.freeze({
