@@ -1,0 +1,99 @@
+{
+  "schema": "axiom-deployment-topology-profiles.v1",
+  "status": "experimental deployment architecture; not production support claim",
+  "profiles": [
+    {
+      "id": "single_device_local",
+      "connectivity": "offline_first",
+      "description": "One owner-controlled device hosts UI, local trust plane, runtime, and encrypted state with logical separation.",
+      "sync": "optional export/import",
+      "suitable_for": [
+        "personal/private workflows",
+        "field use",
+        "development"
+      ],
+      "limits": [
+        "device loss requires external backup/recovery if continuity is desired"
+      ]
+    },
+    {
+      "id": "local_lan_mesh",
+      "connectivity": "offline_first",
+      "description": "Multiple admitted local nodes coordinate over a trusted local network with no Internet dependency.",
+      "sync": "causal/local replication",
+      "suitable_for": [
+        "home",
+        "school lab",
+        "facility",
+        "temporary field team"
+      ],
+      "limits": [
+        "external revocation/currentness unavailable until reconciliation unless locally mirrored"
+      ]
+    },
+    {
+      "id": "intermittent_field_mesh",
+      "connectivity": "intermittent",
+      "description": "Nodes operate autonomously during partitions and reconcile bounded state when links return.",
+      "sync": "store-and-forward with conflict visibility",
+      "suitable_for": [
+        "disaster response",
+        "remote research",
+        "mobile organizations"
+      ],
+      "limits": [
+        "operations requiring fresh external authority must remain pending or denied while disconnected"
+      ]
+    },
+    {
+      "id": "managed_hybrid",
+      "connectivity": "online_preferred",
+      "description": "Local nodes retain authority/state while optional managed services provide compute, relay, verification, backup, or interoperability.",
+      "sync": "policy-bound selective replication",
+      "suitable_for": [
+        "institutions",
+        "consumer managed service",
+        "distributed teams"
+      ],
+      "limits": [
+        "managed outage must not cause silent downgrade of local policy"
+      ]
+    },
+    {
+      "id": "institutional_private_mesh",
+      "connectivity": "offline_first",
+      "description": "Institution-operated multi-node deployment with local identity, policy, audit, and optional external federation gateways.",
+      "sync": "local replication plus approved gateways",
+      "suitable_for": [
+        "education",
+        "government administration",
+        "research",
+        "enterprise"
+      ],
+      "limits": [
+        "federation evidence does not create automatic local trust"
+      ]
+    },
+    {
+      "id": "air_gapped_enclave",
+      "connectivity": "air_gapped",
+      "description": "No routable external connectivity; artifacts and evidence cross boundaries only through explicit controlled transfer.",
+      "sync": "signed export/import bundles with reconciliation",
+      "suitable_for": [
+        "high-security review",
+        "sensitive research",
+        "critical institutional workloads"
+      ],
+      "limits": [
+        "external currentness, revocation, and transparency dependencies require staged mirrors or explicit stale-state handling"
+      ]
+    }
+  ],
+  "universal_rules": [
+    "every topology declares what can continue during disconnection",
+    "every topology declares which claims require fresh external verification",
+    "reconnection performs explicit reconciliation rather than treating remote state as automatically authoritative",
+    "offline execution still produces local evidence and receipts",
+    "deployment topology does not change underlying capability authority semantics"
+  ]
+}
