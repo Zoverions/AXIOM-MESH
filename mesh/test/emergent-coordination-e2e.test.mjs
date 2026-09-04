@@ -190,12 +190,28 @@ test('external shared-state content cannot widen a constrained machine principal
       body: {
         action: 'system.hash',
         input: { value: JSON.stringify(sharedStateContent) },
-        purpose: 'finance.transfer'
+        purpose: 'test.conformance'
       },
-      idempotencyKey: 'emergent-external-shared-state-deny-0001'
+      idempotencyKey: 'emergent-external-shared-state-action-deny-0001'
     }),
     error => {
       assert.equal(error.code, 'machine_action_denied');
+      assert.equal(error.status, 403);
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    () => clientA.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: JSON.stringify(sharedStateContent) },
+        purpose: 'finance.transfer'
+      },
+      idempotencyKey: 'emergent-external-shared-state-purpose-deny-0001'
+    }),
+    error => {
+      assert.equal(error.code, 'machine_purpose_denied');
       assert.equal(error.status, 403);
       return true;
     }
