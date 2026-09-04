@@ -1,8 +1,0 @@
-{
-  "schema": "axiom-rt-auth-015-mcp-upstream-auth.v1",
-  "target": "RT-AUTH-015",
-  "title": "Upstream MCP authentication must not become AXIOM effect authority",
-  "invariant": "No authentication result produced outside the AXIOM authority boundary can itself authorize a consequential effect.",
-  "source_class": "CVE-2026-59822-style fail-open upstream authentication",
-  "cases": []
-}
