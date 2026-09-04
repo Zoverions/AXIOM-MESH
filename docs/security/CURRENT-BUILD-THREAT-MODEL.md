@@ -4,7 +4,7 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-08-27
+**Updated:** 2026-08-29
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
@@ -16,6 +16,15 @@ For remote-social foundations, this canonical model incorporates
 [`REMOTE-SOCIAL-THREAT-REVIEW.md`](REMOTE-SOCIAL-THREAT-REVIEW.md) as a required
 companion review input. A review that covers remote-social activation but omits
 that companion does not satisfy the current-build threat-model scope.
+
+For agent-swarm, delegation, shared-state, or cross-principal coordination changes,
+this model also incorporates
+[`COLLECTIVE-AUTHORITY-AND-COMMUNICATION.md`](COLLECTIVE-AUTHORITY-AND-COMMUNICATION.md)
+as a required design contract. It defines collective authority non-amplification,
+communication-surface inventory requirements, attenuation-only future delegation,
+aggregate swarm-budget requirements, independent evidence boundaries, and
+below-model physical safety constraints. Current machine-principal v1 remains
+non-delegating.
 
 ## Supported system and trust boundary
 
