@@ -25,11 +25,16 @@ const SUPPORTED_EXTERNAL_TRANSLATION_FIELD_SET = new Set(
 
 const AUTHORIZATION_DETAIL_TYPE = 'axiom-runtime-effect.v1';
 const EFFECT_INPUT_COMMITMENT_SCHEMA = 'axiom-effect-input-commitment.v1';
+const EFFECT_PURPOSE_COMMITMENT_SCHEMA = 'axiom-effect-purpose-commitment.v1';
 const REFERENCE_INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
+const DEFAULT_REFERENCE_INPUT_SHA256 = sha256('synthetic reference input');
+const DIGEST = /^[a-f0-9]{64}$/;
+const PURPOSE_ID = /^[a-z][a-z0-9_.:-]{0,159}$/;
 const SUPPORTED_AUTHORIZATION_DETAIL_FIELDS = Object.freeze([
   'axiom_action',
   'credential_handles',
   'destinations',
+  'purpose',
   'requested_scopes',
   'runtime_operation',
   'type'
@@ -149,6 +154,11 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
     );
   }
 
+  const purpose = assertString(
+    detail.purpose,
+    'external authorization detail purpose',
+    { max: 160, pattern: PURPOSE_ID }
+  );
   const {
     authorization_details: ignoredAuthorizationDetails,
     structuredArguments,
@@ -156,16 +166,26 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
   } = source;
   void ignoredAuthorizationDetails;
 
-  const inputSha256 = hasStructuredArguments
+  const baseInputSha256 = hasStructuredArguments
     ? createStructuredInputCommitment({
         axiomAction: detail.axiom_action,
         structuredArguments
       })
-    : requestMechanics.inputSha256;
+    : requestMechanics.inputSha256 ?? DEFAULT_REFERENCE_INPUT_SHA256;
+  const normalizedBaseInputSha256 = assertString(
+    baseInputSha256,
+    'external authorization input digest',
+    { min: 64, max: 64, pattern: DIGEST }
+  );
+  const inputSha256 = createPurposeBoundInputCommitment({
+    axiomAction: detail.axiom_action,
+    purpose,
+    inputSha256: normalizedBaseInputSha256
+  });
 
   const nativeRequest = createSyntheticReferenceRequest({
     ...requestMechanics,
-    ...(inputSha256 === undefined ? {} : { inputSha256 })
+    inputSha256
   });
   return {
     ...nativeRequest,
@@ -364,5 +384,14 @@ function createStructuredInputCommitment({ axiomAction, structuredArguments }) {
     axiom_action: axiomAction,
     input_schema_ref: REFERENCE_INPUT_SCHEMA_REF,
     arguments: argumentsObject
+  }));
+}
+
+function createPurposeBoundInputCommitment({ axiomAction, purpose, inputSha256 }) {
+  return sha256(canonicalJson({
+    schema: EFFECT_PURPOSE_COMMITMENT_SCHEMA,
+    axiom_action: axiomAction,
+    purpose,
+    input_sha256: inputSha256
   }));
 }
