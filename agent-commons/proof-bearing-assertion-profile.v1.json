@@ -1,0 +1,61 @@
+{
+  "schema": "axiom-proof-bearing-assertion-profile.v1",
+  "status": "experimental interoperability profile; no production promotion",
+  "purpose": "Normalize privacy-preserving or independently verifiable external assertions into bounded evidence inputs without making any proof system, blockchain, credential format, or verifier a source of ambient authority.",
+  "supported_source_families": [
+    "zero_knowledge_proof",
+    "zkTLS_or_notary_style_proof",
+    "verifiable_credential",
+    "institutional_attestation",
+    "signed_external_receipt",
+    "threshold_or_multi_party_attestation",
+    "future_proof_system"
+  ],
+  "core_distinctions": [
+    "proof verifies != claim is globally true",
+    "proof verifies != subject identity is universally established",
+    "proof verifies != authorization",
+    "proof verifies != legal validity",
+    "proof verifies != currentness outside the checked freshness window"
+  ],
+  "required_bindings": [
+    "statement type",
+    "source domain",
+    "subject binding",
+    "audience",
+    "resource",
+    "purpose",
+    "issued time",
+    "expiry/currentness",
+    "public-input digest",
+    "proof digest",
+    "verifier implementation digest",
+    "verifier trust profile",
+    "limitations"
+  ],
+  "verifier_transparency": [
+    "verifier identity and implementation digest are recorded",
+    "trust anchors or verifier profile are explicit",
+    "independent reproducibility is recorded rather than assumed",
+    "opaque proof semantics may remain advisory but cannot silently satisfy a trust-critical institutional proof requirement"
+  ],
+  "interoperability_rule": "AXIOM integrates proof systems through adapters. Verification output is normalized into a claim-specific evidence result; local policy separately decides whether that evidence is sufficient for the requested consequence.",
+  "candidate_uses": [
+    "payment-received predicate",
+    "credential-current predicate",
+    "age-threshold predicate",
+    "membership-active predicate",
+    "prerequisite-satisfied predicate",
+    "account-balance-above-threshold predicate",
+    "external-event-within-window predicate",
+    "institutional-compliance predicate"
+  ],
+  "privacy_rule": "Prefer proving the narrowest predicate needed for the decision rather than transferring the underlying sensitive record.",
+  "offline_rule": "An assertion whose required verifier, revocation source, or trust anchor cannot be refreshed offline must retain its recorded validity window; offline operation may not silently extend it.",
+  "nonclaims": [
+    "This profile does not implement zero-knowledge cryptography.",
+    "This profile does not endorse or require PulseChain, ProveX, ZKP2P, zkTLS, any credential standard, or any blockchain.",
+    "A valid proof-bearing assertion grants no execution authority by itself.",
+    "A verifier result is bounded to the exact statement and bindings checked."
+  ]
+}
