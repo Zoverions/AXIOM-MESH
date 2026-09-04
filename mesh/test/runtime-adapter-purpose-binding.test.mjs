@@ -74,6 +74,22 @@ test('recognized exact-effect authorization requires an explicit purpose', () =>
   );
 });
 
+test('purpose syntax and inner input digest are validated before commitment', () => {
+  assert.throws(() => translateSyntheticExternalAuthorizationRequest(externalRequest({
+    suffix: 'invalid-purpose',
+    grantId: 'grant:rt-auth-014-invalid-purpose',
+    detail: authorizationDetail({ purpose: 'Not A Stable Purpose' })
+  })));
+
+  assert.throws(() => translateSyntheticExternalAuthorizationRequest({
+    ...externalRequest({
+      suffix: 'invalid-input-digest',
+      grantId: 'grant:rt-auth-014-invalid-input-digest'
+    }),
+    inputSha256: 'not-a-sha256-digest'
+  }));
+});
+
 test('purpose widening cannot reuse the signed effect grant', async () => {
   const manifest = createSyntheticReferenceAdapterManifest();
   const grantAuthority = createSyntheticReferenceGrantAuthority();
