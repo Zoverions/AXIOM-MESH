@@ -195,6 +195,31 @@ exact negative test. The protected test suite also exercises peer authority-like
 language, distributed action/purpose pooling attempts, receipt/discovery laundering,
 and unsupported delegation/sub-agent claims without enabling those capabilities.
 
+### Experimental adaptive-assurance boundary
+
+The repository contains an experimental, non-authorizing adaptive-assurance
+primitive in `mesh/src/lib/adaptive-assurance.mjs`. It can recommend stronger
+verification effort from bounded observable risk signals and a bounded reputation
+adjustment, and it may add supplemental review using a cryptographically secure
+stochastic sample. It cannot grant authority, delegate authority, lower the
+risk-class assurance floor, or raise the current runtime beyond A3.
+
+The primitive is not yet connected to live intent orchestration. Any future
+integration must treat its inputs as security-sensitive observations: reputation,
+anomaly, provenance, correlation, and context-integrity values supplied by an
+acting model or an untrusted peer are not trustworthy simply because they are
+well-formed. Runtime integration must bind signal provenance, completed verifier
+work, and independence/correlation evidence before stronger assurance is claimed.
+
+Strategic gaming is an explicit threat. A principal may attempt to cultivate
+reputation to obtain predictable exemptions, split activity across identities,
+shape observable risk signals, target a known verifier, induce correlated
+agreement among nominally independent agents, or infer the audit sampling rule
+from UI behavior. The current primitive bounds reputation relief, preserves a
+non-zero stochastic challenge rate, withholds exact sampling details from its
+pre-execution UI projection, and treats stochastic review as escalation-only.
+Those controls are development evidence, not proof against an adaptive adversary.
+
 ## Assets and security objectives
 
 The primary assets are:
@@ -451,6 +476,25 @@ The current review must consider at minimum:
   unverified critical/high closure, reviewer-approved risk exception, or
   non-expiring exception.
 
+Additional adaptive-assurance abuse cases include:
+
+- high reputation being used to suppress a mandatory assurance floor or reduce
+  stochastic audit probability to zero;
+- risk-signal spoofing, omission, unsupported fields, or strategic under-reporting;
+- Sybil splitting across principals to reset task-level scrutiny;
+- correlated sub-agents or identical model/context replicas being misrepresented
+  as independent verification;
+- catalog-only, expired, revoked, runtime-substituted, or cloned/lookalike
+  verifier candidates being admitted to the stochastic reviewer pool;
+- unverified model-family or operator-domain labels being used to manufacture
+  apparent verifier diversity;
+- a verifier selected by, or fully predictable to, the acting principal;
+- memory/context poisoning steering an agent toward a permitted but wrong action
+  while ordinary authorization remains valid;
+- pre-execution UI leaking exact stochastic thresholds or samples; and
+- assurance recursion consuming unbounded inference, API, storage, bandwidth,
+  human-attention, or device-time budgets.
+
 ## Security invariants
 
 Independent review should treat these as invariants, not best-effort goals:
@@ -514,6 +558,48 @@ Independent review should treat these as invariants, not best-effort goals:
     capability absent from an exact valid authority chain to the actual executor;
     shared state and peer artifacts remain non-authorizing unless separately
     admitted through the normal AXIOM authority path.
+23. Adaptive assurance cannot reduce a mandatory policy/risk floor, grant authority,
+    or make reputation an exemption from scrutiny.
+24. Stochastic assurance may only increase scrutiny. Exact sampling thresholds and
+    samples must not be exposed through the pre-execution user surface.
+25. Independent verification claims require evidence of meaningful independence
+    of context, evidence, method, runtime, or reviewer; repeated correlated votes
+    are not sufficient by themselves.
+26. Adaptive-assurance signals that can alter scrutiny require attributable,
+    current, policy-accepted evidence; missing or stale required signal evidence
+    cannot default to a lower-risk value.
+27. Conflicting risk-increasing assurance evidence resolves conservatively toward
+    greater scrutiny unless a separately reviewed resolution policy proves a safer
+    rule.
+28. Durable assurance-source admissions remain non-authorizing and do not establish
+    truth merely because the Grid signed them; source identity, class, upstream
+    verification digest, lifetime, and trusted Grid key must all verify.
+29. Durable source bindings require a verified revocation snapshot. A valid
+    signature and monotonically higher sequence are not themselves global-
+    currentness proof; retained-currentness and key-rotation policy remain
+    independently required.
+30. Runtime/provider catalog presence is not verifier admission. Stochastic
+    reviewer selection requires an active identity-bound candidate path, and
+    unverified model-family/operator-domain labels cannot increase independence.
+
+Durable assurance-source admissions now support bounded, Grid-signed revocation
+snapshots that can invalidate either an admission digest or its upstream source-
+verification digest before receipt expiry. Durable binding collection requires a
+verified non-revoked snapshot, and a caller-supplied retained minimum sequence can
+reject an older snapshot.
+
+This does **not** establish global currentness or complete rollback resistance.
+A caller that loses or fails to retain its newest known sequence could accept an
+older still-valid signed snapshot. Grid-key rotation/revocation, cross-node
+currentness distribution, and binding these snapshots to the Grid continuity/public-
+witness model remain separate gates.
+
+The current Intent/Grid `minimum_independent_verifiers` assessment counts
+distinct verifier actors. It does not by itself prove meaningful independence of
+context, evidence set, method, runtime, model family, or operator domain. The
+experimental adaptive-assurance verifier-independence contract does not silently
+change that live semantics; stronger independence must be introduced through an
+explicit future contract/evidence requirement and reviewed migration.
 
 ## Residual risk and non-claims
 
