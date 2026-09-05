@@ -48,6 +48,7 @@ test('baseline-private validates without implying anonymity or mandatory disclos
 
   assert.equal(result.valid, true);
   assert.equal(result.profile_class, 'baseline-private');
+  assert.match(result.profile_digest, /^[a-f0-9]{64}$/);
   assert.equal(result.required_disclosure_inspection, false);
   assert.equal(result.authority_effect, 'none');
   assert.equal(result.anonymity_granted, false);
@@ -59,6 +60,7 @@ test('high-anonymity validates only as a stronger requirement class, not an anon
 
   assert.equal(result.valid, true);
   assert.equal(result.profile_class, 'high-anonymity');
+  assert.match(result.profile_digest, /^[a-f0-9]{64}$/);
   assert.equal(result.required_disclosure_inspection, true);
   assert.equal(result.authority_effect, 'none');
   assert.equal(result.anonymity_granted, false);
