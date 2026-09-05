@@ -3,6 +3,7 @@ import {
   GatewayClientError
 } from '/vendor/axiom-client.mjs';
 import { createHumanPresenter } from '/presentation.mjs';
+import { buildBrowserOrganizeDraft } from '/local-organize.mjs';
 
 const ROUTES = new Set([
   'overview',
@@ -23,7 +24,9 @@ const state = {
   pendingIntent: null,
   vault: {
     pending: null,
-    last: null
+    last: null,
+    organizePending: null,
+    organizeDraft: null
   }
 };
 
@@ -132,7 +135,7 @@ function renderDisconnected() {
     grid([
       card('Local by default', 'This preview talks only to the same-origin loopback service. It loads no remote fonts, analytics, or third-party assets.'),
       card('Authority stays visible', 'Every request still passes through the authenticated Gateway and the kernel policy path. This page grants no authority.'),
-      card('No synthetic AI', 'External and local model adapters are not configured by this preview. Ask begins with a transparent echo test, not a simulated assistant.')
+      card('No production AI', 'External model adapters are not configured. A local organizer stub can draft suggestions only; Ask still begins with a transparent echo test.')
     ])
   );
 }
@@ -179,7 +182,7 @@ async function renderAsk() {
     }
   });
   form.append(
-    notice('AI is not enabled. This transparent workflow reviews and sends system.echo through Gateway → Hypervisor → Sandbox → Grid, then keeps its exact evidence available.'),
+    notice('AI is not enabled as a production provider. This Ask path reviews and sends system.echo through Gateway → Hypervisor → Sandbox → Grid. Vault can run a local organizer stub for draft suggestions only.'),
     field('Message', message, 'ask-message'),
     field('Purpose', purpose, 'ask-purpose'),
     element('div', { className: 'actions' }, [
@@ -553,6 +556,185 @@ async function renderVault() {
       ? empty('Create at least two active memory records before linking provenance.')
       : element('div', { className: 'actions' }, [linkButton])
   );
+
+  const organizeForm = element('form', { className: 'stack' });
+  const organizeSource = element('select', {
+    attrs: { id: 'organize-source', name: 'organize_source' }
+  });
+  organizeSource.append(element('option', {
+    text: 'Paste or type selected text below',
+    attrs: { value: '' }
+  }));
+  const noteTextById = new Map();
+  for (const item of objects) {
+    const objectId = item.object_id ?? item.id;
+    if (typeof objectId !== 'string' || !objectId) continue;
+    const noteText = typeof item.payload_json?.content?.text === 'string'
+      ? item.payload_json.content.text
+      : '';
+    noteTextById.set(objectId, noteText.slice(0, 8000));
+    organizeSource.append(element('option', {
+      text: objectTitle(item),
+      attrs: { value: objectId }
+    }));
+  }
+  const organizeText = element('textarea', {
+    attrs: {
+      id: 'organize-text',
+      name: 'organize_text',
+      required: '',
+      maxlength: '8000',
+      placeholder: 'Owner-selected note text to organize locally as a draft suggestion.'
+    }
+  });
+  const organizePurpose = element('input', {
+    attrs: {
+      id: 'organize-purpose',
+      name: 'organize_purpose',
+      maxlength: '512',
+      value: 'owner-local-organize-draft'
+    }
+  });
+  const organizeSubmit = element('button', {
+    className: 'button button-primary',
+    text: 'Review local organize',
+    attrs: { type: 'submit' }
+  });
+  organizeForm.append(
+    notice('Local organizer stub only. AI is not enabled as a production provider. The result is a draft suggestion and does not mutate Vault until a separate confirmed memory.put write.'),
+    field('Include from active note (optional)', organizeSource, 'organize-source'),
+    field('Selected note text', organizeText, 'organize-text'),
+    field('Purpose', organizePurpose, 'organize-purpose'),
+    element('div', { className: 'actions' }, [organizeSubmit])
+  );
+  organizeSource.addEventListener('change', () => {
+    const fromNote = noteTextById.get(organizeSource.value) ?? '';
+    if (fromNote) organizeText.value = fromNote;
+  });
+
+  const organizeReview = element('div', { className: 'stack', attrs: { id: 'organize-review' } });
+  const organizeResult = element('div', { className: 'stack', attrs: { id: 'organize-result' } });
+
+  const renderOrganizeDraft = draft => {
+    organizeResult.replaceChildren();
+    if (!draft) return;
+    const facts = element('dl', { className: 'fact-list' }, [
+      element('dt', { text: 'Provider' }),
+      element('dd', { text: draft.provider_id }),
+      element('dt', { text: 'Model' }),
+      element('dd', { text: draft.model }),
+      element('dt', { text: 'Purpose' }),
+      element('dd', { text: draft.purpose }),
+      element('dt', { text: 'Data scope' }),
+      element('dd', { text: `${draft.data_scope.kind}; max ${draft.data_scope.max_chars} chars` }),
+      element('dt', { text: 'Budget' }),
+      element('dd', { text: `in ${draft.budget.max_input_chars} / out ${draft.budget.max_output_chars} / ${draft.budget.max_wall_ms}ms` }),
+      element('dt', { text: 'Timeout' }),
+      element('dd', { text: `${draft.timeout_ms}ms` }),
+      element('dt', { text: 'Cancel' }),
+      element('dd', { text: draft.cancel.allowed ? draft.cancel.signal : 'denied' }),
+      element('dt', { text: 'Retention' }),
+      element('dd', { text: `${draft.retention.kind}; persist=${draft.retention.persist}` }),
+      element('dt', { text: 'Note digest' }),
+      element('dd', { text: draft.note_digest }),
+      element('dt', { text: 'Integrity vs truth' }),
+      element('dd', { text: draft.integrity_vs_truth })
+    ]);
+    const save = element('button', {
+      className: 'button button-primary',
+      text: 'Review save draft as private note',
+      attrs: { type: 'button' }
+    });
+    const discard = element('button', {
+      className: 'button button-secondary',
+      text: 'Discard draft',
+      attrs: { type: 'button' }
+    });
+    save.addEventListener('click', () => {
+      startReview({
+        action: 'memory.put',
+        input: {
+          kind: 'note',
+          content: {
+            title: draft.suggestion.title.slice(0, 200),
+            text: draft.suggestion.summary_text.slice(0, 10000)
+          },
+          metadata: { source: 'axiom-one-local-preview' }
+        },
+        purpose: 'owner-memory-from-organize-draft'
+      });
+      announce('Draft save requires a separate reviewed memory.put path');
+    });
+    discard.addEventListener('click', () => {
+      state.vault.organizeDraft = null;
+      organizeResult.replaceChildren();
+      announce('Local organize draft discarded; Vault unchanged');
+    });
+    organizeResult.append(
+      element('article', { className: 'card full' }, [
+        element('span', { className: 'badge pending', text: 'Draft suggestion only' }),
+        element('h2', { text: draft.suggestion.title }),
+        element('p', { text: 'This local organizer stub draft is not a Mesh grant, approval, or production AI result.' }),
+        element('pre', { text: draft.suggestion.summary_text }),
+        facts,
+        element('div', { className: 'actions' }, [save, discard])
+      ])
+    );
+  };
+
+  organizeForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const pending = {
+      body: {
+        action: 'ai.local-organize',
+        input: { text: organizeText.value },
+        purpose: organizePurpose.value || 'owner-local-organize-draft'
+      }
+    };
+    state.vault.organizePending = pending;
+    const run = element('button', {
+      className: 'button button-primary',
+      text: 'Run local organizer stub',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Change selection',
+      attrs: { type: 'button' }
+    });
+    run.addEventListener('click', async () => {
+      try {
+        const draft = await buildBrowserOrganizeDraft({
+          includedText: pending.body.input.text,
+          purpose: pending.body.purpose,
+          principalId: state.session?.principal_id || 'local-owner'
+        });
+        state.vault.organizeDraft = draft;
+        state.vault.organizePending = null;
+        organizeReview.replaceChildren();
+        renderOrganizeDraft(draft);
+        announce('Local organize draft ready; Vault was not mutated');
+      } catch (error) {
+        organizeResult.replaceChildren(errorBox(error, 'Local organize draft failed closed'));
+        announce('Local organize draft failed closed');
+      }
+    });
+    change.addEventListener('click', () => {
+      state.vault.organizePending = null;
+      organizeReview.replaceChildren();
+      organizeText.focus();
+      announce('Local organize review closed without running');
+    });
+    organizeReview.replaceChildren(humanExplanation(
+      human.requestPreview(pending.body),
+      'Local organize request (not a Mesh intent)',
+      pending.body,
+      [run, change]
+    ));
+    announce('Local organize review is ready; nothing has been written');
+  });
+
+
   const review = element('div', { className: 'stack', attrs: { id: 'vault-review' } });
   const result = element('div', { className: 'stack', attrs: { id: 'vault-result' } });
   let activeController;
@@ -829,6 +1011,12 @@ async function renderVault() {
       element('h2', { text: 'Create a private note', attrs: { id: 'create-memory-heading' } }),
       form
     ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'organize-memory-heading' } }, [
+      element('h2', { text: 'Local organize (draft only)', attrs: { id: 'organize-memory-heading' } }),
+      organizeForm
+    ]),
+    organizeReview,
+    organizeResult,
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'link-memory-heading' } }, [
       element('h2', { text: 'Record provenance', attrs: { id: 'link-memory-heading' } }),
       provenanceForm
@@ -846,8 +1034,10 @@ async function renderVault() {
     rawDetails('Raw memory response', response)
   );
   create.disabled = Boolean(state.vault.pending);
+  organizeSubmit.disabled = Boolean(state.vault.pending);
   linkButton.disabled = Boolean(state.vault.pending) || objects.length < 2;
   if (state.vault.pending) renderReview();
+  if (state.vault.organizeDraft) renderOrganizeDraft(state.vault.organizeDraft);
   renderLast();
 }
 

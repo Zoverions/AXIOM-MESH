@@ -40,7 +40,8 @@ const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'memory.put',
   'memory.link',
   'memory.tombstone',
-  'export.create'
+  'export.create',
+  'ai.local-organize'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -99,6 +100,7 @@ export async function checkAxiomOnePreview() {
     index,
     app,
     presentation,
+    localOrganize,
     styles,
     worker,
     server,
@@ -110,6 +112,7 @@ export async function checkAxiomOnePreview() {
     readText('index.html'),
     readText('app.mjs'),
     readText('presentation.mjs'),
+    readText('local-organize.mjs'),
     readText('styles.css'),
     readText('sw.mjs'),
     readText('server.mjs'),
@@ -118,7 +121,7 @@ export async function checkAxiomOnePreview() {
   validatePolicy(policy);
   validateExplanations(policy, humanContract);
   validateManifest(manifest);
-  validateAssets({ index, app, presentation, styles, worker, server, icon });
+  validateAssets({ index, app, presentation, localOrganize, styles, worker, server, icon });
   return {
     valid: true,
     schema: policy.schema,
@@ -152,6 +155,7 @@ export async function checkAxiomOnePreview() {
       index: sha256(index),
       app: sha256(app),
       presentation: sha256(presentation),
+      local_organize: sha256(localOrganize),
       styles: sha256(styles),
       worker: sha256(worker),
       server: sha256(server),
@@ -320,7 +324,7 @@ function validateManifest(manifest) {
   ) throw new ValidationError('AXIOM One web manifest is invalid');
 }
 
-function validateAssets({ index, app, presentation, styles, worker, server, icon }) {
+function validateAssets({ index, app, presentation, localOrganize, styles, worker, server, icon }) {
   const requiredIndex = [
     '<meta name="viewport"',
     '<link rel="manifest" href="/manifest.webmanifest">',
@@ -348,7 +352,7 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     /https?:\/\//
   ];
   if (forbiddenBrowserPatterns.some(pattern => pattern.test(
-    `${app}\n${presentation}\n${index}\n${styles}`
+    `${app}\n${presentation}\n${localOrganize}\n${index}\n${styles}`
   ))) {
     throw new ValidationError('AXIOM One browser assets cross a storage, injection, or remote-origin boundary');
   }
@@ -384,6 +388,24 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (lifecycleMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One memory lifecycle surface is incomplete');
   }
+  const organizeMarkers = [
+    "action: 'ai.local-organize'",
+    "from '/local-organize.mjs'",
+    'buildBrowserOrganizeDraft',
+    'Local organizer stub',
+    'draft suggestion',
+    "'/local-organize.mjs'"
+  ];
+  if (organizeMarkers.some(marker => !`${app}\n${localOrganize}\n${server}\n${worker}`.includes(marker))) {
+    throw new ValidationError('AXIOM One local organize draft surface is incomplete');
+  }
+  if (
+    !localOrganize.includes('deterministic')
+    || !localOrganize.includes('LOCAL_ORGANIZE_PROVIDER_ID')
+    || !localOrganize.includes('INTEGRITY_VS_TRUTH')
+  ) {
+    throw new ValidationError('AXIOM One local organize module boundary is incomplete');
+  }
   const socialMarkers = [
     "state.client.call('social.get'",
     "response.network_effect === 'none'",
@@ -414,8 +436,10 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (
     !server.includes("'/presentation.mjs'")
     || !server.includes("'/human-contract.json'")
+    || !server.includes("'/local-organize.mjs'")
     || !worker.includes("'/presentation.mjs'")
     || !worker.includes("'/human-contract.json'")
+    || !worker.includes("'/local-organize.mjs'")
   ) throw new ValidationError('AXIOM One public explanation assets are not exact');
   if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
     throw new ValidationError('AXIOM One reduced-motion behavior is missing');

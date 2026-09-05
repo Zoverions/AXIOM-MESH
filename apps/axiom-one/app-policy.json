@@ -25,7 +25,14 @@
   "human_explanations": {
     "contract_schema": "axiom-one-human-contract.v1",
     "status": "experimental-human-explanations",
-    "action_previews": ["system.echo", "memory.put", "memory.link", "memory.tombstone", "export.create"],
+    "action_previews": [
+      "system.echo",
+      "memory.put",
+      "memory.link",
+      "memory.tombstone",
+      "export.create",
+      "ai.local-organize"
+    ],
     "stable_gateway_errors": 20,
     "event_kinds": 37,
     "raw_evidence_always_available": true,
@@ -33,13 +40,25 @@
   },
   "memory_lifecycle": {
     "status": "experimental-bounded-lifecycle",
-    "actions": ["memory.put", "memory.link", "memory.tombstone", "export.create"],
+    "actions": [
+      "memory.put",
+      "memory.link",
+      "memory.tombstone",
+      "export.create"
+    ],
     "read_route": "memory.list",
-    "provenance_relations": ["derived-from", "supports", "corrects"],
+    "provenance_relations": [
+      "derived-from",
+      "supports",
+      "corrects"
+    ],
     "self_links": false,
     "correction_replaces_original": false,
     "link_deletion": false,
-    "export_routes": ["exports.get", "export_bundles.get"],
+    "export_routes": [
+      "exports.get",
+      "export_bundles.get"
+    ],
     "bundle_reveal": "explicit-user-action-only",
     "persistent_browser_storage": false,
     "hard_delete": false,

@@ -43,3 +43,4 @@ These cannot be completed from repository work alone:
 | Date | Decision | By |
 |---|---|---|
 | 2026-09-05 | Open foundational packs PR; freeze progression Pilot → One+provider → Hermes read-only pin → Verify | Assistant on owner mandate to drive foundational status |
+| 2026-09-05 | Advance frozen stage 2 AI-001 with local organize provider stub only; keep `ai.providers` adapter_required; drafts never authorize Mesh effects | Assistant on owner mandate for One + provider wedge |
