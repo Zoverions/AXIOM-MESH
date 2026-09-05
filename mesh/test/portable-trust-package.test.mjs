@@ -50,6 +50,32 @@ test('unsafe package paths are rejected', async () => {
   );
 });
 
+test('artifact paths reject non-canonical relative forms', async () => {
+  const base = await examplePackage();
+  for (const artifactPath of [
+    'folder\\evil.bin',
+    'folder/\u0000evil.bin',
+    'folder//evil.bin',
+    './evil.bin',
+    'folder/../evil.bin',
+    'folder/'
+  ]) {
+    const pkg = structuredClone(base);
+    pkg.artifacts[0].path = artifactPath;
+    assert.throws(
+      () => validatePortableTrustPackage(pkg, { now: NOW }),
+      /traversal-safe/
+    );
+  }
+});
+
+test('artifact paths may contain dot pairs inside ordinary segment names', async () => {
+  const pkg = await examplePackage();
+  pkg.artifacts[0].path = 'folder/a..b.bin';
+  const result = validatePortableTrustPackage(pkg, { now: NOW });
+  assert.equal(result.valid_for_quarantine_import, true);
+});
+
 test('expired package cannot enter even quarantine as valid transfer context', async () => {
   const pkg = await examplePackage();
   const result = validatePortableTrustPackage(pkg, {
