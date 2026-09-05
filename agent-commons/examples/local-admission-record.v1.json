@@ -1,0 +1,50 @@
+{
+  "schema": "axiom-local-admission-record.v1",
+  "admission_id": "admission:institution-alpha-enclave-001",
+  "target_instance_id": "instance:alpha-airgap-01",
+  "source_package_id": "trust-package:institution-alpha-transfer-001",
+  "source_package_manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "approved_artifact_digests": [
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "rejected_artifact_digests": [
+    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  ],
+  "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "protection_profile_ids": [
+    "protection:airgap-high-assurance"
+  ],
+  "deployment_topology_id": "air_gapped_enclave",
+  "authority_source": {
+    "authority_type": "institutional_local_policy",
+    "authority_id": "authority:alpha-security-review",
+    "authority_evidence_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "review": {
+    "reviewer_ids": [
+      "reviewer:security-1",
+      "reviewer:operations-1"
+    ],
+    "review_evidence_digests": [
+      "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    ],
+    "quarantine_scan_passed": true,
+    "policy_check_passed": true
+  },
+  "valid_from": "2026-09-01T12:45:00.000Z",
+  "expires_at": "2026-09-08T12:45:00.000Z",
+  "rollback": {
+    "required": true,
+    "rollback_plan_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "max_recovery_seconds": 3600
+  },
+  "activation": {
+    "state": "admitted_inert",
+    "requires_fresh_effect_admission": true,
+    "auto_activate": false
+  },
+  "limitations": [
+    "Admission applies only to the exact target instance and artifact digests.",
+    "Activation and consequential effects require separate local authorization."
+  ]
+}
