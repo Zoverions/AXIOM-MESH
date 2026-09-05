@@ -1,0 +1,197 @@
+{
+  "schema": "axiom-dns-aid-operational-interoperability-fixtures.v1",
+  "target": "RT-AUTH-001",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "authority_granted": false,
+  "purpose": "Portable falsification cases for operational DNS-AID-adjacent publication and verification boundaries. These fixtures characterize evidence states only and never mint authority.",
+  "cases": [
+    {
+      "id": "tlsa-301-certificate-renewal-stale",
+      "basis": "observed failure class from agentnameservice/ans#105",
+      "given": {
+        "dns_provider_accepts_record": true,
+        "dnssec_state": "secure",
+        "tlsa": "3 0 1 <old-leaf-cert-sha256>",
+        "served_leaf_certificate": "renewed-certificate-with-different-DER",
+        "public_key_reused": true,
+        "local_grant": null
+      },
+      "attempt": "treat a stale full-certificate TLSA record as current endpoint proof after certificate renewal",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": false,
+        "endpoint_resolved": false,
+        "authorization_allowed": false,
+        "authority": "none",
+        "reason": "secure DNS can authenticate a TLSA RRset that no longer matches the renewed leaf certificate"
+      }
+    },
+    {
+      "id": "tlsa-311-same-key-certificate-renewal-valid",
+      "basis": "rotation-surviving SPKI case discussed in agentnameservice/ans#105 and RFC 7671",
+      "given": {
+        "dns_provider_accepts_record": true,
+        "dnssec_state": "secure",
+        "tlsa": "3 1 1 <spki-sha256>",
+        "served_leaf_certificate": "renewed-certificate-with-same-public-key",
+        "public_key_reused": true,
+        "verifier_supports_selector_1_matching_type_1": true,
+        "local_grant": null
+      },
+      "attempt": "use valid SPKI-bound endpoint evidence as if it were local effect authorization",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": true,
+        "endpoint_resolved": true,
+        "authorization_allowed": false,
+        "authority": "none",
+        "reason": "SPKI continuity can preserve endpoint verification across certificate renewal but cannot grant AXIOM authority"
+      }
+    },
+    {
+      "id": "tlsa-overlap-key-rotation",
+      "basis": "portable rotation overlap falsification case derived from ans#105 compatibility discussion",
+      "given": {
+        "dns_provider_accepts_records": true,
+        "dnssec_state": "secure",
+        "tlsa_records": [
+          "3 1 1 <old-spki-sha256>",
+          "3 1 1 <new-spki-sha256>"
+        ],
+        "served_leaf_certificate": "certificate-with-new-public-key",
+        "supported_record_matching": "accept when at least one supported secure TLSA record matches",
+        "local_grant": null
+      },
+      "attempt": "treat overlap publication as authority continuity rather than endpoint-evidence continuity",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": true,
+        "endpoint_resolved": true,
+        "authorization_allowed": false,
+        "authority": "none",
+        "rotation_state": "new-key-match-with-overlap",
+        "reason": "overlap can support endpoint rotation without transferring or widening local grants"
+      }
+    },
+    {
+      "id": "svcparam-private-key-provider-rejection",
+      "basis": "provider compatibility report in agentnameservice/ans#104",
+      "given": {
+        "record": "1 . alpn=a2a key65400=<descriptor-locator> key65409=<capability-locator>",
+        "managed_dns_provider_result": "rejected",
+        "local_grant": null
+      },
+      "attempt": "infer deployed discovery from a standards/profile-valid record that the selected provider cannot publish",
+      "expect": {
+        "publishable": false,
+        "dnssec_valid": null,
+        "tlsa_valid": null,
+        "endpoint_resolved": false,
+        "authorization_allowed": false,
+        "authority": "none",
+        "reason": "representation or profile validity does not prove operational provider publishability"
+      }
+    },
+    {
+      "id": "svcparam-stripped-after-publication",
+      "basis": "portable negative control for provider mutation or unsupported-parameter stripping",
+      "given": {
+        "submitted_record": "1 . alpn=a2a key65400=<descriptor-locator>",
+        "served_record": "1 . alpn=a2a",
+        "dnssec_state": "secure",
+        "tlsa_state": "matching",
+        "descriptor_locator_required": true,
+        "local_grant": null
+      },
+      "attempt": "treat provider acceptance as proof that all submitted discovery parameters are present in the served RRset",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": true,
+        "endpoint_resolved": false,
+        "authorization_allowed": false,
+        "authority": "none",
+        "reason": "the served record lacks the required descriptor locator even though other DNS and TLS evidence can remain valid"
+      }
+    },
+    {
+      "id": "alpn-multi-token-interpretation-divergence",
+      "basis": "verifier interpretation disagreement described in agentnameservice/ans#104 discussion",
+      "given": {
+        "record": "1 . alpn=a2a,h2",
+        "dns_provider_accepts_record": true,
+        "dnssec_state": "secure",
+        "tlsa_state": "matching",
+        "producer_interpretation": "agent protocol plus transport token",
+        "verifier_interpretation": "exact whole-value comparison against alpn=a2a",
+        "local_grant": null
+      },
+      "attempt": "normalize an implementation disagreement into a successful discovery result",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": true,
+        "endpoint_resolved": false,
+        "authorization_allowed": false,
+        "authority": "none",
+        "interop_state": "representation-divergence",
+        "reason": "publication success does not erase producer/verifier disagreement about SvcParam semantics"
+      }
+    },
+    {
+      "id": "go-rust-selector-verifier-parity",
+      "basis": "Go/Rust selector-aware verifier work reported in agentnameservice/ans#105",
+      "given": {
+        "dnssec_state": "secure",
+        "tlsa_records": [
+          "3 0 1 <stale-old-cert-sha256>",
+          "3 1 1 <current-spki-sha256>"
+        ],
+        "served_leaf_certificate": "current-certificate-matching-current-spki",
+        "implementations": [
+          "ans-sdk-go selector-aware verifier",
+          "ans-sdk-rust selector-aware verifier"
+        ],
+        "local_grant": null
+      },
+      "attempt": "claim interoperability when named supported implementations disagree about the same selector-aware record set",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": true,
+        "endpoint_resolved": true,
+        "authorization_allowed": false,
+        "authority": "none",
+        "cross_implementation_result": "same",
+        "reason": "both named selector-aware implementations are expected to accept the current matching SPKI record while ignoring the stale non-matching full-certificate record as non-fatal"
+      }
+    },
+    {
+      "id": "valid-discovery-without-local-grant",
+      "basis": "AXIOM identity/discovery versus authorization invariant",
+      "given": {
+        "dns_provider_accepts_record": true,
+        "dnssec_state": "secure",
+        "tlsa_state": "matching-supported-record",
+        "descriptor_state": "resolved-and-integrity-checked",
+        "endpoint_state": "reachable",
+        "local_grant": null
+      },
+      "attempt": "convert fully successful operational discovery into permission for a consequential action",
+      "expect": {
+        "publishable": true,
+        "dnssec_valid": true,
+        "tlsa_valid": true,
+        "endpoint_resolved": true,
+        "authorization_allowed": false,
+        "authority": "none",
+        "decision": "deny",
+        "reason": "discovery and endpoint verification remain non-authorizing inputs to the local authority path"
+      }
+    }
+  ]
+}
