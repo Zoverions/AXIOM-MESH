@@ -5,7 +5,12 @@ import {
   assertStringArray
 } from './canonical.mjs';
 
+const ID = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
+
+function id(value, label) {
+  return assertString(value, label, { min: 1, max: 192, pattern: ID });
+}
 
 function digest(value, label) {
   return assertString(value, label, { min: 64, max: 64, pattern: DIGEST });
@@ -13,12 +18,15 @@ function digest(value, label) {
 
 export function assessAmendmentMateriality(raw) {
   const value = assertPlainObject(raw, 'amendment materiality input');
-  digest(value.base_contract_digest, 'base_contract_digest');
-  digest(value.proposed_contract_digest, 'proposed_contract_digest');
+  const baseContractDigest = digest(value.base_contract_digest, 'base_contract_digest');
+  const proposedContractDigest = digest(value.proposed_contract_digest, 'proposed_contract_digest');
 
   const changed = assertStringArray(value.changed_dimensions ?? [], 'changed_dimensions', {
     maxItems: 64, itemMax: 128
   });
+  if (baseContractDigest !== proposedContractDigest && changed.length === 0) {
+    throw new ValidationError('changed contract digest requires explicit changed_dimensions');
+  }
 
   const materialDimensions = new Set([
     'obligation','beneficiary','obligor','price_or_value','deadline','data_scope',
@@ -30,6 +38,14 @@ export function assessAmendmentMateriality(raw) {
   const affectedParties = assertStringArray(value.affected_party_ids ?? [], 'affected_party_ids', {
     maxItems: 128, itemMax: 192
   });
+  const affectedPartyIds = new Set();
+  for (const [index, affectedPartyId] of affectedParties.entries()) {
+    const canonicalPartyId = id(affectedPartyId, `affected_party_ids[${index}]`);
+    if (affectedPartyIds.has(canonicalPartyId)) {
+      throw new ValidationError('affected_party_ids must be unique');
+    }
+    affectedPartyIds.add(canonicalPartyId);
+  }
 
   if (material && affectedParties.length === 0) {
     throw new ValidationError('material amendment requires explicit affected_party_ids');
