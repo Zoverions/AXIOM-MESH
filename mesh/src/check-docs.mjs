@@ -496,9 +496,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Automated source setup',
     'npm run network-policy:check',
     'not evidence of a live deployment'
-  ]
-});
-
+  ],
   'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md': [
     'Executive verdict',
     'Gateway → Hypervisor → Sandbox → Grid',
@@ -515,7 +513,7 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md': [
     'Least Authority',
     'SEC-002',
-    'outreach shortlist only'
+    'Outreach shortlist only'
   ],
   'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md': [
     'pilot',
@@ -532,7 +530,9 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': [
     'AXIOM One',
     'provider'
-  ],
+  ]
+});
+
 
 const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
