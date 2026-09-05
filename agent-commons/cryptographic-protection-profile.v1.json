@@ -1,0 +1,79 @@
+{
+  "schema": "axiom-cryptographic-protection-profile.v1",
+  "status": "experimental profile/conformance surface; no new cryptographic primitive",
+  "purpose": "Bind exact cryptographic mechanisms, purposes, key lifecycle, migration rules, and non-authority semantics into replaceable versioned profiles.",
+  "current_compatible_profiles": [
+    {
+      "id": "crypto:current-local-data-v1",
+      "use": "authenticated encryption for local protected state",
+      "primitives": {
+        "aead": "AES-256-GCM",
+        "key_size_bits": 256,
+        "nonce_size_bits": 96,
+        "authentication_tag_bits": 128
+      },
+      "key_purpose": "data_protection",
+      "authority_effect": "none"
+    },
+    {
+      "id": "crypto:current-recipient-export-v1",
+      "use": "recipient-bound portable export encryption",
+      "primitives": {
+        "key_agreement": "X25519",
+        "kdf": "HKDF-SHA256",
+        "aead": "AES-256-GCM"
+      },
+      "wire_profile": "X25519-HKDF-SHA256+A256GCM",
+      "key_purpose": "recipient_encryption",
+      "authority_effect": "none"
+    },
+    {
+      "id": "crypto:current-signature-v1",
+      "use": "service, node, artifact, and receipt signing where the current implementation already uses Ed25519",
+      "primitives": {
+        "signature": "Ed25519",
+        "digest_binding": "SHA-256 where an external digest binding is required by the surrounding format"
+      },
+      "key_purpose": "signing",
+      "authority_effect": "none"
+    },
+    {
+      "id": "crypto:current-internal-transport-v1",
+      "use": "mutually authenticated internal transport",
+      "primitives": {
+        "protocol": "TLS 1.3",
+        "certificate_signature": "Ed25519",
+        "peer_identity": "DNS and SPIFFE-style URI binding plus active-leaf pinning"
+      },
+      "key_purpose": "transport_identity",
+      "authority_effect": "none"
+    }
+  ],
+  "profile_requirements": [
+    "profile identifier and semantic version",
+    "exact intended purpose",
+    "named primitives and parameters",
+    "key purpose separation",
+    "custody mode",
+    "rotation policy",
+    "compromise behavior",
+    "recovery behavior",
+    "migration/sunset conditions",
+    "offline handling",
+    "independent test vectors or implementation evidence where applicable"
+  ],
+  "key_separation_rules": [
+    "signing keys are not data-encryption keys",
+    "transport identity keys are not recipient-encryption keys",
+    "root or recovery keys are not used for ordinary service traffic",
+    "one compromised key purpose must not automatically compromise unrelated purposes",
+    "key identifiers and digests may travel farther than secret key material"
+  ],
+  "migration_rule": "Profiles are replaceable. A stronger or newer profile is introduced through explicit migration, dual-read/dual-verify or staged re-encryption where appropriate, evidence capture, rollback planning, and retirement of the old profile. Profile names such as latest are never authoritative.",
+  "nonclaims": [
+    "This profile does not claim that every listed primitive is appropriate for every jurisdiction, threat model, or future cryptographic horizon.",
+    "This profile does not authorize effects.",
+    "This profile does not make cryptographic integrity equivalent to truth, consent, legal validity, or identity.",
+    "Post-quantum migration is a separate reviewable programme and is not claimed implemented here."
+  ]
+}

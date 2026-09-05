@@ -1,0 +1,107 @@
+{
+  "schema": "axiom-key-lifecycle-profile.v1",
+  "status": "experimental lifecycle architecture; no production custody promotion",
+  "purpose": "Separate key creation, activation, ordinary use, rotation, compromise, recovery, archival verification, and destruction semantics across local, institutional, and offline deployments.",
+  "states": [
+    "generated",
+    "staged",
+    "active",
+    "rotating",
+    "retired",
+    "compromised",
+    "recovery_only",
+    "destroyed"
+  ],
+  "transitions": [
+    [
+      "generated",
+      "staged"
+    ],
+    [
+      "staged",
+      "active"
+    ],
+    [
+      "active",
+      "rotating"
+    ],
+    [
+      "rotating",
+      "retired"
+    ],
+    [
+      "active",
+      "compromised"
+    ],
+    [
+      "retired",
+      "compromised"
+    ],
+    [
+      "generated",
+      "destroyed"
+    ],
+    [
+      "staged",
+      "destroyed"
+    ],
+    [
+      "retired",
+      "destroyed"
+    ],
+    [
+      "compromised",
+      "destroyed"
+    ],
+    [
+      "retired",
+      "recovery_only"
+    ],
+    [
+      "recovery_only",
+      "destroyed"
+    ]
+  ],
+  "custody_modes": [
+    "process_local_secret_file",
+    "hardware_backed",
+    "external_secret_provider",
+    "split_or_threshold",
+    "offline_cold_custody",
+    "air_gapped_custody"
+  ],
+  "lifecycle_rules": [
+    "generation records public identity/digest and intended key purpose without logging secret material",
+    "activation requires exact profile, purpose, instance, and policy binding",
+    "rotation preserves historical verification while preventing retired keys from authorizing new effects",
+    "compromise is a distinct state and cannot be represented merely as retirement",
+    "recovery material may restore access or decrypt historical state only under a separately authorized recovery policy",
+    "destruction records evidence of the process where possible but does not claim impossible proof of erasure on all media",
+    "backups and replicas are part of key-lifecycle scope",
+    "offline nodes must reconcile key retirement/compromise before effect-increasing operations that depend on freshness"
+  ],
+  "compromise_classes": [
+    {
+      "id": "service_key_compromise",
+      "response": "rotate affected service key, quarantine associated active trust, preserve unrelated root/other-purpose keys where evidence supports separation"
+    },
+    {
+      "id": "data_key_compromise",
+      "response": "stop new writes under compromised key, re-encrypt supported live/recovery contexts, rotate manifests/authentication material where coupled, preserve forensic evidence"
+    },
+    {
+      "id": "transport_ca_or_root_compromise",
+      "response": "treat as wider recovery domain; re-establish trust anchors and revalidate descendants rather than trusting ordinary leaf rotation"
+    },
+    {
+      "id": "recovery_key_compromise",
+      "response": "invalidate recovery path and require a separately authorized replacement/recovery ceremony"
+    }
+  ],
+  "nonclaims": [
+    "Key destruction evidence is not proof that no historical copy exists.",
+    "Key rotation is not equivalent to data deletion.",
+    "A valid key does not create authority outside its bound purpose.",
+    "This profile does not define a universal HSM, KMS, or threshold-cryptography implementation."
+  ]
+}
