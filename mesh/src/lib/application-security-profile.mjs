@@ -49,6 +49,58 @@ export function validateApplicationSecurityBaseline(value) {
   return true;
 }
 
+export function validateApplicationSecurityProfile(
+  profile,
+  active = ACTIVE_APPLICATION_SECURITY_BASELINE
+) {
+  validateApplicationSecurityBaseline(active);
+  exactObject(profile, 'application security profile', [
+    'schema',
+    'version',
+    'application_id',
+    'status',
+    'exposure',
+    'browser_untrusted',
+    'adapters',
+    'controls',
+    'evidence'
+  ]);
+
+  if (
+    profile.schema !== 'axiom-application-security-profile.v1'
+    || profile.version !== 1
+    || typeof profile.application_id !== 'string'
+    || !/^[a-z0-9][a-z0-9-]{1,63}$/.test(profile.application_id)
+    || !['active', 'experimental'].includes(profile.status)
+    || !['loopback-only', 'internet'].includes(profile.exposure)
+    || profile.browser_untrusted !== true
+  ) throw new ValidationError('Application security profile identity is invalid');
+
+  exactObject(profile.adapters, 'application security adapters', ADAPTERS);
+  for (const adapter of ADAPTERS) {
+    if (typeof profile.adapters[adapter] !== 'boolean') {
+      throw new ValidationError(`Application security adapter flag is invalid: ${adapter}`);
+    }
+  }
+
+  exactObject(profile.controls, 'application security controls', UNIVERSAL_CONTROLS);
+  for (const control of UNIVERSAL_CONTROLS) {
+    if (!CONTROL_STATES.includes(profile.controls[control])) {
+      throw new ValidationError(`Application security control state is invalid: ${control}`);
+    }
+  }
+
+  if (!Array.isArray(profile.evidence) || profile.evidence.length === 0) {
+    throw new ValidationError('Application security evidence is required');
+  }
+
+  if (profile.exposure === 'internet' && profile.adapters.hosted_web !== true) {
+    throw new ValidationError('Internet exposure requires the hosted_web adapter');
+  }
+
+  return true;
+}
+
 function exactObject(value, name, keys) {
   if (
     !value
