@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/reward-probe-manifest-v0.schema.json",
+  "title": "AXIOM Reward Probe Manifest v0",
+  "description": "Strict inert evidence contract describing a model-neutral state-value or reward-prediction-error probe. A manifest is measurement-method evidence only and never grants authority, routing, promotion, runtime activation, or network effects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "version", "status", "manifest_id", "probe_type", "measurement_method",
+    "target", "probe_artifact_ref", "probe_artifact_digest", "method_ref", "evidence_ref",
+    "evidence_digest", "feature_descriptor", "training_data_class", "dataset_refs", "calibration",
+    "transfer_scope", "transfer_evidence_refs", "limitations", "source_refs", "created_at", "recorded_at",
+    "contains_secret_material", "authority_effect", "network_effect", "credential_visibility",
+    "runtime_activation", "routing_effect", "promotion_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-reward-probe-manifest.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "manifest_id": { "$ref": "#/$defs/identifier" },
+    "probe_type": { "type": "string", "enum": ["state-value", "reward-prediction-error"] },
+    "measurement_method": {
+      "type": "string",
+      "enum": ["linear-probe", "sparse-feature-probe", "activation-subset", "model-native-signal", "other-reviewed"]
+    },
+    "target": { "$ref": "#/$defs/target" },
+    "probe_artifact_ref": { "$ref": "#/$defs/nullableIdentifier" },
+    "probe_artifact_digest": { "$ref": "#/$defs/nullableDigest" },
+    "method_ref": { "$ref": "#/$defs/nullableIdentifier" },
+    "evidence_ref": { "$ref": "#/$defs/nullableIdentifier" },
+    "evidence_digest": { "$ref": "#/$defs/nullableDigest" },
+    "feature_descriptor": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "training_data_class": { "$ref": "#/$defs/identifier" },
+    "dataset_refs": {
+      "type": "array", "minItems": 0, "maxItems": 32, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "calibration": { "$ref": "#/$defs/calibration" },
+    "transfer_scope": { "type": "string", "enum": ["exact-target-only", "declared-family", "reviewed-cross-target"] },
+    "transfer_evidence_refs": {
+      "type": "array", "minItems": 0, "maxItems": 32, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "limitations": {
+      "type": "array", "minItems": 0, "maxItems": 32,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+    },
+    "source_refs": {
+      "type": "array", "minItems": 0, "maxItems": 32, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "credential_visibility": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "routing_effect": { "const": "none" },
+    "promotion_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "nullableIdentifier": {
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+    },
+    "nullableDigest": {
+      "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }]
+    },
+    "timestamp": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "target_ref", "target_digest", "node_id", "model_id", "artifact_digest",
+        "profile_id", "offering_ref", "catalog_entry_id", "catalog_entry_digest", "artifact_digest_availability"
+      ],
+      "properties": {
+        "kind": { "type": "string", "enum": ["topology-node", "model-artifact", "runtime-offering"] },
+        "target_ref": { "$ref": "#/$defs/identifier" },
+        "target_digest": { "$ref": "#/$defs/digest" },
+        "node_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "model_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "artifact_digest": { "$ref": "#/$defs/nullableDigest" },
+        "profile_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "offering_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "catalog_entry_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "catalog_entry_digest": { "$ref": "#/$defs/nullableDigest" },
+        "artifact_digest_availability": {
+          "type": "string",
+          "enum": ["exact", "unavailable-provider-controlled", "not-applicable"]
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class", "method_ref", "evidence_digest", "population_ref", "score_range",
+        "normalization_rule_ref", "uncertainty_method_ref"
+      ],
+      "properties": {
+        "class": { "type": "string", "enum": ["uncalibrated", "calibrated-bounded", "calibrated-probabilistic"] },
+        "method_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "evidence_digest": { "$ref": "#/$defs/nullableDigest" },
+        "population_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "score_range": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "array", "minItems": 2, "maxItems": 2,
+              "prefixItems": [{ "type": "number" }, { "type": "number" }],
+              "items": false
+            }
+          ]
+        },
+        "normalization_rule_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "uncertainty_method_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/reward-probe-manifest.mjs",
+  "x-axiom-semantic-rules": [
+    "every manifest target must bind exactly to one validated Cognitive Topology node, Cognitive Capability Profile, or owner-addressable model artifact",
+    "non-native probe methods require an exact probe artifact digest",
+    "uncalibrated probes cannot carry calibration or probability semantics",
+    "broader transfer scopes require explicit transfer evidence and do not imply calibration on another target",
+    "recorded_at cannot precede created_at",
+    "all authority, routing, promotion, runtime, credential, and network effects remain inert"
+  ],
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "routing",
+    "promotion",
+    "runtime-activation",
+    "network-effect",
+    "biological-dopamine",
+    "consciousness-inference"
+  ]
+}
