@@ -234,6 +234,9 @@ function validateTarget(value) {
     requireNull(value.offering_ref, 'target.offering_ref');
     requireNull(value.catalog_entry_id, 'target.catalog_entry_id');
     requireNull(value.catalog_entry_digest, 'target.catalog_entry_digest');
+    if (value.artifact_digest_availability === 'unavailable-provider-controlled') {
+      throw new ValidationError('Topology-node reward probe targets cannot use provider-controlled artifact availability');
+    }
   } else if (value.kind === 'model-artifact') {
     requireNull(value.node_id, 'target.node_id');
     requirePresent(value.model_id, 'target.model_id');
@@ -247,6 +250,7 @@ function validateTarget(value) {
     }
   } else {
     requireNull(value.node_id, 'target.node_id');
+    requireNull(value.model_id, 'target.model_id');
     requirePresent(value.profile_id, 'target.profile_id');
     requirePresent(value.offering_ref, 'target.offering_ref');
     requirePresent(value.catalog_entry_id, 'target.catalog_entry_id');
