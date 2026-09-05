@@ -1,11 +1,11 @@
 # Runtime Adapter First Pin
 
 **Build context:** `0.12.0-dev.3`  
-**Trackers:** RUNTIME-001 (contract + synthetic reference complete), RUNTIME-002 (pending)  
+**Trackers:** RUNTIME-001 (contract + synthetic reference complete), RUNTIME-002 (in progress — Hermes identity-only research fixture; pin not accepted)  
 **Normative:** `docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md`  
 **Research pointers (not final selection):** `docs/reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md`, `docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md`
 
-**Status:** Process document to select **one** maintained external runtime for a bounded **read-only** Agent Runtime Adapter v1 integration. Not certification. Not install or execute permission until promotion gates below pass in a dated decision log.
+**Status:** Process document for the bounded **read-only** Agent Runtime Adapter v1 first pin. Hermes is the provisional candidate; a fixture-backed identity-only research slice may exist under `docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md` without accepting the pin. Not certification. Not install or execute permission until promotion gates below pass in a dated decision log entry that the pin is accepted.
 
 **Authority path:** external runtime or machine client → versioned adapter → Gateway → Hypervisor → Sandbox → Grid → independently consumable receipt.
 

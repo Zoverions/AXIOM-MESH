@@ -1,0 +1,58 @@
+{
+  "schema": "axiom-hermes-runtime-002-identity-pin.v0",
+  "status": "provisional-research-fixture",
+  "production_certification_claimed": false,
+  "pin_accepted": false,
+  "live_hermes_spawned": false,
+  "upstream": {
+    "repository": "https://github.com/NousResearch/hermes-agent",
+    "immutable_commit": "b6bcb3e791c673e63974029bbab40cc9326803ff",
+    "short_sha": "b6bcb3e7",
+    "project_version": "0.20.5",
+    "license_spdx": "MIT",
+    "commit_signature_verified": false
+  },
+  "first_operation": {
+    "runtime_operation": "hermes.get_code_identity",
+    "axiom_action": "adapter.hermes.code_identity.inspect",
+    "effect_class": "read",
+    "helper": "hermes_cli.build_info.get_code_identity",
+    "allowed_fields": ["sha", "short_sha", "version", "source"],
+    "allowed_sources": ["git", "build-file"],
+    "rejected_operations": ["hermes.dump", "hermes dump"]
+  },
+  "execution_profile": {
+    "network": "disabled",
+    "env_import": false,
+    "credentials_permitted": false,
+    "lazy_installs": false,
+    "browser": false,
+    "messaging": false,
+    "mcp": false,
+    "a2a": false,
+    "terminal": false,
+    "cron": false,
+    "skill_update": false,
+    "self_update": false,
+    "model_inference": false,
+    "remote_execution": false,
+    "fail_closed_on_unknown_identity": true,
+    "fail_closed_on_sha_mismatch": true,
+    "subprocess_spawn": false,
+    "driver": "fixture-backed",
+    "not_production_certification": true
+  },
+  "expected_identity": {
+    "sha": "b6bcb3e791c673e63974029bbab40cc9326803ff",
+    "short_sha": "b6bcb3e7",
+    "version": "0.20.5",
+    "source": "git"
+  },
+  "normative_refs": [
+    "docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md",
+    "docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md",
+    "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md",
+    "docs/operations/OWNER-DECISION-LOG-2026-09.md",
+    "docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md"
+  ]
+}

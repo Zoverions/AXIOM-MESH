@@ -2,7 +2,7 @@
 
 **Status:** subordinate execution queue; documentation/contract work only until existing capability, policy, runtime, test, and promotion gates are satisfied
 
-**Updated:** 2026-08-22
+**Updated:** 2026-09-05
 
 **Parent workstreams:** `ORCH-001`, `RUNTIME-001`, `RUNTIME-002`, `AI-001`, `ROUTE-001`, AXIOM Studio, MCP/A2A laboratories, multi-host dispatch, and Circle governance.
 
@@ -74,7 +74,7 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 - [ ] Record maintenance/release hygiene, licence, source/dependency reviewability, integration boundary, worker/sub-agent behavior, credential model, filesystem/network assumptions, update mechanism, and known security history.
 - [ ] Select one exact upstream source commit/release and pin it immutably.
 - [ ] Complete source, licence, dependency, SBOM, and threat-model review.
-- [ ] Implement one no-secret read-only operation through Agent Runtime Adapter v1.
+- [ ] Implement one no-secret read-only operation through Agent Runtime Adapter v1. *(partial: fixture-backed Hermes `get_code_identity` research slice landed 2026-09-05; live process path deferred)*
 - [ ] Bind the real-runtime task to an exact immutable catalog entry ID/version and adapter contract.
 - [ ] Prove native Gateway versus adapter authorization parity.
 - [ ] Prove direct Gateway-internal-service access is impossible from the runtime boundary.
@@ -82,6 +82,8 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 - [ ] Keep consequential effects disabled until independent review passes.
 
 **Candidate-source checkpoint:** Hermes has an immutable research pin at `b6bcb3e791c673e63974029bbab40cc9326803ff` in `reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md`. That document records the observed unsigned commit, MIT licence, version/dependency facts, and a code-identity-only candidate probe. The four-runtime first-pass comparison also includes Codex CLI as a narrower coding-runtime control. These records do not complete runtime selection, full security/dependency review, or certification.
+
+**RUNTIME-002 identity fixture (2026-09-05):** Mesh now carries a fixture-backed Hermes identity-only research slice (`docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md`, `mesh/fixtures/runtime-adapter/hermes-runtime-002-identity-pin.json`, `mesh/src/lib/hermes-identity-fixture-adapter.mjs`). It proves pin binding, field bounding, mismatch/forged-build denial, dump rejection, and contract/manifest receipt binding without spawning Hermes. Pin remains provisional; parity matrix items for live process, native Gateway path, direct-service denial, and owner acceptance remain open. `capabilities.json` untouched.
 
 ## P4 — second runtime neutrality proof
 
