@@ -99,6 +99,9 @@ export function validateDeploymentTransitionReceipt(raw) {
     throw new ValidationError('deployment transition receipt requires artifact_digests');
   }
   for (const [index, item] of artifacts.entries()) digest(item, `artifact_digests[${index}]`);
+  if (new Set(artifacts).size !== artifacts.length) {
+    throw new ValidationError('duplicate artifact digest is not allowed');
+  }
 
   digest(value.policy_digest, 'policy_digest');
 
@@ -151,6 +154,9 @@ export function validateDeploymentTransitionReceipt(raw) {
     throw new ValidationError('deployment transition receipt requires health evidence');
   }
   for (const [index, item] of healthEvidence.entries()) digest(item, `health.evidence_digests[${index}]`);
+  if (new Set(healthEvidence).size !== healthEvidence.length) {
+    throw new ValidationError('duplicate health evidence digest is not allowed');
+  }
 
   const rollback = exact(value.rollback, [
     'target_state_digest',
