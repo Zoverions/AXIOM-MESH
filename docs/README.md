@@ -271,6 +271,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Pilot external evidence checklist](operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md)
 - [AXIOM Verify MVP scope](operations/AXIOM-VERIFY-MVP-SCOPE.md)
 - [Runtime adapter first pin](operations/RUNTIME-ADAPTER-FIRST-PIN.md)
+- [Hermes RUNTIME-002 identity fixture](operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md)
 - [AXIOM One provider wedge](operations/AXIOM-ONE-PROVIDER-WEDGE.md)
 
 ### Dated reviews/audits retained as evidence
