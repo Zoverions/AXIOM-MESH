@@ -50,7 +50,7 @@ Owner timebox: prefer finishing one gate over starting three. If blocked more th
 
 ## Decision log template
 
-Copy into `docs/operations/decision-log/` (or owner notebook) as `YYYY-MM-DD-slug.md`:
+Copy into `docs/operations/decision-log/` as `YYYY-MM-DD-slug.md` (create that directory if it does not exist yet), or record the same decision in [`OWNER-DECISION-LOG-2026-09.md`](OWNER-DECISION-LOG-2026-09.md) / an owner notebook:
 
 ```text
 # Decision: <title>
