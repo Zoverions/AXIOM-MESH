@@ -91,7 +91,31 @@
           "type": "string",
           "enum": ["exact", "unavailable-provider-controlled", "not-applicable"]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "topology-node" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "artifact_digest_availability": { "enum": ["exact", "not-applicable"] }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "runtime-offering" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "model_id": { "type": "null" }
+            }
+          }
+        }
+      ]
     },
     "calibration": {
       "type": "object",
