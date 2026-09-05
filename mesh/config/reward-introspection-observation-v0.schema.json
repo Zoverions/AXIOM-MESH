@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/reward-introspection-observation-v0.schema.json",
+  "title": "AXIOM Reward Introspection Observation v0",
+  "description": "Strict inert evidence contract for one minimized internal state-value or reward-prediction-error observation. It contains no raw prompt, response, chain-of-thought, hidden-state tensor, authority, routing, promotion, runtime, or network effect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "version", "status", "observation_id", "probe_manifest_id", "probe_manifest_digest",
+    "target_ref", "target_digest", "reasoning_state_ref", "reasoning_state_digest", "step_ref",
+    "raw_score", "normalized_score", "normalized_range", "probability_semantics", "uncertainty",
+    "provenance_ref", "provenance_digest", "observed_at", "recorded_at", "contains_secret_material",
+    "authority_effect", "network_effect", "credential_visibility", "runtime_activation", "routing_effect",
+    "promotion_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-reward-introspection-observation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "observation_id": { "$ref": "#/$defs/identifier" },
+    "probe_manifest_id": { "$ref": "#/$defs/identifier" },
+    "probe_manifest_digest": { "$ref": "#/$defs/digest" },
+    "target_ref": { "$ref": "#/$defs/identifier" },
+    "target_digest": { "$ref": "#/$defs/digest" },
+    "reasoning_state_ref": { "$ref": "#/$defs/identifier" },
+    "reasoning_state_digest": { "$ref": "#/$defs/digest" },
+    "step_ref": { "$ref": "#/$defs/nullableIdentifier" },
+    "raw_score": { "type": "number" },
+    "normalized_score": {
+      "anyOf": [{ "type": "number" }, { "type": "null" }]
+    },
+    "normalized_range": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [{ "type": "number" }, { "type": "number" }],
+          "items": false
+        }
+      ]
+    },
+    "probability_semantics": { "type": "boolean" },
+    "uncertainty": {
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/uncertainty" }]
+    },
+    "provenance_ref": { "$ref": "#/$defs/identifier" },
+    "provenance_digest": { "$ref": "#/$defs/digest" },
+    "observed_at": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "credential_visibility": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "routing_effect": { "const": "none" },
+    "promotion_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lower", "upper", "method_ref"],
+      "properties": {
+        "lower": { "type": "number" },
+        "upper": { "type": "number" },
+        "method_ref": { "$ref": "#/$defs/identifier" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/reward-introspection-observation.mjs",
+  "x-axiom-semantic-rules": [
+    "probe_manifest_id and probe_manifest_digest must bind exactly to the supplied Reward Probe Manifest",
+    "target_ref and target_digest must match the exact target resolved by the bound manifest",
+    "raw_score, normalized evidence, and uncertainty values must be finite and internally ordered",
+    "normalized evidence requires the bound manifest normalization rule and exact score range",
+    "probability semantics require calibrated-probabilistic probe evidence and normalized range [0, 1]",
+    "uncertainty evidence requires the exact uncertainty method declared by the bound manifest",
+    "recorded_at cannot precede observed_at",
+    "raw prompt, response, chain-of-thought, hidden-state, reconstructive embedding, credential, routing, promotion, and action payloads are outside this contract"
+  ],
+  "x-axiom-non-claims": [
+    "truth-from-confidence",
+    "raw-chain-of-thought-storage",
+    "raw-hidden-state-storage",
+    "authority-grant",
+    "routing",
+    "promotion",
+    "runtime-activation",
+    "network-effect"
+  ]
+}
