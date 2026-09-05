@@ -22,10 +22,10 @@
         "publishable": true,
         "dnssec_valid": true,
         "tlsa_valid": false,
-        "endpoint_resolved": false,
+        "endpoint_resolved": true,
         "authorization_allowed": false,
         "authority": "none",
-        "reason": "secure DNS can authenticate a TLSA RRset that no longer matches the renewed leaf certificate"
+        "reason": "DNS resolution can still succeed while the securely served TLSA RRset no longer matches the renewed leaf certificate"
       }
     },
     {
