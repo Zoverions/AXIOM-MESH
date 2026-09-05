@@ -87,6 +87,14 @@ export function validateNegotiationMessage(raw, { now = new Date() } = {}) {
   const accepted = assertStringArray(value.accepted_term_ids, 'accepted_term_ids', {
     maxItems: 256, itemMax: 192
   });
+  const acceptedIds = new Set();
+  for (const [index, acceptedTermId] of accepted.entries()) {
+    const acceptedId = id(acceptedTermId, `accepted_term_ids[${index}]`);
+    if (acceptedIds.has(acceptedId)) {
+      throw new ValidationError('accepted_term_ids must be unique');
+    }
+    acceptedIds.add(acceptedId);
+  }
   if (['partial_acceptance','conditional_acceptance','amendment_acceptance','settlement_acceptance'].includes(type)
       && accepted.length === 0) {
     throw new ValidationError(`${type} requires explicit accepted_term_ids`);
@@ -101,8 +109,13 @@ export function validateNegotiationMessage(raw, { now = new Date() } = {}) {
     assertString(value.delegation_evidence_ref, 'delegation_evidence_ref', { min: 1, max: 512 });
   }
 
-  timestamp(value.issued_at, 'issued_at');
+  const issuedAt = timestamp(value.issued_at, 'issued_at');
   const expiresAt = timestamp(value.expires_at, 'expires_at');
+  const issuedAtMs = new Date(issuedAt).valueOf();
+  const expiresAtMs = new Date(expiresAt).valueOf();
+  if (expiresAtMs <= issuedAtMs) {
+    throw new ValidationError('expires_at must be after issued_at');
+  }
 
   const authority = exact(value.authority, [
     'message_grants_runtime_authority',
@@ -123,7 +136,7 @@ export function validateNegotiationMessage(raw, { now = new Date() } = {}) {
   if (!Number.isFinite(nowMs)) throw new ValidationError('now is invalid');
 
   return Object.freeze({
-    valid: new Date(expiresAt).valueOf() > nowMs,
+    valid: nowMs >= issuedAtMs && nowMs < expiresAtMs,
     message_id: value.message_id,
     message_type: type,
     negotiation_effect: 'proposal_or_acceptance_evidence_only',
