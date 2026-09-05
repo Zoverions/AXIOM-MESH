@@ -85,7 +85,13 @@ export function validatePortableTrustPackage(raw, { now = new Date() } = {}) {
     ], `artifacts[${index}]`);
 
     const path = assertString(artifact.path, `artifacts[${index}].path`, { min: 1, max: 512 });
-    if (path.startsWith('/') || path.includes('..')) {
+    const pathSegments = path.split('/');
+    if (
+      path.startsWith('/') ||
+      path.includes('\\') ||
+      path.includes('\u0000') ||
+      pathSegments.some((segment) => segment === '' || segment === '.' || segment === '..')
+    ) {
       throw new ValidationError(`artifacts[${index}].path must be relative and traversal-safe`);
     }
     if (seenPaths.has(path)) {
