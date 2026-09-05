@@ -92,7 +92,9 @@ export function validateObligationContract(raw) {
 
   const effectiveFrom = timestamp(context.effective_from, 'context.effective_from');
   const expiresAt = timestamp(context.expires_at, 'context.expires_at');
-  if (new Date(expiresAt).valueOf() <= new Date(effectiveFrom).valueOf()) {
+  const effectiveFromMs = new Date(effectiveFrom).valueOf();
+  const expiresAtMs = new Date(expiresAt).valueOf();
+  if (expiresAtMs <= effectiveFromMs) {
     throw new ValidationError('context.expires_at must be after context.effective_from');
   }
 
@@ -125,8 +127,12 @@ export function validateObligationContract(raw) {
     });
 
     const deadline = timestamp(obligation.deadline, `obligations[${index}].deadline`);
-    if (new Date(deadline).valueOf() < new Date(effectiveFrom).valueOf()) {
+    const deadlineMs = new Date(deadline).valueOf();
+    if (deadlineMs < effectiveFromMs) {
       throw new ValidationError('obligation deadline cannot precede contract effective_from');
+    }
+    if (deadlineMs > expiresAtMs) {
+      throw new ValidationError('obligation deadline cannot exceed contract expires_at');
     }
 
     const evidence = assertStringArray(obligation.evidence_required, `obligations[${index}].evidence_required`, {
