@@ -267,6 +267,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Pilot deployment dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md)
 - [Foundational execution pack — 2026-09](operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md)
 - [Owner decision log — foundational progression 2026-09](operations/OWNER-DECISION-LOG-2026-09.md)
+- [Independent reviewer shortlist — 2026-09](operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md)
 - [Pilot external evidence checklist](operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md)
 - [AXIOM Verify MVP scope](operations/AXIOM-VERIFY-MVP-SCOPE.md)
 - [Runtime adapter first pin](operations/RUNTIME-ADAPTER-FIRST-PIN.md)
