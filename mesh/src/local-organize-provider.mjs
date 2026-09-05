@@ -7,7 +7,7 @@ import {
   denyCrossPrincipal,
   validateAiProviderInvoke
 } from './lib/ai-provider-invoke.mjs';
-import { organizeSelectedText } from '../../apps/axiom-one/local-organize.mjs';
+import { organizeSelectedText } from './lib/local-organize-text.mjs';
 
 export {
   LOCAL_ORGANIZE_MODEL,

@@ -12,9 +12,8 @@ import {
 } from '../src/lib/ai-provider-invoke.mjs';
 
 function validInvoke(overrides = {}) {
-  const included_text = overrides.included_text ?? '# Title\n\n- one\n- two\n\nBody line.';
   const {
-    included_text: _ignored,
+    included_text = '# Title\n\n- one\n- two\n\nBody line.',
     note_digest: noteDigestOverride,
     ...rest
   } = overrides;
@@ -41,8 +40,6 @@ function validInvoke(overrides = {}) {
       kind: 'ephemeral-draft',
       persist: false
     },
-    included_text,
-    note_digest: noteDigestOverride ?? sha256(included_text),
     draft_only: true,
     principal_id: 'owner.alice',
     ...rest,
