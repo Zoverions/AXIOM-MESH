@@ -1218,3 +1218,7 @@ The implemented extension does not claim to provide:
 - transition authority;
 - execution authority;
 - production promotion.
+
+## 30. Reward Introspection Evidence v0 adjunct
+
+Reward Introspection Evidence v0 is an optional evidence-only adjunct for internal state-value and reward-prediction-error observations, calibration against independently sourced outcomes, and compatibility-gated drift evaluation. It does not alter Cognitive Topology, activate or route a runtime, promote a model, grant capability authority, or modify the governed self-improvement lifecycle described above; its outputs remain additional evaluation evidence only.
