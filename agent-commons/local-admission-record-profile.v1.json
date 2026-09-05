@@ -5,7 +5,7 @@
   "lifecycle": [
     "quarantined_inert",
     "reviewed",
-    "locally_admitted_inert",
+    "admitted_inert",
     "eligible_for_activation_request",
     "activated_by_separate_effect_admission",
     "suspended_or_rolled_back",
