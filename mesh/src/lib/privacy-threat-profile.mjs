@@ -153,11 +153,7 @@ export function validatePrivacyThreatProfile(raw) {
   if (expiresAt.getTime() <= issuedAt.getTime()) {
     throw new ValidationError('Privacy threat profile currentness expires_at must follow issued_at');
   }
-  assertString(currentness.policy_digest, 'Privacy threat profile currentness.policy_digest', {
-    min: 64,
-    max: 64,
-    pattern: SHA256
-  });
+  canonicalDigest(currentness.policy_digest, 'Privacy threat profile currentness.policy_digest');
 
   if (profile.authority_effect !== 'none') {
     throw new ValidationError('Privacy threat profile authority_effect must be none');
@@ -225,10 +221,16 @@ function exactObject(raw, label, fields) {
 }
 
 function canonicalTimestamp(value, label) {
-  const text = assertString(value, label, { min: 24, max: 24 });
+  const text = assertString(value, label, { min: 1, max: 64 });
   const parsed = new Date(text);
   if (Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== text) {
     throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
   }
   return parsed;
+}
+
+function canonicalDigest(value, label) {
+  const text = assertString(value, label, { min: 1, max: 128 });
+  if (!SHA256.test(text)) throw new ValidationError(`${label} has an invalid format`);
+  return text;
 }
