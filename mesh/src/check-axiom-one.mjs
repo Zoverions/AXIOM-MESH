@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { canonicalJson, digestObject, sha256, ValidationError } from './lib/canonical.mjs';
 import { MESH_ROOT } from './lib/config.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
+import { validateApplicationSecurityProfile } from './lib/application-security-profile.mjs';
 import { validateHumanContract } from '../../apps/axiom-one/presentation.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
@@ -94,6 +95,7 @@ const EXPECTED_EVENT_KINDS = Object.freeze([
 export async function checkAxiomOnePreview() {
   const [
     policy,
+    securityProfile,
     humanContract,
     manifest,
     index,
@@ -105,6 +107,7 @@ export async function checkAxiomOnePreview() {
     icon
   ] = await Promise.all([
     readJson('app-policy.json'),
+    readJson('security-profile.json'),
     readJson('human-contract.json'),
     readJson('manifest.webmanifest'),
     readText('index.html'),
@@ -116,6 +119,7 @@ export async function checkAxiomOnePreview() {
     readText('icon.svg')
   ]);
   validatePolicy(policy);
+  validateApplicationSecurityProfile(securityProfile);
   validateExplanations(policy, humanContract);
   validateManifest(manifest);
   validateAssets({ index, app, presentation, styles, worker, server, icon });
@@ -134,6 +138,10 @@ export async function checkAxiomOnePreview() {
     public_shell_cache: policy.security.public_shell_cache,
     api_cache: policy.security.api_cache,
     remote_origins_allowed: policy.network.remote_origins_allowed,
+    application_security_schema: securityProfile.schema,
+    application_security_exposure: securityProfile.exposure,
+    application_security_active_adapters: Object.values(securityProfile.adapters).filter(Boolean).length,
+    application_security_profile_digest: digestObject(securityProfile),
     human_contract_schema: humanContract.schema,
     human_contract_digest: digestObject(humanContract),
     explained_gateway_errors: Object.keys(humanContract.gateway_outcomes).length,
