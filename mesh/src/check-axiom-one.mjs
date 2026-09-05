@@ -119,7 +119,7 @@ export async function checkAxiomOnePreview() {
     readText('icon.svg')
   ]);
   validatePolicy(policy);
-  validateApplicationSecurityProfile(securityProfile);
+  validateAxiomOneApplicationSecurity(policy, securityProfile);
   validateExplanations(policy, humanContract);
   validateManifest(manifest);
   validateAssets({ index, app, presentation, styles, worker, server, icon });
@@ -171,6 +171,23 @@ export async function checkAxiomOnePreview() {
 
 export function validateAxiomOnePolicy(policy) {
   validatePolicy(policy);
+  return true;
+}
+
+export function validateAxiomOneApplicationSecurity(policy, securityProfile) {
+  validateApplicationSecurityProfile(securityProfile);
+  if (
+    securityProfile.application_id !== 'axiom-one'
+    || securityProfile.status !== 'experimental'
+    || securityProfile.exposure !== 'loopback-only'
+    || securityProfile.adapters.hosted_web !== false
+    || securityProfile.adapters.relational_database !== false
+    || securityProfile.adapters.reusable_session !== false
+    || securityProfile.adapters.password_store !== false
+    || securityProfile.adapters.file_upload !== false
+    || policy.security.cookies_used !== false
+    || policy.security.token_persistence !== 'memory-only'
+  ) throw new ValidationError('AXIOM One application security profile conflicts with preview policy');
   return true;
 }
 
