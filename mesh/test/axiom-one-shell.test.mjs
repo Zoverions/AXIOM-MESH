@@ -25,7 +25,7 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.public_shell_cache, true);
   assert.equal(result.api_cache, false);
   assert.equal(result.remote_origins_allowed, false);
-  assert.equal(result.explained_actions, 5);
+  assert.equal(result.explained_actions, 6);
   assert.equal(result.memory_lifecycle_status, 'experimental-bounded-lifecycle');
   assert.equal(result.provenance_relations, 3);
   assert.equal(result.self_links, false);
@@ -41,6 +41,11 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.match(app, /response\.network_effect === 'none'/);
   assert.doesNotMatch(app, /action:\s*'social\./);
   assert.doesNotMatch(app, /localStorage|sessionStorage|indexedDB|document\.cookie|innerHTML/);
+  assert.match(app, /action:\s*'ai\.local-organize'/);
+  assert.match(app, /buildBrowserOrganizeDraft/);
+  const organize = await readFile(new URL('../../apps/axiom-one/local-organize.mjs', import.meta.url), 'utf8');
+  assert.match(organize, /LOCAL_ORGANIZE_PROVIDER_ID/);
+  assert.match(organize, /INTEGRITY_VS_TRUTH/);
 });
 
 test('AXIOM One preview rejects non-loopback and weakened policy', async () => {
