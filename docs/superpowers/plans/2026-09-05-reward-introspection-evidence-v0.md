@@ -4,7 +4,7 @@
 
 **Goal:** Add four strict, content-addressed, evidence-only contracts for model reward/introspection probes, observations, calibration, and drift comparison without enabling model invocation, routing, promotion, authority, or external effects.
 
-**Architecture:** Implement four pure Node.js ESM libraries with matching JSON Schema 2020-12 mirrors. Bind every downstream artifact to exact upstream digests, preserve independent external outcome evidence, fail closed on incompatible comparisons, and keep raw hidden states / chain-of-thought out of durable evidence. The subsystem ends at evaluation evidence and never crosses into the Gateway/capability authority path.
+**Architecture:** Implement four pure Node.js ESM libraries with matching JSON Schema 2020-12 mirrors. Bind every downstream artifact to exact upstream digests, preserve independently sourced outcome evidence, fail closed on incompatible comparisons, and keep raw hidden states / chain-of-thought out of durable evidence. The subsystem ends at evaluation evidence and never crosses into the Gateway/capability authority path.
 
 **Tech Stack:** Node.js ESM, Node built-in `node:test`, existing `mesh/src/lib/canonical.mjs` (`digestObject`, `ValidationError`), existing Cognitive Topology and Cognitive Capability Profile validators/digests, JSON Schema 2020-12.
 
@@ -15,21 +15,21 @@
 - Node compatibility remains `>=22.23.2 <23 || >=24.14.0 <25`.
 - `mesh/config/capabilities.json` remains authoritative and MUST NOT be widened for this slice.
 - Every new contract is strict, closed-world, fail-closed, deterministic, and evidence-only.
-- `authority_effect` must remain `none`.
-- `network_effect` must remain `none`.
-- `credential_visibility` must remain `none`.
-- `runtime_activation` must remain `false`.
-- `routing_effect` must remain `none`.
-- `promotion_effect` must remain `evidence-only`.
-- No production module in this slice may import filesystem, network, subprocess, Gateway-effect, credential/token, wallet/payment, provider client, model-runtime launcher, or capability-grant surfaces.
+- `authority_effect = none`.
+- `network_effect = none`.
+- `credential_visibility = none`.
+- `runtime_activation = false`.
+- `routing_effect = none`.
+- `promotion_effect = evidence-only`.
+- No production module in this slice may import filesystem, network, subprocess, Gateway-effect, credential/token broker, wallet/payment, provider client, model-runtime launcher, or capability-grant surfaces.
 - Raw prompt text, response text, chain-of-thought, raw hidden states/tensors, reconstructive embeddings, credentials, secrets, and direct personal-data payloads MUST NOT appear in durable v0 evidence contracts.
 - `NaN`, positive infinity, and negative infinity MUST fail closed anywhere numeric evidence is accepted.
-- Probability semantics MUST NOT be inferred from arbitrary scores; they are allowed only when the bound probe manifest declares `calibrated-probabilistic`.
+- Probability semantics MUST NOT be inferred from arbitrary scores; they are allowed only when the exact bound probe manifest declares `calibrated-probabilistic`.
 - External correctness/outcome evidence MUST remain independently sourced and MUST NOT be satisfied by self-attestation from the same model/probe.
-- Incompatible probe/model/calibration conditions MUST return or validate to `incompatible`; they MUST NOT be numerically compared as if equivalent.
+- Incompatible probe/model/calibration conditions MUST become `incompatible`; they MUST NOT be numerically compared as if equivalent.
 - Insufficient evidence MUST remain explicit as `insufficient-evidence`; no validator/resolver may fabricate calibration or drift certainty.
 - Existing canonical digest conventions from `canonical.mjs` MUST be used for all contract digests.
-- All returned resolver summaries should be frozen/deep-frozen consistent with nearby cognitive evidence modules.
+- Resolver outputs must be frozen/deep-frozen consistent with nearby cognitive evidence modules.
 
 ---
 
@@ -47,15 +47,15 @@
   - `validateRewardProbeManifest(document)`
   - `rewardProbeManifestDigest(document)`
   - `resolveRewardProbeManifest(document, target)`
-- `resolveRewardProbeManifest(document, target)` consumes one of the exact target forms below:
-  - `target.kind === 'topology-node'` with `{ kind, topology, node_id }`; validate with `validateCognitiveTopology(topology)`, recompute `cognitiveTopologyDigest(topology)`, locate `node_id`, and compare exact target/model/artifact facts.
-  - `target.kind === 'runtime-offering'` with `{ kind, profile }`; validate with `validateCognitiveCapabilityProfile(profile)`, recompute `cognitiveCapabilityProfileDigest(profile)`, and compare exact profile/offering/catalog identity fields.
-  - `target.kind === 'model-artifact'` with `{ kind, model_id, artifact_digest }`; use only when an exact owner-addressable artifact digest exists.
+- `resolveRewardProbeManifest(document, target)` consumes one exact target form:
+  - topology node: `{ kind: 'topology-node', topology, node_id }`
+  - runtime offering: `{ kind: 'runtime-offering', profile }`
+  - exact model artifact: `{ kind: 'model-artifact', model_id, artifact_digest }`
 - Consumes: `digestObject`, `ValidationError`, `validateCognitiveTopology`, `cognitiveTopologyDigest`, `validateCognitiveCapabilityProfile`, `cognitiveCapabilityProfileDigest`.
 
-- [ ] **Step 1: Write the failing manifest tests**
+- [ ] **Step 1: Write failing manifest tests**
 
-Create fixtures for all three `target_kind` values and assert:
+Assert the public surface and deterministic digest:
 
 ```js
 assert.equal(REWARD_PROBE_MANIFEST_SCHEMA, 'axiom-reward-probe-manifest.v0');
@@ -67,9 +67,14 @@ assert.equal(
 );
 ```
 
-Test the exact closed vocabularies:
+Use these closed vocabularies:
 
 ```text
+target_kind:
+  topology-node
+  model-artifact
+  runtime-offering
+
 probe_type:
   state-value
   reward-prediction-error
@@ -97,30 +102,7 @@ artifact_digest_availability:
   not-applicable
 ```
 
-Also prove:
-- `other-reviewed` requires `method_ref`, `evidence_ref`, and `evidence_digest`.
-- calibrated manifests require calibration method/evidence/population/range; uncalibrated manifests require those calibration fields to be null.
-- broader transfer scope requires non-empty transfer evidence references.
-- `probe_artifact_digest` is required for artifact-backed probe methods and nullable only for `model-native-signal` where no separate probe artifact exists.
-- raw-content fields such as `prompt`, `response`, `chain_of_thought`, `hidden_state`, `activation_tensor`, `embedding`, `api_key`, `token`, or `credential` fail as unknown fields.
-- all six boundary constants reject widening.
-- canonical timestamps are required and `recorded_at >= created_at`.
-- validator/resolver do not mutate deeply frozen inputs.
-
-- [ ] **Step 2: Verify RED**
-
-Run:
-
-```bash
-cd mesh
-node --test test/reward-probe-manifest.test.mjs test/reward-probe-manifest-schema.test.mjs
-```
-
-Expected: FAIL because the module/schema do not yet exist.
-
-- [ ] **Step 3: Implement the minimal manifest library**
-
-Use the nearby cognitive evidence pattern: local `exactObject`, identifier/digest/timestamp helpers, `Number.isFinite`, `digestObject`, and deep-freeze outputs. Required top-level shape:
+Required top-level shape:
 
 ```js
 {
@@ -128,11 +110,13 @@ Use the nearby cognitive evidence pattern: local `exactObject`, identifier/diges
   version,
   status,
   manifest_id,
+  target_kind,
+  target,
   probe_type,
   measurement_method,
-  target,
   probe_artifact_ref,
   probe_artifact_digest,
+  artifact_digest_availability,
   method_ref,
   evidence_ref,
   evidence_digest,
@@ -156,25 +140,57 @@ Use the nearby cognitive evidence pattern: local `exactObject`, identifier/diges
 }
 ```
 
-`target` must be a closed object that carries enough exact identity/digest fields for the selected `target_kind`; do not accept a generic untyped blob.
+`target` is a closed discriminated object:
 
-`validateRewardProbeManifest()` returns a frozen summary including `manifest_digest` and all six zero-effect boundaries. `resolveRewardProbeManifest()` first validates the manifest and supplied target, then requires exact digest/identity binding and returns the resolved frozen evidence summary.
+```js
+// topology-node
+{ topology_id, topology_digest, node_id, model_id, artifact_digest }
+
+// model-artifact
+{ model_id, artifact_digest }
+
+// runtime-offering
+{ profile_id, profile_digest, offering_ref, entry_id, entry_version, entry_digest }
+```
+
+Tests must prove:
+- topology target binding recomputes `cognitiveTopologyDigest(topology)` and checks node/model/artifact facts exactly.
+- runtime-offering binding recomputes `cognitiveCapabilityProfileDigest(profile)` and checks profile/offering/catalog facts exactly.
+- model-artifact requires an exact 64-hex artifact digest.
+- `other-reviewed` requires non-null `method_ref`, `evidence_ref`, and `evidence_digest`.
+- `calibration` is a closed object `{ class, method_ref, evidence_digest, population_ref, score_min, score_max, normalization_rule_ref, uncertainty_method_ref }`; uncalibrated manifests require all fields except `class` to be null.
+- calibrated manifests require finite ordered score bounds and non-null method/evidence/population fields.
+- broader transfer scope requires non-empty `transfer_evidence_refs` of `{ evidence_ref, evidence_digest }`; `exact-target-only` requires an empty array.
+- artifact-backed probe methods require `probe_artifact_digest`; `model-native-signal` may use null when `artifact_digest_availability` is `not-applicable`.
+- raw-content fields such as `prompt`, `response`, `chain_of_thought`, `hidden_state`, `activation_tensor`, `embedding`, `api_key`, `token`, or `credential` fail as unknown fields.
+- all six boundary constants reject widening.
+- canonical timestamps are required and `recorded_at >= created_at`.
+- validator/resolver preserve deeply frozen inputs.
+
+- [ ] **Step 2: Verify RED**
+
+```bash
+cd mesh
+node --test test/reward-probe-manifest.test.mjs test/reward-probe-manifest-schema.test.mjs
+```
+
+Expected: FAIL because the module/schema do not yet exist.
+
+- [ ] **Step 3: Implement the minimal manifest library**
+
+Follow the existing cognitive-evidence style: local `exactObject`, identifier/digest/timestamp helpers, `Number.isFinite`, `digestObject`, and deep-freeze outputs. `validateRewardProbeManifest()` returns a frozen summary including `manifest_digest` and all zero-effect boundaries. `resolveRewardProbeManifest()` validates the supplied target with the existing source contract, recomputes exact digests, rejects drift, and returns a resolved frozen evidence summary.
 
 - [ ] **Step 4: Add the JSON Schema mirror**
 
-Create JSON Schema 2020-12 with `additionalProperties: false` at every object layer, exact enum/constant vocabularies, bounded arrays/strings, digest patterns, semantic-validator metadata, and explicit non-claims including `authority-grant`, `routing`, `promotion`, `runtime-activation`, `network-effect`, `biological-dopamine`, and `consciousness-inference`.
+Use JSON Schema 2020-12, `additionalProperties: false` at every object layer, exact enum/constant vocabularies, bounded arrays/strings, digest patterns, `x-axiom-semantic-validator`, semantic rules for exact target binding/calibration/transfer semantics, and non-claims including `authority-grant`, `routing`, `promotion`, `runtime-activation`, `network-effect`, `biological-dopamine`, and `consciousness-inference`.
 
-- [ ] **Step 5: Verify GREEN**
-
-Run the two focused tests again and require PASS.
-
-- [ ] **Step 6: Commit Task 1**
+- [ ] **Step 5: Verify GREEN and commit**
 
 ```bash
-git add mesh/src/lib/reward-probe-manifest.mjs \
-  mesh/config/reward-probe-manifest-v0.schema.json \
-  mesh/test/reward-probe-manifest.test.mjs \
-  mesh/test/reward-probe-manifest-schema.test.mjs
+cd mesh
+node --test test/reward-probe-manifest.test.mjs test/reward-probe-manifest-schema.test.mjs
+git add src/lib/reward-probe-manifest.mjs config/reward-probe-manifest-v0.schema.json \
+  test/reward-probe-manifest.test.mjs test/reward-probe-manifest-schema.test.mjs
 git commit -m "feat: add reward probe manifest v0"
 ```
 
@@ -192,13 +208,11 @@ git commit -m "feat: add reward probe manifest v0"
   - `validateRewardIntrospectionObservation(document)`
   - `rewardIntrospectionObservationDigest(document)`
   - `resolveRewardIntrospectionObservation(document, manifest, target)`
-- Consumes: `rewardProbeManifestDigest`, `resolveRewardProbeManifest`, and the exact target object used in Task 1.
+- Consumes: `rewardProbeManifestDigest`, `resolveRewardProbeManifest`, and Task 1 target forms.
 
-- [ ] **Step 1: Write the failing observation tests**
+- [ ] **Step 1: Write failing observation tests**
 
-Use one calibrated-probabilistic manifest fixture and one uncalibrated fixture. Assert exact manifest digest binding, exact target inheritance, deterministic digesting, deep immutability, and boundary constants.
-
-Required observation shape:
+Required shape:
 
 ```js
 {
@@ -232,7 +246,9 @@ Required observation shape:
 }
 ```
 
-Test these semantic failures explicitly:
+`normalized_range` is null or `{ min, max }`. `uncertainty` is null or `{ lower, upper, confidence }`.
+
+Test:
 
 ```js
 for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
@@ -243,15 +259,15 @@ for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFIN
 ```
 
 Also prove:
-- `normalized_score` and `normalized_range` are both null for an uncalibrated manifest.
-- normalized values require a manifest normalization declaration and must lie in the declared range.
-- `probability_semantics: true` requires `calibrated-probabilistic` and normalized range `[0, 1]`.
-- `uncertainty` is null unless the manifest declares an uncertainty method; if present its interval endpoints are finite and ordered.
-- `recorded_at` cannot precede `observed_at`.
-- manifest id/digest mismatch fails.
-- target mismatch fails.
-- `reasoning_state_ref`/`step_ref` are opaque references only; payload fields for prompt/response/CoT/raw activation are rejected.
-- fields such as `recommended_action`, `route_to`, `activate_model`, `approve_candidate`, `grant_capability`, and `execute` are rejected as unknown.
+- exact manifest id/digest binding and exact target inheritance.
+- uncalibrated manifests require `normalized_score`, `normalized_range`, and `uncertainty` to be null and `probability_semantics` false.
+- normalized values require manifest normalization metadata and must lie within the manifest score range.
+- `probability_semantics: true` requires `calibrated-probabilistic` and a normalized range exactly `[0, 1]`.
+- uncertainty requires a manifest `uncertainty_method_ref`; interval endpoints/confidence are finite and ordered/bounded.
+- `recorded_at >= observed_at`.
+- reasoning state and step fields are opaque refs/digests only; raw prompt/response/CoT/activation payload fields fail closed.
+- action-like fields `recommended_action`, `route_to`, `activate_model`, `approve_candidate`, `grant_capability`, and `execute` fail as unknown.
+- deeply frozen inputs are preserved.
 
 - [ ] **Step 2: Verify RED**
 
@@ -262,25 +278,17 @@ node --test test/reward-introspection-observation.test.mjs test/reward-introspec
 
 Expected: FAIL because the module/schema do not yet exist.
 
-- [ ] **Step 3: Implement the minimal observation validator/resolver**
+- [ ] **Step 3: Implement validator/resolver and schema**
 
-The resolver must call `resolveRewardProbeManifest(manifest, target)`, recompute `rewardProbeManifestDigest(manifest)`, verify target consistency, and then return a frozen evidence summary. It MUST NOT interpret a raw score as probability or derive a route/action.
+The resolver must call `resolveRewardProbeManifest(manifest, target)`, recompute `rewardProbeManifestDigest(manifest)`, verify exact target consistency, and return a frozen evidence summary. It MUST NOT convert arbitrary scores into probability or derive any route/action. The schema mirrors every closed object and hard boundary and delegates cross-document normalization/probability semantics to `x-axiom-semantic-rules`.
 
-- [ ] **Step 4: Add the JSON Schema mirror**
-
-Mirror the exact observation contract, including finite numeric constraints where JSON Schema can express them, nullable normalized/uncertainty structures, six hard zero-effect constants, and semantic rules for normalization/probability enforcement in the JS validator.
-
-- [ ] **Step 5: Verify GREEN**
-
-Run the two focused tests and require PASS.
-
-- [ ] **Step 6: Commit Task 2**
+- [ ] **Step 4: Verify GREEN and commit**
 
 ```bash
-git add mesh/src/lib/reward-introspection-observation.mjs \
-  mesh/config/reward-introspection-observation-v0.schema.json \
-  mesh/test/reward-introspection-observation.test.mjs \
-  mesh/test/reward-introspection-observation-schema.test.mjs
+cd mesh
+node --test test/reward-introspection-observation.test.mjs test/reward-introspection-observation-schema.test.mjs
+git add src/lib/reward-introspection-observation.mjs config/reward-introspection-observation-v0.schema.json \
+  test/reward-introspection-observation.test.mjs test/reward-introspection-observation-schema.test.mjs
 git commit -m "feat: add reward introspection observation v0"
 ```
 
@@ -298,11 +306,11 @@ git commit -m "feat: add reward introspection observation v0"
   - `validateRewardCalibrationReport(document)`
   - `rewardCalibrationReportDigest(document)`
   - `resolveRewardCalibrationReport(document, manifest, observations)`
-- Consumes: exact Reward Probe Manifest v0 and Reward Introspection Observation v0 documents.
+- Consumes exact Reward Probe Manifest v0 and Reward Introspection Observation v0 documents.
 
 - [ ] **Step 1: Write failing calibration tests**
 
-Required top-level shape:
+Required shape:
 
 ```js
 {
@@ -322,7 +330,7 @@ Required top-level shape:
   inclusion_rule_ref,
   inclusion_rule_digest,
   verification_source,
-  observation_refs,
+  samples,
   metrics,
   calibration_status,
   evaluated_from,
@@ -338,7 +346,7 @@ Required top-level shape:
 }
 ```
 
-`verification_source` must be a closed object with:
+`verification_source`:
 
 ```js
 {
@@ -350,7 +358,19 @@ Required top-level shape:
 }
 ```
 
-Closed v0 metric names:
+Each `samples[]` entry:
+
+```js
+{
+  observation_id,
+  observation_digest,
+  outcome_ref,
+  outcome_digest,
+  outcome_result // success | failure | indeterminate
+}
+```
+
+Closed metrics:
 
 ```text
 agreement-count
@@ -363,7 +383,7 @@ false-low-confidence-count
 missing-invalid-observation-count
 ```
 
-Closed status vocabulary:
+Closed statuses:
 
 ```text
 calibrated
@@ -374,15 +394,16 @@ incompatible
 ```
 
 Tests must prove:
-- every observation reference resolves to the same exact manifest and target.
-- duplicate observation ids/digests fail closed.
-- `sample_count` equals the count of accepted observation/outcome pairs represented by the report.
-- `sample_count < minimum_sample_count` requires `calibration_status = 'insufficient-evidence'`.
-- `calibration-error` is allowed only for `calibrated-probabilistic` probes.
-- self-attested verifier identity that aliases the probe/model target is rejected; `independent_from_probe` must be true and verifier provenance must be separately identified.
-- all metric values are finite and metric names are unique.
+- every sample observation resolves to the same exact manifest and target.
+- duplicate observation ids/digests or duplicate outcome refs/digests fail closed.
+- `sample_count === samples.length`.
+- `sample_count < minimum_sample_count` forces `insufficient-evidence`.
+- `calibration-error` is permitted only for `calibrated-probabilistic` probes.
+- `verification_source.independent_from_probe` must be true; verifier provenance must not alias the exact probe manifest id or target ref.
+- outcome evidence stays reference/digest/result only; raw answer/content fields are rejected.
+- metric names are unique and every metric value is finite.
 - invalid chronology fails (`evaluated_to < evaluated_from`, `recorded_at < evaluated_to`).
-- report/status is evidence-only and cannot contain promotion/routing/action fields.
+- report/status cannot carry routing, promotion, activation, or authority semantics.
 
 - [ ] **Step 2: Verify RED**
 
@@ -393,34 +414,29 @@ node --test test/reward-calibration-report.test.mjs test/reward-calibration-repo
 
 Expected: FAIL because the module/schema do not yet exist.
 
-- [ ] **Step 3: Implement strict report validation and resolution**
+- [ ] **Step 3: Implement strict report validation/resolution**
 
 `resolveRewardCalibrationReport()` must:
-1. validate the report;
-2. validate/re-digest the manifest;
-3. validate/re-digest each supplied observation;
-4. require exact manifest and target identity across all observations;
-5. require every `observation_ref` in the report to match exactly one supplied observation id/digest;
-6. preserve the independently supplied verifier evidence as a separate structure;
-7. derive only structural status constraints (for example sample insufficiency and incompatibility), never invent scientific thresholds for `calibrated` versus `miscalibrated`.
-
-The validator may accept an explicitly reported `calibration_status` only when it is structurally consistent with sample sufficiency and probe compatibility. Scientific classification thresholds stay in the bound evaluation methodology/evidence, not hidden in kernel code.
+1. validate the report and exact manifest digest;
+2. validate/re-digest each supplied observation;
+3. require exact manifest and target identity across observations;
+4. require every sample observation id/digest to match exactly one supplied observation;
+5. keep outcome evidence separate from introspection evidence;
+6. force structural `insufficient-evidence` when the minimum sample count is not met;
+7. reject `calibration-error` for non-probabilistic probes;
+8. never invent scientific thresholds for `calibrated`, `miscalibrated`, or `mixed`—those statuses remain bound to the declared evaluation methodology/evidence.
 
 - [ ] **Step 4: Add the JSON Schema mirror**
 
-Use closed nested objects, bounded arrays, unique metric names enforced semantically, exact boundary constants, semantic-validator metadata, and non-claims for correctness proof, authority, routing, activation, and self-certification.
+Use closed nested objects, bounded arrays, exact boundary constants, digest patterns, semantic rules for unique samples/metrics, independent verification, sample sufficiency, and non-claims for correctness proof, self-certification, authority, routing, and activation.
 
-- [ ] **Step 5: Verify GREEN**
-
-Run focused tests and require PASS.
-
-- [ ] **Step 6: Commit Task 3**
+- [ ] **Step 5: Verify GREEN and commit**
 
 ```bash
-git add mesh/src/lib/reward-calibration-report.mjs \
-  mesh/config/reward-calibration-report-v0.schema.json \
-  mesh/test/reward-calibration-report.test.mjs \
-  mesh/test/reward-calibration-report-schema.test.mjs
+cd mesh
+node --test test/reward-calibration-report.test.mjs test/reward-calibration-report-schema.test.mjs
+git add src/lib/reward-calibration-report.mjs config/reward-calibration-report-v0.schema.json \
+  test/reward-calibration-report.test.mjs test/reward-calibration-report-schema.test.mjs
 git commit -m "feat: add reward calibration report v0"
 ```
 
@@ -438,11 +454,11 @@ git commit -m "feat: add reward calibration report v0"
   - `validateRewardDriftComparison(document)`
   - `rewardDriftComparisonDigest(document)`
   - `resolveRewardDriftComparison(document, referenceManifest, referenceReport, candidateManifest, candidateReport)`
-- Consumes: exact probe manifests and calibration reports from Tasks 1 and 3.
+- Consumes exact probe manifests and calibration reports from Tasks 1 and 3.
 
-- [ ] **Step 1: Write failing drift-comparison tests**
+- [ ] **Step 1: Write failing drift tests**
 
-Required top-level shape:
+Required shape:
 
 ```js
 {
@@ -454,8 +470,8 @@ Required top-level shape:
   candidate,
   comparison_scope,
   metric_deltas,
-  drift_status,
   compatibility,
+  drift_status,
   compared_at,
   recorded_at,
   contains_secret_material,
@@ -468,19 +484,56 @@ Required top-level shape:
 }
 ```
 
-Each side binds exact `{ manifest_id, manifest_digest, calibration_report_id, calibration_report_digest, target_ref, target_digest }`.
+Each side:
 
-Closed drift status vocabulary:
-
-```text
-stable-within-declared-bounds
-material-drift
-mixed
-insufficient-evidence
-incompatible
+```js
+{
+  manifest_id,
+  manifest_digest,
+  calibration_report_id,
+  calibration_report_digest,
+  target_ref,
+  target_digest
+}
 ```
 
-Closed compatibility reason codes should include:
+`comparison_scope`:
+
+```js
+{
+  task_domain,
+  population_ref,
+  population_digest,
+  metric_set_ref,
+  metric_set_digest,
+  method_ref,
+  method_digest,
+  bounds_ref,
+  bounds_digest
+}
+```
+
+Each `metric_deltas[]` entry:
+
+```js
+{
+  metric_name,
+  reference_value,
+  candidate_value,
+  delta
+}
+```
+
+`compatibility`:
+
+```js
+{
+  compatible,
+  reason_codes
+}
+```
+
+Closed compatibility reason codes:
 
 ```text
 compatible
@@ -495,16 +548,25 @@ transfer-scope-insufficient
 insufficient-calibration-evidence
 ```
 
+Closed drift statuses:
+
+```text
+stable-within-declared-bounds
+material-drift
+mixed
+insufficient-evidence
+incompatible
+```
+
 Tests must prove:
-- exact predecessor/candidate identities and digests are preserved.
-- probe-type mismatch resolves to `incompatible`.
-- incompatible normalization or calibration semantics resolve to `incompatible`.
-- transfer beyond `exact-target-only` without required transfer evidence resolves to `incompatible`.
-- a reference or candidate report with `insufficient-evidence` forces drift status `insufficient-evidence` unless an earlier hard incompatibility applies.
-- metric deltas are finite and only compare metric names present and semantically comparable on both sides.
-- the resolver does not silently compare differently defined metrics.
-- input order does not change canonical digest.
-- no source input is mutated.
+- exact predecessor/candidate ids/digests are preserved.
+- probe-type, measurement-method, normalization, calibration, population, metric-set, target-transfer, and transfer-scope incompatibilities are reason-coded deterministically.
+- any hard incompatibility forces `compatibility.compatible = false`, `drift_status = 'incompatible'`, and an empty `metric_deltas` array.
+- if no hard incompatibility exists but either calibration report is `insufficient-evidence`, drift status is `insufficient-evidence` and numeric drift claims are empty.
+- compatible comparisons only accept metrics present with identical metric semantics on both reports.
+- every `delta` equals `candidate_value - reference_value`; all values are finite.
+- `stable-within-declared-bounds`, `material-drift`, or `mixed` requires non-null bound methodology refs/digests in `comparison_scope`; the kernel validates binding but does not define universal thresholds.
+- source inputs remain unmodified and canonical digesting is deterministic.
 
 - [ ] **Step 2: Verify RED**
 
@@ -515,57 +577,59 @@ node --test test/reward-drift-comparison.test.mjs test/reward-drift-comparison-s
 
 Expected: FAIL because the module/schema do not yet exist.
 
-- [ ] **Step 3: Implement the compatibility gate and drift resolver**
+- [ ] **Step 3: Implement compatibility gate and resolver**
 
-Resolution order must be deterministic:
+Resolution order:
 
 ```text
 validate documents
--> verify exact digests/ids
--> evaluate hard compatibility
--> if incompatible: return incompatible with stable reason codes and no numeric drift claim
--> else if either side lacks sufficient calibration evidence: return insufficient-evidence
--> else validate supplied comparable metric deltas against exact report metrics
--> preserve declared drift_status only when structurally compatible with the evidence
+-> recompute exact manifest/report digests
+-> evaluate hard compatibility and sorted reason codes
+-> incompatible => no numeric comparison
+-> otherwise check calibration sufficiency
+-> insufficient evidence => no numeric comparison
+-> otherwise verify each supplied metric delta from exact report metric values
+-> require bound comparison methodology/bounds for stable/material/mixed status
+-> return frozen evidence-only result
 ```
 
-Do not embed universal drift thresholds in v0. Thresholds/bounds belong to the separately referenced comparison methodology/evidence. The kernel verifies exact binding and semantic compatibility, not scientific policy.
+Do not embed universal drift thresholds in v0.
 
-- [ ] **Step 4: Add the JSON Schema mirror**
-
-Mirror all closed enums/objects, exact boundary constants, digest patterns, compatibility structures, semantic-validator metadata, and non-claims for promotion/activation/authority.
-
-- [ ] **Step 5: Verify GREEN**
-
-Run focused tests and require PASS.
-
-- [ ] **Step 6: Commit Task 4**
+- [ ] **Step 4: Add schema, verify GREEN, and commit**
 
 ```bash
-git add mesh/src/lib/reward-drift-comparison.mjs \
-  mesh/config/reward-drift-comparison-v0.schema.json \
-  mesh/test/reward-drift-comparison.test.mjs \
-  mesh/test/reward-drift-comparison-schema.test.mjs
+cd mesh
+node --test test/reward-drift-comparison.test.mjs test/reward-drift-comparison-schema.test.mjs
+git add src/lib/reward-drift-comparison.mjs config/reward-drift-comparison-v0.schema.json \
+  test/reward-drift-comparison.test.mjs test/reward-drift-comparison-schema.test.mjs
 git commit -m "feat: add reward drift comparison v0"
 ```
 
-### Task 5: Prove authority isolation, register canonical docs, and verify exact head
+The JSON Schema mirror must use closed objects, exact enums/constants, digest patterns, compatibility structures, semantic-validator metadata, and explicit non-claims for promotion/activation/authority.
+
+### Task 5: Authority isolation, canonical docs, and exact-head verification
 
 **Files:**
 - Create: `mesh/test/reward-introspection-boundary-static.test.mjs`
 - Modify: `mesh/src/check-docs.mjs`
-- Existing spec: `docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md`
-- Existing plan: `docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md`
-- Modify only if narrowly necessary for cross-linking current executable evidence: `docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md`
+- Modify: `docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md`
+- Existing: `docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md`
+- Existing: `docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md`
 
 **Interfaces:**
 - Inspects the four new production modules.
-- Registers the new spec and plan in `CANONICAL_DOCUMENTS` inside `mesh/src/check-docs.mjs`.
+- Registers the new spec and plan in `CANONICAL_DOCUMENTS`.
 - Does not add or modify an executable capability.
 
-- [ ] **Step 1: Write the static boundary test**
+- [ ] **Step 1: Write the static authority/I-O boundary test**
 
-Load all four source files and reject forbidden imports/direct execution surfaces. Expected allowed local imports are limited to:
+Parse only actual ESM import specifiers using:
+
+```js
+const imports = [...source.matchAll(/from\s+['"](.+?)['"]/g)].map(match => match[1]).sort();
+```
+
+Across the four modules, allowed local imports are limited to the subset each module needs from:
 
 ```text
 ./canonical.mjs
@@ -576,7 +640,7 @@ Load all four source files and reject forbidden imports/direct execution surface
 ./reward-calibration-report.mjs
 ```
 
-Forbid direct references/imports to at least:
+Reject import specifiers beginning with or naming:
 
 ```text
 node:fs
@@ -587,39 +651,46 @@ node:tls
 node:dns
 node:child_process
 node:worker_threads
-fetch(
 gateway
 hypervisor
 sandbox
 grid
-credential
+credential-broker
 wallet
 payment
 provider-client
 runtime-supervisor
 capability-grant
-activate_model
-route_to
-approve_candidate
-grant_capability
 ```
 
-The test should additionally parse/inspect exported resolved objects in the behavioral tests to prove `authority_effect: 'none'`, `network_effect: 'none'`, `credential_visibility: 'none'`, `runtime_activation: false`, `routing_effect: 'none'`, and `promotion_effect: 'evidence-only'` remain present.
+Also reject executable-call tokens with word-boundary/parenthesis-aware checks, not naive substrings, for:
 
-- [ ] **Step 2: Register the new canonical documents**
+```text
+fetch(
+activateModel(
+routeTo(
+approveCandidate(
+grantCapability(
+```
 
-Add exactly these paths to `CANONICAL_DOCUMENTS`:
+Do **not** forbid the legitimate inert field name `credential_visibility` merely because it contains the word `credential`.
+
+Behavioral tests for each contract must assert the frozen resolved output contains exactly the six approved boundary values.
+
+- [ ] **Step 2: Register canonical documents**
+
+Add exactly:
 
 ```text
 docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md
 docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md
 ```
 
-Do not add the four `mesh/config/*schema.json` files to the canonical documentation list unless `check-docs.mjs` already treats analogous `mesh/config` schemas as canonical documents; current nearby cognitive schemas are verified by dedicated schema tests instead.
+to `CANONICAL_DOCUMENTS` in `mesh/src/check-docs.mjs`. Do not add the four `mesh/config/*schema.json` files; nearby cognitive config schemas are verified by dedicated schema tests rather than the canonical-document list.
 
-- [ ] **Step 3: Add one narrow cross-link to the cognitive-topology design**
+- [ ] **Step 3: Cross-link Cognitive Topology**
 
-In the current executable-boundary/future-work portion of `2026-08-29-cognitive-topology-identity-kernel-design.md`, add a short statement that Reward Introspection Evidence v0 is an optional evidence-only adjunct for internal value/reward-prediction-error observations and drift evaluation; explicitly state it does not alter Cognitive Topology, authority, activation, routing, or promotion semantics.
+Add one short current-boundary paragraph to `docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md`: Reward Introspection Evidence v0 is an optional evidence-only adjunct for internal value/reward-prediction-error observations, calibration, and drift evaluation. It does not alter Cognitive Topology, runtime activation, routing, promotion, capability authority, or the existing governed self-improvement lifecycle.
 
 - [ ] **Step 4: Run all focused tests**
 
@@ -639,28 +710,20 @@ node --test \
 
 Expected: all PASS.
 
-- [ ] **Step 5: Run documentation and registry checks**
+- [ ] **Step 5: Run documentation, registry, and full checks**
 
 ```bash
 cd mesh
 npm run docs:check
 npm run check-registry
-```
-
-Expected: PASS with no capability-registry changes. If `check-registry` fails because this evidence class is unexpectedly required to register as a capability, STOP: that would widen the authority surface beyond this approved spec and requires a new design review rather than weakening the checker.
-
-- [ ] **Step 6: Run the full local protected check**
-
-```bash
-cd mesh
 npm run check
 ```
 
-Expected: PASS. Do not suppress unrelated failures; classify them before proceeding.
+Expected: PASS with no `mesh/config/capabilities.json` change. If `check-registry` requires this evidence class to become an executable capability, STOP and return to design review rather than weakening the checker or widening authority.
 
-- [ ] **Step 7: Review changed-file scope**
+- [ ] **Step 6: Review exact changed-file scope**
 
-Expected implementation scope:
+Expected implementation files:
 
 ```text
 docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md
@@ -686,20 +749,20 @@ mesh/test/reward-drift-comparison-schema.test.mjs
 mesh/test/reward-introspection-boundary-static.test.mjs
 ```
 
-No `mesh/config/capabilities.json`, Gateway, Hypervisor, Sandbox, Grid, runtime/provider invocation, credential, wallet, or external-network file should change.
+No Gateway, Hypervisor, Sandbox, Grid, provider/runtime invocation, credential broker, wallet/payment, external-network, or capability-registry authority file should change.
 
-- [ ] **Step 8: Commit integration/documentation evidence**
+- [ ] **Step 7: Commit boundary/docs integration**
 
 ```bash
-git add mesh/src/check-docs.mjs \
-  mesh/test/reward-introspection-boundary-static.test.mjs \
-  docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md \
-  docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md \
-  docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md
+cd mesh
+git add src/check-docs.mjs test/reward-introspection-boundary-static.test.mjs \
+  ../docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md \
+  ../docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md \
+  ../docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md
 git commit -m "test: verify reward introspection authority boundary"
 ```
 
-- [ ] **Step 9: Open a PR and require exact-head CI**
+- [ ] **Step 8: Open PR and require exact-head verification**
 
 PR summary must state:
 - evidence-only introspection contracts;
@@ -707,20 +770,21 @@ PR summary must state:
 - no raw hidden-state persistence;
 - no capability widening;
 - no routing/promotion/authority effects;
-- independent external outcome evidence remains mandatory for calibration.
+- independently sourced external outcome evidence remains mandatory for calibration.
 
-Require the repository's normal protected checks, especially Clean Kernel and supported Node/platform compatibility. Treat any failing check as unresolved until its exact assertion/log is inspected.
+Require the repository's protected CI, especially Clean Kernel and supported Node/platform compatibility. Inspect exact failing assertions/logs before any retry or repair.
 
-- [ ] **Step 10: Merge only a freshly verified exact head**
+- [ ] **Step 9: Merge only the freshly verified exact head**
 
-Do not claim implementation complete until the final PR head is green and the merged `main` commit is known. After merge, verify the resulting `main` commit's required workflows before closing the implementation slice.
+Do not claim implementation complete until the final PR head is green and the merged `main` commit is known. Verify required post-merge workflows on that resulting `main` commit before closing the slice.
 
 ---
 
 ## Self-Review Checklist
 
-- Spec coverage: all four contracts, exact digest binding, privacy minimization, independent outcomes, insufficient-evidence behavior, compatibility gating, recursive-improvement evidence-only integration, static authority isolation, documentation registration, and full verification are assigned to explicit tasks.
-- No placeholders: the plan contains no `TBD`, `TODO`, or unspecified implementation steps.
-- Type/interface consistency: downstream tasks consume the exact exported function names introduced by earlier tasks.
+- Spec coverage: all four contracts, exact digest binding, privacy minimization, independent outcomes, sample sufficiency, compatibility gating, recursive-improvement evidence-only integration, static authority isolation, canonical documentation registration, and full verification are assigned to explicit tasks.
+- Placeholder scan: no `TBD`, `TODO`, “similar to”, or unspecified implementation step remains.
+- Type consistency: every downstream interface consumes function names and document fields defined in earlier tasks.
+- Privacy consistency: calibration samples carry only observation/outcome references, digests, and bounded outcome classes; no raw reasoning or answer content is required.
 - Scope discipline: no model adapter, hidden-state extractor, routing policy, promotion rule, capability grant, or runtime invocation is introduced.
 - Authority discipline: any discovery that requires changing `mesh/config/capabilities.json` is an explicit STOP/review condition, not an implementation shortcut.
