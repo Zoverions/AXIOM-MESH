@@ -13,14 +13,14 @@
 
 ## 1. Executive verdict
 
-AXIOM-MESH is an **unusual fail-closed authority substrate**: consequential work must still pass identity, deny-dominant policy, confirmation/approval, short-lived capability consumption, bounded execution, and signed evidence. Intelligence, planners, browser apps, external runtimes, providers, repository operators, remote nodes, and administrators do **not** inherit authority from connectivity ([`docs/PROJECT-STATUS-2026.md`](../../PROJECT-STATUS-2026.md)).
+AXIOM-MESH is an **unusual fail-closed authority substrate**: consequential work must still pass identity, deny-dominant policy, confirmation/approval, short-lived capability consumption, bounded execution, and signed evidence. Intelligence, planners, browser apps, external runtimes, providers, repository operators, remote nodes, and administrators do **not** inherit authority from connectivity ([`docs/PROJECT-STATUS-2026.md`](../PROJECT-STATUS-2026.md)).
 
 The foundational gap is **not** another laboratory. The gap is:
 
 1. **Lived external evidence** — authentic controlled pilot + independent security review for the exact pinned source/image/deployment (promotion blockers in PROJECT-STATUS).
 2. **One human/machine utility wedge** — a productized AXIOM One path plus one least-privilege provider under Mesh grants, with receipts that a non-operator can inspect.
 
-Mechanism density is already high: 31 of 49 capabilities marked `implemented` in [`mesh/config/capabilities.json`](../../../mesh/config/capabilities.json) (as recorded in PROJECT-STATUS / STATUS). Synthetic drills, production-unreachable prototypes, and draft architectures prove design honesty; they do not prove deployment truth.
+Mechanism density is already high: 31 of 49 capabilities marked `implemented` in [`mesh/config/capabilities.json`](../../mesh/config/capabilities.json) (as recorded in PROJECT-STATUS / STATUS). Synthetic drills, production-unreachable prototypes, and draft architectures prove design honesty; they do not prove deployment truth.
 
 **Verdict in one line:** Keep the kernel constitutional; freeze one progression; earn promotion with evidence; ship a narrow useful surface before activating broader effects.
 
