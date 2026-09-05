@@ -24,6 +24,11 @@ const ALLOWED_TRANSITIONS = new Set([
   'rolled_back->retired'
 ]);
 
+const AUTHORITY_MODES = new Set([
+  'fresh_effect_admission',
+  'preauthorized_fail_safe'
+]);
+
 function exact(raw, fields, label) {
   const value = assertPlainObject(raw, label);
   const allowed = new Set(fields);
@@ -103,6 +108,9 @@ export function validateDeploymentTransitionReceipt(raw) {
     'fresh_at_transition'
   ], 'transition_authority');
   id(authority.mode, 'transition_authority.mode');
+  if (!AUTHORITY_MODES.has(authority.mode)) {
+    throw new ValidationError('transition_authority.mode is unsupported');
+  }
   digest(authority.grant_or_policy_evidence_digest, 'transition_authority.grant_or_policy_evidence_digest');
   if (typeof authority.fresh_at_transition !== 'boolean') {
     throw new ValidationError('transition_authority.fresh_at_transition must be boolean');
@@ -151,6 +159,9 @@ export function validateDeploymentTransitionReceipt(raw) {
   ], 'rollback');
   digest(rollback.target_state_digest, 'rollback.target_state_digest');
   digest(rollback.rollback_plan_digest, 'rollback.rollback_plan_digest');
+  if (typeof rollback.available !== 'boolean') {
+    throw new ValidationError('rollback.available must be boolean');
+  }
   if (rollback.available !== true && !reducingRisk) {
     throw new ValidationError('rollback must be available for effect-increasing transitions');
   }
@@ -169,12 +180,11 @@ export function validateDeploymentTransitionReceipt(raw) {
   }
 
   if (
-    offline.offline &&
     !offline.external_currentness_satisfied &&
     !reducingRisk
   ) {
     throw new ValidationError(
-      'offline effect-increasing transition cannot proceed with unsatisfied external currentness'
+      'effect-increasing transition cannot proceed with unsatisfied external currentness'
     );
   }
 
