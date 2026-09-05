@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-23
+**Updated:** 2026-09-05
 
 **Active build:** `0.12.0-dev.3`
 
@@ -265,9 +265,17 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Deployment-independent providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
 - [Pilot deployment dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md)
+- [Foundational execution pack — 2026-09](operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md)
+- [Owner decision log — foundational progression 2026-09](operations/OWNER-DECISION-LOG-2026-09.md)
+- [Independent reviewer shortlist — 2026-09](operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md)
+- [Pilot external evidence checklist](operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md)
+- [AXIOM Verify MVP scope](operations/AXIOM-VERIFY-MVP-SCOPE.md)
+- [Runtime adapter first pin](operations/RUNTIME-ADAPTER-FIRST-PIN.md)
+- [AXIOM One provider wedge](operations/AXIOM-ONE-PROVIDER-WEDGE.md)
 
 ### Dated reviews/audits retained as evidence
 
+- [Foundational strength audit — 2026-09-05](reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md)
 - [Scalability audit — 2026-07-30](audits/SCALABILITY-AUDIT-2026-07-30.md)
 - [Audit hardening G5-G9 — 2026-08-10](audits/AUDIT-HARDENING-G5-G9-2026-08-10.md)
 - [Plural-authority architecture review — 2026-08-03](reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md)

@@ -83,6 +83,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
   'docs/reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md',
   'docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md',
+  'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md',
@@ -122,6 +123,13 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
+  'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md',
+  'docs/operations/OWNER-DECISION-LOG-2026-09.md',
+  'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md',
+  'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md',
+  'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md',
+  'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md',
+  'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'agent-skills/axiom-authority-auditor/SKILL.md',
@@ -490,8 +498,43 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Automated source setup',
     'npm run network-policy:check',
     'not evidence of a live deployment'
+  ],
+  'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md': [
+    'Executive verdict',
+    'Gateway → Hypervisor → Sandbox → Grid',
+    'Promote only with evidence'
+  ],
+  'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md': [
+    'Frozen progression',
+    'Pilot'
+  ],
+  'docs/operations/OWNER-DECISION-LOG-2026-09.md': [
+    'Frozen progression',
+    'Hermes'
+  ],
+  'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md': [
+    'Least Authority',
+    'SEC-002',
+    'Outreach shortlist only'
+  ],
+  'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md': [
+    'pilot',
+    'continuity'
+  ],
+  'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md': [
+    'Verify',
+    'receipt'
+  ],
+  'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': [
+    'Agent Runtime Adapter',
+    'read-only'
+  ],
+  'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': [
+    'AXIOM One',
+    'provider'
   ]
 });
+
 
 const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
@@ -538,6 +581,14 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': 6_000,
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': 8_000,
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': 8_000,
+  'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md': 8_000,
+  'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md': 3_000,
+  'docs/operations/OWNER-DECISION-LOG-2026-09.md': 1_500,
+  'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md': 5_000,
+  'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md': 4_000,
+  'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md': 2_500,
+  'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': 3_000,
+  'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': 2_500,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 
