@@ -82,8 +82,20 @@ export function validateLocalAdmissionRecord(raw, { now = new Date() } = {}) {
   }
   for (const [index, item] of approved.entries()) digest(item, `approved_artifact_digests[${index}]`);
   for (const [index, item] of rejected.entries()) digest(item, `rejected_artifact_digests[${index}]`);
-  const overlap = approved.filter(item => rejected.includes(item));
-  if (overlap.length > 0) throw new ValidationError('artifact digest cannot be both approved and rejected');
+
+  const approvedSet = new Set(approved);
+  if (approvedSet.size !== approved.length) {
+    throw new ValidationError('approved artifact digests must be unique');
+  }
+  const rejectedSet = new Set(rejected);
+  if (rejectedSet.size !== rejected.length) {
+    throw new ValidationError('rejected artifact digests must be unique');
+  }
+  for (const item of approvedSet) {
+    if (rejectedSet.has(item)) {
+      throw new ValidationError('artifact digest cannot be both approved and rejected');
+    }
+  }
 
   digest(value.policy_digest, 'policy_digest');
 
@@ -93,6 +105,9 @@ export function validateLocalAdmissionRecord(raw, { now = new Date() } = {}) {
   });
   if (protectionProfiles.length === 0) {
     throw new ValidationError('local admission record requires protection_profile_ids');
+  }
+  for (const [index, item] of protectionProfiles.entries()) {
+    id(item, `protection_profile_ids[${index}]`);
   }
   id(value.deployment_topology_id, 'deployment_topology_id');
 
@@ -116,6 +131,9 @@ export function validateLocalAdmissionRecord(raw, { now = new Date() } = {}) {
     itemMax: 192
   });
   if (reviewers.length === 0) throw new ValidationError('local admission record requires reviewer_ids');
+  for (const [index, item] of reviewers.entries()) {
+    id(item, `review.reviewer_ids[${index}]`);
+  }
   const reviewDigests = assertStringArray(review.review_evidence_digests, 'review.review_evidence_digests', {
     maxItems: 128,
     itemMax: 64
@@ -172,13 +190,16 @@ export function validateLocalAdmissionRecord(raw, { now = new Date() } = {}) {
   if (!Number.isFinite(nowMs)) throw new ValidationError('now is invalid');
   const validFromMs = new Date(validFrom).valueOf();
   const expiresMs = new Date(expiresAt).valueOf();
+  if (expiresMs <= validFromMs) {
+    throw new ValidationError('expires_at must follow valid_from');
+  }
 
   const checks = Object.freeze({
     effective: validFromMs <= nowMs,
     not_expired: expiresMs > nowMs,
-    quarantine_scan_passed: true,
-    policy_check_passed: true,
-    rollback_defined: true
+    quarantine_scan_passed: review.quarantine_scan_passed === true,
+    policy_check_passed: review.policy_check_passed === true,
+    rollback_defined: rollback.required === true
   });
 
   return Object.freeze({
