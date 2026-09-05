@@ -20,7 +20,7 @@ The foundational gap is **not** another laboratory. The gap is:
 1. **Lived external evidence** — authentic controlled pilot + independent security review for the exact pinned source/image/deployment (promotion blockers in PROJECT-STATUS).
 2. **One human/machine utility wedge** — a productized AXIOM One path plus one least-privilege provider under Mesh grants, with receipts that a non-operator can inspect.
 
-Mechanism density is already high: 31 of 49 capabilities marked `implemented` in [`mesh/config/capabilities.json`](../../mesh/config/capabilities.json) (as recorded in PROJECT-STATUS / STATUS). Synthetic drills, production-unreachable prototypes, and draft architectures prove design honesty; they do not prove deployment truth.
+Mechanism density is already high: 31 of 50 capabilities marked `implemented` in [`mesh/config/capabilities.json`](../../mesh/config/capabilities.json) (as recorded in PROJECT-STATUS / STATUS). Synthetic drills, production-unreachable prototypes, and draft architectures prove design honesty; they do not prove deployment truth.
 
 **Verdict in one line:** Keep the kernel constitutional; freeze one progression; earn promotion with evidence; ship a narrow useful surface before activating broader effects.
 
@@ -60,7 +60,7 @@ Supported coordination kernel line is dependency-free Node.js with exact engine 
 
 ### Claim lifecycle bound to capabilities.json
 `mesh/config/capabilities.json`; `docs/rebuild/STATUS.md`.
-Roadmaps, labs, synthetic conformance, and built-but-unreachable source cannot promote status. Current count: 31 implemented of 49 tracked.
+Roadmaps, labs, synthetic conformance, and built-but-unreachable source cannot promote status. Current count: 31 implemented of 50 tracked.
 
 ### Fail-closed pilot and independent-review intake
 `docs/operations/PILOT-DEPLOYMENT-DOSSIER.md`; `mesh/src/pilot-dossier.mjs`; `mesh/src/pilot-evidence-package.mjs`; `mesh/src/independent-security-review.mjs`.
