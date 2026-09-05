@@ -544,7 +544,8 @@ const MINIMUM_LENGTH = Object.freeze({
 export function markdownLocalTargets(markdown) {
   const targets = [];
   const pattern = /!?\[[^\]]*]\(([^)]+)\)/g;
-  for (const match of markdown.matchAll(pattern)) {
+  const scan = String(markdown).replace(/```[\s\S]*?```/g, '');
+  for (const match of scan.matchAll(pattern)) {
     const raw = match[1].trim().replace(/^<|>$/g, '');
     if (
       !raw
