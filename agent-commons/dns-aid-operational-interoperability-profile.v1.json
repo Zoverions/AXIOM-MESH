@@ -1,0 +1,70 @@
+{
+  "schema": "axiom-dns-aid-operational-interoperability-profile.v1",
+  "status": "experimental interoperability profile; no production promotion claimed",
+  "target": "RT-AUTH-001",
+  "scope": "Operational publication, DNSSEC, DANE/TLSA, endpoint-resolution and cross-implementation behavior for DNS-AID-adjacent discovery evidence.",
+  "core_invariant": "Publishable, DNSSEC-valid, TLSA-valid, endpoint-resolved, and authorization-allowed are independent states. Success in any discovery or verification state MUST NOT manufacture local effect authority.",
+  "result_dimensions": [
+    "publishable",
+    "dnssec_valid",
+    "tlsa_valid",
+    "endpoint_resolved",
+    "authorization_allowed"
+  ],
+  "authority_model": {
+    "publication": "A provider accepting a DNS record proves only that the record can be represented and served by that provider.",
+    "dnssec": "A secure DNSSEC result authenticates the DNS data under the validated chain; it does not authorize an AXIOM effect.",
+    "tlsa": "A matching supported TLSA record is endpoint/certificate evidence under the applicable DANE policy; it does not grant local action authority.",
+    "resolution": "A successfully resolved agent endpoint establishes reachability/discovery evidence only.",
+    "authorization": "Only the normal AXIOM local authority path may authorize a bounded effect. Discovery evidence may constrain or deny but never widen that authority."
+  },
+  "operational_rules": [
+    "Treat TLSA selector and matching type as verification semantics rather than fixed formatting assumptions.",
+    "A 3 0 1 full-certificate digest becomes stale when the leaf certificate changes unless DNS is updated; a 3 1 1 SPKI digest may survive certificate reissuance only when the same public key is retained.",
+    "During deliberate key rotation, overlapping old/new TLSA evidence may support continuity only when the verifier has explicit supported-record semantics and the served endpoint matches at least one currently accepted secure record.",
+    "Provider acceptance, canonical DNS publication and verifier interpretation are separate interoperability checks.",
+    "Unknown or private SvcParamKeys must not be silently treated as present when a provider rejects or strips them.",
+    "ALPN token/list interpretation differences must be surfaced as interoperability failure rather than normalized into an inferred match.",
+    "Cross-implementation parity is an evidence target: semantically identical inputs should produce the same supported/unsupported and match/no-match result across named verifier implementations.",
+    "Absent, stale, unsupported or contradictory discovery evidence fails closed for any flow that requires that evidence, without changing the underlying local authorization ceiling."
+  ],
+  "provenance": [
+    {
+      "source": "agentnameservice/ans#105",
+      "kind": "operator and implementation discussion",
+      "retained": [
+        "3 0 1 full-certificate renewal brittleness",
+        "3 1 1 SPKI continuity when the key is retained",
+        "coordinated verifier support requirement"
+      ],
+      "non_claim": "The issue is not an adopted standard and does not establish AXIOM conformance."
+    },
+    {
+      "source": "agentnameservice/ans#104",
+      "kind": "provider interoperability discussion",
+      "retained": [
+        "managed-DNS publication constraints for private/numeric SvcParamKeys",
+        "descriptor-locator loss risk",
+        "ALPN representation disagreement"
+      ],
+      "non_claim": "A provider-specific failure does not prove that the DNS-AID design is universally undeployable."
+    },
+    {
+      "source": "RFC 6698 and RFC 7671",
+      "kind": "DANE/TLSA standards context",
+      "retained": [
+        "selector-aware TLSA verification",
+        "DNSSEC prerequisite for authenticated TLSA use",
+        "SPKI operational trade-offs"
+      ],
+      "non_claim": "Standards-valid TLSA evidence remains endpoint evidence, not AXIOM authorization."
+    }
+  ],
+  "explicit_non_claims": [
+    "No DNS-AID, ANS, DANE, TLSA or SVCB runtime is activated by this profile.",
+    "No external DNS provider or SDK is certified by this profile.",
+    "No production conformance is claimed.",
+    "Discovery, endpoint proof, registration, badge, identity lineage and authorization remain separate evidence/decision planes.",
+    "This profile grants no network, tool, delegation, governance or effect authority."
+  ]
+}
