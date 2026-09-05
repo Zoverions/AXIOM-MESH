@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  assertBrowserAssetSafe,
+  checkApplicationSecurity
+} from '../src/check-application-security.mjs';
+import {
   ACTIVE_APPLICATION_SECURITY_BASELINE,
   validateApplicationSecurityBaseline,
   validateApplicationSecurityProfile
@@ -57,4 +61,36 @@ test('application security profile rejects internet exposure without hosted-web 
   const profile = validProfile();
   profile.exposure = 'internet';
   assert.throws(() => validateApplicationSecurityProfile(profile), /hosted_web/);
+});
+
+test('repository application security check covers registered applications without leaking credential material', async () => {
+  const result = await checkApplicationSecurity();
+  assert.equal(result.valid, true);
+  assert.equal(result.applications, 1);
+  assert.equal(result.scanned_browser_assets, 5);
+  assert.equal(result.active_adapters, 0);
+  assert.equal(JSON.stringify(result).includes('Bearer '), false);
+});
+
+test('browser asset security rejects secret-like credentials without echoing the value', () => {
+  const secret = `AIza${'A'.repeat(35)}`;
+  assert.throws(
+    () => assertBrowserAssetSafe(
+      Buffer.from(`export const publicKey = '${secret}';`),
+      'fixture.mjs',
+      { auditKey: Buffer.alloc(32, 7) }
+    ),
+    error => {
+      assert.match(error.message, /secret-like credential candidate/);
+      assert.equal(error.message.includes(secret), false);
+      return true;
+    }
+  );
+});
+
+test('browser asset security rejects unsafe HTML injection primitives', () => {
+  assert.throws(
+    () => assertBrowserAssetSafe(Buffer.from('element.innerHTML = userContent;'), 'fixture.mjs'),
+    /browser security boundary/
+  );
 });
