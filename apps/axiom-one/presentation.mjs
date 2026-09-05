@@ -32,6 +32,10 @@ const ACTION_BOUNDARIES = Object.freeze({
   'export.create': Object.freeze({
     consequence: 'local-selective-export-write',
     confirmations: Object.freeze([])
+  }),
+  'ai.local-organize': Object.freeze({
+    consequence: 'non-consequential-local-draft',
+    confirmations: Object.freeze([])
   })
 });
 
@@ -166,7 +170,7 @@ function requestPreview(contract, request) {
     kind: 'request-preview',
     state: 'review',
     tone: 'pending',
-    badge: 'Review before sending',
+    badge: request.action === 'ai.local-organize' ? 'Review before organizing' : 'Review before sending',
     title: action.label,
     summary: 'This is a browser explanation of the exact request, not an authoritative kernel plan or grant.',
     facts: [
@@ -187,11 +191,17 @@ function requestPreview(contract, request) {
         : []),
       fact('Independent approval', action.independent_approval ? 'Required' : 'Not required')
     ],
-    guidance: [
-      'Selecting Send authorizes only submission of the request shown here.',
-      'The Gateway and active node policy remain authoritative and may deny it.',
-      'Change request returns to editing without sending network traffic.'
-    ],
+    guidance: request.action === 'ai.local-organize'
+      ? [
+        'Selecting Run produces a local draft suggestion only; it does not submit a Mesh intent.',
+        'The draft cannot approve, grant, or authorize Vault writes or other Mesh effects.',
+        'Saving requires a separate reviewed memory.put path.'
+      ]
+      : [
+        'Selecting Send authorizes only submission of the request shown here.',
+        'The Gateway and active node policy remain authoritative and may deny it.',
+        'Change request returns to editing without sending network traffic.'
+      ],
     retrySameRequest: false
   });
 }

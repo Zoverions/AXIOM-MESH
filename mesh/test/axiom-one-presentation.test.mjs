@@ -27,6 +27,7 @@ test('human explanation contract exactly covers stable errors and kernel events'
   assert.equal(Object.keys(contract.gateway_outcomes).length, 20);
   assert.equal(Object.keys(contract.event_kinds).length, 37);
   assert.deepEqual(Object.keys(contract.actions).sort(), [
+    'ai.local-organize',
     'export.create',
     'memory.link',
     'memory.put',
@@ -78,6 +79,15 @@ test('request review names every bounded effect without granting authority', () 
     () => presenter.requestPreview({ ...request, action: 'capsule.revoke' }),
     /cannot explain/
   );
+  const organize = presenter.requestPreview({
+    action: 'ai.local-organize',
+    input: { text: '# Note\n- item' },
+    purpose: 'owner-local-organize-draft'
+  });
+  assert.equal(organize.badge, 'Review before organizing');
+  assert.match(organize.guidance.join(' '), /draft suggestion only/i);
+  assert.match(organize.guidance.join(' '), /cannot approve, grant/i);
+
   assert.throws(
     () => presenter.requestPreview({ action: 'system.echo', input: [] }),
     /input is invalid/

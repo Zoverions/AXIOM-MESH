@@ -2,7 +2,7 @@
 
 **Build context:** `0.12.0-dev.3`  
 **Surfaces:** `apps/axiom-one/`; Gateway client contract; AI-001 / UX-* in `docs/MASTER-TODO.md`  
-**Status:** Smallest useful One workflow plus one least-privilege AI provider under Mesh grants. Not a supported product release claim. Model output never authorizes Mesh effects.
+**Status:** In progress (AI-001). Local deterministic organize/summarize provider stub + Mesh invoke envelope + AXIOM One draft-only Vault path landed; Mesh capability `ai.providers` remains `adapter_required`. Not a supported product release claim. Model output never authorizes Mesh effects.
 
 **Doctrine:** Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.
 
@@ -59,6 +59,19 @@ Before any provider-assisted path can trigger external messaging, payments, repo
 - Denials are readable; cross-principal Vault access remains denied in real-stack tests.
 - At least one exportable receipt verifies under the Verify MVP acceptance tests when Verify lands.
 - Public docs describe the wedge without claiming a general personal agent, production AI adapter, or Mesh production promotion.
+
+
+## Current repository slice (honest)
+
+Landed for AI-001 without promoting `ai.providers`:
+
+- `mesh/src/lib/ai-provider-invoke.mjs` — fail-closed invoke/receipt contract (purpose, data_scope, budget, timeout_ms, cancel, retention, note_digest, `draft_only=true`, terminal outcome digest, integrity-vs-truth non-claim).
+- `mesh/src/local-organize-provider.mjs` — deterministic local organizer (normalize whitespace, headings/bullets, explicit truncation); no network and no model process spawn.
+- `mesh/test/ai-provider-invoke.test.mjs` and `mesh/test/local-organize-provider.test.mjs` — valid PASS; missing fields FAIL; altered bytes FAIL; draft-cannot-authorize; cross-principal denial.
+- AXIOM One Vault — owner-selected text → local organize draft review → optional separate `memory.put` confirm path. Ask remains `system.echo`.
+- Human contract action `ai.local-organize` explains the draft path; it is not a Sandbox intent and does not change `capabilities.json`.
+
+Still deferred: Mesh Gateway→Hypervisor→Sandbox adapter wiring for providers, external/local model adapters, Verify receipt export, production AI claims.
 
 ## Non-claims
 
