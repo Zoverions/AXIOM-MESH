@@ -1,7 +1,8 @@
 import {
   ValidationError,
   assertPlainObject,
-  assertString
+  assertString,
+  assertStringArray
 } from './canonical.mjs';
 
 export const KEY_LIFECYCLE_EVENT_SCHEMA = 'axiom-key-lifecycle-event.v1';
@@ -121,7 +122,11 @@ export function validateKeyLifecycleEvent(raw) {
     throw new ValidationError('offline key activation requires satisfied external status when policy requires it');
   }
 
-  if (!Array.isArray(value.limitations) || value.limitations.length === 0) {
+  const limitations = assertStringArray(value.limitations, 'limitations', {
+    maxItems: 64,
+    itemMax: 512
+  });
+  if (limitations.length === 0) {
     throw new ValidationError('key lifecycle event must declare limitations');
   }
 
