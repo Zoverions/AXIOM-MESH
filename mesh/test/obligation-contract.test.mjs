@@ -31,7 +31,7 @@ test('contract rejects unknown settlement state', async () => {
 test('contract validates canonical timestamps and ordering', async () => {
   const invalid = JSON.parse(await readFile(exampleUrl, 'utf8'));
   invalid.context.effective_from = 'not-a-time';
-  assert.throws(() => validateObligationContract(invalid), /canonical UTC ISO/);
+  assert.throws(() => validateObligationContract(invalid), /context\.effective_from/);
 
   const reversed = JSON.parse(await readFile(exampleUrl, 'utf8'));
   reversed.context.expires_at = '2026-08-31T13:20:00.000Z';
@@ -39,7 +39,7 @@ test('contract validates canonical timestamps and ordering', async () => {
 
   const badDeadline = JSON.parse(await readFile(exampleUrl, 'utf8'));
   badDeadline.obligations[0].deadline = 'tomorrow';
-  assert.throws(() => validateObligationContract(badDeadline), /canonical UTC ISO/);
+  assert.throws(() => validateObligationContract(badDeadline), /obligations\[0\]\.deadline/);
 });
 
 test('obligation deadline cannot extend beyond contract expiry', async () => {
@@ -87,7 +87,7 @@ test('assessment rejects malformed obligation IDs', async () => {
       evidence_refs: [],
       reviewed: true
     }),
-    /pattern/
+    /obligation\.obligation_id/
   );
 });
 
