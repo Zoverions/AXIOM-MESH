@@ -17,9 +17,20 @@
     "axiom_action": "adapter.hermes.code_identity.inspect",
     "effect_class": "read",
     "helper": "hermes_cli.build_info.get_code_identity",
-    "allowed_fields": ["sha", "short_sha", "version", "source"],
-    "allowed_sources": ["git", "build-file"],
-    "rejected_operations": ["hermes.dump", "hermes dump"]
+    "allowed_fields": [
+      "sha",
+      "short_sha",
+      "version",
+      "source"
+    ],
+    "allowed_sources": [
+      "git",
+      "build-file"
+    ],
+    "rejected_operations": [
+      "hermes.dump",
+      "hermes dump"
+    ]
   },
   "execution_profile": {
     "network": "disabled",
@@ -53,6 +64,7 @@
     "docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md",
     "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md",
     "docs/operations/OWNER-DECISION-LOG-2026-09.md",
-    "docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md"
+    "docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md",
+    "docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md"
   ]
 }

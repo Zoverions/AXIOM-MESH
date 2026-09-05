@@ -59,6 +59,11 @@ test('Hermes identity pin fixture records exact provisional pin and profile cons
     'hermes.dump',
     'hermes dump'
   ]);
+  assert.ok(
+    profile.normative_refs.includes(
+      'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md'
+    )
+  );
 });
 
 test('exact pinned identity observation is accepted and field-bounded', () => {

@@ -12,6 +12,7 @@
 - [Hermes RUNTIME-002 candidate pin — 2026-08-21](../reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md)
 - [Agent Runtime Adapter conformance](../architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [Owner decision log — 2026-09](OWNER-DECISION-LOG-2026-09.md)
+- [Hermes RUNTIME-002 identity threat inventory](HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md)
 
 ## What landed
 
@@ -77,7 +78,7 @@ Still required before calling the pin accepted (see first-pin parity matrix):
 - native Gateway versus adapter authorization parity on a real Gateway route;
 - direct-service denial against Hypervisor/Sandbox/Grid from the runtime boundary;
 - cancellation, idempotency, timeout, and bounded-response evidence against a real adapter process;
-- dependency/SBOM inventory and threat-model delta for the exact identity-only environment;
+- deepen/complete SBOM-grade dependency evidence beyond the bounded identity-only inventory note ([HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md](HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md) is prep only — not certification);
 - independent review;
 - owner decision log entry: **“RUNTIME-002 read-only pin accepted”**.
 
