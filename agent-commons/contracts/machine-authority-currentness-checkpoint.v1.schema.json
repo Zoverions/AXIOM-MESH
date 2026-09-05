@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-machine-authority-currentness-checkpoint.v1.json",
+  "title": "AXIOM Machine Authority Currentness Checkpoint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "statement",
+    "statement_digest",
+    "authority_source_signature",
+    "checkpoint_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-machine-authority-currentness-checkpoint.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkpoint_id",
+        "checkpoint_sequence",
+        "predecessor_checkpoint_digest",
+        "authority_source_id",
+        "authority_source_key_id",
+        "principal_id",
+        "evaluated_at",
+        "status",
+        "current_authority_digest",
+        "reason_code",
+        "evidence_scope",
+        "identity_currentness_claimed",
+        "authorization_policy_evaluated",
+        "global_currentness_claimed",
+        "effect_admission_authorized",
+        "authority_effect",
+        "delegation_effect"
+      ],
+      "properties": {
+        "checkpoint_id": { "$ref": "#/$defs/id" },
+        "checkpoint_sequence": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "predecessor_checkpoint_digest": {
+          "anyOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        },
+        "authority_source_id": { "$ref": "#/$defs/id" },
+        "authority_source_key_id": { "$ref": "#/$defs/digest" },
+        "principal_id": { "$ref": "#/$defs/id" },
+        "evaluated_at": { "$ref": "#/$defs/timestamp" },
+        "status": { "enum": ["active", "revoked"] },
+        "current_authority_digest": {
+          "anyOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+            },
+            { "type": "null" }
+          ]
+        },
+        "evidence_scope": { "const": "caller-trusted-signed-authority-head-only" },
+        "identity_currentness_claimed": { "const": false },
+        "authorization_policy_evaluated": { "const": false },
+        "global_currentness_claimed": { "const": false },
+        "effect_admission_authorized": { "const": false },
+        "authority_effect": { "const": "none" },
+        "delegation_effect": { "const": "none" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "checkpoint_sequence": { "const": 1 } },
+            "required": ["checkpoint_sequence"]
+          },
+          "then": {
+            "properties": { "predecessor_checkpoint_digest": { "type": "null" } }
+          },
+          "else": {
+            "properties": { "predecessor_checkpoint_digest": { "$ref": "#/$defs/digest" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "active" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "current_authority_digest": { "$ref": "#/$defs/digest" },
+              "reason_code": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "revoked" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "current_authority_digest": { "type": "null" },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "statement_digest": { "$ref": "#/$defs/digest" },
+    "authority_source_signature": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 1024,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "checkpoint_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 24,
+      "maxLength": 24
+    }
+  }
+}

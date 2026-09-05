@@ -631,6 +631,7 @@ export function evaluateAgentCurrentnessAtEffect({
     max_evidence_age_ms: maxEvidenceAgeMs,
     active_credential_digest: atEffect.credential_digest,
     active_key_epoch: atEffect.key_epoch,
+    active_principal_authority_digest: atEffect.principal_authority_digest,
     known_active_under_retained_evidence: true,
     evidence_scope: 'supplied-issuer-evidence-plus-retained-checkpoint-head',
     global_currentness_claimed: false,

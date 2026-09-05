@@ -23,6 +23,7 @@ import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
 import { executeSandboxBuiltin } from './education-executor.mjs';
+import { evaluateMachineEffectAuthorityCurrentness } from '../lib/machine-effect-currentness-admission.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 
@@ -79,6 +80,36 @@ export async function createSandboxService(config = meshConfig()) {
         'Capability token invocation digest is invalid',
         401
       );
+    }
+    if (claims.principal_expires_at !== undefined) {
+      if (
+        typeof claims.principal_expires_at !== 'string'
+        || claims.principal_expires_at.length > 64
+      ) {
+        throw new AxiomError(
+          'invalid_capability_claims',
+          'Capability principal expiry is invalid',
+          401
+        );
+      }
+      const principalExpiry = new Date(claims.principal_expires_at);
+      if (
+        Number.isNaN(principalExpiry.valueOf())
+        || principalExpiry.toISOString() !== claims.principal_expires_at
+      ) {
+        throw new AxiomError(
+          'invalid_capability_claims',
+          'Capability principal expiry is invalid',
+          401
+        );
+      }
+      if (principalExpiry <= new Date()) {
+        throw new AxiomError(
+          'machine_principal_expired',
+          'Machine principal authority expired before Sandbox effect admission',
+          403
+        );
+      }
     }
     if (claims.effect_destination !== undefined) {
       let expectedDestination;
@@ -147,6 +178,16 @@ export async function createSandboxService(config = meshConfig()) {
     }
     if (claims.subject !== intent.principal.id) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
+    }
+    if (intent.principal.schema === 'axiom-machine-principal.v1') {
+      const currentness = evaluateMachineEffectAuthorityCurrentness({
+        verifiedCapabilityClaims: claims,
+        currentPrincipal: intent.principal,
+        effectAt: new Date().toISOString()
+      });
+      if (!currentness.allow) {
+        throw new AxiomError(currentness.code, currentness.reason, 403);
+      }
     }
     const startedAt = new Date().toISOString();
     const builtinResult = executeSandboxBuiltin({

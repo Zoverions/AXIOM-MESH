@@ -1,0 +1,134 @@
+{
+  "schema": "axiom-authority-laundering-negative-fixtures.v1",
+  "status": "candidate-portable-fixtures",
+  "claim_boundary": {
+    "externally_reproduced": false,
+    "vulnerability_confirmed": false,
+    "production_exploit_claimed": false,
+    "purpose": "Portable negative tests for authority laundering and stale-authority effect admission."
+  },
+  "invariant": "Discovery, identity, authentication, protocol metadata, capability possession, stale authority evidence, transport reachability, or successful preprocessing MUST NOT become permission for a consequential effect.",
+  "fixtures": [
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-REVOKE",
+      "class": "authority-currentness-toctou",
+      "precondition": "A machine principal is authorized and a short-lived execution capability is issued.",
+      "mutation_before_effect": "Revoke the principal or its authoritative credential before Sandbox effect execution.",
+      "expected": "Effect admission fails closed; previously issued capability is insufficient by itself.",
+      "evidence_required": [
+        "exact build/commit",
+        "capability issuance timestamp and digest",
+        "revocation/currentness mutation timestamp and evidence",
+        "effect-attempt timestamp",
+        "terminal decision/error",
+        "proof that the effect did not occur"
+      ]
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-EXPIRY",
+      "class": "authority-currentness-toctou",
+      "precondition": "A non-persistent machine principal is still valid when Hypervisor authorizes the intent and issues a short-lived execution capability.",
+      "mutation_before_effect": "Allow the principal's declared expires_at instant to pass after capability issuance but before the first consequential Sandbox effect.",
+      "expected": "Effect admission fails closed because principal authority is expired; capability TTL or signature validity must not extend principal authority.",
+      "evidence_required": [
+        "exact build/commit",
+        "declared principal expires_at",
+        "capability issuance timestamp and digest",
+        "effect-attempt timestamp demonstrably after expires_at",
+        "terminal decision/error",
+        "proof that the effect did not occur"
+      ],
+      "architecture_note": "Unlike revoke/remove/narrow, this case uses the existing machine-principal expires_at contract and does not require inventing a mutable principal registry."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-REMOVE",
+      "class": "authority-currentness-toctou",
+      "precondition": "A machine principal is authorized and a capability is issued.",
+      "mutation_before_effect": "Remove the principal from the active authority registry before effect execution.",
+      "expected": "Effect admission fails closed."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-NARROW",
+      "class": "authority-currentness-toctou",
+      "precondition": "A capability permits action A for purpose P at destination D.",
+      "mutation_before_effect": "Narrow current principal authority so A, P, or D is no longer permitted.",
+      "expected": "Effect admission fails closed even if the issued capability remains cryptographically valid."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-SPONSOR",
+      "class": "authority-lineage-currentness",
+      "precondition": "A machine principal has sponsor S1 and a capability is issued.",
+      "mutation_before_effect": "Invalidate or replace sponsor binding before effect execution.",
+      "expected": "Effect admission fails closed unless current authoritative policy explicitly permits continuity."
+    },
+    {
+      "id": "RT-AUTH-001-CURRENTNESS-RUNTIME",
+      "class": "runtime-binding-currentness",
+      "precondition": "A machine principal is bound to runtime R1 and a capability is issued.",
+      "mutation_before_effect": "Change the authoritative runtime binding or measured runtime identity to R2.",
+      "expected": "Effect admission fails closed unless the capability is re-authorized for R2."
+    },
+    {
+      "id": "RT-AUTH-001-TARGET-SELECTOR",
+      "class": "target-resolution-authority-laundering",
+      "precondition": "Caller is authorized for one canonical target.",
+      "mutation_before_effect": "Supply nested selectors, operator-like objects, arrays, nulls, wildcards, alternate encodings, or semantically broader target expressions.",
+      "expected": "The executor rejects non-canonical target semantics or proves the resolved target digest is identical to the pre-authorized target."
+    },
+    {
+      "id": "RT-AUTH-001-PROXY-METADATA",
+      "class": "transport-authority-laundering",
+      "precondition": "A local or internal agent/tool endpoint is reachable.",
+      "mutation_before_effect": "Supply attacker-controlled forwarding, host, scheme, origin, or proxy metadata without a trusted-proxy attestation boundary.",
+      "expected": "Transport metadata does not create trusted actor context, origin trust, or execution authority."
+    },
+    {
+      "id": "RT-AUTH-001-PREPROCESSOR-EXECUTION",
+      "class": "pre-model-code-execution-boundary",
+      "precondition": "Untrusted prompt, template, policy, or adapter input is accepted as data.",
+      "mutation_before_effect": "Inject template/expression syntax or other data that a preprocessing layer could accidentally evaluate.",
+      "expected": "Input remains inert data; no host-language or template evaluation occurs."
+    },
+    {
+      "id": "RT-AUTH-001-ERROR-PLANE",
+      "class": "evidence-confidentiality-boundary",
+      "precondition": "A tool/provider/runtime raises an internal exception containing implementation or credential-adjacent detail.",
+      "mutation_before_effect": "Propagate the failure through the conversational or agent-visible plane.",
+      "expected": "Public/agent-visible output is bounded and classified while privileged diagnostics remain in the evidence channel."
+    }
+  ],
+  "cross_protocol_expectations": [
+    "AID/DNS discovery resolves a candidate endpoint, never an authorization decision.",
+    "MCP/A2A metadata and tool discovery never mint authority.",
+    "Authentication proves a principal or credential, not permission for an effect.",
+    "Runtime attestation proves measured execution properties, not authorization or external-world truth.",
+    "A capability remains subject to any explicitly required late currentness/effect-admission checks."
+  ],
+  "nonclaims": [
+    "These fixtures do not claim any listed failure is currently exploitable in AXIOM-MESH.",
+    "These fixtures do not authorize testing of third-party systems.",
+    "A NOT_REPRODUCED result with exact environment and limitations is a valid outcome."
+  ],
+  "current_repository_assessment": {
+    "assessed_commit": "1c7ced824e909be28dd3dd45a7fd3648b1849f90",
+    "assessed_at": "2026-09-01",
+    "result": "ARCHITECTURE_LIMITED_NOT_REPRODUCED",
+    "evidence": [
+      "Hypervisor evaluates machine-principal authority and binds sponsor, authority_digest, runtime_id, intent, plan, policy, tool and destination into the short-lived capability.",
+      "Sandbox verifies capability signature/TTL, intent and plan binding, policy, destination, durable Grid consumption, replay and subject before the builtin effect.",
+      "The reviewed Sandbox execution path does not consult a live machine-principal registry or revocation/currentness source immediately before effect.",
+      "The repository contains signed agent-currentness checkpoint and effect-evaluation primitives, but their fixed semantics explicitly state effect_admission_authorized=false and they are not wired into Sandbox.",
+      "The bearer principal registry is normalized from configured API-token entries; no supported live revoke/remove/narrow mutation path was identified at this effect boundary."
+    ],
+    "interpretation": "The static scout hypothesis is valid as an architecture concern, but revoke/remove/narrow/sponsor/runtime TOCTOU cannot presently be claimed as a reproduced production bypass because the reviewed runtime does not expose the required authoritative mutation path.",
+    "independently_reproduced": false,
+    "vulnerability_confirmed": false,
+    "next_gate": "Bind a separately reviewed authoritative currentness source into late effect admission, then deterministically test capability issuance -> authority mutation -> first effect. Expiry may be tested earlier because machine-principal expires_at already exists without inventing a mutable registry.",
+    "promotion_constraints": [
+      "Do not weaken capability TTL, signature, replay, plan, destination, subject or durable-consumption checks to make the test possible.",
+      "Do not treat the currentness laboratory as runtime authority merely because it can evaluate signed evidence.",
+      "Do not add a synthetic-only authority source and report its behavior as a production vulnerability.",
+      "Preserve bounded NOT_REPRODUCED and architecture-limited outcomes as valid evidence."
+    ]
+  }
+}
