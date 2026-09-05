@@ -55,7 +55,7 @@ test('fixture set covers certificate renewal, SPKI continuity, overlap rotation,
   ]) assert.ok(ids.has(required), required);
 });
 
-test('full-certificate renewal failure is distinct from SPKI continuity and never changes authorization', async () => {
+test('full-certificate renewal can leave resolution intact while DANE validity fails and authorization remains absent', async () => {
   const fixtures = await loadJson(fixtureUrl);
   const cert = fixtures.cases.find(({ id }) => id === 'tlsa-301-certificate-renewal-stale');
   const spki = fixtures.cases.find(({ id }) => id === 'tlsa-311-same-key-certificate-renewal-valid');
@@ -63,7 +63,7 @@ test('full-certificate renewal failure is distinct from SPKI continuity and neve
   assert.ok(cert);
   assert.ok(spki);
   assert.equal(cert.expect.tlsa_valid, false);
-  assert.equal(cert.expect.endpoint_resolved, false);
+  assert.equal(cert.expect.endpoint_resolved, true);
   assert.equal(spki.expect.tlsa_valid, true);
   assert.equal(spki.expect.endpoint_resolved, true);
   assert.equal(cert.expect.authorization_allowed, false);
