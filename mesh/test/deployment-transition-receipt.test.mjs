@@ -88,3 +88,21 @@ test('effect-increasing transition fails whenever required external currentness 
     /external currentness/
   );
 });
+
+test('artifact digests must be unique', async () => {
+  const receipt = await activationReceipt();
+  receipt.artifact_digests.push(receipt.artifact_digests[0]);
+  assert.throws(
+    () => validateDeploymentTransitionReceipt(receipt),
+    /duplicate artifact digest/
+  );
+});
+
+test('health evidence digests must be unique', async () => {
+  const receipt = await activationReceipt();
+  receipt.health.evidence_digests.push(receipt.health.evidence_digests[0]);
+  assert.throws(
+    () => validateDeploymentTransitionReceipt(receipt),
+    /duplicate health evidence digest/
+  );
+});
