@@ -47,16 +47,8 @@ export function validateDisclosureReview(raw) {
     max: 160,
     pattern: ID
   });
-  assertString(review.object_digest, 'Disclosure review object_digest', {
-    min: 64,
-    max: 64,
-    pattern: SHA256
-  });
-  assertString(review.threat_profile_digest, 'Disclosure review threat_profile_digest', {
-    min: 64,
-    max: 64,
-    pattern: SHA256
-  });
+  canonicalDigest(review.object_digest, 'Disclosure review object_digest');
+  canonicalDigest(review.threat_profile_digest, 'Disclosure review threat_profile_digest');
   assertString(review.purpose, 'Disclosure review purpose', {
     min: 1,
     max: 160,
@@ -201,4 +193,10 @@ function exactObject(raw, label, fields) {
     if (!Object.hasOwn(value, key)) throw new ValidationError(`${label} is missing required field ${key}`);
   }
   return value;
+}
+
+function canonicalDigest(value, label) {
+  const text = assertString(value, label, { min: 1, max: 128 });
+  if (!SHA256.test(text)) throw new ValidationError(`${label} has an invalid format`);
+  return text;
 }
