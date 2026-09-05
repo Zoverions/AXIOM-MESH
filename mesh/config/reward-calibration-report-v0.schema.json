@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/reward-calibration-report-v0.schema.json",
+  "title": "AXIOM Reward Calibration Report v0",
+  "description": "Strict inert evidence contract comparing internal reward/introspection observations with independently sourced outcomes. Calibration evidence never grants model authority, routing, promotion, runtime activation, or network effects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "version", "status", "report_id", "probe_manifest_id", "probe_manifest_digest",
+    "target_ref", "target_digest", "evaluation_set_ref", "evaluation_set_digest", "task_domain",
+    "sample_count", "minimum_sample_count", "inclusion_rule_ref", "inclusion_rule_digest",
+    "verification_source", "observation_refs", "metrics", "calibration_status", "evaluated_from",
+    "evaluated_to", "recorded_at", "contains_secret_material", "authority_effect", "network_effect",
+    "credential_visibility", "runtime_activation", "routing_effect", "promotion_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-reward-calibration-report.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "report_id": { "$ref": "#/$defs/identifier" },
+    "probe_manifest_id": { "$ref": "#/$defs/identifier" },
+    "probe_manifest_digest": { "$ref": "#/$defs/digest" },
+    "target_ref": { "$ref": "#/$defs/identifier" },
+    "target_digest": { "$ref": "#/$defs/digest" },
+    "evaluation_set_ref": { "$ref": "#/$defs/identifier" },
+    "evaluation_set_digest": { "$ref": "#/$defs/digest" },
+    "task_domain": { "$ref": "#/$defs/identifier" },
+    "sample_count": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+    "minimum_sample_count": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+    "inclusion_rule_ref": { "$ref": "#/$defs/identifier" },
+    "inclusion_rule_digest": { "$ref": "#/$defs/digest" },
+    "verification_source": { "$ref": "#/$defs/verificationSource" },
+    "observation_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": { "$ref": "#/$defs/observationOutcomePair" }
+    },
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/metric" }
+    },
+    "calibration_status": {
+      "type": "string",
+      "enum": ["calibrated", "miscalibrated", "mixed", "insufficient-evidence", "incompatible"]
+    },
+    "evaluated_from": { "$ref": "#/$defs/timestamp" },
+    "evaluated_to": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "credential_visibility": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "routing_effect": { "const": "none" },
+    "promotion_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "verificationSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_class", "source_ref", "source_digest", "principal_ref", "independent_from_probe"],
+      "properties": {
+        "source_class": {
+          "type": "string",
+          "enum": ["benchmark-harness", "deterministic-checker", "human-adjudication", "independent-verifier", "other-reviewed"]
+        },
+        "source_ref": { "$ref": "#/$defs/identifier" },
+        "source_digest": { "$ref": "#/$defs/digest" },
+        "principal_ref": { "$ref": "#/$defs/identifier" },
+        "independent_from_probe": { "const": true }
+      }
+    },
+    "observationOutcomePair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation_id", "observation_digest", "outcome", "outcome_ref", "outcome_digest"],
+      "properties": {
+        "observation_id": { "$ref": "#/$defs/identifier" },
+        "observation_digest": { "$ref": "#/$defs/digest" },
+        "outcome": { "type": "string", "enum": ["success", "failure"] },
+        "outcome_ref": { "$ref": "#/$defs/identifier" },
+        "outcome_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "agreement-count",
+            "disagreement-count",
+            "success-rate",
+            "calibration-error",
+            "discrimination-score",
+            "false-high-confidence-count",
+            "false-low-confidence-count",
+            "missing-invalid-observation-count"
+          ]
+        },
+        "value": { "type": "number" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/reward-calibration-report.mjs",
+  "x-axiom-semantic-rules": [
+    "probe_manifest_id and probe_manifest_digest must bind exactly to one supplied Reward Probe Manifest",
+    "every observation/outcome pair must bind exactly once to supplied observation evidence with the same manifest and target",
+    "verification evidence must remain independent from the probe and cognitive target identities",
+    "sample_count must equal represented observation/outcome pairs and undersized samples require insufficient-evidence",
+    "calibration-error is valid only when the bound probe manifest declares calibrated-probabilistic semantics",
+    "metric names are unique and all numeric evidence must be finite",
+    "evaluated_to cannot precede evaluated_from and recorded_at cannot precede evaluated_to",
+    "calibration evidence remains descriptive and cannot route, promote, activate, authorize, or execute a model"
+  ],
+  "x-axiom-non-claims": [
+    "truth-from-internal-confidence",
+    "self-attested-correctness",
+    "model-promotion",
+    "model-routing",
+    "authority-grant",
+    "runtime-activation",
+    "network-effect"
+  ]
+}
