@@ -349,7 +349,7 @@ function enumValue(value, label, allowed) {
   return value;
 }
 function positiveInteger(value, label) {
-  if (!Number.isSafeInteger(value) || value < 1 || value > 1000000) {
+  if (!Number.isSafeInteger(value) || value < 1 || value > 100000) {
     throw new ValidationError(`${label} must be a positive bounded integer`);
   }
   return value;
