@@ -200,14 +200,15 @@ test('fixture adapter completes pin-matching identity and binds contract + manif
     verifyHermesIdentityFixtureReceipt(
       outcome.receipt,
       adapter.receiptAuthority,
-      manifest
+      manifest,
+      profile
     ),
     true
   );
 });
 
 test('fixture adapter denies pin-mismatched identity and still binds contract digest on denial receipt', async () => {
-  const { manifest, authorities, adapter } = buildAdapter();
+  const { profile, manifest, authorities, adapter } = buildAdapter();
   const grant = createHermesIdentityFixtureGrant({
     grantId: 'grant:hermes-identity-mismatch',
     principalId: 'principal:hermes-identity',
@@ -241,11 +242,25 @@ test('fixture adapter denies pin-mismatched identity and still binds contract di
   assert.equal(outcome.receipt.identity, null);
   assert.equal(outcome.receipt.contract.contract_sha256, RUNTIME_ADAPTER_CONTRACT_SHA256);
   assert.equal(outcome.receipt.manifest_digest, digestObject(manifest));
+  assert.equal(outcome.receipt.pin_digest, digestObject(profile));
   assert.equal(outcome.receipt.production_conformance_claimed, false);
+
+  // Single-use: denial still consumes the grant — retry must fail closed.
+  const retry = await adapter.execute(
+    createHermesIdentityFixtureRequest({
+      requestId: 'request:hermes-identity-mismatch-retry',
+      principalId: 'principal:hermes-identity',
+      grantId: grant.grant_id,
+      idempotencyKey: 'idempotency:hermes-identity-mismatch-0002'
+    }),
+    { identityFixture: pinnedHermesIdentityFixture() }
+  );
+  assert.equal(retry.state, 'denied');
+  assert.equal(retry.code, 'grant-consumed');
 });
 
 test('receipt tampering is rejected by verifier', async () => {
-  const { manifest, authorities, adapter } = buildAdapter();
+  const { profile, manifest, authorities, adapter } = buildAdapter();
   const grant = createHermesIdentityFixtureGrant({
     grantId: 'grant:hermes-identity-tamper',
     principalId: 'principal:hermes-identity',
@@ -271,7 +286,8 @@ test('receipt tampering is rejected by verifier', async () => {
     () => verifyHermesIdentityFixtureReceipt(
       tampered,
       adapter.receiptAuthority,
-      manifest
+      manifest,
+      profile
     ),
     /signature is invalid|invariants are invalid/
   );
@@ -328,5 +344,155 @@ test('manifest research non-claims stay fail-closed', () => {
   assert.equal(
     manifest.implementation.artifact_sha256,
     sha256(`hermes-identity-fixture-adapter\n${HERMES_PIN_COMMIT}`)
+  );
+});
+
+test('registerGrant fails closed with ValidationError for malformed attestation', () => {
+  const { manifest, authorities, adapter } = buildAdapter();
+  const grant = createHermesIdentityFixtureGrant({
+    grantId: 'grant:hermes-identity-malformed-attestation',
+    principalId: 'principal:hermes-identity',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: authorities.grant.signer
+  });
+
+  assert.throws(
+    () => adapter.registerGrant({ ...grant, attestation: null }),
+    (error) => {
+      assert.equal(error.name, 'ValidationError');
+      assert.match(String(error.message), /attestation|object/i);
+      return true;
+    }
+  );
+  assert.throws(
+    () => adapter.registerGrant({ ...grant, attestation: 'not-an-object' }),
+    (error) => {
+      assert.equal(error.name, 'ValidationError');
+      assert.match(String(error.message), /attestation|object/i);
+      return true;
+    }
+  );
+  assert.throws(
+    () => adapter.registerGrant({ ...grant, attestation: undefined }),
+    (error) => {
+      assert.equal(error.name, 'ValidationError');
+      assert.match(String(error.message), /attestation|object/i);
+      return true;
+    }
+  );
+});
+
+test('field-bounding denial consumes single-use grant', async () => {
+  const { manifest, authorities, adapter } = buildAdapter();
+  const grant = createHermesIdentityFixtureGrant({
+    grantId: 'grant:hermes-identity-field-bound',
+    principalId: 'principal:hermes-identity',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: authorities.grant.signer
+  });
+  adapter.registerGrant(grant);
+
+  const denied = await adapter.execute(
+    createHermesIdentityFixtureRequest({
+      requestId: 'request:hermes-identity-field-bound',
+      principalId: 'principal:hermes-identity',
+      grantId: grant.grant_id,
+      idempotencyKey: 'idempotency:hermes-identity-field-bound-0001'
+    }),
+    {
+      identityFixture: {
+        ...pinnedHermesIdentityFixture(),
+        provider: 'openai'
+      }
+    }
+  );
+  assert.equal(denied.state, 'denied');
+  assert.equal(denied.code, 'identity-field-bounding');
+
+  const retry = await adapter.execute(
+    createHermesIdentityFixtureRequest({
+      requestId: 'request:hermes-identity-field-bound-retry',
+      principalId: 'principal:hermes-identity',
+      grantId: grant.grant_id,
+      idempotencyKey: 'idempotency:hermes-identity-field-bound-0002'
+    }),
+    { identityFixture: pinnedHermesIdentityFixture() }
+  );
+  assert.equal(retry.state, 'denied');
+  assert.equal(retry.code, 'grant-consumed');
+});
+
+test('verifyHermesIdentityFixtureReceipt binds pin_digest and contract_version', async () => {
+  const { profile, manifest, authorities, adapter } = buildAdapter();
+  const grant = createHermesIdentityFixtureGrant({
+    grantId: 'grant:hermes-identity-pin-bind',
+    principalId: 'principal:hermes-identity',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: authorities.grant.signer
+  });
+  adapter.registerGrant(grant);
+  const outcome = await adapter.execute(
+    createHermesIdentityFixtureRequest({
+      requestId: 'request:hermes-identity-pin-bind',
+      principalId: 'principal:hermes-identity',
+      grantId: grant.grant_id,
+      idempotencyKey: 'idempotency:hermes-identity-pin-bind-0001'
+    }),
+    { identityFixture: pinnedHermesIdentityFixture() }
+  );
+
+  assert.equal(
+    verifyHermesIdentityFixtureReceipt(
+      outcome.receipt,
+      adapter.receiptAuthority,
+      manifest,
+      profile
+    ),
+    true
+  );
+
+  const badPinFormat = structuredClone(outcome.receipt);
+  badPinFormat.pin_digest = 'not-a-digest';
+  assert.throws(
+    () => verifyHermesIdentityFixtureReceipt(
+      badPinFormat,
+      adapter.receiptAuthority,
+      manifest,
+      profile
+    ),
+    /invariants are invalid|signature is invalid/
+  );
+
+  const wrongPin = structuredClone(outcome.receipt);
+  wrongPin.pin_digest = digestObject({ ...profile, pin_accepted: true });
+  assert.throws(
+    () => verifyHermesIdentityFixtureReceipt(
+      wrongPin,
+      adapter.receiptAuthority,
+      manifest,
+      profile
+    ),
+    /invariants are invalid|signature is invalid/
+  );
+
+  const badContractVersion = structuredClone(outcome.receipt);
+  badContractVersion.contract = {
+    ...badContractVersion.contract,
+    contract_version: '999.0.0'
+  };
+  assert.throws(
+    () => verifyHermesIdentityFixtureReceipt(
+      badContractVersion,
+      adapter.receiptAuthority,
+      manifest,
+      profile
+    ),
+    /invariants are invalid|signature is invalid/
   );
 });

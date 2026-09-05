@@ -609,6 +609,8 @@ export class HermesIdentityFixtureAdapter {
   }
 
   registerGrant(grant) {
+    assertPlainObject(grant, 'Hermes fixture grant');
+    assertPlainObject(grant.attestation, 'Hermes fixture grant attestation');
     const unsigned = structuredClone(grant);
     delete unsigned.attestation;
     if (
@@ -667,6 +669,10 @@ export class HermesIdentityFixtureAdapter {
       });
     }
 
+    // Single-use: consume once a valid grant is selected for execution, before
+    // identity inspection, so denied identity/field-bounding attempts cannot retry.
+    this.consumedGrants.set(grant.grant_id, request.request_id);
+
     let identityObservation;
     try {
       identityObservation = validateHermesCodeIdentityObservation(
@@ -683,7 +689,6 @@ export class HermesIdentityFixtureAdapter {
       });
     }
 
-    this.consumedGrants.set(grant.grant_id, request.request_id);
     return this.#finish(request, {
       state: 'completed',
       code: 'hermes-identity-fixture-completed',
@@ -765,7 +770,12 @@ export class HermesIdentityFixtureAdapter {
       ...unsigned,
       attestation: this.receiptSigner.signObject(unsigned)
     };
-    verifyHermesIdentityFixtureReceipt(receipt, this.receiptAuthority, this.manifest);
+    verifyHermesIdentityFixtureReceipt(
+      receipt,
+      this.receiptAuthority,
+      this.manifest,
+      this.profile
+    );
     return {
       state,
       code,
@@ -789,7 +799,8 @@ function mapIdentityDenialCode(message) {
 export function verifyHermesIdentityFixtureReceipt(
   receipt,
   expectedReceiptAuthority,
-  expectedManifest
+  expectedManifest,
+  expectedProfile = null
 ) {
   exactKeys(receipt, 'Hermes identity fixture receipt', [
     'schema',
@@ -824,9 +835,12 @@ export function verifyHermesIdentityFixtureReceipt(
     || receipt.pin_accepted !== false
     || receipt.contract.contract_sha256 !== RUNTIME_ADAPTER_CONTRACT_SHA256
     || receipt.contract.contract_id !== RUNTIME_ADAPTER_CONTRACT_ID
+    || receipt.contract.contract_version !== RUNTIME_ADAPTER_CONTRACT_VERSION
     || receipt.runtime.source_commit !== HERMES_PIN_COMMIT
     || !DIGEST.test(receipt.manifest_digest ?? '')
+    || !DIGEST.test(receipt.pin_digest ?? '')
     || (expectedManifest && receipt.manifest_digest !== digestObject(expectedManifest))
+    || (expectedProfile && receipt.pin_digest !== digestObject(expectedProfile))
     || receipt.signer.key_id !== expectedReceiptAuthority.key_id
     || receipt.signer.public_key_pem !== expectedReceiptAuthority.public_key_pem
   ) {
