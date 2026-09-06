@@ -131,7 +131,7 @@ Stage 3 is accepted only on an exact PR head for which all required checks pass.
 - a dedicated promoted-source regression test covers representative valid behavior and malformed/out-of-contract rejection;
 - the source-boundary verifier rejects an additional unapproved Rust source;
 - existing release dependency governance still rejects an unapproved Cargo manifest under the promoted path;
-- release verification runs the Stage 3 Rust-source preflight before the existing release verifier;
+- the Stage 3 Rust-source preflight remains CI/test-bound: the tracked-repository kernel test and dedicated Rust workflow enforce it, while `mesh/src/release.mjs` and `npm --prefix mesh run release:verify` remain unchanged;
 - Rust 1.85.0 formatting, Clippy, and locked tests pass with no third-party dependency or unsafe-code expansion;
 - protected Clean Kernel and host-compatibility workflows remain green;
 - no supported Node call site, capability registry entry, Gateway/Hypervisor/Sandbox/Grid path, credential, state, network, or effect authority is changed.
@@ -164,7 +164,7 @@ If a failure criterion is met:
 1. stop migration-stage advancement;
 2. keep the Node kernel authoritative;
 3. mark the affected evidence as failed or inconclusive;
-4. for Stage 3, remove `trust-core/rust/canonical_value_v0.rs`, restore the laboratory-owned implementation, and revert the Stage 3 source-boundary/workflow/release-preflight wiring;
+4. for Stage 3, remove `trust-core/rust/canonical_value_v0.rs`, restore the laboratory-owned implementation, and revert the Stage 3 source-boundary/workflow/CI/test source-boundary wiring;
 5. record the failure and its exact commit before considering a revised experiment.
 
 No production data or authority rollback is required because Stage 3 has no production runtime integration.
