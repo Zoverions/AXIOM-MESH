@@ -13,7 +13,7 @@ test('tracked repository admits only the approved Stage 3 Rust candidate source'
   ]);
 });
 
-test('release source boundary classifies only the approved Stage 3 Rust candidate source', () => {
+test('candidate Rust source boundary classifies only the approved Stage 3 source', () => {
   const trackedPaths = [
     'README.md',
     'package.json',
@@ -43,7 +43,7 @@ test('release source boundary classifies only the approved Stage 3 Rust candidat
   ]);
 });
 
-test('release source boundary rejects unapproved Rust source beside the Stage 3 candidate', () => {
+test('candidate Rust source boundary rejects an unapproved source beside the Stage 3 candidate', () => {
   assert.throws(
     () => validateCandidateRustSourceBoundary([
       'mesh/package.json',
@@ -55,7 +55,7 @@ test('release source boundary rejects unapproved Rust source beside the Stage 3 
   );
 });
 
-test('release source boundary still rejects unapproved Cargo manifests', () => {
+test('release dependency boundary still rejects an unapproved Cargo manifest', () => {
   assert.throws(
     () => validateSupportedSourceBoundary([
       'mesh/package.json',
