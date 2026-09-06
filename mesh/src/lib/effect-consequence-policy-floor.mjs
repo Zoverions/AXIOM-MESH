@@ -1,4 +1,4 @@
-import { assertString, ValidationError } from './canonical.mjs';
+import { assertPlainObject, assertString, ValidationError } from './canonical.mjs';
 import {
   effectConsequenceClassificationDigest,
   validateEffectConsequenceClassification
@@ -12,6 +12,13 @@ const POLICY_RISK_ORDER = Object.freeze({
   high: 2,
   critical: 3
 });
+
+const POLICY_FLOOR_REQUEST_FIELDS = Object.freeze([
+  'classification',
+  'expectedEffectDigest',
+  'expectedClassificationInstant',
+  'policyRisk'
+]);
 
 export const EFFECT_CONSEQUENCE_MINIMUM_POLICY_RISK = Object.freeze({
   informational: 'low',
@@ -47,12 +54,30 @@ function assertPolicyRisk(value) {
   return value;
 }
 
-export function evaluateEffectConsequencePolicyFloor({
-  classification,
-  expectedEffectDigest,
-  expectedClassificationInstant,
-  policyRisk
-}) {
+function assertPolicyFloorRequest(value) {
+  const request = assertPlainObject(value, 'effect consequence policy floor request');
+  for (const key of Object.keys(request)) {
+    if (!POLICY_FLOOR_REQUEST_FIELDS.includes(key)) {
+      throw new ValidationError(`effect consequence policy floor request has unknown field: ${key}`);
+    }
+  }
+  for (const key of POLICY_FLOOR_REQUEST_FIELDS) {
+    if (!Object.hasOwn(request, key)) {
+      throw new ValidationError(`effect consequence policy floor request is missing field: ${key}`);
+    }
+  }
+  return request;
+}
+
+export function evaluateEffectConsequencePolicyFloor(value) {
+  const request = assertPolicyFloorRequest(value);
+  const {
+    classification,
+    expectedEffectDigest,
+    expectedClassificationInstant,
+    policyRisk
+  } = request;
+
   const normalized = validateEffectConsequenceClassification(classification);
   const effectDigest = assertDigest(expectedEffectDigest, 'expected effect digest');
   if (normalized.effect_digest !== effectDigest) {
