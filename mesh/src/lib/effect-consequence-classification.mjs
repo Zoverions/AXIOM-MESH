@@ -19,6 +19,7 @@ const VERSION = '0.1.0';
 const STATUS = 'inert-evidence';
 const CLASS_SET = new Set(EFFECT_CONSEQUENCE_CLASSES);
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const DIGEST = /^[a-f0-9]{64}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const REVERSIBILITY = new Set(['not-applicable', 'reversible', 'partially-reversible', 'irreversible', 'unknown']);
 const PHYSICAL_SAFETY_IMPACT = new Set(['none', 'low', 'material', 'critical', 'unknown']);
@@ -30,6 +31,7 @@ const FIELDS = Object.freeze([
   'status',
   'classification_id',
   'effect_ref',
+  'effect_digest',
   'consequence_class',
   'rationale',
   'reversibility',
@@ -53,6 +55,10 @@ function assertExactFields(value) {
 
 function identifier(value, name) {
   return assertString(value, name, { max: 160, pattern: IDENTIFIER });
+}
+
+function digest(value, name) {
+  return assertString(value, name, { min: 64, max: 64, pattern: DIGEST });
 }
 
 function enumValue(value, name, allowed, max = 64) {
@@ -112,6 +118,7 @@ export function validateEffectConsequenceClassification(input) {
     status: STATUS,
     classification_id: identifier(value.classification_id, 'effect consequence classification.classification_id'),
     effect_ref: assertString(value.effect_ref, 'effect consequence classification.effect_ref', { max: 512 }),
+    effect_digest: digest(value.effect_digest, 'effect consequence classification.effect_digest'),
     consequence_class: consequenceClass,
     rationale: assertString(value.rationale, 'effect consequence classification.rationale', { max: 2048 }),
     reversibility,
