@@ -6,6 +6,7 @@ import {
 } from './canonical.mjs';
 import {
   aiProviderInvokeDigest,
+  buildAiProviderReceipt,
   validateAiProviderInvoke
 } from './ai-provider-invoke.mjs';
 
@@ -175,17 +176,27 @@ export function bindAiExecutionProvenance({ request, receipt, provenance }) {
   if (normalizedProvenance.request_digest !== expectedRequestDigest) {
     throw new ValidationError('ai execution provenance.request_digest does not bind the exact provider request');
   }
-  const expectedReceiptDigest = digestObject(normalizedReceipt);
-  if (normalizedProvenance.receipt_digest !== expectedReceiptDigest) {
-    throw new ValidationError('ai execution provenance.receipt_digest does not bind the exact provider receipt');
+
+  let canonicalReceipt;
+  try {
+    canonicalReceipt = buildAiProviderReceipt({
+      invoke: normalizedRequest,
+      suggestion: normalizedReceipt.suggestion,
+      terminal_status: normalizedReceipt.terminal_status
+    });
+  } catch (error) {
+    throw new ValidationError(`ai execution provenance receipt is not a valid canonical terminal receipt: ${error.message}`);
   }
 
-  for (const [name, expected, actual] of [
-    ['provider', normalizedRequest.provider_id, normalizedReceipt.provider_id],
-    ['model', normalizedRequest.model, normalizedReceipt.model]
-  ]) {
-    if (actual !== expected) throw new ValidationError(`ai execution provenance ${name} mismatch between request and receipt`);
+  const providedReceiptDigest = digestObject(normalizedReceipt);
+  const canonicalReceiptDigest = digestObject(canonicalReceipt);
+  if (providedReceiptDigest !== canonicalReceiptDigest) {
+    throw new ValidationError('ai execution provenance receipt does not match the canonical terminal receipt for the bound request');
   }
+  if (normalizedProvenance.receipt_digest !== canonicalReceiptDigest) {
+    throw new ValidationError('ai execution provenance.receipt_digest does not bind the exact canonical provider receipt');
+  }
+
   if (normalizedProvenance.provider_id !== normalizedRequest.provider_id) {
     throw new ValidationError('ai execution provenance provider mismatch');
   }
