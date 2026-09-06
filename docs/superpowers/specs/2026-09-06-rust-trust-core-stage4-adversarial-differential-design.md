@@ -83,6 +83,8 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 
 Node remains authoritative throughout Stage 4.
 
+The planned Stage 4 implementation must not modify `trust-core/rust/canonical_value_v0.rs`. If the adversarial corpus reveals that the promoted source violates the already-frozen v0 contract, Stage 4 halts and Stage 3 acceptance is explicitly reopened. A correction to the promoted source then requires its own fail-closed correction gate and exact-head verification before Stage 4 can resume. Stage 4 must not silently “fix forward” the implementation it is supposed to evaluate.
+
 ## 4. Frozen semantic domain
 
 Stage 4 does not change the `canonical-value-v0` grammar.
@@ -106,7 +108,19 @@ Generated evidence supplements those fixtures; it does not replace them.
 
 ## 5. Deterministic adversarial corpus
 
-Stage 4 adds a bounded deterministic corpus generator under the laboratory.
+Stage 4 adds one Node-based bounded deterministic corpus generator:
+
+`labs/rust-trust-core/node/canonical_adversarial_corpus.mjs`
+
+Its direct unit tests live at:
+
+`labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs`
+
+The Rust differential integration consumes the generator output from:
+
+`labs/rust-trust-core/tests/canonical_adversarial_differential.rs`
+
+Node is selected for the generator because the generator emits only the already-frozen language-neutral fixture grammar; it does not perform canonicalization and does not decide pass/fail. The real Node oracle and the promoted Rust candidate independently process the same emitted rows. Input generation therefore does not make the generator an authority implementation.
 
 The generator is test infrastructure only. It is not a production protocol, parser, runtime component, or source of authority.
 
@@ -114,15 +128,26 @@ The generator is test infrastructure only. It is not a production protocol, pars
 
 The generator must:
 
-- use only standard-library/runtime primitives already available in the laboratory toolchain;
-- use an explicitly documented deterministic 32-bit state transition;
+- use only standard Node runtime primitives already available in the laboratory toolchain;
+- use the exact xorshift32 state transition specified below;
 - use fixed published seeds committed in source;
 - produce the same ordered case stream for the same seed on every supported CI host;
 - avoid host time, OS randomness, locale, filesystem ordering, environment variables, or network input;
 - encode seed and sequence number into every generated `case_id`;
 - fail if a duplicate generated `case_id` occurs.
 
-A simple unsigned 32-bit xorshift generator is sufficient. If implemented in JavaScript, every state transition must explicitly normalize to unsigned 32-bit semantics. The algorithm and seed list become part of the Stage 4 evidence contract and must not change silently.
+The xorshift32 transition is:
+
+```text
+state ^= state << 13
+state = state >>> 0
+state ^= state >>> 17
+state = state >>> 0
+state ^= state << 5
+state = state >>> 0
+```
+
+The implementation must preserve these explicit unsigned 32-bit normalizations. The algorithm and seed list are part of the Stage 4 evidence contract and must not change silently.
 
 The initial fixed seeds are:
 
@@ -140,9 +165,11 @@ These values are identifiers for reproducibility only; they carry no cryptograph
 The accepted Stage 4 run must generate exactly:
 
 - **1,024 valid cases** total: 256 per fixed seed;
-- **256 malformed or over-bound cases** total: 64 per fixed seed.
+- **256 malformed or over-bound fixture cases** total: 64 per fixed seed.
 
 The existing 17 valid and 12 malformed hand-curated cases remain separate required evidence.
+
+Harness-level negative tests that intentionally exceed `MAX_TOTAL_CASES` are separate from the 256 malformed fixture cases and do not change that exact corpus count.
 
 A later change in generated case counts, seeds, generator algorithm, or category allocation invalidates prior Stage 4 exact-head evidence and requires a new reviewed gate.
 
@@ -180,9 +207,9 @@ Array order is not normalized. The generator must include distinct arrays whose 
 
 ## 6. Malformed and over-bound corpus
 
-Each fixed seed also produces a deterministic set of invalid cases.
+Each fixed seed also produces a deterministic set of invalid fixture rows.
 
-The malformed/over-bound categories must include:
+The 256 generated malformed/over-bound fixture cases must cover:
 
 - unknown `kind`;
 - duplicate `case_id`;
@@ -198,8 +225,9 @@ The malformed/over-bound categories must include:
 - missing or extra TSV columns;
 - payloads exceeding the Stage 4 harness payload limit;
 - arrays exceeding the Stage 4 harness width limit;
-- objects exceeding the Stage 4 harness member limit;
-- total generated case counts exceeding the Stage 4 harness corpus limit in dedicated negative tests.
+- objects exceeding the Stage 4 harness member limit.
+
+Separate harness-level negative tests must exceed the Stage 4 total-corpus limit and prove that over-count input fails closed before comparison. Those over-count tests do not count toward the 256 generated invalid fixture rows.
 
 Invalid cases must fail closed. They must not be truncated, coerced, normalized into a valid case, silently dropped, or accepted with a warning.
 
@@ -233,7 +261,7 @@ The evidence flow is:
 fixed seeds + category schedule
           |
           v
-bounded deterministic corpus generator
+Node bounded deterministic corpus generator
           |
           v
 canonical-value-v0 fixture rows
@@ -270,7 +298,7 @@ The test must:
 5. assert that the comparator fails;
 6. include the seed, case identifier, Node bytes, and Rust bytes in the diagnostic.
 
-The production candidate implementation must not be modified to create the mismatch.
+The promoted candidate implementation must not be modified to create the mismatch.
 
 Passing only hand-curated mismatch tests is insufficient for Stage 4; at least one mismatch proof must originate from the generated corpus path.
 
@@ -286,7 +314,7 @@ The Rust laboratory job must fail for the missing Stage 4 generator/harness surf
 
 ### GREEN 1 — deterministic bounded generator
 
-Implement only the minimum generator and harness support needed to produce the declared v0 corpus reproducibly and feed it through the existing Node and Rust paths.
+Implement only the minimum Node generator and harness support needed to produce the declared v0 corpus reproducibly and feed it through the existing Node and Rust paths.
 
 The accepted result must include exact Node-vs-Rust byte equality for all 1,024 valid generated cases plus the existing 17 hand-curated valid cases.
 
@@ -302,7 +330,7 @@ Implement only the comparison/diagnostic behavior required to prove the generate
 
 ### RED 3 — generated malformed and over-bound rejection
 
-Add the 256-case generated malformed corpus and explicit resource-bound negative tests before the required fail-closed harness checks exist.
+Add the 256-case generated malformed fixture corpus plus separate explicit resource-bound and total-corpus-limit negative tests before the required fail-closed harness checks exist.
 
 ### GREEN 3 — bounded fail-closed harness
 
@@ -310,7 +338,7 @@ Implement only the minimum validation required for all declared malformed and ov
 
 ### REFACTOR
 
-Run formatting and Clippy with warnings denied. Refactoring must not expand the semantic domain, source inventory, dependencies, authority, or runtime reachability.
+Run formatting and Clippy with warnings denied. Refactoring must not expand the semantic domain, source inventory, dependencies, authority, runtime reachability, or promoted Rust implementation.
 
 ## 11. CI and exact-head evidence
 
@@ -350,6 +378,7 @@ An accepted Stage 4 record must state at minimum:
 - Rust compiler version;
 - Cargo version;
 - promoted Rust source inventory;
+- generator implementation path;
 - generator algorithm/version;
 - exact fixed seeds;
 - exact valid generated count;
@@ -381,7 +410,7 @@ If the generated corpus, resource-limit checks, or differential harness expose a
 
 No production data, receipt, state, capability, or runtime rollback is required because Stage 4 introduces no production runtime integration.
 
-If a Stage 4 finding demonstrates that the promoted Stage 3 implementation itself violates the already-frozen v0 contract, migration advancement halts and Stage 3 acceptance must be re-evaluated explicitly rather than silently patched forward.
+If a Stage 4 finding demonstrates that the promoted Stage 3 implementation itself violates the already-frozen v0 contract, migration advancement halts, Stage 3 acceptance is reopened, and the promoted source is corrected only through a separate fail-closed correction gate. Stage 4 evidence is then restarted against the newly accepted Stage 3 source; it is not patched forward in place.
 
 ## 14. Documentation truth corrections in the Stage 4 design branch
 
@@ -407,6 +436,7 @@ Stage 4 does not claim or establish:
 - Gateway, Hypervisor, Sandbox, or Grid replacement;
 - production Cargo/package/runtime support;
 - production release-verifier integration for the Rust source gate;
+- permission to modify the promoted Stage 3 Rust source inside the Stage 4 evidence campaign;
 - permission to replace any supported Node call site;
 - permission to begin Stage 5 automatically.
 
@@ -414,20 +444,21 @@ Stage 4 does not claim or establish:
 
 Stage 4 is complete only when all of the following are true at one exact accepted commit:
 
-1. the Stage 3 promoted source inventory remains unchanged unless a separately reviewed source-boundary change is approved;
+1. the Stage 3 promoted source inventory and `trust-core/rust/canonical_value_v0.rs` contents remain unchanged throughout the Stage 4 evidence campaign;
 2. the hand-curated v0 corpus remains green;
 3. the fixed Stage 4 seeds reproduce the same ordered corpus;
 4. exactly 1,024 generated valid cases are produced and all match the live Node oracle byte-for-byte;
-5. exactly 256 generated malformed/over-bound cases fail closed as declared;
-6. every required valid and invalid category is demonstrably covered;
-7. paired object permutations satisfy the declared metamorphic equality check;
-8. generated array-order cases preserve order and are not incorrectly normalized;
-9. a deliberate generated-output mismatch is detected with seed/case provenance;
-10. all declared harness resource limits fail closed when exceeded;
-11. Rust remains on the accepted pinned toolchain, with zero third-party dependencies and unsafe code forbidden unless separately reviewed;
-12. the Rust source gate remains CI/test-bound and `release:verify` remains unchanged;
-13. no supported runtime or authority path invokes Rust;
-14. Rust Trust-Core Laboratory, Clean Kernel, container, Node 22, Windows, and both macOS lanes are green on the exact head;
-15. Stage 5 remains a separate explicit design and promotion gate.
+5. exactly 256 generated malformed/over-bound fixture cases fail closed as declared;
+6. separate total-corpus-limit negative tests fail closed;
+7. every required valid and invalid category is demonstrably covered;
+8. paired object permutations satisfy the declared metamorphic equality check;
+9. generated array-order cases preserve order and are not incorrectly normalized;
+10. a deliberate generated-output mismatch is detected with seed/case provenance;
+11. all declared harness resource limits fail closed when exceeded;
+12. Rust remains on the accepted pinned toolchain, with zero third-party dependencies and unsafe code forbidden unless separately reviewed;
+13. the Rust source gate remains CI/test-bound and `release:verify` remains unchanged;
+14. no supported runtime or authority path invokes Rust;
+15. Rust Trust-Core Laboratory, Clean Kernel, container, Node 22, Windows, and both macOS lanes are green on the exact head;
+16. Stage 5 remains a separate explicit design and promotion gate.
 
 Passing Stage 4 permits only consideration of the next migration stage. It does not promote Rust into supported runtime authority.
