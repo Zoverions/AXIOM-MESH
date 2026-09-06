@@ -270,6 +270,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Independent reviewer shortlist — 2026-09](operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md)
 - [Pilot external evidence checklist](operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md)
 - [AXIOM Verify MVP scope](operations/AXIOM-VERIFY-MVP-SCOPE.md)
+- [AXIOM Verify MVP how to run](operations/AXIOM-VERIFY-MVP-RUN.md)
 - [Runtime adapter first pin](operations/RUNTIME-ADAPTER-FIRST-PIN.md)
 - [Hermes RUNTIME-002 identity fixture](operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md)
 - [Hermes RUNTIME-002 identity threat inventory](operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md)

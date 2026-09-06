@@ -128,6 +128,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md',
   'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md',
   'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md',
+  'docs/operations/AXIOM-VERIFY-MVP-RUN.md',
   'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md',
   'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md',
   'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md',
@@ -527,6 +528,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'Verify',
     'receipt'
   ],
+  'docs/operations/AXIOM-VERIFY-MVP-RUN.md': [
+    'VERIFY-001',
+    'How to run',
+    'Integrity versus truth',
+    'experimental'
+  ],
   'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': [
     'Agent Runtime Adapter',
     'read-only'
@@ -604,6 +611,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md': 5_000,
   'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md': 4_000,
   'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md': 2_500,
+  'docs/operations/AXIOM-VERIFY-MVP-RUN.md': 800,
   'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': 3_000,
   'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md': 2_000,
   'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md': 4_000,
