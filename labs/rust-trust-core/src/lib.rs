@@ -10,8 +10,8 @@ pub use canonical_value_v0::{
 };
 pub use intent_attenuation::{
     IntentAttenuationCase, IntentAttenuationChecks, IntentAttenuationError,
-    IntentAttenuationResult, parse_intent_attenuation_fixture,
-    parse_intent_attenuation_vector_row, verify_intent_attenuation,
+    IntentAttenuationResult, parse_intent_attenuation_fixture, parse_intent_attenuation_vector_row,
+    verify_intent_attenuation,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
