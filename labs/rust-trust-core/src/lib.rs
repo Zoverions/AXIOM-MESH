@@ -70,7 +70,7 @@ pub enum DenyReason {
 ///     capability: "synthetic.effect",
 /// };
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct AuthorityGrant<'a> {
     subject: &'a str,
     capability: &'a str,
