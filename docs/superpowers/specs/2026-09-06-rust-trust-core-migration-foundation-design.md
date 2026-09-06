@@ -96,6 +96,8 @@ The Rust laboratory exposes raw evidence structures but does not expose a public
 
 Only the authority evaluator may produce an `AuthorityGrant`, and only when all required evidence passes. Future effect-bearing functions can therefore be designed to accept a grant token rather than a bag of unchecked booleans.
 
+`AuthorityGrant` is intentionally neither `Copy` nor `Clone`. The laboratory includes compile-fail evidence that an evaluated grant cannot be reused after move and that callers outside the crate cannot construct a grant directly. This does not yet make the grant a production one-use mandate; it establishes the type-level non-reuse foundation on which a later consumable effect API can be evaluated.
+
 This is the core type-system experiment:
 
 > **Can the implementation make unauthorized effect states harder to represent and harder to accidentally execute?**
