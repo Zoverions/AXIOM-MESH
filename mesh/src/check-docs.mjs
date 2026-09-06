@@ -420,6 +420,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Purpose and exact claim',
     '## Start and stop the local preview',
     '## Implemented surfaces',
+    '## Offline Verify on Receipts (experimental)',
     '## Browser and token boundary',
     '## Loopback proxy and response controls',
     '## Security headers and offline policy',
@@ -531,6 +532,7 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/operations/AXIOM-VERIFY-MVP-RUN.md': [
     'VERIFY-001',
     'How to run',
+    'AXIOM One local preview helper',
     'Integrity versus truth',
     'experimental'
   ],

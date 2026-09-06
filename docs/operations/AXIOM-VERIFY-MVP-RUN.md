@@ -25,6 +25,11 @@ Exit 0 PASS, 1 FAIL, 2 usage. Covered by mesh check in CI.
 5. Unknown schema id / unknown export format fails closed with explanation.
 6. Report always includes integrity-versus-truth, sanitizes untrusted fields, and avoids production-promotion language.
 
+
+## AXIOM One local preview helper
+
+From an authenticated AXIOM One local preview Receipts surface, the owner can run the same offline Verify path through loopback `POST /local/verify` on `apps/axiom-one/server.mjs`. The helper imports `packages/axiom-verify` on the Node preview process (browser cannot use Node crypto) and returns the report JSON. It never calls Gateway as an authority client. UX shows PASS/FAIL, human reasons, integrity-versus-truth, and the raw report. Experimental only; not a released Verify product; no Mesh production promotion.
+
 ## Still deferred / out of this slice
 
 Full live Grid sqlite chain verification (mesh verify-grid-chain / store path), encrypted recipient-export decrypt path as a product surface, TPM/TEE/BFT, and any production-promotion claim. Mesh helpers remain inspiration only; Verify stays isolated in packages/axiom-verify/ with no kernel authority client.

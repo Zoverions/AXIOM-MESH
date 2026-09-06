@@ -313,3 +313,47 @@ test('every current event kind is readable and unknown kinds remain unmapped', (
   assert.equal(unknown.tone, 'uncertain');
   assert.match(unknown.summary, /makes no plain-language claim/);
 });
+
+test('offline verify reports explain PASS and FAIL without claiming truth or promotion', () => {
+  const presenter = createHumanPresenter(contract);
+  const pass = presenter.verifyReport({
+    schema: 'axiom-verify-report.v0',
+    status: 'experimental-mvp-scaffold',
+    ok: true,
+    verdict: 'PASS',
+    artifact_schema: 'axiom-machine-intent-receipt.v1',
+    receipt_digest: 'a' * 64,
+    intent_id: 'intent_demo',
+    reason: null,
+    code: null,
+    integrity_versus_truth:
+      'Integrity versus truth: a PASS means the supplied bytes, digests, signatures, and declared scopes match under the verification keys and schemas provided to Verify. It does not mean the underlying statement about the external world is true.'
+  });
+  assert.equal(pass.kind, 'verify-report');
+  assert.equal(pass.state, 'verify-pass');
+  assert.equal(pass.tone, 'complete');
+  assert.equal(pass.badge, 'PASS');
+  assert.match(pass.guidance.join(' '), /Integrity versus truth/);
+  assert.match(pass.guidance.join(' '), /not external-world truth/i);
+  assert.match(pass.guidance.join(' '), /does not promote Mesh production/i);
+  assert.doesNotMatch(pass.guidance.join(' '), /production-ready|generally available|production-promoted/i);
+  assert.match(pass.guidance.join(' '), /Not a released Verify product/);
+
+  const fail = presenter.verifyReport({
+    schema: 'axiom-verify-report.v0',
+    status: 'experimental-mvp-scaffold',
+    ok: false,
+    verdict: 'FAIL',
+    artifact_schema: 'unknown',
+    reason: 'Unknown schema id fails closed',
+    code: 'unknown_schema',
+    integrity_versus_truth:
+      'Integrity versus truth: a PASS means the supplied bytes, digests, signatures, and declared scopes match under the verification keys and schemas provided to Verify. It does not mean the underlying statement about the external world is true.'
+  });
+  assert.equal(fail.state, 'verify-fail');
+  assert.equal(fail.tone, 'blocked');
+  assert.equal(fail.badge, 'FAIL');
+  assert.match(fail.summary, /Unknown schema id fails closed/);
+  assert.equal(fail.facts.some(item => item.label === 'Human reason'), true);
+});
+

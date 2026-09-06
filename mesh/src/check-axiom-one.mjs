@@ -368,7 +368,11 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     'intentSuccess',
     'intentFailure',
     'retrySameRequest',
-    'Raw result and evidence'
+    'Raw result and evidence',
+    'verifyReport',
+    'Verify offline',
+    '/local/verify',
+    'integrity_versus_truth'
   ];
   if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {
     throw new ValidationError('AXIOM One human explanation surface is incomplete');
@@ -418,11 +422,16 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
+    || !worker.includes("url.pathname.startsWith('/local/')")
     || !worker.includes('!SHELL_ASSETS.includes(url.pathname)')
   ) throw new ValidationError('AXIOM One service worker may cache API data');
   const serverMarkers = [
     "host !== LOOPBACK_HOST",
     "url.pathname.startsWith('/v1/')",
+    "url.pathname === '/local/verify'",
+    'handleLocalVerify',
+    'packages/axiom-verify',
+    'gateway_authority_client: false',
     'Cross-origin preview request denied',
     'gatewayContract.limits.maximum_query_values',
     "frame-ancestors 'none'",

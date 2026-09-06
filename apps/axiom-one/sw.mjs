@@ -1,4 +1,4 @@
-const CACHE_NAME = 'axiom-one-shell-v5';
+const CACHE_NAME = 'axiom-one-shell-v6';
 const SHELL_ASSETS = Object.freeze([
   '/',
   '/index.html',
@@ -34,6 +34,7 @@ self.addEventListener('fetch', event => {
     event.request.method !== 'GET'
     || url.origin !== self.location.origin
     || url.pathname.startsWith('/v1/')
+    || url.pathname.startsWith('/local/')
     || !SHELL_ASSETS.includes(url.pathname)
   ) return;
   event.respondWith((async () => {
