@@ -4,8 +4,7 @@ use axiom_trust_core_lab::{canonicalize_case, parse_canonical_fixture};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use support::adversarial::{
-    assert_generated_exact_match, catch_generated_mismatch, parse_node_outputs,
-    run_node_with_stdin,
+    assert_generated_exact_match, catch_generated_mismatch, parse_node_outputs, run_node_with_stdin,
 };
 
 fn manifest_dir() -> PathBuf {
@@ -105,7 +104,9 @@ fn generated_comparator_rejects_controlled_real_case_divergence() {
     let fixture = generated_valid_fixture();
     let cases =
         parse_canonical_fixture(&fixture).expect("generated valid fixture must parse in Rust");
-    let case = cases.first().expect("generated corpus must contain a first case");
+    let case = cases
+        .first()
+        .expect("generated corpus must contain a first case");
     assert_eq!(seed_from_case_id(case.case_id()), 0x4158494F);
 
     let node = generated_node_outputs(&fixture);
