@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://axiom.local/schemas/cognitive-capability-observation-v0.schema.json",
+  "$id": "https://axiom.invalid/schemas/cognitive-capability-observation-v0.schema.json",
   "title": "AXIOM Cognitive Capability Observation v0",
   "type": "object",
   "additionalProperties": false,
