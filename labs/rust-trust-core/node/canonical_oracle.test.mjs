@@ -62,6 +62,13 @@ test('Node oracle CLI accepts fixture text over stdin', async () => {
   assert.equal(result.stdout, `${expected}\n`);
 });
 
+test('Node oracle stdin reader avoids incremental streamed-chunk concatenation', async () => {
+  const source = await readFile(ORACLE, 'utf8');
+  assert.equal(/\btext\s*\+=\s*chunk\b/.test(source), false);
+  assert.match(source, /chunks\.push\(chunk\)/);
+  assert.match(source, /return chunks\.join\(''\)/);
+});
+
 test('fixture parser preserves all declared case ids exactly once', async () => {
   const cases = parseFixture(await readFile(FIXTURE, 'utf8'));
   assert.equal(cases.length, 17);
