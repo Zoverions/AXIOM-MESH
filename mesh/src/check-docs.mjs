@@ -101,6 +101,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-02-sovereign-host-deployment-shared-embodiment-design.md',
   'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md',
   'docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md',
+  'docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -110,6 +111,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice1.md',
   'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice2.md',
   'docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md',
+  'docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -137,6 +139,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'agent-skills/axiom-authority-auditor/SKILL.md',
   'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
+  'labs/rust-trust-core/EXPERIMENT.md',
   'mesh/README.md',
   'mesh/PRODUCTION.md'
 ]);
@@ -558,7 +561,6 @@ const REQUIRED_CONTENT = Object.freeze({
     'provider'
   ]
 });
-
 
 const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
