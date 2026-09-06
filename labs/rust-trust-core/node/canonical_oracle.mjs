@@ -127,11 +127,11 @@ function decodeAsciiKeyObject(payload) {
 
 async function readStdinText() {
   process.stdin.setEncoding('utf8');
-  let text = '';
+  const chunks = [];
   for await (const chunk of process.stdin) {
-    text += chunk;
+    chunks.push(chunk);
   }
-  return text;
+  return chunks.join('');
 }
 
 async function main() {
