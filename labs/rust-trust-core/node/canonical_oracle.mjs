@@ -75,9 +75,14 @@ export function parseFixture(text) {
   });
 }
 
+export function runFixtureText(text) {
+  return parseFixture(text)
+    .map(({ caseId, value }) => `${caseId}\t${canonicalJson(value)}`)
+    .join('\n');
+}
+
 export async function runFixture(path) {
-  const cases = parseFixture(await readFile(path, 'utf8'));
-  return cases.map(({ caseId, value }) => `${caseId}\t${canonicalJson(value)}`).join('\n');
+  return runFixtureText(await readFile(path, 'utf8'));
 }
 
 function decodeSafeInteger(payload) {
@@ -120,10 +125,20 @@ function decodeAsciiKeyObject(payload) {
   return output;
 }
 
+async function readStdinText() {
+  process.stdin.setEncoding('utf8');
+  const chunks = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return chunks.join('');
+}
+
 async function main() {
   const path = process.argv[2];
-  if (!path) throw new TypeError('Usage: canonical_oracle.mjs <fixture-path>');
-  process.stdout.write(`${await runFixture(path)}\n`);
+  if (!path) throw new TypeError('Usage: canonical_oracle.mjs <fixture-path|->');
+  const text = path === '-' ? await readStdinText() : await readFile(path, 'utf8');
+  process.stdout.write(`${runFixtureText(text)}\n`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

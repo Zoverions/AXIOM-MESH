@@ -1,13 +1,21 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { decodeVectorRow, parseFixture, runFixture } from './canonical_oracle.mjs';
+import {
+  decodeVectorRow,
+  parseFixture,
+  runFixture,
+  runFixtureText
+} from './canonical_oracle.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, '..', 'fixtures', 'canonical-value-v0.tsv');
 const INVALID_FIXTURE = join(HERE, '..', 'fixtures', 'canonical-value-v0-invalid.tsv');
+const ORACLE = join(HERE, 'canonical_oracle.mjs');
 
 function decodeEscapedRow(encoded) {
   return encoded.replaceAll('\\t', '\t').replaceAll('\\n', '\n');
@@ -38,15 +46,36 @@ test('Node oracle executes the supported canonicalJson implementation for the sh
   assert.equal(lines.includes('object_mixed\t{"a":"hello","b":false,"m":0,"n":null}'), true);
 });
 
+test('fixture-text execution is identical to file execution', async () => {
+  const text = await readFile(FIXTURE, 'utf8');
+  assert.equal(runFixtureText(text), await runFixture(FIXTURE));
+});
+
+test('Node oracle CLI accepts fixture text over stdin', async () => {
+  const text = await readFile(FIXTURE, 'utf8');
+  const expected = await runFixture(FIXTURE);
+  const result = spawnSync(process.execPath, [ORACLE, '-'], {
+    input: text,
+    encoding: 'utf8'
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `${expected}\n`);
+});
+
+test('Node oracle stdin reader avoids incremental streamed-chunk concatenation', async () => {
+  const source = await readFile(ORACLE, 'utf8');
+  assert.equal(/\btext\s*\+=\s*chunk\b/.test(source), false);
+  assert.match(source, /chunks\.push\(chunk\)/);
+  assert.match(source, /return chunks\.join\(''\)/);
+});
+
 test('fixture parser preserves all declared case ids exactly once', async () => {
-  const { readFile } = await import('node:fs/promises');
   const cases = parseFixture(await readFile(FIXTURE, 'utf8'));
   assert.equal(cases.length, 17);
   assert.equal(new Set(cases.map(item => item.caseId)).size, cases.length);
 });
 
 test('Node oracle fails closed on every malformed canonical-value-v0 case', async () => {
-  const { readFile } = await import('node:fs/promises');
   const lines = (await readFile(INVALID_FIXTURE, 'utf8')).trimEnd().split('\n');
   assert.equal(lines.shift(), 'case_id\tencoded_row');
   assert.equal(lines.length, 12);
