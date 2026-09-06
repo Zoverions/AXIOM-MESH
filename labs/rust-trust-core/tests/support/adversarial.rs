@@ -58,3 +58,28 @@ pub fn assert_generated_exact_match(seed: u32, case_id: &str, node: &str, rust: 
         "seed=0x{seed:08x} case={case_id}: canonical byte mismatch; node={node:?}; rust={rust:?}"
     );
 }
+
+pub fn catch_generated_mismatch(
+    seed: u32,
+    case_id: &str,
+    node: &str,
+    rust: &str,
+) -> Result<(), String> {
+    let mut perturbed_rust = rust.to_owned();
+    perturbed_rust.push(' ');
+
+    match std::panic::catch_unwind(|| {
+        assert_generated_exact_match(seed, case_id, node, &perturbed_rust);
+    }) {
+        Ok(()) => Ok(()),
+        Err(payload) => {
+            if let Some(message) = payload.downcast_ref::<String>() {
+                Err(message.clone())
+            } else if let Some(message) = payload.downcast_ref::<&str>() {
+                Err((*message).to_owned())
+            } else {
+                Err("generated comparator panicked without a string diagnostic".to_owned())
+            }
+        }
+    }
+}
