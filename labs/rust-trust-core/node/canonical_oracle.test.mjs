@@ -7,6 +7,11 @@ import { decodeVectorRow, parseFixture, runFixture } from './canonical_oracle.mj
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, '..', 'fixtures', 'canonical-value-v0.tsv');
+const INVALID_FIXTURE = join(HERE, '..', 'fixtures', 'canonical-value-v0-invalid.tsv');
+
+function decodeEscapedRow(encoded) {
+  return encoded.replaceAll('\\t', '\t').replaceAll('\\n', '\n');
+}
 
 test('Node oracle decodes representative canonical-value-v0 rows', () => {
   assert.deepEqual(decodeVectorRow('bool_true\tbool\ttrue'), {
@@ -38,4 +43,28 @@ test('fixture parser preserves all declared case ids exactly once', async () => 
   const cases = parseFixture(await readFile(FIXTURE, 'utf8'));
   assert.equal(cases.length, 17);
   assert.equal(new Set(cases.map(item => item.caseId)).size, cases.length);
+});
+
+test('Node oracle fails closed on every malformed canonical-value-v0 case', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const lines = (await readFile(INVALID_FIXTURE, 'utf8')).trimEnd().split('\n');
+  assert.equal(lines.shift(), 'case_id\tencoded_row');
+  assert.equal(lines.length, 12);
+
+  for (const line of lines) {
+    const separator = line.indexOf('\t');
+    assert.notEqual(separator, -1, `invalid corpus row missing separator: ${line}`);
+    const caseId = line.slice(0, separator);
+    const encoded = line.slice(separator + 1);
+    const decoded = decodeEscapedRow(encoded);
+
+    if (caseId === 'duplicate_case_id_fixture') {
+      assert.throws(
+        () => parseFixture(`case_id\tkind\tpayload\n${decoded}`),
+        /Duplicate canonical vector case_id/
+      );
+    } else {
+      assert.throws(() => decodeVectorRow(decoded), undefined, caseId);
+    }
+  }
 });
