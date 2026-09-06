@@ -3,9 +3,7 @@ mod support;
 use axiom_trust_core_lab::{canonicalize_case, parse_canonical_fixture};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use support::adversarial::{
-    assert_generated_exact_match, parse_node_outputs, run_node_with_stdin,
-};
+use support::adversarial::{assert_generated_exact_match, parse_node_outputs, run_node_with_stdin};
 
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -42,7 +40,8 @@ fn seed_from_case_id(case_id: &str) -> u32 {
 #[test]
 fn promoted_candidate_matches_all_1024_generated_node_oracle_cases() {
     let fixture = generated_valid_fixture();
-    let cases = parse_canonical_fixture(&fixture).expect("generated valid fixture must parse in Rust");
+    let cases =
+        parse_canonical_fixture(&fixture).expect("generated valid fixture must parse in Rust");
     assert_eq!(cases.len(), 1024);
 
     let node = generated_node_outputs(&fixture);
@@ -85,7 +84,11 @@ fn generated_object_permutations_have_identical_verified_node_bytes() {
 
     assert_eq!(groups.len(), 64);
     for (group, outputs) in groups {
-        assert_eq!(outputs.len(), 2, "permutation group {group} must contain a pair");
+        assert_eq!(
+            outputs.len(),
+            2,
+            "permutation group {group} must contain a pair"
+        );
         assert_eq!(
             outputs[0].as_bytes(),
             outputs[1].as_bytes(),
