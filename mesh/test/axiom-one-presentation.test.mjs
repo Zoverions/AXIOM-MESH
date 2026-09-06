@@ -322,7 +322,7 @@ test('offline verify reports explain PASS and FAIL without claiming truth or pro
     ok: true,
     verdict: 'PASS',
     artifact_schema: 'axiom-machine-intent-receipt.v1',
-    receipt_digest: 'a' * 64,
+    receipt_digest: 'a'.repeat(64),
     intent_id: 'intent_demo',
     reason: null,
     code: null,
