@@ -56,10 +56,18 @@ fn rust_candidate_matches_exact_node_oracle_bytes_for_all_v0_vectors() {
         let expected = node
             .get(case.case_id())
             .unwrap_or_else(|| panic!("Node oracle missing case {}", case.case_id()));
-        assert_eq!(&rust, expected, "case {}", case.case_id());
+        assert_exact_match(case.case_id(), expected, &rust);
         rust_count += 1;
     }
 
     assert_eq!(rust_count, node.len());
     assert_eq!(rust_count, 17);
+}
+
+#[test]
+fn differential_comparison_rejects_real_byte_divergence() {
+    let result = std::panic::catch_unwind(|| {
+        assert_exact_match("mismatch_probe", "{\"a\":1}", "{\"a\":2}");
+    });
+    assert!(result.is_err(), "byte divergence must fail the differential harness");
 }
