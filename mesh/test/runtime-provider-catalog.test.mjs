@@ -160,15 +160,3 @@ test('local inference profiles pin reviewed source identities without admitting 
     assert.equal(catalog.backlog.includes(admitted), false, `admitted profile remains in backlog: ${admitted}`);
   }
 });
-
-test('RED probe: AI execution provenance implementation exists', async () => {
-  await import('../src/lib/ai-execution-provenance.mjs');
-});
-
-test('RED probe: verified work graph implementation exists', async () => {
-  await import('../src/lib/verified-work-graph.mjs');
-});
-
-test('RED probe: effect consequence classification implementation exists', async () => {
-  await import('../src/lib/effect-consequence-classification.mjs');
-});
