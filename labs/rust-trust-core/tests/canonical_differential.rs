@@ -93,7 +93,8 @@ fn differential_comparison_rejects_real_byte_divergence() {
 #[test]
 fn node_output_parser_rejects_duplicate_case_ids() {
     let duplicate = "same\t{\"a\":1}\nsame\t{\"a\":2}\n";
-    let error = parse_node_outputs(duplicate).expect_err("duplicate Node case ids must fail closed");
+    let error =
+        parse_node_outputs(duplicate).expect_err("duplicate Node case ids must fail closed");
     assert!(error.contains("duplicate Node oracle case_id: same"));
 }
 
