@@ -66,6 +66,8 @@ jobs:
         run: node --test labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
       - name: Verify Stage 3 source boundary
         run: node mesh/src/rust-trust-core-source-boundary.mjs
+      - name: Verify Stage 4 does not modify promoted Rust v0 source
+        run: git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs
       - name: Verify pinned Rust toolchain
         working-directory: labs/rust-trust-core
         run: |
