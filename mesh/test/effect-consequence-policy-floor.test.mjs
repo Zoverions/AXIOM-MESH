@@ -44,6 +44,7 @@ test('consequence classes map only to minimum existing policy risk floors', () =
     'physical-safety-relevant': 'high',
     'physical-potentially-irreversible': 'critical'
   });
+  assert.equal(Object.isFrozen(EFFECT_CONSEQUENCE_MINIMUM_POLICY_RISK), true);
 });
 
 test('higher existing policy risk satisfies a lower consequence floor without being reduced', () => {
@@ -66,6 +67,7 @@ test('higher existing policy risk satisfies a lower consequence floor without be
   }
   assert.equal(result.authority_effect, 'none');
   assert.equal(result.execution_effect, 'none');
+  assert.equal(Object.isFrozen(result), true);
 });
 
 test('classification cannot lower an existing policy risk requirement', () => {
