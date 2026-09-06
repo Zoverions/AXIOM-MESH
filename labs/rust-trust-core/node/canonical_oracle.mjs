@@ -125,10 +125,19 @@ function decodeAsciiKeyObject(payload) {
   return output;
 }
 
+async function readStdinText() {
+  process.stdin.setEncoding('utf8');
+  let text = '';
+  for await (const chunk of process.stdin) {
+    text += chunk;
+  }
+  return text;
+}
+
 async function main() {
   const path = process.argv[2];
   if (!path) throw new TypeError('Usage: canonical_oracle.mjs <fixture-path|->');
-  const text = path === '-' ? await readFile(0, 'utf8') : await readFile(path, 'utf8');
+  const text = path === '-' ? await readStdinText() : await readFile(path, 'utf8');
   process.stdout.write(`${runFixtureText(text)}\n`);
 }
 
