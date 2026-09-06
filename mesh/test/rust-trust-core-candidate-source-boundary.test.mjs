@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { validateSupportedSourceBoundary } from '../src/release.mjs';
-import { validateCandidateRustSourceBoundary } from '../src/rust-trust-core-source-boundary.mjs';
+import {
+  validateCandidateRustSourceBoundary,
+  verifyTrackedCandidateRustSourceBoundary
+} from '../src/rust-trust-core-source-boundary.mjs';
+
+test('tracked repository admits only the approved Stage 3 Rust candidate source', () => {
+  const candidate = verifyTrackedCandidateRustSourceBoundary();
+  assert.deepEqual(candidate.candidate_rust_sources, [
+    'trust-core/rust/canonical_value_v0.rs'
+  ]);
+});
 
 test('release source boundary classifies only the approved Stage 3 Rust candidate source', () => {
   const trackedPaths = [
