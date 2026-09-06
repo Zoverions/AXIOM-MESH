@@ -105,7 +105,8 @@ test('effect consequence JSON schema mirrors strict no-authority boundary', asyn
   assert.equal(schema.additionalProperties, false);
   assert.equal(schema.properties.schema.const, EFFECT_CONSEQUENCE_CLASSIFICATION_SCHEMA);
   assert.ok(schema.required.includes('effect_digest'));
-  assert.equal(schema.properties.effect_digest.pattern, '^[a-f0-9]{64}$');
+  assert.equal(schema.properties.effect_digest.$ref, '#/$defs/digest');
+  assert.equal(schema.$defs.digest.pattern, '^[a-f0-9]{64}$');
   assert.deepEqual(schema.properties.consequence_class.enum, EFFECT_CONSEQUENCE_CLASSES);
   assert.equal(schema.properties.authority_effect.const, 'none');
   assert.equal(schema.properties.execution_effect.const, 'none');
