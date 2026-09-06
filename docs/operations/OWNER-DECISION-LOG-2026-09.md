@@ -27,7 +27,7 @@ Parked until after the above: Circles productization, repository-effect activati
 | Explicitly rejected first op | `hermes dump` |
 | Not claimed | certification, installation approval, remote execution, MCP/A2A, or Mesh authority for Hermes |
 
-A Mesh-side **fixture-backed** identity-only research slice may land before live spawn (pin binding, field bounding, mismatch/forged-build denial, contract/manifest receipt binding). That fixture does **not** accept the pin. Refresh pin hash + SBOM/threat review before any live Hermes adapter path merges. Selection becomes final only after Adapter v1 parity matrix green for the read-only slice **and** an owner decision log entry: "RUNTIME-002 read-only pin accepted".
+A Mesh-side **fixture-backed** identity-only research slice may land before live spawn (pin binding, field bounding, mismatch/forged-build denial, contract/manifest receipt binding). That fixture does **not** accept the pin. Bounded identity-only dependency inventory + threat notes live in [HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md](HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md) (not SBOM certification; not pin acceptance). Refresh pin hash + deepen inventory/threat review before any live Hermes adapter path merges. Selection becomes final only after Adapter v1 parity matrix green for the read-only slice **and** an owner decision log entry: "RUNTIME-002 read-only pin accepted".
 
 ## Open owner inputs required
 
@@ -45,3 +45,4 @@ These cannot be completed from repository work alone:
 | 2026-09-05 | Open foundational packs PR; freeze progression Pilot → One+provider → Hermes read-only pin → Verify | Assistant on owner mandate to drive foundational status |
 | 2026-09-05 | Advance frozen stage 2 AI-001 with local organize provider stub only; keep `ai.providers` adapter_required; drafts never authorize Mesh effects | Assistant on owner mandate for One + provider wedge |
 | 2026-09-05 | Advance RUNTIME-002 with Hermes identity-only **research/fixture** + adapter profile + tests; pin remains provisional until parity matrix green + owner acceptance; no live Hermes spawn; capabilities.json untouched; do not claim pin accepted | Assistant on owner mandate for Adapter first pin |
+| 2026-09-05 | Record bounded Hermes identity-only dependency inventory + threat-model note (unsigned-commit / secret-import / network / dump / second-control-plane); does not certify SBOM, accept pin, or complete live process audit; capabilities.json untouched | Assistant on owner mandate for Adapter first pin prep |

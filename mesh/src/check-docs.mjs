@@ -130,6 +130,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md',
   'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md',
   'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md',
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md',
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
@@ -537,6 +538,14 @@ const REQUIRED_CONTENT = Object.freeze({
     'Not production certification',
     'pin_accepted'
   ],
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md': [
+    'b6bcb3e791c673e63974029bbab40cc9326803ff',
+    'get_code_identity',
+    'identity-only',
+    'lazy installs',
+    'Not production certification',
+    'pin_accepted'
+  ],
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': [
     'AXIOM One',
     'provider'
@@ -597,6 +606,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md': 2_500,
   'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': 3_000,
   'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md': 2_000,
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md': 4_000,
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': 2_500,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
