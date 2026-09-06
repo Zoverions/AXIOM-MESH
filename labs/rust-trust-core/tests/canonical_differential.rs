@@ -1,4 +1,6 @@
-use axiom_trust_core_lab::{canonicalize_case, parse_canonical_vector_row};
+use axiom_trust_core_lab::{
+    canonicalize_case, parse_canonical_fixture, parse_canonical_vector_row,
+};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::Command;
@@ -9,6 +11,10 @@ fn manifest_dir() -> PathBuf {
 
 fn fixture_path() -> PathBuf {
     manifest_dir().join("fixtures/canonical-value-v0.tsv")
+}
+
+fn invalid_fixture_path() -> PathBuf {
+    manifest_dir().join("fixtures/canonical-value-v0-invalid.tsv")
 }
 
 fn oracle_path() -> PathBuf {
@@ -46,6 +52,10 @@ fn assert_exact_match(case_id: &str, node: &str, rust: &str) {
         rust.as_bytes(),
         "case {case_id}: canonical byte mismatch; node={node:?}; rust={rust:?}"
     );
+}
+
+fn decode_escaped_row(encoded: &str) -> String {
+    encoded.replace("\\t", "\t").replace("\\n", "\n")
 }
 
 #[test]
@@ -86,4 +96,34 @@ fn differential_comparison_rejects_real_byte_divergence() {
     assert!(message.contains("mismatch_probe"));
     assert!(message.contains("node=\"{\\\"a\\\":1}\""));
     assert!(message.contains("rust=\"{\\\"a\\\":2}\""));
+}
+
+#[test]
+fn rust_candidate_fails_closed_on_every_malformed_canonical_value_v0_case() {
+    let fixture =
+        std::fs::read_to_string(invalid_fixture_path()).expect("invalid fixture must be readable");
+    let mut lines = fixture.lines();
+    assert_eq!(lines.next(), Some("case_id\tencoded_row"));
+    let cases = lines.collect::<Vec<_>>();
+    assert_eq!(cases.len(), 12);
+
+    for line in cases {
+        let (case_id, encoded) = line
+            .split_once('\t')
+            .expect("invalid corpus row must contain case id and encoded row");
+        let decoded = decode_escaped_row(encoded);
+
+        if case_id == "duplicate_case_id_fixture" {
+            let duplicate_fixture = format!("case_id\tkind\tpayload\n{decoded}");
+            assert!(
+                parse_canonical_fixture(&duplicate_fixture).is_err(),
+                "case {case_id} must be rejected"
+            );
+        } else {
+            assert!(
+                parse_canonical_vector_row(&decoded).is_err(),
+                "case {case_id} must be rejected"
+            );
+        }
+    }
 }
