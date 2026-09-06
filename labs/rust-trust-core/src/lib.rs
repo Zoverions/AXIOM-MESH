@@ -237,6 +237,31 @@ pub fn parse_canonical_vector_row(line: &str) -> Result<CanonicalCase, VectorErr
     })
 }
 
+pub fn parse_canonical_fixture(text: &str) -> Result<Vec<CanonicalCase>, VectorError> {
+    let normalized = text.replace("\r\n", "\n");
+    let mut lines = normalized.split('\n').collect::<Vec<_>>();
+    if lines.last() == Some(&"") {
+        lines.pop();
+    }
+    if lines.first() != Some(&"case_id\tkind\tpayload") {
+        return Err(VectorError::new("canonical vector fixture header is invalid"));
+    }
+
+    let mut seen = HashSet::new();
+    let mut cases = Vec::new();
+    for line in lines.into_iter().skip(1) {
+        let case = parse_canonical_vector_row(line)?;
+        if !seen.insert(case.case_id.clone()) {
+            return Err(VectorError::new(format!(
+                "duplicate canonical vector case_id: {}",
+                case.case_id
+            )));
+        }
+        cases.push(case);
+    }
+    Ok(cases)
+}
+
 pub fn canonicalize_case(case: &CanonicalCase) -> String {
     match &case.value {
         CanonicalValue::Scalar(value) => canonicalize_scalar(value),
