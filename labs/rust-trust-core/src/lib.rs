@@ -40,6 +40,36 @@ pub enum DenyReason {
     ExhaustedEffectBudget,
 }
 
+/// A validated authority token. Callers cannot construct one directly.
+///
+/// Authority grants are intentionally non-copyable so later effect-bearing APIs
+/// can consume a grant rather than accidentally treating it as reusable ambient
+/// authority.
+///
+/// ```compile_fail
+/// use axiom_trust_core_lab::{
+///     AuthorityEvidence, CapabilityEvidence, ConsentEvidence, EffectBudgetEvidence,
+///     PrincipalEvidence, evaluate_authority,
+/// };
+///
+/// let grant = evaluate_authority(AuthorityEvidence {
+///     principal: PrincipalEvidence { subject: "principal:test", verified: true },
+///     capability: CapabilityEvidence { capability: "synthetic.effect", authorized: true },
+///     consent: ConsentEvidence { required: false, valid: false },
+///     budget: EffectBudgetEvidence { required: false, remaining: 0 },
+/// }).unwrap();
+/// let consumed = grant;
+/// let reused = grant;
+/// # let _ = (consumed, reused);
+/// ```
+///
+/// ```compile_fail
+/// use axiom_trust_core_lab::AuthorityGrant;
+/// let _ = AuthorityGrant {
+///     subject: "principal:test",
+///     capability: "synthetic.effect",
+/// };
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AuthorityGrant<'a> {
     subject: &'a str,
