@@ -66,9 +66,24 @@ function containsPromotionLanguage(text) {
 export function buildVerificationReport(result) {
   const passed = result?.ok === true;
   const safeSchema = sanitizeUntrustedReportField(result?.schema ?? 'unknown');
-  const safeDigest = sanitizeUntrustedReportField(result?.receipt_digest);
+  const safeDigest = sanitizeUntrustedReportField(
+    result?.receipt_digest
+      ?? result?.anchor_digest
+      ?? result?.bundle_digest
+      ?? null
+  );
   const safeIntent = sanitizeUntrustedReportField(result?.intent_id);
+  const safeAnchorId = sanitizeUntrustedReportField(result?.anchor_id);
+  const safeExportId = sanitizeUntrustedReportField(result?.export_id);
   const safeReason = sanitizeUntrustedReportField(result?.reason);
+  const safeEvidenceHead = sanitizeUntrustedReportField(result?.evidence_head);
+  const safeFileName = sanitizeUntrustedReportField(result?.file_name);
+
+  const digestLabel = result?.anchor_digest != null
+    ? 'Anchor digest'
+    : result?.bundle_digest != null
+      ? 'Bundle digest'
+      : 'Receipt digest';
 
   const trustedFooter = [
     INTEGRITY_VERSUS_TRUTH,
@@ -83,6 +98,7 @@ export function buildVerificationReport(result) {
   try {
     assertNoPromotionLanguage(`AXIOM Verify report (${VERIFY_STATUS})`);
     assertNoPromotionLanguage(trustedFooter);
+    assertNoPromotionLanguage(digestLabel);
   } catch (error) {
     return {
       schema: 'axiom-verify-report.v0',
@@ -90,8 +106,16 @@ export function buildVerificationReport(result) {
       ok: false,
       verdict: 'FAIL',
       artifact_schema: result?.schema != null ? safeSchema : null,
-      receipt_digest: safeDigest,
+      receipt_digest: result?.receipt_digest != null ? safeDigest : null,
+      anchor_digest: result?.anchor_digest != null
+        ? sanitizeUntrustedReportField(result.anchor_digest)
+        : null,
+      bundle_digest: result?.bundle_digest != null
+        ? sanitizeUntrustedReportField(result.bundle_digest)
+        : null,
       intent_id: safeIntent,
+      anchor_id: safeAnchorId,
+      export_id: safeExportId,
       reason: `Report generation failed closed: ${error.message}`,
       code: 'report_promotion_language',
       integrity_versus_truth: INTEGRITY_VERSUS_TRUTH,
@@ -114,8 +138,12 @@ export function buildVerificationReport(result) {
   // closed with a structured report instead of throwing.
   const untrustedLines = [
     `Artifact schema: ${safeSchema}`,
-    safeDigest ? `Receipt digest: ${safeDigest}` : null,
+    safeDigest ? `${digestLabel}: ${safeDigest}` : null,
     safeIntent ? `Intent id: ${safeIntent}` : null,
+    safeAnchorId ? `Anchor id: ${safeAnchorId}` : null,
+    safeExportId ? `Export id: ${safeExportId}` : null,
+    safeEvidenceHead ? `Evidence head: ${safeEvidenceHead}` : null,
+    safeFileName ? `File: ${safeFileName}` : null,
     reason ? `Reason: ${reason}` : null
   ].filter(line => line !== null);
 
@@ -131,8 +159,12 @@ export function buildVerificationReport(result) {
     `AXIOM Verify report (${VERIFY_STATUS})`,
     `Result: ${verdict}`,
     `Artifact schema: ${safeSchema}`,
-    safeDigest ? `Receipt digest: ${safeDigest}` : null,
+    safeDigest ? `${digestLabel}: ${safeDigest}` : null,
     safeIntent ? `Intent id: ${safeIntent}` : null,
+    safeAnchorId ? `Anchor id: ${safeAnchorId}` : null,
+    safeExportId ? `Export id: ${safeExportId}` : null,
+    safeEvidenceHead ? `Evidence head: ${safeEvidenceHead}` : null,
+    safeFileName ? `File: ${safeFileName}` : null,
     reason ? `Reason: ${reason}` : null,
     '',
     trustedFooter
@@ -146,8 +178,18 @@ export function buildVerificationReport(result) {
     ok,
     verdict,
     artifact_schema: result?.schema != null ? safeSchema : null,
-    receipt_digest: safeDigest,
+    receipt_digest: result?.receipt_digest != null
+      ? sanitizeUntrustedReportField(result.receipt_digest)
+      : null,
+    anchor_digest: result?.anchor_digest != null
+      ? sanitizeUntrustedReportField(result.anchor_digest)
+      : null,
+    bundle_digest: result?.bundle_digest != null
+      ? sanitizeUntrustedReportField(result.bundle_digest)
+      : null,
     intent_id: safeIntent,
+    anchor_id: safeAnchorId,
+    export_id: safeExportId,
     reason,
     code,
     integrity_versus_truth: INTEGRITY_VERSUS_TRUTH,

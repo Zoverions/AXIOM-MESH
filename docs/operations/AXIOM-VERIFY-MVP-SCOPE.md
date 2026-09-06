@@ -2,7 +2,7 @@
 
 **Build context:** AXIOM-MESH `0.12.0-dev.3`  
 **Tracker:** VERIFY-001 in `docs/MASTER-TODO.md`  
-**Status:** Scope document only. Does not claim a shipped Verify product or production promotion.
+**Status:** Experimental MVP scaffold in progress under packages/axiom-verify/ (receipt + continuity-anchor chain-segment + selective-export digest checks). Does not claim a shipped Verify product or production promotion.
 
 ## Purpose
 
@@ -43,6 +43,9 @@ MVP assumptions:
 - Certifying external runtimes or AI providers
 
 ## Acceptance tests (MVP)
+
+Implementation status (experimental scaffold): items 1–2 and 5–7 covered by the receipt slice; items 3–4 covered by continuity-anchor chain-segment and selective-export digest verifiers in packages/axiom-verify/. Still not a released product.
+
 
 1. Valid machine receipt plus matching public key yields PASS.
 2. Altered receipt bytes yield FAIL.
