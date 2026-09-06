@@ -1,0 +1,8 @@
+case_id	principal_verified	capability_authorized	consent_required	consent_valid	budget_required	budget_remaining	expected
+allow_all_required_valid	true	true	true	true	true	1	allow
+deny_unverified_principal	false	true	true	true	true	1	deny
+deny_unauthorized_capability	true	false	true	true	true	1	deny
+deny_missing_required_consent	true	true	true	false	true	1	deny
+deny_exhausted_required_budget	true	true	true	true	true	0	deny
+allow_invalid_consent_when_not_required	true	true	false	false	true	1	allow
+allow_zero_budget_when_not_required	true	true	true	true	false	0	allow
