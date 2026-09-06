@@ -4,7 +4,7 @@
 
 **Goal:** Add a deterministic, fail-closed formal-proof verification substrate to AXIOM Verify that binds exact statements, proof bytes, dependency closure, verifier profile, resource policy, and transcript while preserving the invariant that verification is evidence and never authority.
 
-**Architecture:** Keep the implementation under `packages/axiom-verify/` and reuse its dependency-light canonical JSON/SHA-256 posture. Add strict v1 formal contracts, in-memory artifact materialization, an allowlisted verifier-profile registry, one deterministic in-process mock adapter, and a formal verification orchestrator/report path. Do not add a real theorem prover, filesystem discovery, network access, subprocess execution, capability changes, or a Mesh policy consumer in this slice; Mesh-side changes are negative reachability tests plus canonical documentation/tracker registration.
+**Architecture:** Keep the implementation under `packages/axiom-verify/` and reuse its dependency-light canonical JSON/SHA-256 posture. First validate caller-supplied manifest/artifact bytes under fixed conservative bootstrap ceilings that do not depend on trusting an unknown profile; only then resolve an allowlisted verifier profile, apply its exact tighter resource policy, invoke one deterministic in-process mock adapter, and emit a domain-separated verification artifact/report. Do not add a real theorem prover, filesystem discovery, network access, subprocess execution, capability changes, or a Mesh policy consumer in this slice; Mesh-side changes are negative reachability tests plus canonical documentation/tracker registration.
 
 **Tech Stack:** Node.js ESM; Node built-ins (`node:crypto`, `node:test`, `node:assert/strict`, `node:fs/promises` in tests only); existing `packages/axiom-verify/canonical.mjs`; existing AXIOM Verify report conventions; existing Mesh external-effect validation for negative authority-boundary tests.
 
@@ -16,6 +16,7 @@
 - `mesh/config/capabilities.json` MUST NOT change in this slice.
 - No real Lean, Coq, Isabelle, HOL, Metamath, SMT, or other external theorem prover is added in this slice.
 - Production formal-verification modules MUST NOT import `node:fs`, `node:net`, `node:http`, `node:https`, `node:tls`, `node:dgram`, `node:child_process`, Gateway, Hypervisor, Grid authority clients, capability-grant code, approval-consumption code, or external-effect execution code.
+- Production formal-verification modules MUST NOT consult `process.env`, `process.cwd()`, user home/config directories, package caches, current locale/timezone, `Date.now()`, `new Date()`, `Math.random()`, or hostnames to decide proof semantics or the core verification result.
 - Verification runs only over caller-supplied bytes and an allowlisted in-process mock profile.
 - Unknown schema/profile/adapter conditions fail closed.
 - Artifact paths use the v1 relative POSIX ASCII grammar and are rejected rather than normalized when ambiguous.
@@ -26,14 +27,16 @@
   - `axiom-formal-proof-bundle.v1\n`
   - `axiom-formal-verifier-profile.v1\n`
   - `axiom-formal-proof-verification.v1\n`
+- Resource-policy identity in this slice uses existing AXIOM canonical digest semantics: `digestObject(policy)`; it does not invent a fifth normative domain prefix not present in the approved spec.
 - `VERIFIED` means only that the exact formal statement checks under the exact bound premises/dependencies/profile. It MUST NOT be described as external-world truth, general model correctness, legal sufficiency, policy wisdom, or execution authorization.
 - `VERIFIED` MUST NOT create/widen capability, mandate, approval, policy, resource budget, destination scope, or external-effect authority.
 - No Mesh production code consumes `axiom-formal-proof-verification.v1` as a policy predicate in this first slice. A future Mesh importer must be separately specified and must bind the exact verification artifact digest through existing signed evidence/provenance machinery.
-- The mock adapter is test infrastructure for the substrate contract only; human-facing copy MUST state that it is not mathematical capability or a production theorem-prover integration.
+- The mock adapter is fixture/substrate infrastructure only. Its `executable_digest` is a deterministic fixture-identity binding, not a claim of measured executable provenance or theorem-prover assurance.
+- `wall_clock_ms` is profile-bound and checked after the bounded synchronous mock returns. This slice does not claim preemptive CPU isolation; any future external prover requires an independently specified enforceable runner/sandbox before admission.
 
 ---
 
-### Task 1: Formal v1 contract and domain-separated digest primitives
+### Task 1: Formal v1 contracts and domain-separated digest primitives
 
 **Files:**
 - Create: `packages/axiom-verify/formal-contracts.mjs`
@@ -44,38 +47,38 @@
   - `FORMAL_PROOF_BUNDLE_SCHEMA = 'axiom-formal-proof-bundle.v1'`
   - `FORMAL_PROOF_VERIFICATION_SCHEMA = 'axiom-formal-proof-verification.v1'`
   - `FORMAL_VERIFIER_PROFILE_SCHEMA = 'axiom-formal-verifier-profile.v1'`
+  - `FORMAL_RESOURCE_POLICY_SCHEMA = 'axiom-formal-resource-policy.v1'`
   - `FORMAL_VERDICTS = Object.freeze(['VERIFIED','REJECTED','UNSUPPORTED','ERROR'])`
   - `domainSeparatedDigestBytes(domain, bytes)`
   - `domainSeparatedDigestObject(domain, value)`
   - `validateFormalProofManifest(manifest)`
   - `validateFormalVerifierProfile(profile)`
+  - `normalizeFormalResourcePolicy(policy)`
+  - `formalResourcePolicyDigest(policy)`
   - `formalDependencyClosureDigest(dependencies)`
   - `formalVerifierProfileDigest(profile)`
   - `formalProofBundleDigest(manifest)`
   - `validateFormalVerificationArtifact(artifact)`
   - `formalVerificationArtifactDigest(artifact)`
-- Consumes: `canonicalJson`, `sha256`, and `VerifyError` from `packages/axiom-verify/canonical.mjs`.
+- `statement_fingerprint` is always the closed object `{ algorithm: 'sha256-domain-v1', value: <64-hex> }`; it is never a bare digest string.
+- Consumes: `canonicalJson`, `digestObject`, `sha256`, and `VerifyError` from `packages/axiom-verify/canonical.mjs`.
 
-- [ ] **Step 1: Write the failing public-contract tests**
-
-Create `mesh/test/axiom-formal-contracts.test.mjs` and import the expected surface:
+- [ ] **Step 1: Write the failing schema/digest public-contract tests**
 
 ```js
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { canonicalJson, sha256 } from '../../packages/axiom-verify/canonical.mjs';
 import {
   FORMAL_PROOF_BUNDLE_SCHEMA,
   FORMAL_PROOF_VERIFICATION_SCHEMA,
   FORMAL_VERIFIER_PROFILE_SCHEMA,
   domainSeparatedDigestBytes,
-  domainSeparatedDigestObject,
   formalDependencyClosureDigest,
   formalProofBundleDigest,
   formalVerifierProfileDigest,
   formalVerificationArtifactDigest,
-  validateFormalProofManifest,
-  validateFormalVerifierProfile,
-  validateFormalVerificationArtifact
+  validateFormalProofManifest
 } from '../../packages/axiom-verify/formal-contracts.mjs';
 
 test('formal schema ids are exact', () => {
@@ -83,11 +86,7 @@ test('formal schema ids are exact', () => {
   assert.equal(FORMAL_PROOF_VERIFICATION_SCHEMA, 'axiom-formal-proof-verification.v1');
   assert.equal(FORMAL_VERIFIER_PROFILE_SCHEMA, 'axiom-formal-verifier-profile.v1');
 });
-```
 
-Add a fixed digest vector proving the newline-delimited domain changes the result:
-
-```js
 const bytes = Buffer.from('same-payload', 'utf8');
 assert.notEqual(
   domainSeparatedDigestBytes('axiom-formal-proof-bundle.v1\n', bytes),
@@ -95,9 +94,7 @@ assert.notEqual(
 );
 ```
 
-- [ ] **Step 2: Add valid fixture builders inside the test file**
-
-Use this exact baseline manifest shape:
+- [ ] **Step 2: Use this exact valid manifest shape in contract tests**
 
 ```js
 function validManifest() {
@@ -144,46 +141,40 @@ function validManifest() {
 }
 ```
 
-Note: `artifacts[]` above is intentionally ordered by ASCII path (`proof/proof.axm` before `proof/statement.axm`).
+- [ ] **Step 3: Add strict order/path/shape RED tests**
 
-- [ ] **Step 3: Add canonical-order and duplicate RED tests**
+Prove rejection of:
+- unsorted or duplicate `artifacts[]`, `dependencies[]`, `premise_refs[]`, `declared_scope.non_claims[]`, `provenance.source_refs[]`;
+- duplicate artifact path even when role/digest differ;
+- malformed 64-hex digest;
+- unknown artifact role outside `statement|proof|source|dependency|configuration|lockfile|auxiliary`;
+- unknown top-level or nested key;
+- unsafe/non-integer/negative `size_bytes`;
+- `/abs`, `a//b`, `a/../b`, `a/./b`, `a\\b`, `a:b`, NUL, empty path.
 
-Prove each set-like field rejects noncanonical order and duplicates instead of sorting internally:
+Use:
 
 ```js
 const bad = validManifest();
 bad.premise_refs = ['premise:z', 'premise:a'];
 assert.throws(() => validateFormalProofManifest(bad), /canonical order/i);
-
-const dup = validManifest();
-dup.declared_scope.non_claims = ['same', 'same'];
-assert.throws(() => validateFormalProofManifest(dup), /duplicate/i);
 ```
 
-Also cover:
-- `artifacts[]` duplicate path;
-- `dependencies[]` duplicate `(kind, dependency_id, digest)`;
-- malformed 64-hex digests;
-- unknown artifact role;
-- unknown top-level/nested keys;
-- invalid `size_bytes` (`-1`, non-integer, unsafe integer);
-- invalid path forms (`/abs`, `a//b`, `a/../b`, `a/./b`, backslash, colon, NUL, empty segment);
-- missing/duplicate `statement` or `proof` role is allowed at generic contract level only if the adapter profile later permits it; generic contract validates role vocabulary, not adapter cardinality.
+Generic manifest validation checks role vocabulary but does not require exactly one statement/proof; adapter-specific cardinality belongs to Task 3.
 
-- [ ] **Step 4: Add exact digest formula RED tests**
+- [ ] **Step 4: Pin exact digest formulas**
 
-For dependency closure:
+Dependency closure:
 
 ```js
-const deps = validManifest().dependencies;
-const expected = sha256(Buffer.concat([
+const expectedDependency = sha256(Buffer.concat([
   Buffer.from('axiom-formal-dependency-closure.v1\n', 'utf8'),
-  Buffer.from(canonicalJson(deps), 'utf8')
+  Buffer.from(canonicalJson(manifest.dependencies), 'utf8')
 ]));
-assert.equal(formalDependencyClosureDigest(deps), expected);
+assert.equal(formalDependencyClosureDigest(manifest.dependencies), expectedDependency);
 ```
 
-For profile:
+Verifier profile:
 
 ```js
 const expectedProfile = sha256(Buffer.concat([
@@ -193,7 +184,7 @@ const expectedProfile = sha256(Buffer.concat([
 assert.equal(formalVerifierProfileDigest(profile), expectedProfile);
 ```
 
-For bundle, use the spec's two-stage formula:
+Proof bundle is the spec's two-stage formula:
 
 ```js
 const manifestDigest = sha256(canonicalJson(manifest));
@@ -204,7 +195,7 @@ const expectedBundle = sha256(Buffer.concat([
 assert.equal(formalProofBundleDigest(manifest), expectedBundle);
 ```
 
-For verification artifact:
+Verification artifact:
 
 ```js
 const expectedVerification = sha256(Buffer.concat([
@@ -214,27 +205,50 @@ const expectedVerification = sha256(Buffer.concat([
 assert.equal(formalVerificationArtifactDigest(verificationArtifact), expectedVerification);
 ```
 
-- [ ] **Step 5: Verify RED**
+`formalProofBundleDigest()` is a pure low-level formula helper; production orchestration MUST call it only after Task 2 has independently validated every artifact byte/size.
 
-Run:
+- [ ] **Step 5: Pin resource-policy contract**
+
+Use the closed object:
+
+```js
+{
+  schema: 'axiom-formal-resource-policy.v1',
+  max_manifest_bytes,
+  max_bundle_bytes,
+  max_file_count,
+  max_individual_file_bytes,
+  max_dependency_count,
+  max_transcript_bytes,
+  wall_clock_ms,
+  max_process_count,
+  max_output_bytes,
+  max_recursion_depth,
+  max_archive_expansions
+}
+```
+
+All fields are non-negative safe integers; byte/count/time ceilings except `max_archive_expansions` must be positive. In this slice `max_process_count === 1` and `max_archive_expansions === 0`. `formalResourcePolicyDigest(policy) === digestObject(normalizeFormalResourcePolicy(policy))`.
+
+- [ ] **Step 6: Verify RED**
 
 ```bash
 node --test mesh/test/axiom-formal-contracts.test.mjs
 ```
 
-Expected: FAIL because `packages/axiom-verify/formal-contracts.mjs` does not exist.
+Expected: FAIL because `formal-contracts.mjs` does not exist.
 
-- [ ] **Step 6: Implement `formal-contracts.mjs` minimally**
+- [ ] **Step 7: Implement minimal contracts and verify GREEN**
 
-Use exact-key validators, bounded strings, bounded arrays, ordinary plain-object checks, explicit regexes, and no coercion. Path grammar should accept only:
+Path grammar:
 
 ```js
 const FORMAL_PATH = /^(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/;
 ```
 
-Then reject any segment equal to `.` or `..` even if the regex otherwise matches it.
+Then reject any segment exactly `.` or `..`.
 
-Implement domain-separated hashing with raw prefix bytes and no hidden normalization:
+Domain-separated bytes:
 
 ```js
 export function domainSeparatedDigestBytes(domain, bytes) {
@@ -244,15 +258,9 @@ export function domainSeparatedDigestBytes(domain, bytes) {
   const body = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   return sha256(Buffer.concat([Buffer.from(domain, 'utf8'), body]));
 }
-
-export function domainSeparatedDigestObject(domain, value) {
-  return domainSeparatedDigestBytes(domain, Buffer.from(canonicalJson(value), 'utf8'));
-}
 ```
 
-Implement `formalProofBundleDigest()` exactly as two-stage manifest digest + domain prefix from the spec; do not simplify it to `domainSeparatedDigestObject()`.
-
-- [ ] **Step 7: Verify GREEN and commit**
+Run and commit:
 
 ```bash
 node --test mesh/test/axiom-formal-contracts.test.mjs
@@ -262,7 +270,7 @@ git commit -m "feat: add formal verification v1 contracts"
 
 ---
 
-### Task 2: Bounded in-memory bundle materialization
+### Task 2: Bootstrap-bounded in-memory artifact validation
 
 **Files:**
 - Create: `packages/axiom-verify/formal-materialize.mjs`
@@ -270,33 +278,13 @@ git commit -m "feat: add formal verification v1 contracts"
 
 **Interfaces:**
 - Produces:
-  - `normalizeFormalResourcePolicy(policy)`
-  - `formalResourcePolicyDigest(policy)`
-  - `validateAndMaterializeFormalBundle({ manifest, artifacts }, resourcePolicy)`
-- Returns a frozen record:
+  - `FORMAL_BOOTSTRAP_RESOURCE_POLICY`
+  - `validateAndMaterializeFormalBundle({ manifest, artifacts })`
+  - `assertMaterializedBundleWithinResourcePolicy(materialized, policy)`
+- `FORMAL_BOOTSTRAP_RESOURCE_POLICY` is fixed in source and intentionally conservative:
 
 ```js
 {
-  manifest,
-  manifest_json,
-  artifact_records: [
-    { path, role, sha256, size_bytes, bytes }
-  ],
-  total_bundle_bytes,
-  dependency_closure_digest,
-  proof_bundle_digest
-}
-```
-
-- `artifacts` input is a plain object mapping exact declared logical path to `Buffer`, `Uint8Array`, or UTF-8 string. It is not a filesystem path map and never triggers I/O.
-- Consumes Task 1 validators/digest helpers and `canonicalJson`, `sha256`.
-
-- [ ] **Step 1: Write RED tests for resource limits**
-
-Use this exact resource policy fixture:
-
-```js
-const policy = {
   schema: 'axiom-formal-resource-policy.v1',
   max_manifest_bytes: 32768,
   max_bundle_bytes: 262144,
@@ -304,30 +292,52 @@ const policy = {
   max_individual_file_bytes: 65536,
   max_dependency_count: 64,
   max_transcript_bytes: 16384,
-  wall_clock_ms: 1000,
+  wall_clock_ms: 5000,
   max_process_count: 1,
   max_output_bytes: 16384,
   max_recursion_depth: 32,
   max_archive_expansions: 0
-};
+}
 ```
 
-Prove each limit fails with a distinct code/message when exceeded.
+This bootstrap ceiling is not a verifier trust decision. It exists only so an unknown/untrusted requested profile cannot force unbounded parsing/materialization before registry lookup.
 
-- [ ] **Step 2: Write RED tests for exact artifact byte binding**
+- Returns:
 
-For a valid manifest and artifact map, independently compute SHA-256/size in the fixture. Then prove:
-- altered statement bytes -> `artifact_digest_mismatch`;
-- altered proof bytes -> `artifact_digest_mismatch`;
+```js
+{
+  manifest,
+  manifest_json,
+  artifact_records: [{ path, role, sha256, size_bytes, bytes }],
+  total_artifact_bytes,
+  total_bundle_bytes,
+  dependency_closure_digest,
+  proof_bundle_digest
+}
+```
+
+- `artifacts` is a plain object mapping exact declared logical path to `Buffer`, `Uint8Array`, or UTF-8 string. No filesystem reads occur.
+
+- [ ] **Step 1: Write bootstrap-limit RED tests**
+
+Prove distinct fail-closed codes for bootstrap violation of manifest bytes, total bundle bytes, file count, individual file bytes, and dependency count.
+
+- [ ] **Step 2: Write exact artifact-binding RED tests**
+
+Prove:
+- altered statement/proof bytes -> `artifact_digest_mismatch`;
 - correct digest but wrong declared size -> `artifact_size_mismatch`;
 - missing declared file -> `artifact_missing`;
 - undeclared extra file -> `artifact_undeclared`;
-- duplicate logical path cannot be expressed through the input object and is already blocked in manifest validation;
-- non-string/Buffer/Uint8Array value -> `artifact_invalid_bytes`;
-- total bundle-size accounting includes manifest canonical JSON bytes plus all artifact bytes;
-- no archive expansion path exists.
+- unsupported byte value -> `artifact_invalid_bytes`;
+- `total_bundle_bytes` equals canonical manifest UTF-8 bytes plus all artifact bytes;
+- proof bundle digest is not returned until all declared artifact hashes/sizes have passed.
 
-- [ ] **Step 3: Verify RED**
+- [ ] **Step 3: Write profile-policy recheck RED tests**
+
+Given a successfully bootstrap-materialized bundle, pass a tighter profile policy to `assertMaterializedBundleWithinResourcePolicy()` and prove it rejects if any profile ceiling is exceeded. This is the second resource gate required before adapter execution.
+
+- [ ] **Step 4: Verify RED**
 
 ```bash
 node --test mesh/test/axiom-formal-materialize.test.mjs
@@ -335,36 +345,32 @@ node --test mesh/test/axiom-formal-materialize.test.mjs
 
 Expected: FAIL because `formal-materialize.mjs` does not exist.
 
-- [ ] **Step 4: Implement the minimal materializer**
-
-Validation order is normative:
+- [ ] **Step 5: Implement the exact validation sequence**
 
 ```text
-validate manifest shape/order/path rules
--> normalize resource policy
--> enforce manifest byte ceiling
--> enforce file/dependency count ceilings
+validate manifest/order/path shape
+-> apply fixed bootstrap manifest/file/dependency ceilings
 -> require exact declared artifact key set
--> coerce only string/Buffer/Uint8Array to immutable copied Buffer
--> check individual and aggregate byte ceilings
--> check exact sha256 + size_bytes for every file
+-> copy only string/Buffer/Uint8Array bytes
+-> enforce individual + aggregate bootstrap byte ceilings
+-> verify exact sha256 + size_bytes for every artifact
 -> compute dependency_closure_digest
 -> compute proof_bundle_digest
 ```
 
-Do not call `fs`, `path.resolve`, package managers, environment discovery, or network code.
+`assertMaterializedBundleWithinResourcePolicy()` rechecks already-measured counts/bytes against the resolved profile policy; it does not re-read or mutate bytes.
 
-- [ ] **Step 5: Verify GREEN and commit**
+- [ ] **Step 6: Verify GREEN and commit**
 
 ```bash
 node --test mesh/test/axiom-formal-contracts.test.mjs mesh/test/axiom-formal-materialize.test.mjs
 git add packages/axiom-verify/formal-materialize.mjs mesh/test/axiom-formal-materialize.test.mjs
-git commit -m "feat: materialize formal proof bundles in memory"
+git commit -m "feat: bind formal proof bundle bytes"
 ```
 
 ---
 
-### Task 3: Allowlisted verifier profile registry and deterministic mock adapter
+### Task 3: Static allowlisted mock verifier profile and adapter
 
 **Files:**
 - Create: `packages/axiom-verify/formal-mock-adapter.mjs`
@@ -374,33 +380,39 @@ git commit -m "feat: materialize formal proof bundles in memory"
 - Create: `mesh/test/axiom-formal-mock-adapter.test.mjs`
 
 **Interfaces:**
-- `formal-profile-registry.mjs` produces:
-  - `MOCK_FORMAL_RESOURCE_POLICY`
-  - `MOCK_FORMAL_PROFILE`
-  - `MOCK_FORMAL_PROFILE_DIGEST`
-  - `resolveFormalVerifierProfile(profileDigest)`
-- Registry resolution returns:
+- `formal-profile-registry.mjs` exports `MOCK_FORMAL_RESOURCE_POLICY`, `MOCK_FORMAL_PROFILE`, `MOCK_FORMAL_PROFILE_DIGEST`, `resolveFormalVerifierProfile(profileDigest)`.
+- Exact resource policy is the same numeric ceiling as bootstrap in v1; future profiles may be tighter but never bypass bootstrap.
+- Exact profile descriptor:
 
 ```js
 {
-  profile,
-  profile_digest,
-  resource_policy,
-  resource_policy_digest,
-  adapter
+  profile_schema: 'axiom-formal-verifier-profile.v1',
+  adapter_id: 'axiom.mock-formal.v1',
+  adapter_version: '1.0.0',
+  formal_system: {
+    language: 'axiom-mock',
+    language_version: '1',
+    logic_profile: 'token-equality-v1'
+  },
+  verifier_id: 'axiom-mock-kernel',
+  verifier_version: '1.0.0',
+  executable_digest: sha256('axiom-mock-kernel-fixture:v1'),
+  configuration_digest: sha256('axiom-mock-config:token-equality-v1'),
+  statement_fingerprint_method: 'sha256-domain:axiom-mock-statement-fingerprint.v1',
+  dependency_closure_method: 'axiom-formal-dependency-closure.v1',
+  resource_policy_digest: formalResourcePolicyDigest(MOCK_FORMAL_RESOURCE_POLICY),
+  output_contract_version: 'axiom-formal-adapter-output.v1'
 }
 ```
 
-- `formal-mock-adapter.mjs` produces:
-  - `MOCK_STATEMENT_FINGERPRINT_DOMAIN = 'axiom-mock-statement-fingerprint.v1\n'`
-  - `verifyMockFormalProof({ manifest, materialized, resolved_profile })`
-- Adapter output is exactly:
+- Registry resolution returns `{ profile, profile_digest, resource_policy, resource_policy_digest, adapter }` or `null`. No dynamic registration API exists.
+- `verifyMockFormalProof({ manifest, materialized, resolved_profile })` returns exactly:
 
 ```js
 {
   verdict,
   reason_code,
-  statement_fingerprint,
+  statement_fingerprint: { algorithm: 'sha256-domain-v1', value: <64-hex> },
   dependency_closure_digest,
   premise_refs,
   verifier_profile_digest,
@@ -408,62 +420,31 @@ git commit -m "feat: materialize formal proof bundles in memory"
 }
 ```
 
-- `formal-fixtures.mjs` produces `createMockFormalProofFixture(overrides = {})` for tests only.
+- [ ] **Step 1: Write profile identity RED tests**
 
-- [ ] **Step 1: Write registry RED tests**
+Assert resolving `MOCK_FORMAL_PROFILE_DIGEST` round-trips exact profile/resource digests and unknown 64-hex returns `null`. Prove changing any one of `adapter_version`, `verifier_version`, `executable_digest`, `configuration_digest`, `statement_fingerprint_method`, `dependency_closure_method`, `resource_policy_digest`, or `output_contract_version` changes profile digest.
 
-Assert:
+- [ ] **Step 2: Pin exact mock proof semantics in tests**
 
-```js
-const resolved = resolveFormalVerifierProfile(MOCK_FORMAL_PROFILE_DIGEST);
-assert.equal(resolved.profile_digest, MOCK_FORMAL_PROFILE_DIGEST);
-assert.equal(formalVerifierProfileDigest(resolved.profile), MOCK_FORMAL_PROFILE_DIGEST);
-assert.equal(formalResourcePolicyDigest(resolved.resource_policy), resolved.resource_policy_digest);
-assert.equal(typeof resolved.adapter, 'function');
-assert.equal(resolveFormalVerifierProfile('0'.repeat(64)), null);
-```
-
-Prove changing any one of these profile fields changes the digest:
-- `adapter_version`;
-- `verifier_version`;
-- `executable_digest`;
-- `configuration_digest`;
-- `statement_fingerprint_method`;
-- `dependency_closure_method`;
-- `resource_policy_digest`;
-- `output_contract_version`.
-
-- [ ] **Step 2: Define the exact mock semantics in tests**
-
-The mock profile accepts exactly one `statement` artifact and exactly one `proof` artifact.
+Exactly one `statement` artifact and one `proof` artifact are required. `entrypoint.path` must equal the statement artifact path.
 
 Statement fingerprint:
 
 ```text
-SHA-256(
-  UTF8("axiom-mock-statement-fingerprint.v1\n") || statement_bytes
-)
+SHA-256(UTF8("axiom-mock-statement-fingerprint.v1\n") || statement_bytes)
 ```
 
-Valid proof bytes are exactly:
+Valid proof bytes:
 
 ```text
-axiom.mock.proof.v1\n<statement_fingerprint>\n
+axiom.mock.proof.v1\n<statement_fingerprint.value>\n
 ```
 
-The adapter checks that `manifest.entrypoint.path` is the statement artifact path and returns `REJECTED/proof_rejected` when proof bytes do not match that exact form.
+Bad proof returns `REJECTED/proof_rejected`. Missing/duplicate role cardinality returns `ERROR/adapter_contract_violation`.
 
-The adapter never attempts theorem search, network access, file discovery, process launch, or policy decisions.
+- [ ] **Step 3: Pin stable adapter transcript**
 
-- [ ] **Step 3: Write adapter RED tests**
-
-Cover:
-- valid fixture -> `VERIFIED`;
-- changed proof bytes with manifest hashes recomputed -> `REJECTED/proof_rejected`;
-- statement fingerprint mismatch in manifest -> adapter returns independently computed fingerprint so orchestrator can reject the mismatch in Task 4;
-- duplicate/missing statement/proof roles -> `ERROR/adapter_contract_violation`;
-- returned `premise_refs` exactly equal the canonical manifest list;
-- transcript contains only stable semantic fields and no timestamp/PID/path outside logical bundle paths.
+Adapter transcript is a plain canonicalizable record containing only stable logical facts such as declaration, logical statement path, proof check boolean, and reason code. It contains no wall-clock, PID, hostname, absolute path, environment variable, random value, or raw diagnostic stream.
 
 - [ ] **Step 4: Verify RED**
 
@@ -471,20 +452,22 @@ Cover:
 node --test mesh/test/axiom-formal-profile-registry.test.mjs mesh/test/axiom-formal-mock-adapter.test.mjs
 ```
 
-Expected: FAIL because registry/adapter modules do not exist.
+Expected: FAIL because modules do not exist.
 
-- [ ] **Step 5: Implement the registry and fixture-only mock adapter**
+- [ ] **Step 5: Implement registry, adapter, fixture builder**
 
-Use fixed mock identity material derived from immutable labels, not environment state:
+`createMockFormalProofFixture(overrides = {})` must:
+1. resolve the static mock profile;
+2. create statement bytes;
+3. compute statement fingerprint;
+4. create proof bytes from that fingerprint;
+5. compute artifact hashes/sizes and canonical artifact ordering;
+6. build canonical dependencies/premises/non-claims/source refs;
+7. copy redundant verifier identity fields from the resolved profile;
+8. set top-level resource policy digest from the resolved resource policy;
+9. return `{ bundle: { manifest, artifacts }, manifest, statement_fingerprint, dependency_closure_digest, proof_bundle_digest }`.
 
-```js
-const executable_digest = sha256('axiom-mock-kernel:v1');
-const configuration_digest = sha256('axiom-mock-config:token-equality-v1');
-```
-
-The registry is a frozen allowlist. Do not support dynamic registration in v1.
-
-`createMockFormalProofFixture()` must generate statement/proof bytes first, then exact artifact descriptor hashes/sizes, then dependency closure, profile bindings, statement fingerprint, and final canonical manifest.
+The fixture helper may call the materializer after construction to calculate its expected bundle digest; production verification still recomputes independently.
 
 - [ ] **Step 6: Verify GREEN and commit**
 
@@ -499,12 +482,12 @@ git add packages/axiom-verify/formal-mock-adapter.mjs \
   packages/axiom-verify/formal-fixtures.mjs \
   mesh/test/axiom-formal-profile-registry.test.mjs \
   mesh/test/axiom-formal-mock-adapter.test.mjs
-git commit -m "feat: add allowlisted mock formal verifier profile"
+git commit -m "feat: add allowlisted mock formal verifier"
 ```
 
 ---
 
-### Task 4: Formal verification orchestrator and deterministic verification artifact
+### Task 4: Formal verification orchestrator, transcript, and report
 
 **Files:**
 - Create: `packages/axiom-verify/verify-formal-proof.mjs`
@@ -512,27 +495,25 @@ git commit -m "feat: add allowlisted mock formal verifier profile"
 - Create: `mesh/test/axiom-formal-verification.test.mjs`
 
 **Interfaces:**
-- Produces `verifyFormalProofBundle(bundle, options = {})`.
-- Default resolver is `resolveFormalVerifierProfile`.
-- Return shape:
+- `verifyFormalProofBundle(bundle, options = {})` where `options.profileResolver` defaults to `resolveFormalVerifierProfile` and is the only test injection hook.
+- Returns:
 
 ```js
 {
-  ok,                       // true only for VERIFIED
-  verdict,                  // VERIFIED | REJECTED | UNSUPPORTED | ERROR
-  code,                     // bounded reason code
-  reason,                   // human diagnostic, never policy-authoritative
-  artifact,                 // axiom-formal-proof-verification.v1 or null for pre-contract failures
-  artifact_digest,          // exact domain-separated digest or null
-  report                    // human-facing non-claim report
+  ok,
+  verdict,
+  code,
+  reason,
+  artifact,
+  artifact_digest,
+  report
 }
 ```
 
-- `formal-report.mjs` produces:
-  - `FORMAL_VERIFICATION_NON_CLAIMS`
-  - `buildFormalVerificationReport(result)`
+- `artifact === null` only for pre-contract failures where a valid v1 verification artifact cannot be truthfully constructed (for example malformed/unknown manifest schema).
+- After a manifest is structurally valid and all bytes are bootstrap-bound, `UNSUPPORTED`, `REJECTED`, and `ERROR` should emit a deterministic `axiom-formal-proof-verification.v1` artifact whenever required identity fields are available.
 
-- [ ] **Step 1: Write the valid end-to-end RED test**
+- [ ] **Step 1: Write exact valid-path RED test**
 
 ```js
 const fixture = createMockFormalProofFixture();
@@ -540,54 +521,56 @@ const result = verifyFormalProofBundle(fixture.bundle);
 assert.equal(result.ok, true);
 assert.equal(result.verdict, 'VERIFIED');
 assert.equal(result.code, 'pass');
-assert.equal(result.artifact.schema, 'axiom-formal-proof-verification.v1');
+assert.deepEqual(result.artifact.statement_fingerprint, fixture.statement_fingerprint);
 assert.equal(result.artifact.proof_bundle_digest, fixture.proof_bundle_digest);
 assert.equal(result.artifact.verifier_profile_digest, MOCK_FORMAL_PROFILE_DIGEST);
 assert.equal(result.artifact_digest, formalVerificationArtifactDigest(result.artifact));
-assert.match(result.report.human_summary, /does not establish.*external world/i);
-assert.match(result.report.human_summary, /does not authorize external effects/i);
 ```
 
-- [ ] **Step 2: Write RED tests for the normative verification sequence**
+- [ ] **Step 2: Implement/test the normative orchestration order**
 
-Cover these exact classes:
-- invalid manifest -> `ERROR/manifest_invalid`, `artifact === null`;
-- unknown profile after valid byte binding -> `UNSUPPORTED/profile_unknown`;
-- profile digest mismatch -> `REJECTED/profile_digest_mismatch`;
-- redundant adapter/version/verifier/executable/configuration fields disagree with resolved profile -> matching bounded reason code;
+Exact order:
+
+```text
+1. bootstrap-validate manifest + caller-supplied bytes
+2. resolve requested profile_digest through options.profileResolver
+3. unknown profile -> UNSUPPORTED/profile_unknown (no adapter call)
+4. compare manifest redundant profile fields to resolved profile
+5. compare top-level resource_policy_digest to resolved resource policy digest
+6. apply resolved profile resource ceilings to materialized measured facts
+7. invoke adapter with immutable validated material
+8. measure elapsed monotonic time only for resource enforcement; do not include elapsed value in core transcript/artifact
+9. validate bounded adapter output contract
+10. invoke adapter a second time with identical immutable inputs and compare canonical semantic output
+11. disagreement -> ERROR/nondeterministic_result
+12. independently compare statement fingerprint, dependency closure digest, premise refs, verifier profile digest
+13. construct bounded deterministic transcript and enforce max_transcript_bytes
+14. construct/validate verification artifact
+15. compute verification artifact digest
+16. build human report with required non-claims
+```
+
+The synchronous mock's elapsed-time check can detect an overrun after return but cannot preempt a hung function; report/non-claims must not imply stronger sandboxing.
+
+- [ ] **Step 3: Write failure-class RED tests**
+
+Cover:
+- malformed manifest -> `ERROR/manifest_invalid`, `artifact === null`;
+- unknown profile -> `UNSUPPORTED/profile_unknown`;
+- redundant `adapter_id`, `adapter_version`, `verifier_id`, `verifier_version`, `executable_digest`, `configuration_digest` mismatch -> bounded corresponding `REJECTED` code;
 - resource-policy digest mismatch -> `REJECTED/resource_policy_mismatch`;
-- changed dependency descriptor with all file bytes unchanged -> `REJECTED/dependency_digest_mismatch` when the adapter result does not match the recomputed closure;
-- statement fingerprint mismatch -> `REJECTED/statement_fingerprint_mismatch`;
+- profile-specific byte/count ceiling breach -> `ERROR/resource_limit_exceeded`;
+- adapter throw -> `ERROR/verifier_execution_error`;
 - malformed adapter output -> `ERROR/adapter_contract_violation`;
-- adapter throws -> `ERROR/verifier_execution_error`;
-- transcript canonical bytes exceed policy -> `ERROR/transcript_limit_exceeded`;
-- proof mismatch -> `REJECTED/proof_rejected`;
-- successful path emits `VERIFIED` only after all independent comparisons pass.
+- adapter transcript over limit -> `ERROR/transcript_limit_exceeded`;
+- adapter nondeterminism -> `ERROR/nondeterministic_result`;
+- statement fingerprint mismatch -> `REJECTED/statement_fingerprint_mismatch`;
+- dependency closure mismatch -> `REJECTED/dependency_digest_mismatch`;
+- premise list mismatch -> `REJECTED/premise_refs_mismatch`;
+- bad proof -> `REJECTED/proof_rejected`;
+- only the exact valid fixture -> `VERIFIED/pass`.
 
-- [ ] **Step 3: Add deterministic-repeat protection**
-
-For this v1 mock profile, invoke the adapter twice with the same immutable materialized input and compare canonical semantic adapter outputs before accepting them.
-
-Test with an injected resolver returning an adapter that toggles its verdict:
-
-```js
-let flip = false;
-const nondeterministicAdapter = () => ({
-  verdict: (flip = !flip) ? 'VERIFIED' : 'REJECTED',
-  reason_code: 'pass',
-  statement_fingerprint: fixture.statement_fingerprint,
-  dependency_closure_digest: fixture.dependency_closure_digest,
-  premise_refs: fixture.manifest.premise_refs,
-  verifier_profile_digest: fixture.manifest.verifier_profile.profile_digest,
-  transcript: { stable: false }
-});
-```
-
-Expected: `ERROR/nondeterministic_result`; never `VERIFIED`.
-
-- [ ] **Step 4: Define the deterministic transcript contract**
-
-The orchestrator canonicalizes a transcript object containing only:
+- [ ] **Step 4: Pin deterministic transcript shape**
 
 ```js
 {
@@ -603,9 +586,9 @@ The orchestrator canonicalizes a transcript object containing only:
 }
 ```
 
-Reject adapter transcript values that cannot be canonicalized. No wall-clock, PID, hostname, temp path, or random identifier is added.
+Compute `transcript_digest = sha256(canonicalJson(transcript))`; the approved spec requires the transcript itself to be bounded/deterministic but does not define an additional transcript domain prefix.
 
-- [ ] **Step 5: Build the final verification artifact exactly**
+- [ ] **Step 5: Pin verification artifact shape**
 
 ```js
 {
@@ -617,14 +600,14 @@ Reject adapter transcript values that cannot be canonicalized. No wall-clock, PI
   statement_fingerprint: computedStatementFingerprint,
   dependency_closure_digest: materialized.dependency_closure_digest,
   premise_refs: manifest.premise_refs,
-  verifier_profile_digest: resolved.profile_digest,
-  resource_policy_digest: resolved.resource_policy_digest,
+  verifier_profile_digest: requestedOrResolvedProfileDigest,
+  resource_policy_digest: manifest.resource_policy_digest,
   transcript_digest,
   verification_scope: {
     formal_system: manifest.formal_system,
-    adapter_id: resolved.profile.adapter_id,
-    verifier_id: resolved.profile.verifier_id,
-    verifier_version: resolved.profile.verifier_version
+    adapter_id: resolved ? resolved.profile.adapter_id : manifest.verifier_profile.adapter_id,
+    verifier_id: resolved ? resolved.profile.verifier_id : manifest.verifier_profile.verifier_id,
+    verifier_version: resolved ? resolved.profile.verifier_version : manifest.verifier_profile.verifier_version
   },
   non_claims: [
     'does-not-authorize-external-effects',
@@ -636,17 +619,27 @@ Reject adapter transcript values that cannot be canonicalized. No wall-clock, PI
 }
 ```
 
-Keep `non_claims[]` lexicographically sorted in the actual implementation.
+The array above is already lexicographically sorted. For `UNSUPPORTED/profile_unknown`, the artifact records the requested manifest profile identity; it does not represent that profile as trusted or accepted.
 
-- [ ] **Step 6: Verify RED**
+- [ ] **Step 6: Pin human report language**
+
+`FORMAL_VERIFICATION_NON_CLAIMS` must state at minimum:
+- formal premises may not correspond to the external world;
+- a result does not establish general model correctness;
+- verifier soundness is only within accepted profile/review assumptions;
+- formal verification does not authorize external effects;
+- it does not establish legal sufficiency, policy wisdom, or institutional legitimacy;
+- the mock profile is fixture-only and not a real theorem prover.
+
+- [ ] **Step 7: Verify RED, implement, GREEN, commit**
 
 ```bash
 node --test mesh/test/axiom-formal-verification.test.mjs
 ```
 
-Expected: FAIL because orchestrator/report modules do not exist.
+Expected before implementation: FAIL.
 
-- [ ] **Step 7: Implement minimal orchestrator/report and verify GREEN**
+Then:
 
 ```bash
 node --test \
@@ -663,67 +656,59 @@ git commit -m "feat: verify formal proof bundles deterministically"
 
 ---
 
-### Task 5: AXIOM Verify public surface and authority/non-reachability regression
+### Task 5: AXIOM Verify public surface and non-authority reachability guard
 
 **Files:**
 - Modify: `packages/axiom-verify/index.mjs`
 - Create: `mesh/test/axiom-formal-authority-boundary.test.mjs`
 
 **Interfaces:**
-- Add public exports from `index.mjs` for:
-  - all three formal schema constants;
-  - `formalDependencyClosureDigest`;
-  - `formalVerifierProfileDigest`;
-  - `formalProofBundleDigest`;
-  - `formalVerificationArtifactDigest`;
-  - `MOCK_FORMAL_PROFILE_DIGEST`;
-  - `createMockFormalProofFixture`;
-  - `verifyFormalProofBundle`;
-  - `FORMAL_VERIFICATION_NON_CLAIMS`.
-- Do not change `verifyMachineReceiptLike()` semantics.
-- Do not add a generic dispatcher that ambiguously mixes receipt and proof-bundle shapes in v1.
+- Publicly export all formal schema constants, digest/validation helpers needed by independent verifiers, `MOCK_FORMAL_PROFILE_DIGEST`, `createMockFormalProofFixture`, `verifyFormalProofBundle`, and `FORMAL_VERIFICATION_NON_CLAIMS`.
+- Do not change `verifyMachineReceiptLike()` behavior.
+- Do not add a generic receipt/proof dispatcher in v1.
 
-- [ ] **Step 1: Write the public-surface RED test**
+- [ ] **Step 1: Write public-surface RED test**
 
-Import from `../../packages/axiom-verify/index.mjs` only and prove the new formal API works without importing internal files.
+Import only from `../../packages/axiom-verify/index.mjs`, create a mock fixture, verify it, and assert `VERIFIED` plus exact artifact digest.
 
-- [ ] **Step 2: Write a static no-authority-import test**
+- [ ] **Step 2: Add production import/ambient-state static guard**
 
-In `mesh/test/axiom-formal-authority-boundary.test.mjs`, read the production formal modules and reject forbidden imports:
+Read only the new production formal modules and extract executable import lines. Reject imports matching:
 
 ```js
-const forbidden = [
-  /from ['"]node:fs/, /from ['"]node:net/, /from ['"]node:http/, /from ['"]node:https/,
-  /from ['"]node:tls/, /from ['"]node:dgram/, /from ['"]node:child_process/,
-  /mesh\/src\//, /external-effect-outbox/, /capabilit(?:y|ies)/,
-  /approval-consum/, /gateway-client/, /hypervisor/
-];
+[
+  /node:fs/, /node:net/, /node:http/, /node:https/, /node:tls/, /node:dgram/,
+  /node:child_process/, /mesh\/src\//, /external-effect-outbox/,
+  /gateway-client/, /hypervisor/, /approval-consum/
+]
 ```
 
-Apply those regexes to executable import statements, not comments/human-facing non-claim strings. A small import-line extractor is preferable to scanning all text.
+Also reject executable production references to:
 
-- [ ] **Step 3: Pin that Mesh has no formal-verification policy consumer in this slice**
+```js
+[
+  /process\.env/, /process\.cwd\(/, /Math\.random\(/, /Date\.now\(/,
+  /new Date\(/, /os\.hostname\(/, /homedir\(/
+]
+```
 
-Scan production `.mjs` files under `mesh/src/` and assert none import `packages/axiom-verify/verify-formal-proof.mjs`, `formal-profile-registry.mjs`, or reference `axiom-formal-proof-verification.v1` in executable source.
+Do not scan comments/non-claim prose with these semantic regexes; strip comments or inspect executable lines so the test does not punish documentation language.
 
-This is intentional first-slice behavior: a fabricated `{ verdict: 'VERIFIED' }` object cannot satisfy Mesh policy because no Mesh production consumer exists yet.
+- [ ] **Step 3: Pin no Mesh policy consumer in this slice**
 
-- [ ] **Step 4: Prove a genuine verification artifact cannot masquerade as an external effect**
+Recursively scan production `.mjs` under `mesh/src/` and assert no executable source imports formal verifier modules or references `axiom-formal-proof-verification.v1`. This is intentional: a fabricated JSON object containing `verdict: 'VERIFIED'` is not a Mesh policy input in this slice at all.
 
-Use the real external-effect validator:
+- [ ] **Step 4: Prove a real verification artifact is rejected by external-effect normalization**
 
 ```js
 import { normalizePreparedExternalEffect } from '../src/lib/external-effect-outbox.mjs';
 
 const verified = verifyFormalProofBundle(createMockFormalProofFixture().bundle);
 assert.equal(verified.verdict, 'VERIFIED');
-assert.throws(
-  () => normalizePreparedExternalEffect(verified.artifact),
-  /schema|prepared external effect/i
-);
+assert.throws(() => normalizePreparedExternalEffect(verified.artifact));
 ```
 
-Also prove the verification artifact contains none of these authority fields:
+Assert the artifact has none of:
 
 ```text
 capability_id
@@ -734,15 +719,15 @@ external_effect_executed
 merge_authorized
 ```
 
-- [ ] **Step 5: Verify RED**
+- [ ] **Step 5: Verify RED, expose API, GREEN, commit**
 
 ```bash
 node --test mesh/test/axiom-formal-authority-boundary.test.mjs
 ```
 
-Expected: FAIL until `index.mjs` exports the formal surface.
+Expected before index export: FAIL.
 
-- [ ] **Step 6: Update `index.mjs`, verify GREEN, and commit**
+Then:
 
 ```bash
 node --test \
@@ -759,18 +744,18 @@ git commit -m "feat: expose formal verification through AXIOM Verify"
 
 ---
 
-### Task 6: Adversarial matrix and report non-claim regression
+### Task 6: Adversarial mutation matrix
 
 **Files:**
 - Create: `mesh/test/axiom-formal-adversarial.test.mjs`
 
 **Interfaces:**
-- Consumes only the public `packages/axiom-verify/index.mjs` surface plus dependency-injection hooks explicitly exposed by `verifyFormalProofBundle()` for tests (`profileResolver` only).
-- Produces no production code unless a failing adversarial case requires the smallest correction in Tasks 1–5 modules.
+- Consume public `packages/axiom-verify/index.mjs` plus the documented `options.profileResolver` injection hook.
+- No new production module should be necessary; if a mutation exposes a defect, make the smallest correction in Tasks 1–5 code and rerun the focused suite.
 
-- [ ] **Step 1: Build the mutation matrix**
+- [ ] **Step 1: Mutate every trust binding one at a time**
 
-Start from one valid fixture and mutate one dimension at a time:
+Matrix:
 
 ```text
 statement bytes
@@ -795,62 +780,35 @@ configuration digest
 resource-policy digest
 statement fingerprint
 unknown profile
-oversized manifest
-oversized artifact
-oversized bundle
-oversized dependency count
-oversized transcript
+bootstrap manifest limit
+bootstrap file limit
+bootstrap bundle limit
+profile-specific resource limit
+transcript limit
 adapter throw
 adapter malformed output
 adapter nondeterminism
 ```
 
-Each mutation must assert one exact expected verdict/reason class and must never produce `VERIFIED` accidentally.
+Each mutation asserts one expected bounded verdict/reason class and must never accidentally produce `VERIFIED`.
 
-- [ ] **Step 2: Add result-class separation tests**
-
-Prove:
-- bad proof under a known profile -> `REJECTED`;
-- unknown profile -> `UNSUPPORTED`;
-- resource/adaptor execution failure -> `ERROR`;
-- only exact valid fixture -> `VERIFIED`.
-
-Do not collapse these into a boolean-only API.
-
-- [ ] **Step 3: Add human-report non-claim tests**
-
-For every emitted `VERIFIED` result, assert human output contains all of:
+- [ ] **Step 2: Pin result-class separation**
 
 ```text
-external world
-model correctness
-verifier soundness
-external effects
-legal
-policy
+known-profile bad proof        -> REJECTED
+unknown profile                -> UNSUPPORTED
+resource/execution/contract    -> ERROR
+exact valid fixture            -> VERIFIED
 ```
 
-And does not contain phrases that imply production promotion or truth certification:
+- [ ] **Step 3: Pin human non-claims**
 
-```text
-production-ready
-certified true
-guaranteed true
-authorized to execute
-mathematically proves reality
-```
+Every `VERIFIED` report must contain concepts `external world`, `model correctness`, `verifier soundness`, `external effects`, `legal`, and `policy`, and must not claim `production-ready`, `certified true`, `guaranteed true`, `authorized to execute`, or `mathematically proves reality`.
 
-- [ ] **Step 4: Run the adversarial suite and fix only demonstrated failures**
+- [ ] **Step 4: Run and commit adversarial coverage**
 
 ```bash
 node --test mesh/test/axiom-formal-adversarial.test.mjs
-```
-
-Expected after fixes: PASS.
-
-- [ ] **Step 5: Run the complete focused AXIOM Verify suite and commit**
-
-```bash
 node --test \
   mesh/test/axiom-verify.test.mjs \
   mesh/test/axiom-formal-contracts.test.mjs \
@@ -876,11 +834,11 @@ git commit -m "test: harden formal verification boundary"
 - Existing: `docs/superpowers/plans/2026-09-05-formal-verification-substrate.md`
 
 **Interfaces:**
-- Adds `FORMAL-001` immediately after `VERIFY-001` in the P0 tracker.
-- Registers the approved spec and implementation plan in `CANONICAL_DOCUMENTS`.
-- Does not register runtime capability promotion and does not modify `mesh/config/capabilities.json`.
+- Add `FORMAL-001` immediately after `VERIFY-001` in P0.
+- Register approved spec and plan in `CANONICAL_DOCUMENTS`.
+- No capability registry change.
 
-- [ ] **Step 1: Write the documentation-registration RED test**
+- [ ] **Step 1: Write doc-registration RED test**
 
 ```js
 import assert from 'node:assert/strict';
@@ -897,7 +855,7 @@ test('FORMAL-001 design and plan are canonical documents', () => {
 });
 ```
 
-Also read `docs/MASTER-TODO.md` and assert it contains one `FORMAL-001` row with status `In progress` and language including `formal verification is evidence, not authority`.
+Also read `docs/MASTER-TODO.md` and require exactly one `FORMAL-001` row with `In progress` and `formal verification is evidence, not authority`.
 
 - [ ] **Step 2: Verify RED**
 
@@ -905,38 +863,31 @@ Also read `docs/MASTER-TODO.md` and assert it contains one `FORMAL-001` row with
 node --test mesh/test/formal-verification-doc-registration.test.mjs
 ```
 
-Expected: FAIL because the two paths and tracker row are not registered yet.
+Expected: FAIL until registration/tracker change.
 
-- [ ] **Step 3: Update the tracker**
-
-Add exactly one row after `VERIFY-001`:
+- [ ] **Step 3: Add tracker row exactly**
 
 ```text
 | FORMAL-001 | In progress | Formal verification substrate | Exact statement/proof/dependency/profile/resource binding in AXIOM Verify; deterministic mock-adapter evidence path; formal verification is evidence, not authority; no real prover or Mesh effect consumer in this slice |
 ```
 
-- [ ] **Step 4: Register the two reviewed documents**
+- [ ] **Step 4: Register only the spec and plan**
 
-Add the spec path to the specs block and the plan path to the plans block in `CANONICAL_DOCUMENTS`. Do not add package source files or tests to `CANONICAL_DOCUMENTS`.
+Add spec to the specs block and plan to the plans block in `CANONICAL_DOCUMENTS`. Do not add source/tests to the canonical-document list.
 
-- [ ] **Step 5: Verify docs and full repository checks**
+- [ ] **Step 5: Verify docs, repository checks, commit**
 
 ```bash
 node --test mesh/test/formal-verification-doc-registration.test.mjs
 npm test
 npm run check
-```
-
-Expected: all PASS on a supported Node version. If `npm run check` exposes an unrelated pre-existing failure, record it separately; do not weaken FORMAL-001 checks to hide it.
-
-- [ ] **Step 6: Commit**
-
-```bash
 git add docs/MASTER-TODO.md mesh/src/check-docs.mjs mesh/test/formal-verification-doc-registration.test.mjs \
   docs/superpowers/specs/2026-09-05-formal-verification-substrate-design.md \
   docs/superpowers/plans/2026-09-05-formal-verification-substrate.md
 git commit -m "docs: register FORMAL-001 verification substrate"
 ```
+
+Expected: PASS on a supported Node version. If a full repository command exposes an unrelated pre-existing failure, record it separately; do not weaken FORMAL-001 tests.
 
 ---
 
@@ -944,14 +895,14 @@ git commit -m "docs: register FORMAL-001 verification substrate"
 
 **Files:**
 - No new production files expected.
-- Review all Task 1–7 files.
+- Review all Task 1–7 changes.
 
 **Interfaces:**
-- Produces final implementation evidence only; no capability promotion.
+- Produces verification evidence only; no release or capability promotion.
 
-- [ ] **Step 1: Verify exact changed-file scope**
+- [ ] **Step 1: Verify exact production/source scope**
 
-Expected production/source changes are limited to:
+Allowed source changes:
 
 ```text
 packages/axiom-verify/formal-contracts.mjs
@@ -966,9 +917,9 @@ mesh/src/check-docs.mjs
 docs/MASTER-TODO.md
 ```
 
-Plus the approved spec/plan and dedicated tests. Any change to `mesh/config/capabilities.json`, Gateway, Hypervisor, Grid authority clients, approvals, mandates, external-effect execution, networking, or subprocess code is out of scope and must be removed before approval.
+Plus the approved spec/plan and dedicated tests. Changes to `mesh/config/capabilities.json`, Gateway, Hypervisor, Grid authority clients, approval/mandate logic, external-effect execution, network code, or subprocess code are out of scope and must be removed.
 
-- [ ] **Step 2: Run focused verification**
+- [ ] **Step 2: Run focused suite**
 
 ```bash
 node --test \
@@ -992,24 +943,25 @@ npm test
 npm run check
 ```
 
-Expected: PASS on the supported Node matrix.
+Expected: PASS on supported Node.
 
-- [ ] **Step 4: Inspect non-authority reachability manually**
+- [ ] **Step 4: Manually confirm non-authority/non-environment reachability**
 
 Confirm:
-- `packages/axiom-verify/` formal modules have no authority/network/subprocess imports;
-- no Mesh production source consumes `axiom-formal-proof-verification.v1` yet;
+- formal modules have no forbidden authority/network/subprocess imports;
+- no formal proof semantics depend on ambient env/cwd/time/random/hostname;
+- no Mesh production source consumes formal verification artifacts yet;
 - `normalizePreparedExternalEffect()` rejects a formal verification artifact;
 - capabilities registry is unchanged;
-- mock adapter is labeled fixture/substrate-only;
-- reports retain formal-proof-vs-reality non-claims.
+- mock adapter is clearly fixture/substrate-only;
+- reports preserve proof-vs-reality non-claims.
 
-- [ ] **Step 5: Commit any verification-only corrections**
+- [ ] **Step 5: Commit only demonstrated final corrections**
 
-Only if Step 2–4 exposed a defect, make the smallest correction, rerun the exact failing command plus the focused suite, then commit with a narrowly scoped message such as:
+If Steps 2–4 expose a defect, make the smallest correction, rerun the exact failing command plus the focused suite, and commit with a narrow message such as:
 
 ```bash
-git commit -m "fix: close formal verification admission gap"
+git commit -m "fix: close formal verification boundary gap"
 ```
 
 Do not create a release or promote FORMAL-001 beyond `In progress` in this plan.
