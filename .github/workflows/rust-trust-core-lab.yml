@@ -1,0 +1,46 @@
+name: Rust Trust-Core Laboratory
+
+on:
+  push:
+    branches: ["feat/rust-trust-core-foundation"]
+    paths:
+      - "labs/rust-trust-core/**"
+      - ".github/workflows/rust-trust-core-lab.yml"
+      - "docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md"
+      - "docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "labs/rust-trust-core/**"
+      - ".github/workflows/rust-trust-core-lab.yml"
+      - "docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md"
+      - "docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-trust-core-lab-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-trust-core-lab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify pinned Rust toolchain
+        working-directory: labs/rust-trust-core
+        run: |
+          rustc --version
+          cargo --version
+      - name: Verify formatting
+        run: cargo fmt --manifest-path labs/rust-trust-core/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo clippy --manifest-path labs/rust-trust-core/Cargo.toml --all-targets -- -D warnings
+      - name: Verify trust-core laboratory tests
+        run: cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked
