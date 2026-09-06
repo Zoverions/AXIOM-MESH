@@ -253,6 +253,58 @@ test('selective export package FAIL on any file substitution', () => {
   assert.match(result.report.human_summary, /Integrity versus truth/);
 });
 
+test('selective export package FAIL closed when provided file bytes are null or undefined', () => {
+  const { package: pkg, publicKeyPem, fileName } = createExportPackageFixture();
+
+  for (const missing of [null, undefined]) {
+    const result = verifyExportPackage(
+      {
+        manifest: pkg.manifest,
+        files: { [fileName]: missing }
+      },
+      { publicKeyPem }
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.code, 'missing_bytes');
+    assert.match(result.reason, /missing\/null\/undefined bytes/i);
+    assert.match(result.reason, /fail closed/i);
+    assert.equal(result.report.verdict, 'FAIL');
+    assert.match(result.report.human_summary, /Integrity versus truth/);
+  }
+
+  const arrayMissing = verifyExportPackage(
+    {
+      manifest: pkg.manifest,
+      files: [{ name: fileName }]
+    },
+    { publicKeyPem }
+  );
+  assert.equal(arrayMissing.ok, false);
+  assert.equal(arrayMissing.code, 'missing_bytes');
+  assert.match(arrayMissing.reason, new RegExp(`file '${fileName}'`, 'i'));
+
+  const mapMissing = verifyExportPackage(
+    {
+      manifest: pkg.manifest,
+      files: new Map([[fileName, null]])
+    },
+    { publicKeyPem }
+  );
+  assert.equal(mapMissing.ok, false);
+  assert.equal(mapMissing.code, 'missing_bytes');
+});
+
+test('selective export package accepts intentional empty bytes without missing_bytes', () => {
+  const { package: pkg, publicKeyPem, fileName } = createExportPackageFixture({
+    bundle_text: ''
+  });
+  assert.equal(pkg.files[fileName].length, 0);
+  const result = verifyExportPackage(pkg, { publicKeyPem });
+  assert.equal(result.ok, true);
+  assert.equal(result.code, 'pass');
+  assert.equal(result.report.verdict, 'PASS');
+});
+
 test('export / continuity reports sanitize untrusted promotion phrases', () => {
   const crafted = verifyExportPackage(
     {

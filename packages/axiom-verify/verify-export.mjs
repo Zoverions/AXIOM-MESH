@@ -251,7 +251,8 @@ function normalizeProvidedFiles(files) {
   const map = new Map();
   if (files instanceof Map) {
     for (const [name, value] of files.entries()) {
-      map.set(String(name), toBuffer(value));
+      const normalized = putProvidedFile(map, name, value);
+      if (!normalized.ok) return normalized;
     }
   } else if (Array.isArray(files)) {
     for (const entry of files) {
@@ -262,11 +263,17 @@ function normalizeProvidedFiles(files) {
           reason: 'Export package files array entries must include a name'
         };
       }
-      map.set(entry.name, toBuffer(entry.bytes ?? entry.content ?? entry.data));
+      const normalized = putProvidedFile(
+        map,
+        entry.name,
+        entry.bytes ?? entry.content ?? entry.data
+      );
+      if (!normalized.ok) return normalized;
     }
   } else if (typeof files === 'object') {
     for (const [name, value] of Object.entries(files)) {
-      map.set(name, toBuffer(value));
+      const normalized = putProvidedFile(map, name, value);
+      if (!normalized.ok) return normalized;
     }
   } else {
     return {
@@ -279,7 +286,26 @@ function normalizeProvidedFiles(files) {
   return { ok: true, files: map };
 }
 
+function putProvidedFile(map, name, value) {
+  const buffer = toBuffer(value);
+  if (buffer === null) {
+    return {
+      ok: false,
+      code: 'missing_bytes',
+      reason: `Export package file '${name}' has missing/null/undefined bytes; digest checks fail closed without coercing to an empty buffer`
+    };
+  }
+  map.set(String(name), buffer);
+  return { ok: true };
+}
+
 function toBuffer(value) {
+  // Fail closed: never coerce missing content into an empty UTF-8 buffer.
+  // Callers that omit bytes must get a structured FAIL (missing_bytes), not a
+  // zero-length digest match opportunity.
+  if (value === undefined || value === null) {
+    return null;
+  }
   if (Buffer.isBuffer(value)) return value;
   if (value instanceof Uint8Array) return Buffer.from(value);
   if (typeof value === 'string') {
@@ -289,7 +315,7 @@ function toBuffer(value) {
   if (value && typeof value === 'object' && value.type === 'Buffer' && Array.isArray(value.data)) {
     return Buffer.from(value.data);
   }
-  return Buffer.from(String(value ?? ''), 'utf8');
+  return Buffer.from(String(value), 'utf8');
 }
 
 function failClosed(code, reason, schema, extra = {}) {
