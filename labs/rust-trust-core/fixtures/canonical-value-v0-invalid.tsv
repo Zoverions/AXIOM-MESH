@@ -1,0 +1,13 @@
+case_id	encoded_row
+unknown_kind	bad_case\tfloat\t1.0
+invalid_boolean	bad_case\tbool\tyes
+integer_above_safe	bad_case\tsafe_integer\t9007199254740992
+integer_below_safe	bad_case\tsafe_integer\t-9007199254740992
+invalid_negative_zero	bad_case\tnegative_zero\t0
+disallowed_quote	bad_case\tascii_string\thello"world
+malformed_array_token	bad_case\tscalar_array\ti:1,,i:2
+invalid_object_key	bad_case\tascii_key_object\tbad key=i:1
+duplicate_object_key	bad_case\tascii_key_object\ta=i:1;a=i:2
+unsupported_nested_token	bad_case\tscalar_array\to:a=i:1
+wrong_column_count	bad_case\tbool
+duplicate_case_id_fixture	duplicate\tbool\ttrue\nduplicate\tbool\tfalse
