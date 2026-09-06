@@ -69,5 +69,8 @@ fn differential_comparison_rejects_real_byte_divergence() {
     let result = std::panic::catch_unwind(|| {
         assert_exact_match("mismatch_probe", "{\"a\":1}", "{\"a\":2}");
     });
-    assert!(result.is_err(), "byte divergence must fail the differential harness");
+    assert!(
+        result.is_err(),
+        "byte divergence must fail the differential harness"
+    );
 }
