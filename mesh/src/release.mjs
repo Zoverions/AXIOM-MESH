@@ -39,6 +39,13 @@ const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
   'mesh/package.json',
   'mesh/package-lock.json'
 ]);
+const LABORATORY_DEPENDENCY_MANIFESTS = new Set([
+  'labs/rust-trust-core/Cargo.toml',
+  'labs/rust-trust-core/Cargo.lock'
+]);
+const LABORATORY_WORKFLOWS = new Set([
+  'rust-trust-core-lab.yml'
+]);
 const UNSUPPORTED_RUNTIME_PREFIXES = [
   'certs/',
   'cli/',
@@ -340,11 +347,15 @@ export async function verifyReleaseReadiness() {
   const activeWorkflows = (await readdir(join(REPOSITORY_ROOT, '.github', 'workflows')))
     .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
     .sort();
-  const governedWorkflows = [
+  const governedProductionWorkflows = [
     'chain-verification-benchmark.yml',
     'kernel.yml',
     'windows.yml'
   ];
+  const governedWorkflows = [
+    ...governedProductionWorkflows,
+    ...LABORATORY_WORKFLOWS
+  ].sort();
   if (canonicalJson(activeWorkflows) !== canonicalJson(governedWorkflows)) {
     throw new ValidationError('Unsupported legacy GitHub workflows are still active');
   }
@@ -903,7 +914,11 @@ export function validateSupportedSourceBoundary(trackedPaths) {
   }
   const unsupported = trackedPaths.filter(path => (
     UNSUPPORTED_RUNTIME_PREFIXES.some(prefix => path.startsWith(prefix))
-    || (isDependencyManifest(path) && !SUPPORTED_DEPENDENCY_MANIFESTS.has(path))
+    || (
+      isDependencyManifest(path)
+      && !SUPPORTED_DEPENDENCY_MANIFESTS.has(path)
+      && !LABORATORY_DEPENDENCY_MANIFESTS.has(path)
+    )
   ));
   if (unsupported.length) {
     throw new ValidationError(
@@ -913,7 +928,8 @@ export function validateSupportedSourceBoundary(trackedPaths) {
   return {
     valid: true,
     tracked_paths: trackedPaths.length,
-    dependency_manifests: [...SUPPORTED_DEPENDENCY_MANIFESTS].sort()
+    dependency_manifests: [...SUPPORTED_DEPENDENCY_MANIFESTS].sort(),
+    laboratory_dependency_manifests: [...LABORATORY_DEPENDENCY_MANIFESTS].sort()
   };
 }
 
