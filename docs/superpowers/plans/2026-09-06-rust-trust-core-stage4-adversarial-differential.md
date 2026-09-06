@@ -26,31 +26,31 @@
 
 ---
 
-## Planned file structure
+## File map
 
 **Create**
 - `labs/rust-trust-core/node/canonical_adversarial_corpus.mjs` — deterministic xorshift32 corpus generation and CLI rendering only; no canonicalization.
-- `labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs` — generator determinism, seed/count/category, and rendering contract tests.
-- `labs/rust-trust-core/node/canonical_adversarial_limits.mjs` — Stage 4 test-harness resource-limit validation for Node-side generated fixtures.
-- `labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs` — explicit fail-closed limit tests.
-- `labs/rust-trust-core/tests/canonical_adversarial_differential.rs` — generated valid differential campaign, metamorphic object-order evidence, generated mismatch proof, and invalid-case rejection.
-- `labs/rust-trust-core/tests/support/mod.rs` — integration-test support module declaration.
-- `labs/rust-trust-core/tests/support/adversarial.rs` — Rust-side Stage 4 test-harness limits, Node subprocess helpers, and exact-byte comparison diagnostics.
+- `labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs` — determinism, seed/count/category, known-sequence, and rendering tests.
+- `labs/rust-trust-core/node/canonical_adversarial_limits.mjs` — Node-side Stage 4 test-harness resource limits.
+- `labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs` — exact fail-closed limit tests.
+- `labs/rust-trust-core/tests/support/mod.rs` — Rust integration support module declaration.
+- `labs/rust-trust-core/tests/support/adversarial.rs` — Rust test-harness limits, Node subprocess helpers, duplicate-aware output parsing, and comparison diagnostics.
+- `labs/rust-trust-core/tests/canonical_adversarial_differential.rs` — 1,024-case differential campaign, metamorphic permutation evidence, mismatch proof, and generated invalid rejection.
 
 **Modify**
-- `labs/rust-trust-core/node/canonical_oracle.mjs` — add fixture-text/stdin execution while continuing to call the real supported `canonicalJson` implementation.
-- `labs/rust-trust-core/node/canonical_oracle.test.mjs` — prove fixture-text execution is identical to file execution.
-- `labs/rust-trust-core/EXPERIMENT.md` — correct Stage 3 source-gate truth and document Stage 4 methodology/non-claims before final exact-head CI.
-- `docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md` — mark Stage 3 complete and Stage 4 as the active uncompleted migration gate.
-- `mesh/src/check-docs.mjs` — register the approved Stage 4 spec and implementation plan as canonical documents; do not relax any inventory rule.
-- `.github/workflows/rust-trust-core-lab.yml` — add Stage 4 branch/path coverage, Node generator/limit tests, and an explicit guard that the promoted Rust source remains identical to Stage 3.
+- `labs/rust-trust-core/node/canonical_oracle.mjs` — fixture-text/stdin execution while still calling the real `canonicalJson` implementation.
+- `labs/rust-trust-core/node/canonical_oracle.test.mjs` — prove fixture-text execution equals file execution.
+- `labs/rust-trust-core/EXPERIMENT.md` — Stage 3 truth correction plus Stage 4 methodology/non-claims.
+- `docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md` — Stage 3 complete; Stage 4 active and incomplete.
+- `mesh/src/check-docs.mjs` — register only the Stage 4 spec and plan; do not weaken inventory rules.
+- `.github/workflows/rust-trust-core-lab.yml` — Stage 4 branch/path coverage, Node tests, and promoted-source immutability guard.
 
 **Must remain byte-for-byte unchanged by Stage 4**
 - `trust-core/rust/canonical_value_v0.rs`
 - `mesh/src/release.mjs`
 - `mesh/package.json`
 - `mesh/config/capabilities.json`
-- Gateway/Hypervisor/Sandbox/Grid production sources.
+- supported Gateway/Hypervisor/Sandbox/Grid production sources.
 
 ---
 
@@ -61,18 +61,16 @@
 - Modify: `labs/rust-trust-core/EXPERIMENT.md`
 - Modify: `docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md`
 - Modify: `.github/workflows/rust-trust-core-lab.yml`
-- Existing: `docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md`
-- Existing: `docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md`
 
 **Interfaces:**
-- Consumes: the repository's existing strict `CANONICAL_DOCUMENTS` inventory and Stage 3 accepted boundary.
-- Produces: canonical registration for the Stage 4 spec/plan, truthful Stage 3 records, and CI path/branch triggering for the later Stage 4 test files. No runtime interface changes.
+- Consumes: strict canonical-document inventory and accepted Stage 3 boundary.
+- Produces: canonical Stage 4 documentation registration, truthful Stage 3 records, and Stage 4 CI triggering. No runtime interface.
 
-- [ ] **Step 1: Create the implementation branch from the approved design/plan head**
+- [ ] **Step 1: Create the implementation branch**
 
-Create `feat/rust-trust-core-stage4-adversarial-differential` from the final commit on `design/rust-trust-core-stage4-adversarial-differential`. Do not branch from a newer unrelated `main` without first comparing it to the signed Stage 3 base and forward-porting only compatible mainline changes.
+Create `feat/rust-trust-core-stage4-adversarial-differential` from the final approved design/plan head. Before execution, compare current protected `main` with signed Stage 3 merge `ec2a480ff8d903fbef89807429c289637e3a0d7c`; if `main` advanced, forward-port only compatible mainline changes before starting TDD.
 
-- [ ] **Step 2: Run documentation verification before registration and preserve the RED evidence**
+- [ ] **Step 2: Prove the documentation RED**
 
 Run:
 
@@ -80,22 +78,22 @@ Run:
 node mesh/src/check-docs.mjs
 ```
 
-Expected: FAIL because the newly approved Stage 4 spec and plan are not yet in `CANONICAL_DOCUMENTS`. No other documentation failure is acceptable for this RED.
+Expected: FAIL only because the Stage 4 spec/plan are not yet registered in `CANONICAL_DOCUMENTS`.
 
-- [ ] **Step 3: Register exactly the two Stage 4 documents**
+- [ ] **Step 3: Register exactly the Stage 4 spec and plan**
 
-Add these exact entries adjacent to the earlier Rust migration documents in `mesh/src/check-docs.mjs`:
+Add to `CANONICAL_DOCUMENTS` beside the earlier Rust documents:
 
 ```js
 'docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md',
 'docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md',
 ```
 
-Do not remove, wildcard, or weaken any existing canonical-document rule.
+Do not remove, wildcard, or relax any existing document check.
 
-- [ ] **Step 4: Correct the stale Stage 3 experiment claim**
+- [ ] **Step 4: Correct Stage 3 source-gate wording**
 
-In `labs/rust-trust-core/EXPERIMENT.md`, replace the false Stage 3 gate bullet:
+In `labs/rust-trust-core/EXPERIMENT.md`, replace:
 
 ```text
 release verification runs the Stage 3 Rust-source preflight before the existing release verifier;
@@ -107,64 +105,56 @@ with:
 the Stage 3 Rust-source preflight remains CI/test-bound: the tracked-repository kernel test and dedicated Rust workflow enforce it, while `mesh/src/release.mjs` and `npm --prefix mesh run release:verify` remain unchanged;
 ```
 
-Also change rollback wording that says `release-preflight wiring` to `CI/test source-boundary wiring` so the rollback record matches the accepted implementation.
+Replace rollback wording `release-preflight wiring` with `CI/test source-boundary wiring`.
 
-- [ ] **Step 5: Bring the master todo up to accepted truth**
+- [ ] **Step 5: Update the sovereign-host migration queue**
 
-Replace:
-
-```markdown
-- [ ] Stage 3: move only pure validation/canonicalization candidates after Stage 2 evidence is accepted; do not introduce runtime authority.
-```
-
-with:
+Replace the unchecked Stage 3 line with:
 
 ```markdown
 - [x] Stage 3: move only the accepted pure `canonical-value-v0` candidate into the governed `trust-core/rust/` source boundary without runtime authority.
 - [ ] Stage 4: run deterministic adversarial Node-vs-Rust differential conformance over the frozen `canonical-value-v0` domain without changing the promoted Rust implementation or runtime authority.
 ```
 
-Leave the broader later-stage promotion requirements unchecked.
+Leave later migration/promotion requirements unchecked.
 
-- [ ] **Step 6: Extend workflow triggering only, not Stage 4 commands yet**
+- [ ] **Step 6: Extend workflow triggering only**
 
 In `.github/workflows/rust-trust-core-lab.yml`:
+- add push branch `feat/rust-trust-core-stage4-adversarial-differential`;
+- add the Stage 4 spec and plan paths under both `push.paths` and `pull_request.paths`.
 
-1. add branch `feat/rust-trust-core-stage4-adversarial-differential` under `push.branches`;
-2. add the Stage 4 spec and plan paths under both `push.paths` and `pull_request.paths`.
+Do not add generator commands until Task 2 files exist.
 
-Do not add generator commands until the generator tests exist in Task 2.
-
-- [ ] **Step 7: Verify documentation GREEN**
+- [ ] **Step 7: Prove documentation GREEN and immutable production surfaces**
 
 Run:
 
 ```bash
 node mesh/src/check-docs.mjs
+git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- \
+  trust-core/rust/canonical_value_v0.rs \
+  mesh/src/release.mjs \
+  mesh/package.json \
+  mesh/config/capabilities.json
 ```
 
-Expected: PASS with the strict inventory intact.
+Expected: both PASS.
 
-- [ ] **Step 8: Verify prohibited production surfaces are unchanged**
-
-Run:
+- [ ] **Step 8: Commit**
 
 ```bash
-git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs mesh/src/release.mjs mesh/package.json mesh/config/capabilities.json
-```
-
-Expected: PASS / no diff.
-
-- [ ] **Step 9: Commit**
-
-```bash
-git add mesh/src/check-docs.mjs labs/rust-trust-core/EXPERIMENT.md docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md .github/workflows/rust-trust-core-lab.yml docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md
+git add mesh/src/check-docs.mjs labs/rust-trust-core/EXPERIMENT.md \
+  docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md \
+  .github/workflows/rust-trust-core-lab.yml \
+  docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md \
+  docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md
 git commit -m "docs: establish Rust Stage 4 adversarial gate"
 ```
 
 ---
 
-### Task 2: Deterministic bounded adversarial corpus generator
+### Task 2: Deterministic adversarial corpus generator
 
 **Files:**
 - Create: `labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs`
@@ -172,42 +162,40 @@ git commit -m "docs: establish Rust Stage 4 adversarial gate"
 - Modify: `.github/workflows/rust-trust-core-lab.yml`
 
 **Interfaces:**
-- Consumes: frozen `canonical-value-v0` fixture grammar only; it must not import `canonicalJson` or the Rust candidate.
+- Consumes: frozen `canonical-value-v0` row grammar only.
 - Produces:
-  - `FIXED_SEEDS: readonly number[]`
-  - `VALID_CASES_PER_SEED = 256`
-  - `INVALID_CASES_PER_SEED = 64`
-  - `xorshift32(state: number): number`
-  - `generateValidCases(seed: number): Array<{caseId, kind, payload, category, permutationGroup}>`
-  - `generateInvalidCases(seed: number): Array<{caseId, encodedRow, category}>`
-  - `renderValidFixture(cases): string`
-  - `renderInvalidFixture(cases): string`
-  - CLI: `node canonical_adversarial_corpus.mjs valid` emits one 1,024-row valid fixture; `... invalid` emits one 256-row `case_id<TAB>encoded_row` invalid fixture.
-
-- [ ] **Step 1: Write the generator contract test before the module exists**
-
-Create `canonical_adversarial_corpus.test.mjs` importing the interfaces above and asserting:
 
 ```js
-assert.deepEqual(FIXED_SEEDS, [0x4158494F, 0x4D455348, 0xC0DEF00D, 0x5EED0004]);
-assert.equal(VALID_CASES_PER_SEED, 256);
-assert.equal(INVALID_CASES_PER_SEED, 64);
+export const FIXED_SEEDS = Object.freeze([
+  0x4158494F,
+  0x4D455348,
+  0xC0DEF00D,
+  0x5EED0004
+]);
+export const VALID_CASES_PER_SEED = 256;
+export const INVALID_CASES_PER_SEED = 64;
+export function xorshift32(state) {}
+export function generateValidCases(seed) {}
+export function generateInvalidCases(seed) {}
+export function renderValidFixture(cases) {}
+export function renderInvalidFixture(cases) {}
 ```
 
-For each fixed seed, assert:
+CLI:
 
-```js
-const first = generateValidCases(seed);
-const second = generateValidCases(seed);
-assert.deepEqual(first, second);
-assert.equal(first.length, 256);
-assert.equal(new Set(first.map(item => item.caseId)).size, 256);
+```text
+node canonical_adversarial_corpus.mjs valid
+node canonical_adversarial_corpus.mjs invalid
 ```
 
-Assert every required valid category appears, including a permutation pair. Use this exact category set:
+- [ ] **Step 1: Write the failing generator contract test**
+
+Create `canonical_adversarial_corpus.test.mjs` asserting exact seeds/counts, deterministic replay, unique IDs, category coverage, and exact invalid-category counts.
+
+Required valid category set:
 
 ```js
-new Set([
+const REQUIRED_VALID_CATEGORIES = new Set([
   'null_or_bool',
   'zero_or_near',
   'safe_min',
@@ -224,75 +212,10 @@ new Set([
   'unordered_object',
   'adjacent_prefix_keys',
   'object_permutation'
-])
-```
-
-Assert each seed's invalid set has 64 unique IDs and exactly four cases in each of the 16 invalid categories from the spec.
-
-Add a known-sequence test for `xorshift32`, calculating expected constants once from the exact approved transition and committing those constants. Do not calculate the expected sequence by calling `xorshift32` itself.
-
-- [ ] **Step 2: Run the test and preserve the intended RED**
-
-Run:
-
-```bash
-node --test labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
-```
-
-Expected: FAIL because `canonical_adversarial_corpus.mjs` does not exist. Formatting/workflow failures do not count as RED.
-
-- [ ] **Step 3: Implement exact xorshift32 and fixed constants**
-
-Create `canonical_adversarial_corpus.mjs` beginning with:
-
-```js
-export const FIXED_SEEDS = Object.freeze([
-  0x4158494F,
-  0x4D455348,
-  0xC0DEF00D,
-  0x5EED0004
 ]);
-export const VALID_CASES_PER_SEED = 256;
-export const INVALID_CASES_PER_SEED = 64;
-
-export function xorshift32(state) {
-  state = (state ^ (state << 13)) >>> 0;
-  state = (state ^ (state >>> 17)) >>> 0;
-  state = (state ^ (state << 5)) >>> 0;
-  return state >>> 0;
-}
 ```
 
-No call may use `Math.random`, `Date`, `crypto.random*`, locale-sensitive comparison, network input, or environment variables.
-
-- [ ] **Step 4: Implement the deterministic valid category schedule**
-
-Use a fixed quota schedule so category appearance is guaranteed rather than probabilistic:
-
-- 32 cases (16 A/B pairs) for `object_permutation`;
-- at least 16 cases for each of the other 15 categories;
-- allocate any remaining exact quota deterministically to `mixed_array` and `unordered_object` until the total is exactly 256.
-
-Every `object_permutation` pair must share a non-null `permutationGroup` and contain identical unique key/value members in different insertion orders.
-
-Use generated case IDs that encode seed and sequence, for example:
-
-```text
-adv_4158494f_000_null_or_bool
-adv_4158494f_perm_000_a
-adv_4158494f_perm_000_b
-```
-
-Do not add a new fixture column for category metadata; category/permutation metadata exists only in the in-memory generator object. `renderValidFixture` must emit exactly:
-
-```text
-case_id\tkind\tpayload
-...
-```
-
-- [ ] **Step 5: Implement the exact 64-invalid-case schedule per seed**
-
-Use 16 fixed invalid categories with exactly four cases each:
+Required invalid categories:
 
 ```js
 const INVALID_CATEGORIES = [
@@ -315,33 +238,30 @@ const INVALID_CATEGORIES = [
 ];
 ```
 
-`renderInvalidFixture` must use the existing escaped-row convention:
+For every seed require exactly four invalid cases per invalid category.
 
-```text
-case_id\tencoded_row
-...
-```
+- [ ] **Step 2: Add fixed xorshift known-sequence expectations**
 
-where embedded tabs/newlines are rendered as literal `\\t` / `\\n`.
-
-For `duplicate_case_id`, the encoded row value must contain two full fixture rows with the same ID separated by escaped `\\n`, matching the Stage 2 invalid-fixture convention.
-
-- [ ] **Step 6: Add CLI rendering without adding canonicalization**
-
-At module bottom:
+The test must hard-code these first four outputs; it must not derive them by calling the implementation under test:
 
 ```js
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const mode = process.argv[2];
-  if (mode === 'valid') process.stdout.write(renderValidFixture(allValidCases()));
-  else if (mode === 'invalid') process.stdout.write(renderInvalidFixture(allInvalidCases()));
-  else throw new TypeError('Usage: canonical_adversarial_corpus.mjs <valid|invalid>');
-}
+assert.deepEqual(sequence(0x4158494F, 4), [
+  0x46402397, 0x046EB34E, 0x92E453ED, 0x0BA60B81
+]);
+assert.deepEqual(sequence(0x4D455348, 4), [
+  0x02A83B1E, 0xBCB4C69B, 0xA89121A8, 0x182898BA
+]);
+assert.deepEqual(sequence(0xC0DEF00D, 4), [
+  0xC534B322, 0x394B8BCA, 0x4E6F15B3, 0x37FD583F
+]);
+assert.deepEqual(sequence(0x5EED0004, 4), [
+  0x23521132, 0x4FF85088, 0xF8C73DFC, 0xF06EFA40
+]);
 ```
 
-The generator must not import `mesh/src/lib/canonical.mjs`.
+The `sequence` helper in the test calls `xorshift32` repeatedly; only expected constants are independent.
 
-- [ ] **Step 7: Run generator tests GREEN**
+- [ ] **Step 3: Run RED**
 
 Run:
 
@@ -349,38 +269,108 @@ Run:
 node --test labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
 ```
 
-Expected: PASS with 1,024 total valid cases and 256 total invalid cases across the fixed seeds.
+Expected: FAIL because `canonical_adversarial_corpus.mjs` does not exist.
 
-- [ ] **Step 8: Add the generator test to dedicated CI**
+- [ ] **Step 4: Implement exact xorshift32**
 
-In `.github/workflows/rust-trust-core-lab.yml`, immediately after the existing Node oracle test add:
+Create `canonical_adversarial_corpus.mjs` with:
+
+```js
+export function xorshift32(state) {
+  state = (state ^ (state << 13)) >>> 0;
+  state = (state ^ (state >>> 17)) >>> 0;
+  state = (state ^ (state << 5)) >>> 0;
+  return state >>> 0;
+}
+```
+
+No `Math.random`, time, OS randomness, locale, network, or environment input.
+
+- [ ] **Step 5: Implement an exact 256-valid-case schedule per seed**
+
+Use these fixed quotas:
+- `object_permutation`: 32 cases = 16 A/B pairs;
+- each of the other 15 categories: 14 cases = 210 cases;
+- add 7 extra `mixed_array` cases and 7 extra `unordered_object` cases.
+
+Total: `32 + 210 + 7 + 7 = 256` exactly.
+
+Each permutation pair must share `permutationGroup` and contain identical unique key/value members in different insertion orders. Example IDs:
+
+```text
+adv_4158494f_000_null_or_bool
+adv_4158494f_perm_000_a
+adv_4158494f_perm_000_b
+```
+
+`renderValidFixture` emits exactly three columns:
+
+```text
+case_id\tkind\tpayload
+```
+
+No category metadata is added to the fixture grammar.
+
+- [ ] **Step 6: Implement exactly 64 invalid cases per seed**
+
+Generate exactly four cases for each of the 16 invalid categories. `renderInvalidFixture` uses the existing Stage 2 escaped-row format:
+
+```text
+case_id\tencoded_row
+```
+
+Embedded tabs/newlines become literal `\\t` / `\\n`. A `duplicate_case_id` value contains two full fixture rows with the same ID separated by escaped `\\n`.
+
+- [ ] **Step 7: Add CLI rendering without canonicalization**
+
+Use `pathToFileURL` and expose only:
+
+```text
+valid   -> complete 1,024-row valid fixture
+invalid -> complete 256-row invalid fixture
+```
+
+The generator must not import `canonicalJson`.
+
+- [ ] **Step 8: Run GREEN and add CI command**
+
+Run:
+
+```bash
+node --test labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
+```
+
+Expected: PASS.
+
+Then add to `.github/workflows/rust-trust-core-lab.yml` after the existing oracle test:
 
 ```yaml
 - name: Verify deterministic Stage 4 corpus
   run: node --test labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
 ```
 
-- [ ] **Step 9: Re-run Node tests and source immutability guard**
-
-Run:
+Re-run:
 
 ```bash
-node --test labs/rust-trust-core/node/canonical_oracle.test.mjs labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
+node --test labs/rust-trust-core/node/canonical_oracle.test.mjs \
+  labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
 git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs
 ```
 
-Expected: both PASS.
+Expected: PASS.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add labs/rust-trust-core/node/canonical_adversarial_corpus.mjs labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs .github/workflows/rust-trust-core-lab.yml
+git add labs/rust-trust-core/node/canonical_adversarial_corpus.mjs \
+  labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs \
+  .github/workflows/rust-trust-core-lab.yml
 git commit -m "test: add deterministic Rust Stage 4 corpus"
 ```
 
 ---
 
-### Task 3: Generated valid Node-vs-Rust differential campaign
+### Task 3: 1,024-case generated Node-vs-Rust differential
 
 **Files:**
 - Modify: `labs/rust-trust-core/node/canonical_oracle.mjs`
@@ -390,18 +380,18 @@ git commit -m "test: add deterministic Rust Stage 4 corpus"
 - Create: `labs/rust-trust-core/tests/canonical_adversarial_differential.rs`
 
 **Interfaces:**
-- Consumes: Task 2 `valid` CLI output and existing Rust exports `parse_canonical_fixture`, `canonicalize_case`, `CanonicalCase`.
-- Produces:
-  - Node `runFixtureText(text: string): string` using the actual `canonicalJson` implementation;
-  - Node CLI `canonical_oracle.mjs -` reading fixture text from stdin;
-  - Rust support `run_node_with_stdin(script: &Path, args: &[&str], stdin: &str) -> Result<String, String>`;
-  - Rust support `parse_node_outputs(stdout: &str) -> Result<BTreeMap<String,String>,String>` with duplicate-ID rejection;
-  - Rust support `assert_generated_exact_match(seed: u32, case_id: &str, node: &str, rust: &str)`;
-  - generated valid differential test proving 1,024/1,024 byte equality plus metamorphic object-permutation equality.
+- Node: `runFixtureText(text: string): string`; CLI accepts `-` for stdin.
+- Rust support:
 
-- [ ] **Step 1: Extend the Node oracle unit test first**
+```rust
+pub fn run_node_with_stdin(script: &Path, args: &[&str], stdin: &str) -> Result<String, String>;
+pub fn parse_node_outputs(stdout: &str) -> Result<BTreeMap<String, String>, String>;
+pub fn assert_generated_exact_match(seed: u32, case_id: &str, node: &str, rust: &str);
+```
 
-Add a test that imports `runFixtureText` before it exists:
+- [ ] **Step 1: Write Node RED test for fixture-text execution**
+
+Add:
 
 ```js
 test('fixture-text execution is identical to file execution', async () => {
@@ -410,9 +400,11 @@ test('fixture-text execution is identical to file execution', async () => {
 });
 ```
 
-- [ ] **Step 2: Add the Rust generated-differential test before its support interfaces exist**
+Import `runFixtureText` before it exists.
 
-Create `canonical_adversarial_differential.rs` importing:
+- [ ] **Step 2: Write Rust RED test for generated differential**
+
+Create `canonical_adversarial_differential.rs` with:
 
 ```rust
 mod support;
@@ -422,24 +414,30 @@ use support::adversarial::{
 };
 ```
 
-The first test must invoke the generator's `valid` mode, require exactly 1,024 parsed cases, send the same fixture text to the Node oracle via stdin, canonicalize every Rust case, and compare raw bytes.
+The first test must:
+1. run generator CLI `valid`;
+2. assert fixture parses to 1,024 cases;
+3. feed identical text to `canonical_oracle.mjs -`;
+4. assert Node output has 1,024 unique IDs;
+5. canonicalize every Rust case;
+6. derive seed from case ID;
+7. compare raw bytes for every case;
+8. assert exactly 1,024 matches.
 
-Add a second test that identifies `*_perm_*_a` / `*_perm_*_b` pairs by case ID and asserts each pair's Node canonical bytes are equal after each individual case has already passed Node-vs-Rust comparison.
+Add a second test grouping `*_perm_*_a` / `*_perm_*_b` IDs and asserting each pair's already-verified Node canonical bytes are equal.
 
-- [ ] **Step 3: Run Node and Rust tests and preserve the intended RED**
-
-Run:
+- [ ] **Step 3: Run RED**
 
 ```bash
 node --test labs/rust-trust-core/node/canonical_oracle.test.mjs
 cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked --test canonical_adversarial_differential
 ```
 
-Expected: FAIL specifically for missing `runFixtureText` and/or the new Rust support module/functions. Do not accept failure from formatting, the generator, or the promoted source.
+Expected: FAIL only for missing `runFixtureText` and/or Rust support functions.
 
-- [ ] **Step 4: Implement fixture-text/stdin oracle support**
+- [ ] **Step 4: Implement fixture-text/stdin oracle path**
 
-Refactor `canonical_oracle.mjs` so canonicalization remains in one function:
+Refactor `canonical_oracle.mjs` to:
 
 ```js
 export function runFixtureText(text) {
@@ -453,7 +451,7 @@ export async function runFixture(path) {
 }
 ```
 
-Update CLI input handling:
+CLI:
 
 ```js
 const path = process.argv[2];
@@ -462,69 +460,44 @@ const text = path === '-' ? await readFile(0, 'utf8') : await readFile(path, 'ut
 process.stdout.write(`${runFixtureText(text)}\n`);
 ```
 
-Do not duplicate or replace `canonicalJson`.
+Do not copy or replace `canonicalJson`.
 
-- [ ] **Step 5: Implement Rust subprocess and duplicate-aware output support**
+- [ ] **Step 5: Implement Rust support helpers**
 
-Create `tests/support/mod.rs`:
+`tests/support/mod.rs`:
 
 ```rust
 pub mod adversarial;
 ```
 
-In `tests/support/adversarial.rs`, implement `run_node_with_stdin` with `std::process::Command`, `Stdio::piped`, `write_all`, and `wait_with_output`. Reject nonzero status and non-UTF-8 output.
+`tests/support/adversarial.rs`:
+- use `Command`, `Stdio::piped`, `write_all`, `wait_with_output`;
+- reject process start/write/status/UTF-8 errors;
+- parse Node output into `BTreeMap` with duplicate-ID rejection;
+- compare `node.as_bytes()` to `rust.as_bytes()`;
+- diagnostic must include `seed=0x{seed:08x}`, case ID, Node bytes, Rust bytes.
 
-Implement `parse_node_outputs` using a `BTreeMap` and reject duplicate IDs exactly as the Stage 2 harness does:
-
-```rust
-if outputs.insert(case_id.to_owned(), canonical.to_owned()).is_some() {
-    return Err(format!("duplicate Node oracle case_id: {case_id}"));
-}
-```
-
-Implement `assert_generated_exact_match` using `assert_eq!(node.as_bytes(), rust.as_bytes(), ...)` and include `seed=0x{seed:08x}`, `case_id`, Node bytes, and Rust bytes in the diagnostic.
-
-- [ ] **Step 6: Make the 1,024-case differential test GREEN**
-
-The test must:
-
-1. call the generator CLI `valid`;
-2. parse with `parse_canonical_fixture`;
-3. assert `cases.len() == 1024`;
-4. send identical fixture text to `canonical_oracle.mjs -`;
-5. assert Node output count is 1,024;
-6. derive the seed from `case_id` and compare every Rust result with `assert_generated_exact_match`;
-7. assert all 1,024 matched.
-
-For object permutation pairs, use the case-ID `perm_<group>_a/b` convention and assert both Node bytes are equal.
-
-- [ ] **Step 7: Run GREEN verification**
-
-Run:
+- [ ] **Step 6: Run GREEN**
 
 ```bash
-node --test labs/rust-trust-core/node/canonical_oracle.test.mjs labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
+node --test labs/rust-trust-core/node/canonical_oracle.test.mjs \
+  labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
 cargo fmt --manifest-path labs/rust-trust-core/Cargo.toml --all -- --check
 cargo clippy --manifest-path labs/rust-trust-core/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked
-```
-
-Expected: all PASS; the existing 17-case Stage 2 differential test must remain green.
-
-- [ ] **Step 8: Confirm promoted source is still unchanged**
-
-Run:
-
-```bash
 git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs
 ```
 
-Expected: PASS / no diff. If it fails, stop Stage 4 rather than editing the source.
+Expected: all PASS, including existing 17-vector Stage 2 differential coverage.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add labs/rust-trust-core/node/canonical_oracle.mjs labs/rust-trust-core/node/canonical_oracle.test.mjs labs/rust-trust-core/tests/support/mod.rs labs/rust-trust-core/tests/support/adversarial.rs labs/rust-trust-core/tests/canonical_adversarial_differential.rs
+git add labs/rust-trust-core/node/canonical_oracle.mjs \
+  labs/rust-trust-core/node/canonical_oracle.test.mjs \
+  labs/rust-trust-core/tests/support/mod.rs \
+  labs/rust-trust-core/tests/support/adversarial.rs \
+  labs/rust-trust-core/tests/canonical_adversarial_differential.rs
 git commit -m "test: add generated canonical differential campaign"
 ```
 
@@ -537,23 +510,6 @@ git commit -m "test: add generated canonical differential campaign"
 - Modify: `labs/rust-trust-core/tests/support/adversarial.rs`
 
 **Interfaces:**
-- Consumes: Task 3 real generated case, real Node oracle bytes, and real Rust candidate bytes.
-- Produces: a controlled generated mismatch proof that fails at the byte comparator and reports seed/case/Node/Rust provenance without modifying the promoted source.
-
-- [ ] **Step 1: Write the mismatch test before the dedicated probe helper exists**
-
-Add a test that obtains the first accepted generated case from seed `0x4158494F`, computes real Node and Rust bytes, then calls a not-yet-existing helper:
-
-```rust
-let panic = catch_generated_mismatch(
-    seed,
-    case.case_id(),
-    node_bytes,
-    rust_bytes,
-).expect_err("perturbed generated bytes must be rejected");
-```
-
-The helper contract is:
 
 ```rust
 pub fn catch_generated_mismatch(
@@ -561,40 +517,40 @@ pub fn catch_generated_mismatch(
     case_id: &str,
     node: &str,
     rust: &str,
-) -> Result<(), String>
+) -> Result<(), String>;
 ```
 
-It must perturb only the comparison input (for example append one ASCII space to a copy of the Rust string), invoke the real `assert_generated_exact_match`, catch the panic, and return its diagnostic string as `Err`.
+- [ ] **Step 1: Write RED test**
 
-- [ ] **Step 2: Run the targeted test and preserve RED**
-
-Run:
-
-```bash
-cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked --test canonical_adversarial_differential generated_comparator_rejects_controlled_real_case_divergence -- --exact
-```
-
-Expected: FAIL because `catch_generated_mismatch` does not exist.
-
-- [ ] **Step 3: Implement only the comparison-boundary probe helper**
-
-In `tests/support/adversarial.rs`, implement `catch_generated_mismatch` using `std::panic::catch_unwind`. Clone/perturb the Rust output string only inside this helper; do not change the candidate, fixture, oracle, or generator.
-
-Return an error diagnostic containing all of:
+Use the first real accepted case from seed `0x4158494F`. Obtain real Node and Rust bytes, then call `catch_generated_mismatch` before it exists. Require returned diagnostic to contain:
 
 ```text
 seed=0x4158494f
-case=<actual generated case id>
+case=
 node=
 rust=
 ```
 
-- [ ] **Step 4: Run targeted and full tests GREEN**
-
-Run:
+- [ ] **Step 2: Run RED**
 
 ```bash
-cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked --test canonical_adversarial_differential generated_comparator_rejects_controlled_real_case_divergence -- --exact
+cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked \
+  --test canonical_adversarial_differential \
+  generated_comparator_rejects_controlled_real_case_divergence -- --exact
+```
+
+Expected: FAIL because helper is missing.
+
+- [ ] **Step 3: Implement comparison-boundary-only perturbation**
+
+In `tests/support/adversarial.rs`, copy the Rust output, append one ASCII space, invoke real `assert_generated_exact_match` inside `std::panic::catch_unwind`, extract the panic string, and return it as `Err`. Do not mutate candidate source, fixture, oracle, or generator.
+
+- [ ] **Step 4: Run GREEN**
+
+```bash
+cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked \
+  --test canonical_adversarial_differential \
+  generated_comparator_rejects_controlled_real_case_divergence -- --exact
 cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked
 ```
 
@@ -603,13 +559,14 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add labs/rust-trust-core/tests/canonical_adversarial_differential.rs labs/rust-trust-core/tests/support/adversarial.rs
+git add labs/rust-trust-core/tests/canonical_adversarial_differential.rs \
+  labs/rust-trust-core/tests/support/adversarial.rs
 git commit -m "test: prove generated differential mismatch detection"
 ```
 
 ---
 
-### Task 5: Fail-closed malformed corpus and resource limits
+### Task 5: Fail-closed generated invalid corpus and resource limits
 
 **Files:**
 - Create: `labs/rust-trust-core/node/canonical_adversarial_limits.mjs`
@@ -619,10 +576,8 @@ git commit -m "test: prove generated differential mismatch detection"
 - Modify: `.github/workflows/rust-trust-core-lab.yml`
 
 **Interfaces:**
-- Consumes: Task 2 `invalid` CLI output; existing Node `decodeVectorRow`/`parseFixture`; existing promoted Rust `parse_canonical_vector_row`/`parse_canonical_fixture`.
-- Produces parallel Node/Rust Stage 4 harness-limit validators with exact constants and no truncation.
 
-Node exports:
+Node:
 
 ```js
 export const STAGE4_LIMITS = Object.freeze({
@@ -636,7 +591,7 @@ export function validateStage4FixtureLimits(text) {}
 export function validateStage4RowLimits(line) {}
 ```
 
-Rust support exports:
+Rust:
 
 ```rust
 pub const MAX_TOTAL_CASES: usize = 2048;
@@ -648,9 +603,9 @@ pub fn validate_stage4_fixture_limits(text: &str) -> Result<(), String>;
 pub fn validate_stage4_row_limits(line: &str) -> Result<(), String>;
 ```
 
-- [ ] **Step 1: Write Node limit tests before the validator exists**
+- [ ] **Step 1: Write Node RED tests for exact limits**
 
-Create `canonical_adversarial_limits.test.mjs` asserting accepted rows pass and each exact bound fails when exceeded by one:
+Require accepted row plus `limit + 1` failures:
 
 ```js
 assert.doesNotThrow(() => validateStage4RowLimits('ok\tscalar_array\tn,b:true'));
@@ -660,92 +615,86 @@ assert.throws(() => validateStage4RowLimits(`object\tascii_key_object\t${Array.f
 assert.throws(() => validateStage4RowLimits(`key\tascii_key_object\t${'k'.repeat(65)}=n`), /MAX_KEY_LENGTH/);
 ```
 
-Construct a 2,049-row fixture and require `validateStage4FixtureLimits` to throw `/MAX_TOTAL_CASES/` before semantic parsing.
+Construct a normal-header fixture with 2,049 body rows and require `/MAX_TOTAL_CASES/`.
 
-- [ ] **Step 2: Add Rust RED tests for the same bounds and generated invalid corpus**
+- [ ] **Step 2: Write Rust RED tests for limits and 256 invalid rows**
 
-In `canonical_adversarial_differential.rs`, import the not-yet-existing Rust limit validators/constants and add:
+In `canonical_adversarial_differential.rs`:
+- import missing Rust constants/validators;
+- add one `limit + 1` test per bound;
+- run generator CLI `invalid` and assert exactly 256 rows;
+- decode escaped rows;
+- route Stage 4 over-bound categories through `validate_stage4_row_limits` first;
+- route grammar-invalid categories through `parse_canonical_vector_row` or `parse_canonical_fixture`;
+- route `duplicate_case_id` through full fixture parsing.
 
-1. one targeted test per limit using `limit + 1`;
-2. a generated-invalid test that runs `canonical_adversarial_corpus.mjs invalid`, asserts exactly 256 invalid cases, decodes each escaped row, and proves rejection.
-
-Rejection rule:
-
-- Stage 4 over-bound categories must be rejected by `validate_stage4_row_limits` before the v0 parser is called;
-- grammar-invalid categories must be within harness limits and then be rejected by `parse_canonical_vector_row` or `parse_canonical_fixture`;
-- `duplicate_case_id` must be tested through full fixture parsing, never by a single-row parser.
-
-- [ ] **Step 3: Run Node/Rust tests and preserve RED**
-
-Run:
+- [ ] **Step 3: Run RED**
 
 ```bash
 node --test labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
 cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked --test canonical_adversarial_differential
 ```
 
-Expected: FAIL for missing limit validators, not because the promoted source was changed.
+Expected: FAIL for missing validators.
 
-- [ ] **Step 4: Implement Node limits with byte-count semantics**
+- [ ] **Step 4: Implement Node limits**
 
-In `canonical_adversarial_limits.mjs`:
+Rules:
+- exactly three TSV columns for row-limit inspection;
+- `Buffer.byteLength(payload, 'utf8')` for payload bytes;
+- `scalar_array`: empty = 0 items, else comma count + 1;
+- `ascii_key_object`: empty = 0 members, else semicolon count + 1;
+- inspect each object key before `=` and enforce 64 ASCII bytes;
+- fixture validator normalizes CRLF, removes one trailing empty line, requires normal header, and rejects >2,048 body rows;
+- no slicing/truncation.
 
-- split each row into exactly 3 TSV columns for limit inspection;
-- use `Buffer.byteLength(payload, 'utf8')` for `MAX_PAYLOAD_BYTES`;
-- for `scalar_array`, count comma-separated items only when payload is non-empty;
-- for `ascii_key_object`, count semicolon-separated members and inspect the key before `=`;
-- enforce `MAX_KEY_LENGTH` using ASCII byte length;
-- in fixture validation, normalize CRLF, remove one trailing empty line, verify the normal header, and reject more than 2,048 body rows;
-- never slice/truncate input to make it fit.
-
-Limit validation is Stage 4 harness behavior only; do not alter `canonical_oracle.mjs` v0 semantics.
+Do not alter oracle v0 semantics.
 
 - [ ] **Step 5: Implement equivalent Rust test-harness limits**
 
-In `tests/support/adversarial.rs`, implement the exact constants and validators using `payload.as_bytes().len()` and the same structural counting rules. Return errors naming the exact violated constant, for example:
+Use byte lengths (`as_bytes().len()`), identical counting rules, and errors naming the violated constant, e.g.:
 
 ```text
 Stage 4 MAX_ARRAY_ITEMS exceeded: 33 > 32
 ```
 
-Do not modify `trust-core/rust/canonical_value_v0.rs` to enforce these test-harness limits.
+Do not modify `trust-core/rust/canonical_value_v0.rs`.
 
-- [ ] **Step 6: Make all 256 generated invalid cases fail closed**
+- [ ] **Step 6: Prove 256/256 invalid rejection in both paths**
 
-In Node tests, iterate Task 2's generated invalid cases and require each case to fail either Stage 4 limit validation or the existing Node v0 parser according to its category.
+Node tests iterate generated invalid cases and require every case to fail either Stage 4 limit validation or existing Node v0 parsing according to category.
 
-In Rust tests, do the same against the Rust test-harness validator and promoted parser. Assert exactly 256/256 rejected in each language path.
+Rust tests do the same against Rust harness limits and promoted parser. Assert exactly 256 rejected and assert every declared category appears.
 
-No invalid case may be silently skipped. The test must fail if a category produces zero cases.
+- [ ] **Step 7: Add CI commands and promoted-source guard**
 
-- [ ] **Step 7: Add limit tests to dedicated CI**
-
-In `.github/workflows/rust-trust-core-lab.yml`, add after generator verification:
+Add:
 
 ```yaml
 - name: Verify Stage 4 adversarial limits
   run: node --test labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
-```
 
-Add a promoted-source immutability step before Rust compilation:
-
-```yaml
 - name: Verify Stage 4 does not modify promoted Rust v0 source
   run: git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs
 ```
 
-- [ ] **Step 8: Run full Stage 4 local verification**
-
-Run:
+- [ ] **Step 8: Run full local GREEN**
 
 ```bash
-node --test labs/rust-trust-core/node/canonical_oracle.test.mjs labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
+node --test \
+  labs/rust-trust-core/node/canonical_oracle.test.mjs \
+  labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs \
+  labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
 node mesh/src/rust-trust-core-source-boundary.mjs
 cargo fmt --manifest-path labs/rust-trust-core/Cargo.toml --all -- --check
 cargo clippy --manifest-path labs/rust-trust-core/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked
 node mesh/src/check-docs.mjs
-git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs mesh/src/release.mjs mesh/package.json mesh/config/capabilities.json
+git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- \
+  trust-core/rust/canonical_value_v0.rs \
+  mesh/src/release.mjs \
+  mesh/package.json \
+  mesh/config/capabilities.json
 ```
 
 Expected: all PASS.
@@ -753,54 +702,54 @@ Expected: all PASS.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add labs/rust-trust-core/node/canonical_adversarial_limits.mjs labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs labs/rust-trust-core/tests/support/adversarial.rs labs/rust-trust-core/tests/canonical_adversarial_differential.rs .github/workflows/rust-trust-core-lab.yml
+git add labs/rust-trust-core/node/canonical_adversarial_limits.mjs \
+  labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs \
+  labs/rust-trust-core/tests/support/adversarial.rs \
+  labs/rust-trust-core/tests/canonical_adversarial_differential.rs \
+  .github/workflows/rust-trust-core-lab.yml
 git commit -m "test: fail closed on Stage 4 adversarial bounds"
 ```
 
 ---
 
-### Task 6: Stage 4 record, PR, and exact-head acceptance evidence
+### Task 6: Stage 4 experiment record and exact-head acceptance gate
 
 **Files:**
 - Modify: `labs/rust-trust-core/EXPERIMENT.md`
-- Modify: `.github/workflows/rust-trust-core-lab.yml` only if path coverage is incomplete; no semantic CI changes after the final evidence record is written.
-- PR metadata: Stage 4 pull request body (not a repository file) carries exact run numbers/conclusions after CI so recording evidence does not change the verified commit.
+- PR metadata: exact accepted head/run evidence is stored in the PR body after CI so evidence recording does not mutate the verified head.
 
 **Interfaces:**
-- Consumes: all Task 1-5 GREEN evidence.
-- Produces: reviewable Stage 4 experiment record and one immutable exact-head acceptance snapshot. It does not produce runtime authority.
+- Consumes: Tasks 1-5 GREEN evidence.
+- Produces: reviewable Stage 4 record and one immutable exact-head acceptance snapshot. No runtime authority.
 
-- [ ] **Step 1: Update the experiment record before final exact-head verification**
+- [ ] **Step 1: Record Stage 4 methodology before final CI**
 
-Add a Stage 4 section to `labs/rust-trust-core/EXPERIMENT.md` recording:
+Add to `EXPERIMENT.md`:
 
 ```text
-- generator: labs/rust-trust-core/node/canonical_adversarial_corpus.mjs
-- algorithm: xorshift32 with explicit >>> 0 normalization
-- seeds: 0x4158494F, 0x4D455348, 0xC0DEF00D, 0x5EED0004
-- generated valid: 1,024
-- generated invalid/over-bound fixture rows: 256
-- existing hand-curated valid: 17
-- existing hand-curated malformed: 12
-- limits: 2048 total / 32 array / 32 object / 64 key / 4096 payload bytes
-- Node remains oracle; Rust remains non-authoritative
-- promoted source unchanged from Stage 3
-- source gate remains CI/test-bound, not release:verify authority
+generator: labs/rust-trust-core/node/canonical_adversarial_corpus.mjs
+algorithm: xorshift32 with explicit >>> 0 normalization
+seeds: 0x4158494F, 0x4D455348, 0xC0DEF00D, 0x5EED0004
+generated valid: 1,024
+generated invalid/over-bound fixture rows: 256
+hand-curated valid: 17
+hand-curated malformed: 12
+limits: 2048 total / 32 array / 32 object / 64 key / 4096 payload bytes
+source gate: CI/test-bound, not release:verify authority
+promoted Rust v0 source: unchanged from Stage 3
 ```
 
-Also add Stage 4 halt criteria: any real generated Node/Rust mismatch in the frozen v0 domain stops Stage 4 and reopens Stage 3.
+Add halt rule: a real generated Node/Rust mismatch in frozen v0 stops Stage 4 and reopens Stage 3.
 
-Do **not** put CI run numbers or a final head SHA in this file after verification; those belong in PR metadata so recording them cannot invalidate the exact head.
+Do not add final run numbers/head SHA to the repo file after CI.
 
-- [ ] **Step 2: Run the complete pre-PR verification suite**
+- [ ] **Step 2: Run complete pre-PR verification again**
 
-Run the full command block from Task 5 Step 8 again after the experiment-record edit.
+Repeat Task 5 Step 8 after the experiment-record edit. Expected: all PASS.
 
-Expected: all PASS.
+- [ ] **Step 3: Verify changed-file boundary**
 
-- [ ] **Step 3: Verify the final diff is bounded**
-
-Compare against Stage 3 base and require that changed files are limited to:
+Against Stage 3 base, allowed changed files are exactly within this set:
 
 ```text
 .github/workflows/rust-trust-core-lab.yml
@@ -820,37 +769,34 @@ labs/rust-trust-core/tests/support/adversarial.rs
 mesh/src/check-docs.mjs
 ```
 
-Any change to `trust-core/rust/canonical_value_v0.rs`, capability registry, production runtime, release verifier, Gateway, Hypervisor, Sandbox, Grid, credentials/state, compose/deployment, or production dependency manifests is a blocker requiring review before proceeding.
+Any change to promoted Rust v0 source, release verifier, capabilities, production runtime, Gateway/Hypervisor/Sandbox/Grid, credentials/state, deployment surfaces, or production manifests is a blocker.
 
-- [ ] **Step 4: Commit the final Stage 4 record**
+- [ ] **Step 4: Commit final experiment record**
 
 ```bash
 git add labs/rust-trust-core/EXPERIMENT.md
 git commit -m "docs: record Rust Stage 4 adversarial evidence contract"
 ```
 
-- [ ] **Step 5: Open the pull request as draft**
-
-Use a title such as:
+- [ ] **Step 5: Open draft PR with exact title**
 
 ```text
 feat: add Rust Stage 4 adversarial differential conformance
 ```
 
-PR body must state:
-
-- evidence-only Stage 4 purpose;
+PR body must include:
+- evidence-only purpose;
 - fixed seeds/counts/limits;
-- TDD RED -> GREEN sequence for generator, valid differential, mismatch proof, and invalid limits;
+- RED -> GREEN sequence for generator, valid differential, mismatch proof, invalid limits;
 - promoted source unchanged;
-- Node remains authoritative;
-- source gate remains CI/test-bound;
+- Node authoritative;
+- source gate CI/test-bound;
 - no runtime/capability/effect authority;
 - Stage 5 not authorized.
 
-- [ ] **Step 6: Require exact-head workflow completion**
+- [ ] **Step 6: Require exact-head workflow success**
 
-Record the PR head SHA, then require all workflow families on that exact head:
+For one unchanged PR head require:
 
 ```text
 Rust Trust-Core Laboratory       completed/success
@@ -864,47 +810,34 @@ Windows Compatibility            completed/success
   verify-macos (macos-15-intel)  success
 ```
 
-Do not reuse earlier-head evidence after any commit.
+Any commit invalidates prior exact-head evidence.
 
-- [ ] **Step 7: Review every new comment/thread before readiness**
+- [ ] **Step 7: Process all review findings before readiness**
 
-For each review finding:
+For every finding: verify against current code; valid findings get fresh RED -> GREEN correction plus full exact-head restart; invalid/wording findings get evidence-backed response/correction without authority widening; resolve only after addressed.
 
-1. verify the claim against current code;
-2. if valid, use a fresh RED -> GREEN correction and restart exact-head evidence;
-3. if invalid or wording-only, respond with the verified boundary and correct misleading text without widening authority;
-4. resolve only after the concern is actually addressed.
+- [ ] **Step 8: Update PR body with immutable evidence snapshot**
 
-- [ ] **Step 8: Update PR metadata with the immutable evidence snapshot**
-
-Without changing repository files, add to the PR body:
-
+Without changing repo files, record:
 - exact accepted head SHA;
-- exact Rust/Node toolchain versions;
-- 1,024/1,024 generated valid matches;
+- Node/Rust/Cargo versions;
+- 1,024/1,024 generated valid exact matches;
 - 256/256 generated invalid rejections in both language paths;
 - 17/17 existing valid matches and 12/12 existing malformed rejections;
-- deterministic replay/category coverage result;
-- generated mismatch proof result;
+- deterministic replay/category coverage;
+- generated mismatch proof;
+- all resource-bound negative tests;
 - dependency count `0` and unsafe state `forbidden`;
-- exact workflow run numbers and conclusions;
+- exact workflow run numbers/conclusions;
 - unresolved review-thread count `0`;
-- explicit Stage 4 non-claims.
+- explicit non-claims.
 
-PR-body edits do not change the head SHA.
+PR body edits do not alter head SHA.
 
-- [ ] **Step 9: Mark ready for review only after the final immutability gate**
+- [ ] **Step 9: Mark ready only after final immutability check**
 
-Immediately before changing draft state, re-read:
+Immediately re-read PR head, protected `main`, workflow conclusions, review threads, and changed files. Do not mark ready if head/base incompatibly changed, a check regressed, a blocker exists, or promoted source changed.
 
-- PR head SHA;
-- protected `main` SHA;
-- workflow conclusions attached to the PR head;
-- review threads;
-- changed-file list.
+- [ ] **Step 10: Stop at Stage 4 acceptance/merge gate**
 
-If the PR head changed, `main` advanced incompatibly, a workflow regressed, an unresolved blocker appeared, or the promoted source changed, do not mark ready.
-
-- [ ] **Step 10: Stop at the Stage 4 acceptance/merge gate**
-
-Do not merge automatically as part of implementation-plan execution. Report the exact head, workflow evidence, review state, changed-file boundary, and non-claims. Stage 5 begins only after a separate explicit Stage 4 acceptance/merge decision.
+Do not merge as part of this plan. Report exact head, workflow evidence, review state, changed-file boundary, and non-claims. Stage 5 requires a separate explicit acceptance/merge decision.
