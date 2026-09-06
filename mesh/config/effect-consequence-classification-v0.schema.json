@@ -10,6 +10,7 @@
     "status",
     "classification_id",
     "effect_ref",
+    "effect_digest",
     "consequence_class",
     "rationale",
     "reversibility",
@@ -26,6 +27,7 @@
     "status": { "const": "inert-evidence" },
     "classification_id": { "$ref": "#/$defs/identifier" },
     "effect_ref": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "effect_digest": { "$ref": "#/$defs/digest" },
     "consequence_class": {
       "enum": [
         "informational",
@@ -75,6 +77,10 @@
       "minLength": 1,
       "maxLength": 160,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   }
 }
