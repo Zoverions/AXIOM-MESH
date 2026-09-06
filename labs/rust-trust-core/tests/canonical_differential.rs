@@ -34,16 +34,8 @@ fn node_outputs() -> BTreeMap<String, String> {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    String::from_utf8(output.stdout)
-        .expect("Node oracle output must be UTF-8")
-        .lines()
-        .map(|line| {
-            let (case_id, canonical) = line
-                .split_once('\t')
-                .expect("Node oracle output must contain case_id and canonical bytes");
-            (case_id.to_owned(), canonical.to_owned())
-        })
-        .collect()
+    let stdout = String::from_utf8(output.stdout).expect("Node oracle output must be UTF-8");
+    parse_node_outputs(&stdout).expect("Node oracle output must be unique and well formed")
 }
 
 fn assert_exact_match(case_id: &str, node: &str, rust: &str) {
@@ -96,6 +88,13 @@ fn differential_comparison_rejects_real_byte_divergence() {
     assert!(message.contains("mismatch_probe"));
     assert!(message.contains("node=\"{\\\"a\\\":1}\""));
     assert!(message.contains("rust=\"{\\\"a\\\":2}\""));
+}
+
+#[test]
+fn node_output_parser_rejects_duplicate_case_ids() {
+    let duplicate = "same\t{\"a\":1}\nsame\t{\"a\":2}\n";
+    let error = parse_node_outputs(duplicate).expect_err("duplicate Node case ids must fail closed");
+    assert!(error.contains("duplicate Node oracle case_id: same"));
 }
 
 #[test]
