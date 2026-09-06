@@ -8,10 +8,9 @@ on:
       - "feat/rust-trust-core-stage3-source-promotion"
     paths:
       - "labs/rust-trust-core/**"
-      - "trust-core/rust/canonical_value_v0.rs"
+      - "trust-core/rust/**"
       - "mesh/src/rust-trust-core-source-boundary.mjs"
       - "mesh/test/rust-trust-core-candidate-source-boundary.test.mjs"
-      - "mesh/package.json"
       - ".github/workflows/rust-trust-core-lab.yml"
       - "docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md"
       - "docs/ROADMAP.md"
@@ -23,10 +22,9 @@ on:
     branches: ["main"]
     paths:
       - "labs/rust-trust-core/**"
-      - "trust-core/rust/canonical_value_v0.rs"
+      - "trust-core/rust/**"
       - "mesh/src/rust-trust-core-source-boundary.mjs"
       - "mesh/test/rust-trust-core-candidate-source-boundary.test.mjs"
-      - "mesh/package.json"
       - ".github/workflows/rust-trust-core-lab.yml"
       - "docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md"
       - "docs/ROADMAP.md"
