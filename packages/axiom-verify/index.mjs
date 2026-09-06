@@ -25,18 +25,38 @@ export {
 export {
   MACHINE_INTENT_RECEIPT_SCHEMA,
   MACHINE_INTENT_RECEIPT_STATEMENT_SCHEMA,
+  GRID_CONTINUITY_ANCHOR_SCHEMA,
+  CLAIM_BUILD_CONTEXT_SCHEMA,
+  GRID_CONTINUITY_MODE,
+  EXPORT_PACKAGE_FORMAT,
+  EXPORT_CONTINUITY_MODE,
+  EVIDENCE_BUNDLE_ARTIFACT,
   KNOWN_RECEIPT_SCHEMAS,
   KNOWN_STATEMENT_SCHEMAS,
-  isKnownReceiptSchema
+  KNOWN_CONTINUITY_SCHEMAS,
+  isKnownReceiptSchema,
+  isKnownContinuitySchema
 } from './schemas.mjs';
 
 export { verifyMachineReceiptLike } from './verify-receipt.mjs';
+export {
+  verifyContinuityAnchor,
+  verifyChainSegmentAgainstRetainedHead,
+  GENESIS_HASH
+} from './verify-continuity.mjs';
+export { verifyExportPackage } from './verify-export.mjs';
 
 export {
   INTEGRITY_VERSUS_TRUTH,
   VERIFY_STATUS,
   buildVerificationReport,
-  assertNoPromotionLanguage
+  assertNoPromotionLanguage,
+  sanitizeUntrustedReportField
 } from './report.mjs';
 
-export { createSignedReceiptFixture } from './fixtures.mjs';
+export {
+  createSignedReceiptFixture,
+  createChainSegmentFixture,
+  createContinuityAnchorFixture,
+  createExportPackageFixture
+} from './fixtures.mjs';
