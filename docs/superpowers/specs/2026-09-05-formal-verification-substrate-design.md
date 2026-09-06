@@ -159,7 +159,6 @@ A policy predicate may require, for example:
 ```text
 artifact_schema == axiom-formal-proof-verification.v1
 verdict == VERIFIED
-formal_system_profile == profile digest P
 statement_fingerprint == digest S
 dependency_closure_digest == digest D
 verifier_profile_digest in accepted set V
@@ -174,9 +173,11 @@ Any authority-sensitive use must continue through the existing signed policy and
 
 ## 5. `axiom-formal-proof-bundle.v1`
 
-The proof bundle is a canonical manifest plus an exact set of referenced files or content-addressed blobs.
+The proof bundle is a canonical manifest plus an exact set of referenced ordinary files or content-addressed blobs.
 
-The manifest itself is canonical JSON and is digested using the same dependency-light canonicalization posture already used by AXIOM Verify.
+The manifest itself is canonical JSON and is digested using the same dependency-light canonicalization posture already used by AXIOM Verify, with domain separation defined below.
+
+Version 1 does not auto-expand archives.
 
 ### 5.1 Required manifest fields
 
@@ -195,6 +196,9 @@ statement_fingerprint:
   algorithm
   value
 verifier_profile:
+  profile_digest
+  adapter_id
+  adapter_version
   verifier_id
   verifier_version
   executable_digest
@@ -223,7 +227,27 @@ provenance:
 
 The manifest may contain descriptive metadata, but no descriptive field may substitute for a required digest binding.
 
-### 5.2 Path and file rules
+The `verifier_profile.profile_digest` must match the digest of exactly one registered verifier profile descriptor. The remaining verifier-profile fields in the manifest are redundant inspectability bindings and must exactly match that resolved descriptor; any disagreement fails closed.
+
+### 5.2 Canonical ordering rules
+
+The verifier does not silently sort or normalize set-like input before deciding whether the manifest is valid. Version 1 requires the producer to supply canonical order, and the verifier rejects violations.
+
+Required ordering is:
+
+```text
+artifacts[]      -> ascending bytewise ASCII path
+dependencies[]   -> ascending tuple (kind, dependency_id, digest)
+premise_refs[]   -> ascending bytewise string value
+non_claims[]     -> ascending bytewise string value
+source_refs[]    -> ascending bytewise string value
+```
+
+All five arrays must be duplicate-free.
+
+Arrays whose order is semantically meaningful in a future formal-system adapter require a new schema/profile rule rather than silently reinterpreting these v1 set-like arrays.
+
+### 5.3 Path and file rules
 
 Version 1 uses a deliberately narrow file model.
 
@@ -242,7 +266,7 @@ The verifier rejects the bundle rather than normalizing ambiguous paths.
 
 Each artifact is bound by exact SHA-256 digest and byte length before any verifier adapter receives it.
 
-### 5.3 Artifact roles
+### 5.4 Artifact roles
 
 Version 1 recognizes a bounded role vocabulary:
 
@@ -258,31 +282,26 @@ auxiliary
 
 Adapters may impose stricter role requirements. Unknown roles fail closed under v1.
 
-### 5.4 Dependency closure
+### 5.5 Dependency closure
 
 The bundle must declare the complete dependency closure required for the claimed verification scope.
 
 Dependencies include any formal library, axiom package, theorem package, generated source, lockfile, configuration, or other semantic input that can affect proof acceptance.
 
-The closure is identified by:
+The closure is identified by the domain-separated digest:
 
 ```text
 dependency_closure_digest = SHA-256(
-  canonical-json(sorted exact dependency descriptors)
+  UTF8("axiom-formal-dependency-closure.v1\n") ||
+  UTF8(canonical-json(dependencies[]))
 )
 ```
 
-The sorting key is the canonical tuple:
-
-```text
-(kind, dependency_id, digest)
-```
-
-The verifier rejects unsorted, duplicate, ambiguous, or incomplete dependency descriptors rather than silently repairing them.
+`dependencies[]` must already satisfy the canonical ordering rule from section 5.2. The verifier rejects unsorted, duplicate, ambiguous, or incomplete dependency descriptors rather than silently repairing them.
 
 For adapter profiles that use package managers or standard libraries, the accepted profile must define how the complete transitive dependency closure is materialized and hashed. Network resolution during verification is forbidden.
 
-### 5.5 Premises and assumptions
+### 5.6 Premises and assumptions
 
 `premise_refs[]` identifies the formal premises on which the claimed theorem depends at the abstraction level exposed by the adapter.
 
@@ -290,7 +309,7 @@ This field exists for inspectability and policy use. It does not replace the ful
 
 A proof can be valid relative to inconsistent, weak, strong, domain-specific, or empirically unsupported premises. The verification report must preserve those premise references and must not describe proof validity as external-world truth.
 
-### 5.6 Statement fingerprint
+### 5.7 Statement fingerprint
 
 Each registered adapter profile must define one deterministic procedure for computing the fingerprint of the checked declaration.
 
@@ -299,6 +318,23 @@ The procedure must bind the exact formal statement interpreted by that verifier 
 If the adapter cannot deterministically identify the exact checked statement, the bundle is `UNSUPPORTED` under that profile.
 
 The bundle-provided fingerprint must equal the independently computed fingerprint or verification fails closed.
+
+### 5.8 Proof-bundle digest
+
+After the verifier has confirmed that every supplied artifact byte string matches the `sha256` and `size_bytes` declared in the canonical manifest, the exact bundle identity is:
+
+```text
+manifest_digest = SHA-256(UTF8(canonical-json(manifest)))
+
+proof_bundle_digest = SHA-256(
+  UTF8("axiom-formal-proof-bundle.v1\n") ||
+  manifest_digest_bytes
+)
+```
+
+Because the canonical manifest contains the complete artifact digest/size table, dependency descriptors, statement fingerprint, verifier-profile binding, and resource-policy digest, the domain-separated `proof_bundle_digest` transitively binds those verified artifact bytes and semantic inputs.
+
+The digest is not computed until all declared artifact digests and sizes have been independently checked.
 
 ---
 
@@ -327,9 +363,18 @@ resource_policy_digest
 output_contract_version
 ```
 
-The canonical descriptor digest is `verifier_profile_digest`.
+Its identity is:
+
+```text
+verifier_profile_digest = SHA-256(
+  UTF8("axiom-formal-verifier-profile.v1\n") ||
+  UTF8(canonical-json(profile_descriptor))
+)
+```
 
 Changing any semantically relevant verifier, adapter, configuration, foundation, dependency-resolution, resource, or output-contract property creates a different profile digest.
+
+The manifest's `verifier_profile.profile_digest` and redundant verifier identity fields must match this resolved descriptor exactly.
 
 ### 6.2 Adapter contract
 
@@ -427,20 +472,22 @@ The high-level verification sequence is normative.
 ```text
 1. Parse manifest under bounded JSON limits.
 2. Require exact supported schema id.
-3. Validate canonical field shapes and bounded enums.
-4. Validate path rules and declared file sizes.
+3. Validate canonical field shapes, bounded enums, canonical array order,
+   duplicate-freedom, and exact path grammar.
+4. Validate declared file sizes and materialize ordinary files only.
 5. Hash every artifact before adapter invocation.
 6. Reject any digest, size, duplicate, ordering, or materialization mismatch.
-7. Resolve exactly one registered verifier profile.
-8. Require exact verifier/profile/config/resource digests.
+7. Resolve exactly one registered verifier profile by profile_digest.
+8. Require exact redundant verifier/profile/config/resource bindings.
 9. Compute and validate complete dependency_closure_digest.
-10. Invoke the registered adapter under the resolved profile.
-11. Require adapter output to satisfy the bounded output contract.
-12. Independently compare returned statement fingerprint, dependency digest,
+10. Compute proof_bundle_digest only after artifact validation succeeds.
+11. Invoke the registered adapter under the resolved profile.
+12. Require adapter output to satisfy the bounded output contract.
+13. Independently compare returned statement fingerprint, dependency digest,
     premise refs, and verifier profile digest against the manifest/profile.
-13. Digest the bounded verification transcript.
-14. Emit axiom-formal-proof-verification.v1.
-15. If imported into Mesh, bind the verification artifact digest through the
+14. Build and digest the bounded deterministic verification transcript.
+15. Emit axiom-formal-proof-verification.v1.
+16. If imported into Mesh, bind the verification artifact digest through the
     existing signed evidence/provenance path before policy consumption.
 ```
 
@@ -473,6 +520,8 @@ verification_scope:
   verifier_version
 non_claims[]
 ```
+
+`premise_refs[]` and `non_claims[]` retain the canonical v1 ordering/duplicate rules from section 5.2.
 
 No wall-clock timestamp is part of the deterministic core verification result. If Mesh imports the result, the existing evidence event may add authenticated observation/ingestion time outside the core result digest.
 
@@ -531,7 +580,36 @@ transcript_limit_exceeded
 
 The implementation may define more specific bounded codes while preserving these semantic classes.
 
-### 8.4 Non-claims
+### 8.4 Deterministic transcript
+
+`transcript_digest` binds a bounded deterministic semantic transcript defined by the adapter output contract.
+
+The deterministic transcript may contain verifier-relevant declarations, checked targets, bounded reason codes, and other stable verification facts. It must exclude or normalize host-specific and run-specific values such as:
+
+- wall-clock timestamps;
+- process identifiers;
+- temporary absolute paths;
+- hostnames;
+- nondeterministic progress text;
+- memory addresses;
+- randomized diagnostic identifiers.
+
+Raw operational stdout/stderr may be retained separately as diagnostic evidence where appropriate, but it is not allowed to alter the core semantic verification result unless the profile explicitly defines a deterministic bounded representation.
+
+### 8.5 Verification-artifact digest
+
+After constructing the canonical result object, its exact identity is:
+
+```text
+verification_artifact_digest = SHA-256(
+  UTF8("axiom-formal-proof-verification.v1\n") ||
+  UTF8(canonical-json(verification_artifact))
+)
+```
+
+Mesh evidence import binds this exact digest, not a human summary and not an unverified `VERIFIED` field copied from another object.
+
+### 8.6 Non-claims
 
 Every human-facing representation of a `VERIFIED` result must communicate at least these non-claims:
 
@@ -550,7 +628,7 @@ Every human-facing representation of a `VERIFIED` result must communicate at lea
 
 A raw JSON object claiming to be a verification report is not trusted merely because its fields say `VERIFIED`.
 
-When a verification result is used inside Mesh, the system must bind the exact result digest through the existing evidence/provenance mechanism appropriate to the consuming workflow.
+When a verification result is used inside Mesh, the system must bind the exact `verification_artifact_digest` through the existing evidence/provenance mechanism appropriate to the consuming workflow.
 
 The consuming policy must be able to identify:
 
@@ -703,7 +781,7 @@ A crafted manifest attempts to read/write outside the verification workspace or 
 
 A verifier or adapter produces inconsistent verdicts or semantic fingerprints for the same exact inputs/profile.
 
-**Mitigation:** deterministic adapter contract, reproducibility tests, explicit nondeterministic-result failure, profile ineligibility until resolved.
+**Mitigation:** deterministic adapter contract, repeated reproducibility tests during profile qualification, explicit nondeterministic-result failure in test adapters, and profile ineligibility until determinism requirements are satisfied.
 
 ### 11.10 Fake verification report
 
@@ -740,9 +818,10 @@ statement_fingerprint
 dependency_closure_digest
 premise_refs
 verifier_profile_digest
+transcript_digest
 ```
 
-Operational metadata such as host observation time, process identifiers, or UI text must not alter that core semantic result.
+Operational metadata such as host observation time, process identifiers, raw diagnostic logs, or UI text must not alter that core semantic result.
 
 If a formal system inherently requires nondeterministic search, the accepted profile must still reduce the final checking step to deterministic verification of an explicit proof object. Search may be nondeterministic; acceptance must not depend on unbound search state.
 
@@ -774,24 +853,25 @@ A future real-prover slice may introduce one narrowly pinned adapter only after 
 
 The first implementation plan must include tests demonstrating at least:
 
-1. A valid deterministic fixture produces `VERIFIED` with exact expected digests.
+1. A valid deterministic fixture produces `VERIFIED` with exact expected domain-separated digests.
 2. Changed statement bytes fail.
 3. Changed proof bytes fail.
 4. Changed dependency bytes fail.
 5. Missing dependency fails closed.
-6. Duplicate or unsorted dependency descriptors fail closed.
+6. Duplicate or unsorted artifact/dependency/premise/non-claim/source-reference entries fail closed.
 7. Unknown verifier profile produces `UNSUPPORTED`.
 8. Verifier-profile digest mismatch fails closed.
-9. Executable/configuration/resource-policy digest mismatch fails closed.
+9. Redundant adapter/verifier/executable/configuration/resource-policy binding mismatch fails closed.
 10. Invalid or ambiguous artifact paths fail closed.
 11. Oversized manifest, artifact count, artifact size, dependency count, and transcript fail closed according to the declared resource policy.
 12. Statement fingerprint mismatch fails closed.
 13. Adapter output outside the bounded contract fails closed.
-14. Deliberately nondeterministic adapter behavior is detected or makes the profile ineligible for `VERIFIED` evidence.
-15. A fabricated JSON report containing `VERIFIED` is insufficient for Mesh policy consumption without accepted evidence/provenance binding.
+14. Repeated qualification runs for the same exact fixture/profile produce the same semantic result and transcript digest; a deliberately nondeterministic test adapter is ineligible for `VERIFIED` evidence.
+15. A fabricated JSON report containing `VERIFIED` is insufficient for Mesh policy consumption without accepted evidence/provenance binding of `verification_artifact_digest`.
 16. A genuine verified-proof artifact cannot mint a capability, widen a mandate, consume an unrelated approval, or directly authorize an external effect.
 17. Human-facing `VERIFIED` output always preserves the formal-verification-versus-external-truth non-claim.
 18. `REJECTED`, `UNSUPPORTED`, and `ERROR` remain distinguishable.
+19. Changing only run-specific metadata cannot change the core semantic verification artifact.
 
 ---
 
