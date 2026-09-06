@@ -159,6 +159,7 @@ A policy predicate may require, for example:
 ```text
 artifact_schema == axiom-formal-proof-verification.v1
 verdict == VERIFIED
+formal_system_profile == profile digest P
 statement_fingerprint == digest S
 dependency_closure_digest == digest D
 verifier_profile_digest in accepted set V
@@ -173,9 +174,9 @@ Any authority-sensitive use must continue through the existing signed policy and
 
 ## 5. `axiom-formal-proof-bundle.v1`
 
-The proof bundle is a canonical manifest plus an exact set of referenced ordinary files or content-addressed blobs.
+The proof bundle is a canonical manifest plus an exact set of referenced files or content-addressed blobs.
 
-The manifest itself is canonical JSON and is digested using the same dependency-light canonicalization posture already used by AXIOM Verify, with domain separation defined below.
+The manifest itself is canonical JSON and is digested using the same dependency-light canonicalization posture already used by AXIOM Verify.
 
 Version 1 does not auto-expand archives.
 
@@ -628,7 +629,7 @@ Every human-facing representation of a `VERIFIED` result must communicate at lea
 
 A raw JSON object claiming to be a verification report is not trusted merely because its fields say `VERIFIED`.
 
-When a verification result is used inside Mesh, the system must bind the exact `verification_artifact_digest` through the existing evidence/provenance mechanism appropriate to the consuming workflow.
+When a verification result is used inside Mesh, the system must bind the exact result digest through the existing evidence/provenance mechanism appropriate to the consuming workflow.
 
 The consuming policy must be able to identify:
 
@@ -781,7 +782,7 @@ A crafted manifest attempts to read/write outside the verification workspace or 
 
 A verifier or adapter produces inconsistent verdicts or semantic fingerprints for the same exact inputs/profile.
 
-**Mitigation:** deterministic adapter contract, repeated reproducibility tests during profile qualification, explicit nondeterministic-result failure in test adapters, and profile ineligibility until determinism requirements are satisfied.
+**Mitigation:** deterministic adapter contract, reproducibility tests, explicit nondeterministic-result failure, profile ineligibility until resolved.
 
 ### 11.10 Fake verification report
 
@@ -818,10 +819,9 @@ statement_fingerprint
 dependency_closure_digest
 premise_refs
 verifier_profile_digest
-transcript_digest
 ```
 
-Operational metadata such as host observation time, process identifiers, raw diagnostic logs, or UI text must not alter that core semantic result.
+Operational metadata such as host observation time, process identifiers, or UI text must not alter that core semantic result.
 
 If a formal system inherently requires nondeterministic search, the accepted profile must still reduce the final checking step to deterministic verification of an explicit proof object. Search may be nondeterministic; acceptance must not depend on unbound search state.
 
@@ -853,25 +853,24 @@ A future real-prover slice may introduce one narrowly pinned adapter only after 
 
 The first implementation plan must include tests demonstrating at least:
 
-1. A valid deterministic fixture produces `VERIFIED` with exact expected domain-separated digests.
+1. A valid deterministic fixture produces `VERIFIED` with exact expected digests.
 2. Changed statement bytes fail.
 3. Changed proof bytes fail.
 4. Changed dependency bytes fail.
 5. Missing dependency fails closed.
-6. Duplicate or unsorted artifact/dependency/premise/non-claim/source-reference entries fail closed.
+6. Duplicate or unsorted dependency descriptors fail closed.
 7. Unknown verifier profile produces `UNSUPPORTED`.
 8. Verifier-profile digest mismatch fails closed.
-9. Redundant adapter/verifier/executable/configuration/resource-policy binding mismatch fails closed.
+9. Executable/configuration/resource-policy digest mismatch fails closed.
 10. Invalid or ambiguous artifact paths fail closed.
 11. Oversized manifest, artifact count, artifact size, dependency count, and transcript fail closed according to the declared resource policy.
 12. Statement fingerprint mismatch fails closed.
 13. Adapter output outside the bounded contract fails closed.
-14. Repeated qualification runs for the same exact fixture/profile produce the same semantic result and transcript digest; a deliberately nondeterministic test adapter is ineligible for `VERIFIED` evidence.
-15. A fabricated JSON report containing `VERIFIED` is insufficient for Mesh policy consumption without accepted evidence/provenance binding of `verification_artifact_digest`.
+14. Deliberately nondeterministic adapter behavior is detected or makes the profile ineligible for `VERIFIED` evidence.
+15. A fabricated JSON report containing `VERIFIED` is insufficient for Mesh policy consumption without accepted evidence/provenance binding.
 16. A genuine verified-proof artifact cannot mint a capability, widen a mandate, consume an unrelated approval, or directly authorize an external effect.
 17. Human-facing `VERIFIED` output always preserves the formal-verification-versus-external-truth non-claim.
 18. `REJECTED`, `UNSUPPORTED`, and `ERROR` remain distinguishable.
-19. Changing only run-specific metadata cannot change the core semantic verification artifact.
 
 ---
 
