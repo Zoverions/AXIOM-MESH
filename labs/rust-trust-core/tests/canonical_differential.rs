@@ -40,6 +40,14 @@ fn node_outputs() -> BTreeMap<String, String> {
         .collect()
 }
 
+fn assert_exact_match(case_id: &str, node: &str, rust: &str) {
+    assert_eq!(
+        node.as_bytes(),
+        rust.as_bytes(),
+        "case {case_id}: canonical byte mismatch; node={node:?}; rust={rust:?}"
+    );
+}
+
 #[test]
 fn rust_candidate_matches_exact_node_oracle_bytes_for_all_v0_vectors() {
     let fixture = std::fs::read_to_string(fixture_path()).expect("fixture must be readable");
@@ -69,8 +77,13 @@ fn differential_comparison_rejects_real_byte_divergence() {
     let result = std::panic::catch_unwind(|| {
         assert_exact_match("mismatch_probe", "{\"a\":1}", "{\"a\":2}");
     });
-    assert!(
-        result.is_err(),
-        "byte divergence must fail the differential harness"
-    );
+    let panic = result.expect_err("byte divergence must fail the differential harness");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .expect("mismatch panic must carry a readable message");
+    assert!(message.contains("mismatch_probe"));
+    assert!(message.contains("node=\"{\\\"a\\\":1}\""));
+    assert!(message.contains("rust=\"{\\\"a\\\":2}\""));
 }
