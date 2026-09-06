@@ -244,7 +244,9 @@ pub fn parse_canonical_fixture(text: &str) -> Result<Vec<CanonicalCase>, VectorE
         lines.pop();
     }
     if lines.first() != Some(&"case_id\tkind\tpayload") {
-        return Err(VectorError::new("canonical vector fixture header is invalid"));
+        return Err(VectorError::new(
+            "canonical vector fixture header is invalid",
+        ));
     }
 
     let mut seen = HashSet::new();
