@@ -179,7 +179,9 @@ pub fn parse_canonical_vector_row(line: &str) -> Result<CanonicalCase, VectorErr
     let kind = columns[1];
     let payload = columns[2];
     if case_id.is_empty() {
-        return Err(VectorError::new("canonical vector case_id must be non-empty"));
+        return Err(VectorError::new(
+            "canonical vector case_id must be non-empty",
+        ));
     }
 
     let value = match kind {
@@ -198,9 +200,9 @@ pub fn parse_canonical_vector_row(line: &str) -> Result<CanonicalCase, VectorErr
                 )));
             }
         }),
-        "safe_integer" => CanonicalValue::Scalar(CanonicalScalar::SafeInteger(
-            parse_safe_integer(payload)?,
-        )),
+        "safe_integer" => {
+            CanonicalValue::Scalar(CanonicalScalar::SafeInteger(parse_safe_integer(payload)?))
+        }
         "negative_zero" => {
             if payload != "-0" {
                 return Err(VectorError::new("negative_zero payload must be -0"));
@@ -221,9 +223,7 @@ pub fn parse_canonical_vector_row(line: &str) -> Result<CanonicalCase, VectorErr
             };
             CanonicalValue::ScalarArray(values)
         }
-        "ascii_key_object" => {
-            CanonicalValue::AsciiKeyObject(parse_ascii_key_object(payload)?)
-        }
+        "ascii_key_object" => CanonicalValue::AsciiKeyObject(parse_ascii_key_object(payload)?),
         _ => {
             return Err(VectorError::new(format!(
                 "unknown canonical vector kind: {kind}"
