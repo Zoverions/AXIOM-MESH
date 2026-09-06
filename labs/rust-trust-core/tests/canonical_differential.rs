@@ -25,9 +25,9 @@ fn parse_node_outputs(stdout: &str) -> Result<BTreeMap<String, String>, String> 
     let mut outputs = BTreeMap::new();
 
     for line in stdout.lines() {
-        let (case_id, canonical) = line
-            .split_once('\t')
-            .ok_or_else(|| "Node oracle output must contain case_id and canonical bytes".to_owned())?;
+        let (case_id, canonical) = line.split_once('\t').ok_or_else(|| {
+            "Node oracle output must contain case_id and canonical bytes".to_owned()
+        })?;
 
         if outputs
             .insert(case_id.to_owned(), canonical.to_owned())
