@@ -198,7 +198,10 @@ fn stage4_rust_harness_limits_are_exact_and_fail_closed() {
     validate_stage4_row_limits("ok\tscalar_array\tn,b:true")
         .expect("ordinary generated row must be within Stage 4 limits");
 
-    let payload_row = format!("payload\tascii_string\t{}", "a".repeat(MAX_PAYLOAD_BYTES + 1));
+    let payload_row = format!(
+        "payload\tascii_string\t{}",
+        "a".repeat(MAX_PAYLOAD_BYTES + 1)
+    );
     assert!(
         validate_stage4_row_limits(&payload_row)
             .expect_err("payload limit plus one must fail")
@@ -301,7 +304,10 @@ fn all_256_generated_invalid_or_over_bound_cases_fail_closed_in_rust() {
             }
         };
 
-        assert!(failed, "generated invalid case unexpectedly accepted: {case_id}");
+        assert!(
+            failed,
+            "generated invalid case unexpectedly accepted: {case_id}"
+        );
         rejected += 1;
     }
 
