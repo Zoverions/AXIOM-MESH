@@ -21,6 +21,25 @@ fn oracle_path() -> PathBuf {
     manifest_dir().join("node/canonical_oracle.mjs")
 }
 
+fn parse_node_outputs(stdout: &str) -> Result<BTreeMap<String, String>, String> {
+    let mut outputs = BTreeMap::new();
+
+    for line in stdout.lines() {
+        let (case_id, canonical) = line
+            .split_once('\t')
+            .ok_or_else(|| "Node oracle output must contain case_id and canonical bytes".to_owned())?;
+
+        if outputs
+            .insert(case_id.to_owned(), canonical.to_owned())
+            .is_some()
+        {
+            return Err(format!("duplicate Node oracle case_id: {case_id}"));
+        }
+    }
+
+    Ok(outputs)
+}
+
 fn node_outputs() -> BTreeMap<String, String> {
     let output = Command::new("node")
         .arg(oracle_path())
