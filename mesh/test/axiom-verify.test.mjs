@@ -58,6 +58,44 @@ test('unknown schema id fails closed with explanation', () => {
   assert.equal(result.report.status, 'experimental-mvp-scaffold');
 });
 
+test('schema id containing promotion phrase does not crash report generation', () => {
+  const craftedSchema = 'attacker-production-ready-schema.v0';
+  let result;
+  assert.doesNotThrow(() => {
+    result = verifyMachineReceiptLike(
+      { schema: craftedSchema, payload: { x: 1 } },
+      { publicKeyPem: 'unused' }
+    );
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'unknown_schema');
+  assert.equal(result.report.verdict, 'FAIL');
+  assert.equal(result.report.status, VERIFY_STATUS);
+  assert.match(result.report.human_summary, /Integrity versus truth/);
+  const lowerSummary = result.report.human_summary.toLowerCase();
+  assert.equal(lowerSummary.includes('production-ready'), false);
+  assert.equal(lowerSummary.includes('production ready'), false);
+  assert.match(result.report.human_summary, /redacted-untrusted-field/);
+  assert.equal(String(result.report.artifact_schema).toLowerCase().includes('production-ready'), false);
+});
+
+test('non-cloneable artifact fails closed distinctly from invalid JSON', () => {
+  const nonCloneable = {
+    schema: 'axiom-totally-unknown.v9',
+    fn: () => {}
+  };
+  const cloneResult = verifyMachineReceiptLike(nonCloneable, { publicKeyPem: 'unused' });
+  assert.equal(cloneResult.ok, false);
+  assert.equal(cloneResult.code, 'non_cloneable');
+  assert.match(cloneResult.reason, /non-cloneable/i);
+  assert.equal(cloneResult.reason.includes('not valid JSON'), false);
+
+  const jsonResult = verifyMachineReceiptLike('{not-json', { publicKeyPem: 'unused' });
+  assert.equal(jsonResult.ok, false);
+  assert.equal(jsonResult.code, 'invalid_json');
+  assert.match(jsonResult.reason, /not valid JSON/);
+});
+
 test('verification report always includes integrity-versus-truth and no promotion language', () => {
   const { receipt, publicKeyPem } = createSignedReceiptFixture();
   const pass = verifyMachineReceiptLike(receipt, { publicKeyPem });

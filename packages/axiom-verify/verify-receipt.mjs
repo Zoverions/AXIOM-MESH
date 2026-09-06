@@ -15,10 +15,22 @@ const DIGEST = /^[a-f0-9]{64}$/;
  */
 export function verifyMachineReceiptLike(artifact, options = {}) {
   let parsed;
-  try {
-    parsed = typeof artifact === 'string' ? JSON.parse(artifact) : structuredClone(artifact);
-  } catch {
-    return failClosed('invalid_json', 'Artifact is not valid JSON', null);
+  if (typeof artifact === 'string') {
+    try {
+      parsed = JSON.parse(artifact);
+    } catch {
+      return failClosed('invalid_json', 'Artifact is not valid JSON', null);
+    }
+  } else {
+    try {
+      parsed = structuredClone(artifact);
+    } catch {
+      return failClosed(
+        'non_cloneable',
+        'Artifact could not be cloned for verification (non-cloneable input)',
+        null
+      );
+    }
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
