@@ -65,10 +65,14 @@ jobs:
         run: node --test labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
       - name: Verify Stage 4 adversarial limits
         run: node --test labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
+      - name: Verify Stage 5A Node intent attenuation oracle
+        run: node --test labs/rust-trust-core/node/intent_attenuation_oracle.test.mjs
       - name: Verify Stage 3 source boundary
         run: node mesh/src/rust-trust-core-source-boundary.mjs
       - name: Verify Stage 4 does not modify promoted Rust v0 source
         run: git diff --exit-code ec2a480ff8d903fbef89807429c289637e3a0d7c -- trust-core/rust/canonical_value_v0.rs
+      - name: Verify Stage 5A does not modify promoted Rust v0 source
+        run: git diff --exit-code ad8c0bd92f74f328c1c7e86c3d6e2723119defb3 -- trust-core/rust/canonical_value_v0.rs
       - name: Verify pinned Rust toolchain
         working-directory: labs/rust-trust-core
         run: |
