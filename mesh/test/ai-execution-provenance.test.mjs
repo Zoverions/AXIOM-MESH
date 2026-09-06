@@ -142,6 +142,41 @@ test('AI execution provenance rejects provider model and exact-result substituti
   );
 });
 
+test('AI execution provenance rejects a self-consistent forged terminal receipt', () => {
+  const request = invoke();
+  const receipt = buildAiProviderReceipt({ invoke: request, suggestion: suggestion() });
+  const forgedReceipt = {
+    ...receipt,
+    authority_effect: 'grant'
+  };
+  const forgedProvenance = provenance({ receipt_digest: digestObject(forgedReceipt) });
+
+  assert.throws(
+    () => bindAiExecutionProvenance({ request, receipt: forgedReceipt, provenance: forgedProvenance }),
+    /receipt/i
+  );
+});
+
+test('AI execution provenance rejects a recomputed receipt that changes request-bound purpose', () => {
+  const request = invoke();
+  const receipt = buildAiProviderReceipt({ invoke: request, suggestion: suggestion() });
+  const forgedUnsigned = {
+    ...receipt,
+    purpose: 'different-purpose'
+  };
+  delete forgedUnsigned.terminal_outcome_digest;
+  const forgedReceipt = {
+    ...forgedUnsigned,
+    terminal_outcome_digest: digestObject(forgedUnsigned)
+  };
+  const forgedProvenance = provenance({ receipt_digest: digestObject(forgedReceipt) });
+
+  assert.throws(
+    () => bindAiExecutionProvenance({ request, receipt: forgedReceipt, provenance: forgedProvenance }),
+    /receipt|purpose/i
+  );
+});
+
 test('AI execution provenance digest is deterministic', () => {
   assert.equal(aiExecutionProvenanceDigest(provenance()), aiExecutionProvenanceDigest(provenance()));
 });
