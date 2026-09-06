@@ -1,6 +1,6 @@
 use axiom_trust_core_lab::{
-    IntentAttenuationChecks, parse_intent_attenuation_fixture,
-    parse_intent_attenuation_vector_row, verify_intent_attenuation,
+    IntentAttenuationChecks, parse_intent_attenuation_fixture, parse_intent_attenuation_vector_row,
+    verify_intent_attenuation,
 };
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -150,7 +150,9 @@ fn node_outputs_for_text(text: &str) -> BTreeMap<String, OracleResult> {
         .expect("oracle stdin must be available")
         .write_all(text.as_bytes())
         .expect("generated fixture must be writable to oracle stdin");
-    let output = child.wait_with_output().expect("oracle process must finish");
+    let output = child
+        .wait_with_output()
+        .expect("oracle process must finish");
     assert!(
         output.status.success(),
         "Node attenuation oracle failed: {}",
@@ -204,11 +206,7 @@ fn render_set(values: &[String]) -> String {
     values.join(",")
 }
 
-fn render_row(
-    case_id: &str,
-    grants: &[Vec<String>; 4],
-    intents: &[Vec<String>; 4],
-) -> String {
+fn render_row(case_id: &str, grants: &[Vec<String>; 4], intents: &[Vec<String>; 4]) -> String {
     [
         case_id.to_owned(),
         "true".to_owned(),
@@ -443,7 +441,12 @@ fn generated_campaign_matches_real_node_oracle_and_expected_monotonicity() {
         let node_result = node
             .get(case.case_id())
             .unwrap_or_else(|| panic!("Node oracle missing generated case {}", case.case_id()));
-        assert_eq!(actual, *node_result, "{} Node/Rust mismatch", case.case_id());
+        assert_eq!(
+            actual,
+            *node_result,
+            "{} Node/Rust mismatch",
+            case.case_id()
+        );
         assert_eq!(
             actual,
             expected[case.case_id()],
@@ -461,8 +464,7 @@ fn generated_campaign_matches_real_node_oracle_and_expected_monotonicity() {
 
 #[test]
 fn node_output_parser_rejects_duplicate_case_ids() {
-    let duplicate =
-        "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
+    let duplicate = "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
     let error = parse_node_outputs(duplicate).expect_err("duplicate output ids must fail closed");
     assert!(error.contains("duplicate Node attenuation oracle case_id: same"));
 }
