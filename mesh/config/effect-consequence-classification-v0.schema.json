@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-effect-consequence-classification.v0",
+  "title": "AXIOM Effect Consequence Classification v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "classification_id",
+    "effect_ref",
+    "consequence_class",
+    "rationale",
+    "reversibility",
+    "physical_safety_impact",
+    "legal_or_regulatory_impact",
+    "classified_at",
+    "classifier_ref",
+    "authority_effect",
+    "execution_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-effect-consequence-classification.v0" },
+    "version": { "const": "0.1.0" },
+    "status": { "const": "inert-evidence" },
+    "classification_id": { "$ref": "#/$defs/identifier" },
+    "effect_ref": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "consequence_class": {
+      "enum": [
+        "informational",
+        "digital-reversible",
+        "digital-consequential",
+        "physical-reversible",
+        "physical-safety-relevant",
+        "physical-potentially-irreversible"
+      ]
+    },
+    "rationale": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "reversibility": {
+      "enum": ["not-applicable", "reversible", "partially-reversible", "irreversible", "unknown"]
+    },
+    "physical_safety_impact": {
+      "enum": ["none", "low", "material", "critical", "unknown"]
+    },
+    "legal_or_regulatory_impact": {
+      "enum": ["none", "material", "regulated", "unknown"]
+    },
+    "classified_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "classifier_ref": { "$ref": "#/$defs/identifier" },
+    "authority_effect": { "const": "none" },
+    "execution_effect": { "const": "none" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "consequence_class": { "const": "physical-safety-relevant" } } },
+      "then": { "properties": { "physical_safety_impact": { "not": { "const": "none" } } } }
+    },
+    {
+      "if": { "properties": { "consequence_class": { "const": "physical-potentially-irreversible" } } },
+      "then": {
+        "properties": {
+          "physical_safety_impact": { "not": { "const": "none" } },
+          "reversibility": { "not": { "const": "reversible" } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    }
+  }
+}
