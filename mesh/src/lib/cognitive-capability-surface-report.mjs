@@ -347,7 +347,7 @@ function validateResourceBucket(item, index, pathPrefix) {
   assertSortedUniqueStrings(item.observation_refs, `${path}.observation_refs`);
   if (item.basis === 'unknown') {
     if (item.unit !== null || item.min_amount !== null || item.max_amount !== null) {
-      throw new ValidationError(`${path} unknown resource bucket must use null unit and numeric range`);
+      throw new ValidationError(`${path} unknown resource bucket must use null unit, min_amount, and max_amount`);
     }
   } else {
     assertUnit(item.unit, `${path}.unit`);
