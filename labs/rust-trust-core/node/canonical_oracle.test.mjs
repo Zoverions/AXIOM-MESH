@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +15,7 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, '..', 'fixtures', 'canonical-value-v0.tsv');
 const INVALID_FIXTURE = join(HERE, '..', 'fixtures', 'canonical-value-v0-invalid.tsv');
+const ORACLE = join(HERE, 'canonical_oracle.mjs');
 
 function decodeEscapedRow(encoded) {
   return encoded.replaceAll('\\t', '\t').replaceAll('\\n', '\n');
@@ -47,6 +49,17 @@ test('Node oracle executes the supported canonicalJson implementation for the sh
 test('fixture-text execution is identical to file execution', async () => {
   const text = await readFile(FIXTURE, 'utf8');
   assert.equal(runFixtureText(text), await runFixture(FIXTURE));
+});
+
+test('Node oracle CLI accepts fixture text over stdin', async () => {
+  const text = await readFile(FIXTURE, 'utf8');
+  const expected = await runFixture(FIXTURE);
+  const result = spawnSync(process.execPath, [ORACLE, '-'], {
+    input: text,
+    encoding: 'utf8'
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `${expected}\n`);
 });
 
 test('fixture parser preserves all declared case ids exactly once', async () => {
