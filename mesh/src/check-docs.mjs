@@ -544,7 +544,7 @@ const REQUIRED_CONTENT = Object.freeze({
     'identity-only',
     'lazy installs',
     'Not production certification',
-    'pin accepted'
+    'pin_accepted'
   ],
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': [
     'AXIOM One',
