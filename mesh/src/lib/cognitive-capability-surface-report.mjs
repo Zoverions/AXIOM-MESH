@@ -618,7 +618,19 @@ export function validateCognitiveCapabilitySurfaceReport(document) {
   }
 
   assertArray(document.source_observations, 'surface report source_observations', 256);
-  document.source_observations.forEach(validateSourceObservation);
+  const seenIds = new Set();
+  const seenDigests = new Set();
+  document.source_observations.forEach((item, index) => {
+    validateSourceObservation(item, index);
+    if (seenIds.has(item.observation_id)) {
+      throw new ValidationError(`duplicate observation_id ${item.observation_id}`);
+    }
+    if (seenDigests.has(item.observation_digest)) {
+      throw new ValidationError(`duplicate observation digest ${item.observation_digest}`);
+    }
+    seenIds.add(item.observation_id);
+    seenDigests.add(item.observation_digest);
+  });
   for (let index = 1; index < document.source_observations.length; index += 1) {
     const previous = document.source_observations[index - 1];
     const current = document.source_observations[index];
