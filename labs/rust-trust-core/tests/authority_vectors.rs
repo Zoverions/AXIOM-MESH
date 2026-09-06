@@ -1,5 +1,5 @@
 use axiom_trust_core_lab::{
-    AuthorityEvidence, CapabilityEvidence, ConsentEvidence, EffectBudgetEvidence,
+    AuthorityEvidence, CapabilityEvidence, ConsentEvidence, DenyReason, EffectBudgetEvidence,
     PrincipalEvidence, evaluate_authority,
 };
 
@@ -10,6 +10,27 @@ fn parse_bool(value: &str) -> bool {
         "true" => true,
         "false" => false,
         other => panic!("invalid boolean fixture value: {other}"),
+    }
+}
+
+fn valid_input() -> AuthorityEvidence<'static> {
+    AuthorityEvidence {
+        principal: PrincipalEvidence {
+            subject: "principal:test",
+            verified: true,
+        },
+        capability: CapabilityEvidence {
+            capability: "synthetic.effect",
+            authorized: true,
+        },
+        consent: ConsentEvidence {
+            required: true,
+            valid: true,
+        },
+        budget: EffectBudgetEvidence {
+            required: true,
+            remaining: 1,
+        },
     }
 }
 
@@ -58,4 +79,48 @@ fn authority_vectors_match_expected_decisions() {
 
         assert_eq!(allowed, expected_allowed, "case {case_id}");
     }
+}
+
+#[test]
+fn deny_order_is_fail_closed_and_stable() {
+    let mut input = valid_input();
+    input.principal.verified = false;
+    input.capability.authorized = false;
+    input.consent.valid = false;
+    input.budget.remaining = 0;
+    assert_eq!(
+        evaluate_authority(input),
+        Err(DenyReason::UnverifiedPrincipal)
+    );
+
+    let mut input = valid_input();
+    input.capability.authorized = false;
+    input.consent.valid = false;
+    input.budget.remaining = 0;
+    assert_eq!(
+        evaluate_authority(input),
+        Err(DenyReason::UnauthorizedCapability)
+    );
+
+    let mut input = valid_input();
+    input.consent.valid = false;
+    input.budget.remaining = 0;
+    assert_eq!(
+        evaluate_authority(input),
+        Err(DenyReason::MissingRequiredConsent)
+    );
+
+    let mut input = valid_input();
+    input.budget.remaining = 0;
+    assert_eq!(
+        evaluate_authority(input),
+        Err(DenyReason::ExhaustedEffectBudget)
+    );
+}
+
+#[test]
+fn authority_grant_is_bound_to_evaluated_subject_and_capability() {
+    let grant = evaluate_authority(valid_input()).expect("valid evidence should grant authority");
+    assert_eq!(grant.subject(), "principal:test");
+    assert_eq!(grant.capability(), "synthetic.effect");
 }
