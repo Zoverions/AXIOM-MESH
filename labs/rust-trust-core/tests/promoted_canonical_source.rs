@@ -1,9 +1,7 @@
 #[path = "../../../trust-core/rust/canonical_value_v0.rs"]
 mod canonical_value_v0;
 
-use canonical_value_v0::{
-    canonicalize_case, parse_canonical_fixture, parse_canonical_vector_row,
-};
+use canonical_value_v0::{canonicalize_case, parse_canonical_fixture, parse_canonical_vector_row};
 
 #[test]
 fn promoted_source_matches_stage2_canonical_value_v0_contract() {
