@@ -44,7 +44,9 @@ fn parse_node_outputs(stdout: &str) -> Result<BTreeMap<String, OracleResult>, St
     for line in stdout.lines() {
         let columns = line.split('\t').collect::<Vec<_>>();
         if columns.len() != 6 {
-            return Err(format!("Node attenuation oracle output must contain 6 TSV columns: {line}"));
+            return Err(format!(
+                "Node attenuation oracle output must contain 6 TSV columns: {line}"
+            ));
         }
         let result = OracleResult {
             valid: parse_bool(columns[1])?,
@@ -54,7 +56,10 @@ fn parse_node_outputs(stdout: &str) -> Result<BTreeMap<String, OracleResult>, St
             resources: parse_bool(columns[5])?,
         };
         if outputs.insert(columns[0].to_owned(), result).is_some() {
-            return Err(format!("duplicate Node attenuation oracle case_id: {}", columns[0]));
+            return Err(format!(
+                "duplicate Node attenuation oracle case_id: {}",
+                columns[0]
+            ));
         }
     }
     Ok(outputs)
@@ -71,8 +76,8 @@ fn node_outputs_for_fixture() -> BTreeMap<String, OracleResult> {
         "Node attenuation oracle failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    parse_node_outputs(&String::from_utf8(output.stdout).expect("oracle output must be UTF-8"))
-        .expect("oracle output must be unique and well formed")
+    let stdout = String::from_utf8(output.stdout).expect("oracle output must be UTF-8");
+    parse_node_outputs(&stdout).expect("oracle output must be unique and well formed")
 }
 
 fn decode_escaped_row(encoded: &str) -> String {
@@ -92,16 +97,36 @@ fn rust_attenuation_matches_real_node_oracle_for_hand_curated_vectors() {
         let expected = node
             .get(case.case_id())
             .unwrap_or_else(|| panic!("Node oracle missing case {}", case.case_id()));
-        assert_eq!(rust.valid, expected.valid, "{} valid mismatch", case.case_id());
-        assert_eq!(rust.checks.actions, expected.actions, "{} actions mismatch", case.case_id());
-        assert_eq!(rust.checks.purposes, expected.purposes, "{} purposes mismatch", case.case_id());
+        assert_eq!(
+            rust.valid,
+            expected.valid,
+            "{} valid mismatch",
+            case.case_id()
+        );
+        assert_eq!(
+            rust.checks.actions,
+            expected.actions,
+            "{} actions mismatch",
+            case.case_id()
+        );
+        assert_eq!(
+            rust.checks.purposes,
+            expected.purposes,
+            "{} purposes mismatch",
+            case.case_id()
+        );
         assert_eq!(
             rust.checks.destinations,
             expected.destinations,
             "{} destinations mismatch",
             case.case_id()
         );
-        assert_eq!(rust.checks.resources, expected.resources, "{} resources mismatch", case.case_id());
+        assert_eq!(
+            rust.checks.resources,
+            expected.resources,
+            "{} resources mismatch",
+            case.case_id()
+        );
     }
 }
 
@@ -111,7 +136,12 @@ fn rust_attenuation_has_expected_subset_and_widening_semantics() {
     let cases = parse_intent_attenuation_fixture(&fixture).expect("valid fixture must parse");
     let results = cases
         .iter()
-        .map(|case| (case.case_id(), verify_intent_attenuation(case).expect("case must evaluate")))
+        .map(|case| {
+            (
+                case.case_id(),
+                verify_intent_attenuation(case).expect("case must evaluate"),
+            )
+        })
         .collect::<BTreeMap<_, _>>();
 
     for case_id in [
@@ -151,7 +181,8 @@ fn rust_attenuation_has_expected_subset_and_widening_semantics() {
 
 #[test]
 fn malformed_unverified_and_unbound_rows_fail_closed() {
-    let fixture = std::fs::read_to_string(invalid_fixture_path()).expect("invalid fixture must be readable");
+    let fixture =
+        std::fs::read_to_string(invalid_fixture_path()).expect("invalid fixture must be readable");
     let mut lines = fixture.lines();
     assert_eq!(lines.next(), Some("case_id\tencoded_row"));
     let rows = lines.collect::<Vec<_>>();
@@ -174,7 +205,8 @@ fn malformed_unverified_and_unbound_rows_fail_closed() {
 
 #[test]
 fn node_output_parser_rejects_duplicate_case_ids() {
-    let duplicate = "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
+    let duplicate =
+        "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
     let error = parse_node_outputs(duplicate).expect_err("duplicate output ids must fail closed");
     assert!(error.contains("duplicate Node attenuation oracle case_id: same"));
 }

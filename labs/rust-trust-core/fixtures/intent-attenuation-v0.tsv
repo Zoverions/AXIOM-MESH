@@ -3,7 +3,7 @@ exact_empty	true	true
 exact_single	true	true	action:a	purpose:a	destination:a	resource:a	action:a	purpose:a	destination:a	resource:a
 exact_multi	true	true	action:a,action:b	purpose:a,purpose:b	destination:a,destination:b	resource:a,resource:b	action:a,action:b	purpose:a,purpose:b	destination:a,destination:b	resource:a,resource:b
 subset_actions	true	true	action:a,action:b,action:c	purpose:a	destination:a	resource:a	action:a,action:c	purpose:a	destination:a	resource:a
-subset_purposes	true	true	action:a	purpose:a,purpose:b,purpose:c	destination:a	resource:a	action:a	purpose:b	 destination:a	resource:a
+subset_purposes	true	true	action:a	purpose:a,purpose:b,purpose:c	destination:a	resource:a	action:a	purpose:b	destination:a	resource:a
 subset_destinations	true	true	action:a	purpose:a	destination:a,destination:b,destination:c	resource:a	action:a	purpose:a	destination:a,destination:c	resource:a
 subset_resources	true	true	action:a	purpose:a	destination:a	resource:a,resource:b,resource:c	action:a	purpose:a	destination:a	resource:b
 empty_intent_nonempty	true	true	action:a	purpose:a	destination:a	resource:a				
