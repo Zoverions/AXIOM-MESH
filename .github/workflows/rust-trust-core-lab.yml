@@ -62,6 +62,8 @@ jobs:
         run: node --test labs/rust-trust-core/node/canonical_oracle.test.mjs
       - name: Verify Stage 4 adversarial corpus contract
         run: node --test labs/rust-trust-core/node/canonical_adversarial_corpus.test.mjs
+      - name: Verify Stage 4 adversarial limits
+        run: node --test labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
       - name: Verify Stage 3 source boundary
         run: node mesh/src/rust-trust-core-source-boundary.mjs
       - name: Verify pinned Rust toolchain
