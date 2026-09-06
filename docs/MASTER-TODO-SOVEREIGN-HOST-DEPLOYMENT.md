@@ -41,7 +41,8 @@ These are active/draft lines with different historical bases. Before implementat
 - [x] Pin Rust `1.85.0`, forbid unsafe code, use zero third-party Rust dependencies, and bind the laboratory to dedicated formatting, Clippy, and locked-test CI.
 - [x] Add synthetic deny-dominant authority vectors and a privately constructible `AuthorityGrant` experiment without registering a capability.
 - [x] Stage 2: freeze the first shared language-neutral conformance vectors for pure validation/canonicalization semantics and run exact Node-vs-Rust comparisons.
-- [ ] Stage 3: move only pure validation/canonicalization candidates after Stage 2 evidence is accepted; do not introduce runtime authority.
+- [x] Stage 3: move only the accepted pure `canonical-value-v0` candidate into the governed `trust-core/rust/` source boundary without runtime authority.
+- [ ] Stage 4: run deterministic adversarial Node-vs-Rust differential conformance over the frozen `canonical-value-v0` domain without changing the promoted Rust implementation or runtime authority.
 - [ ] Require positive and negative semantic equivalence, canonical serialization equivalence where applicable, dependency/unsafe review, crash/recovery behavior, rollback, and independent review before any supported authority behavior moves from Node to Rust.
 - [ ] Keep every migration stage separately promotable and reversible; no stage inherits production authority merely because a previous stage passed.
 
