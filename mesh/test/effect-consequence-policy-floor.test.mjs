@@ -138,3 +138,16 @@ test('malformed policy risk and classification evidence fail closed', () => {
     /authority_effect/i
   );
 });
+
+test('unknown request fields fail closed instead of becoming future authority channels', () => {
+  assert.throws(
+    () => evaluateEffectConsequencePolicyFloor({
+      classification: classification(),
+      expectedEffectDigest: EFFECT_DIGEST,
+      expectedClassificationInstant: AT,
+      policyRisk: 'high',
+      authorityOverride: true
+    }),
+    error => error instanceof ValidationError && /unknown field/i.test(error.message)
+  );
+});
