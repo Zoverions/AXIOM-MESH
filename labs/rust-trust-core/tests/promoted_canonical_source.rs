@@ -1,10 +1,18 @@
 #[path = "../../../trust-core/rust/canonical_value_v0.rs"]
 mod canonical_value_v0;
 
-use canonical_value_v0::{canonicalize_case, parse_canonical_vector_row};
+use canonical_value_v0::{
+    canonicalize_case, parse_canonical_fixture, parse_canonical_vector_row,
+};
 
 #[test]
 fn promoted_source_matches_stage2_canonical_value_v0_contract() {
+    let fixture = parse_canonical_fixture("case_id\tkind\tpayload\nfixture_bool\tbool\ttrue\n")
+        .expect("approved Stage 3 candidate must parse the frozen fixture shape");
+    assert_eq!(fixture.len(), 1);
+    assert_eq!(fixture[0].case_id(), "fixture_bool");
+    assert_eq!(canonicalize_case(&fixture[0]), "true");
+
     let object = parse_canonical_vector_row("object_order\tascii_key_object\tz=i:2;a=i:1")
         .expect("approved Stage 3 candidate must parse the frozen v0 row");
     assert_eq!(canonicalize_case(&object), "{\"a\":1,\"z\":2}");
