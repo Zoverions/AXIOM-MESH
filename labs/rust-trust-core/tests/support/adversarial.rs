@@ -3,6 +3,88 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+pub const MAX_TOTAL_CASES: usize = 2048;
+pub const MAX_ARRAY_ITEMS: usize = 32;
+pub const MAX_OBJECT_MEMBERS: usize = 32;
+pub const MAX_KEY_LENGTH: usize = 64;
+pub const MAX_PAYLOAD_BYTES: usize = 4096;
+
+pub fn validate_stage4_row_limits(line: &str) -> Result<(), String> {
+    let columns: Vec<&str> = line.split('\t').collect();
+    if columns.len() != 3 {
+        return Err(format!(
+            "Stage 4 row must contain exactly 3 TSV columns: {line}"
+        ));
+    }
+
+    let kind = columns[1];
+    let payload = columns[2];
+    let payload_bytes = payload.len();
+    if payload_bytes > MAX_PAYLOAD_BYTES {
+        return Err(format!(
+            "Stage 4 MAX_PAYLOAD_BYTES exceeded: {payload_bytes} > {MAX_PAYLOAD_BYTES}"
+        ));
+    }
+
+    if kind == "scalar_array" {
+        let items = if payload.is_empty() {
+            0
+        } else {
+            payload.split(',').count()
+        };
+        if items > MAX_ARRAY_ITEMS {
+            return Err(format!(
+                "Stage 4 MAX_ARRAY_ITEMS exceeded: {items} > {MAX_ARRAY_ITEMS}"
+            ));
+        }
+    }
+
+    if kind == "ascii_key_object" {
+        let members: Vec<&str> = if payload.is_empty() {
+            Vec::new()
+        } else {
+            payload.split(';').collect()
+        };
+        if members.len() > MAX_OBJECT_MEMBERS {
+            return Err(format!(
+                "Stage 4 MAX_OBJECT_MEMBERS exceeded: {} > {MAX_OBJECT_MEMBERS}",
+                members.len()
+            ));
+        }
+
+        for member in members {
+            let key = member.split_once('=').map_or(member, |(key, _)| key);
+            let key_bytes = key.len();
+            if key_bytes > MAX_KEY_LENGTH {
+                return Err(format!(
+                    "Stage 4 MAX_KEY_LENGTH exceeded: {key_bytes} > {MAX_KEY_LENGTH}"
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn validate_stage4_fixture_limits(text: &str) -> Result<(), String> {
+    let normalized = text.replace("\r\n", "\n");
+    let without_one_trailing_empty = normalized.strip_suffix('\n').unwrap_or(&normalized);
+    let mut lines = without_one_trailing_empty.split('\n');
+
+    if lines.next() != Some("case_id\tkind\tpayload") {
+        return Err("Stage 4 fixture header is invalid".to_owned());
+    }
+
+    let total_cases = lines.count();
+    if total_cases > MAX_TOTAL_CASES {
+        return Err(format!(
+            "Stage 4 MAX_TOTAL_CASES exceeded: {total_cases} > {MAX_TOTAL_CASES}"
+        ));
+    }
+
+    Ok(())
+}
+
 pub fn run_node_with_stdin(script: &Path, args: &[&str], stdin: &str) -> Result<String, String> {
     let mut child = Command::new("node")
         .arg(script)
