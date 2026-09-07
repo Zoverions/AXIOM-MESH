@@ -53,7 +53,9 @@ struct Parser<'a> {
 impl<'a> Parser<'a> {
     fn new(text: &'a str) -> Result<Self, AuthorityContextError> {
         if text.is_empty() {
-            return Err(AuthorityContextError::new("Stage 5B JSON line must not be empty"));
+            return Err(AuthorityContextError::new(
+                "Stage 5B JSON line must not be empty",
+            ));
         }
         if text.len() > MAX_JSONL_LINE_BYTES {
             return Err(AuthorityContextError::new(
@@ -309,10 +311,7 @@ fn valid_identifier_text(text: &str) -> bool {
     })
 }
 
-fn identifier<'a>(
-    value: &'a JsonValue,
-    label: &str,
-) -> Result<&'a str, AuthorityContextError> {
+fn identifier<'a>(value: &'a JsonValue, label: &str) -> Result<&'a str, AuthorityContextError> {
     let text = ascii_string(value, label, 1, 192)?;
     if !valid_identifier_text(text) {
         return Err(AuthorityContextError::new(format!(
@@ -324,7 +323,10 @@ fn identifier<'a>(
 
 fn digest<'a>(value: &'a JsonValue, label: &str) -> Result<&'a str, AuthorityContextError> {
     let text = ascii_string(value, label, 64, 64)?;
-    if !text.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)) {
+    if !text
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
         return Err(AuthorityContextError::new(format!(
             "{label} must be exactly 64 lowercase hexadecimal characters"
         )));
@@ -337,9 +339,7 @@ fn decimal(bytes: &[u8]) -> Option<u32> {
         return None;
     }
     bytes.iter().try_fold(0_u32, |value, digit| {
-        value
-            .checked_mul(10)?
-            .checked_add(u32::from(*digit - b'0'))
+        value.checked_mul(10)?.checked_add(u32::from(*digit - b'0'))
     })
 }
 
@@ -388,13 +388,7 @@ fn canonical_utc_timestamp<'a>(
         2 => 28,
         _ => 0,
     };
-    if day == 0
-        || day > month_days
-        || hour > 23
-        || minute > 59
-        || second > 59
-        || millis > 999
-    {
+    if day == 0 || day > month_days || hour > 23 || minute > 59 || second > 59 || millis > 999 {
         return Err(AuthorityContextError::new(format!(
             "{label} must be canonical UTC ISO"
         )));
@@ -457,16 +451,34 @@ fn validate_grant(value: &JsonValue) -> Result<(), AuthorityContextError> {
         ],
         "authority grant",
     )?;
-    require_true(object_field(object, "verified")?, "authority grant verified")?;
-    identifier(object_field(object, "grant_id")?, "authority grant grant_id")?;
+    require_true(
+        object_field(object, "verified")?,
+        "authority grant verified",
+    )?;
+    identifier(
+        object_field(object, "grant_id")?,
+        "authority grant grant_id",
+    )?;
     identifier(object_field(object, "issuer")?, "authority grant issuer")?;
     identifier(
         object_field(object, "principal_id")?,
         "authority grant principal_id",
     )?;
-    sorted_unique_ascii_set(object_field(object, "resources")?, "authority grant resources", 128)?;
-    sorted_unique_ascii_set(object_field(object, "actions")?, "authority grant actions", 128)?;
-    sorted_unique_ascii_set(object_field(object, "purposes")?, "authority grant purposes", 128)?;
+    sorted_unique_ascii_set(
+        object_field(object, "resources")?,
+        "authority grant resources",
+        128,
+    )?;
+    sorted_unique_ascii_set(
+        object_field(object, "actions")?,
+        "authority grant actions",
+        128,
+    )?;
+    sorted_unique_ascii_set(
+        object_field(object, "purposes")?,
+        "authority grant purposes",
+        128,
+    )?;
     sorted_unique_ascii_set(
         object_field(object, "destinations")?,
         "authority grant destinations",
@@ -490,14 +502,26 @@ fn validate_intent(value: &JsonValue) -> Result<(), AuthorityContextError> {
         "authority intent",
     )?;
     require_true(object_field(object, "bound")?, "authority intent bound")?;
-    sorted_unique_ascii_set(object_field(object, "actions")?, "authority intent actions", 128)?;
-    sorted_unique_ascii_set(object_field(object, "purposes")?, "authority intent purposes", 128)?;
+    sorted_unique_ascii_set(
+        object_field(object, "actions")?,
+        "authority intent actions",
+        128,
+    )?;
+    sorted_unique_ascii_set(
+        object_field(object, "purposes")?,
+        "authority intent purposes",
+        128,
+    )?;
     sorted_unique_ascii_set(
         object_field(object, "destinations")?,
         "authority intent destinations",
         128,
     )?;
-    sorted_unique_ascii_set(object_field(object, "resources")?, "authority intent resources", 128)?;
+    sorted_unique_ascii_set(
+        object_field(object, "resources")?,
+        "authority intent resources",
+        128,
+    )?;
     Ok(())
 }
 
@@ -552,10 +576,22 @@ fn validate_history(value: &JsonValue) -> Result<(), AuthorityContextError> {
         let label = format!("authority history[{index}]");
         let object = exact_object(
             entry,
-            &["causal_scope_id", "action", "resource", "purpose", "destination"],
+            &[
+                "causal_scope_id",
+                "action",
+                "resource",
+                "purpose",
+                "destination",
+            ],
             &label,
         )?;
-        for key in ["causal_scope_id", "action", "resource", "purpose", "destination"] {
+        for key in [
+            "causal_scope_id",
+            "action",
+            "resource",
+            "purpose",
+            "destination",
+        ] {
             identifier(object_field(object, key)?, &format!("{label}.{key}"))?;
         }
     }
@@ -589,10 +625,7 @@ fn validate_restrictions(value: &JsonValue) -> Result<(), AuthorityContextError>
             ));
         }
         for (action_index, action) in actions.iter().enumerate() {
-            identifier(
-                action,
-                &format!("{label}.ordered_actions[{action_index}]"),
-            )?;
+            identifier(action, &format!("{label}.ordered_actions[{action_index}]"))?;
         }
     }
     Ok(())
@@ -604,7 +637,14 @@ pub fn parse_authority_context_line(
     let context = parse_json(line)?;
     let object = exact_object(
         &context,
-        &["case_id", "grant", "intent", "request", "history", "restrictions"],
+        &[
+            "case_id",
+            "grant",
+            "intent",
+            "request",
+            "history",
+            "restrictions",
+        ],
         "Stage 5B fixture envelope",
     )?;
     let case_id = identifier(object_field(object, "case_id")?, "Stage 5B case_id")?.to_owned();
@@ -645,7 +685,14 @@ pub fn validate_authority_context(
 ) -> Result<(), AuthorityContextError> {
     let object = exact_object(
         &case.context,
-        &["case_id", "grant", "intent", "request", "history", "restrictions"],
+        &[
+            "case_id",
+            "grant",
+            "intent",
+            "request",
+            "history",
+            "restrictions",
+        ],
         "Stage 5B fixture envelope",
     )?;
     validate_grant(object_field(object, "grant")?)?;
