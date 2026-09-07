@@ -7,12 +7,9 @@ fn manifest_dir() -> PathBuf {
 
 #[test]
 fn stage5b_valid_fixture_requires_structural_validator() {
-    let text = std::fs::read_to_string(
-        manifest_dir().join("fixtures/authority-context-v0.jsonl"),
-    )
-    .expect("Stage 5B fixture must be readable");
-    let cases = parse_authority_context_fixture(&text)
-        .expect("Stage 5B valid fixture must parse");
+    let text = std::fs::read_to_string(manifest_dir().join("fixtures/authority-context-v0.jsonl"))
+        .expect("Stage 5B fixture must be readable");
+    let cases = parse_authority_context_fixture(&text).expect("Stage 5B valid fixture must parse");
     assert!(cases.len() >= 10);
     for case in &cases {
         validate_authority_context(case)
