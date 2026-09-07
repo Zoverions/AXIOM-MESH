@@ -463,8 +463,7 @@ fn generated_campaign_matches_real_node_oracle_and_expected_monotonicity() {
 
 #[test]
 fn node_output_parser_rejects_duplicate_case_ids() {
-    let duplicate =
-        "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
+    let duplicate = "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
     let error = parse_node_outputs(duplicate).expect_err("duplicate output ids must fail closed");
     assert!(error.contains("duplicate Node attenuation oracle case_id: same"));
 }
