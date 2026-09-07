@@ -168,3 +168,9 @@ Permitted claim:
 At the accepted exact head, the laboratory-only Rust Stage 5B candidate matched the Stage 5B Node oracle's structural-admission result and rejection layer within the frozen printable-ASCII JSONL fixture envelope across the declared hand-curated and deterministic generated corpora. The Node oracle invoked the real supported evaluateAuthorityComposition() for nested structural validation and discarded all authorization output. Node remained authoritative and no production runtime or effect authority was promoted.
 
 Do not shorten this to “Rust matches evaluateAuthorityComposition()” because Stage 5B does not compare authorization semantics.
+
+IMPLEMENTATION GATE
+
+No Stage 5B implementation source exists at this review gate.
+
+Approval of this plan authorizes only the bounded laboratory implementation tasks in the canonical Stage 5B plan amendment. Any material change to target, authority map, TCB, dependency/unsafe/bridge policy, state reachability, or effect reachability reopens design review before code changes continue.
