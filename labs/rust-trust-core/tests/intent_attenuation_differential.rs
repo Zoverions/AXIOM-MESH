@@ -381,12 +381,11 @@ fn malformed_unverified_and_unbound_rows_fail_closed() {
             .split_once('\t')
             .expect("invalid fixture row must have id and encoded row");
         let row = decode_escaped_row(encoded);
-        match parse_intent_attenuation_vector_row(&row) {
-            Ok(case) => assert!(
+        if let Ok(case) = parse_intent_attenuation_vector_row(&row) {
+            assert!(
                 verify_intent_attenuation(&case).is_err(),
                 "{case_id} must fail closed during evaluation"
-            ),
-            Err(_) => {}
+            );
         }
     }
 }
@@ -464,7 +463,8 @@ fn generated_campaign_matches_real_node_oracle_and_expected_monotonicity() {
 
 #[test]
 fn node_output_parser_rejects_duplicate_case_ids() {
-    let duplicate = "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
+    let duplicate =
+        "same\ttrue\ttrue\ttrue\ttrue\ttrue\nsame\tfalse\tfalse\ttrue\ttrue\ttrue\n";
     let error = parse_node_outputs(duplicate).expect_err("duplicate output ids must fail closed");
     assert!(error.contains("duplicate Node attenuation oracle case_id: same"));
 }
