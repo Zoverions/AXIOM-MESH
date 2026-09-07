@@ -232,7 +232,7 @@ The foundation slice is complete when:
 
 ## 12. Stage 5B amendment — fresh authority-reconstitution gate
 
-**Amendment status:** written-spec review gate; no Stage 5B implementation authority
+**Amendment status:** implementation-plan review gate; no Stage 5B implementation authority
 
 **Stage 5B base:** signed `main` merge commit `1f457508f5c6bf2e4361bce1e791cd4f658c0a47`, which merged Stage 5A through PR #1554.
 
@@ -516,7 +516,7 @@ The Stage 5B design gate is accepted only when:
 11. the evidence architecture is declared before implementation;
 12. no production behavior, capability, supported runtime call site, or effect path changes merely to pass the design gate.
 
-This amendment establishes the gate structure. It intentionally does **not** choose the next effect-bearing migration target. That choice belongs inside the fresh gate and must not be inferred from Stage 5A chronology.
+This amendment establishes the gate structure. It intentionally does **not** choose an effect-bearing migration target. The separately reviewed Stage 5B target is the laboratory-only authority-context structural validation slice recorded in `labs/rust-trust-core/STAGE5B-AUTHORITY-CONTEXT-VALIDATION.design.txt`.
 
 ## 25. Stage 5B non-claims
 
@@ -551,15 +551,10 @@ A rejected design requires no code or data rollback because Stage 5B design appr
 
 ## 27. Transition after Stage 5B written-spec approval
 
-After this amendment is reviewed and approved, the next step is **implementation planning, not immediate implementation**.
+The Stage 5B written design has now been translated into a separate implementation plan. The implementation plan is recorded in `docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md` under the Stage 5B amendment and clarified by `labs/rust-trust-core/STAGE5B-AUTHORITY-CONTEXT-VALIDATION.plan.txt`.
 
-The Stage 5B plan must:
+No Stage 5B implementation code may begin until that implementation plan is separately approved.
 
-1. name the exact first migration slice;
-2. map every implementation task to the approved Stage 5B outputs above;
-3. begin with RED evidence for the new gate-specific boundary;
-4. preserve Node authority until an explicit later promotion decision;
-5. include exact rollback and exact-head verification steps;
-6. stop if implementation requires an unapproved change to scope or authority.
+Plan approval authorizes only the bounded laboratory structural-validation tasks recorded there. It does not authorize production runtime reachability, source promotion, authority evaluation, cryptography, dependency/unsafe/bridge expansion, or any effect-bearing migration.
 
-Only that separately reviewed plan may authorize Stage 5B code work.
+Any implementation discovery requiring a material change to target, TCB, authority map, language-neutral contract, dependency/unsafe/bridge policy, state reachability, rollback model, or effect reachability reopens Stage 5B design review before code changes continue.
