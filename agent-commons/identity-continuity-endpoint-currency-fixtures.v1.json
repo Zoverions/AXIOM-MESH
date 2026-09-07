@@ -1,0 +1,195 @@
+{
+  "schema": "axiom-identity-continuity-endpoint-currency-fixtures.v1",
+  "target": "RT-AUTH-001",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "authority_granted": false,
+  "core_invariant": "Stable identity continuity, service relationship/delegation, endpoint currency, and local authorization are distinct planes. Success in any identity or discovery plane MUST NOT create local effect authority.",
+  "planes": [
+    {
+      "id": "root_identity",
+      "answers": "What stable principal identity anchors longer-lived continuity?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "service_relationship",
+      "answers": "What signed service-specific relationship or delegation is currently valid for this relying-service context?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "endpoint_currency",
+      "answers": "Which service endpoint key is currently evidenced for this relationship?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "local_authorization",
+      "answers": "What exact action may the resulting principal perform here and now?",
+      "authority_effect": "bounded_local_grant_only"
+    }
+  ],
+  "composition_pattern": "stable root identity -> signed service relationship/delegation -> service-specific identity/key -> endpoint-currentness evidence -> authentication -> current local authorization -> effect",
+  "cases": [
+    {
+      "id": "service-key-rotation-root-stable",
+      "given": {
+        "root": "root:A",
+        "service": "svc:alpha",
+        "old_endpoint_key": "alpha:k1",
+        "new_endpoint_key": "alpha:k2",
+        "new_endpoint_evidence": "current",
+        "service_relationship": "valid"
+      },
+      "attempt": "rotate only the service endpoint key and infer a new principal or authority",
+      "expect": {
+        "identity_continuity": "preserved",
+        "endpoint_currency": "new_key_only",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "service-key-compromise-isolated",
+      "given": {
+        "root": "root:A",
+        "alpha_key_state": "compromised",
+        "beta_key_state": "current",
+        "alpha_relationship": "revoked_or_recovery_required",
+        "beta_relationship": "valid"
+      },
+      "attempt": "treat compromise of alpha as proof that beta or the stable root must rotate",
+      "expect": {
+        "compromise_scope": "alpha_service_only_unless_root_evidence_changes",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "root-compromise-invalidates-descendants",
+      "given": {
+        "root": "root:A",
+        "root_state": "compromised",
+        "service_relationships": ["alpha:valid_before_compromise", "beta:valid_before_compromise"],
+        "endpoint_keys": ["alpha:k2", "beta:k7"]
+      },
+      "attempt": "continue trusting descendant service relationships because their endpoint keys remain current",
+      "expect": {
+        "decision": "deny",
+        "requires_reestablished_root_or_explicit_local_recovery_policy": true,
+        "authority": "none"
+      }
+    },
+    {
+      "id": "dns-endpoint-change-no-authority-transfer",
+      "given": {
+        "service": "svc:alpha",
+        "old_endpoint_key": "alpha:k1",
+        "new_endpoint_key": "alpha:k2",
+        "dns_or_first_hop_evidence": "alpha:k2_current",
+        "prior_grant_bound_endpoint": "alpha:k1"
+      },
+      "attempt": "treat current DNS/AID endpoint evidence as transferring a grant bound to the retired key",
+      "expect": {
+        "decision": "deny",
+        "requires_fresh_or_rebound_grant": true,
+        "authority": "none"
+      }
+    },
+    {
+      "id": "stale-endpoint-current-service-delegation",
+      "given": {
+        "service_relationship": "valid",
+        "presented_endpoint_key": "alpha:k1",
+        "current_endpoint_key": "alpha:k2",
+        "presented_endpoint_state": "stale"
+      },
+      "attempt": "use valid service lineage to rescue stale endpoint-currentness evidence",
+      "expect": {
+        "decision": "deny",
+        "failure_plane": "endpoint_currency",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "valid-service-lineage-expired-endpoint",
+      "given": {
+        "root_identity": "valid",
+        "service_relationship": "valid",
+        "endpoint_proof": "expired_or_revoked"
+      },
+      "attempt": "authenticate or execute using an endpoint whose longer-lived lineage remains valid",
+      "expect": {
+        "decision": "deny",
+        "failure_plane": "endpoint_currency",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "valid-endpoint-no-service-relationship",
+      "given": {
+        "endpoint_key": "alpha:k2",
+        "endpoint_proof": "current",
+        "service_relationship": null
+      },
+      "attempt": "treat current endpoint-key possession as proof of stable service relationship or execution authority",
+      "expect": {
+        "decision": "deny",
+        "failure_plane": "service_relationship",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "valid-lineage-not-execution-authority",
+      "given": {
+        "root_identity": "valid",
+        "service_relationship": "valid",
+        "endpoint_proof": "current",
+        "local_grant": null
+      },
+      "attempt": "perform a consequential effect using valid identity, relationship and endpoint evidence",
+      "expect": {
+        "decision": "deny",
+        "failure_plane": "local_authorization",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "cross-service-credential-transplant",
+      "given": {
+        "credential_service": "alpha",
+        "request_service": "beta",
+        "root_identity": "same",
+        "alpha_credential": "valid"
+      },
+      "attempt": "present a valid alpha service credential or delegation in beta's relying-service context",
+      "expect": {
+        "decision": "deny",
+        "failure_plane": "service_relationship",
+        "cross_service_reuse": "forbidden",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "pairwise-credential-noncorrelation",
+      "given": {
+        "internal_root": "root:A",
+        "alpha_presentation": "pairwise:alpha:7",
+        "beta_presentation": "pairwise:beta:2",
+        "alpha_and_beta_share_root": true,
+        "linkage_disclosure": null
+      },
+      "attempt": "derive cross-service correlation solely from the externally presented service credentials",
+      "expect": {
+        "cross_service_linkability": "not_derivable_without_separate_authorized_evidence",
+        "authority": "none"
+      }
+    }
+  ],
+  "nonclaims": [
+    "This profile does not require DID, AID, PKA, DNSSEC, DANE, OAuth, MCP, A2A, or any single identity protocol.",
+    "This profile does not make DNS or first-hop discovery globally authoritative for persistent identity.",
+    "This profile does not claim pairwise presentation identifiers are always required.",
+    "This profile does not grant legal identity, personhood, reputation, truth, execution authority, or delegation authority."
+  ],
+  "provenance": [
+    "Agent Community issue #115 implementation input from Aporia/keureyes: stable root identity, signed service-specific delegation, service key, and platform-local endpoint proof should remain separable.",
+    "AXIOM-MESH identity-lineage-composition-threat-model.v1 and RT-AUTH-001."
+  ]
+}

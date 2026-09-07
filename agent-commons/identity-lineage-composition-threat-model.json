@@ -2,17 +2,17 @@
   "schema": "axiom-identity-lineage-composition-threat-model.v1",
   "repository": "Zoverions/AXIOM-MESH",
   "status": "experimental interoperability profile; no production promotion claimed",
-  "scope": "Composition of first-hop endpoint evidence, longer-lived identity continuity/delegation evidence, accountable operator or organization credentials, and local authorization. The profile is protocol-neutral and does not require DID resolution, AID, PKA, DNSSEC, DANE, OAuth, MCP, or any single identity system.",
-  "core_invariant": "Endpoint currency, identity continuity, accountability, and authorization are separate evidence/decision planes. Success in any identity or discovery plane MUST NOT create local effect authority.",
+  "scope": "Composition of stable root identity, service-scoped relationship/delegation evidence, first-hop endpoint-currentness evidence, accountable operator or organization credentials, and local authorization. The profile is protocol-neutral and does not require DID resolution, AID, PKA, DNSSEC, DANE, OAuth, MCP, A2A, or any single identity system.",
+  "core_invariant": "Stable identity continuity, service relationship/delegation, endpoint currency, accountability, and authorization are separate evidence/decision planes. Success in any identity or discovery plane MUST NOT create local effect authority.",
   "planes": [
     {
       "id": "endpoint_currency",
-      "answers": "Which key/endpoint is currently evidenced?",
+      "answers": "Which key/endpoint is currently evidenced for this service relationship?",
       "authority_effect": "none"
     },
     {
       "id": "identity_continuity",
-      "answers": "What longer-lived identity lineage is evidenced across service-key rotation?",
+      "answers": "What longer-lived root and service relationship is evidenced across service-key rotation?",
       "authority_effect": "none"
     },
     {
@@ -26,13 +26,16 @@
       "authority_effect": "bounded_local_grant_only"
     }
   ],
-  "composition_pattern": "stable root identity -> signed attenuation-only service delegation -> service-specific identity/key -> platform-local identity or endpoint proof -> local policy evaluation -> bounded grant -> effect",
+  "composition_pattern": "stable root identity -> signed attenuation-only service relationship/delegation -> service-specific identity/key -> platform-local identity or endpoint-currentness proof -> authentication -> local policy evaluation -> bounded grant -> effect",
   "required_properties": [
     "root keys are not required for ordinary service traffic",
     "service-specific keys isolate compromise and rotation blast radius",
+    "service compromise does not imply unrelated service or root compromise absent separate evidence",
+    "root compromise invalidates unrevalidated descendant service relationships even if endpoint keys remain current",
     "endpoint-key replacement does not silently replace persistent identity",
     "endpoint-key replacement does not automatically transfer grants bound to the retired key",
     "platform-specific service credentials are audience/service bound and cannot be replayed as cross-platform authority",
+    "pairwise or service-specific presentation identifiers need not expose cross-service correlation without separate authorized linkage evidence",
     "lineage evidence never mints scopes, capabilities, grants, or permissions",
     "delegation cannot widen authority beyond its parent and cannot substitute for a local grant",
     "stale endpoint or lineage evidence fails closed at a consequential effect boundary",
@@ -42,20 +45,30 @@
   ],
   "negative_cases": [
     "service-key-rotation-root-stable",
-    "stale-endpoint-current-delegation",
-    "valid-lineage-no-local-grant",
+    "service-key-compromise-isolated",
+    "root-compromise-invalidates-descendants",
+    "dns-endpoint-change-no-authority-transfer",
+    "stale-endpoint-current-service-delegation",
+    "valid-service-lineage-expired-endpoint",
+    "valid-endpoint-no-service-relationship",
+    "valid-lineage-not-execution-authority",
+    "cross-service-credential-transplant",
+    "pairwise-credential-noncorrelation",
     "cross-service-delegation-replay",
     "endpoint-proof-as-allow",
     "protocol-switch-authority-laundering",
-    "root-compromise-vs-service-compromise",
     "endpoint-rotation-does-not-inherit-old-grant",
-    "platform-credential-isolation",
-    "root-compromise-invalidates-unrevalidated-lineage"
+    "platform-credential-isolation"
+  ],
+  "fixture_profiles": [
+    "identity-lineage-negative-fixtures.v1.json",
+    "identity-continuity-endpoint-currency-fixtures.v1.json"
   ],
   "nonclaims": [
     "This profile does not make a DID an endpoint-discovery primitive.",
     "This profile does not require a generic identity document in first-hop discovery.",
     "This profile does not claim DNS or any identity proof is globally current.",
+    "This profile does not require pairwise identifiers in every deployment.",
     "This profile does not grant legal identity, personhood, reputation, truth, execution authority, or delegation authority."
   ],
   "provenance": [
