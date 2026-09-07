@@ -44,10 +44,7 @@ fn parse_node_outputs(stdout: &str) -> Result<BTreeMap<String, bool>, String> {
             other => return Err(format!("invalid Stage 5B oracle boolean: {other}")),
         };
         if outputs.insert(columns[0].to_owned(), admitted).is_some() {
-            return Err(format!(
-                "duplicate Stage 5B oracle case_id: {}",
-                columns[0]
-            ));
+            return Err(format!("duplicate Stage 5B oracle case_id: {}", columns[0]));
         }
     }
     Ok(outputs)
@@ -102,7 +99,11 @@ fn node_classify_line(line: &str) -> AdmissionClass {
     let stdout = String::from_utf8(output.stdout).expect("Stage 5B oracle output must be UTF-8");
     let outputs = parse_node_outputs(stdout.trim_end()).expect("Stage 5B oracle output must parse");
     assert_eq!(outputs.len(), 1, "single-line oracle must emit one result");
-    if *outputs.values().next().expect("single Node result must exist") {
+    if *outputs
+        .values()
+        .next()
+        .expect("single Node result must exist")
+    {
         AdmissionClass::Admitted
     } else {
         AdmissionClass::StructuralRejected
@@ -135,8 +136,8 @@ fn compare_admissions(
 
 #[test]
 fn stage5b_valid_fixture_requires_structural_validator() {
-    let text = std::fs::read_to_string(valid_fixture_path())
-        .expect("Stage 5B fixture must be readable");
+    let text =
+        std::fs::read_to_string(valid_fixture_path()).expect("Stage 5B fixture must be readable");
     let cases = parse_authority_context_fixture(&text).expect("Stage 5B valid fixture must parse");
     assert_eq!(cases.len(), 11);
     for case in &cases {
@@ -208,7 +209,12 @@ fn differential_comparator_detects_deliberate_perturbation() {
     let cases = parse_authority_context_fixture(&text).expect("Stage 5B valid fixture must parse");
     let rust = cases
         .iter()
-        .map(|case| (case.case_id().to_owned(), validate_authority_context(case).is_ok()))
+        .map(|case| {
+            (
+                case.case_id().to_owned(),
+                validate_authority_context(case).is_ok(),
+            )
+        })
         .collect::<BTreeMap<_, _>>();
     let mut perturbed = node_outputs_for_text(&text);
     let first_case = perturbed
