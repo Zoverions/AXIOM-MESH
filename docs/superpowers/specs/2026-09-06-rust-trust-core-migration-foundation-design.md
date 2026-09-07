@@ -227,3 +227,339 @@ The foundation slice is complete when:
 5. protected Node verification remains green;
 6. no capability-registry or production-state claim changes are made;
 7. the next migration stage is explicitly separated from this one.
+
+---
+
+## 12. Stage 5B amendment — fresh authority-reconstitution gate
+
+**Amendment status:** written-spec review gate; no Stage 5B implementation authority
+
+**Stage 5B base:** signed `main` merge commit `1f457508f5c6bf2e4361bce1e791cd4f658c0a47`, which merged Stage 5A through PR #1554.
+
+**Prior-stage classification:** Stage 5A is laboratory-only Node↔Rust intent-attenuation evidence. It is not production authority and does not authorize the next migration slice.
+
+The governing Stage 5B rule is:
+
+> **Stage 5A evidence is admissible at Stage 5B; Stage 5A authority is not.**
+
+Stage 5B is therefore a fresh architectural gate. It must re-establish, from current `main`, the exact migration scope, trusted-computing-base boundary, authority map, invariants, threat model, language-neutral migration contract, failure and disagreement semantics, recovery/rollback model, dependency/`unsafe`/bridge policy, and review requirements before any next migration implementation begins.
+
+A successful Stage 5B design review authorizes only a separate Stage 5B implementation plan. It does not authorize production Rust execution, call-site replacement, capability widening, or an effect-bearing migration.
+
+Node remains the supported authoritative implementation unless a later explicit implementation-and-promotion gate changes that fact.
+
+## 13. Why Stage 5B does not inherit Stage 5A authority
+
+Stage 5A proved only a bounded semantic-parity claim around the existing Node `verifyIntentAttenuation()` subset checks for actions, purposes, destinations, and resources.
+
+Stage 5A did not establish or authorize:
+
+- grant issuance or signature verification;
+- credential verification;
+- capability consumption;
+- consent evaluation;
+- budget evaluation;
+- expiry/currentness semantics;
+- causal-history or composition restrictions;
+- persistence, crash recovery, or state mutation;
+- production Rust runtime integration;
+- FFI, WASM, subprocess, service, or linked-runtime authority;
+- Gateway, Hypervisor, Sandbox, or Grid replacement;
+- effect authorization or execution.
+
+Those are qualitatively different authority boundaries, not merely a larger Stage 5A test matrix. Treating Stage 5A as implicit permission to cross them would allow laboratory conformance evidence to become accidental architecture.
+
+## 14. Stage 5B approaches considered
+
+### A. Incremental continuation with inherited Stage 5A boundary
+
+Treat the next slice as a larger Stage 5A authority-semantic differential and preserve Stage 5A assumptions unless testing exposes a problem.
+
+**Rejected.** This makes prior implementation structure and test boundaries the default architecture and risks authority by momentum.
+
+### B. Fresh authority gate with evidence carry-forward
+
+Treat accepted Stage 1–5A work as evidence that may reduce uncertainty, while requiring Stage 5B to independently justify every authority-sensitive premise it relies on.
+
+**Selected.** This preserves valuable evidence without confusing evidence continuity with authority continuity.
+
+### C. Discard all prior evidence and restart from zero
+
+Repeat the migration programme without relying on accepted Stage 1–5A results.
+
+**Rejected.** Existing exact-head evidence remains useful provenance. A fresh authority decision does not require pretending prior evidence does not exist.
+
+## 15. Stage 5B input classification
+
+Every prior-stage fact imported into Stage 5B must be explicitly classified as one of:
+
+- **provenance** — records what was previously built or tested;
+- **evidence** — supports a proposition but grants no authority;
+- **assumption** — currently believed and requiring Stage 5B validation if authority-sensitive;
+- **constraint** — imposed by a higher-order repository/security rule and not negotiable inside Stage 5B;
+- **non-claim** — remains unproven;
+- **reopened question** — a prior decision that Stage 5B deliberately re-evaluates.
+
+No prior artifact may be cited as “already approved” when the claim being made concerns a Stage 5B authority boundary.
+
+## 16. Mandatory Stage 5B design outputs
+
+Stage 5B is not complete until the selected migration slice records all of the following.
+
+### 16.1 Exact migration target and non-goals
+
+The gate must name:
+
+- the exact supported Node behavior under consideration;
+- the exact Rust source/package/runtime surface proposed to implement or validate it;
+- whether the slice is laboratory-only, source-promoted, production-adjacent, or runtime-reachable;
+- what state, credentials, keys, capabilities, receipts, network data, or effects it may touch;
+- what is explicitly excluded.
+
+“Continue the Rust migration” is not an acceptable scope statement.
+
+### 16.2 Trusted-computing-base inventory
+
+The gate must enumerate every component whose correctness would become security-relevant if the slice succeeds, including as applicable:
+
+- supported Node implementation/oracle;
+- Rust laboratory crate;
+- promoted Rust source under `trust-core/rust/`;
+- any new Rust package or executable;
+- serialization/parser boundary;
+- FFI/WASM/subprocess/service bridge;
+- release verification;
+- CI-only evidence machinery;
+- host supervisor or OS integration.
+
+Repository presence does not itself make a component part of the TCB. Conversely, any component that can influence an authority result cannot be omitted from the TCB merely because it is described as glue.
+
+### 16.3 Authority map
+
+For every Stage 5B component, the design must state:
+
+- what inputs it may trust;
+- what claims it may produce;
+- what authority it may exercise;
+- what authority it must never mint;
+- what downstream component independently re-verifies its output;
+- whether failure is fail-closed;
+- whether it can increase effect scope.
+
+The protected production authority chain remains:
+
+```text
+Gateway -> Hypervisor -> Sandbox -> Grid
+```
+
+Any proposed change to that chain is itself a Stage 5B architectural decision and cannot be inherited from Stage 5A.
+
+### 16.4 Invariant ledger
+
+The initial mandatory Stage 5B invariants are:
+
+1. capability is not authority;
+2. conformance evidence is not runtime authority;
+3. source promotion is not execution promotion;
+4. a Rust `valid=true` or equivalent result cannot itself mint a grant or effect permission;
+5. malformed, unknown, stale, unverifiable, or partially bound evidence fails closed;
+6. effect-increasing transitions require the currently applicable authority path, not self-reported state;
+7. migration plumbing may not implicitly create persistent identity, consent, credential, governance, state, network, or external-effect authority;
+8. rollback must not require trusting the component being rolled back;
+9. coexistence may not permit a weaker implementation path to authorize what the stronger path would deny;
+10. prior-stage evidence may strengthen confidence but cannot waive a Stage 5B invariant.
+
+The later implementation plan may add stricter invariants. It may not silently weaken these.
+
+## 17. Stage 5B threat-model refresh
+
+Stage 5B must use the current repository and proposed migration topology rather than copy the Stage 5A threat model unchanged.
+
+At minimum, review must cover:
+
+- authority laundering through “verification-only” helpers;
+- confused-deputy behavior between Node and Rust;
+- disagreement handling when implementations differ;
+- downgrade to a weaker implementation during coexistence;
+- stale or replayed evidence crossing the implementation boundary;
+- parser/canonicalization divergence before cryptographic verification;
+- FFI memory/ownership hazards if FFI is proposed;
+- subprocess path, environment, stdin/stdout, executable-replacement, and exit-code ambiguity if subprocess integration is proposed;
+- WASM host-call authority leakage if WASM is proposed;
+- service authentication, admission, replay, and failure semantics if IPC/service integration is proposed;
+- dependency compromise and supply-chain expansion;
+- `unsafe` expansion;
+- panic/crash behavior and partial state transition;
+- rollback after durable state has been written by a new implementation;
+- time/currentness differences across runtimes;
+- cross-platform semantic differences;
+- test-oracle contamination where two implementations accidentally share the same flawed logic.
+
+A Stage 5B finding may reopen an earlier stage if it invalidates an earlier accepted claim. Stage numbering does not override contrary evidence.
+
+## 18. Stage 5B migration-contract requirements
+
+Before implementation planning, Stage 5B must freeze a language-neutral contract for the selected slice.
+
+The contract must specify:
+
+- admitted input grammar and canonical representation;
+- preconditions and independently verified evidence requirements;
+- exact outputs and error classes;
+- deterministic versus ambient inputs;
+- currentness/time semantics where relevant;
+- resource bounds;
+- state-transition semantics if any state is touched;
+- idempotence/replay behavior where relevant;
+- receipt/evidence requirements;
+- compatibility/version-negotiation behavior;
+- what constitutes semantic mismatch;
+- what happens on mismatch.
+
+JavaScript object behavior, Rust type layout, process exit conventions, or FFI ABI details do not become conceptual protocol merely because an implementation uses them.
+
+## 19. Coexistence and disagreement policy
+
+If Node and Rust evaluate the same authority-sensitive operation during Stage 5B, the default policy is:
+
+> **Any Node/Rust disagreement fails closed and blocks migration advancement. Node remains authoritative for supported operation until a later explicit promotion gate.**
+
+Stage 5B must not use majority voting, “prefer Rust,” “prefer the new implementation,” fuzzy semantic equivalence, or normalization-after-comparison to hide disagreement.
+
+Shadow execution must not duplicate effects. A conformance path must be side-effect-free unless a separate Stage 5B design proves effect isolation.
+
+## 20. Dependency, `unsafe`, and bridge policy
+
+Stage 5B must explicitly approve any expansion beyond the current zero-third-party-dependency, `#![forbid(unsafe_code)]` laboratory posture.
+
+No third-party dependency, `unsafe` block, FFI bridge, WASM runtime, subprocess integration, IPC service, or production Cargo manifest may appear merely because a candidate migration slice seems to need it.
+
+For each proposed expansion, Stage 5B must record:
+
+- why the current boundary is insufficient;
+- alternatives considered;
+- new TCB/supply-chain surface;
+- update and provenance policy;
+- platform implications;
+- failure behavior;
+- rollback behavior;
+- independent review requirement.
+
+The default is deny introduction until specifically justified and approved.
+
+## 21. Persistence, recovery, and rollback gate
+
+Any Stage 5B slice that can write durable state or influence a state transition must define recovery before implementation begins.
+
+The design must answer:
+
+- whether existing Node code can read state written by the new Rust path;
+- whether the new Rust path can read all currently supported state;
+- how interrupted writes are detected;
+- how partial transitions are rejected or recovered;
+- whether rollback requires state migration;
+- how receipts identify which implementation produced a transition;
+- how downgrade safety is preserved;
+- what exact event halts rollout.
+
+If these answers are not available, Stage 5B keeps the slice read-only or laboratory-only.
+
+## 22. Evidence architecture
+
+Stage 5B must declare evidence requirements before implementation.
+
+The minimum evidence classes are:
+
+- positive conformance;
+- negative/fail-closed conformance;
+- boundary values;
+- deterministic generated/adversarial evidence where useful;
+- deliberate mismatch detection;
+- malformed transport/parser rejection;
+- resource-bound rejection;
+- cross-platform verification where host semantics matter;
+- crash/restart/recovery evidence if state is touched;
+- rollback evidence if production reachability exists;
+- authority-boundary regression proving the candidate cannot be called from an unapproved path;
+- exact-head verification.
+
+Passing Stage 5A tests is inherited evidence only. Stage 5B acceptance criteria must be independently sufficient for the selected Stage 5B slice.
+
+## 23. Approval and independent-review boundary
+
+Stage 5B requires distinct approvals for design and implementation/promotion.
+
+**Design approval** accepts only the selected scope, TCB, authority map, invariants, threat model, migration contract, failure/rollback model, and evidence architecture.
+
+**Implementation/promotion approval** later accepts an exact implementation against that approved design and plan.
+
+A green implementation PR cannot substitute for design approval. Implementation success cannot retroactively redefine the design.
+
+Any material change to the migration target, TCB, authority map, language-neutral contract, dependency/`unsafe`/bridge policy, state ownership, rollback model, or effect reachability reopens Stage 5B design review.
+
+Any production-reachable or effect-influencing Stage 5B slice requires an authority-boundary review independent from the implementation pass before promotion.
+
+## 24. Stage 5B design acceptance criteria
+
+The Stage 5B design gate is accepted only when:
+
+1. it is reviewed against current `main`, not merely a Stage 5A feature branch;
+2. Stage 5A is classified as evidence/provenance, not inherited authority;
+3. the exact next migration target is separately specified before implementation planning;
+4. the Stage 5B TCB inventory is explicit;
+5. the authority map is explicit;
+6. the invariant ledger is explicit;
+7. the threat model is refreshed for the selected topology;
+8. the language-neutral migration contract is frozen for the selected slice;
+9. failure, disagreement, rollback, and downgrade semantics are explicit;
+10. dependency/`unsafe`/bridge decisions are explicit;
+11. the evidence architecture is declared before implementation;
+12. no production behavior, capability, supported runtime call site, or effect path changes merely to pass the design gate.
+
+This amendment establishes the gate structure. It intentionally does **not** choose the next effect-bearing migration target. That choice belongs inside the fresh gate and must not be inferred from Stage 5A chronology.
+
+## 25. Stage 5B non-claims
+
+Acceptance of this amendment does not claim:
+
+- Rust is production authority;
+- Rust should replace the entire Node kernel;
+- Stage 5A semantics are sufficient for broader authority evaluation;
+- the next migration target is full `authority-composition-guard.mjs`;
+- cryptographic verification should move next;
+- a production Cargo package is approved;
+- FFI, WASM, subprocess, IPC, or service integration is approved;
+- `unsafe` is approved;
+- a new third-party dependency is approved;
+- any capability, Gateway route, Hypervisor/Sandbox/Grid behavior, consent, credential, governance, persistent-state, network, or external-effect authority is changed;
+- Node is deprecated.
+
+## 26. Failure and rollback of Stage 5B design
+
+If review shows the proposed next migration target cannot satisfy a clear authority map, fail-closed disagreement model, bounded TCB, or recovery/rollback rule, Stage 5B does not proceed to implementation.
+
+The correct result may be to:
+
+- narrow the slice;
+- keep it laboratory-only;
+- choose a different migration boundary;
+- strengthen the Node contract first;
+- add missing evidence in an earlier stage;
+- or defer migration entirely.
+
+A rejected design requires no code or data rollback because Stage 5B design approval grants no production runtime authority.
+
+## 27. Transition after Stage 5B written-spec approval
+
+After this amendment is reviewed and approved, the next step is **implementation planning, not immediate implementation**.
+
+The Stage 5B plan must:
+
+1. name the exact first migration slice;
+2. map every implementation task to the approved Stage 5B outputs above;
+3. begin with RED evidence for the new gate-specific boundary;
+4. preserve Node authority until an explicit later promotion decision;
+5. include exact rollback and exact-head verification steps;
+6. stop if implementation requires an unapproved change to scope or authority.
+
+Only that separately reviewed plan may authorize Stage 5B code work.
