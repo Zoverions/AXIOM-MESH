@@ -2,10 +2,16 @@
 
 #[path = "../../../trust-core/rust/canonical_value_v0.rs"]
 mod canonical_value_v0;
+mod intent_attenuation;
 
 pub use canonical_value_v0::{
     CanonicalCase, CanonicalScalar, VectorError, canonicalize_case, parse_canonical_fixture,
     parse_canonical_vector_row,
+};
+pub use intent_attenuation::{
+    IntentAttenuationCase, IntentAttenuationChecks, IntentAttenuationError,
+    IntentAttenuationResult, parse_intent_attenuation_fixture, parse_intent_attenuation_vector_row,
+    verify_intent_attenuation,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
