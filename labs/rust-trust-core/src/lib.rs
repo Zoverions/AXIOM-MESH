@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 
+mod authority_context;
 #[path = "../../../trust-core/rust/canonical_value_v0.rs"]
 mod canonical_value_v0;
-mod authority_context;
 mod intent_attenuation;
 
 pub use authority_context::{
