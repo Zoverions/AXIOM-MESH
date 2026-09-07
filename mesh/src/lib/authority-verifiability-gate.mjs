@@ -46,6 +46,14 @@ const RISK_PROFILE = Object.freeze({
   critical: Object.freeze({ monitorability: 4, maxLeaseMs: 15_000 })
 });
 
+const LEVEL_PROFILE = Object.freeze({
+  0: Object.freeze({ monitorability: 0, maxLeaseMs: 900_000 }),
+  1: Object.freeze({ monitorability: 1, maxLeaseMs: 900_000 }),
+  2: Object.freeze({ monitorability: 2, maxLeaseMs: 300_000 }),
+  3: Object.freeze({ monitorability: 3, maxLeaseMs: 60_000 }),
+  4: Object.freeze({ monitorability: 4, maxLeaseMs: 15_000 })
+});
+
 const NOVELTY_SIGNALS = new Set([
   'counterparty',
   'environment',
@@ -201,13 +209,24 @@ function normalizeEvidence(raw) {
 }
 
 function calculateRequirements(request) {
-  const profile = RISK_PROFILE[request.risk];
+  const riskProfile = RISK_PROFILE[request.risk];
+  const authorityProfile = LEVEL_PROFILE[request.authority_level];
+  const autonomyProfile = LEVEL_PROFILE[request.autonomy_level];
+  const baseMonitorability = Math.max(
+    riskProfile.monitorability,
+    authorityProfile.monitorability,
+    autonomyProfile.monitorability
+  );
   const noveltyEscalation = request.novelty_signals.length >= 3
     ? 2
     : request.novelty_signals.length > 0 ? 1 : 0;
 
-  let monitorabilityLevel = Math.min(4, profile.monitorability + noveltyEscalation);
-  let maxLeaseMs = profile.maxLeaseMs;
+  let monitorabilityLevel = Math.min(4, baseMonitorability + noveltyEscalation);
+  let maxLeaseMs = Math.min(
+    riskProfile.maxLeaseMs,
+    authorityProfile.maxLeaseMs,
+    autonomyProfile.maxLeaseMs
+  );
 
   const selfModification = request.self_modification === true;
   if (selfModification) {
