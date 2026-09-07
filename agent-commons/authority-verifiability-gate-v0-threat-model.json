@@ -1,0 +1,140 @@
+{
+  "schema": "axiom-authority-verifiability-gate-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "authority-verifiability-gate-v0",
+  "scope": "Deterministic effect-inert evaluation of whether explicitly declared authority, autonomy, consequence, novelty and monitoring evidence satisfy a minimum verifiability burden before any downstream authorization path may consider the request.",
+  "core_invariant": "Capability must never outrun verifiability. An eligible result is evidence of minimum gate satisfaction only and is never authorization, a capability, delegation, credential, currentness proof, policy decision or effect admission.",
+  "attack_classes": [
+    {
+      "id": "eligibility-authority-laundering",
+      "risks": [
+        "eligible result treated as execution authorization",
+        "decision cached as a reusable bearer grant",
+        "adapter bypasses the live policy or capability path"
+      ],
+      "controls": [
+        "eligibility_is_not_authorization notice",
+        "grants_execution_authority false",
+        "mints_capability false",
+        "consumes_capability false",
+        "requires_downstream_authorization true",
+        "authority_effect none"
+      ]
+    },
+    {
+      "id": "novelty-omission",
+      "risks": [
+        "novel environment, tool, model, objective or counterparty omitted to reduce monitorability burden",
+        "external agent interaction declared without counterparty novelty"
+      ],
+      "controls": [
+        "fixed novelty vocabulary",
+        "sorted unique novelty declarations",
+        "novelty escalation is deterministic",
+        "external_agent_interaction requires explicit counterparty novelty",
+        "unknown fields fail closed"
+      ]
+    },
+    {
+      "id": "self-monitoring-independence-confusion",
+      "risks": [
+        "acting agent presented as independent monitor",
+        "acting agent presented as independent evaluator",
+        "high-authority or self-modifying request proceeds without independent scrutiny"
+      ],
+      "controls": [
+        "independence requirements are explicit output facts",
+        "authority/autonomy level 4 requires independent monitor",
+        "self-modification requires independent monitor and evaluator",
+        "critical consequence requires independent evaluator"
+      ]
+    },
+    {
+      "id": "stale-or-unbound-evidence",
+      "risks": [
+        "stale identity treated as current",
+        "revoked or stale delegation treated as current",
+        "unbound monitoring facts substituted into another request"
+      ],
+      "controls": [
+        "identity_current false is hard deny",
+        "delegation_current false is hard deny",
+        "evidence_bound false is hard deny",
+        "policy binding digest is included in decision digest"
+      ]
+    },
+    {
+      "id": "rollback-laundering",
+      "risks": [
+        "self-modification proceeds with nominal rollback that was never tested",
+        "rollback_tested asserted while rollback_available is false"
+      ],
+      "controls": [
+        "self-modification requires rollback available",
+        "self-modification requires rollback tested",
+        "inconsistent rollback evidence fails validation",
+        "self-modification clamps max lease ceiling to 15000 ms"
+      ]
+    },
+    {
+      "id": "lease-ceiling-widening",
+      "risks": [
+        "caller supplies a longer lease",
+        "novel or self-modifying request inherits an unbounded duration"
+      ],
+      "controls": [
+        "caller cannot provide max_lease_ms",
+        "risk profile owns lease ceilings",
+        "self-modification clamps the ceiling to 15000 ms",
+        "output schema restricts lease values"
+      ]
+    },
+    {
+      "id": "decision-tampering",
+      "risks": [
+        "decision or evidence projection modified after evaluation",
+        "requirements lowered without changing provenance"
+      ],
+      "controls": [
+        "canonical decision body",
+        "SHA-256 decision_digest",
+        "strict field sets",
+        "fixed non-authorizing semantics"
+      ]
+    }
+  ],
+  "known_nonclaims": [
+    "v0 does not verify signatures, identity proofs, delegation proofs, currentness checkpoints or policy digests itself.",
+    "v0 does not infer novelty from model reasoning, telemetry or prose.",
+    "v0 does not identify whether a claimed monitor or evaluator is truly independent.",
+    "v0 does not grant execution authority, delegation or policy permission.",
+    "v0 does not mint, revoke, consume or persist capability leases.",
+    "v0 does not integrate with chain-of-thought or activation monitoring.",
+    "v0 does not implement an RSI promotion or self-modification workflow.",
+    "v0 does not perform network, filesystem, credential, tool or runtime effects."
+  ],
+  "next_gates": [
+    "bind verified currentness and policy evidence into the gate input adapter",
+    "implement separately reviewed capability lease issuance and revocation",
+    "implement monitor/evaluator identity and independence verification",
+    "implement RSI proposal-sandbox-evaluation-authorization-canary-rollback workflow",
+    "implement agent-to-agent trust-boundary enforcement",
+    "integrate only after exact-head adversarial and production effect-path review"
+  ],
+  "boundaries": {
+    "bearer_authority": false,
+    "execution_authorized": false,
+    "delegation_enabled": false,
+    "capability_mint_enabled": false,
+    "capability_consume_enabled": false,
+    "policy_mutation_enabled": false,
+    "currentness_mutation_enabled": false,
+    "credential_issuance_enabled": false,
+    "remote_execution_enabled": false,
+    "network_io_enabled": false,
+    "filesystem_mutation_enabled": false,
+    "tool_execution_enabled": false,
+    "self_modification_enabled": false,
+    "capability_promotion_enabled": false
+  }
+}
