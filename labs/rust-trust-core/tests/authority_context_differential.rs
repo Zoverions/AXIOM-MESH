@@ -6,6 +6,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+const GENERATED_SEED: u32 = 0x5354_3542;
+const GENERATED_VALID_CASES: usize = 256;
+const GENERATED_INVALID_CASES: usize = 256;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AdmissionClass {
     EnvelopeRejected,
@@ -227,6 +231,14 @@ fn differential_comparator_detects_deliberate_perturbation() {
     let error = compare_admissions(&rust, &perturbed)
         .expect_err("deliberate Stage 5B comparator perturbation must fail");
     assert!(error.contains(&first_case));
+}
+
+#[test]
+fn generated_stage5b_campaign_matches_real_node_oracle() {
+    let valid = generated_valid_contexts(GENERATED_SEED, GENERATED_VALID_CASES);
+    let invalid = generated_invalid_contexts(GENERATED_SEED, GENERATED_INVALID_CASES);
+    assert_eq!(valid.len(), GENERATED_VALID_CASES);
+    assert_eq!(invalid.len(), GENERATED_INVALID_CASES);
 }
 
 mod serde_free_case_id {
