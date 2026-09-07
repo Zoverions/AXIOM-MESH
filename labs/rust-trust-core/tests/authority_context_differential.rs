@@ -118,9 +118,7 @@ fn json_string_array(values: &[String]) -> String {
 }
 
 fn render_context(case_id: &str, nonce: u32, template: &ContextTemplate) -> String {
-    let mut grant_fields = vec![
-        format!("\"verified\":{}", template.grant_verified),
-    ];
+    let mut grant_fields = vec![format!("\"verified\":{}", template.grant_verified)];
     if let Some(grant_id) = &template.grant_id {
         grant_fields.push(format!("\"grant_id\":{}", json_string(grant_id)));
     }
@@ -128,16 +126,10 @@ fn render_context(case_id: &str, nonce: u32, template: &ContextTemplate) -> Stri
         "\"issuer\":\"gateway\"".to_owned(),
         "\"principal_id\":\"principal:test\"".to_owned(),
         "\"resources\":[\"resource:a\"]".to_owned(),
-        format!(
-            "\"actions\":{}",
-            json_string_array(&template.grant_actions)
-        ),
+        format!("\"actions\":{}", json_string_array(&template.grant_actions)),
         "\"purposes\":[\"research\"]".to_owned(),
         "\"destinations\":[\"local\"]".to_owned(),
-        format!(
-            "\"expires_at\":{}",
-            json_string(&template.grant_expires_at)
-        ),
+        format!("\"expires_at\":{}", json_string(&template.grant_expires_at)),
         format!(
             "\"policy_digest\":{}",
             json_string(&template.grant_policy_digest)
@@ -403,9 +395,7 @@ fn generated_invalid_contexts(seed: u32, count: usize) -> Vec<GeneratedCase> {
                 AdmissionClass::StructuralRejected
             }
             13 => {
-                template.restrictions =
-                    "[{\"id\":\"restriction:one\",\"ordered_actions\":[\"prepare\"]}]"
-                        .to_owned();
+                template.restrictions = "[{\"id\":\"restriction:one\",\"ordered_actions\":[\"prepare\"]}]".to_owned();
                 AdmissionClass::StructuralRejected
             }
             14 => {
@@ -457,8 +447,7 @@ fn over_bound_contexts() -> Vec<GeneratedCase> {
 
     let mut restrictions_template = ContextTemplate::baseline(3);
     let restriction_entry = "{\"id\":\"restriction:r\",\"ordered_actions\":[\"a\",\"b\"]}";
-    restrictions_template.restrictions =
-        format!("[{}]", vec![restriction_entry; 257].join(","));
+    restrictions_template.restrictions = format!("[{}]", vec![restriction_entry; 257].join(","));
     cases.push(GeneratedCase {
         case_id: "over_bound_restrictions_257".to_owned(),
         line: render_context("over_bound_restrictions_257", 3, &restrictions_template),
@@ -476,7 +465,11 @@ fn over_bound_contexts() -> Vec<GeneratedCase> {
     );
     cases.push(GeneratedCase {
         case_id: "over_bound_ordered_actions_17".to_owned(),
-        line: render_context("over_bound_ordered_actions_17", 4, &ordered_actions_template),
+        line: render_context(
+            "over_bound_ordered_actions_17",
+            4,
+            &ordered_actions_template,
+        ),
         expected: AdmissionClass::StructuralRejected,
     });
 
@@ -628,7 +621,10 @@ fn generated_stage5b_campaign_matches_real_node_oracle() {
     assert_eq!(rust_valid.len(), GENERATED_VALID_CASES);
     for case in &rust_valid {
         validate_authority_context(case).unwrap_or_else(|error| {
-            panic!("generated valid {} must be structurally admitted: {error}", case.case_id())
+            panic!(
+                "generated valid {} must be structurally admitted: {error}",
+                case.case_id()
+            )
         });
     }
     let node_valid = node_outputs_for_text(&valid_text);
