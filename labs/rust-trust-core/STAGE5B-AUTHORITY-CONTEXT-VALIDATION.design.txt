@@ -1,0 +1,331 @@
+Rust Trust-Core Stage 5B — Authority Context Validation Design Gate
+Date: 2026-09-06
+Status: written-spec review gate; no implementation authority
+Base main: 1f457508f5c6bf2e4361bce1e791cd4f658c0a47
+Canonical gate: docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md sections 12-27
+
+GOVERNING RULE
+
+Stage 5A evidence is admissible at Stage 5B; Stage 5A authority is not.
+
+Stage 5B independently selects and defines the next migration candidate. Nothing in Stage 5A authorizes this slice.
+
+SELECTED TARGET
+
+Stage 5B will evaluate a laboratory-only Rust candidate for the STRUCTURAL VALIDATION BOUNDARY of the current authority-composition context accepted by:
+
+mesh/src/lib/authority-composition-guard.mjs
+  evaluateAuthorityComposition({ grant, intent, request, history, restrictions, now })
+
+The candidate may determine only whether a bounded synthetic authority-composition context is structurally admitted by the frozen Stage 5B contract.
+
+It may NOT return or reproduce the production allow/deny decision, denial reasons, authority_effect, or any grant/effect permission.
+
+This is deliberately narrower than migrating evaluateAuthorityComposition().
+
+WHY THIS TARGET
+
+The current supported evaluator combines several qualitatively different concerns:
+
+- exact object shape validation;
+- identifiers and digest syntax;
+- canonical UTC timestamp validation;
+- sorted/unique bounded string sets;
+- bounded request/history/restriction structures;
+- grant expiry/currentness;
+- principal/policy/scope matching;
+- Stage 5A intent attenuation;
+- causal-history composition restriction checks;
+- an allow/deny authority result.
+
+Stage 5A covered only intent attenuation semantics. Moving directly to the full evaluator would make validation, time/currentness, history composition, and positive authority decisions advance together.
+
+Stage 5B instead isolates the structural admission boundary first. This lets Rust prove it can reject malformed authority context without becoming an authority evaluator.
+
+ALTERNATIVES REJECTED
+
+A. Full evaluateAuthorityComposition() differential next.
+Rejected because it combines parser/validation parity with currentness, history restrictions, and positive authority decisions in one migration step.
+
+B. Cryptographic grant verification next.
+Rejected because Stage 5A's verified=true flag is provenance, not evidence that cryptographic verification is the correct next boundary. Cryptographic dependencies, key formats, canonical bytes, revocation/currentness, and trust anchors require their own design gate.
+
+C. Promote the Stage 5A Rust attenuation source under trust-core/rust/ next.
+Rejected because Stage 5A source existence and parity evidence do not grant source-promotion authority.
+
+AUTHORITY AND TCB MAP
+
+Supported Node evaluator:
+- Current status: authoritative supported implementation.
+- Stage 5B role: laboratory admission oracle only.
+- Runtime authority: unchanged.
+- Stage 5B change: none.
+
+Node Stage 5B oracle wrapper:
+- Current status: does not exist yet.
+- Intended role if later implemented: call the real supported evaluateAuthorityComposition() with a fixed valid now value and report only whether the call returned or rejected validation.
+- Runtime authority: none; laboratory only.
+- Must not copy normalizeGrant/normalizeIntent/normalizeRequest/normalizeHistory/normalizeRestrictions semantics.
+- Must discard allow/deny/reasons/authority_effect output.
+
+Rust Stage 5B candidate:
+- Current status: does not exist yet.
+- Intended location if later implemented: labs/rust-trust-core/ only.
+- Runtime authority: none.
+- Production reachability: none.
+- Permitted output: structurally_admitted true/false plus a laboratory validation classification if required for diagnostics.
+- Forbidden output: grant, allow, effect permission, authority_effect, capability, consent decision, budget decision, credential decision, or production receipt.
+
+Promoted Rust source trust-core/rust/canonical_value_v0.rs:
+- Stage 5B status: existing provenance/evidence only.
+- Modification by Stage 5B: forbidden.
+- It is not authority for this slice.
+
+Stage 5A Rust intent attenuation source:
+- Stage 5B status: inherited laboratory evidence only.
+- Modification by Stage 5B: forbidden unless a separate correction gate reopens Stage 5A.
+- It is not imported as Stage 5B authority.
+
+Gateway -> Hypervisor -> Sandbox -> Grid:
+- Stage 5B change: none.
+
+STAGE 5B LANGUAGE-NEUTRAL CONTRACT
+
+The Stage 5B fixture represents one synthetic authority-composition context with these top-level fields:
+
+case_id
+grant
+intent
+request
+history
+restrictions
+
+The oracle supplies a fixed valid now value separately. now is test-harness input, not authority evidence.
+
+The fixture format may be JSON/JSONL in implementation, but the semantic contract below is authoritative; transport syntax must not silently widen it.
+
+GRANT CONTRACT
+
+Exact fields:
+verified
+grant_id
+issuer
+principal_id
+resources
+actions
+purposes
+destinations
+expires_at
+policy_digest
+
+Requirements:
+- verified must be literal true;
+- grant_id, issuer, principal_id use [A-Za-z0-9][A-Za-z0-9_.:/-]{0,191};
+- resources/actions/purposes/destinations are arrays of at most 128 strings;
+- every set member is 1..256 characters;
+- each set is already sorted and unique; no normalization may repair input;
+- expires_at is a canonical UTC ISO timestamp whose parse and re-serialization are identical;
+- policy_digest is exactly 64 lowercase hexadecimal characters;
+- extra or missing fields fail closed.
+
+The verified flag is a precondition marker only. Stage 5B does not verify a credential or signature.
+
+INTENT CONTRACT
+
+Exact fields:
+bound
+actions
+purposes
+destinations
+resources
+
+Requirements:
+- bound must be literal true;
+- each set follows the same <=128, 1..256-character, sorted, unique rules;
+- extra or missing fields fail closed.
+
+The bound flag is a precondition marker only. Stage 5B does not establish that a trusted application boundary actually performed binding.
+
+REQUEST CONTRACT
+
+Exact fields:
+principal_id
+resource
+action
+purpose
+destination
+protocol
+causal_scope_id
+policy_digest
+
+Requirements:
+- all identifiers except policy_digest use [A-Za-z0-9][A-Za-z0-9_.:/-]{0,191};
+- policy_digest is exactly 64 lowercase hexadecimal characters;
+- extra or missing fields fail closed.
+
+HISTORY CONTRACT
+
+- array of at most 4096 entries;
+- each entry has exact fields causal_scope_id, action, resource, purpose, destination;
+- every field is a valid identifier under the 192-character ID rule;
+- order is preserved;
+- extra or missing fields fail closed.
+
+RESTRICTIONS CONTRACT
+
+- array of at most 256 entries;
+- each entry has exact fields id and ordered_actions;
+- id is a valid identifier;
+- ordered_actions is an array of at most 16 valid identifiers;
+- ordered_actions must contain at least two actions;
+- order is preserved;
+- extra or missing fields fail closed.
+
+STRUCTURAL ADMISSION ONLY
+
+A context is structurally admitted if the supported Node evaluateAuthorityComposition() call returns a result rather than rejecting validation, AND the Rust candidate independently accepts the same frozen Stage 5B structural contract.
+
+The Node result may contain allow=true or allow=false. Stage 5B ignores that value.
+
+A semantically denied but structurally valid context is therefore an admitted Stage 5B validation case.
+
+This distinction is mandatory:
+
+structurally_admitted != authorized
+
+FIXED ORACLE CURRENTNESS INPUT
+
+If later implemented, the Node laboratory oracle supplies exactly:
+
+2030-01-01T00:00:00.000Z
+
+as the evaluation now value for every Stage 5B fixture.
+
+Stage 5B does not compare expiry/currentness outcomes. The fixed now exists only because the supported public evaluator requires a now context. The oracle discards allow/deny output.
+
+Any invalid now value is a harness failure, not a Stage 5B fixture result.
+
+FAIL-CLOSED REQUIREMENTS
+
+Stage 5B structural validation must reject rather than coerce, sort, deduplicate, truncate, or repair:
+
+- non-object top-level components;
+- extra or missing exact-object fields;
+- verified other than true;
+- bound other than true;
+- malformed/empty/overlong IDs;
+- malformed digest values;
+- malformed or non-canonical timestamps;
+- non-array sets;
+- over-width sets;
+- unsorted sets;
+- duplicate set entries;
+- overlong set members;
+- non-array history/restrictions;
+- over-width history/restrictions;
+- malformed history entries;
+- malformed restriction entries;
+- restriction ordered_actions with fewer than two or more than sixteen actions.
+
+No error path may return structurally_admitted=true.
+
+NON-GOALS
+
+Stage 5B does not evaluate or migrate:
+- grant expiry/currentness semantics;
+- principal/request equality;
+- policy digest equality;
+- request membership in grant scope;
+- request membership in intent scope;
+- intent attenuation semantics beyond retaining Stage 5A evidence;
+- causal-history restriction matching;
+- allow/deny output;
+- denial reason ordering/deduplication;
+- authority_effect;
+- protocol_is_authority or identity_is_authority markers;
+- credential/signature verification;
+- consent;
+- budgets;
+- persistence;
+- recovery;
+- state mutation;
+- networking;
+- effects.
+
+DEPENDENCY / UNSAFE / BRIDGE DECISION
+
+For this selected Stage 5B target:
+- zero new third-party Rust dependencies;
+- #![forbid(unsafe_code)] remains mandatory;
+- no production Cargo manifest;
+- no FFI;
+- no WASM runtime;
+- no supported-runtime subprocess integration;
+- no IPC/service bridge;
+- no listener or egress;
+- no new source under trust-core/rust/.
+
+If implementation appears to require any of these, Stage 5B design is reopened rather than the implementation plan widening scope.
+
+THREAT MODEL FOR THIS TARGET
+
+Review and later evidence must cover:
+- copied Node validation logic in the oracle rather than calling the supported evaluator;
+- oracle accidentally treating allow/deny as Stage 5B authority output;
+- Rust candidate normalizing malformed sets that Node rejects;
+- JSON/transport parsing differences hidden before comparison;
+- duplicate fixture case IDs being overwritten;
+- error-class differences being treated as successful admission;
+- resource-limit bypass or truncation;
+- Stage 5A source modification smuggled into Stage 5B;
+- promoted canonical source modification smuggled into Stage 5B;
+- a production import/call path to the Stage 5B candidate;
+- a positive structurally_admitted result being described as authorization.
+
+EVIDENCE REQUIRED BEFORE ANY STAGE 5B IMPLEMENTATION CAN BE ACCEPTED
+
+The later implementation plan must require, at minimum:
+- hand-curated structurally valid contexts covering allow and deny Node outcomes while Stage 5B records only admission;
+- hand-curated malformed contexts for every fail-closed class above;
+- exact boundary cases for all declared length/count limits;
+- deterministic mutation/adversarial cases across every object family;
+- deliberate comparator mismatch detection;
+- duplicate oracle-output case ID rejection;
+- proof the Node oracle calls the real supported evaluateAuthorityComposition();
+- proof the oracle discards authorization output;
+- proof no supported runtime imports or invokes the Rust candidate;
+- proof trust-core/rust/canonical_value_v0.rs is unchanged;
+- proof Stage 5A Rust attenuation source is unchanged;
+- rustfmt, Clippy -D warnings, and locked Rust tests;
+- zero dependency and unsafe-code checks;
+- protected Clean Kernel and cross-platform verification on one exact head.
+
+DISAGREEMENT POLICY
+
+Any Node/Rust structural-admission disagreement is a hard failure.
+
+The implementation must not choose Rust, choose Node, vote, normalize after comparison, or reinterpret the mismatch as harmless.
+
+The migration halts and the case is recorded.
+
+Node remains authoritative regardless of Stage 5B laboratory outcome.
+
+ROLLBACK
+
+Stage 5B is laboratory-only. Rollback of a failed implementation is removal/reversion of Stage 5B laboratory fixtures, candidate, oracle, tests, and dedicated CI wiring.
+
+No production data/state migration is permitted in this stage, so no production rollback dependency is introduced.
+
+DESIGN ACCEPTANCE
+
+This target design is accepted only if review agrees that:
+1. structural authority-context validation is the correct next bounded migration candidate;
+2. Stage 5A contributes evidence but no authority;
+3. the Rust candidate cannot produce a production authorization result;
+4. Node remains authoritative;
+5. the selected contract is sufficiently precise for a TDD implementation plan;
+6. no dependency/unsafe/bridge/source-promotion expansion is required;
+7. failure and disagreement remain fail-closed;
+8. no production call site or effect path changes.
+
+After written-spec approval, the implementation plan must RESTATE this exact target. It may not choose a different one. Any target change reopens the Stage 5B design gate.
