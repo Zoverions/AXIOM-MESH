@@ -174,3 +174,12 @@ IMPLEMENTATION GATE
 No Stage 5B implementation source exists at this review gate.
 
 Approval of this plan authorizes only the bounded laboratory implementation tasks in the canonical Stage 5B plan amendment. Any material change to target, authority map, TCB, dependency/unsafe/bridge policy, state reachability, or effect reachability reopens design review before code changes continue.
+
+SELF-REVIEW RESULT
+
+- No Stage 5B implementation code is present.
+- No new Markdown file is added outside the existing canonical documentation inventory.
+- The canonical plan contains no Stage 5B TBD/TODO or symbolic SHA placeholder.
+- The plan distinguishes laboratory transport/envelope rejection from supported-evaluator nested structural rejection.
+- The Node oracle is required to discard all authorization output.
+- The Rust public API returns Result<(), AuthorityContextError> and cannot mint an authority token.
