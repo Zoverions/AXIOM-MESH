@@ -22,6 +22,20 @@
       ]
     },
     {
+      "id": "assurance-floor-understatement",
+      "risks": [
+        "low consequence label used to hide high effective authority",
+        "high autonomy receives a low monitoring burden",
+        "lease duration remains broad while authority or autonomy rises"
+      ],
+      "controls": [
+        "monitorability baseline is the strongest of consequence, authority and autonomy floors",
+        "lease ceiling is the most restrictive of consequence, authority and autonomy ceilings",
+        "authority and autonomy are independently bounded from 0 through 4",
+        "novelty escalates from the already strongest assurance floor"
+      ]
+    },
+    {
       "id": "novelty-omission",
       "risks": [
         "novel environment, tool, model, objective or counterparty omitted to reduce monitorability burden",
@@ -84,7 +98,7 @@
       ],
       "controls": [
         "caller cannot provide max_lease_ms",
-        "risk profile owns lease ceilings",
+        "consequence, authority and autonomy profiles jointly constrain lease ceilings",
         "self-modification clamps the ceiling to 15000 ms",
         "output schema restricts lease values"
       ]
