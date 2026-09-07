@@ -243,7 +243,7 @@ docs: stage Rust trust-core migration programme
 
 **Architecture:** Use a restricted JSONL evidence grammar under `labs/rust-trust-core/`. Rust independently parses and validates structural shape using the standard library only. A Node laboratory oracle parses the same rows, invokes the real supported `evaluateAuthorityComposition(...)` at a fixed `now`, and emits only `case_id` plus `structurally_admitted`; it discards `allow`, reasons, `authority_effect`, and every other authority-bearing output.
 
-**Spec:** `docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md` sections 12–27 and `labs/rust-trust-core/STAGE5B-AUTHORITY-CONTEXT-VALIDATION.design.txt`.
+**Spec:** `docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md` sections 12–27, `labs/rust-trust-core/STAGE5B-AUTHORITY-CONTEXT-VALIDATION.design.txt`, and `labs/rust-trust-core/STAGE5B-AUTHORITY-CONTEXT-VALIDATION.plan.txt`. The `.plan.txt` record is authoritative for the laboratory transport/envelope classification where it narrows the execution details below; it does not widen authority scope.
 
 ## Stage 5B Global Constraints
 
@@ -311,9 +311,9 @@ quote_backslash_ascii_structural
 
 `expired_but_structural` uses `2029-12-31T23:59:59.999Z`. `composition_blocked_but_structural` uses history actions `prepare`, `approve`, request action `execute`, and one restriction `ordered_actions: ["prepare","approve","execute"]` in the same causal scope.
 
-- [ ] **Step 2: Create the parse-valid structurally invalid fixture**
+- [ ] **Step 2: Create the parse-valid rejected fixture**
 
-Include one-defect cases with these exact IDs:
+The supplemental `.plan.txt` classifies each case as either `envelope_rejected` or `structural_rejected`; do not collapse those layers. Include one-defect cases with these exact IDs:
 
 ```text
 missing_top_level_history
@@ -607,7 +607,7 @@ export function structurallyAdmitAuthorityContext(candidate) {
 }
 ```
 
-`parseAuthorityContextFixture` enforces the restricted printable-ASCII JSONL transport before `JSON.parse`, rejects numbers/unsupported escapes/duplicate case IDs, and does not sort, deduplicate, truncate, or repair nested values.
+Before `JSON.parse`, implement the recursive `validateRestrictedJsonLine` preflight exactly as specified in `STAGE5B-AUTHORITY-CONTEXT-VALIDATION.plan.txt`; it must detect duplicate object keys rather than relying on `JSON.parse` last-key-wins behavior. After preflight, enforce the exact six-field Stage 5B envelope, validate `case_id`, and only then call the supported evaluator. Do not sort, deduplicate, truncate, or repair nested values.
 
 `runAuthorityContextFixtureText` emits only:
 
@@ -676,9 +676,9 @@ Use `Command::new("node")`, pass `node/authority_context_oracle.mjs` and `-`, pi
 
 For every valid fixture case: Rust `validate_authority_context(case).is_ok()` is true and Node output for the same `case_id` is true.
 
-- [ ] **Step 4: Assert invalid corpus parity one case at a time**
+- [ ] **Step 4: Assert rejected corpus parity one case at a time**
 
-For each parse-valid invalid line: Rust structural validation returns `Err`; Node returns `false`. Cases outside the admitted transport grammar are tested as parser rejection in both harnesses rather than structural validation.
+Use the supplemental `.plan.txt` classification. Envelope-rejected cases must be rejected at the envelope layer by both paths. Nested structural-rejected cases must pass the envelope and then be rejected by both nested validators. A rejection-layer mismatch fails the test even if both ultimately reject.
 
 - [ ] **Step 5: Add comparator perturbation proof**
 
@@ -746,7 +746,7 @@ No host time, OS randomness, locale, environment, filesystem ordering, or networ
 
 Generate 128 baseline/allow-like contexts and 128 structural-valid semantic-denial contexts cycling through: expired grant, principal mismatch, policy mismatch, request outside grant, request outside intent, intent widening, composition restriction. All 256 must produce structural admission true in Node and Rust.
 
-- [ ] **Step 5: Generate 256 one-defect invalid contexts**
+- [ ] **Step 5: Generate 256 one-defect rejected contexts**
 
 Cycle exactly 16 cases through each category:
 
@@ -769,7 +769,7 @@ restriction_seventeen_actions
 extra_top_level_field
 ```
 
-Render the actual malformed object; do not use shared mutation instructions.
+Render the actual malformed object; do not use shared mutation instructions. Record each case's expected rejection layer (`envelope_rejected` or `structural_rejected`) and require Node and Rust to reject at the same layer.
 
 - [ ] **Step 6: Add explicit over-bound rejection**
 
@@ -784,7 +784,7 @@ cargo clippy --manifest-path labs/rust-trust-core/Cargo.toml --all-targets -- -D
 cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked
 ```
 
-Expected: all commands exit 0; generated counts are exactly 256 admitted and 256 rejected in both paths.
+Expected: all commands exit 0; generated counts are exactly 256 admitted and 256 rejected in both paths, with rejection-layer parity for invalid cases.
 
 - [ ] **Step 8: Commit**
 
@@ -826,7 +826,7 @@ Keep all earlier source-boundary checks.
 
 - [ ] **Step 4: Update experiment evidence without premature success claims**
 
-Record: structural admission only; fixed oracle time; printable-ASCII restricted JSONL grammar; seed `0x53543542`; exact generated counts; source-integrity guards; Node remains authoritative; Stage 5A is evidence/provenance only; any real mismatch halts Stage 5B.
+Record: structural admission only; fixed oracle time; printable-ASCII restricted JSONL grammar; seed `0x53543542`; exact generated counts; envelope-vs-nested rejection classification; source-integrity guards; Node remains authoritative; Stage 5A is evidence/provenance only; any real mismatch halts Stage 5B.
 
 - [ ] **Step 5: Run local reproducibility suite**
 
@@ -906,7 +906,7 @@ No unresolved review finding may affect structural-vs-authority separation, dire
 - [ ] **Step 5: Record only this bounded claim**
 
 ```text
-At the accepted exact head, the laboratory-only Rust Stage 5B candidate matched the supported Node evaluator's structural admission behavior for the frozen Stage 5B printable-ASCII JSONL evidence grammar across the declared hand-curated and deterministic generated corpora, while declared invalid and over-bound contexts failed closed. Node remains authoritative and no production runtime or effect authority was promoted.
+At the accepted exact head, the laboratory-only Rust Stage 5B candidate matched the Stage 5B Node oracle's structural-admission result and rejection layer within the frozen printable-ASCII JSONL fixture envelope across the declared hand-curated and deterministic generated corpora. The Node oracle invoked the real supported evaluateAuthorityComposition() for nested structural validation and discarded all authorization output. Node remained authoritative and no production runtime or effect authority was promoted.
 ```
 
 Do not claim full `evaluateAuthorityComposition()` parity, cryptographic parity, authorization parity, production readiness, or permission to promote the Rust validator under `trust-core/rust/`.
