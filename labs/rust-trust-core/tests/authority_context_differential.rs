@@ -395,7 +395,8 @@ fn generated_invalid_contexts(seed: u32, count: usize) -> Vec<GeneratedCase> {
                 AdmissionClass::StructuralRejected
             }
             13 => {
-                template.restrictions = "[{\"id\":\"restriction:one\",\"ordered_actions\":[\"prepare\"]}]".to_owned();
+                template.restrictions =
+                    "[{\"id\":\"restriction:one\",\"ordered_actions\":[\"prepare\"]}]".to_owned();
                 AdmissionClass::StructuralRejected
             }
             14 => {
