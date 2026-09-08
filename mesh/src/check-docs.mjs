@@ -26,9 +26,11 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md',
   'docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md',
   'docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md',
+  'docs/MASTER-TODO-EPISTEMIC-FABRIC.md',
   'docs/ROADMAP.md',
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md',
+  'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md',
   'docs/PRODUCTION-GRADE.md',
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
@@ -90,6 +92,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
+  'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md',
   'docs/superpowers/specs/2026-08-27-emergent-coordination-collective-authority-design.md',
   'docs/superpowers/specs/2026-08-29-sovereign-agent-composition-continuity-design.md',
   'docs/superpowers/specs/2026-08-29-extensible-agent-provider-substrate-design.md',
@@ -104,6 +107,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md',
   'docs/superpowers/specs/2026-09-06-rust-trust-core-stage2-differential-conformance-design.md',
   'docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md',
+  'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -116,6 +120,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md',
   'docs/superpowers/plans/2026-09-06-rust-trust-core-stage2-differential-conformance.md',
   'docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md',
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -200,6 +205,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Priority 17 — Required promotion artifacts',
     '## Completion rule'
   ],
+  'docs/MASTER-TODO-EPISTEMIC-FABRIC.md': [
+    '## Priority 0 — Protect current authority truth',
+    '## Priority 6 — Later work remains parked',
+    '## Completion rule'
+  ],
   'docs/ROADMAP.md': ['## Promotion rules', '## Current Phase 2'],
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': [
     '## Compatibility commitments effective immediately',
@@ -215,6 +225,12 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Workstream E — MCP server laboratory',
     '## Workstream K — A2A-compatible discovery and task exchange',
     '## Documentation and claims maintenance',
+    '## Current non-claims'
+  ],
+  'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md': [
+    '## Compatibility commitments effective immediately',
+    '## Workstream A — E0 inert contracts',
+    '## Workstream K — E8 unknown-to-experiment planning',
     '## Current non-claims'
   ],
   'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
@@ -399,6 +415,12 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Signed evidence and CI gate',
     '## Residual limitations and pilot repetition'
   ],
+  'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md': [
+    '## Security objective',
+    '## Threats and required controls',
+    '## Required negative tests',
+    '## Non-claims'
+  ],
   'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md': [
     'Risk is not prohibition',
     'Security gates and human interruptions are independent',
@@ -406,6 +428,18 @@ const REQUIRED_CONTENT = Object.freeze({
     'Cross-domain knowledge is permitted; cross-domain dossiers are not the default mechanism',
     'Provenance is not truth',
     'available != reviewed'
+  ],
+  'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md': [
+    'Fresh-gate rule',
+    'Knowledge may inform authority',
+    '## 17. Migration contract',
+    '## 21. Stage 5B approval state'
+  ],
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': [
+    '## Gate 0 — exact candidate inventory',
+    '## Task 1 — common inert record envelope',
+    '## Explicitly out of scope',
+    '## Completion condition'
   ],
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
     '## Current-build setup boundary',
@@ -570,9 +604,11 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': 8_000,
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md': 7_000,
+  'docs/MASTER-TODO-EPISTEMIC-FABRIC.md': 2_500,
   'docs/ROADMAP.md': 2_000,
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': 8_000,
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
+  'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md': 4_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
   'docs/architecture/AGENT-COMMONS.md': 7_000,
@@ -599,6 +635,9 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
+  'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md': 4_000,
+  'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md': 8_000,
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': 5_000,
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,
