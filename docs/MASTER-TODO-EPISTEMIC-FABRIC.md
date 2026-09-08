@@ -16,7 +16,7 @@
 - [x] Preserve deny-dominant composition, exact-effect binding, current-head validation, replay protection, consume-before-execute, and burn-on-uncertainty.
 - [x] Enforce the doctrine: knowledge may inform authority; knowledge must never silently become authority.
 
-The Stage 5B documentation PR changes only documentation, the canonical-document verifier, and focused documentation-registration coverage. It does not modify capability or production-policy files.
+The Stage 5B documentation PR changed only documentation, the canonical-document verifier, and focused documentation-registration coverage. It did not modify capability or production-policy files.
 
 ## Priority 1 — Register the Stage 5B documentation set
 
@@ -28,7 +28,9 @@ Before any implementation candidate is accepted:
 - [x] register the epistemic threat model;
 - [x] register the E0/E1 implementation plan;
 - [x] add focused documentation-registration coverage;
-- [ ] run the repository documentation verifier on supported platforms and record protected-check completion.
+- [x] run the repository documentation verifier on supported platforms and record protected-check completion.
+
+Verification evidence: PR #1560 head `f6b71a5dbe10a086bd4d4fa91be7d9ea45488a0b` passed Clean Kernel run `34174907304` and Windows Compatibility run `34174907306`, including Windows and both macOS compatibility jobs. The documentation-only gate merged to `main` as `344ad17b0e4781c66a5103a4df67c72b93bde4ca`.
 
 ## Priority 2 — E0 schema proposal only
 
@@ -46,6 +48,8 @@ Prepare a fresh implementation proposal for inert schemas covering:
 - [ ] canonical serialization profile.
 
 E0 must have no runtime activation.
+
+A fresh E0/E1 implementation-gate proposal is being prepared on `docs/epistemic-fabric-e0-e1-gate` from exact merged base `344ad17b0e4781c66a5103a4df67c72b93bde4ca`. Proposal preparation grants no implementation authority.
 
 ## Priority 3 — E0 negative fixtures
 
