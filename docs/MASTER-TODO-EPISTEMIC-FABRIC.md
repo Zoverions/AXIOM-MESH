@@ -1,6 +1,6 @@
 # AXIOM-MESH Master TODO — Epistemic Fabric
 
-**Status:** subordinate Stage 5B queue; original E0/E1 gate approved; implementation blocked pending schema-composition amendment A
+**Status:** subordinate Stage 5B queue; E0/E1 gate and schema-composition amendment A owner-approved; implementation awaits approval-record verification/merge
 
 **Date:** 2026-09-08
 
@@ -30,9 +30,9 @@ Verification evidence: PR #1560 head `f6b71a5dbe10a086bd4d4fa91be7d9ea45488a0b` 
 
 ## Priority 2 — E0 schema contract
 
-Original gate proposal `9fec5a449811e343c4723dfb5598d860b59841dc` was owner-approved, but implementation review found a JSON Schema composition defect: the base schema's `additionalProperties:false` is incompatible with specialized `allOf` extension under standard JSON Schema 2020-12 semantics.
+Original gate proposal `9fec5a449811e343c4723dfb5598d860b59841dc` was owner-approved. Pre-implementation review then found a JSON Schema composition defect: the base schema's `additionalProperties:false` was incompatible with specialized `allOf` extension under standard JSON Schema 2020-12 semantics.
 
-Amendment A is now proposed and must be owner-approved before implementation:
+Amendment A was explicitly owner-approved on 2026-09-08 against amendment proposal head `e3bcd9230309159c63017f893ba8b56dc79915e7`:
 
 - [x] common epistemic record envelope preserved;
 - [x] `Source`, `Claim`, and `Evidence` fields preserved;
@@ -44,9 +44,9 @@ Amendment A is now proposed and must be owner-approved before implementation:
 - [x] canonical serialization profile preserved;
 - [x] base changed to extensible composition form;
 - [x] specialized schemas closed with `unevaluatedProperties:false`;
-- [ ] **owner approval of amendment A exact schema bytes/digests**.
+- [x] **owner approval of amendment A exact schema bytes/digests**.
 
-Amended schema SHA-256 digests:
+Approved amended schema SHA-256 digests:
 
 - record: `d647878abe6912d580ac60122b4a15a2ae845b411d4236630ce19a62deb0c7ae`
 - source: `d359eb1238eb44d573ff273aa8b89780b42b85b7e67f0f80f2a47f3eae6a3868`
@@ -57,7 +57,7 @@ E0 remains inert: no runtime activation, capability registration, production pol
 
 ## Priority 3 — E0 negative fixtures
 
-Implementation remains blocked. Once amendment A is approved, use test-first development and prove:
+After the approval record passes protected checks and merges, use test-first development and prove:
 
 - [ ] specialized schemas accept common + specialized declared fields and reject unevaluated fields;
 - [ ] malformed source anchors fail;
@@ -72,7 +72,7 @@ Implementation remains blocked. Once amendment A is approved, use test-first dev
 
 ## Priority 4 — E1 local proposal graph
 
-Blocked pending amendment A approval. After approval, implementation may cover only:
+After approval-record verification/merge, implementation may cover only:
 
 - [ ] bounded local proposal store;
 - [ ] `Source -> Claim -> Evidence` construction;
@@ -86,7 +86,7 @@ Blocked pending amendment A approval. After approval, implementation may cover o
 
 ## Priority 5 — E0/E1 implementation authority
 
-The original fresh gate recorded:
+The fresh gate now records:
 
 - [x] exact proposal head;
 - [x] exact changed-file envelope;
@@ -94,12 +94,16 @@ The original fresh gate recorded:
 - [x] rollback/recovery behavior;
 - [x] threat-model boundary;
 - [x] focused acceptance-test matrix;
-- [x] protected verification;
-- [x] explicit owner approval independent of Stage 5A.
+- [x] original protected verification;
+- [x] explicit owner approval independent of Stage 5A;
+- [x] narrow amendment A exact replacement schema bytes/digests;
+- [x] explicit owner approval of amendment A.
 
-But because schema bytes are a gated exact-effect dimension:
+Before `feat/epistemic-fabric-e0-e1` is created:
 
-- [ ] amendment A must receive explicit owner approval before `feat/epistemic-fabric-e0-e1` is created or implementation code is written.
+- [ ] approval-record head must pass fresh Clean Kernel verification;
+- [ ] approval-record head must pass supported Windows/macOS compatibility verification;
+- [ ] PR #1562 must merge to `main`.
 
 No earlier Stage 5A approval substitutes for this gate, and no part of this work grants E2+ authority.
 
