@@ -121,6 +121,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-06-rust-trust-core-stage2-differential-conformance.md',
   'docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md',
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md',
+  'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
