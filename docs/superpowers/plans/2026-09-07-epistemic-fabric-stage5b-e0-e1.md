@@ -18,50 +18,15 @@
 
 ## Gate decision requested
 
-This document is the fresh Stage 5B E0/E1 implementation-gate proposal required by the approved Epistemic Fabric architecture.
+This is the fresh Stage 5B E0/E1 implementation-gate proposal required by the approved Epistemic Fabric architecture. Repository presence, Stage 5A history, prior design approval, or CI success do not grant implementation authority.
 
-It does **not** authorize implementation by existing on-repository presence, by Stage 5A authority, by prior design approval, or by protected-check success. Implementation authority begins only after an explicit owner approval of this gate against the exact base head and exact E0 schema bytes recorded below.
-
-If approved, the authority is limited to the exact E0/E1 candidate envelope in this document.
-
-## Objective
-
-Prepare the smallest fail-closed implementation candidate for:
-
-```text
-E0: inert schemas/contracts
-E1: local proposal graph for Source -> Claim -> Evidence
-```
-
-Nothing in this proposal authorizes runtime activation, public ingestion, federation, autonomous discovery, canonical promotion, or external effect execution.
-
-## Authority boundary
-
-Approval of this gate, if given, would authorize only development of a bounded local proposal substrate:
+If explicitly approved, the authority is limited to a bounded local proposal substrate:
 
 ```text
 Source -> Claim -> Evidence
 ```
 
-It would not authorize:
-
-- runtime activation;
-- public ingestion;
-- federation;
-- canonical epistemic admission;
-- assessment scoring;
-- unknown/contradiction mutation;
-- prediction ledgers;
-- continuous feeds;
-- live external model/provider access;
-- cross-domain discovery;
-- experiment execution;
-- capability-registry changes;
-- production-policy changes;
-- new Gateway routes;
-- network egress;
-- direct Grid mutation;
-- any epistemic object acquiring execution authority.
+It does not authorize runtime activation, public ingestion, federation, canonical epistemic admission, assessment scoring, continuous feeds, live model/provider access, cross-domain discovery, experiment execution, capability-registry changes, production-policy changes, new Gateway routes, network egress, direct Grid mutation, or any epistemic object gaining execution authority.
 
 The invariant remains:
 
@@ -70,9 +35,15 @@ knowledge may inform authority
 knowledge must never silently become authority
 ```
 
-## Exact implementation file envelope
+## Gate 0 — exact candidate inventory
 
-If this gate is explicitly approved, the first implementation PR may add or modify only the following implementation/test files unless a fresh gate amendment is approved:
+The gate is bound to base head:
+
+```text
+344ad17b0e4781c66a5103a4df67c72b93bde4ca
+```
+
+If approved, the first implementation PR may add or modify only:
 
 ```text
 mesh/config/epistemic-record-v0.schema.json
@@ -89,7 +60,7 @@ docs/MASTER-TODO-EPISTEMIC-FABRIC.md
 docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md
 ```
 
-The following authority-bearing surfaces are explicitly outside the candidate envelope:
+Explicitly outside the candidate envelope:
 
 ```text
 mesh/config/capabilities.json
@@ -104,9 +75,9 @@ provider/runtime launchers
 repository-effect activation
 ```
 
-Any need to touch those surfaces requires a fresh gate.
+Any need to touch those surfaces requires a fresh gate amendment.
 
-## Required reuse points
+## Task 1 — common inert record envelope
 
 The implementation MUST reuse the current plain-data canonicalization/digest discipline from:
 
@@ -114,95 +85,32 @@ The implementation MUST reuse the current plain-data canonicalization/digest dis
 mesh/src/lib/canonical.mjs
 ```
 
-It MUST NOT introduce a second canonicalization engine.
+It MUST NOT introduce a second canonicalization engine. Existing `ValidationError` semantics should be reused for fail-closed validation.
 
-Existing `ValidationError` semantics SHOULD be reused for fail-closed validation.
+The common envelope is proposal-only and fixes:
 
-No E0/E1 module may import filesystem-network-subprocess-provider-capability-effect surfaces except narrowly necessary local filesystem primitives inside the proposal store. Those calls must be bounded to an explicitly supplied disposable/local directory; there is no ambient production path.
+```text
+schema
+id
+object_type
+schema_version
+created_at
+created_by
+revision
+previous_revision?
+content_digest
+provenance_refs
+canonical_state = proposal
+machine_generated
+generation_metadata?
+authority_effect = none
+```
 
-## Resource ceilings
+No E0/E1 object may claim canonical status or effect authority.
 
-The first implementation is constrained to:
+## Task 2 — exact E0 schema byte contract
 
-| Dimension | Ceiling |
-|---|---:|
-| serialized epistemic object | 64 KiB |
-| objects per proposal store | 1,024 |
-| total deterministic export | 8 MiB |
-| provenance refs per object | 64 |
-| source anchors per claim | 32 |
-| source/evidence refs per evidence object | 64 |
-| parent source refs | 32 |
-| graph traversal depth | 8 |
-| proposition length | 16 KiB |
-| scope/applicability string | 4 KiB |
-| individual limitation string | 2 KiB |
-| live model/provider calls | 0 |
-| network requests | 0 |
-| external effects | 0 |
-| production credentials | 0 |
-
-Unknown or missing limit information fails closed.
-
-The proposal store must not persist acquired raw source bytes in E1. It may retain exact digests and bounded references only. Source-byte verification, when required by a fixture, occurs against caller-supplied bytes and does not convert the proposal store into an object archive.
-
-## Revision and replay groundwork
-
-E0/E1 remains proposal-only, but revisions must already be structurally monotonic:
-
-- revision starts at 1;
-- revision greater than 1 requires an exact prior proposal ID/content digest;
-- missing prior revision fails;
-- conflicting prior head fails;
-- stale update fails rather than merges;
-- replaying the exact same proposal may return the same deterministic object identity but MUST NOT create a second divergent revision;
-- distributed replay protection is not claimed.
-
-No field named `canonical_state` may contain anything other than `proposal` in E0/E1.
-
-## Rollback and recovery
-
-Rollback is deliberately simple and fail-closed:
-
-1. E0 schema files are inert and not runtime-loaded.
-2. E1 proposal-store state is local/disposable and carries no execution authority.
-3. Removing the E0/E1 modules and local proposal data returns the runtime to the pre-E0/E1 state.
-4. No rollback may rewrite Grid history because E0/E1 does not write Grid history.
-5. No migration of production durable state is permitted.
-6. If local proposal state becomes corrupt, validation fails and the store may be discarded/rebuilt from input fixtures or exported proposal records.
-
-## Predeclared acceptance tests
-
-The first implementation PR must demonstrate all of the following:
-
-1. valid Source/Claim/Evidence fixtures validate deterministically;
-2. key-order variations canonicalize to the same digest;
-3. sparse arrays, accessors, custom prototypes, symbol keys, non-enumerable fields, unsupported numbers, and non-plain values fail under the reused canonical discipline;
-4. missing source bytes cannot silently become empty bytes;
-5. malformed optional evidence supplied by the caller fails rather than disappearing;
-6. source anchors with invalid offsets or reversed ranges fail;
-7. scope changes change the claim digest;
-8. `independence_state: unknown` remains unknown and is not treated as independent;
-9. `authority_effect` anything other than `none` fails;
-10. `canonical_state` anything other than `proposal` fails;
-11. model-generated fixture metadata is attributable to actor/run/input digest;
-12. an epistemic object cannot be passed as a capability or grant;
-13. no E0/E1 module mutates `mesh/config/capabilities.json`;
-14. no E0/E1 module mutates production policy;
-15. no E0/E1 module opens network transport;
-16. no E0/E1 module invokes external-effect execution;
-17. stale proposal-head updates fail;
-18. object-count, object-size, export-size, ref-count, and traversal-depth ceilings fail closed;
-19. deterministic export is byte-identical across repeated runs;
-20. proposal-store corruption produces explicit failure, not partial acceptance.
-
-Protected verification before merge must include the repository's current Clean Kernel and supported platform compatibility checks.
-
-## Exact E0 schema byte contract
-
-The four schema files below are proposed as exact UTF-8 bytes. Encoding is UTF-8, JSON is compact with no whitespace between tokens, line endings are LF, and each file has exactly one final newline. Their SHA-256 digests are normative for this gate.
-
-If implementation requires different schema bytes, this gate must be amended before those bytes are merged.
+The four files below are proposed as exact UTF-8 bytes. Encoding is UTF-8, JSON is compact with no whitespace between tokens, line endings are LF, and each file has exactly one final newline. Their SHA-256 digests are normative. A byte change requires a gate amendment.
 
 ### `mesh/config/epistemic-record-v0.schema.json`
 
@@ -236,54 +144,82 @@ SHA-256: `4ff83b8362e2fe893d4058a9211f6346ec71f6749d532478face6175be11f8e1`
 {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"urn:axiom:epistemic-evidence:v0","title":"AXIOM Epistemic Evidence v0","allOf":[{"$ref":"urn:axiom:epistemic-record:v0"},{"type":"object","required":["target_claim_ref","direction","evidence_type","source_refs","independence_state","applicability_scope"],"properties":{"object_type":{"const":"evidence"},"target_claim_ref":{"type":"string","minLength":1,"maxLength":256},"direction":{"enum":["supports","weakens","contradicts","discriminates","neutral"]},"evidence_type":{"enum":["direct_observation","experiment","replication","dataset","statistical_result","logical_derivation","mathematical_proof","simulation","testimony","historical_record","other"]},"source_refs":{"type":"array","minItems":1,"maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"observation_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"methodology_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"independence_state":{"enum":["independent","partially_independent","dependent","unknown"]},"limitations":{"type":"array","maxItems":64,"items":{"type":"string","minLength":1,"maxLength":2048}},"applicability_scope":{"type":"string","minLength":1,"maxLength":4096}}}]}
 ```
 
-## E1 implementation shape
+## Task 3 — bounded E1 local proposal store
 
-After E0 tests are green under an approved gate:
+After E0 tests are green under an approved gate, `mesh/src/lib/epistemic-proposal-store.mjs` may:
 
-### `mesh/src/lib/epistemic-contracts.mjs`
-
-May:
-
-- load the four exact schema contracts;
-- expose bounded validation/build helpers;
-- reuse `canonicalize`, hashing, and `ValidationError` behavior from the current kernel;
-- validate source-byte digests against caller-supplied bytes;
-- produce proposal-only records.
-
-Must not:
-
-- create capabilities;
-- call Gateway;
-- call Hypervisor;
-- call Sandbox effects;
-- mutate Grid;
-- read production credentials;
-- open network connections;
-- launch providers/models.
-
-### `mesh/src/lib/epistemic-proposal-store.mjs`
-
-May:
-
-- accept an explicit local directory;
+- accept an explicit local/disposable directory;
 - persist bounded proposal records/revisions;
 - verify exact prior head before revision;
 - export a deterministic bounded proposal snapshot.
 
-Must not:
+It must not accept an ambient production path, persist raw source artifact bytes, federate, infer truth, mutate Grid, call Gateway/Hypervisor/Sandbox effects, read production credentials, open network connections, launch providers/models, or promote proposals to canonical state.
 
-- become a production durable authority store;
-- accept an ambient default production path;
-- persist source artifact bytes;
-- federate;
-- infer truth;
-- promote proposals to canonical state.
+## Task 4 — resource ceilings
 
-## Model/agent attribution boundary
+| Dimension | Ceiling |
+|---|---:|
+| serialized epistemic object | 64 KiB |
+| objects per proposal store | 1,024 |
+| total deterministic export | 8 MiB |
+| provenance refs per object | 64 |
+| source anchors per claim | 32 |
+| source/evidence refs per evidence object | 64 |
+| parent source refs | 32 |
+| graph traversal depth | 8 |
+| proposition length | 16 KiB |
+| scope/applicability string | 4 KiB |
+| individual limitation string | 2 KiB |
+| live model/provider calls | 0 |
+| network requests | 0 |
+| external effects | 0 |
+| production credentials | 0 |
 
-The first slice uses fixture-backed machine-generation metadata only.
+Unknown or missing limit information fails closed. E1 stores digests and bounded references, not acquired source bytes.
 
-No live provider call is authorized.
+## Task 5 — revision, replay, rollback, and recovery
+
+- revision starts at 1;
+- revision greater than 1 requires an exact prior proposal ID/content digest;
+- missing or stale prior head fails;
+- conflicting prior head fails rather than merges;
+- exact replay must not create divergent revisions;
+- distributed replay protection is not claimed;
+- E0 schemas remain inert and runtime-unloaded;
+- E1 state is local/disposable and carries no effect authority;
+- no production durable-state migration is permitted;
+- corrupted proposal state fails validation and may be discarded/rebuilt.
+
+## Task 6 — predeclared negative and conformance tests
+
+The first implementation PR must prove:
+
+1. valid Source/Claim/Evidence fixtures validate deterministically;
+2. key-order variation gives the same canonical digest;
+3. sparse arrays, accessors, custom prototypes, symbol/non-enumerable state, unsupported numbers, and non-plain values fail under the reused canonical discipline;
+4. missing source bytes do not silently become empty bytes;
+5. malformed supplied optional evidence fails rather than disappearing;
+6. invalid/reversed source-anchor offsets fail;
+7. changing claim scope changes its digest;
+8. `independence_state: unknown` remains unknown;
+9. `authority_effect != none` fails;
+10. `canonical_state != proposal` fails;
+11. fixture-backed machine generation remains attributable to actor/run/input digest;
+12. epistemic objects cannot be used as capabilities/grants;
+13. capability registry remains unchanged;
+14. production policy remains unchanged;
+15. no network transport is opened;
+16. no external effect is invoked;
+17. stale proposal-head updates fail;
+18. size/count/ref/depth ceilings fail closed;
+19. deterministic export is byte-identical across repeated runs;
+20. proposal-store corruption produces explicit failure.
+
+Protected verification before merge must include the current Clean Kernel and supported platform compatibility checks.
+
+## Task 7 — model/agent attribution boundary
+
+The first slice uses fixture-backed generation metadata only. No live provider call is authorized.
 
 A fixture may record:
 
@@ -296,17 +232,7 @@ generated_at
 role
 ```
 
-but model output remains proposal content with zero authority effect.
-
-## Documentation and threat-model obligations
-
-The implementation PR must:
-
-- update this plan with actual implementation commit evidence;
-- update `docs/MASTER-TODO-EPISTEMIC-FABRIC.md`;
-- update `docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md` only for real implementation deltas;
-- keep `mesh/config/capabilities.json` unchanged;
-- keep current project-status claims truthful: E0/E1 remains non-production, proposal-only, and not externally exposed.
+Model output remains proposal content with zero authority effect.
 
 ## Explicitly out of scope
 
@@ -325,13 +251,13 @@ The implementation PR must:
 
 ## Independent gate rule
 
-Protected CI success proves the candidate passes those checks. It does not itself approve the gate.
+CI success proves only that a candidate passes those checks. It does not approve this gate.
 
-An explicit owner decision must state that the E0/E1 implementation gate is approved against base `344ad17b0e4781c66a5103a4df67c72b93bde4ca` and the four schema digests above before implementation begins.
+An explicit owner decision must approve E0/E1 against base `344ad17b0e4781c66a5103a4df67c72b93bde4ca` and all four schema digests above before implementation begins.
 
 ## Completion condition
 
-If approved, E0/E1 is complete only when the repository demonstrates a bounded, local, proposal-only `Source -> Claim -> Evidence` substrate whose exact bytes/provenance/revision semantics are reproducible and whose objects have structurally zero authority effect.
+If approved, E0/E1 is complete only when the repository demonstrates a bounded, local, proposal-only `Source -> Claim -> Evidence` substrate whose bytes/provenance/revision semantics are reproducible and whose objects have structurally zero authority effect.
 
 Until explicit approval:
 
