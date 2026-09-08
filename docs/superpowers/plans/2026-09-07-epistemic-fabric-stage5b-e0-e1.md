@@ -1,16 +1,18 @@
 # Epistemic Fabric Stage 5B — E0/E1 Implementation Gate
 
-**Status:** OWNER APPROVED at proposal head `9fec5a…`; implementation BLOCKED pending narrow schema-composition amendment approval
+**Status:** OWNER APPROVED original gate + amendment A; implementation authorized only after this approval record passes protected checks and merges
 
 **Date:** 2026-09-08
 
 **Original approved proposal head:** `9fec5a449811e343c4723dfb5598d860b59841dc`
 
+**Amendment A approved proposal head:** `e3bcd9230309159c63017f893ba8b56dc79915e7`
+
 **Fresh base head:** `344ad17b0e4781c66a5103a4df67c72b93bde4ca`
 
 **Gate branch:** `docs/epistemic-fabric-e0-e1-gate`
 
-**Implementation branch after amendment approval:** `feat/epistemic-fabric-e0-e1`
+**Approved implementation branch after approval-record merge:** `feat/epistemic-fabric-e0-e1`
 
 **Design:** `docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md`
 
@@ -22,17 +24,19 @@
 
 The owner explicitly approved the fresh Stage 5B E0/E1 gate against proposal head `9fec5a449811e343c4723dfb5598d860b59841dc` after that proposal passed Clean Kernel and supported-platform checks.
 
-A pre-implementation standards review then identified one defect in the exact schema bytes: the approved base record used `additionalProperties:false`, while the specialized `Source`, `Claim`, and `Evidence` schemas composed it with `allOf`. Under JSON Schema 2020-12 semantics, the base therefore rejects the specialized fields before composition can succeed.
+A pre-implementation standards review then identified one defect in the exact schema bytes: the approved base record used `additionalProperties:false`, while the specialized `Source`, `Claim`, and `Evidence` schemas composed it with `allOf`. Under JSON Schema 2020-12 semantics, the base therefore rejects specialized fields before composition can succeed.
 
-This is not being worked around in runtime code. Implementation remains blocked until the narrow byte amendment below is explicitly owner-approved.
+The defect is not being worked around in runtime code. The owner explicitly approved narrow amendment A on 2026-09-08 against amendment proposal head `e3bcd9230309159c63017f893ba8b56dc79915e7`.
 
-The amendment changes only JSON Schema composition semantics:
+Amendment A changes only JSON Schema composition semantics:
 
 1. remove `additionalProperties:false` from the extensible base record schema;
 2. keep the base required/common properties unchanged;
 3. compose specialized schemas with the base via `allOf`;
 4. set `unevaluatedProperties:false` on each specialized schema so the final composed object remains closed;
 5. keep all field names, enum values, cardinality/resource limits, authority semantics, implementation file envelope, and E0/E1 scope unchanged.
+
+Implementation may begin only after the approval-record head passes fresh protected checks and this gate PR merges.
 
 The invariant remains:
 
@@ -49,7 +53,7 @@ The implementation gate remains bound to base head:
 344ad17b0e4781c66a5103a4df67c72b93bde4ca
 ```
 
-After amendment approval, the first implementation PR may add or modify only:
+After the approval record merges, the first implementation PR may add or modify only:
 
 ```text
 mesh/config/epistemic-record-v0.schema.json
@@ -114,13 +118,13 @@ authority_effect = none
 
 No E0/E1 object may claim canonical status or effect authority.
 
-## Task 2 — exact E0 schema byte contract — amendment A
+## Task 2 — exact E0 schema byte contract — amendment A approved
 
-Encoding remains UTF-8, JSON compact with no whitespace between tokens, LF line endings, and exactly one final newline. These four amended SHA-256 digests replace the originally approved digests only if the owner explicitly approves amendment A.
+Encoding is UTF-8, JSON compact with no whitespace between tokens, LF line endings, and exactly one final newline. The four SHA-256 digests below are the owner-approved amendment A byte identities and replace the original approved digests.
 
 ### `mesh/config/epistemic-record-v0.schema.json`
 
-Amended SHA-256: `d647878abe6912d580ac60122b4a15a2ae845b411d4236630ce19a62deb0c7ae`
+Approved SHA-256: `d647878abe6912d580ac60122b4a15a2ae845b411d4236630ce19a62deb0c7ae`
 
 ```json
 {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"urn:axiom:epistemic-record:v0","title":"AXIOM Epistemic Record v0","type":"object","required":["schema","id","object_type","schema_version","created_at","created_by","revision","content_digest","provenance_refs","canonical_state","machine_generated","authority_effect"],"properties":{"schema":{"const":"axiom-epistemic-record.v0"},"id":{"type":"string","minLength":1,"maxLength":256},"object_type":{"enum":["source","claim","evidence"]},"schema_version":{"const":"0.1.0"},"created_at":{"type":"string","format":"date-time"},"created_by":{"type":"string","minLength":1,"maxLength":256},"revision":{"type":"integer","minimum":1,"maximum":2147483647},"previous_revision":{"type":"string","minLength":1,"maxLength":256},"content_digest":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},"provenance_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"canonical_state":{"const":"proposal"},"machine_generated":{"type":"boolean"},"generation_metadata":{"type":"object","additionalProperties":false,"required":["actor_id","run_id","input_digest","generated_at","role"],"properties":{"actor_id":{"type":"string","minLength":1,"maxLength":256},"version":{"type":"string","minLength":1,"maxLength":128},"run_id":{"type":"string","minLength":1,"maxLength":256},"input_digest":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},"generated_at":{"type":"string","format":"date-time"},"role":{"type":"string","minLength":1,"maxLength":128}}},"authority_effect":{"const":"none"}}}
@@ -128,7 +132,7 @@ Amended SHA-256: `d647878abe6912d580ac60122b4a15a2ae845b411d4236630ce19a62deb0c7
 
 ### `mesh/config/epistemic-source-v0.schema.json`
 
-Amended SHA-256: `d359eb1238eb44d573ff273aa8b89780b42b85b7e67f0f80f2a47f3eae6a3868`
+Approved SHA-256: `d359eb1238eb44d573ff273aa8b89780b42b85b7e67f0f80f2a47f3eae6a3868`
 
 ```json
 {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"urn:axiom:epistemic-source:v0","title":"AXIOM Epistemic Source v0","allOf":[{"$ref":"urn:axiom:epistemic-record:v0"}],"type":"object","required":["source_type","retrieved_at","original_content_digest"],"properties":{"object_type":{"const":"source"},"source_type":{"enum":["paper","preprint","dataset","book","thesis","patent","report","standard","recording","webpage","archive","instrument_output","simulation","other"]},"title":{"type":"string","maxLength":1024},"authors":{"type":"array","maxItems":64,"items":{"type":"string","minLength":1,"maxLength":256}},"published_at":{"type":"string","format":"date-time"},"retrieved_at":{"type":"string","format":"date-time"},"external_identifiers":{"type":"array","maxItems":32,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":1024}},"original_content_digest":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},"parent_source_refs":{"type":"array","maxItems":32,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"raw_artifact_ref":{"type":"string","minLength":1,"maxLength":2048}},"unevaluatedProperties":false}
@@ -136,7 +140,7 @@ Amended SHA-256: `d359eb1238eb44d573ff273aa8b89780b42b85b7e67f0f80f2a47f3eae6a38
 
 ### `mesh/config/epistemic-claim-v0.schema.json`
 
-Amended SHA-256: `a7c6b20afcb223a2e48db9543d5e332bb8de9b752110d68b80582e63f02f2c87`
+Approved SHA-256: `a7c6b20afcb223a2e48db9543d5e332bb8de9b752110d68b80582e63f02f2c87`
 
 ```json
 {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"urn:axiom:epistemic-claim:v0","title":"AXIOM Epistemic Claim v0","allOf":[{"$ref":"urn:axiom:epistemic-record:v0"}],"type":"object","required":["proposition","claim_kind","scope","source_anchors"],"properties":{"object_type":{"const":"claim"},"proposition":{"type":"string","minLength":1,"maxLength":16384},"claim_kind":{"enum":["observation_report","empirical_generalization","causal","mechanistic","interpretive","theoretical","mathematical","forecast","normative","hypothesis","speculative"]},"scope":{"type":"string","minLength":1,"maxLength":4096},"qualifiers":{"type":"array","maxItems":32,"items":{"type":"string","minLength":1,"maxLength":1024}},"assumption_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"source_anchors":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"object","additionalProperties":false,"required":["source_ref"],"properties":{"source_ref":{"type":"string","minLength":1,"maxLength":256},"page":{"type":"integer","minimum":1,"maximum":1000000},"section":{"type":"string","maxLength":1024},"start_offset":{"type":"integer","minimum":0,"maximum":1073741824},"end_offset":{"type":"integer","minimum":0,"maximum":1073741824},"quote_digest":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"}}}}},"unevaluatedProperties":false}
@@ -144,7 +148,7 @@ Amended SHA-256: `a7c6b20afcb223a2e48db9543d5e332bb8de9b752110d68b80582e63f02f2c
 
 ### `mesh/config/epistemic-evidence-v0.schema.json`
 
-Amended SHA-256: `207ab9477334eb6654869abc9e688a7cbe40ba5065c72f349f22ede8d944d628`
+Approved SHA-256: `207ab9477334eb6654869abc9e688a7cbe40ba5065c72f349f22ede8d944d628`
 
 ```json
 {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"urn:axiom:epistemic-evidence:v0","title":"AXIOM Epistemic Evidence v0","allOf":[{"$ref":"urn:axiom:epistemic-record:v0"}],"type":"object","required":["target_claim_ref","direction","evidence_type","source_refs","independence_state","applicability_scope"],"properties":{"object_type":{"const":"evidence"},"target_claim_ref":{"type":"string","minLength":1,"maxLength":256},"direction":{"enum":["supports","weakens","contradicts","discriminates","neutral"]},"evidence_type":{"enum":["direct_observation","experiment","replication","dataset","statistical_result","logical_derivation","mathematical_proof","simulation","testimony","historical_record","other"]},"source_refs":{"type":"array","minItems":1,"maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"observation_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"methodology_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}},"independence_state":{"enum":["independent","partially_independent","dependent","unknown"]},"limitations":{"type":"array","maxItems":64,"items":{"type":"string","minLength":1,"maxLength":2048}},"applicability_scope":{"type":"string","minLength":1,"maxLength":4096}},"unevaluatedProperties":false}
@@ -152,7 +156,7 @@ Amended SHA-256: `207ab9477334eb6654869abc9e688a7cbe40ba5065c72f349f22ede8d944d6
 
 ## Task 3 — bounded E1 local proposal store
 
-After E0 tests are green under an amendment-approved gate, `mesh/src/lib/epistemic-proposal-store.mjs` may:
+After E0 tests are green under this amendment-approved gate, `mesh/src/lib/epistemic-proposal-store.mjs` may:
 
 - accept an explicit local/disposable directory;
 - persist bounded proposal records/revisions;
@@ -257,19 +261,26 @@ Model output remains proposal content with zero authority effect.
 
 ## Independent gate rule
 
-Original owner approval remains recorded but does not authorize implementation using changed bytes. Amendment A must be explicitly owner-approved because the exact schema hashes change.
+Original gate approval and amendment A approval are both explicit and separately recorded. The amended schema hashes above are the only schema bytes authorized for this E0/E1 implementation slice.
 
-No other part of the gate is reopened by this amendment.
+No other part of the gate was reopened by amendment A. Any change to those bytes, authority boundaries, resource ceilings, file envelope, external-effect boundary, or E0/E1 scope requires a fresh gate amendment.
 
 ## Completion condition
 
 E0/E1 is complete only when the repository demonstrates a bounded, local, proposal-only `Source -> Claim -> Evidence` substrate whose bytes/provenance/revision semantics are reproducible and whose objects have structurally zero authority effect.
 
-Until amendment A is explicitly approved:
+Before the approval-record merge:
 
 ```text
 ORIGINAL GATE: OWNER APPROVED
-AMENDMENT A: PROPOSED
-IMPLEMENTATION AUTHORITY: BLOCKED PENDING AMENDMENT A
+AMENDMENT A: OWNER APPROVED
+IMPLEMENTATION AUTHORITY: BLOCKED UNTIL APPROVAL-RECORD CHECKS + MERGE
+LATER PHASE AUTHORITY: NONE
+```
+
+After that exact approval record passes protected checks and merges:
+
+```text
+IMPLEMENTATION AUTHORITY: E0/E1 ONLY
 LATER PHASE AUTHORITY: NONE
 ```
