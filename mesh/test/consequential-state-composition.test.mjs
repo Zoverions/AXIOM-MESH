@@ -1,3 +1,4 @@
+// Intentional RED: profile and fixture files are absent at this commit.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
