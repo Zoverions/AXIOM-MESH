@@ -501,3 +501,148 @@ Implementation authority remains **not granted** until a fresh implementation pr
 The first permitted implementation proposal must be E0/E1 only.
 
 > **Knowledge may inform authority. Knowledge must never silently become authority.**
+
+---
+
+## 22. Amendment B — multidimensional, reproducible, continuable epistemic state
+
+**Amendment status:** owner-approved design amendment on 2026-09-08; documentation-only; no E2+ implementation authority.
+
+**Scope boundary:** Amendment B changes future compatibility requirements only. It does not change the owner-approved E0/E1 schema bytes, schema digests, changed-file envelope, implementation authority, or PR #1563 contract. E0/E1 remains the bounded local proposal-only `Source -> Claim -> Evidence` substrate.
+
+The additional governing doctrine is:
+
+> **Epistemic state is multidimensional, historical, reproducible, and continuable. No scalar score, successful proof, failed search, computed frontier, agent recommendation, or verification result independently establishes truth, canonical status, or execution authority.**
+
+### 22.1 Evidence-state vectors, not scalar truth/confidence
+
+Future assessment and verification work must preserve materially distinct dimensions rather than collapse them into one confidence number. A future vocabulary may evolve, but it must be able to represent independently at least:
+
+- formal or machine-check status;
+- exact statement/claim identity;
+- statement-to-source or formalization alignment status;
+- provenance integrity;
+- evidence independence state;
+- empirical or observational support where applicable;
+- verifier/profile identity and version;
+- dependency-closure coverage;
+- independent replay/reproduction status;
+- human or institutional review state where applicable;
+- unresolved limitations and applicability scope.
+
+Unknown dimensions remain unknown. A consumer may derive a policy-specific view from a vector, but the derived view must not overwrite the underlying dimensions or become a global truth primitive.
+
+### 22.2 Negative knowledge and failure provenance are first-class
+
+Failed approaches, falsifications, counterexamples, dead ends, rejected derivations, and unsuccessful experiments may carry substantial information and must not be discarded merely because they did not produce a successful result.
+
+A future failure-provenance representation must bind, where applicable:
+
+```text
+target / question
+attempted route
+assumptions and relevant inputs
+actor / model / agent / run
+method or verifier profile
+result
+failure class / reason
+supporting artifacts or counterexample
+created_at
+content/dependency digests
+```
+
+A failed attempt is not automatically a falsification. A rejected proof attempt is not evidence that the theorem is false. Failure semantics must distinguish logical refutation, empirical falsification, resource exhaustion, tool failure, unsupported method, scope mismatch, duplicate search, and inconclusive search.
+
+Historical failed routes remain attributable and append-only so later agents can avoid useless repetition or revisit an old route when assumptions, tools, or evidence change.
+
+### 22.3 Verification is a structured closure claim
+
+The unqualified state `verified = true` is insufficient for nontrivial epistemic work.
+
+A future verification/reproduction record must make explicit the closure actually checked, including as applicable:
+
+```text
+exact statement or target digest
+verifier / kernel / checker identity and version
+verification profile / configuration digest
+execution-environment digest
+dependency-closure digest
+dependencies freshly checked or rebuilt
+dependencies reused but not independently rebuilt
+independent-replay identity and status
+result and limitations
+```
+
+The strongest reproducibility claim may not exceed the closure actually replayed. Reusing already-compiled, cached, trusted, or externally supplied dependencies must remain visible rather than being silently described as an end-to-end independent rebuild.
+
+This rule applies beyond theorem proving: software builds, experiments, simulations, benchmarks, datasets, and derived evidence may each have different reproducibility closures.
+
+### 22.4 Continuation packets are portable knowledge, never portable authority
+
+Future E7 discovery/research agents may emit bounded, content-addressed continuation packets for unresolved work. A continuation packet should make it possible for another agent or node to resume an investigation without reconstructing the full search history.
+
+A packet may include:
+
+- unresolved target/question and scope;
+- exact relevant graph/snapshot references;
+- evidence-state vector references;
+- attempted and failed routes;
+- counterexamples or falsifiers;
+- open dependencies and proof/evidence obligations;
+- promising unexplored routes with rationale;
+- exact model/agent/run provenance;
+- resource expenditure and remaining declared search budget;
+- packet digest and creation time.
+
+A continuation packet must not contain or imply transferred execution authority, capability, credentials, consent, spending permission, network authority, repository authority, or experiment authority. Importing a packet imports evidence/proposals only. Any new effect requires ordinary AXIOM authorization in the receiving context.
+
+### 22.5 Frontier state is computed proposal state
+
+A future research frontier is a derived object/view over unresolved graph state, not a decree about truth or priority.
+
+A frontier computation may identify:
+
+- unresolved obligations;
+- contradictions or discriminating observations;
+- missing dependency edges;
+- viable unexplored routes;
+- claims whose verification closure is incomplete;
+- assumptions whose weakening or replacement could unlock progress;
+- high-information candidate experiments or formal searches.
+
+Frontier state must be bound to an exact graph/snapshot, methodology/profile, resource horizon, and derivation digest. Different nodes or evaluators may legitimately compute different frontiers from the same underlying corpus.
+
+`frontier_rank`, novelty, expected information gain, model preference, or search priority must never become truth, canonical admission, funding authority, or execution authority by themselves.
+
+### 22.6 Phase mapping and independent gates
+
+Amendment B maps onto the existing roadmap rather than creating a second epistemic subsystem:
+
+- **E0/E1:** unchanged. No Amendment B runtime/schema widening is authorized.
+- **E2:** future verification records must expose reproducibility closure and exact dependency/replay scope.
+- **E4:** future `Assessment`/`Unknown`/`Relationship` work must preserve multidimensional evidence state and failure provenance without scalar collapse.
+- **evidence-independence/contradiction work:** must compose independence lineage with reproducibility and failure provenance.
+- **E6:** continuous feeds may ingest new evidence and verification results but must preserve their dimensional/provenance boundaries.
+- **E7:** continuation packets and computed-frontier proposals belong here and remain proposal-only.
+- **E8:** a frontier or continuation packet may suggest an experiment, but execution remains on the ordinary Mesh authority path.
+
+Every implementation slice above requires its own fresh design/authority gate. Approval of Amendment B grants compatibility requirements only.
+
+### 22.7 Amendment B acceptance requirements for future phases
+
+Before a future phase claims these semantics are implemented, tests must prove at minimum:
+
+1. one strong dimension cannot silently overwrite unknown/weak dimensions;
+2. a scalar confidence or aggregate score cannot become global truth or effect authority;
+3. failed routes remain attributable and cannot be silently deleted from historical reconstruction;
+4. inconclusive/tool/resource failures cannot masquerade as falsification;
+5. verification claims cannot exceed the dependency closure actually checked;
+6. cached/reused dependencies remain distinguishable from independently rebuilt dependencies;
+7. independent replay identity cannot be self-declared without bound evidence;
+8. continuation packets cannot carry capabilities, credentials, grants, consent, or external-effect authority;
+9. continuation import does not create canonical-write authority;
+10. frontier computation is deterministic for an exact snapshot/profile where determinism is claimed;
+11. different scoped frontier views may coexist without one becoming canonical truth;
+12. frontier priority cannot directly authorize repository, network, spending, deployment, or physical effects.
+
+> **Negative knowledge is knowledge. Verification describes a closure. Unresolved work is portable. The frontier is derived, not decreed.**
