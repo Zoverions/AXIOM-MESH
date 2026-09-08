@@ -7,7 +7,8 @@ const required = new Set([
   'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md',
   'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md',
   'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
-  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md'
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md',
+  'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md'
 ]);
 
 test('Stage 5B epistemic fabric corpus is canonically registered', () => {
