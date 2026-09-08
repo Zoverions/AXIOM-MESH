@@ -1,6 +1,6 @@
 # AXIOM-MESH Master TODO — Epistemic Fabric
 
-**Status:** subordinate Stage 5B queue; E0/E1 implementation gate approved; no authority inherited from Stage 5A
+**Status:** subordinate Stage 5B queue; original E0/E1 gate approved; implementation blocked pending schema-composition amendment A
 
 **Date:** 2026-09-08
 
@@ -16,43 +16,50 @@
 - [x] Preserve deny-dominant composition, exact-effect binding, current-head validation, replay protection, consume-before-execute, and burn-on-uncertainty.
 - [x] Enforce the doctrine: knowledge may inform authority; knowledge must never silently become authority.
 
-The Stage 5B documentation PR changed only documentation, the canonical-document verifier, and focused documentation-registration coverage. It did not modify capability or production-policy files.
-
 ## Priority 1 — Register the Stage 5B documentation set
 
-Before any implementation candidate is accepted:
+- [x] design gate registered;
+- [x] roadmap registered;
+- [x] queue registered;
+- [x] threat model registered;
+- [x] E0/E1 plan registered;
+- [x] focused documentation-registration coverage added;
+- [x] Stage 5B documentation package verified and merged through PR #1560.
 
-- [x] register the design gate in `CANONICAL_DOCUMENTS`;
-- [x] register the roadmap extension;
-- [x] register this queue;
-- [x] register the epistemic threat model;
-- [x] register the E0/E1 implementation plan;
-- [x] add focused documentation-registration coverage;
-- [x] run the repository documentation verifier on supported platforms and record protected-check completion.
-
-Verification evidence: PR #1560 head `f6b71a5dbe10a086bd4d4fa91be7d9ea45488a0b` passed Clean Kernel run `34174907304` and Windows Compatibility run `34174907306`, including Windows and both macOS compatibility jobs. The documentation-only gate merged to `main` as `344ad17b0e4781c66a5103a4df67c72b93bde4ca`.
+Verification evidence: PR #1560 head `f6b71a5dbe10a086bd4d4fa91be7d9ea45488a0b` passed Clean Kernel run `34174907304` and Windows Compatibility run `34174907306`; it merged to `main` as `344ad17b0e4781c66a5103a4df67c72b93bde4ca`.
 
 ## Priority 2 — E0 schema contract
 
-The fresh implementation gate is approved against proposal head `9fec5a449811e343c4723dfb5598d860b59841dc`.
+Original gate proposal `9fec5a449811e343c4723dfb5598d860b59841dc` was owner-approved, but implementation review found a JSON Schema composition defect: the base schema's `additionalProperties:false` is incompatible with specialized `allOf` extension under standard JSON Schema 2020-12 semantics.
 
-- [x] common epistemic record envelope specified;
-- [x] `Source` schema bytes/digest specified;
-- [x] `Claim` schema bytes/digest specified;
-- [x] `Evidence` schema bytes/digest specified;
-- [x] exact source anchors specified;
-- [x] provenance references specified;
-- [x] immutable object/revision digests specified;
-- [x] explicit authority-neutral semantics specified;
-- [x] bounded collection/cardinality fields specified;
-- [x] canonical serialization profile specified.
+Amendment A is now proposed and must be owner-approved before implementation:
+
+- [x] common epistemic record envelope preserved;
+- [x] `Source`, `Claim`, and `Evidence` fields preserved;
+- [x] exact source anchors preserved;
+- [x] provenance references preserved;
+- [x] immutable object/revision semantics preserved;
+- [x] authority-neutral semantics preserved;
+- [x] cardinality/resource ceilings preserved;
+- [x] canonical serialization profile preserved;
+- [x] base changed to extensible composition form;
+- [x] specialized schemas closed with `unevaluatedProperties:false`;
+- [ ] **owner approval of amendment A exact schema bytes/digests**.
+
+Amended schema SHA-256 digests:
+
+- record: `d647878abe6912d580ac60122b4a15a2ae845b411d4236630ce19a62deb0c7ae`
+- source: `d359eb1238eb44d573ff273aa8b89780b42b85b7e67f0f80f2a47f3eae6a3868`
+- claim: `a7c6b20afcb223a2e48db9543d5e332bb8de9b752110d68b80582e63f02f2c87`
+- evidence: `207ab9477334eb6654869abc9e688a7cbe40ba5065c72f349f22ede8d944d628`
 
 E0 remains inert: no runtime activation, capability registration, production policy, network path, or external effect is authorized.
 
 ## Priority 3 — E0 negative fixtures
 
-Implementation must use test-first development and prove:
+Implementation remains blocked. Once amendment A is approved, use test-first development and prove:
 
+- [ ] specialized schemas accept common + specialized declared fields and reject unevaluated fields;
 - [ ] malformed source anchors fail;
 - [ ] missing required source bytes do not become empty bytes;
 - [ ] empty-byte substitution attempts fail;
@@ -65,7 +72,7 @@ Implementation must use test-first development and prove:
 
 ## Priority 4 — E1 local proposal graph
 
-Authorized only within the approved gate:
+Blocked pending amendment A approval. After approval, implementation may cover only:
 
 - [ ] bounded local proposal store;
 - [ ] `Source -> Claim -> Evidence` construction;
@@ -79,23 +86,22 @@ Authorized only within the approved gate:
 
 ## Priority 5 — E0/E1 implementation authority
 
-The fresh gate now records:
+The original fresh gate recorded:
 
-- [x] exact approved proposal head;
+- [x] exact proposal head;
 - [x] exact changed-file envelope;
-- [x] exact schema bytes and SHA-256 digests;
-- [x] affected capability/policy surfaces explicitly excluded;
 - [x] resource ceilings;
 - [x] rollback/recovery behavior;
 - [x] threat-model boundary;
 - [x] focused acceptance-test matrix;
-- [x] Clean Kernel verification of the approved proposal head;
-- [x] supported platform compatibility verification of the approved proposal head;
+- [x] protected verification;
 - [x] explicit owner approval independent of Stage 5A.
 
-Implementation branch authorized by this gate: `feat/epistemic-fabric-e0-e1`.
+But because schema bytes are a gated exact-effect dimension:
 
-No earlier Stage 5A approval substitutes for this gate, and no part of this approval grants E2+ authority.
+- [ ] amendment A must receive explicit owner approval before `feat/epistemic-fabric-e0-e1` is created or implementation code is written.
+
+No earlier Stage 5A approval substitutes for this gate, and no part of this work grants E2+ authority.
 
 ## Priority 6 — Later work remains parked
 
@@ -115,4 +121,4 @@ Do not implement until separately gated:
 
 ## Completion rule
 
-E0/E1 is complete only when the repository demonstrates the approved bounded local proposal-only substrate, all predeclared acceptance tests pass, protected checks are green on the exact implementation head, and no epistemic object, model, evaluator, Circle, institution, or consensus mechanism can bypass AXIOM-MESH authority boundaries.
+E0/E1 is complete only when the amendment-approved bounded local proposal-only substrate passes all predeclared acceptance tests and protected checks on the exact implementation head, with no authority widening.
