@@ -211,3 +211,107 @@ Before any E0/E1 implementation promotion, tests must demonstrate at least:
 This threat model does not claim that AXIOM-MESH currently implements the epistemic fabric, continuous ingestion, cross-domain discovery, private-evidence ZK proofs, autonomous experiment design/execution, or global federation.
 
 It also does not supersede `docs/security/CURRENT-BUILD-THREAT-MODEL.md`. It is a Stage 5B extension that must be incorporated into the current-build model only when a corresponding implementation candidate exists.
+
+---
+
+## Amendment B threat delta — 2026-09-08
+
+**Status:** owner-approved design threat delta only; no E2+ implementation authority; no change to E0/E1 schema bytes or PR #1563 authority.
+
+Amendment B introduces additional failure modes that future E2/E4/E7 work must address.
+
+### Scalar-collapse laundering
+
+**Threat:** a multidimensional epistemic state is compressed into a single confidence, truth, reputation, quality, or priority score, and the scalar hides material weaknesses such as unverified dependencies, unknown independence, weak source alignment, or absent reproduction.
+
+**Controls:** retain underlying dimensions; require explicit derivation profile for any scalar view; forbid aggregate views from overwriting base state; never let a scalar create canonical truth or effect authority.
+
+### Verification-closure ambiguity
+
+**Threat:** a result is labelled `verified` even though only the top-level artifact was checked while dependencies, libraries, cached objects, datasets, compiled binaries, or prior proof objects were reused without independent validation.
+
+**Controls:** bind exact target, verifier/profile, environment, dependency-closure digest, freshly checked subset, reused subset, and replay status. Claims must not exceed the closure actually checked.
+
+### Dependency shadowing
+
+**Threat:** a verification record names dependencies abstractly while an attacker or accidental environment change substitutes different dependency bytes or versions.
+
+**Controls:** content-address dependency identity, exact version/profile binding, environment digest, deterministic reconstruction where claimed, and fail closed on unresolved required dependency identity.
+
+### Replay-depth spoofing
+
+**Threat:** an agent or node self-declares a verification as independently reproduced without evidence of a separate actor/run/environment or without actually re-executing the relevant closure.
+
+**Controls:** bind replay actor/run identity, inputs, environment, closure, outputs, and receipts/evidence where applicable; unknown independence remains unknown.
+
+### Failed-route erasure
+
+**Threat:** unsuccessful approaches, counterexamples, failed replications, or negative findings are silently discarded, causing agents to repeat dead ends or creating a biased history that overrepresents success.
+
+**Controls:** append-only attributable failure provenance, explicit failure classes, resource/search metadata, and historical reconstruction including negative-search state.
+
+### Failed-route poisoning
+
+**Threat:** malicious agents inject fabricated failure records to discourage exploration of viable approaches or falsely claim that a route has already been exhausted.
+
+**Controls:** exact run/artifact provenance, evidence-linked failure reason, independent replay when material, no automatic route exclusion from an unverified failure record, and explicit confidence/verification dimensions for the failure itself.
+
+### Failure-to-falsification laundering
+
+**Threat:** tool errors, budget exhaustion, timeout, unsupported methods, or inconclusive searches are represented as proof that a claim or approach is false.
+
+**Controls:** closed failure taxonomy; logical refutation/empirical falsification kept distinct from inconclusive, operational, resource, and tooling failures; downstream consumers must not silently reinterpret classes.
+
+### Continuation-packet authority smuggling
+
+**Threat:** a research handoff contains or implies credentials, capabilities, grants, consent, budget permission, repository authority, network authority, experiment authority, or instructions treated as already authorized by the receiving node.
+
+**Controls:** continuation packet schema remains authority-neutral; deny authority-bearing fields; strip no restrictions silently; receiving context performs fresh ordinary AXIOM authorization for any effect.
+
+### Continuation-context substitution
+
+**Threat:** a valid continuation packet is resumed against a different graph snapshot, target, dependency set, or evidence state while still presenting the work as a continuation of the original investigation.
+
+**Controls:** content-address exact target, graph/snapshot, obligations, evidence references, and packet digest; mismatched continuation context creates a new derivation/packet rather than silently mutating identity.
+
+### Frontier capture
+
+**Threat:** one model, institution, sponsor, or optimization objective defines the `frontier` so that selected topics, methods, or hypotheses appear objectively most important.
+
+**Controls:** frontier is a scoped derived view bound to explicit methodology/profile, source snapshot, resource horizon, and derivation digest; multiple legitimate frontier views may coexist; no universal frontier authority.
+
+### Frontier-to-authority laundering
+
+**Threat:** high frontier rank, novelty, expected information gain, or agent preference directly triggers spending, repository mutation, deployment, network activity, or experiment execution.
+
+**Controls:** frontier output is proposal-only evidence. Any external effect traverses the ordinary Mesh authority path with fresh state, policy, resource, and consequence checks.
+
+### Frontier feedback gaming
+
+**Threat:** agents generate low-quality contradictions, unresolved obligations, or synthetic novelty to manipulate frontier ranking and attract compute/resources.
+
+**Controls:** provenance-bound frontier derivation, duplicate/correlation controls, resource budgets, explicit evidence-state dimensions, no automatic resource grant, and auditable derivation from the exact underlying graph.
+
+## Amendment B future negative-test requirements
+
+These tests belong only to the separately gated future implementation slices; they do not modify E0/E1 acceptance criteria:
+
+1. a scalar aggregate cannot erase or overwrite weaker/unknown underlying dimensions;
+2. a high scalar score cannot mint canonical status or external-effect authority;
+3. `verified` cannot be emitted without explicit target/verifier/closure semantics once the future verification contract requires them;
+4. reused dependencies cannot be represented as freshly independently rebuilt;
+5. changed dependency bytes invalidate exact verification identity;
+6. self-declared replay cannot become independent reproduction without bound replay evidence;
+7. failed routes remain present in historical reconstruction;
+8. timeout/resource/tool failure cannot be reclassified as falsification;
+9. fabricated/unverified failure provenance cannot automatically suppress a route;
+10. continuation packets reject authority-bearing fields and credentials;
+11. continuation import does not inherit sender authority;
+12. packet reuse against a different graph snapshot cannot preserve the same continuation identity;
+13. frontier output changes when the bound source snapshot/profile changes;
+14. multiple scoped frontier views may coexist without global truth promotion;
+15. frontier rank cannot directly invoke repository, network, spending, deployment, or physical effects.
+
+## Amendment B non-claims
+
+This threat delta does not claim implementation of evidence-state vectors, reproducibility closure, failure provenance, continuation packets, frontier computation, MAP/Lean ingestion, or autonomous mathematical/scientific research. It adds design constraints that future independently gated phases must satisfy.
