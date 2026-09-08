@@ -1,14 +1,18 @@
-# Epistemic Fabric Stage 5B — E0/E1 Implementation Gate Proposal
+# Epistemic Fabric Stage 5B — E0/E1 Implementation Gate
 
-**Status:** proposed implementation gate; NOT approved; no code authority granted
+**Status:** APPROVED for bounded E0/E1 implementation only
 
 **Date:** 2026-09-07
+
+**Owner approval recorded:** 2026-09-08
+
+**Approved proposal head:** `9fec5a449811e343c4723dfb5598d860b59841dc`
 
 **Fresh base head:** `344ad17b0e4781c66a5103a4df67c72b93bde4ca`
 
 **Gate branch:** `docs/epistemic-fabric-e0-e1-gate`
 
-**Proposed implementation branch after explicit approval:** `feat/epistemic-fabric-e0-e1`
+**Approved implementation branch:** `feat/epistemic-fabric-e0-e1`
 
 **Design:** `docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md`
 
@@ -16,11 +20,11 @@
 
 **Queue:** `docs/MASTER-TODO-EPISTEMIC-FABRIC.md`
 
-## Gate decision requested
+## Gate decision
 
-This is the fresh Stage 5B E0/E1 implementation-gate proposal required by the approved Epistemic Fabric architecture. Repository presence, Stage 5A history, prior design approval, or CI success do not grant implementation authority.
+The owner explicitly approved this fresh Stage 5B E0/E1 implementation gate after the proposal head `9fec5a449811e343c4723dfb5598d860b59841dc` passed Clean Kernel run `34177178246` and Windows Compatibility run `34177178232`.
 
-If explicitly approved, the authority is limited to a bounded local proposal substrate:
+Implementation authority is limited to the bounded local proposal substrate:
 
 ```text
 Source -> Claim -> Evidence
@@ -37,13 +41,13 @@ knowledge must never silently become authority
 
 ## Gate 0 — exact candidate inventory
 
-The gate is bound to base head:
+The implementation gate is bound to base head:
 
 ```text
 344ad17b0e4781c66a5103a4df67c72b93bde4ca
 ```
 
-If approved, the first implementation PR may add or modify only:
+The first implementation PR may add or modify only:
 
 ```text
 mesh/config/epistemic-record-v0.schema.json
@@ -110,7 +114,7 @@ No E0/E1 object may claim canonical status or effect authority.
 
 ## Task 2 — exact E0 schema byte contract
 
-The four files below are proposed as exact UTF-8 bytes. Encoding is UTF-8, JSON is compact with no whitespace between tokens, line endings are LF, and each file has exactly one final newline. Their SHA-256 digests are normative. A byte change requires a gate amendment.
+The four files below are approved as exact UTF-8 bytes. Encoding is UTF-8, JSON is compact with no whitespace between tokens, line endings are LF, and each file has exactly one final newline. Their SHA-256 digests are normative. A byte change requires a gate amendment.
 
 ### `mesh/config/epistemic-record-v0.schema.json`
 
@@ -146,7 +150,7 @@ SHA-256: `4ff83b8362e2fe893d4058a9211f6346ec71f6749d532478face6175be11f8e1`
 
 ## Task 3 — bounded E1 local proposal store
 
-After E0 tests are green under an approved gate, `mesh/src/lib/epistemic-proposal-store.mjs` may:
+After E0 tests are green, `mesh/src/lib/epistemic-proposal-store.mjs` may:
 
 - accept an explicit local/disposable directory;
 - persist bounded proposal records/revisions;
@@ -251,17 +255,16 @@ Model output remains proposal content with zero authority effect.
 
 ## Independent gate rule
 
-CI success proves only that a candidate passes those checks. It does not approve this gate.
+This approval is bound to proposal head `9fec5a449811e343c4723dfb5598d860b59841dc`, base `344ad17b0e4781c66a5103a4df67c72b93bde4ca`, the exact file envelope, resource ceilings, acceptance tests, and four schema digests above.
 
-An explicit owner decision must approve E0/E1 against base `344ad17b0e4781c66a5103a4df67c72b93bde4ca` and all four schema digests above before implementation begins.
+Any material widening requires a fresh owner-approved gate amendment.
 
 ## Completion condition
 
-If approved, E0/E1 is complete only when the repository demonstrates a bounded, local, proposal-only `Source -> Claim -> Evidence` substrate whose bytes/provenance/revision semantics are reproducible and whose objects have structurally zero authority effect.
-
-Until explicit approval:
+E0/E1 is complete only when the repository demonstrates a bounded, local, proposal-only `Source -> Claim -> Evidence` substrate whose bytes/provenance/revision semantics are reproducible and whose objects have structurally zero authority effect.
 
 ```text
-GATE STATUS: PROPOSED
-IMPLEMENTATION AUTHORITY: NONE
+GATE STATUS: APPROVED
+IMPLEMENTATION AUTHORITY: E0/E1 ONLY
+LATER PHASE AUTHORITY: NONE
 ```
