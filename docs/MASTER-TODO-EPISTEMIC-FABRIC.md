@@ -10,23 +10,25 @@
 
 ## Priority 0 — Protect current authority truth
 
-- [ ] Keep `mesh/config/capabilities.json` unchanged for documentation-only work.
-- [ ] Do not add production policy actions for epistemic ingestion, canonical promotion, federation, discovery, or experiment execution.
-- [ ] Preserve Gateway -> Hypervisor -> Sandbox -> Grid as the only ordinary privileged effect path.
-- [ ] Preserve deny-dominant composition, exact-effect binding, current-head validation, replay protection, consume-before-execute, and burn-on-uncertainty.
-- [ ] Enforce the doctrine: knowledge may inform authority; knowledge must never silently become authority.
+- [x] Keep `mesh/config/capabilities.json` unchanged for documentation-only work.
+- [x] Do not add production policy actions for epistemic ingestion, canonical promotion, federation, discovery, or experiment execution.
+- [x] Preserve Gateway -> Hypervisor -> Sandbox -> Grid as the only ordinary privileged effect path.
+- [x] Preserve deny-dominant composition, exact-effect binding, current-head validation, replay protection, consume-before-execute, and burn-on-uncertainty.
+- [x] Enforce the doctrine: knowledge may inform authority; knowledge must never silently become authority.
+
+The Stage 5B documentation PR changes only documentation, the canonical-document verifier, and focused documentation-registration coverage. It does not modify capability or production-policy files.
 
 ## Priority 1 — Register the Stage 5B documentation set
 
 Before any implementation candidate is accepted:
 
-- [ ] register the design gate in `CANONICAL_DOCUMENTS`;
-- [ ] register the roadmap extension;
-- [ ] register this queue;
-- [ ] register the epistemic threat model;
-- [ ] register the E0/E1 implementation plan;
-- [ ] add focused documentation-registration coverage;
-- [ ] run the repository documentation verifier on supported platforms.
+- [x] register the design gate in `CANONICAL_DOCUMENTS`;
+- [x] register the roadmap extension;
+- [x] register this queue;
+- [x] register the epistemic threat model;
+- [x] register the E0/E1 implementation plan;
+- [x] add focused documentation-registration coverage;
+- [ ] run the repository documentation verifier on supported platforms and record protected-check completion.
 
 ## Priority 2 — E0 schema proposal only
 
