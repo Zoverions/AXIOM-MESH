@@ -2,7 +2,7 @@
 
 **Status:** owner operating decisions for the foundational track. Does not change capability registry status or claim production promotion.
 
-**Linked:** [Foundational strength audit — 2026-09-05](../reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md), [Foundational execution pack](FOUNDATIONAL-EXECUTION-PACK-2026-09.md)
+**Linked:** [Foundational strength audit — 2026-09-05](../reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md), [Foundational execution pack](FOUNDATIONAL-EXECUTION-PACK-2026-09.md), [Epistemic Fabric Stage 5B design gate](../superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md), [Epistemic Fabric roadmap](../ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md), [Epistemic Fabric queue](../MASTER-TODO-EPISTEMIC-FABRIC.md), [Epistemic Fabric threat model](../security/EPISTEMIC-FABRIC-THREAT-MODEL.md)
 
 ## Frozen progression (active)
 
@@ -14,6 +14,8 @@ Only this sequence is active until the next written decision:
 4. **AXIOM Verify MVP** — local/static verifier ([AXIOM Verify MVP scope](AXIOM-VERIFY-MVP-SCOPE.md)).
 
 Parked until after the above: Circles productization, repository-effect activation, MCP/A2A exposure, Personal Compute Fabric implementation, plural-authority laboratories, and parallel Agent Trust green branches that are not on this progression.
+
+The Epistemic Fabric Stage 5B work is a separate design-gated track. Its documentation decision does **not** alter the frozen foundational progression above and grants no runtime implementation authority. The only permissible next proposal is a fresh E0/E1 implementation gate for inert schemas plus a bounded local proposal graph (`Source -> Claim -> Evidence`). Stage 5A artifacts may be used as inputs/provenance but confer no Stage 5B implementation or authorization authority.
 
 ## Runtime-002 provisional selection
 
@@ -48,3 +50,4 @@ These cannot be completed from repository work alone:
 | 2026-09-05 | Record bounded Hermes identity-only dependency inventory + threat-model note (unsigned-commit / secret-import / network / dump / second-control-plane); does not certify SBOM, accept pin, or complete live process audit; capabilities.json untouched | Assistant on owner mandate for Adapter first pin prep |
 | 2026-09-05 | Verify scaffold started while Hermes pin provisional / SEC-002 pending; offline VERIFY-001 MVP slice only; capabilities.json untouched; no product-release claim | Assistant on owner mandate for Verify MVP |
 | 2026-09-05 | Extend VERIFY-001 with offline continuity-anchor chain-segment + selective-export digest checks; capabilities.json untouched; experimental only; no product-release claim | Assistant on owner mandate for Verify MVP |
+| 2026-09-07 | Approve the Epistemic Fabric as a fresh Stage 5B design direction only. Stage 5B inherits no implementation or authorization authority from Stage 5A. Preserve proposal/canonical separation, `knowledge != authority`, exact-head/replay semantics, append-only revision history, bounded reassessment, evidence-lineage independence, and node disagreement. Only a fresh E0/E1 proposal may proceed next; no capability registry or production-policy change is authorized by this decision. | Owner approval recorded from current project discussion |
