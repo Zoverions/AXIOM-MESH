@@ -131,7 +131,7 @@ test('authority, canonical-state, machine attribution, source-byte and anchor bo
   assert.equal(validateEpistemicProposal(unknown).independence_state, 'unknown');
 });
 
-test('reused canonical discipline rejects hidden or non-plain state and oversized objects', async () => {
+test('reused canonical discipline rejects hidden or non-plain state and aggregate oversized objects', async () => {
   const { computeEpistemicContentDigest, finalizeEpistemicProposal } = await loadContracts();
   const sparse = sourceInput({ authors: new Array(1) });
   assert.throws(() => computeEpistemicContentDigest(sparse), /sparse/i);
@@ -148,5 +148,13 @@ test('reused canonical discipline rejects hidden or non-plain state and oversize
   symbolState[Symbol('hidden')] = 'state';
   assert.throws(() => computeEpistemicContentDigest(symbolState), /symbol/i);
 
-  assert.throws(() => finalizeEpistemicProposal(sourceInput({ title: 'x'.repeat(70 * 1024) })), /64 KiB|65536|size/i);
+  const oversized = sourceInput({
+    title: 't'.repeat(1024),
+    authors: Array.from({ length: 64 }, (_, i) => `author:${i}:${'a'.repeat(240)}`),
+    external_identifiers: Array.from({ length: 32 }, (_, i) => `urn:fixture:${i}:${'e'.repeat(990)}`),
+    parent_source_refs: Array.from({ length: 32 }, (_, i) => `source:parent:${i}:${'p'.repeat(220)}`),
+    provenance_refs: Array.from({ length: 64 }, (_, i) => `prov:${i}:${'v'.repeat(230)}`),
+    raw_artifact_ref: 'r'.repeat(2048)
+  });
+  assert.throws(() => finalizeEpistemicProposal(oversized), /64 KiB|65536|size/i);
 });
