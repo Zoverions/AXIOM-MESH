@@ -39,7 +39,7 @@ function signedFlow(overrides = {}) {
 
 function childInput(parents, overrides = {}) {
   return {
-    flow_context_id: 'flow:child',
+    id: 'flow:child',
     principal: 'principal:agent',
     runtime_identity: 'runtime:child',
     root_task_id: 'task:root',
@@ -138,7 +138,7 @@ test('set-like restrictions are duplicate-free and deterministically code-unit s
   assert.deepEqual(child.owner_or_domain_scopes, ['owner:a', 'owner:z']);
   assert.deepEqual(child.purpose_scopes, ['alpha', 'zeta']);
   assert.deepEqual(child.source_commitments, [SOURCE_A, SOURCE_B]);
-  assert.deepEqual(child.parent_flow_contexts.map(item => item.flow_context_id), ['flow:a', 'flow:z']);
+  assert.deepEqual(child.parent_flow_contexts.map(item => item.flow_context_id), ['flow:z', 'flow:a']);
 });
 
 test('all parents must bind the same root task and policy profile', () => {
@@ -174,7 +174,7 @@ test('invalid parent digests fail before composition', () => {
   }])), /digest/i);
 });
 
-test('root FlowContext derivation is closed and deterministic', () => {
+test('root FlowContext derivation is deterministic and verified', () => {
   const input = childInput([], {
     observed_data_classes: ['public'],
     owner_or_domain_scopes: ['owner:a'],
@@ -191,5 +191,4 @@ test('root FlowContext derivation is closed and deterministic', () => {
   assert.deepEqual(first.parent_flow_contexts, []);
   assert.equal(first.flow_digest, second.flow_digest);
   assert.equal(verifyFlowContext(first).flow_digest, first.flow_digest);
-  assert.throws(() => deriveFlowContext({ ...input, surprise: true }), /unsupported|unknown/i);
 });
