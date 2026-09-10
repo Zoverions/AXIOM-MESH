@@ -1,17 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { canonicalJson } from '../src/lib/canonical.mjs';
 import {
   FLOW_CONTEXT_SCHEMA,
   contractDigest,
   verifyFlowContext
 } from '../src/lib/agent-containment-contracts.mjs';
-import { deriveFlowContext } from '../src/lib/flow-policy-evaluator.mjs';
+import {
+  deriveFlowContext,
+  evaluateProtectedEgress
+} from '../src/lib/flow-policy-evaluator.mjs';
 
 const POLICY = `sha256:${'1'.repeat(64)}`;
+const ALT_POLICY = `sha256:${'9'.repeat(64)}`;
 const SOURCE_A = `sha256:${'a'.repeat(64)}`;
 const SOURCE_B = `sha256:${'b'.repeat(64)}`;
 const SOURCE_C = `sha256:${'c'.repeat(64)}`;
+const SURROGATE = `sha256:${'6'.repeat(64)}`;
+const APPROVAL = `sha256:${'7'.repeat(64)}`;
 const T0 = '2026-09-10T18:00:00.000Z';
 const T1 = '2026-09-10T18:01:00.000Z';
 
@@ -54,6 +61,37 @@ function childInput(parents, overrides = {}) {
     policy_profile_digest: POLICY,
     ...overrides
   };
+}
+
+function egressRequest(overrides = {}) {
+  return {
+    schema: 'axiom-flow-egress-request.v0',
+    action: 'document.read',
+    provider_or_connector: 'connector:fixture',
+    destination: 'https://example.invalid/api',
+    purpose: 'research',
+    requires_credential: false,
+    ...overrides
+  };
+}
+
+function egressPolicy(overrides = {}) {
+  return {
+    schema: 'axiom-flow-egress-policy.v0',
+    policy_profile_digest: POLICY,
+    allowed_actions: ['document.read'],
+    allowed_providers_or_connectors: ['connector:fixture'],
+    allowed_destinations: ['https://example.invalid/api'],
+    allowed_purposes: ['research'],
+    allowed_data_classes: ['public'],
+    approval_required_for_data_classes: [],
+    credential_surrogate_required: false,
+    ...overrides
+  };
+}
+
+function decision(flow, request = egressRequest(), policy = egressPolicy()) {
+  return evaluateProtectedEgress({ flow_context: flow, request, policy });
 }
 
 test('a child cannot shed an owner-private restriction inherited from its parent', () => {
@@ -146,7 +184,7 @@ test('all parents must bind the same root task and policy profile', () => {
   const wrongTask = signedFlow({ flow_context_id: 'flow:task', root_task_id: 'task:other' });
   const wrongPolicy = signedFlow({
     flow_context_id: 'flow:policy',
-    policy_profile_digest: `sha256:${'9'.repeat(64)}`
+    policy_profile_digest: ALT_POLICY
   });
   assert.throws(() => deriveFlowContext(childInput([valid, wrongTask])), /root task|root_task/i);
   assert.throws(() => deriveFlowContext(childInput([valid, wrongPolicy])), /policy/i);
@@ -191,4 +229,98 @@ test('root FlowContext derivation is deterministic and verified', () => {
   assert.deepEqual(first.parent_flow_contexts, []);
   assert.equal(first.flow_digest, second.flow_digest);
   assert.equal(verifyFlowContext(first).flow_digest, first.flow_digest);
+});
+
+test('public exact policy allows only as non-authorizing eligibility evidence', () => {
+  const result = decision(signedFlow());
+  assert.equal(result.decision, 'allow');
+  assert.deepEqual(result.reason_codes, ['allow']);
+  assert.equal(result.schema, 'axiom-flow-evaluation.v0');
+  assert.equal(Object.isFrozen(result), true);
+});
+
+test('owner-private data is denied by public-only policy and allowed only by an explicit compatible policy', () => {
+  const flow = signedFlow({ observed_data_classes: ['owner_private'] });
+  assert.deepEqual(decision(flow).reason_codes, ['data_class_not_allowed']);
+  assert.deepEqual(decision(flow, egressRequest(), egressPolicy({
+    allowed_data_classes: ['owner_private', 'public']
+  })).reason_codes, ['allow']);
+});
+
+test('authority-bearing material always makes protected egress ineligible', () => {
+  const flow = signedFlow({ observed_authority_classes: ['credential'] });
+  assert.deepEqual(decision(flow).reason_codes, ['authority_bearing_material_observed']);
+});
+
+test('action provider destination and purpose must each match exactly', () => {
+  const flow = signedFlow();
+  assert.deepEqual(decision(flow, egressRequest({ action: 'document.write' })).reason_codes, ['action_not_allowed']);
+  assert.deepEqual(decision(flow, egressRequest({ provider_or_connector: 'connector:other' })).reason_codes, ['provider_not_allowed']);
+  assert.deepEqual(decision(flow, egressRequest({ destination: 'https://other.invalid/api' })).reason_codes, ['destination_not_allowed']);
+  assert.deepEqual(decision(flow, egressRequest({ purpose: 'other' })).reason_codes, ['purpose_not_allowed']);
+});
+
+test('credential-surrogate requirement is explicit and digest presence is sufficient only for that gate', () => {
+  const flow = signedFlow();
+  const policy = egressPolicy({ credential_surrogate_required: true });
+  const required = egressRequest({ requires_credential: true });
+  assert.deepEqual(decision(flow, required, policy).reason_codes, ['credential_surrogate_required']);
+  assert.deepEqual(decision(flow, {
+    ...required,
+    credential_surrogate_digest: SURROGATE
+  }, policy).reason_codes, ['allow']);
+});
+
+test('private classes can require a separate approval-challenge digest', () => {
+  const flow = signedFlow({ observed_data_classes: ['owner_private'] });
+  const policy = egressPolicy({
+    allowed_data_classes: ['owner_private'],
+    approval_required_for_data_classes: ['owner_private']
+  });
+  assert.deepEqual(decision(flow, egressRequest(), policy).reason_codes, ['approval_required']);
+  assert.deepEqual(decision(flow, egressRequest({ approval_challenge_digest: APPROVAL }), policy).reason_codes, ['allow']);
+});
+
+test('policy profile mismatch denies before every weaker eligibility reason', () => {
+  const flow = signedFlow({
+    observed_data_classes: ['secret'],
+    observed_authority_classes: ['credential']
+  });
+  const request = egressRequest({
+    action: 'document.write',
+    provider_or_connector: 'connector:other',
+    destination: 'https://other.invalid/api',
+    purpose: 'other',
+    requires_credential: true
+  });
+  const policy = egressPolicy({
+    policy_profile_digest: ALT_POLICY,
+    approval_required_for_data_classes: ['secret'],
+    credential_surrogate_required: true
+  });
+  assert.deepEqual(decision(flow, request, policy).reason_codes, [
+    'policy_profile_mismatch',
+    'authority_bearing_material_observed',
+    'action_not_allowed',
+    'provider_not_allowed',
+    'destination_not_allowed',
+    'purpose_not_allowed',
+    'data_class_not_allowed',
+    'credential_surrogate_required',
+    'approval_required'
+  ]);
+});
+
+test('request and policy validation are closed, bounded, exact, and deterministic', () => {
+  const flow = signedFlow();
+  assert.throws(() => decision(flow, { ...egressRequest(), surprise: true }), /unsupported|unknown/i);
+  assert.throws(() => decision(flow, egressRequest(), { ...egressPolicy(), surprise: true }), /unsupported|unknown/i);
+  assert.throws(() => decision(flow, egressRequest({ action: '*' })), /wildcard|glob|exact/i);
+  assert.throws(() => decision(flow, egressRequest(), egressPolicy({ allowed_destinations: ['https://*.invalid/api'] })), /wildcard|glob|exact/i);
+  assert.throws(() => decision(flow, egressRequest(), egressPolicy({ allowed_actions: [] })), /empty|at least one/i);
+  assert.throws(() => decision(flow, egressRequest(), egressPolicy({ allowed_actions: ['document.read', 'document.read'] })), /duplicate/i);
+  assert.throws(() => decision(flow, egressRequest(), egressPolicy({ allowed_data_classes: ['unknown'] })), /data class/i);
+  const first = decision(flow);
+  const second = decision(flow);
+  assert.equal(canonicalJson(first), canonicalJson(second));
 });
