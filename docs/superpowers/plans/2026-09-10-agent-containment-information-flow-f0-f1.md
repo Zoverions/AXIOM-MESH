@@ -27,7 +27,7 @@
 - Maximum canonical serialized contract object: 65,536 bytes. Maximum evaluator policy/request object: 32,768 bytes each.
 - Credential surrogate lifetime: greater than 0 and at most 15 minutes. Trusted approval challenge lifetime: greater than 0 and at most 10 minutes.
 - F0/F1 has zero live credential reads, zero network requests, zero external effects, zero browser actions, and zero production state migrations.
-- Implementation branch must be created from current `main` only after the Stage 5B documentation gate is merged; recommended branch: `feat/agent-containment-flow-f0-f1`.
+- Implementation branch must be created from current `main` only after the Stage 5B documentation gate is merged; branch name: `feat/agent-containment-flow-f0-f1`.
 
 ## Exact changed-file envelope
 
@@ -83,8 +83,6 @@ If implementation requires any other production policy, Gateway, Hypervisor, San
 
 - [ ] **Step 1: Write the failing contract tests**
 
-Create tests that construct one minimal valid instance of each contract and assert that unknown fields, duplicate set members, unsupported classes, over-limit values, and digest mismatch are rejected.
-
 ```js
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -127,22 +125,20 @@ test('FlowContext is closed, bounded, and self-digesting', () => {
 });
 ```
 
-Add equivalent tests for the other three contracts. For `CredentialSurrogate`, require `single_use === true`, `expires_at > issued_at`, and `expires_at - issued_at <= 900_000`. For `TrustedApprovalChallenge`, require the window to be at most `600_000` ms. For `FlowReceipt`, reject fields named `raw_payload`, `credential`, `token`, `otp`, `prompt`, or any other unknown field because the schema is closed.
+Add equivalent concrete fixtures for the other three contracts. `CredentialSurrogate` must have `single_use === true`, `expires_at > issued_at`, and `expires_at - issued_at <= 900_000`. `TrustedApprovalChallenge` must have `expires_at > issued_at` and a window `<= 600_000`. `FlowReceipt` is closed and therefore rejects raw-content additions such as `raw_payload`, `credential`, `token`, `otp`, or `prompt`.
 
 - [ ] **Step 2: Run the focused test and verify RED**
-
-Run:
 
 ```bash
 cd mesh
 node --test test/agent-containment-contracts.test.mjs
 ```
 
-Expected: FAIL because `../src/lib/agent-containment-contracts.mjs` and the four contract files do not exist.
+Expected: FAIL because `agent-containment-contracts.mjs` and the four contract files do not exist.
 
 - [ ] **Step 3: Add the four exact contract shapes**
 
-Use JSON Schema 2020-12, `additionalProperties: false`, and these required fields:
+Use JSON Schema 2020-12, `additionalProperties: false`, and exactly these required fields:
 
 ```text
 FlowContext:
@@ -170,16 +166,13 @@ FlowReceipt:
   reason_codes, evaluated_at, receipt_digest
 ```
 
-`parent_flow_contexts` items are closed objects with exactly `flow_context_id` and `flow_digest`. Digests use `^sha256:[0-9a-f]{64}$`. `reversibility` is one of `reversible`, `compensating-only`, `irreversible`, `unknown`. `decision` is `allow` or `deny`. Set array ceilings from Global Constraints and use `uniqueItems: true` for set-like arrays.
+`parent_flow_contexts` items are closed objects with exactly `flow_context_id` and `flow_digest`. Digests use `^sha256:[0-9a-f]{64}$`. `reversibility` is one of `reversible`, `compensating-only`, `irreversible`, `unknown`. `decision` is `allow` or `deny`. Set-like arrays use `uniqueItems: true` and the ceilings in Global Constraints.
 
 - [ ] **Step 4: Implement the minimal zero-dependency semantic verifier**
-
-Implement helpers with the repository's plain-data discipline; do not add Ajv or another JSON Schema runtime dependency.
 
 ```js
 import { canonicalJson, digestObject, ValidationError } from './canonical.mjs';
 
-const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const MAX_OBJECT_BYTES = 65_536;
 
 export function contractDigest(value, digestField) {
@@ -200,18 +193,16 @@ function boundedCanonical(value, name) {
 }
 ```
 
-Each verifier must reject unknown fields itself, validate required fields/enums/cardinality/time ordering, recompute its digest, and return the canonical verified object. `verifyFlowContext` must also require `updated_at >= created_at`, `lineage_depth <= 16`, and parent count `<= 8`.
+Each verifier rejects unknown fields, validates required fields/enums/cardinality/time ordering, recomputes its digest, and returns the canonical verified object. `verifyFlowContext` also requires `updated_at >= created_at`, `lineage_depth <= 16`, and parent count `<= 8`.
 
-- [ ] **Step 5: Run contract tests and the canonicalization regression tests**
-
-Run:
+- [ ] **Step 5: Run contract tests and canonicalization regressions**
 
 ```bash
 cd mesh
-node --test test/agent-containment-contracts.test.mjs test/canonical.test.mjs
+node --test test/agent-containment-contracts.test.mjs test/canonical-domain.test.mjs
 ```
 
-Expected: PASS. If `test/canonical.test.mjs` is absent on the implementation head, run `node --test test/*canonical*.test.mjs` and record the exact matching files in the PR evidence.
+Expected: PASS.
 
 - [ ] **Step 6: Commit Task 1**
 
@@ -234,11 +225,10 @@ git commit -m "feat: add inert agent containment contracts"
 - Test: `mesh/test/flow-policy-evaluator.test.mjs`
 
 **Interfaces:**
-- Consumes: `verifyFlowContext`, `contractDigest`, `DATA_CLASSES`, `AUTHORITY_CLASSES` from Task 1.
-- Produces:
-  - `deriveFlowContext({ id, principal, runtime_identity, root_task_id, parents, observed_data_classes, observed_authority_classes, owner_or_domain_scopes, purpose_scopes, source_commitments, created_at, updated_at, policy_profile_digest })` -> verified `FlowContext`.
-  - Parent restriction combination is set union sorted lexicographically for deterministic output.
-  - `lineage_depth = 0` when `parents.length === 0`; otherwise `1 + max(parent.lineage_depth)` and reject values above 16.
+- Consumes: `verifyFlowContext`, `contractDigest` from Task 1.
+- Produces `deriveFlowContext({ id, principal, runtime_identity, root_task_id, parents, observed_data_classes, observed_authority_classes, owner_or_domain_scopes, purpose_scopes, source_commitments, created_at, updated_at, policy_profile_digest })` -> verified `FlowContext`.
+- Parent restriction combination is set union sorted lexicographically for deterministic output.
+- `lineage_depth = 0` when `parents.length === 0`; otherwise `1 + max(parent.lineage_depth)` and values above 16 are rejected.
 
 - [ ] **Step 1: Write failing monotonic-composition tests**
 
@@ -283,11 +273,14 @@ Expected: FAIL because `deriveFlowContext` does not exist.
 
 - [ ] **Step 3: Implement minimal composition**
 
-Use exact-set union and validated parents. Parent contexts must share the same `root_task_id` and `policy_profile_digest` as the child request. Do not require the same runtime identity because a child/sub-agent runtime replacement must inherit restrictions rather than reset them.
+Parent contexts share the same `root_task_id` and `policy_profile_digest` as the child request. Runtime identity may change; that change cannot erase restrictions.
 
 ```js
+import { ValidationError } from './canonical.mjs';
+import { verifyFlowContext, contractDigest } from './agent-containment-contracts.mjs';
+
 function unionSorted(...groups) {
-  return [...new Set(groups.flat())].sort();
+  return [...new Set(groups.flat(2))].sort();
 }
 
 export function deriveFlowContext(input) {
@@ -321,8 +314,6 @@ export function deriveFlowContext(input) {
 }
 ```
 
-Flatten groups before passing to `unionSorted` if necessary so nested arrays never survive into the contract.
-
 - [ ] **Step 4: Run focused tests**
 
 ```bash
@@ -350,8 +341,7 @@ git commit -m "feat: add monotonic flow context composition"
 
 **Interfaces:**
 - Consumes: verified `FlowContext` from Task 1/2.
-- Produces:
-  - `evaluateProtectedEgress({ flow_context, request, policy })` -> frozen plain result:
+- Produces `evaluateProtectedEgress({ flow_context, request, policy })` -> frozen plain result:
 
 ```js
 {
@@ -364,14 +354,13 @@ git commit -m "feat: add monotonic flow context composition"
 }
 ```
 
-- `request` exact fields: `schema='axiom-flow-egress-request.v0'`, `action`, `provider_or_connector`, `destination`, `purpose`, `requires_credential`, `credential_surrogate_digest?`, `approval_challenge_digest?`.
-- `policy` exact fields: `schema='axiom-flow-egress-policy.v0'`, `policy_profile_digest`, `allowed_actions[]`, `allowed_providers_or_connectors[]`, `allowed_destinations[]`, `allowed_purposes[]`, `allowed_data_classes[]`, `approval_required_for_data_classes[]`, `credential_surrogate_required`.
-- Set ceilings: actions 64, providers 32, destinations 32, purposes 32, data classes 6.
-- Exact-match only; no glob, wildcard, prefix, regex, redirect, or fallback semantics.
+`request` exact fields are `schema='axiom-flow-egress-request.v0'`, `action`, `provider_or_connector`, `destination`, `purpose`, `requires_credential`, optional `credential_surrogate_digest`, and optional `approval_challenge_digest`.
 
-- [ ] **Step 1: Add failing allow/deny matrix tests**
+`policy` exact fields are `schema='axiom-flow-egress-policy.v0'`, `policy_profile_digest`, `allowed_actions[]`, `allowed_providers_or_connectors[]`, `allowed_destinations[]`, `allowed_purposes[]`, `allowed_data_classes[]`, `approval_required_for_data_classes[]`, and `credential_surrogate_required`.
 
-Add these exact cases:
+Set ceilings: actions 64, providers 32, destinations 32, purposes 32, data classes 6. Matching is exact only; glob, wildcard, prefix, regex, redirect, and fallback semantics are rejected.
+
+- [ ] **Step 1: Add the failing allow/deny matrix**
 
 ```text
 public flow + exact public policy -> allow
@@ -387,7 +376,7 @@ private class requiring approval but no approval digest -> deny:approval_require
 policy profile digest != FlowContext policy digest -> deny:policy_profile_mismatch
 ```
 
-Assert reason codes are emitted in this deterministic precedence:
+Reason-code precedence is exactly:
 
 ```text
 policy_profile_mismatch
@@ -401,7 +390,7 @@ credential_surrogate_required
 approval_required
 ```
 
-If no denial reason exists, return `['allow']`.
+No denial reason returns `['allow']`.
 
 - [ ] **Step 2: Run focused tests and verify RED**
 
@@ -414,7 +403,7 @@ Expected: FAIL because `evaluateProtectedEgress` is not implemented.
 
 - [ ] **Step 3: Implement exact validation and deny-only evaluation**
 
-Validate request/policy as closed ordinary plain objects before evaluation. Reject `*`, glob metacharacters, empty sets, duplicate entries, unknown fields, unknown data classes, or serialized size above 32,768 bytes. Compute `request_digest` as `sha256:${digestObject(request)}`.
+Validate request/policy as closed ordinary plain objects. Reject `*`, glob metacharacters, empty allow sets, duplicate entries, unknown fields, unknown data classes, or canonical serialized size above 32,768 bytes. Compute `request_digest` from the canonical verified request.
 
 ```js
 const REASON_ORDER = Object.freeze([
@@ -455,13 +444,13 @@ export function evaluateProtectedEgress({ flow_context, request, policy }) {
 }
 ```
 
-This result is policy evidence only. It must not create a grant, approval, prepared effect, network request, credential redemption, or receipt in Grid.
+The result is policy evidence only. It creates no grant, approval, prepared effect, network request, credential redemption, or Grid receipt.
 
 - [ ] **Step 4: Add language-neutral conformance vectors**
 
-Create `flow-evaluator-v0.vectors.json` with at least 12 named vectors covering every reason code, one exact allow, one private allow under an explicitly compatible policy, one two-parent restriction-union case, and one runtime-replacement case showing restrictions survive a changed `runtime_identity`. Each vector stores only synthetic identifiers and fake digests.
+Create at least 12 named vectors covering all nine denial reasons, one exact allow, one private allow under an explicitly compatible policy, one two-parent restriction-union case, and one runtime-replacement case showing restrictions survive a changed `runtime_identity`. Use only synthetic identifiers and fake digests.
 
-Each vector has this closed shape:
+Each evaluator vector uses this exact outer shape:
 
 ```json
 {
@@ -473,7 +462,7 @@ Each vector has this closed shape:
 }
 ```
 
-- [ ] **Step 5: Run evaluator tests twice to prove deterministic output**
+- [ ] **Step 5: Run evaluator tests twice for determinism**
 
 ```bash
 cd mesh
@@ -481,7 +470,7 @@ node --test test/flow-policy-evaluator.test.mjs
 node --test test/flow-policy-evaluator.test.mjs
 ```
 
-Expected: both PASS with byte-identical JSON serialization for each result when the test calls `canonicalJson(result)` twice.
+Expected: both PASS. Tests must also assert `canonicalJson(result)` is byte-identical across repeated evaluation of the same vector.
 
 - [ ] **Step 6: Commit Task 3**
 
@@ -505,54 +494,45 @@ git commit -m "feat: add deterministic protected egress evaluator"
 - Consumes: all Task 1-3 public functions and the committed vector file.
 - Produces: executable evidence that F0/F1 is inert and deny-only with respect to current runtime authority.
 
-- [ ] **Step 1: Write the failing boundary tests before adding any test-only hooks**
+- [ ] **Step 1: Write the boundary tests**
 
-Tests must prove:
+Tests must prove all of these concrete cases:
 
 ```text
 1. private parent + public child => private remains present;
 2. authority-bearing parent + clean child => authority class remains present;
 3. runtime/model identity replacement does not reset restrictions;
-4. summarization/redaction/translation/encryption/embedding labels supplied as ordinary metadata cannot remove restrictions because no declassification API exists;
+4. no exported API named declassify, redactAndClear, summarizeAndClear, or equivalent exists;
 5. allowed destination cannot override disallowed data class;
-6. credential surrogate digest presence cannot override a destination/action/purpose/data denial;
-7. approval challenge digest presence cannot override a destination/action/purpose/data denial;
+6. credential-surrogate digest presence cannot override destination/action/purpose/data denial;
+7. approval-challenge digest presence cannot override destination/action/purpose/data denial;
 8. unknown data/authority classes reject before evaluation;
 9. malformed/missing flow digest rejects before evaluation;
 10. parent count and lineage ceilings fail closed;
-11. contract/evaluator modules contain no imports from Gateway, Hypervisor, Sandbox, Grid, provider supervisor, repository operator, browser tooling, or network modules;
-12. capability registry bytes are unchanged by the implementation PR;
-13. no fixture contains strings matching realistic secret prefixes (`ghp_`, `github_pat_`, `sk-`, `Bearer `, PEM private-key headers);
+11. contract/evaluator production modules import no Gateway, Hypervisor, Sandbox, Grid, provider, repository operator, browser, networking, or subprocess module;
+12. capability registry is absent from the implementation diff;
+13. fixtures contain no strings matching `ghp_`, `github_pat_`, `sk-`, `Bearer `, or PEM private-key headers;
 14. FlowReceipt rejects raw protected-content fields;
 15. policy wildcard/glob values are rejected;
-16. evaluator never returns a capability/grant/approval/prepared-effect field.
+16. evaluator results contain no capability, grant, approval, prepared-effect, credential, token, or network-operation field.
 ```
 
-For source-import isolation, read the two new module source files as text and reject import specifiers containing:
+For source-import isolation, inspect only the two production module import declarations. The only permitted production imports are `./canonical.mjs` and `./agent-containment-contracts.mjs`.
 
-```js
-const prohibited = [
-  'gateway', 'hypervisor', 'sandbox', 'grid', 'provider-supervisor',
-  'repository-operator', 'http', 'https', 'net', 'tls', 'dns', 'child_process'
-];
-```
-
-Allow only `./canonical.mjs` and `./agent-containment-contracts.mjs` plus built-in test imports in test files.
-
-- [ ] **Step 2: Run boundary tests and verify RED where coverage is missing**
+- [ ] **Step 2: Run boundary tests and verify RED where invariants are missing**
 
 ```bash
 cd mesh
 node --test test/agent-containment-authority-boundary.test.mjs
 ```
 
-Expected: initial FAIL until all Task 1-3 invariants are enforced and vector/receipt checks exist.
+Expected: FAIL until all required Task 1-3 invariants are enforced.
 
-- [ ] **Step 3: Make only minimal implementation corrections required by failed invariants**
+- [ ] **Step 3: Make minimal corrections only**
 
-Do not add a declassification function, broker, credential reader, network mock, provider mock, or production adapter to make tests pass. The correct F0/F1 resolution for unsupported authority/flow states is rejection or `deny`.
+Do not add a declassification function, broker, credential reader, network mock, provider mock, browser mock, or production adapter. Unsupported states resolve to validation failure or `deny`.
 
-- [ ] **Step 4: Run all three F0/F1 test files together**
+- [ ] **Step 4: Run all F0/F1 tests together**
 
 ```bash
 cd mesh
@@ -590,7 +570,7 @@ git commit -m "test: harden agent containment authority boundaries"
 
 - [ ] **Step 1: Add the dedicated F0/F1 threat model**
 
-The document must state all of the following explicitly:
+The document must explicitly state:
 
 ```text
 Status: F0/F1 candidate only; no live containment claim.
@@ -604,15 +584,15 @@ OS/kernel observer bypass, covert channels, real-world credential/broker comprom
 Future phases: F2-F8 remain independently gated.
 ```
 
-Include the governing non-claim: passing F0/F1 proves deterministic contract/evaluator semantics over supplied synthetic state; it does not prove that a real process cannot bypass information-flow controls.
+Also state: passing F0/F1 proves deterministic contract/evaluator semantics over supplied synthetic state; it does not prove a real process cannot bypass information-flow controls.
 
-- [ ] **Step 2: Update both existing execution queues without creating a third master queue**
+- [ ] **Step 2: Update the two existing execution queues**
 
-Under Runtime & Connector Fabric P0/P2/P7, add references that future runtime/catalog entries must declare flow support and brokered credential strategy, while marking F0/F1 as an inert compatibility/evaluator slice only after tests pass.
+Under Runtime & Connector Fabric P0/P2/P7, add that future runtime/catalog entries must declare flow support and brokered credential strategy. Mark F0/F1 as an inert compatibility/evaluator slice only after the tests pass.
 
-Under Sovereign Host Priority 8/14, add the future host-assisted flow-observation dependency and state that F5 is separately gated; do not mark host enforcement complete.
+Under Sovereign Host Priority 8/14, add the future host-assisted flow-observation dependency and state that F5 is separately gated. Do not mark host enforcement complete.
 
-- [ ] **Step 3: Register the design, plan, threat model, and four contracts in canonical docs**
+- [ ] **Step 3: Register the design, plan, threat model, and four contracts**
 
 Add these paths to `CANONICAL_DOCUMENTS` in `mesh/src/check-docs.mjs`:
 
@@ -626,7 +606,7 @@ docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-des
 docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md
 ```
 
-Add `REQUIRED_CONTENT` checks for these phrases:
+Add `REQUIRED_CONTENT` checks for these exact phrases:
 
 ```text
 Design: "Intelligence may request authority"
@@ -638,7 +618,7 @@ TrustedApprovalChallenge schema: "axiom-trusted-approval-challenge.v0"
 FlowReceipt schema: "axiom-flow-receipt.v0"
 ```
 
-Also add the design/threat-model links to `docs/README.md` in the existing canonical documentation sections.
+Add the design and threat-model links to `docs/README.md` in the existing canonical-documentation sections.
 
 - [ ] **Step 4: Run documentation verification**
 
@@ -664,35 +644,42 @@ git commit -m "docs: register agent containment F0 F1 boundary"
 ### Task 6: Full verification and immutable candidate evidence
 
 **Files:**
-- Modify only if verification exposes an F0/F1 defect within the approved envelope.
-- No capability-registry or production-authority file changes are permitted.
+- Modify only when verification exposes an F0/F1 defect within the approved envelope.
+- No capability-registry or production-authority file change is permitted.
 
 **Interfaces:**
 - Consumes: complete F0/F1 candidate.
 - Produces: exact candidate head suitable for independent review and PR review.
 
-- [ ] **Step 1: Verify the changed-file envelope against the merged Stage 5B base**
+- [ ] **Step 1: Determine and record the implementation base**
 
-Run:
+Immediately after creating `feat/agent-containment-flow-f0-f1` from merged `main`, run:
 
 ```bash
-git diff --name-only <MERGED_STAGE5B_BASE>...HEAD
+BASE="$(git rev-parse HEAD)"
+printf '%s\n' "$BASE"
 ```
 
-Expected: every path is in the exact changed-file envelope above. If any other path appears, stop rather than broadening this plan silently.
+Record that SHA in the implementation PR description before the first implementation commit. Reuse that recorded SHA as `BASE` for every later diff/envelope check on the branch.
 
-- [ ] **Step 2: Search the diff for prohibited live-authority material**
-
-Run:
+- [ ] **Step 2: Verify the changed-file envelope**
 
 ```bash
-git diff <MERGED_STAGE5B_BASE>...HEAD -- . \
+git diff --name-only "$BASE"...HEAD
+```
+
+Expected: every path is in the exact changed-file envelope above. Any extra production path stops implementation and reopens the gate.
+
+- [ ] **Step 3: Search the candidate diff for prohibited live-authority material**
+
+```bash
+git diff "$BASE"...HEAD -- . \
   | grep -E "(capabilities\.json|github_pat_|ghp_|BEGIN .*PRIVATE KEY|child_process|node:http|node:https|node:net|node:tls|node:dns|eBPF|LSM attach)" || true
 ```
 
-Expected: only documentation references to prohibited concepts, never live credential values, network imports, host attachment code, or capability-registry modifications.
+Expected: only documentation references to prohibited concepts; no live credential values, network imports, host attachment code, or capability-registry modifications.
 
-- [ ] **Step 3: Run focused F0/F1 verification**
+- [ ] **Step 4: Run focused F0/F1 verification**
 
 ```bash
 cd mesh
@@ -705,22 +692,20 @@ node src/check-docs.mjs
 
 Expected: PASS.
 
-- [ ] **Step 4: Run Clean Kernel / full repository check**
+- [ ] **Step 5: Run Clean Kernel / full repository check**
 
 ```bash
 cd mesh
 npm run check
 ```
 
-Expected: PASS on the supported Node version.
+Expected: PASS on a repository-supported Node version.
 
-- [ ] **Step 5: Run supported-platform CI on the exact immutable head**
+- [ ] **Step 6: Run supported-platform CI on the exact immutable head**
 
-Push the candidate head and require the repository's protected Linux, Windows, Intel macOS, and Apple Silicon macOS checks that apply to `main`/PRs. Record the exact commit SHA and workflow run URLs in the PR description. A local PASS is not a cross-platform claim.
+Push the candidate head and require the repository's protected Linux, Windows, Intel macOS, and Apple Silicon macOS checks that apply to pull requests. Record the exact commit SHA and workflow-run URLs in the implementation PR description. A local PASS is not a cross-platform claim.
 
-- [ ] **Step 6: Review the candidate against the Stage 5B non-claims**
-
-Confirm all remain true:
+- [ ] **Step 7: Verify all non-claims at the same head**
 
 ```text
 capability_promoted = false
@@ -734,20 +719,16 @@ autonomous_delegation = false
 production_state_migration = false
 ```
 
-- [ ] **Step 7: Commit any verification-only documentation correction, then freeze the review SHA**
-
-If no correction is needed, do not create a meaningless commit. The final PR description must name the exact candidate SHA and state that later F2+ work requires a fresh gate.
+If no correction is needed, do not create a verification-only commit. The final PR description names the exact candidate SHA and states that F2+ requires a fresh gate.
 
 ---
 
 ## F0/F1 acceptance matrix
 
-The candidate is acceptable only if all of these are evidenced at the same immutable head:
-
 | Requirement | Evidence |
 |---|---|
 | Four closed inert contracts | `agent-containment-contracts.test.mjs` |
-| Contract digests are canonical and mutation-sensitive | contract tests |
+| Contract digests canonical and mutation-sensitive | contract tests |
 | Unknown/overflow state fails closed | contract + evaluator tests |
 | Parent restrictions accumulate monotonically | evaluator tests |
 | Runtime replacement does not clear restrictions | evaluator + boundary tests |
@@ -764,12 +745,12 @@ The candidate is acceptable only if all of these are evidenced at the same immut
 
 ## Rollback
 
-F0/F1 adds only inert contracts, pure evaluator code, tests, fixtures, and documentation. Rollback is therefore source rollback: revert the F0/F1 commits as a unit or restore the previous release revision. No Grid migration, credential rotation, network policy migration, external side effect, or durable user-state conversion is introduced by this slice. Historical PR/test evidence remains append-only and must not be rewritten to imply that later F2+ capabilities existed.
+F0/F1 adds only inert contracts, pure evaluator code, tests, fixtures, and documentation. Rollback is source rollback: revert the F0/F1 commits as a unit or restore the previous release revision. No Grid migration, credential rotation, network-policy migration, external side effect, or durable user-state conversion is introduced by this slice. Historical PR/test evidence remains append-only and must not be rewritten to imply later F2+ capabilities existed.
 
 ## Explicit non-claims
 
 F0/F1 does **not** claim live process tainting, kernel-enforced information flow, credential brokering, credential secrecy against a compromised host, live network egress control beyond the existing deny-egress system, browser isolation, OTP filtering in a real connector, payment safety, DNS/redirect safety, subprocess containment, remote-agent flow propagation, or production support for any external runtime.
 
-The exact claim is narrower:
+The exact claim is:
 
 > Given a valid supplied `FlowContext`, the F1 evaluator deterministically intersects its accumulated restrictions with an exact synthetic egress policy and can only deny or report eligibility; it cannot grant AXIOM authority or perform the effect.
