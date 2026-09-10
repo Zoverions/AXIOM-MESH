@@ -1,6 +1,6 @@
 # Agent Containment & Information-Flow — Fresh Stage 5B Design Gate
 
-**Status:** owner-approved design direction; documentation-only; implementation authority not granted
+**Status:** OWNER APPROVED on 2026-09-10; documentation-only; F0/F1 implementation planning authorized, capability/runtime promotion not authorized
 
 **Date:** 2026-09-10
 
@@ -20,13 +20,15 @@
 - the existing `Gateway -> Hypervisor -> Sandbox -> Grid` authority path
 - existing deny-dominant policy, exact-effect commitments, finite destination ceilings, one-use approvals, machine-principal constraints, private credential storage, durable evidence, and external-effect outbox semantics
 
-**Authority boundary:** this design creates no executable capability, provider activation, external runtime activation, credential release, new egress, browser automation, payment authority, autonomous delegation, production promotion, or authority-bearing change to `mesh/config/capabilities.json`.
+**Authority boundary:** this design creates no executable capability, no provider activation, no external runtime activation, no credential release, no new egress, no browser automation, no payment authority, no autonomous delegation, no production promotion, and no authority-bearing change to `mesh/config/capabilities.json`.
 
 ---
 
 ## 1. Architectural decision
 
 AXIOM-MESH should treat powerful agent runtimes as potentially compromised proposal engines operating inside a deterministic authority and information-flow envelope.
+
+The adopted separation is:
 
 ```text
 agent/runtime cognition
@@ -41,30 +43,30 @@ Gateway -> Hypervisor -> Sandbox -> Grid
         +--> evidence / flow receipts
 ```
 
-Governing doctrine:
+The governing doctrine is:
 
 > **Intelligence may request authority. Intelligence must not become the authority root.**
 
-For disclosure:
+And, for data movement:
 
 > **Network permission is insufficient. Egress must also be constrained by what information causally influenced the outgoing computation.**
 
-The current deny-egress boundary remains the outer default. This programme adds flow-sensitive containment inside it; it does not weaken or replace deny-egress.
+The current deny-egress boundary remains the outer default. This programme adds flow-sensitive containment inside that boundary; it does not weaken or replace deny-egress.
 
 ---
 
 ## 2. Problem statement
 
-The current build already separates authority, private credentials, policy, execution, and evidence. It denies arbitrary external destinations and keeps the supported kernel in a no-egress candidate container.
+The current build already separates authority, private credentials, policy, execution, and evidence. It also denies arbitrary external destinations and keeps the supported kernel in a no-egress candidate container.
 
-Four future-agent gaps remain:
+That foundation does not yet fully answer four future-agent problems:
 
 1. a runtime that reads private data may later attempt an otherwise permitted egress whose payload leaks that data;
 2. a runtime that receives a reusable bearer credential may exfiltrate or replay it outside the intended action;
 3. an agent-generated conversational approval prompt may manipulate the human while presenting itself as the trusted authorization ceremony;
 4. access to one domain, especially inbox or browser state, may accidentally confer recovery or authentication authority over unrelated domains.
 
-This design closes those gaps without creating a parallel authorization system.
+The new architecture closes those gaps without creating a parallel authorization system.
 
 ---
 
@@ -72,25 +74,27 @@ This design closes those gaps without creating a parallel authorization system.
 
 ### 3.1 Static route/destination controls only
 
-Keep deny-egress plus exact destination allowlists and connector schemas.
+Keep deny-egress plus exact destination allowlists and rely on connector-specific schemas.
 
-**Advantage:** simple and already aligned with current policy.
+**Advantages:** simple; compatible with existing policy; low implementation complexity.
 
-**Insufficient:** destination permission says where data may go, not whether a computation that has observed protected information may disclose it there.
+**Rejected as sufficient:** destination permission says where data may go, not whether a specific computation is permitted to disclose the information it has observed. A compromised runtime can leak private data through an otherwise valid destination or action.
 
 ### 3.2 Application-level taint only
 
-Have adapters annotate private inputs and require downstream code to propagate labels.
+Have adapters annotate private inputs and require downstream application code to propagate labels.
 
-**Advantage:** portable and easy to prototype.
+**Advantages:** portable; easy to prototype; can run without host changes.
 
-**Insufficient as the final boundary:** an uninstrumented subprocess, native library, alternate runtime path, shared file/socket, or future adapter can drop or bypass labels.
+**Rejected as the final boundary:** application-only tracking can be bypassed by an uninstrumented subprocess, native library, alternate runtime path, unexpected file/socket channel, or future adapter that drops labels.
 
 ### 3.3 Staged flow-sensitive enforcement with trusted brokers — adopted
 
-Introduce language-neutral flow contracts and receipts first, deterministic user-space enforcement second, and host/kernel-assisted propagation only after separate evidence gates.
+Introduce language-neutral flow labels and receipts first, deterministic broker enforcement second, and host/kernel-assisted propagation only after separate evidence gates.
 
-This preserves the current architecture, supports Node/Rust differential work, avoids premature OS-specific privilege, and does not rely on the agent to self-report its own data access.
+**Advantages:** preserves current architecture; supports incremental verification; allows Node/Rust differential work; keeps OS-specific enforcement out of the first slice; does not require trusting the agent to report its own data access.
+
+**Trade-off:** more design and evidence work than static allowlists. The stronger properties are justified only for runtimes that may handle private information or consequential connector actions.
 
 ---
 
@@ -99,15 +103,15 @@ This preserves the current architecture, supports Node/Rust differential work, a
 1. **Agent/runtime is not authority.** Runtime identity, model quality, reputation, installation, or user familiarity never grants effect authority.
 2. **Credential possession is minimized.** A supported consequential runtime path should not require the cognitive runtime to hold long-lived reusable provider credentials.
 3. **Surrogate is not credential.** A capability/credential surrogate is meaningful only to the trusted broker and cannot be redeemed outside its exact bound action.
-4. **Approval UI is authority-owned.** The authoritative approval challenge is generated from committed AXIOM state by a trusted authority component, not arbitrary agent-authored text.
-5. **Private read affects later egress eligibility.** A task that observes private or authority-bearing material cannot silently retain the same egress freedom as a public-only task.
-6. **Unknown flow state fails closed.** Missing, malformed, stale, overflowed, or unrepresentable flow provenance is never treated as public/clean state.
-7. **No silent declassification.** Model-generated summarization, redaction, translation, embedding, compression, encryption, or format conversion does not independently lower classification.
-8. **Cross-domain recovery authority is isolated.** Ordinary application-data access does not automatically expose OTPs, reset links, magic links, recovery codes, signing keys, or equivalent authority-bearing secrets.
-9. **Egress remains exact and finite.** Flow clearance never creates a destination, action, purpose, budget, provider, or data permission not already independently authorized.
-10. **Evidence is privacy-minimized.** Flow receipts prove policy-relevant facts without becoming a secondary private-content database.
-11. **Fallback never widens authority.** Loss of a broker, runtime, local model, network path, or host enforcement feature fails closed or uses only an independently eligible lower-assurance mode.
-12. **Capability registry truth remains authoritative.** Design or laboratory code does not become implemented or promoted by existence.
+4. **Approval UI is authority-owned.** The authoritative approval challenge is generated from committed AXIOM state by a trusted authority component, not from arbitrary agent-authored text.
+5. **Private read affects later egress eligibility.** A process/task that observes private or authority-bearing material cannot silently retain the same egress freedom as a public-data-only process/task.
+6. **Unknown flow state fails closed.** Missing, malformed, stale, or unrepresentable flow provenance is not treated as public/clean state.
+7. **No silent declassification.** A model-generated summary, redaction, rewrite, embedding, compression, encryption, or format conversion does not independently lower a data classification.
+8. **Cross-domain recovery authority is isolated.** Access to ordinary application data must not automatically expose OTPs, reset links, magic links, recovery codes, signing keys, or equivalent authority-bearing secrets.
+9. **Egress remains exact and finite.** Flow clearance never creates a destination, action, purpose, budget, or provider permission that was not already independently authorized.
+10. **Evidence is privacy-minimized.** Flow receipts prove the policy-relevant facts without turning the evidence log into a second store of raw private content.
+11. **Fallback never widens authority.** Loss of a broker, runtime, local model, network path, or host enforcement feature fails closed or falls back only to an independently eligible mode.
+12. **Capability registry truth remains authoritative.** Design or laboratory code does not become implemented or production-promoted by existence.
 
 ---
 
@@ -115,7 +119,7 @@ This preserves the current architecture, supports Node/Rust differential work, a
 
 The programme introduces a language-neutral conceptual `FlowContext` bound to one task/process lineage.
 
-The F0 contract should represent at least:
+The first contract should represent at least:
 
 ```text
 flow_context_id
@@ -136,7 +140,7 @@ flow_digest
 
 ### 5.1 Data classes
 
-The F0 vocabulary should remain small and deny-dominant. Candidate classes:
+The initial vocabulary should be small and deny-dominant. Candidate classes:
 
 - `public`
 - `owner_private`
@@ -145,19 +149,29 @@ The F0 vocabulary should remain small and deny-dominant. Candidate classes:
 - `secret`
 - `authority_bearing_secret`
 
-The exact vocabulary is an F0 contract decision. The controlling semantic rule is monotonic accumulation within a task lineage unless a separately reviewed trusted transform creates a new derived context.
+The exact vocabulary is an F0 contract decision. The critical semantic rule is monotonic accumulation within a task lineage unless a separately reviewed trusted transformation creates a new derived context.
 
 ### 5.2 Authority-bearing material
 
 Authority-bearing material is tracked separately from ordinary confidentiality because exposure can create new power rather than merely disclose information.
 
-Examples include passwords, bearer tokens, private signing keys, recovery codes, OTPs, password-reset links, magic-login links, access-bearing session cookies, payment credentials, and device-enrollment secrets.
+Examples include:
 
-An agent may be allowed to read an email body while being denied access to authority-bearing tokens embedded in the inbox.
+- passwords and bearer tokens;
+- private signing keys;
+- recovery codes;
+- one-time authentication codes;
+- password-reset links;
+- magic-login links;
+- session cookies where possession grants access;
+- payment credentials;
+- device-enrollment secrets.
+
+An agent may be allowed to read an email body while being denied access to authority-bearing tokens embedded in that inbox.
 
 ### 5.3 Join semantics
 
-Combining contexts accumulates restrictions.
+When information from multiple contexts is combined, the child context accumulates the union of relevant restrictions.
 
 ```text
 public + owner_private -> owner_private
@@ -174,10 +188,10 @@ No component may select the least restrictive parent when combining data.
 
 The cognitive runtime must not be the sole authority for declaring what it has read.
 
-Long-horizon target:
+The long-horizon target is layered observation:
 
 ```text
-trusted data/filesystem broker
+trusted data broker / filesystem broker
         +
 trusted connector broker
         +
@@ -185,17 +199,21 @@ host process/file/socket observation where practical
         -> FlowContext updates
 ```
 
-F0/F1 may use only deterministic synthetic/user-space observation and must not claim kernel-enforced information-flow control.
+The first implementation slices may use deterministic synthetic/user-space observation only. They must not claim kernel-enforced information-flow control.
 
-Later host enforcement may use Linux LSM/eBPF or another reviewed equivalent to observe protected file/socket/process relationships. Any specific host mechanism requires a fresh gate, threat review, performance limits, portability analysis, and bypass testing.
+Later host enforcement may use Linux mechanisms such as LSM/eBPF or another reviewed equivalent to observe protected file/socket/process relationships. Adoption of any specific Linux mechanism requires a fresh implementation gate, threat review, performance limits, portability analysis, and bypass testing.
 
-The contract remains platform-neutral even when a reference implementation is platform-specific.
+Windows/macOS support may use different mechanisms. The contract must remain platform-neutral even when one reference implementation is Linux-specific.
 
 ---
 
 ## 7. Credential-surrogate architecture
 
-External credentials remain in a trusted credential broker/provider boundary. The runtime receives only an inert or broker-redeemable surrogate bound to an exact intended operation.
+External credentials remain in a trusted credential broker/provider boundary.
+
+The agent/runtime receives only an inert or broker-redeemable surrogate bound to an exact intended operation.
+
+Conceptually:
 
 ```text
 runtime
@@ -593,19 +611,10 @@ If F0/F1 implementation requires any of those, STOP and reopen the Stage 5B gate
 
 ## 25. Stage 5B approval state
 
-The architecture is approved as design direction from the owner instruction to proceed.
+The owner explicitly approved this written Stage 5B specification on 2026-09-10.
 
-Implementation authority remains **not granted** until this written specification is reviewed and a fresh F0/F1 implementation plan identifies:
+F0/F1 implementation planning is authorized. The implementation plan is `docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md` and remains constrained to inert contracts, synthetic/adversarial vectors, pure flow-context composition, deterministic evaluation, and documentation/evidence changes. F2 and later phases remain independently gated.
 
-- exact contracts/files;
-- exact changed-file envelope;
-- pure evaluator semantics;
-- adversarial vectors;
-- resource ceilings;
-- failure behavior;
-- rollback/non-claim language;
-- documentation registration;
-- Clean Kernel and supported-platform verification;
-- independent-review requirements for later credential/host phases.
+No approval in this document promotes a capability, activates an external runtime, releases a credential, enables live egress, authorizes browser automation, adds privileged host enforcement, or changes production authority.
 
 > **The agent may become arbitrarily capable. Its authority and disclosure rights remain separately bounded, explicit, evidence-backed, and revocable.**
