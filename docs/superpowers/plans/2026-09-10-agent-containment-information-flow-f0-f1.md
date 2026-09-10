@@ -406,6 +406,8 @@ Expected: FAIL because `evaluateProtectedEgress` is not implemented.
 Validate request/policy as closed ordinary plain objects. Reject `*`, glob metacharacters, empty allow sets, duplicate entries, unknown fields, unknown data classes, or canonical serialized size above 32,768 bytes. Compute `request_digest` from the canonical verified request.
 
 ```js
+import { digestObject } from './canonical.mjs';
+
 const REASON_ORDER = Object.freeze([
   'policy_profile_mismatch',
   'authority_bearing_material_observed',
