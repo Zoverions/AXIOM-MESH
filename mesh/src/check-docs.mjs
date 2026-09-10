@@ -108,6 +108,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-06-rust-trust-core-stage2-differential-conformance-design.md',
   'docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md',
   'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
+  'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -122,6 +123,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md',
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md',
   'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md',
+  'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -436,11 +438,23 @@ const REQUIRED_CONTENT = Object.freeze({
     '## 17. Migration contract',
     '## 21. Stage 5B approval state'
   ],
+  'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md': [
+    'Fresh-gate rule',
+    'Intelligence may request authority',
+    '## 22. Migration contract',
+    '## 25. Stage 5B approval state'
+  ],
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': [
     '## Gate 0 — exact candidate inventory',
     '## Task 1 — common inert record envelope',
     '## Explicitly out of scope',
     '## Completion condition'
+  ],
+  'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md': [
+    '## Exact changed-file envelope',
+    '### Task 1: F0 closed contract schemas and semantic verifier',
+    '## F0/F1 acceptance matrix',
+    '## Explicit non-claims'
   ],
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
     '## Current-build setup boundary',
