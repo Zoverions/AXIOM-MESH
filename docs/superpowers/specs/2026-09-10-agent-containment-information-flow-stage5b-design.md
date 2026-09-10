@@ -126,7 +126,8 @@ flow_context_id
 principal
 runtime_identity
 root_task_id
-parent_flow_context_id?
+parent_flow_contexts[]
+lineage_depth
 observed_data_classes[]
 observed_authority_classes[]
 owner_or_domain_scopes[]
@@ -137,6 +138,8 @@ updated_at
 policy_profile_digest
 flow_digest
 ```
+
+`parent_flow_contexts` is a bounded collection because a derived task may combine multiple independently restricted parent contexts. `lineage_depth` is explicit so the implementation can enforce a finite ancestry bound without trusting the runtime to infer or omit it.
 
 ### 5.1 Data classes
 
