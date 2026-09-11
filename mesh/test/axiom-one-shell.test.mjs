@@ -9,6 +9,7 @@ import { startAxiomOnePreview, validatePreviewConfiguration } from '../../apps/a
 import { createGatewayClient } from '../../packages/axiom-client/index.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
 import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
+import { createSignedReceiptFixture } from '../../packages/axiom-verify/index.mjs';
 
 test('AXIOM One preview policy and static boundary are exact', async () => {
   const result = await checkAxiomOnePreview();
@@ -46,6 +47,14 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   const organize = await readFile(new URL('../../apps/axiom-one/local-organize.mjs', import.meta.url), 'utf8');
   assert.match(organize, /LOCAL_ORGANIZE_PROVIDER_ID/);
   assert.match(organize, /INTEGRITY_VS_TRUTH/);
+  assert.match(app, /Verify offline/);
+  assert.match(app, /\/local\/verify/);
+  const presentation = await readFile(new URL('../../apps/axiom-one/presentation.mjs', import.meta.url), 'utf8');
+  assert.match(presentation, /verifyReport/);
+  const server = await readFile(new URL('../../apps/axiom-one/server.mjs', import.meta.url), 'utf8');
+  assert.match(server, /handleLocalVerify/);
+  assert.match(server, /packages\/axiom-verify/);
+  assert.match(server, /gateway_authority_client: false/);
 });
 
 test('AXIOM One preview rejects non-loopback and weakened policy', async () => {
@@ -458,3 +467,86 @@ function rawRequest(port, path, headers) {
     request.end();
   });
 }
+
+test('local offline Verify helper uses axiom-verify without Gateway authority', async t => {
+  const { receipt, publicKeyPem } = createSignedReceiptFixture();
+  const gatewayHits = [];
+  const gateway = createServer((req, res) => {
+    gatewayHits.push(req.url);
+    res.writeHead(500);
+    res.end('gateway must not be consulted for local verify');
+  });
+  await new Promise((resolve, reject) => {
+    gateway.once('error', reject);
+    gateway.listen(0, '127.0.0.1', resolve);
+  });
+  const preview = await startAxiomOnePreview({
+    port: 0,
+    gatewayOrigin: `http://127.0.0.1:${gateway.address().port}`
+  });
+  t.after(async () => {
+    await preview.stop();
+    await new Promise((resolve, reject) => gateway.close(error => error ? reject(error) : resolve()));
+  });
+
+  const passResponse = await fetch(`${preview.url}/local/verify`, {
+    method: 'POST',
+    headers: {
+      origin: preview.url,
+      'sec-fetch-site': 'same-origin',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      mode: 'receipt',
+      artifact: receipt,
+      public_key_pem: publicKeyPem
+    })
+  });
+  assert.equal(passResponse.status, 200);
+  const passReport = await passResponse.json();
+  assert.equal(passReport.schema, 'axiom-verify-report.v0');
+  assert.equal(passReport.verdict, 'PASS');
+  assert.equal(passReport.ok, true);
+  assert.equal(passReport.gateway_authority_client, false);
+  assert.match(passReport.integrity_versus_truth, /Integrity versus truth/);
+  assert.equal(gatewayHits.length, 0);
+
+  const altered = structuredClone(receipt);
+  altered.statement.intent.action = 'system.hash';
+  const failResponse = await fetch(`${preview.url}/local/verify`, {
+    method: 'POST',
+    headers: {
+      origin: preview.url,
+      'sec-fetch-site': 'same-origin',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      mode: 'receipt',
+      artifact: altered,
+      public_key_pem: publicKeyPem
+    })
+  });
+  assert.equal(failResponse.status, 200);
+  const failReport = await failResponse.json();
+  assert.equal(failReport.verdict, 'FAIL');
+  assert.equal(failReport.ok, false);
+  assert.equal(typeof failReport.reason, 'string');
+  assert.equal(gatewayHits.length, 0);
+
+  const crossOrigin = await fetch(`${preview.url}/local/verify`, {
+    method: 'POST',
+    headers: {
+      origin: 'https://attacker.example',
+      'sec-fetch-site': 'cross-site',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      mode: 'receipt',
+      artifact: receipt,
+      public_key_pem: publicKeyPem
+    })
+  });
+  assert.equal(crossOrigin.status, 403);
+  assert.equal(gatewayHits.length, 0);
+});
+

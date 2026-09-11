@@ -106,7 +106,7 @@ product organization, but only the functions in this table are current.
 | Social | Reads the authenticated owner's bounded local actor, persona, publication corpus, supersession/retraction status, transition count, truncation state, and raw snapshot | `social.get` | Read-only owner-local projection; owner is derived from authentication; `network_effect` must remain `none`; no federation, remote distribution, or browser Social mutation |
 | Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
 | Vault | Lists active owner-scoped memory objects and edges, creates one private note at a time, optionally organizes owner-selected text into a local draft suggestion, records one of three fixed directional provenance links, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get`; local organizer stub | Bounded lifecycle only; organize drafts are ephemeral and non-authorizing; no arbitrary relation, direct edge deletion, hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
-| Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
+| Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary; owner can run experimental offline Verify against a visible receipt or pasted export artifact via loopback `/local/verify` using `packages/axiom-verify` | `events.list`; local `/local/verify` (not Gateway) | Raw payload remains visible; mapped integrity evidence is not external truth; Verify PASS is integrity under supplied keys, not truth or Mesh production promotion |
 | Share | Displays explicit unavailable Selective Sharing and Circles states | none | Sends nothing; sharing and Circles remain disabled |
 | Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
@@ -387,6 +387,17 @@ semantic checks and a visual inspection do not replace keyboard traversal,
 screen-reader testing, zoom, contrast calculation, multiple mobile browsers,
 touch-target measurement, language review, cognitive walkthroughs, or testing
 with people who use assistive technology. Those remain promotion gates.
+
+## Offline Verify on Receipts (experimental)
+
+AXIOM One can run **local offline Verify** from the Receipts surface without treating Gateway as a verification authority:
+
+1. Open Receipts and click **Verify offline** on a visible event (prefills raw JSON) or paste a machine-receipt / continuity-anchor / export-package artifact.
+2. Paste the owner-supplied verification public key PEM (Verify does not fetch keys from Gateway).
+3. Click **Run offline Verify**. The loopback preview helper `POST /local/verify` imports `packages/axiom-verify` with Node crypto and returns an `axiom-verify-report.v0` JSON report.
+4. The UI shows PASS/FAIL, human reasons, and always restates integrity-versus-truth. The raw report remains inspectable.
+
+This path is experimental MVP scaffolding only. It is not a released Verify product, does not promote Mesh production, does not claim external-world truth on PASS, and leaves the Hermes pin provisional with SEC-002 pending. Browser code never imports Node `crypto`; the smallest honest path is the loopback-only helper on the AXIOM One preview server.
 
 ## Verification, rollback, and failures
 
