@@ -153,6 +153,78 @@
         "docs/PRODUCTION-READINESS-TRACKER.md",
         "docs/PRODUCTION-GRADE.md"
       ]
+    },
+    {
+      "id": "RT-CONC-011",
+      "review_scope": "authentication-authorization",
+      "title": "Shared authority state must serialize across evaluators",
+      "claim_boundary": "Per-process or per-evaluator authorization locks do not establish atomic admission for shared session, budget, mandate, composition, or one-shot authority state.",
+      "challenge_question": "Can two supported evaluators, replicas, siblings, or concurrent requests each observe stale shared authority state and both admit effects whose combined result violates a session, aggregate-budget, single-use, composition, or delegation constraint?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/rebuild/REQUIREMENTS.md",
+        "mesh/config/capabilities.json"
+      ]
+    },
+    {
+      "id": "RT-ABORT-012",
+      "review_scope": "recovery-rotation",
+      "title": "Abort and scope loss must terminate outstanding effect authority",
+      "claim_boundary": "Cancellation, terminal abort, target removal, or scope loss must become runtime authority state rather than remaining only an agent instruction or advisory signal.",
+      "challenge_question": "After a supported principal requests terminal abort, loses its exact target, or has its scope revoked, can queued, retried, in-flight, or newly derived work still create a consequential effect outside the remaining current authority?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/rebuild/REQUIREMENTS.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md"
+      ]
+    },
+    {
+      "id": "RT-SEM-013",
+      "review_scope": "interoperability-authority",
+      "title": "Semantic interpretation must not manufacture authority",
+      "claim_boundary": "Model, retrieval, ranking, alias, natural-language, or tool-description interpretation may propose or restrict an effect but does not prove that the interpretation matches user intent and cannot mint operational authority.",
+      "challenge_question": "Can ambiguous or changed semantic interpretation, tool metadata, retrieved context, aliasing, or model-generated summaries cause a different action, destination, amount, purpose, tenant, or structured effect to inherit authority that was granted only to another interpretation?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md",
+        "docs/rebuild/REQUIREMENTS.md"
+      ]
+    },
+    {
+      "id": "RT-LIFE-014",
+      "review_scope": "resilience-degraded-mode",
+      "title": "Bootstrap authority must remain narrow and lifecycle-aware",
+      "claim_boundary": "Effects required to establish readiness may be authorized during an explicit bootstrap lifecycle phase, but bootstrap state must not inherit ordinary RUNNING authority or create a circular readiness dependency.",
+      "challenge_question": "Can RESUMING, bootstrap, failed-start, restart, or teardown paths receive broader network, credential, execution, or delegation authority than the exact initialization purpose requires, or can readiness become a prerequisite for an effect needed to establish readiness?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md",
+        "mesh/config/capabilities.json"
+      ]
+    },
+    {
+      "id": "RT-SWARM-015",
+      "review_scope": "container-policy",
+      "title": "Externally observable state must not become unauthorized swarm communication",
+      "claim_boundary": "Tool labels such as read, search, navigate, or fetch do not prove non-effectfulness; any reachable externally observable mutation may become a communication or coordination channel unless explicitly bounded.",
+      "challenge_question": "Can isolated agents or nominally read-only tools create, discover, or exploit externally persistent state through alternate protocol behavior, shared resources, redirects, metadata, filenames, logs, URLs, caches, or other side effects to coordinate beyond their granted communication authority?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/architecture/AGENT-COMMONS.md",
+        "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md"
+      ]
+    },
+    {
+      "id": "RT-DELEG-016",
+      "review_scope": "authentication-authorization",
+      "title": "Delegate possession must not prove delegation ancestry",
+      "claim_boundary": "A delegate or child key can prove that the delegate spoke but cannot by itself prove which parent authorized the delegation, its exact edge, or the current inherited authority.",
+      "challenge_question": "Can compromise or possession of a child/delegate key manufacture a parent relationship, ancestry claim, handoff, delegated scope, or output provenance that an uncompromised parent never authorized or co-bound?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/rebuild/REQUIREMENTS.md",
+        "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md"
+      ]
     }
   ],
   "reporting": {
