@@ -121,7 +121,8 @@ function assertUniqueExactSet(value, name, {
   vocabulary = null
 }) {
   if (!Array.isArray(value) || value.length < minItems || value.length > maxItems) {
-    fail(`${name} must contain at least ${minItems} and at most ${maxItems} items`);
+    const minimum = minItems === 0 ? 'zero' : minItems === 1 ? 'one' : String(minItems);
+    fail(`${name} must contain at least ${minimum} and at most ${maxItems} items`);
   }
   const seen = new Set();
   for (let index = 0; index < value.length; index += 1) {
