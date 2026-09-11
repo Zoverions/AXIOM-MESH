@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/reproduction-case.v0.schema.json",
+  "title": "AXIOM Threat Reproduction Case v0",
+  "description": "Description of a bounded disposable synthetic reproduction experiment. It is not an execution capability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "reproduction_id", "hypothesis_id", "base_source_revision", "lab_profile_digest",
+    "fixtures", "forbidden_resources", "allowed_resources", "expected_observations", "pass_fail_predicate",
+    "max_runtime_ms", "max_storage_bytes", "max_processes", "network_profile", "secret_profile",
+    "cleanup_contract", "reproduction_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-threat-reproduction-case.v0" },
+    "reproduction_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "hypothesis_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "base_source_revision": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "lab_profile_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "fixtures": { "type": "array", "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "maxItems": 32, "uniqueItems": true },
+    "forbidden_resources": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 512 }, "maxItems": 32, "uniqueItems": true },
+    "allowed_resources": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 512 }, "maxItems": 32, "uniqueItems": true },
+    "expected_observations": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 2048 }, "maxItems": 32, "uniqueItems": true },
+    "pass_fail_predicate": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "max_runtime_ms": { "type": "integer", "minimum": 1, "maximum": 300000 },
+    "max_storage_bytes": { "type": "integer", "minimum": 1, "maximum": 1073741824 },
+    "max_processes": { "type": "integer", "minimum": 1, "maximum": 32 },
+    "network_profile": { "type": "string", "enum": ["none", "synthetic_loopback_only"] },
+    "secret_profile": { "const": "synthetic_only" },
+    "cleanup_contract": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "reproduction_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

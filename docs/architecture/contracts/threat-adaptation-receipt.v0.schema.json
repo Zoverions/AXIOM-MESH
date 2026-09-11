@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/threat-adaptation-receipt.v0.schema.json",
+  "title": "AXIOM Threat Adaptation Receipt v0",
+  "description": "Privacy-minimized descriptive evidence receipt for threat-adaptation lifecycle state. It is not authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "receipt_id", "observation_digests", "hypothesis_digest", "source_revision",
+    "lab_profile_digest", "reproduction_result_digest", "regression_candidate_digest", "review_state",
+    "policy_or_code_change_ref", "timestamps", "signer", "receipt_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-threat-adaptation-receipt.v0" },
+    "receipt_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "observation_digests": { "type": "array", "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "maxItems": 32, "uniqueItems": true },
+    "hypothesis_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "source_revision": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "lab_profile_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "reproduction_result_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "regression_candidate_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "review_state": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "policy_or_code_change_ref": { "anyOf": [
+      { "type": "null" },
+      { "type": "string", "minLength": 1, "maxLength": 2048 }
+    ] },
+    "timestamps": { "type": "array", "items": { "type": "string", "format": "date-time", "pattern": "Z$", "maxLength": 64 }, "minItems": 1, "maxItems": 16, "uniqueItems": true },
+    "signer": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "receipt_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}
