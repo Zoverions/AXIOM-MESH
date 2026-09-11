@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { canonicalJson } from '../src/lib/canonical.mjs';
 import {
@@ -323,4 +324,65 @@ test('request and policy validation are closed, bounded, exact, and deterministi
   const first = decision(flow);
   const second = decision(flow);
   assert.equal(canonicalJson(first), canonicalJson(second));
+});
+
+test('language-neutral evaluator vectors cover the required matrix deterministically', async () => {
+  const url = new URL('../fixtures/agent-containment/flow-evaluator-v0.vectors.json', import.meta.url);
+  const corpus = JSON.parse(await readFile(url, 'utf8'));
+  assert.equal(corpus.schema, 'axiom-flow-evaluator-vectors.v0');
+  assert.equal(corpus.vectors.length, 13);
+
+  const names = new Set(corpus.vectors.map(vector => vector.name));
+  assert.equal(names.size, corpus.vectors.length);
+  for (const requiredName of [
+    'public-exact-allow',
+    'private-compatible-allow',
+    'policy-profile-mismatch',
+    'authority-bearing-material',
+    'action-not-allowed',
+    'provider-not-allowed',
+    'destination-not-allowed',
+    'purpose-not-allowed',
+    'data-class-not-allowed',
+    'credential-surrogate-required',
+    'approval-required',
+    'two-parent-restriction-union',
+    'runtime-replacement-retains-restriction'
+  ]) {
+    assert.equal(names.has(requiredName), true, requiredName);
+  }
+
+  const coveredReasons = new Set();
+  for (const vector of corpus.vectors) {
+    const input = {
+      flow_context: vector.flow_context,
+      request: vector.request,
+      policy: vector.policy
+    };
+    const first = evaluateProtectedEgress(input);
+    const second = evaluateProtectedEgress(input);
+    assert.equal(first.decision, vector.expected.decision, vector.name);
+    assert.deepEqual(first.reason_codes, vector.expected.reason_codes, vector.name);
+    assert.equal(canonicalJson(first), canonicalJson(second), vector.name);
+    for (const reason of vector.expected.reason_codes) coveredReasons.add(reason);
+  }
+
+  assert.deepEqual([...coveredReasons].sort(), [
+    'action_not_allowed',
+    'allow',
+    'approval_required',
+    'authority_bearing_material_observed',
+    'credential_surrogate_required',
+    'data_class_not_allowed',
+    'destination_not_allowed',
+    'policy_profile_mismatch',
+    'provider_not_allowed',
+    'purpose_not_allowed'
+  ]);
+  const union = corpus.vectors.find(vector => vector.name === 'two-parent-restriction-union');
+  assert.equal(union.flow_context.parent_flow_contexts.length, 2);
+  assert.deepEqual(union.flow_context.observed_data_classes, ['owner_private', 'public']);
+  const replacement = corpus.vectors.find(vector => vector.name === 'runtime-replacement-retains-restriction');
+  assert.equal(replacement.flow_context.runtime_identity, 'runtime:new');
+  assert.deepEqual(replacement.flow_context.observed_data_classes, ['owner_private']);
 });
