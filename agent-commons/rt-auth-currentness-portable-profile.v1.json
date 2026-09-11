@@ -1,0 +1,70 @@
+{
+  "schema": "axiom-rt-auth-currentness-portable-profile.v1",
+  "target": "RT-AUTH-001",
+  "title": "Portable effect-boundary currentness profile",
+  "status": "experimental Agent Commons interoperability profile; no production promotion claimed",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "independent_external_reproduction_claimed": false,
+  "authority_granted_by_profile": false,
+  "core_invariant": "Historical capability or delegation validity, including durable capability consumption, does not freeze authority state. Currentness is a deny-only prerequisite evaluated against authoritative retained state before consequence and MUST NOT mint, widen, revive, or substitute for local effect authority.",
+  "result_dimensions": [
+    "historical_evidence_valid",
+    "currentness_state",
+    "checkpoint_state",
+    "local_effect_authority_valid",
+    "effect_allowed"
+  ],
+  "authority_model": {
+    "currentness_can_mint_authority": false,
+    "historical_capability_validity_is_current_authority": false,
+    "durable_consumption_freezes_authority_state": false,
+    "local_effect_authority_remains_required": true,
+    "stale_or_rollback_checkpoint_fails_closed": true,
+    "unchanged_currentness_is_sufficient_authority": false,
+    "effect_allow_requires_other_required_checks": true
+  },
+  "composition_rules": [
+    "A capability that was validly issued and durably consumed remains historical evidence after authority state changes; consumption does not preserve permission to perform a later effect.",
+    "Authority replacement, narrowing, revocation, compromise, expiry, or another locally defined invalidating successor state observed before consequence denies the effect even when earlier capability evidence remains cryptographically valid.",
+    "A currentness ALLOW means only that the consulted authority state remains current under this prerequisite; it does not create the local grant, capability, purpose, destination, budget, policy, or runtime permission required for the effect.",
+    "The unchanged-authority positive control may allow an effect only when preexisting local effect authority and every other required check are independently valid.",
+    "A presented currentness checkpoint older than or inconsistent with the authoritative retained head is not rescued by historical evidence and fails closed for effects requiring currentness.",
+    "Currentness evidence must be bound to the security-relevant effect context strongly enough to prevent replay or substitution across principal, capability, intent, plan, policy, or destination boundaries.",
+    "Protocol transitions such as A2A, MCP, browser, shell, native API, or local IPC do not reset the currentness requirement or manufacture authority."
+  ],
+  "portable_receipt_fields": [
+    "principal_id",
+    "principal_type",
+    "capability_id",
+    "capability_authority_digest",
+    "intent_digest",
+    "plan_digest",
+    "effect_destination",
+    "consulted_checkpoint_digest",
+    "retained_head_digest",
+    "currentness_decision",
+    "currentness_decision_digest"
+  ],
+  "source_evidence": [
+    {
+      "kind": "project_reproduction_and_remediation",
+      "reference": "https://github.com/Zoverions/AXIOM-MESH/pull/1444",
+      "description": "A6.4 project-authored full development-stack consume -> mutate -> release races covering authority replacement, terminal revocation, unchanged-authority success, and currentness-source failure.",
+      "independent": false
+    },
+    {
+      "kind": "merged_related_fixture",
+      "reference": "mesh/test/fixtures/rt-delegation-currentness-001.json",
+      "description": "RT-DELEGATION-CURRENTNESS-001 preserves the separate invariant that offline-valid historical delegation is evidence rather than current effect authority.",
+      "independent": false
+    }
+  ],
+  "explicit_non_claims": [
+    "This profile does not claim PR #1444 is merged, production-promoted, or independently reproduced.",
+    "This profile does not claim global rollback resistance, Byzantine currentness, or an externally witnessed deployment vulnerability.",
+    "This profile does not define a new authority source or grant execution authority.",
+    "This profile does not replace capability signature, TTL, plan, policy, destination, consumption, replay, subject, runtime, or containment checks.",
+    "A verified currentness checkpoint is evidence about the consulted retained state, not proof of arbitrary external-world truth."
+  ]
+}
