@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/threat-observation.v0.schema.json",
+  "title": "AXIOM Threat Observation v0",
+  "description": "Inert provenance-preserving security observation. This contract conveys evidence only and grants no authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "observation_id", "source_class", "source_identity_or_locator",
+    "source_version_or_published_at", "retrieved_at", "content_digest", "claim_class",
+    "summary", "indicators", "affected_technology_or_boundary", "reported_preconditions",
+    "reported_effects", "source_confidence", "collector_confidence", "sensitivity_class",
+    "raw_content_reference", "provenance_chain", "supersedes_observation_ids",
+    "contradicts_observation_ids", "lifecycle_state", "expiry_or_review_at", "observation_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-threat-observation.v0" },
+    "observation_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "source_class": { "type": "string", "enum": [
+      "vendor_security_report", "vulnerability_advisory", "upstream_project_advisory",
+      "cert_or_government_advisory", "peer_reviewed_security_research",
+      "trusted_partner_disclosure", "axiom_local_incident", "axiom_lab_finding",
+      "community_submission", "untrusted_open_web_observation"
+    ] },
+    "source_identity_or_locator": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "source_version_or_published_at": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "retrieved_at": { "type": "string", "format": "date-time", "pattern": "Z$", "maxLength": 64 },
+    "content_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "claim_class": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "indicators": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 512 }, "maxItems": 32, "uniqueItems": true },
+    "affected_technology_or_boundary": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 512 }, "maxItems": 32, "uniqueItems": true },
+    "reported_preconditions": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 2048 }, "maxItems": 32, "uniqueItems": true },
+    "reported_effects": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 2048 }, "maxItems": 32, "uniqueItems": true },
+    "source_confidence": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "collector_confidence": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "sensitivity_class": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "raw_content_reference": { "anyOf": [
+      { "type": "null" },
+      { "type": "string", "minLength": 1, "maxLength": 2048 }
+    ] },
+    "provenance_chain": { "type": "array", "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "maxItems": 32, "uniqueItems": true },
+    "supersedes_observation_ids": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 }, "maxItems": 16, "uniqueItems": true },
+    "contradicts_observation_ids": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 }, "maxItems": 16, "uniqueItems": true },
+    "lifecycle_state": { "type": "string", "enum": [
+      "current", "superseded", "contradicted", "source_withdrawn", "fixed_upstream",
+      "not_applicable_current_build", "historical_regression", "expired_pending_reassessment"
+    ] },
+    "expiry_or_review_at": { "type": "string", "format": "date-time", "pattern": "Z$", "maxLength": 64 },
+    "observation_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}
