@@ -56,6 +56,9 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/compute-node-profile.v1.schema.json',
   'docs/architecture/contracts/context-capsule.v1.schema.json',
   'docs/architecture/contracts/context-request.v1.schema.json',
+  'docs/architecture/contracts/credential-surrogate.v0.schema.json',
+  'docs/architecture/contracts/flow-context.v0.schema.json',
+  'docs/architecture/contracts/flow-receipt.v0.schema.json',
   'docs/architecture/contracts/local-trust-envelope.v1.schema.json',
   'docs/architecture/contracts/personal-agent-pack.v1.schema.json',
   'docs/architecture/contracts/personal-agent-pack.v2.schema.json',
@@ -66,6 +69,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
+  'docs/architecture/contracts/trusted-approval-challenge.v0.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
@@ -86,6 +90,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md',
   'docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md',
   'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md',
+  'docs/security/AGENT-CONTAINMENT-INFORMATION-FLOW-THREAT-MODEL.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md',
@@ -157,6 +162,11 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
 ]);
 
 const REQUIRED_CONTENT = Object.freeze({
+  'docs/architecture/contracts/flow-context.v0.schema.json': ['axiom-flow-context.v0'],
+  'docs/architecture/contracts/credential-surrogate.v0.schema.json': ['axiom-credential-surrogate.v0'],
+  'docs/architecture/contracts/trusted-approval-challenge.v0.schema.json': ['axiom-trusted-approval-challenge.v0'],
+  'docs/architecture/contracts/flow-receipt.v0.schema.json': ['axiom-flow-receipt.v0'],
+  'docs/security/AGENT-CONTAINMENT-INFORMATION-FLOW-THREAT-MODEL.md': ['no live containment claim'],
   'README.md': [
     'mesh/config/capabilities.json',
     'docs/whitepapers_and_research/WHITEPAPER.md',
@@ -451,6 +461,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Completion condition'
   ],
   'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md': [
+    'F0/F1',
     '## Exact changed-file envelope',
     '### Task 1: F0 closed contract schemas and semantic verifier',
     '## F0/F1 acceptance matrix',
@@ -757,7 +768,6 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
       checkedLinks += 1;
     }
   }
-
   return {
     valid: true,
     documents: CANONICAL_DOCUMENTS.length,
