@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-09-05
+**Updated:** 2026-09-10
 
 **Active build:** `0.12.0-dev.3`
 
@@ -196,6 +196,9 @@ decision.
 - [Runtime & Connector Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md)
   — replaceable runtime/model/tool/protocol/compute/oracle coordination while
   preserving AXIOM as the authority root.
+- [Agent Containment & Information-Flow Stage 5B design](superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md)
+  — independently gated F0/F1 contract/evaluator foundation and future F2-F8
+  containment programme; design evidence does not grant runtime authority.
 - [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
@@ -228,6 +231,10 @@ decision.
 - [Context Request v1](architecture/contracts/context-request.v1.schema.json)
 - [Vault Access Lease v1](architecture/contracts/vault-access-lease.v1.schema.json)
 - [Context Capsule v1](architecture/contracts/context-capsule.v1.schema.json)
+- [FlowContext v0](architecture/contracts/flow-context.v0.schema.json)
+- [CredentialSurrogate v0](architecture/contracts/credential-surrogate.v0.schema.json)
+- [TrustedApprovalChallenge v0](architecture/contracts/trusted-approval-challenge.v0.schema.json)
+- [FlowReceipt v0](architecture/contracts/flow-receipt.v0.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
@@ -242,10 +249,15 @@ This freezes those reviewed schema bytes only. The semantic instance validator
 remains intentionally scoped to `draft-critical-invariants`; the schemas are
 not loaded by the runtime, no external runtime is certified, no capability is
 promoted, and no external effect becomes reachable because of the byte freeze.
+The four F0/F1 containment schemas are likewise inert contracts consumed only
+by the pure candidate verifier/evaluator; they do not provide a live observer,
+credential broker, network control, browser isolation, or host enforcement.
 
 ### Security
 
 - [Current-build threat model](security/CURRENT-BUILD-THREAT-MODEL.md)
+- [Agent Containment & Information-Flow F0/F1 threat model](security/AGENT-CONTAINMENT-INFORMATION-FLOW-THREAT-MODEL.md)
+  — synthetic/user-space boundary, covered threats, and explicit no-live-containment non-claims.
 - [Independent security review](security/INDEPENDENT-SECURITY-REVIEW.md)
 - [Credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
 - [Deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
