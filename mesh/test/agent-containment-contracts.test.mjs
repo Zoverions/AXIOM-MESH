@@ -160,12 +160,27 @@ test('CredentialSurrogate is exact, single-use, short-lived, and current', () =>
   assert.throws(() => verifyCredentialSurrogate({ ...value, exact_action: '*' }, { now: NOW }), /wildcard|exact/);
 });
 
+test('CredentialSurrogate rejects wildcard provider and destination bindings', () => {
+  assert.throws(() => verifyCredentialSurrogate(surrogate({
+    provider_or_connector: 'connector:*'
+  }), { now: NOW }), /wildcard|exact/);
+  assert.throws(() => verifyCredentialSurrogate(surrogate({
+    exact_destination: 'https://*.invalid/api'
+  }), { now: NOW }), /wildcard|exact/);
+});
+
 test('TrustedApprovalChallenge is exact, short-lived, and current', () => {
   const value = challenge();
   assert.equal(verifyTrustedApprovalChallenge(value, { now: NOW }).challenge_digest, value.challenge_digest);
   assert.throws(() => verifyTrustedApprovalChallenge(challenge({ expires_at: '2026-09-10T18:10:00.001Z' }), { now: NOW }), /10 minutes|lifetime/);
   assert.throws(() => verifyTrustedApprovalChallenge(challenge(), { now: '2026-09-10T18:10:00.001Z' }), /expired/);
   assert.throws(() => verifyTrustedApprovalChallenge(challenge({ reversibility: 'magic' }), { now: NOW }), /reversibility/);
+});
+
+test('TrustedApprovalChallenge rejects wildcard action, provider, and destination bindings', () => {
+  assert.throws(() => verifyTrustedApprovalChallenge(challenge({ requested_action: '*' }), { now: NOW }), /wildcard|exact/);
+  assert.throws(() => verifyTrustedApprovalChallenge(challenge({ provider_or_connector: 'connector:*' }), { now: NOW }), /wildcard|exact/);
+  assert.throws(() => verifyTrustedApprovalChallenge(challenge({ exact_destination: 'https://*.invalid/api' }), { now: NOW }), /wildcard|exact/);
 });
 
 test('FlowReceipt is closed and cannot carry raw protected content', () => {
@@ -199,5 +214,18 @@ test('the four language-neutral JSON schemas are closed and identify their contr
     assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
     assert.equal(schema.additionalProperties, false);
     assert.equal(schema.properties.schema.const, identity);
+  }
+});
+
+test('language-neutral surrogate and approval schemas reject wildcard authority bindings', async () => {
+  for (const filename of [
+    'credential-surrogate.v0.schema.json',
+    'trusted-approval-challenge.v0.schema.json'
+  ]) {
+    const url = new URL(`../../docs/architecture/contracts/${filename}`, import.meta.url);
+    const schema = JSON.parse(await readFile(url, 'utf8'));
+    for (const field of ['provider_or_connector', 'exact_destination']) {
+      assert.equal(schema.properties[field].not?.pattern, '\\*', `${filename}:${field}`);
+    }
   }
 });
