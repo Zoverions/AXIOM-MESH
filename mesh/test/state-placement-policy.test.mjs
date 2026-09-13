@@ -130,16 +130,22 @@ test('all failing hard constraints are reported with closed sorted reason codes'
   ]);
 });
 
-test('owner-scope and operation policy mismatches fail closed for every candidate', () => {
-  const request = makeRequest({ owner_scope: 'owner:request', operation_class: 'replicate' });
-  const policy = makePolicy({ owner_scope: 'owner:other', allowed_operations: ['cache'] });
-  const destination = makeDestination();
-  const plan = evaluateStatePlacement({ request, policy, destinations: [destination], now: NOW });
-  assert.deepEqual(plan.ineligible_destinations[0].reason_codes, [
-    'operation-disallowed-by-policy',
-    'policy-owner-scope-mismatch'
-  ]);
-  assert.equal(plan.satisfied, false);
+test('owner-scope mismatch rejects the entire evaluation', () => {
+  const request = makeRequest({ owner_scope: 'owner:request' });
+  const policy = makePolicy({ owner_scope: 'owner:other' });
+  assert.throws(
+    () => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }),
+    /policy owner scope does not match request owner scope/
+  );
+});
+
+test('operation disallowed by policy rejects the entire evaluation', () => {
+  const request = makeRequest({ operation_class: 'replicate' });
+  const policy = makePolicy({ allowed_operations: ['cache'] });
+  assert.throws(
+    () => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }),
+    /operation is disallowed by placement policy/
+  );
 });
 
 test('availability target can remain unsatisfied without weakening constraints', () => {
@@ -153,7 +159,7 @@ test('availability target can remain unsatisfied without weakening constraints',
   assert.equal(plan.eligible_destinations.length, 1);
 });
 
-test('policy maximum_eligible_destinations truncates deterministically and does not imply ranking', () => {
+test('policy candidate ceiling fails closed instead of truncating eligible destinations', () => {
   const request = makeRequest({ availability_target: { minimum_replicas: 1, minimum_failure_domains: 1 } });
   const policy = makePolicy({ maximum_eligible_destinations: 2 });
   const destinations = [
@@ -161,15 +167,30 @@ test('policy maximum_eligible_destinations truncates deterministically and does 
     makeDestination({ destination_id: 'dest:a', failure_domain: 'fd:a' }),
     makeDestination({ destination_id: 'dest:b', failure_domain: 'fd:b' })
   ];
-  const plan = evaluateStatePlacement({ request, policy, destinations, now: NOW });
-  assert.deepEqual(plan.eligible_destinations.map((item) => item.destination_id), ['dest:a', 'dest:b']);
-  assert.deepEqual(plan.ineligible_destinations.find((item) => item.destination_id === 'dest:c').reason_codes, ['availability-target-unsatisfied']);
+  assert.throws(
+    () => evaluateStatePlacement({ request, policy, destinations, now: NOW }),
+    /maximum_eligible_destinations|eligible destination ceiling/
+  );
 });
 
-test('duplicate destination identities fail closed before evaluation', () => {
+test('duplicate destination identities and duplicate profile digests fail closed', () => {
   const request = makeRequest();
   const policy = makePolicy();
   const a = makeDestination({ destination_id: 'dest:dup' });
   const b = makeDestination({ destination_id: 'dest:dup', failure_domain: 'fd:other' });
   assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [a, b], now: NOW }), /duplicate destination_id/);
+
+  const first = makeDestination({ destination_id: 'dest:first' });
+  const second = { ...makeDestination({ destination_id: 'dest:second' }), profile_digest: first.profile_digest };
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [first, second], now: NOW }), /duplicate profile_digest|profile_digest/);
+});
+
+test('more than 64 candidate destinations fails closed', () => {
+  const request = makeRequest();
+  const policy = makePolicy({ maximum_eligible_destinations: 64 });
+  const destinations = Array.from({ length: 65 }, (_, index) => makeDestination({
+    destination_id: `dest:${String(index).padStart(2, '0')}`,
+    failure_domain: `fd:${String(index).padStart(2, '0')}`
+  }));
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations, now: NOW }), /64|candidate/);
 });
