@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/state-destination-profile.v0.schema.json",
+  "title": "AXIOM State Destination Profile v0",
+  "description": "Inert bounded description of a candidate storage destination. Discovery or profile validity grants no provider or state authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","destination_id","destination_class","failure_domain","regions","residency_evidence_level","owner_controlled","managed_provider","allowed_operations","allowed_purposes","allowed_data_classes","maximum_confidentiality","disclosure_modes","retention_days","maximum_lag_ms","consistency_classes","encryption_profiles","recovery_importance_supported","cost_units","observed_at","expires_at","contains_secret_material","authority_effect","network_effect","provider_effect","canonical_state_effect","profile_digest"],
+  "properties": {
+    "schema": {"const": "axiom-state-destination-profile.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-contract-laboratory"},
+    "destination_id": {"$ref": "#/$defs/id"},
+    "destination_class": {"$ref": "#/$defs/destinationClass"},
+    "failure_domain": {"$ref": "#/$defs/id"},
+    "regions": {"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"$ref":"#/$defs/region"}},
+    "residency_evidence_level": {"enum":["unknown","declared","provider-configured","authenticated-assertion","independently-verified"]},
+    "owner_controlled": {"type":"boolean"},
+    "managed_provider": {"type":"boolean"},
+    "allowed_operations": {"type":"array","minItems":1,"maxItems":32,"uniqueItems":true,"items":{"enum":["replicate","cache","archive","export-staging","restore-staging"]}},
+    "allowed_purposes": {"type":"array","minItems":1,"maxItems":32,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
+    "allowed_data_classes": {"type":"array","minItems":1,"maxItems":32,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
+    "maximum_confidentiality": {"enum":["public","protected","sensitive","restricted"]},
+    "disclosure_modes": {"type":"array","minItems":1,"maxItems":32,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
+    "retention_days": {"$ref":"#/$defs/retention"},
+    "maximum_lag_ms": {"type":"integer","minimum":0,"maximum":86400000},
+    "consistency_classes": {"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"enum":["immutable-object","eventual-derived","bounded-lag-replica"]}},
+    "encryption_profiles": {"type":"array","minItems":1,"maxItems":32,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
+    "recovery_importance_supported": {"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"enum":["ordinary","important","critical"]}},
+    "cost_units": {"type":"integer","minimum":0,"maximum":9007199254740991},
+    "observed_at": {"$ref":"#/$defs/time"},
+    "expires_at": {"$ref":"#/$defs/time"},
+    "contains_secret_material": {"const":false},
+    "authority_effect": {"const":"none"},
+    "network_effect": {"const":"none"},
+    "provider_effect": {"const":"none"},
+    "canonical_state_effect": {"const":"none"},
+    "profile_digest": {"$ref":"#/$defs/digest"}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "digest": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "time": {"type":"string","format":"date-time","maxLength":64},
+    "region": {"type":"string","pattern":"^[A-Z0-9][A-Z0-9-]{0,31}$"},
+    "destinationClass": {"enum":["owner-local","owner-peer","managed-object","institutional-escrow","cold-archive"]},
+    "retention": {
+      "type":"object","additionalProperties":false,
+      "required":["minimum","maximum"],
+      "properties": {
+        "minimum":{"type":"integer","minimum":0,"maximum":36500},
+        "maximum":{"type":"integer","minimum":0,"maximum":36500}
+      }
+    }
+  }
+}
