@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/state-placement-plan.v1.schema.json",
+  "title": "AXIOM State Placement Plan v1",
+  "description": "Deterministic inert result of storage-placement eligibility evaluation. It explains eligibility but grants no storage, provider, network, or canonical-state authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","plan_id","request_id","request_digest","policy_id","policy_digest","evaluated_at","expires_at","satisfied","eligible_destinations","ineligible_destinations","availability_result","authority_effect","network_effect","provider_effect","canonical_state_effect","plan_digest"],
+  "properties": {
+    "schema": {"const":"axiom-state-placement-plan.v1"},
+    "version": {"const":1},
+    "status": {"const":"inert-contract-laboratory"},
+    "plan_id": {"$ref":"#/$defs/id"},
+    "request_id": {"$ref":"#/$defs/id"},
+    "request_digest": {"$ref":"#/$defs/digest"},
+    "policy_id": {"$ref":"#/$defs/id"},
+    "policy_digest": {"$ref":"#/$defs/digest"},
+    "evaluated_at": {"$ref":"#/$defs/time"},
+    "expires_at": {"$ref":"#/$defs/time"},
+    "satisfied": {"type":"boolean"},
+    "eligible_destinations": {"type":"array","maxItems":64,"items":{"$ref":"#/$defs/eligibleDestination"}},
+    "ineligible_destinations": {"type":"array","maxItems":64,"items":{"$ref":"#/$defs/ineligibleDestination"}},
+    "availability_result": {"$ref":"#/$defs/availabilityResult"},
+    "authority_effect": {"const":"none"},
+    "network_effect": {"const":"none"},
+    "provider_effect": {"const":"none"},
+    "canonical_state_effect": {"const":"none"},
+    "plan_digest": {"$ref":"#/$defs/digest"}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "digest": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "time": {"type":"string","format":"date-time","maxLength":64},
+    "destinationClass": {"enum":["owner-local","owner-peer","managed-object","institutional-escrow","cold-archive"]},
+    "reason": {"enum":["policy-owner-scope-mismatch","operation-disallowed-by-policy","destination-class-disallowed-by-policy","destination-id-forbidden-by-policy","managed-destination-disallowed-by-policy","destination-class-not-permitted-by-request","destination-class-forbidden-by-request","operation-unsupported","purpose-unsupported","data-class-unsupported","confidentiality-insufficient","disclosure-mode-unsupported","residency-region-mismatch","residency-evidence-insufficient","retention-window-unsupported","freshness-unsupported","consistency-unsupported","encryption-profile-unsupported","recovery-importance-unsupported","cost-ceiling-exceeded","availability-target-unsatisfied"]},
+    "eligibleDestination": {
+      "type":"object","additionalProperties":false,
+      "required":["destination_id","destination_class","profile_digest","failure_domain","required_encryption_profile","receipt_required"],
+      "properties": {
+        "destination_id":{"$ref":"#/$defs/id"},
+        "destination_class":{"$ref":"#/$defs/destinationClass"},
+        "profile_digest":{"$ref":"#/$defs/digest"},
+        "failure_domain":{"$ref":"#/$defs/id"},
+        "required_encryption_profile":{"$ref":"#/$defs/id"},
+        "receipt_required":{"const":true}
+      }
+    },
+    "ineligibleDestination": {
+      "type":"object","additionalProperties":false,
+      "required":["destination_id","destination_class","profile_digest","reason_codes"],
+      "properties": {
+        "destination_id":{"$ref":"#/$defs/id"},
+        "destination_class":{"$ref":"#/$defs/destinationClass"},
+        "profile_digest":{"$ref":"#/$defs/digest"},
+        "reason_codes":{"type":"array","minItems":1,"maxItems":21,"uniqueItems":true,"items":{"$ref":"#/$defs/reason"}}
+      }
+    },
+    "availabilityResult": {
+      "type":"object","additionalProperties":false,
+      "required":["required_replicas","eligible_replicas","required_failure_domains","eligible_failure_domains"],
+      "properties": {
+        "required_replicas":{"type":"integer","minimum":1,"maximum":16},
+        "eligible_replicas":{"type":"integer","minimum":0,"maximum":64},
+        "required_failure_domains":{"type":"integer","minimum":1,"maximum":16},
+        "eligible_failure_domains":{"type":"integer","minimum":0,"maximum":64}
+      }
+    }
+  }
+}
