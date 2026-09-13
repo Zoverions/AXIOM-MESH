@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/state-placement-request.v1.schema.json",
+  "title": "AXIOM State Placement Request v1",
+  "description": "Inert logical storage-placement request. It selects no provider, performs no I/O, and grants no authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","request_id","owner_scope","source_state_family","operation_class","purpose","data_class","confidentiality_requirement","disclosure_ceiling","residency","permitted_destination_classes","forbidden_destination_classes","retention","availability_target","maximum_lag_ms","consistency_class","encryption_profile","recovery_importance","cost_ceiling_units","consequence_class","policy_profile_digest","created_at","expires_at","contains_secret_material","authority_effect","network_effect","provider_effect","canonical_state_effect","request_digest"],
+  "properties": {
+    "schema": {"const": "axiom-state-placement-request.v1"},
+    "version": {"const": 1},
+    "status": {"const": "inert-contract-laboratory"},
+    "request_id": {"$ref": "#/$defs/id"},
+    "owner_scope": {"$ref": "#/$defs/id"},
+    "source_state_family": {"$ref": "#/$defs/id"},
+    "operation_class": {"enum": ["replicate","cache","archive","export-staging","restore-staging"]},
+    "purpose": {"$ref": "#/$defs/id"},
+    "data_class": {"$ref": "#/$defs/id"},
+    "confidentiality_requirement": {"enum": ["public","protected","sensitive","restricted"]},
+    "disclosure_ceiling": {"$ref": "#/$defs/id"},
+    "residency": {"$ref": "#/$defs/residency"},
+    "permitted_destination_classes": {"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"$ref":"#/$defs/destinationClass"}},
+    "forbidden_destination_classes": {"type":"array","maxItems":16,"uniqueItems":true,"items":{"$ref":"#/$defs/destinationClass"}},
+    "retention": {"$ref": "#/$defs/retention"},
+    "availability_target": {"$ref": "#/$defs/availability"},
+    "maximum_lag_ms": {"type":"integer","minimum":0,"maximum":86400000},
+    "consistency_class": {"enum": ["immutable-object","eventual-derived","bounded-lag-replica"]},
+    "encryption_profile": {"$ref": "#/$defs/id"},
+    "recovery_importance": {"enum": ["ordinary","important","critical"]},
+    "cost_ceiling_units": {"type":"integer","minimum":0,"maximum":9007199254740991},
+    "consequence_class": {"enum": ["C0","C1","C2","C3"]},
+    "policy_profile_digest": {"$ref": "#/$defs/digest"},
+    "created_at": {"$ref": "#/$defs/time"},
+    "expires_at": {"$ref": "#/$defs/time"},
+    "contains_secret_material": {"const": false},
+    "authority_effect": {"const": "none"},
+    "network_effect": {"const": "none"},
+    "provider_effect": {"const": "none"},
+    "canonical_state_effect": {"const": "none"},
+    "request_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "digest": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "time": {"type":"string","format":"date-time","maxLength":64},
+    "region": {"type":"string","pattern":"^[A-Z0-9][A-Z0-9-]{0,31}$"},
+    "destinationClass": {"enum": ["owner-local","owner-peer","managed-object","institutional-escrow","cold-archive"]},
+    "residency": {
+      "type":"object","additionalProperties":false,
+      "required":["allowed_regions","minimum_evidence_level"],
+      "properties": {
+        "allowed_regions":{"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"$ref":"#/$defs/region"}},
+        "minimum_evidence_level":{"enum":["unknown","declared","provider-configured","authenticated-assertion","independently-verified"]}
+      }
+    },
+    "retention": {
+      "type":"object","additionalProperties":false,
+      "required":["minimum_days","maximum_days"],
+      "properties": {
+        "minimum_days":{"type":"integer","minimum":0,"maximum":36500},
+        "maximum_days":{"type":"integer","minimum":0,"maximum":36500}
+      }
+    },
+    "availability": {
+      "type":"object","additionalProperties":false,
+      "required":["minimum_replicas","minimum_failure_domains"],
+      "properties": {
+        "minimum_replicas":{"type":"integer","minimum":1,"maximum":16},
+        "minimum_failure_domains":{"type":"integer","minimum":1,"maximum":16}
+      }
+    }
+  }
+}

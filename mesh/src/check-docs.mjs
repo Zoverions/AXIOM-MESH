@@ -67,6 +67,10 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
+  'docs/architecture/contracts/state-placement-request.v1.schema.json',
+  'docs/architecture/contracts/state-destination-profile.v0.schema.json',
+  'docs/architecture/contracts/state-placement-policy.v0.schema.json',
+  'docs/architecture/contracts/state-placement-plan.v1.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -310,6 +314,18 @@ const REQUIRED_CONTENT = Object.freeze({
     'https://axiom.invalid/schemas/personal-agent-pack.v1.schema.json',
     'axiom-personal-agent-pack.v1',
     'secret_material_included'
+  ],
+  'docs/architecture/contracts/state-placement-request.v1.schema.json': [
+    'axiom-state-placement-request.v1'
+  ],
+  'docs/architecture/contracts/state-destination-profile.v0.schema.json': [
+    'axiom-state-destination-profile.v0'
+  ],
+  'docs/architecture/contracts/state-placement-policy.v0.schema.json': [
+    'axiom-state-placement-policy.v0'
+  ],
+  'docs/architecture/contracts/state-placement-plan.v1.schema.json': [
+    'axiom-state-placement-plan.v1'
   ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',

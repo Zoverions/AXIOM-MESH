@@ -1,0 +1,150 @@
+{
+  "schema": "axiom-state-placement-s0-vectors.v0",
+  "version": 0,
+  "now": "2026-09-11T20:00:00.000Z",
+  "cases": [
+    {
+      "name": "allow_owner_peer_ca",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:peer-ca","destination_class":"owner-peer","failure_domain":"fd:peer-ca","owner_controlled":true,"managed_provider":false}],
+      "expected": {"satisfied":true,"eligible_destination_ids":["dest:peer-ca"],"ineligible":{}}
+    },
+    {
+      "name": "allow_managed_object_ca",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:managed-ca"}],
+      "expected": {"satisfied":true,"eligible_destination_ids":["dest:managed-ca"],"ineligible":{}}
+    },
+    {
+      "name": "reject_wrong_region",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:wrong-region","regions":["US"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:wrong-region":["residency-region-mismatch"]}}
+    },
+    {
+      "name": "reject_weak_residency_evidence",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:weak-evidence","residency_evidence_level":"declared"}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:weak-evidence":["residency-evidence-insufficient"]}}
+    },
+    {
+      "name": "reject_forbidden_destination_class",
+      "request": {"permitted_destination_classes":["owner-peer"],"forbidden_destination_classes":["managed-object"]},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:forbidden-class"}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:forbidden-class":["destination-class-forbidden-by-request","destination-class-not-permitted-by-request"]}}
+    },
+    {
+      "name": "reject_policy_disallowed_destination_class",
+      "request": {},
+      "policy": {"allowed_destination_classes":["owner-peer"]},
+      "destinations": [{"destination_id":"dest:policy-class"}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:policy-class":["destination-class-disallowed-by-policy"]}}
+    },
+    {
+      "name": "reject_managed_when_policy_disallows",
+      "request": {},
+      "policy": {"managed_destinations_allowed":false},
+      "destinations": [{"destination_id":"dest:managed-denied"}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:managed-denied":["managed-destination-disallowed-by-policy"]}}
+    },
+    {
+      "name": "reject_unsupported_operation",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:no-op","allowed_operations":["cache"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:no-op":["operation-unsupported"]}}
+    },
+    {
+      "name": "reject_unsupported_purpose",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:no-purpose","allowed_purposes":["other-purpose"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:no-purpose":["purpose-unsupported"]}}
+    },
+    {
+      "name": "reject_unsupported_data_class",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:no-data","allowed_data_classes":["other-data"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:no-data":["data-class-unsupported"]}}
+    },
+    {
+      "name": "reject_confidentiality_too_weak",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:weak-conf","maximum_confidentiality":"protected"}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:weak-conf":["confidentiality-insufficient"]}}
+    },
+    {
+      "name": "reject_disclosure_mode",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:no-disclosure","disclosure_modes":["commitment-only"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:no-disclosure":["disclosure-mode-unsupported"]}}
+    },
+    {
+      "name": "reject_retention_window",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:retention","retention_days":{"minimum":30,"maximum":90}}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:retention":["retention-window-unsupported"]}}
+    },
+    {
+      "name": "reject_freshness",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:stale","maximum_lag_ms":600000}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:stale":["freshness-unsupported"]}}
+    },
+    {
+      "name": "reject_consistency",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:consistency","consistency_classes":["immutable-object"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:consistency":["consistency-unsupported"]}}
+    },
+    {
+      "name": "reject_encryption_profile",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:encryption","encryption_profiles":["profile:other"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:encryption":["encryption-profile-unsupported"]}}
+    },
+    {
+      "name": "reject_recovery_importance",
+      "request": {},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:recovery","recovery_importance_supported":["ordinary"]}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:recovery":["recovery-importance-unsupported"]}}
+    },
+    {
+      "name": "reject_cost_ceiling",
+      "request": {"cost_ceiling_units":50},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:costly","cost_units":100}],
+      "expected": {"satisfied":false,"eligible_destination_ids":[],"ineligible":{"dest:costly":["cost-ceiling-exceeded"]}}
+    },
+    {
+      "name": "unsatisfied_replica_count",
+      "request": {"availability_target":{"minimum_replicas":2,"minimum_failure_domains":1}},
+      "policy": {},
+      "destinations": [{"destination_id":"dest:one","failure_domain":"fd:one"}],
+      "expected": {"satisfied":false,"eligible_destination_ids":["dest:one"],"ineligible":{}}
+    },
+    {
+      "name": "unsatisfied_failure_domain_diversity",
+      "request": {"availability_target":{"minimum_replicas":2,"minimum_failure_domains":2}},
+      "policy": {},
+      "destinations": [
+        {"destination_id":"dest:a","failure_domain":"fd:shared"},
+        {"destination_id":"dest:b","failure_domain":"fd:shared"}
+      ],
+      "expected": {"satisfied":false,"eligible_destination_ids":["dest:a","dest:b"],"ineligible":{}}
+    }
+  ]
+}
