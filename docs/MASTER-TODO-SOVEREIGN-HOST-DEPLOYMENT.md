@@ -152,6 +152,8 @@ These are active/draft lines with different historical bases. Before implementat
 - [ ] Extend resource envelopes/owner sovereignty reserve below application level where practical rather than creating another policy vocabulary.
 - [ ] Define host service isolation and least privilege.
 - [ ] Define local model/runtime service isolation.
+- [ ] Define a future host-assisted flow-observation profile that can supply independently verifiable information-flow evidence without making application self-report authoritative.
+- [ ] Keep host enforcement in separately gated F5 work; F0/F1 provides no host observer, kernel attachment, or host enforcement claim.
 - [ ] Add hardware compatibility matrix only from actually tested hardware.
 - [ ] Produce reproducible installation proof before any production clean-install claim.
 
@@ -226,6 +228,7 @@ These are active/draft lines with different historical bases. Before implementat
 - [ ] Define provider/model allowlists.
 - [ ] Define cost and latency ceilings.
 - [ ] Define fallback hierarchy and explicit escalation policy.
+- [ ] Require remote-provider eligibility to consume a declared flow-support posture; future host-assisted observation/enforcement remains an F5 dependency rather than something F0/F1 can attest.
 - [ ] Preserve local operation when Internet/cloud providers are unavailable where local capabilities permit it.
 - [ ] Add provider failure, billing-limit, policy-conflict, and data-egress negative tests.
 

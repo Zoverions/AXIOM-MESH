@@ -2,7 +2,7 @@
 
 **Status:** subordinate execution queue; documentation/contract work only until existing capability, policy, runtime, test, and promotion gates are satisfied
 
-**Updated:** 2026-09-05
+**Updated:** 2026-09-10
 
 **Parent workstreams:** `ORCH-001`, `RUNTIME-001`, `RUNTIME-002`, `AI-001`, `ROUTE-001`, AXIOM Studio, MCP/A2A laboratories, multi-host dispatch, and Circle governance.
 
@@ -16,6 +16,8 @@ This queue does not create an alternate authority system and does not promote an
 - [x] Separate assurance evidence, curation, workflow state, capability promotion, and local authorization.
 - [x] Reject a universal composite trust/reputation score as base authority.
 - [x] Add contract/documentation verification that rejects installation-as-authority, handoff-as-authority, curation-as-assurance, self-asserted review/promotion labels, mutable source pins, and silent permission widening.
+- [x] Land F0/F1 as an inert compatibility/evaluator slice only: supplied `FlowContext` contracts plus deterministic deny-or-eligibility evaluation, with no live containment claim, credential redemption, egress activation, or capability promotion.
+- [ ] Require every future runtime/catalog entry that can handle protected data or consequential external actions to declare its information-flow support posture and brokered credential strategy before activation.
 
 ## P1 — freeze draft coordination contracts
 
@@ -63,6 +65,7 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 - [ ] Support the six initial integration classes: agent runtime, model provider, tool/service connector, protocol adapter, compute backend, and evidence/oracle source.
 - [ ] Preserve source/release/artifact/SBOM/licence provenance and immutable pins.
 - [ ] Parse requested capability classifications **and exact actions**, purposes, destinations, data classes, credentials, network needs/destinations, resource bounds, currency-bound cost ceilings, orchestration behavior, independent-child-authority requests, and remote-execution requests.
+- [ ] Add immutable catalog declarations for information-flow support level and credential handling strategy; an entry must state whether credentials are absent, externally brokered/surrogated, or unsupported rather than implying ambient credential access.
 - [ ] Import artifacts inertly with zero machine principal, grant, credential, egress, or execution authority.
 - [ ] Add static scans for hidden bootstrap, secret requests, path traversal, undeclared network use, hidden binaries, prompt/tool-description injection, and permission drift.
 - [ ] Make update diffs visible across source, digest, SBOM, schema, actions, permissions, destinations, credentials, orchestration behavior, and evidence assumptions.
@@ -117,6 +120,7 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 
 - [ ] Add the first least-privilege AI provider (`AI-001`) under the same catalog/provenance model.
 - [ ] Add one low-risk external tool/service connector with dedicated purpose-bound credential and exact destination allowlist.
+- [ ] Require each provider/connector profile to declare how F0/F1-style flow state would be preserved at its boundary and to use a separately gated brokered/surrogate credential strategy rather than exposing reusable credential material to an agent runtime.
 - [ ] Treat provider/tool output as external evidence/data rather than automatically verified truth.
 - [ ] Add MCP server and client profiles only after the existing pinned laboratory requirements pass.
 - [ ] Add A2A task/artifact translation only after task semantics, remote peer admission, and evidence handling are stable.
