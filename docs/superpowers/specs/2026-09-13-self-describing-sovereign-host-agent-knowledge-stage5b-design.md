@@ -50,7 +50,8 @@ The repository already contains the correct primitives to extend rather than rep
 3. `agent-skills/index.json` is a canonical repository-native skill registry and already records properties such as `read_only`, `executes_actions`, and `grants_authority`.
 4. `agent-skills/axiom-authority-auditor/SKILL.md` demonstrates a portable Agent Skills-format artifact whose presence does not create permission.
 5. `agent-readiness/build.mjs` already publishes a self-contained skill artifact and computes a SHA-256 digest.
-6. The discovery surface already separates descriptive machine readability from runtime authority and production claims.
+6. `mesh/src/lib/canonical.mjs` already provides strict canonical JSON and object-digest primitives suitable for deterministic schema-bound digests.
+7. The discovery surface already separates descriptive machine readability from runtime authority and production claims.
 
 The new subsystem should therefore be a host-state projection layer over these foundations, not a second agent-instruction architecture.
 
@@ -174,6 +175,29 @@ Compatibility states are closed and explicit:
 - `UNKNOWN`
 
 `UNKNOWN` MUST NOT be silently upgraded to `CURRENT` for consequential procedures.
+
+### Canonicalization and digest semantics
+
+S0 MUST reuse the repository's existing strict canonical JSON primitives in `mesh/src/lib/canonical.mjs` (`canonicalize`, `canonicalJson`, `sha256`, and `digestObject`) rather than define a second JSON canonicalization algorithm.
+
+Digest strings in this subsystem use the form `sha256:<64 lowercase hex characters>`.
+
+`source_state_digest` is computed from the fully validated deterministic installed-state input object:
+
+```text
+source_state_digest = "sha256:" + digestObject(validated_source_state)
+```
+
+`profile_digest` MUST NOT hash itself. It is computed over the complete validated Host Profile with `profile_digest` omitted, using the same canonical JSON rules:
+
+```text
+profile_without_digest = host_profile minus top-level profile_digest
+profile_digest = "sha256:" + digestObject(profile_without_digest)
+```
+
+Verification recomputes the digest after removing only the top-level `profile_digest` field and requires exact equality. Unknown fields, non-finite numbers, sparse arrays, symbol-keyed state, non-enumerable state, unsupported prototypes, or other values rejected by the existing canonicalizer MUST fail validation rather than be normalized differently by this subsystem.
+
+The canonicalization algorithm is therefore an existing repository dependency of the contract. Changing that algorithm later requires an explicit schema/contract compatibility decision; silently changing Host Profile digest semantics is not permitted.
 
 ## 8. Stable `axiom-host` skill
 
@@ -339,6 +363,7 @@ Before any real host integration, the following fixtures are required.
 10. **Projection containment** — fixture projection cannot escape the approved disposable test root by absolute paths, traversal, symlink tricks, or malformed adapter configuration.
 11. **Negative authority test** — skill/profile presence, valid digest, successful discovery, and successful fixture command resolution each remain insufficient to satisfy an AXIOM authorization predicate.
 12. **Revocation/currentness race** — a profile/skill generated before a component-state or authority-relevant change cannot renew or extend consequential permission.
+13. **Digest determinism** — semantically identical validated source objects with different object key insertion order produce identical source/profile digests; profile self-digesting is impossible by contract.
 
 ## 16. Staged delivery
 
@@ -347,7 +372,7 @@ Before any real host integration, the following fixtures are required.
 Allowed scope after a separate implementation plan is approved:
 
 - JSON schemas;
-- canonicalization rules;
+- canonicalization rules using the existing canonical library;
 - deterministic profile evaluator/generator over fixtures;
 - compatibility evaluator;
 - closed decision enums;
@@ -402,6 +427,7 @@ The design is ready to move to implementation planning when review confirms all 
 - canonical skill content and generated host state are clearly separated;
 - installed component state controls descriptive projection eligibility;
 - version/currentness outcomes are explicit and fail closed;
+- profile/source digests reuse the repository canonical JSON implementation and avoid self-hashing ambiguity;
 - real harness/home-directory writes are excluded from S0/S1;
 - secrets and personal data are excluded from the profile contract;
 - negative authority semantics are testable;
