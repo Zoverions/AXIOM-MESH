@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/state-placement-policy.v0.schema.json",
+  "title": "AXIOM State Placement Policy v0",
+  "description": "Inert policy constraints for pure storage-placement eligibility evaluation. The policy grants no provider or network authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","policy_id","owner_scope","allowed_operations","allowed_destination_classes","forbidden_destination_ids","minimum_residency_evidence_level","managed_destinations_allowed","maximum_eligible_destinations","maximum_plan_lifetime_ms","created_at","expires_at","authority_effect","network_effect","provider_effect","canonical_state_effect","policy_digest"],
+  "properties": {
+    "schema": {"const":"axiom-state-placement-policy.v0"},
+    "version": {"const":0},
+    "status": {"const":"inert-contract-laboratory"},
+    "policy_id": {"$ref":"#/$defs/id"},
+    "owner_scope": {"$ref":"#/$defs/id"},
+    "allowed_operations": {"type":"array","minItems":1,"maxItems":5,"uniqueItems":true,"items":{"enum":["replicate","cache","archive","export-staging","restore-staging"]}},
+    "allowed_destination_classes": {"type":"array","minItems":1,"maxItems":5,"uniqueItems":true,"items":{"enum":["owner-local","owner-peer","managed-object","institutional-escrow","cold-archive"]}},
+    "forbidden_destination_ids": {"type":"array","maxItems":64,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
+    "minimum_residency_evidence_level": {"enum":["unknown","declared","provider-configured","authenticated-assertion","independently-verified"]},
+    "managed_destinations_allowed": {"type":"boolean"},
+    "maximum_eligible_destinations": {"type":"integer","minimum":1,"maximum":64},
+    "maximum_plan_lifetime_ms": {"type":"integer","minimum":1,"maximum":900000},
+    "created_at": {"$ref":"#/$defs/time"},
+    "expires_at": {"$ref":"#/$defs/time"},
+    "authority_effect": {"const":"none"},
+    "network_effect": {"const":"none"},
+    "provider_effect": {"const":"none"},
+    "canonical_state_effect": {"const":"none"},
+    "policy_digest": {"$ref":"#/$defs/digest"}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "digest": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "time": {"type":"string","format":"date-time","maxLength":64}
+  }
+}
