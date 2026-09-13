@@ -68,6 +68,15 @@ test('hard residency constraints dominate cheaper destinations', () => {
   assert.equal(plan.satisfied, true);
 });
 
+test('residency-constrained requests reject destinations that also include an unapproved region', () => {
+  const policy = makePolicy();
+  const request = makeRequest(policy, { residency: { allowed_regions: ['CA'], minimum_evidence_level: 'provider-configured' } });
+  const mixed = makeDestination({ destination_id: 'dest:mixed', regions: ['CA', 'US'] });
+  const plan = evaluateStatePlacement({ request, policy, destinations: [mixed], now: NOW });
+  assert.equal(plan.satisfied, false);
+  assert.deepEqual(plan.ineligible_destinations[0].reason_codes, ['residency-region-mismatch']);
+});
+
 test('eligibility output is deterministic regardless of input destination order', () => {
   const policy = makePolicy();
   const request = makeRequest(policy, { availability_target: { minimum_replicas: 2, minimum_failure_domains: 2 } });
