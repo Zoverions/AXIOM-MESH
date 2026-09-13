@@ -5,29 +5,9 @@ import { evaluateStatePlacement } from '../src/lib/state-placement-policy.mjs';
 
 const NOW = '2026-09-11T20:00:00.000Z';
 const LATER = '2026-09-11T20:10:00.000Z';
-const POLICY_PROFILE = `sha256:${'1'.repeat(64)}`;
 
 function withDigest(value, field) {
   return { ...value, [field]: contractDigest(value, field) };
-}
-
-function makeRequest(overrides = {}) {
-  return withDigest({
-    schema: 'axiom-state-placement-request.v1', version: 1, status: 'inert-contract-laboratory',
-    request_id: 'placement:req:policy-test', owner_scope: 'owner:fixture', source_state_family: 'memory.graph',
-    operation_class: 'replicate', purpose: 'owner-recovery', data_class: 'owner-private-memory',
-    confidentiality_requirement: 'sensitive', disclosure_ceiling: 'ciphertext-only',
-    residency: { allowed_regions: ['CA'], minimum_evidence_level: 'provider-configured' },
-    permitted_destination_classes: ['managed-object', 'owner-peer'], forbidden_destination_classes: [],
-    retention: { minimum_days: 7, maximum_days: 365 },
-    availability_target: { minimum_replicas: 1, minimum_failure_domains: 1 },
-    maximum_lag_ms: 300000, consistency_class: 'bounded-lag-replica',
-    encryption_profile: 'profile:encrypted-replica-v1', recovery_importance: 'important',
-    cost_ceiling_units: 1000, consequence_class: 'C2', policy_profile_digest: POLICY_PROFILE,
-    created_at: NOW, expires_at: LATER, contains_secret_material: false,
-    authority_effect: 'none', network_effect: 'none', provider_effect: 'none', canonical_state_effect: 'none',
-    ...overrides
-  }, 'request_digest');
 }
 
 function makePolicy(overrides = {}) {
@@ -41,6 +21,25 @@ function makePolicy(overrides = {}) {
     authority_effect: 'none', network_effect: 'none', provider_effect: 'none', canonical_state_effect: 'none',
     ...overrides
   }, 'policy_digest');
+}
+
+function makeRequest(policy = makePolicy(), overrides = {}) {
+  return withDigest({
+    schema: 'axiom-state-placement-request.v1', version: 1, status: 'inert-contract-laboratory',
+    request_id: 'placement:req:policy-test', owner_scope: 'owner:fixture', source_state_family: 'memory.graph',
+    operation_class: 'replicate', purpose: 'owner-recovery', data_class: 'owner-private-memory',
+    confidentiality_requirement: 'sensitive', disclosure_ceiling: 'ciphertext-only',
+    residency: { allowed_regions: ['CA'], minimum_evidence_level: 'provider-configured' },
+    permitted_destination_classes: ['managed-object', 'owner-peer'], forbidden_destination_classes: [],
+    retention: { minimum_days: 7, maximum_days: 365 },
+    availability_target: { minimum_replicas: 1, minimum_failure_domains: 1 },
+    maximum_lag_ms: 300000, consistency_class: 'bounded-lag-replica',
+    encryption_profile: 'profile:encrypted-replica-v1', recovery_importance: 'important',
+    cost_ceiling_units: 1000, consequence_class: 'C2', policy_profile_digest: policy.policy_digest,
+    created_at: NOW, expires_at: LATER, contains_secret_material: false,
+    authority_effect: 'none', network_effect: 'none', provider_effect: 'none', canonical_state_effect: 'none',
+    ...overrides
+  }, 'request_digest');
 }
 
 function makeDestination(overrides = {}) {
@@ -59,22 +58,19 @@ function makeDestination(overrides = {}) {
 }
 
 test('hard residency constraints dominate cheaper destinations', () => {
-  const request = makeRequest({ cost_ceiling_units: 1000 });
   const policy = makePolicy();
+  const request = makeRequest(policy, { cost_ceiling_units: 1000 });
   const cheapUs = makeDestination({ destination_id: 'dest:cheap-us', failure_domain: 'fd:us:1', regions: ['US'], cost_units: 1 });
   const ca = makeDestination({ destination_id: 'dest:ca', failure_domain: 'fd:ca:1', regions: ['CA'], cost_units: 500 });
   const plan = evaluateStatePlacement({ request, policy, destinations: [cheapUs, ca], now: NOW });
   assert.deepEqual(plan.eligible_destinations.map((item) => item.destination_id), ['dest:ca']);
-  assert.deepEqual(
-    plan.ineligible_destinations.find((item) => item.destination_id === 'dest:cheap-us').reason_codes,
-    ['residency-region-mismatch']
-  );
+  assert.deepEqual(plan.ineligible_destinations.find((item) => item.destination_id === 'dest:cheap-us').reason_codes, ['residency-region-mismatch']);
   assert.equal(plan.satisfied, true);
 });
 
 test('eligibility output is deterministic regardless of input destination order', () => {
-  const request = makeRequest({ availability_target: { minimum_replicas: 2, minimum_failure_domains: 2 } });
   const policy = makePolicy();
+  const request = makeRequest(policy, { availability_target: { minimum_replicas: 2, minimum_failure_domains: 2 } });
   const a = makeDestination({ destination_id: 'dest:a', failure_domain: 'fd:a' });
   const b = makeDestination({ destination_id: 'dest:b', failure_domain: 'fd:b' });
   const first = evaluateStatePlacement({ request, policy, destinations: [b, a], now: NOW });
@@ -85,18 +81,13 @@ test('eligibility output is deterministic regardless of input destination order'
 });
 
 test('all failing hard constraints are reported with closed sorted reason codes', () => {
-  const request = makeRequest({
-    permitted_destination_classes: ['owner-peer'],
-    forbidden_destination_classes: ['managed-object'],
-    cost_ceiling_units: 10,
-    maximum_lag_ms: 100,
-    recovery_importance: 'critical'
-  });
   const policy = makePolicy({
-    allowed_destination_classes: ['owner-peer'],
-    forbidden_destination_ids: ['dest:bad'],
-    managed_destinations_allowed: false,
-    minimum_residency_evidence_level: 'authenticated-assertion'
+    allowed_destination_classes: ['owner-peer'], forbidden_destination_ids: ['dest:bad'],
+    managed_destinations_allowed: false, minimum_residency_evidence_level: 'authenticated-assertion'
+  });
+  const request = makeRequest(policy, {
+    permitted_destination_classes: ['owner-peer'], forbidden_destination_classes: ['managed-object'],
+    cost_ceiling_units: 10, maximum_lag_ms: 100, recovery_importance: 'critical'
   });
   const bad = makeDestination({
     destination_id: 'dest:bad', regions: ['US'], residency_evidence_level: 'declared',
@@ -109,48 +100,35 @@ test('all failing hard constraints are reported with closed sorted reason codes'
   const plan = evaluateStatePlacement({ request, policy, destinations: [bad], now: NOW });
   assert.equal(plan.satisfied, false);
   assert.deepEqual(plan.ineligible_destinations[0].reason_codes, [
-    'confidentiality-insufficient',
-    'consistency-unsupported',
-    'cost-ceiling-exceeded',
-    'data-class-unsupported',
-    'destination-class-disallowed-by-policy',
-    'destination-class-forbidden-by-request',
-    'destination-class-not-permitted-by-request',
-    'destination-id-forbidden-by-policy',
-    'disclosure-mode-unsupported',
-    'encryption-profile-unsupported',
-    'freshness-unsupported',
-    'managed-destination-disallowed-by-policy',
-    'operation-unsupported',
-    'purpose-unsupported',
-    'recovery-importance-unsupported',
-    'residency-evidence-insufficient',
-    'residency-region-mismatch',
-    'retention-window-unsupported'
+    'confidentiality-insufficient','consistency-unsupported','cost-ceiling-exceeded','data-class-unsupported',
+    'destination-class-disallowed-by-policy','destination-class-forbidden-by-request','destination-class-not-permitted-by-request',
+    'destination-id-forbidden-by-policy','disclosure-mode-unsupported','encryption-profile-unsupported','freshness-unsupported',
+    'managed-destination-disallowed-by-policy','operation-unsupported','purpose-unsupported','recovery-importance-unsupported',
+    'residency-evidence-insufficient','residency-region-mismatch','retention-window-unsupported'
   ]);
 });
 
+test('policy digest mismatch rejects the entire evaluation', () => {
+  const policy = makePolicy();
+  const request = makeRequest(policy, { policy_profile_digest: `sha256:${'f'.repeat(64)}` });
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }), /policy_profile_digest/);
+});
+
 test('owner-scope mismatch rejects the entire evaluation', () => {
-  const request = makeRequest({ owner_scope: 'owner:request' });
   const policy = makePolicy({ owner_scope: 'owner:other' });
-  assert.throws(
-    () => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }),
-    /policy owner scope does not match request owner scope/
-  );
+  const request = makeRequest(policy, { owner_scope: 'owner:request' });
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }), /policy owner scope does not match request owner scope/);
 });
 
 test('operation disallowed by policy rejects the entire evaluation', () => {
-  const request = makeRequest({ operation_class: 'replicate' });
   const policy = makePolicy({ allowed_operations: ['cache'] });
-  assert.throws(
-    () => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }),
-    /operation is disallowed by placement policy/
-  );
+  const request = makeRequest(policy, { operation_class: 'replicate' });
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW }), /operation is disallowed by placement policy/);
 });
 
 test('availability target can remain unsatisfied without weakening constraints', () => {
-  const request = makeRequest({ availability_target: { minimum_replicas: 2, minimum_failure_domains: 2 } });
   const policy = makePolicy();
+  const request = makeRequest(policy, { availability_target: { minimum_replicas: 2, minimum_failure_domains: 2 } });
   const only = makeDestination({ destination_id: 'dest:only', failure_domain: 'fd:only' });
   const plan = evaluateStatePlacement({ request, policy, destinations: [only], now: NOW });
   assert.equal(plan.satisfied, false);
@@ -160,37 +138,47 @@ test('availability target can remain unsatisfied without weakening constraints',
 });
 
 test('policy candidate ceiling fails closed instead of truncating eligible destinations', () => {
-  const request = makeRequest({ availability_target: { minimum_replicas: 1, minimum_failure_domains: 1 } });
   const policy = makePolicy({ maximum_eligible_destinations: 2 });
+  const request = makeRequest(policy);
   const destinations = [
     makeDestination({ destination_id: 'dest:c', failure_domain: 'fd:c' }),
     makeDestination({ destination_id: 'dest:a', failure_domain: 'fd:a' }),
     makeDestination({ destination_id: 'dest:b', failure_domain: 'fd:b' })
   ];
-  assert.throws(
-    () => evaluateStatePlacement({ request, policy, destinations, now: NOW }),
-    /maximum_eligible_destinations|eligible destination ceiling/
-  );
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations, now: NOW }), /maximum_eligible_destinations|eligible destination ceiling/);
 });
 
 test('duplicate destination identities and duplicate profile digests fail closed', () => {
-  const request = makeRequest();
   const policy = makePolicy();
+  const request = makeRequest(policy);
   const a = makeDestination({ destination_id: 'dest:dup' });
   const b = makeDestination({ destination_id: 'dest:dup', failure_domain: 'fd:other' });
   assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [a, b], now: NOW }), /duplicate destination_id/);
-
   const first = makeDestination({ destination_id: 'dest:first' });
   const second = { ...makeDestination({ destination_id: 'dest:second' }), profile_digest: first.profile_digest };
-  assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [first, second], now: NOW }), /duplicate profile_digest|profile_digest/);
+  assert.throws(() => evaluateStatePlacement({ request, policy, destinations: [first, second], now: NOW }), /profile_digest/);
 });
 
 test('more than 64 candidate destinations fails closed', () => {
-  const request = makeRequest();
   const policy = makePolicy({ maximum_eligible_destinations: 64 });
+  const request = makeRequest(policy);
   const destinations = Array.from({ length: 65 }, (_, index) => makeDestination({
-    destination_id: `dest:${String(index).padStart(2, '0')}`,
-    failure_domain: `fd:${String(index).padStart(2, '0')}`
+    destination_id: `dest:${String(index).padStart(2, '0')}`, failure_domain: `fd:${String(index).padStart(2, '0')}`
   }));
   assert.throws(() => evaluateStatePlacement({ request, policy, destinations, now: NOW }), /64|candidate/);
+});
+
+test('returned placement plan is explicitly non-authorizing', () => {
+  const policy = makePolicy();
+  const request = makeRequest(policy);
+  const plan = evaluateStatePlacement({ request, policy, destinations: [makeDestination()], now: NOW });
+  assert.deepEqual(
+    {
+      authority_effect: plan.authority_effect,
+      network_effect: plan.network_effect,
+      provider_effect: plan.provider_effect,
+      canonical_state_effect: plan.canonical_state_effect
+    },
+    { authority_effect: 'none', network_effect: 'none', provider_effect: 'none', canonical_state_effect: 'none' }
+  );
 });
