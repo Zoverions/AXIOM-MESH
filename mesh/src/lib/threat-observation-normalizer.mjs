@@ -11,6 +11,7 @@ import {
 
 const MAX_SOURCE_BYTES = 131_072;
 const MAX_CLAIMS = 64;
+const MAX_CORPUS_OBSERVATIONS = 4096;
 const SOURCE_FIELDS = new Set([
   'source_class',
   'source_identity_or_locator',
@@ -180,8 +181,67 @@ export function linkObservationLifecycle(observations) {
   }
 
   const verified = observations.map(verifyThreatObservation);
+  validateObservationIdentityAndLinks(verified);
+  return [...verified].sort(compareObservations);
+}
+
+export function mergeOfflineObservationCorpus(existing, incoming, { now } = {}) {
+  if (!Array.isArray(existing) || !Array.isArray(incoming)) {
+    throw new ValidationError('existing and incoming must be arrays');
+  }
+  if (existing.length + incoming.length > MAX_CORPUS_OBSERVATIONS) {
+    throw new ValidationError(`observation corpus must contain at most ${MAX_CORPUS_OBSERVATIONS} entries`);
+  }
+  assertCanonicalTimestamp(now, 'now');
+
+  const all = [...existing, ...incoming].map(verifyThreatObservation);
+  const byDigest = new Map();
   const byId = new Map();
-  for (const observation of verified) {
+
+  for (const observation of all) {
+    const existingById = byId.get(observation.observation_id);
+    if (existingById && existingById.observation_digest !== observation.observation_digest) {
+      throw new ValidationError(`observation substitution detected for ${observation.observation_id}: different digest`);
+    }
+    byId.set(observation.observation_id, observation);
+    if (!byDigest.has(observation.observation_digest)) {
+      byDigest.set(observation.observation_digest, observation);
+    }
+  }
+
+  const unique = [...byDigest.values()];
+  validateObservationIdentityAndLinks(unique);
+
+  const supersededTargets = new Set();
+  const contradicted = new Set();
+  for (const observation of unique) {
+    for (const targetId of observation.supersedes_observation_ids) {
+      if (byId.has(targetId)) supersededTargets.add(targetId);
+    }
+    for (const targetId of observation.contradicts_observation_ids) {
+      if (byId.has(targetId)) {
+        contradicted.add(targetId);
+        contradicted.add(observation.observation_id);
+      }
+    }
+  }
+
+  return unique
+    .sort(compareObservations)
+    .map(observation => ({
+      observation,
+      derived_lifecycle_state: deriveLifecycleState({
+        observation,
+        now,
+        supersededTargets,
+        contradicted
+      })
+    }));
+}
+
+function validateObservationIdentityAndLinks(observations) {
+  const byId = new Map();
+  for (const observation of observations) {
     const existing = byId.get(observation.observation_id);
     if (existing && existing.observation_digest !== observation.observation_digest) {
       throw new ValidationError(`observation substitution detected for ${observation.observation_id}`);
@@ -189,7 +249,7 @@ export function linkObservationLifecycle(observations) {
     byId.set(observation.observation_id, observation);
   }
 
-  for (const observation of verified) {
+  for (const observation of observations) {
     for (const linkedId of [
       ...observation.supersedes_observation_ids,
       ...observation.contradicts_observation_ids
@@ -204,8 +264,16 @@ export function linkObservationLifecycle(observations) {
       }
     }
   }
+}
 
-  return [...verified].sort(compareObservations);
+function deriveLifecycleState({ observation, now, supersededTargets, contradicted }) {
+  if (observation.lifecycle_state !== 'current') return observation.lifecycle_state;
+  if (supersededTargets.has(observation.observation_id)) return 'superseded';
+  if (contradicted.has(observation.observation_id)) return 'contradicted';
+  if (Date.parse(observation.expiry_or_review_at) <= Date.parse(now)) {
+    return 'expired_pending_reassessment';
+  }
+  return 'current';
 }
 
 function assertExactFields(object, fields, name) {
