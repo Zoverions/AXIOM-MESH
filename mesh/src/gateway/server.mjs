@@ -609,7 +609,7 @@ function requireScope(principal, scope) {
 }
 
 function boundedIntegerQuery(value, fallback, { label, min, max }) {
-  if (value === null || value === '') return fallback;
+  if (value === null) return fallback;
   if (!/^(0|[1-9][0-9]*)$/.test(value)) {
     throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
   }
