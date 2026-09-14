@@ -1,0 +1,81 @@
+{
+  "source_class": "vendor_security_report",
+  "source_identity_or_locator": "https://www.anthropic.com/threat-intelligence-report-september-2026",
+  "source_version_or_published_at": "September 2026",
+  "retrieved_at": "2026-09-10T20:00:00.000Z",
+  "source_text": "Sanitized fixture summary: the report describes multi-agent offensive workflows, adaptive detection evasion, credential exposure through an evaluation path, opaque model-routing substitution, poisoned recovery material, privacy-invasive data fusion, provenance laundering, and adversarial workflow state. This fixture contains paraphrased security claims only and no operational exploit instructions.",
+  "claims": [
+    {
+      "observation_id": "obs:anthropic:multi-agent-operations",
+      "claim_class": "autonomous_multi_agent_attack",
+      "summary": "The report describes coordinated AI-assisted operations spanning multiple attack stages with limited human intervention.",
+      "indicators": ["multi_agent_workflow", "long_running_operation"],
+      "affected_technology_or_boundary": ["agent_runtime", "external_network_boundary"],
+      "reported_preconditions": ["attacker can direct multiple AI-assisted operational roles"],
+      "reported_effects": ["lower operating cost and faster multi-stage attack execution"]
+    },
+    {
+      "observation_id": "obs:anthropic:adaptive-evasion",
+      "claim_class": "adaptive_detection_evasion",
+      "summary": "The report describes tooling that was repeatedly changed in response to detection results.",
+      "indicators": ["detection_feedback", "iterative_tool_change"],
+      "affected_technology_or_boundary": ["behavior_monitor", "security_detection"],
+      "reported_preconditions": ["attacker receives feedback about whether a technique was detected"],
+      "reported_effects": ["static signatures become less reliable as the attacker adapts"]
+    },
+    {
+      "observation_id": "obs:anthropic:evaluation-credential-theft",
+      "claim_class": "credential_exfiltration_attempt",
+      "summary": "The report describes adversarial content inducing an automated evaluation path to disclose provider credentials.",
+      "indicators": ["evaluation_sandbox", "prompt_injection", "provider_credential"],
+      "affected_technology_or_boundary": ["evaluation_harness", "provider_credential_boundary"],
+      "reported_preconditions": ["adversarial source content reaches an automated evaluator with credential access"],
+      "reported_effects": ["provider credential disclosure"]
+    },
+    {
+      "observation_id": "obs:anthropic:opaque-model-proxy",
+      "claim_class": "provider_routing_substitution",
+      "summary": "The report describes intermediary services that can substitute requested model providers while collecting exchanges.",
+      "indicators": ["provider_substitution", "opaque_proxy"],
+      "affected_technology_or_boundary": ["future_provider_adapter", "provider_provenance"],
+      "reported_preconditions": ["requests pass through an intermediary that can alter routing without transparent evidence"],
+      "reported_effects": ["provider identity and confidentiality expectations can diverge from user intent"]
+    },
+    {
+      "observation_id": "obs:anthropic:poisoned-backup",
+      "claim_class": "recovery_persistence",
+      "summary": "The report describes recovery material intentionally modified so compromise could return after restoration.",
+      "indicators": ["recovery_media", "persistence_after_restore"],
+      "affected_technology_or_boundary": ["recovery", "backup_integrity"],
+      "reported_preconditions": ["restored executable state is trusted without independent compromise checks"],
+      "reported_effects": ["restored environment can reintroduce malicious persistence"]
+    },
+    {
+      "observation_id": "obs:anthropic:data-fusion-surveillance",
+      "claim_class": "privacy_reconstruction",
+      "summary": "The report describes AI-assisted fusion of multiple datasets to identify and track people.",
+      "indicators": ["cross_dataset_linkage", "identity_inference"],
+      "affected_technology_or_boundary": ["privacy_projection", "analytics_boundary"],
+      "reported_preconditions": ["multiple datasets can be correlated at sufficient granularity"],
+      "reported_effects": ["otherwise ordinary records can become identifying surveillance data"]
+    },
+    {
+      "observation_id": "obs:anthropic:provenance-laundering",
+      "claim_class": "provenance_laundering",
+      "summary": "The report describes AI-assisted creation of false personas and attribution-stripped material intended to appear independently sourced.",
+      "indicators": ["false_persona", "attribution_removal", "fabricated_institutional_context"],
+      "affected_technology_or_boundary": ["provenance", "external_content"],
+      "reported_preconditions": ["consumers cannot independently verify source lineage"],
+      "reported_effects": ["fabricated or laundered material can appear more authoritative than its origin supports"]
+    },
+    {
+      "observation_id": "obs:anthropic:persistent-workflow-state",
+      "claim_class": "adversarial_persistent_context",
+      "summary": "The report describes reusable workflow state carrying operational instructions and source lists across repeated activity.",
+      "indicators": ["persistent_instruction_state", "reusable_operational_context"],
+      "affected_technology_or_boundary": ["agent_memory", "runtime_context"],
+      "reported_preconditions": ["persistent workflow state is admitted without bounded provenance and authority review"],
+      "reported_effects": ["adversarial doctrine can persist across otherwise separate agent runs"]
+    }
+  ]
+}
