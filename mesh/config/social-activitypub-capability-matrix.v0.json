@@ -1,0 +1,80 @@
+{
+  "schema": "axiom-social-activitypub-capability-matrix.v0",
+  "version": 0,
+  "status": "truthful-implementation-matrix",
+  "runtime_activation": false,
+  "entries": [
+    {
+      "axiom_semantic": "social.publication.create",
+      "axiom_status": "implemented-local-no-network",
+      "activitypub_mapping": "Create",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.publication.supersede",
+      "axiom_status": "implemented-local-no-network",
+      "activitypub_mapping": "Update",
+      "outbound_adapter_status": "blocked-pending-stable-object-binding"
+    },
+    {
+      "axiom_semantic": "social.publication.retract",
+      "axiom_status": "implemented-local-no-network",
+      "activitypub_mapping": "Delete",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.follow.request",
+      "axiom_status": "specified-not-current-runtime-action",
+      "activitypub_mapping": "Follow",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.follow.accept",
+      "axiom_status": "specified-not-current-runtime-action",
+      "activitypub_mapping": "Accept",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.follow.reject",
+      "axiom_status": "specified-not-current-runtime-action",
+      "activitypub_mapping": "Reject",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.follow.undo",
+      "axiom_status": "specified-not-current-runtime-action",
+      "activitypub_mapping": "Undo",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.reshare",
+      "axiom_status": "specified-not-current-runtime-action",
+      "activitypub_mapping": "Announce",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "social.like",
+      "axiom_status": "specified-not-current-runtime-action",
+      "activitypub_mapping": "Like",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "personal.interaction.boundary",
+      "axiom_status": "specified-user-sovereign-design",
+      "activitypub_mapping": "Block",
+      "outbound_adapter_status": "specified-inert"
+    },
+    {
+      "axiom_semantic": "content.report",
+      "axiom_status": "private-remote-abuse-foundation-not-public-runtime-action",
+      "activitypub_mapping": "Flag",
+      "outbound_adapter_status": "specified-inert"
+    }
+  ],
+  "global_non_claims": {
+    "semantic_mapping_means_runtime_implemented": false,
+    "local_action_means_federation_enabled": false,
+    "remote_abuse_foundation_means_public_moderation_api": false,
+    "specified_follow_semantics_mean_live_follow_protocol": false
+  }
+}
