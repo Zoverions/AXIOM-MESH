@@ -1,7 +1,6 @@
 import {
   assertPlainObject,
   assertString,
-  canonicalJson,
   sha256,
   ValidationError
 } from './canonical.mjs';
@@ -196,9 +195,7 @@ export function linkObservationLifecycle(observations) {
       ...observation.contradicts_observation_ids
     ]) {
       const target = byId.get(linkedId);
-      if (!target) {
-        throw new ValidationError(`lifecycle link target is missing: ${linkedId}`);
-      }
+      if (!target) continue;
       if (
         target.source_identity_or_locator !== observation.source_identity_or_locator ||
         target.source_class !== observation.source_class
@@ -212,8 +209,7 @@ export function linkObservationLifecycle(observations) {
 }
 
 function assertExactFields(object, fields, name) {
-  const keys = Object.keys(object);
-  for (const key of keys) {
+  for (const key of Object.keys(object)) {
     if (!fields.has(key)) throw new ValidationError(`${name} contains unsupported field: ${key}`);
   }
   for (const key of fields) {
