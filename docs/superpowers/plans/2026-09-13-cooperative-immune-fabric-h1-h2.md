@@ -4,45 +4,40 @@
 
 **Goal:** After the already-approved Continuous Threat Intelligence A/B foundation is merged, add inert Cooperative Immune Fabric evidence contracts plus deterministic synthetic multi-node simulation proving that duplicated, Sybil-amplified, correlated, stale, or contradictory security claims cannot manufacture authority or masquerade as independent corroboration.
 
-**Architecture:** H1 introduces three closed language-neutral evidence contracts—`ImmuneSignal`, `ImmuneAttestation`, and `CorroborationSet`—plus deterministic correlation summarization. H2 uses only synthetic local fixtures and pure deterministic simulation to exercise honest corroboration, Sybils, correlated detector failure, copied-source amplification, contradiction, staleness, benign novelty, and applicability mismatch. No networking, live peer discovery, quarantine execution, capability mutation, credential access, or production effect is added.
+**Architecture:** H1 introduces three closed language-neutral evidence contracts—`ImmuneSignal`, `ImmuneAttestation`, and `CorroborationSet`—and deterministic correlation summarization. H2 uses synthetic local fixtures and pure deterministic simulation to exercise honest corroboration, Sybils, correlated detector failure, copied-source amplification, contradiction, staleness, benign novelty, and applicability mismatch. No live transport, automatic containment, reputation system, credential authority, capability mutation, or production effect is added.
 
-**Tech Stack:** Node.js ESM on the repository-supported Node ranges (`>=22.23.2 <23 || >=24.14.0 <25`), built-in `node:test`, JSON Schema 2020-12 documents as language-neutral contract descriptions, existing canonical/digest helpers, zero third-party runtime dependencies.
+**Tech Stack:** Node.js ESM on the repository-supported Node ranges (`>=22.23.2 <23 || >=24.14.0 <25`), built-in `node:test`, JSON Schema 2020-12, existing canonical/digest helpers, zero third-party runtime dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-09-13-cooperative-immune-fabric-stage5b-design.md`
 
 ## Global Constraints
 
-- H0 remains the existing Continuous Threat Intelligence A/B programme and PR #1573; this plan must not widen that PR or duplicate its implementation.
-- Start H1/H2 only after PR #1573 and the Stage 5B Cooperative Immune Fabric design have both landed on `main`.
+- H0 remains the existing Continuous Threat Intelligence A/B programme in PR #1573; this plan must not widen or duplicate it.
+- Begin H1/H2 only after the Stage 5B design and the full H0 A/B artifacts are present on `main` and their focused tests pass.
 - The swarm may increase knowledge; it must not increase authority.
 - No one-agent-one-vote threat semantics.
 - Collective evidence is not collective authority.
 - Remote `confirmed` labels do not create local confirmation.
 - Unknown independence is not independent.
-- Contradictory evidence must remain explicit.
-- Freshness/expiry must remain explicit.
-- `confidence_band` is fixed to `unscored` in v0; H1/H2 must not invent a universal trust/reputation formula.
-- No live peer exchange, socket, listener, fetch, provider call, subprocess, container launch, host hook, eBPF/LSM attachment, browser automation, payment, external target, or network side effect.
+- Contradictory and stale evidence remain explicit.
+- `confidence_band` is exactly `unscored` in v0; H1/H2 must not invent a universal trust/reputation formula.
+- No live peer exchange, socket, listener, `fetch`, provider call, subprocess, container launch, host hook, eBPF/LSM attachment, browser automation, external target, or network side effect.
 - No automatic challenge, throttle, constrain, quarantine, revoke, recover, block, deploy, merge, or policy mutation.
-- No universal reputation score, persistent malicious-node score, or social-credit analogue.
-- No autonomous retaliation or hack-back capability.
+- No universal reputation score, persistent malicious-node score, social-credit analogue, or autonomous retaliation.
 - Do not modify `mesh/config/capabilities.json`.
-- Do not introduce production credentials, credential reads, provider tokens, or private user data.
-- All H2 fixtures use synthetic principals, nodes, digests, versions, and observations only.
-- `ImmuneSignal` and `ImmuneAttestation` canonical object size limit: 65,536 bytes each.
-- `CorroborationSet` canonical object size limit: 262,144 bytes.
-- Maximum signals in one H1/H2 corroboration set: 1,024.
-- Maximum attestations in one H1/H2 corroboration set: 1,024.
-- Maximum independence claims per signal or attestation: 16.
-- Correlation-cluster membership is summarized using `member_count`, `membership_digest`, and at most 8 sample member digests; do not duplicate all member digests into every cluster.
-- Use canonical ordering for all generated arrays and cluster summaries so the same inputs produce the same digest.
-- Signature fields in H1/H2 are inert references only. Actual signed portable package verification belongs to H3.
+- Do not read production credentials or private user data.
+- All H2 identities, versions, observations, and digests are synthetic.
+- `ImmuneSignal` and `ImmuneAttestation` canonical object limit: 65,536 UTF-8 bytes each.
+- `CorroborationSet` canonical object limit: 262,144 UTF-8 bytes.
+- Maximum signals per set: 1,024. Maximum attestations per set: 1,024.
+- Maximum independence claims per signal or attestation: 16; v0 recognizes exactly nine independence dimensions.
+- Correlation clusters store `member_count`, `membership_digest`, and at most 8 sample member digests rather than duplicating full membership lists.
+- Generated arrays and summaries use canonical deterministic ordering.
+- Signature fields are inert references only. Cryptographic portable-package verification belongs to H3.
 - Dangerous payloads, exploit code, secrets, and raw personal telemetry are out of scope.
 - Preserve `Gateway -> Hypervisor -> Sandbox -> Grid`; H1/H2 add no alternate authority path.
 
 ## Exact changed-file envelope
-
-H1/H2 implementation may create or modify only:
 
 ```text
 docs/architecture/contracts/immune-signal.v0.schema.json
@@ -63,40 +58,41 @@ mesh/src/check-docs.mjs
 docs/superpowers/plans/2026-09-13-cooperative-immune-fabric-h1-h2.md
 ```
 
-If implementation requires a production policy file, Gateway, Hypervisor, Sandbox, Grid, node-discovery service, live causal-exchange path, provider, credential broker, runtime launcher, recovery executor, telemetry collector, external network path, or capability-registry change, STOP and return to Stage 5B review.
+If implementation needs a production policy file, Gateway, Hypervisor, Sandbox, Grid, live node-discovery/causal-exchange path, provider, credential broker, runtime launcher, recovery executor, telemetry collector, external network path, or capability-registry change, stop and return to Stage 5B review.
 
 ---
 
-### Task 0: H0 prerequisite and clean branch gate
+### Task 0: Verify H0 and create a clean implementation branch
 
 **Files:** none.
 
 **Interfaces:**
-- Consumes: merged Continuous Threat Intelligence A/B work from PR #1573.
-- Produces: a clean `feat/cooperative-immune-h1-h2` branch from current `main` only after the prerequisite is real.
+- Consumes: the complete H0 Continuous Threat Intelligence A/B artifacts already planned under `docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md`.
+- Produces: `feat/cooperative-immune-h1-h2` from verified current `main`.
 
-- [ ] **Step 1: Verify PR #1573 is merged**
-
-```bash
-test "$(gh pr view 1573 --repo Zoverions/AXIOM-MESH --json state --jq .state)" = "MERGED"
-```
-
-Expected: exit 0. If not, stop; do not stack H1/H2 onto the unfinished A/B implementation branch.
-
-- [ ] **Step 2: Refresh `main` and verify H0 files exist**
+- [ ] **Step 1: Refresh `main`**
 
 ```bash
+git fetch origin
 git checkout main
 git pull --ff-only
+```
+
+- [ ] **Step 2: Prove the H0 artifacts are actually on `main`**
+
+```bash
 test -f mesh/src/lib/threat-intelligence-contracts.mjs
 test -f mesh/src/lib/threat-observation-normalizer.mjs
 test -f mesh/src/lib/threat-applicability.mjs
+test -f mesh/test/threat-intelligence-contracts.test.mjs
+test -f mesh/test/threat-observation-normalizer.test.mjs
+test -f mesh/test/threat-applicability.test.mjs
 test -f mesh/test/threat-intelligence-authority-boundary.test.mjs
 ```
 
-Expected: all commands exit 0.
+Expected: all commands exit 0. If any file is absent, stop and complete the existing H0 plan rather than stacking H1/H2 on an unfinished branch.
 
-- [ ] **Step 3: Run the H0 focused verification before branching**
+- [ ] **Step 3: Run the H0 focused tests**
 
 ```bash
 cd mesh
@@ -110,17 +106,15 @@ cd ..
 
 Expected: PASS.
 
-- [ ] **Step 4: Create the implementation branch from verified `main`**
+- [ ] **Step 4: Create the H1/H2 branch**
 
 ```bash
 git checkout -b feat/cooperative-immune-h1-h2
 ```
 
-Expected: new branch at the same commit just verified.
-
 ---
 
-### Task 1: H1 closed Cooperative Immune Fabric contracts
+### Task 1: Add closed inert Cooperative Immune Fabric contracts
 
 **Files:**
 - Create: `docs/architecture/contracts/immune-signal.v0.schema.json`
@@ -130,20 +124,20 @@ Expected: new branch at the same commit just verified.
 - Test: `mesh/test/cooperative-immune-contracts.test.mjs`
 
 **Interfaces:**
-- Consumes: `contractDigest` from `mesh/src/lib/threat-intelligence-contracts.mjs`; canonical validation helpers from `mesh/src/lib/canonical.mjs`.
+- Consumes: `contractDigest` from `threat-intelligence-contracts.mjs`; canonical helpers from `canonical.mjs`.
 - Produces:
   - `IMMUNE_SIGNAL_SCHEMA = 'axiom-immune-signal.v0'`
   - `IMMUNE_ATTESTATION_SCHEMA = 'axiom-immune-attestation.v0'`
   - `CORROBORATION_SET_SCHEMA = 'axiom-corroboration-set.v0'`
   - `INDEPENDENCE_DIMENSIONS`
   - `ATTESTATION_RESULTS`
-  - `verifyImmuneSignal(value)` -> canonical verified object
-  - `verifyImmuneAttestation(value)` -> canonical verified object
-  - `verifyCorroborationSet(value)` -> canonical verified object
+  - `verifyImmuneSignal(value)`
+  - `verifyImmuneAttestation(value)`
+  - `verifyCorroborationSet(value)`
 
-- [ ] **Step 1: Write the failing contract tests**
+- [ ] **Step 1: Write failing contract tests**
 
-Create `mesh/test/cooperative-immune-contracts.test.mjs` with positive fixtures plus explicit authority-negative cases.
+Use this test scaffold in `mesh/test/cooperative-immune-contracts.test.mjs`:
 
 ```js
 import assert from 'node:assert/strict';
@@ -156,18 +150,18 @@ import {
 } from '../src/lib/cooperative-immune-contracts.mjs';
 
 const D = digit => `sha256:${digit.repeat(64)}`;
-const NOW = '2026-09-13T22:00:00.000Z';
-const LATER = '2026-09-14T22:00:00.000Z';
+const OBSERVED = '2026-09-13T21:00:00.000Z';
+const LATER = '2026-09-14T23:00:00.000Z';
 
 function withDigest(value, field) {
   return { ...value, [field]: contractDigest(value, field) };
 }
 
-function independence(dimension, digit, claim_basis = 'deterministic_derivation') {
+function independence(dimension, digit) {
   return {
     dimension,
     correlation_key_digest: digit === null ? null : D(digit),
-    claim_basis,
+    claim_basis: digit === null ? 'unknown' : 'deterministic_derivation',
     evidence_binding: digit === null ? null : D('e')
   };
 }
@@ -184,8 +178,8 @@ function baseSignal() {
     behavioral_indicators: ['synthetic:unexpected_effect_request'],
     observation_kind: 'direct_local_observation',
     confidence: 'observed',
-    observed_at: NOW,
-    last_observed_at: NOW,
+    observed_at: OBSERVED,
+    last_observed_at: OBSERVED,
     expires_or_review_at: LATER,
     software_state_ref: D('2'),
     runtime_or_detector_ref: D('3'),
@@ -203,100 +197,51 @@ function baseSignal() {
   }, 'signal_digest');
 }
 
-test('ImmuneSignal is inert, closed, and digest-bound', () => {
+test('ImmuneSignal is closed and cannot carry authority', () => {
   const value = baseSignal();
   assert.equal(verifyImmuneSignal(value).signal_digest, value.signal_digest);
   assert.throws(() => verifyImmuneSignal({ ...value, authorize: true }), /unsupported field/);
   assert.throws(() => verifyImmuneSignal({ ...value, quarantine_action: 'execute' }), /unsupported field/);
 });
-
-test('ImmuneAttestation preserves unknown state', () => {
-  const signal = baseSignal();
-  const raw = {
-    schema: 'axiom-immune-attestation.v0',
-    attestation_id: 'immune:attestation:synthetic-1',
-    subject_signal_digest: signal.signal_digest,
-    observer_scope: 'synthetic_peer',
-    observer_principal_or_node_ref: 'peer:synthetic:2',
-    result: 'unknown',
-    observation_method: 'synthetic_review',
-    observation_digest: D('a'),
-    evidence_bindings: [D('b')],
-    independence_claims: [independence('operator', 'c')],
-    software_state_ref: D('d'),
-    runtime_or_detector_ref: D('f'),
-    confidence: 'insufficient_evidence',
-    observed_at: NOW,
-    expires_or_review_at: LATER,
-    signed_envelope_ref: null
-  };
-  const value = withDigest(raw, 'attestation_digest');
-  assert.equal(verifyImmuneAttestation(value).result, 'unknown');
-});
-
-test('CorroborationSet remains unscored and non-authorizing', () => {
-  const raw = {
-    schema: 'axiom-corroboration-set.v0',
-    corroboration_id: 'immune:corroboration:synthetic-1',
-    subject_digest: D('1'),
-    signal_digests: [D('2')],
-    attestation_digests: [],
-    direct_observation_count: 1,
-    reproduction_count: 0,
-    contradiction_count: 0,
-    unknown_count: 0,
-    independence_dimensions: [],
-    correlation_clusters: [],
-    stale_evidence: [],
-    applicability_scope: 'synthetic:current-build',
-    confidence_band: 'unscored',
-    unresolved_questions: [],
-    computed_at: NOW,
-    review_at: LATER
-  };
-  const value = withDigest(raw, 'corroboration_digest');
-  assert.equal(verifyCorroborationSet(value).confidence_band, 'unscored');
-  assert.throws(() => verifyCorroborationSet({ ...value, decision_lane: 'confirmed' }), /unsupported field/);
-  assert.throws(() => verifyCorroborationSet({ ...value, revoke: true }), /unsupported field/);
-});
 ```
 
-Add explicit tests that:
+Add positive `ImmuneAttestation` and `CorroborationSet` fixtures plus negative tests that establish all of these exact properties:
 
-- all three contracts reject unknown fields;
-- all self-digests are recomputed and mismatches fail;
+- unknown fields fail;
+- self-digest mismatch fails;
 - timestamps are canonical UTC ISO-8601;
 - `last_observed_at >= observed_at`;
-- `expires_or_review_at > observed_at` for signals/attestations;
-- `observation_kind` is one of `direct_local_observation`, `deterministic_verifier_result`, `bounded_lab_reproduction`, `locally_inferred_behavioral_anomaly`, `imported_external_intelligence`, `relayed_peer_observation`;
-- attestation `result` is one of `corroborates`, `contradicts`, `reproduced`, `not_applicable`, `blocked_by_current_controls`, `insufficient_evidence`, `unknown`;
-- independence dimensions are restricted to `operator`, `node`, `software`, `detector`, `source`, `network`, `temporal`, `environment`, `method`;
-- `claim_basis` is one of `deterministic_derivation`, `signed_metadata`, `direct_attestation`, `self_reported`, `unknown`;
-- `correlation_key_digest` may be `null`; null means unknown independence, never independent;
-- at most one independence claim per dimension appears in one signal/attestation;
-- `signed_envelope_ref` is null or an inert bounded string reference only;
-- `confidence_band` is exactly `unscored` in v0;
-- no contract has `authorize`, `execute`, `token`, `credential`, `capability`, `policy_patch`, `reputation_score`, `global_block`, `retaliation_target`, or `decision_lane` fields;
-- raw prompts, payload bytes, user-content blobs, or exploit scripts have no contract field;
-- `CorroborationSet.signal_digests` accepts 1..1024 unique digests;
-- `CorroborationSet.attestation_digests` accepts 0..1024 unique digests;
-- a correlation cluster uses only `dimension`, `correlation_key_digest`, `member_count`, `membership_digest`, `member_sample_digests`, `claim_basis_values`;
-- `member_sample_digests` contains at most 8 digests.
+- `expires_or_review_at > observed_at`;
+- observation kind enum: `direct_local_observation`, `deterministic_verifier_result`, `bounded_lab_reproduction`, `locally_inferred_behavioral_anomaly`, `imported_external_intelligence`, `relayed_peer_observation`;
+- attestation result enum: `corroborates`, `contradicts`, `reproduced`, `not_applicable`, `blocked_by_current_controls`, `insufficient_evidence`, `unknown`;
+- independence dimensions: `operator`, `node`, `software`, `detector`, `source`, `network`, `temporal`, `environment`, `method`;
+- claim basis enum: `deterministic_derivation`, `signed_metadata`, `direct_attestation`, `self_reported`, `unknown`;
+- at most one independence claim per dimension;
+- null `correlation_key_digest` means unknown independence;
+- `signed_envelope_ref` is null or an inert bounded string;
+- `confidence_band` is exactly `unscored`;
+- no contract accepts `authorize`, `execute`, `token`, `credential`, `capability`, `policy_patch`, `reputation_score`, `global_block`, `retaliation_target`, `decision_lane`, or embedded raw payload fields;
+- `signal_digests` accepts 1..1024 unique digests and `attestation_digests` accepts 0..1024;
+- count fields cannot exceed their source populations;
+- `stale_evidence` must be a subset of the included signal/attestation digests;
+- `review_at > computed_at`;
+- correlation clusters use only `dimension`, `correlation_key_digest`, `member_count`, `membership_digest`, `member_sample_digests`, `claim_basis_values`;
+- `member_sample_digests.length <= 8`.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [ ] **Step 2: Verify RED**
 
 ```bash
 cd mesh
 node --test test/cooperative-immune-contracts.test.mjs
 ```
 
-Expected: FAIL because `cooperative-immune-contracts.mjs` and schemas do not exist.
+Expected: FAIL because the module and schemas do not exist.
 
-- [ ] **Step 3: Add the exact JSON Schema shapes**
+- [ ] **Step 3: Add exact schema shapes**
 
-Use JSON Schema 2020-12 and `additionalProperties: false` for all objects, including nested independence and cluster objects.
+Use JSON Schema 2020-12 with `additionalProperties: false` at every object level.
 
-Required `ImmuneSignal` fields:
+`ImmuneSignal` required fields:
 
 ```text
 schema, signal_id, origin_scope, origin_principal_or_node_ref,
@@ -307,7 +252,7 @@ source_lineage, independence_claims, sensitivity_class, disclosure_profile,
 evidence_bindings, signed_envelope_ref, signal_digest
 ```
 
-Required `ImmuneAttestation` fields:
+`ImmuneAttestation` required fields:
 
 ```text
 schema, attestation_id, subject_signal_digest, observer_scope,
@@ -317,7 +262,7 @@ software_state_ref, runtime_or_detector_ref, confidence, observed_at,
 expires_or_review_at, signed_envelope_ref, attestation_digest
 ```
 
-Required `CorroborationSet` fields:
+`CorroborationSet` required fields:
 
 ```text
 schema, corroboration_id, subject_digest, signal_digests,
@@ -328,16 +273,16 @@ confidence_band, unresolved_questions, computed_at, review_at,
 corroboration_digest
 ```
 
-Nested independence claim shape:
+Independence claim:
 
 ```text
 dimension
-correlation_key_digest   # sha256 digest or null
+correlation_key_digest  # sha256 or null
 claim_basis
-evidence_binding         # sha256 digest or null
+evidence_binding        # sha256 or null
 ```
 
-Nested independence-dimension summary shape:
+Dimension summary:
 
 ```text
 dimension
@@ -347,22 +292,20 @@ singleton_cluster_count
 largest_cluster_size
 ```
 
-Nested correlation-cluster shape:
+Correlation cluster:
 
 ```text
 dimension
 correlation_key_digest
 member_count
 membership_digest
-member_sample_digests[]  # sorted, max 8
-claim_basis_values[]     # sorted unique tokens
+member_sample_digests[] # sorted; max 8
+claim_basis_values[]    # sorted unique
 ```
 
-- [ ] **Step 4: Implement the minimal zero-dependency semantic verifier**
+- [ ] **Step 4: Implement the semantic verifier**
 
-Create `mesh/src/lib/cooperative-immune-contracts.mjs`. Define and use these private helpers in the same file: `boundedCanonical(value, name, maxBytes)`, `assertExactFields(object, fields, name)`, `assertDigest(value, name)`, `assertTimestamp(value, name)`, `assertUniqueStrings(value, name, limits)`, `assertUniqueDigests(value, name, maxItems)`, `assertIndependenceClaims(value, name)`, `assertIndependenceSummaries(value)`, `assertCorrelationClusters(value)`, and `assertSelfDigest(object, digestField, name)`.
-
-Start the module with:
+Start `mesh/src/lib/cooperative-immune-contracts.mjs` with:
 
 ```js
 import {
@@ -388,9 +331,24 @@ export const ATTESTATION_RESULTS = Object.freeze([
 ]);
 ```
 
-`boundedCanonical` must measure UTF-8 bytes after `canonicalJson`; use 65,536 for signal/attestation and 262,144 for corroboration sets. `assertIndependenceClaims` must reject duplicate dimensions and treat null `correlation_key_digest` as unknown. `assertCorrelationClusters` must enforce `member_sample_digests.length <= 8`. All three public verifiers must recompute the object self-digest with `contractDigest`.
+Define these private helpers in the same file with explicit fail-closed behavior:
 
-- [ ] **Step 5: Run contract and canonicalization regressions**
+```text
+boundedCanonical(value, name, maxBytes)
+assertExactFields(object, fields, name)
+assertDigest(value, name)
+assertTimestamp(value, name)
+assertUniqueStrings(value, name, limits)
+assertUniqueDigests(value, name, maxItems)
+assertIndependenceClaims(value, name)
+assertIndependenceSummaries(value)
+assertCorrelationClusters(value)
+assertSelfDigest(object, digestField, name)
+```
+
+`boundedCanonical` measures canonical UTF-8 size. `assertIndependenceClaims` rejects duplicate dimensions. `assertCorrelationClusters` enforces max-8 member samples. `verifyCorroborationSet` enforces count/subset relationships and exact `confidence_band === 'unscored'`. Each public verifier returns canonical parsed data only after its self-digest matches `contractDigest`.
+
+- [ ] **Step 5: Run Task 1 tests**
 
 ```bash
 cd mesh
@@ -402,7 +360,7 @@ node --test \
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 1**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add \
@@ -416,7 +374,7 @@ git commit -m "feat: add inert cooperative immune contracts"
 
 ---
 
-### Task 2: H1 deterministic independence and correlation summarization
+### Task 2: Add deterministic independence/correlation summarization
 
 **Files:**
 - Create: `mesh/src/lib/immune-corroboration.mjs`
@@ -424,113 +382,18 @@ git commit -m "feat: add inert cooperative immune contracts"
 - Test: `mesh/test/immune-corroboration.test.mjs`
 
 **Interfaces:**
-- Consumes: `verifyImmuneSignal`, `verifyImmuneAttestation`, `verifyCorroborationSet`, `INDEPENDENCE_DIMENSIONS`, `CORROBORATION_SET_SCHEMA`, `contractDigest`, `digestObject`.
+- Consumes: Task 1 verifiers/constants plus `contractDigest` and `digestObject`.
 - Produces:
-  - `buildCorrelationClusters(records)` -> canonical cluster array
-  - `summarizeIndependence(records)` -> canonical per-dimension summaries
-  - `buildCorroborationSet({ subjectDigest, signals, attestations, applicabilityScope, computedAt, reviewAt })` -> verified `CorroborationSet`
-- Does **not** produce a threat verdict, authority decision, reputation score, or response action.
+  - `buildCorrelationClusters(records)`
+  - `summarizeIndependence(records)`
+  - `buildCorroborationSet({ subjectDigest, signals, attestations, applicabilityScope, computedAt, reviewAt })`
+- Produces no verdict, trust score, decision lane, action, or authority.
 
-- [ ] **Step 1: Write the failing correlation tests with explicit test helpers**
+- [ ] **Step 1: Write failing tests and define all test-only helpers locally**
 
-At the top of `mesh/test/immune-corroboration.test.mjs`, define these test-only helpers:
+At the top of `mesh/test/immune-corroboration.test.mjs`, define `digest(value)`, `claim(dimension, groupKey)`, `makeSyntheticSignals(options)`, `makeSyntheticAttestation(signal, result, index)`, and `byDimension(summary, dimension)` in that file. `makeSyntheticSignals` must construct valid Task 1 signals and accept `operatorGroups`, `nodeGroups`, `detectorGroups`, and `sourceGroups`; a null group count produces a null correlation key with `claim_basis: 'unknown'`.
 
-```js
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import { digestObject } from '../src/lib/canonical.mjs';
-import { contractDigest } from '../src/lib/threat-intelligence-contracts.mjs';
-import {
-  IMMUNE_SIGNAL_SCHEMA,
-  IMMUNE_ATTESTATION_SCHEMA
-} from '../src/lib/cooperative-immune-contracts.mjs';
-import {
-  buildCorroborationSet,
-  summarizeIndependence
-} from '../src/lib/immune-corroboration.mjs';
-
-const NOW = '2026-09-13T23:00:00.000Z';
-const LATER = '2026-09-14T23:00:00.000Z';
-const digest = value => `sha256:${digestObject(value)}`;
-
-function claim(dimension, groupKey) {
-  return {
-    dimension,
-    correlation_key_digest: groupKey === null ? null : digest({ dimension, groupKey }),
-    claim_basis: groupKey === null ? 'unknown' : 'deterministic_derivation',
-    evidence_binding: groupKey === null ? null : digest({ evidence: dimension, groupKey })
-  };
-}
-
-function makeSyntheticSignals({
-  count,
-  operatorGroups = count,
-  nodeGroups = count,
-  detectorGroups = count,
-  sourceGroups = count,
-  expiresAt = LATER
-}) {
-  return Array.from({ length: count }, (_, index) => {
-    const raw = {
-      schema: IMMUNE_SIGNAL_SCHEMA,
-      signal_id: `immune:signal:test:${index}`,
-      origin_scope: 'synthetic_peer',
-      origin_principal_or_node_ref: `peer:synthetic:${index}`,
-      observation_digest: digest({ observation: index }),
-      threat_class: 'behavioral_anomaly',
-      affected_surface: ['synthetic:gateway'],
-      behavioral_indicators: ['synthetic:unexpected_effect_request'],
-      observation_kind: 'direct_local_observation',
-      confidence: 'observed',
-      observed_at: NOW,
-      last_observed_at: NOW,
-      expires_or_review_at: expiresAt,
-      software_state_ref: digest({ software: 0 }),
-      runtime_or_detector_ref: digest({ detector: detectorGroups === null ? 'unknown' : index % detectorGroups }),
-      source_lineage: [digest({ source: sourceGroups === null ? 'unknown' : index % sourceGroups })],
-      independence_claims: [
-        claim('operator', operatorGroups === null ? null : index % operatorGroups),
-        claim('node', nodeGroups === null ? null : index % nodeGroups),
-        claim('detector', detectorGroups === null ? null : index % detectorGroups),
-        claim('source', sourceGroups === null ? null : index % sourceGroups)
-      ],
-      sensitivity_class: 'synthetic_security',
-      disclosure_profile: 'minimized_peer_v0',
-      evidence_bindings: [digest({ binding: index })],
-      signed_envelope_ref: null
-    };
-    return { ...raw, signal_digest: contractDigest(raw, 'signal_digest') };
-  });
-}
-
-function makeSyntheticAttestation(signal, result, index = 0) {
-  const raw = {
-    schema: IMMUNE_ATTESTATION_SCHEMA,
-    attestation_id: `immune:attestation:test:${index}`,
-    subject_signal_digest: signal.signal_digest,
-    observer_scope: 'synthetic_peer',
-    observer_principal_or_node_ref: `peer:attestor:${index}`,
-    result,
-    observation_method: 'synthetic_review',
-    observation_digest: digest({ attestation: index, result }),
-    evidence_bindings: [digest({ attestationBinding: index })],
-    independence_claims: [claim('operator', `attestor-${index}`)],
-    software_state_ref: digest({ attestorSoftware: 0 }),
-    runtime_or_detector_ref: digest({ attestorDetector: 0 }),
-    confidence: result === 'unknown' ? 'insufficient_evidence' : 'observed',
-    observed_at: NOW,
-    expires_or_review_at: LATER,
-    signed_envelope_ref: null
-  };
-  return { ...raw, attestation_digest: contractDigest(raw, 'attestation_digest') };
-}
-
-function byDimension(summary, dimension) {
-  return summary.find(item => item.dimension === dimension);
-}
-```
-
-Then add:
+The core tests must include:
 
 ```js
 test('1000 Sybil observations under one operator remain one operator cluster', () => {
@@ -546,8 +409,8 @@ test('1000 Sybil observations under one operator remain one operator cluster', (
     signals,
     attestations: [],
     applicabilityScope: 'synthetic:applicable',
-    computedAt: NOW,
-    reviewAt: LATER
+    computedAt: '2026-09-13T23:00:00.000Z',
+    reviewAt: '2026-09-14T23:00:00.000Z'
   });
   const operator = byDimension(set.independence_dimensions, 'operator');
   assert.equal(operator.known_cluster_count, 1);
@@ -556,44 +419,26 @@ test('1000 Sybil observations under one operator remain one operator cluster', (
   assert.equal('decision_lane' in set, false);
 });
 
-test('unknown independence is counted as unknown, not independent', () => {
+test('unknown independence is unknown, not a singleton', () => {
   const records = makeSyntheticSignals({ count: 4, operatorGroups: null });
   const operator = byDimension(summarizeIndependence(records), 'operator');
   assert.equal(operator.known_cluster_count, 0);
   assert.equal(operator.unknown_count, 4);
 });
-
-test('contradictions remain visible beside direct observations', () => {
-  const signal = makeSyntheticSignals({ count: 1 })[0];
-  const attestation = makeSyntheticAttestation(signal, 'contradicts');
-  const set = buildCorroborationSet({
-    subjectDigest: signal.observation_digest,
-    signals: [signal],
-    attestations: [attestation],
-    applicabilityScope: 'synthetic:applicable',
-    computedAt: NOW,
-    reviewAt: LATER
-  });
-  assert.equal(set.direct_observation_count, 1);
-  assert.equal(set.contradiction_count, 1);
-  assert.ok(set.unresolved_questions.includes('contradictory_evidence_present'));
-});
 ```
 
-Add tests for input-order invariance, stale evidence, same-detector correlation, copied-source correlation, duplicate rejection, and at-most-8 cluster member samples.
+Add tests for: 20 reports with source/operator correlation, same-detector correlation across operators, copied-source lineage, direct observation plus contradiction, stale evidence, duplicate rejection, max-8 samples, and input-order-invariant `corroboration_digest`.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [ ] **Step 2: Verify RED**
 
 ```bash
 cd mesh
 node --test test/immune-corroboration.test.mjs
 ```
 
-Expected: FAIL because `immune-corroboration.mjs` does not exist.
+- [ ] **Step 3: Add compact correlation vectors**
 
-- [ ] **Step 3: Add checked-in correlation vectors**
-
-Create `mesh/fixtures/cooperative-immune/correlation-v0.vectors.json` with these named vectors:
+`mesh/fixtures/cooperative-immune/correlation-v0.vectors.json` contains synthetic-only vectors named:
 
 ```text
 honest-three-domain-corroboration
@@ -605,125 +450,87 @@ mixed-corroboration-and-contradiction
 stale-replay
 ```
 
-Every fixture uses synthetic seeds and expected cluster counts only; no real identities or incident data.
+Each vector stores only synthetic seeds/group counts and expected summary counts.
 
-- [ ] **Step 4: Implement the pure correlation module and all private helpers explicitly**
+- [ ] **Step 4: Implement verified evidence-record handling**
 
-Create `mesh/src/lib/immune-corroboration.mjs` with these imports and private/public functions:
+In `mesh/src/lib/immune-corroboration.mjs`, define:
 
 ```js
-import { digestObject, ValidationError } from './canonical.mjs';
-import { contractDigest } from './threat-intelligence-contracts.mjs';
-import {
-  CORROBORATION_SET_SCHEMA,
-  INDEPENDENCE_DIMENSIONS,
-  verifyImmuneSignal,
-  verifyImmuneAttestation,
-  verifyCorroborationSet
-} from './cooperative-immune-contracts.mjs';
-
-const digest = value => `sha256:${digestObject(value)}`;
+function verifyEvidenceRecord(record) {
+  if (record?.schema === IMMUNE_SIGNAL_SCHEMA) return verifyImmuneSignal(record);
+  if (record?.schema === IMMUNE_ATTESTATION_SCHEMA) return verifyImmuneAttestation(record);
+  throw new ValidationError('unsupported cooperative immune evidence record');
+}
 
 function recordDigest(record) {
   return record.signal_digest ?? record.attestation_digest;
 }
 
-function compareText(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-
 function flattenIndependenceClaims(records) {
-  return records.flatMap(record => record.independence_claims.map(claim => ({
-    record_digest: recordDigest(record),
-    claim
-  })));
-}
-
-function clusterFromMembers(dimension, correlationKeyDigest, members) {
-  const memberDigests = members.map(v => v.record_digest).sort(compareText);
-  const claimBasisValues = [...new Set(members.map(v => v.claim.claim_basis))].sort(compareText);
-  return {
-    dimension,
-    correlation_key_digest: correlationKeyDigest,
-    member_count: memberDigests.length,
-    membership_digest: digest(memberDigests),
-    member_sample_digests: memberDigests.slice(0, 8),
-    claim_basis_values: claimBasisValues
-  };
-}
-
-export function buildCorrelationClusters(records) {
-  const groups = new Map();
-  for (const entry of flattenIndependenceClaims(records)) {
-    const keyDigest = entry.claim.correlation_key_digest;
-    if (keyDigest === null) continue;
-    const key = `${entry.claim.dimension}:${keyDigest}`;
-    const group = groups.get(key) ?? [];
-    group.push(entry);
-    groups.set(key, group);
-  }
-  return [...groups.values()]
-    .map(members => clusterFromMembers(
-      members[0].claim.dimension,
-      members[0].claim.correlation_key_digest,
-      members
-    ))
-    .sort((a, b) => compareText(
-      `${a.dimension}:${a.correlation_key_digest}`,
-      `${b.dimension}:${b.correlation_key_digest}`
-    ));
-}
-
-export function summarizeIndependence(records) {
-  const clusters = buildCorrelationClusters(records);
-  return INDEPENDENCE_DIMENSIONS.map(dimension => {
-    const dimensionClusters = clusters.filter(v => v.dimension === dimension);
-    const unknownCount = records.reduce((count, record) => {
-      const claim = record.independence_claims.find(v => v.dimension === dimension);
-      return count + (claim?.correlation_key_digest == null ? 1 : 0);
-    }, 0);
-    return {
-      dimension,
-      known_cluster_count: dimensionClusters.length,
-      unknown_count: unknownCount,
-      singleton_cluster_count: dimensionClusters.filter(v => v.member_count === 1).length,
-      largest_cluster_size: dimensionClusters.reduce((max, v) => Math.max(max, v.member_count), 0)
-    };
-  });
+  return records.map(verifyEvidenceRecord).flatMap(record =>
+    record.independence_claims.map(claim => ({ record_digest: recordDigest(record), claim }))
+  );
 }
 ```
+
+Both exported summary helpers must therefore validate their inputs even when called outside `buildCorroborationSet`.
+
+- [ ] **Step 5: Implement deterministic clusters**
+
+`buildCorrelationClusters(records)` groups only non-null correlation keys by `dimension + correlation_key_digest`. For every group:
+
+```text
+memberDigests = all member record digests, sorted
+membership_digest = sha256 canonical digest of the complete memberDigests array
+member_sample_digests = first 8 memberDigests
+member_count = complete memberDigests length
+claim_basis_values = sorted unique claim bases
+```
+
+Sort the resulting clusters by `dimension`, then `correlation_key_digest`.
+
+`summarizeIndependence(records)` returns all nine dimensions in fixed `INDEPENDENCE_DIMENSIONS` order with:
+
+```text
+known_cluster_count
+unknown_count
+singleton_cluster_count
+largest_cluster_size
+```
+
+A missing claim or null correlation key increments `unknown_count`; it never creates a singleton cluster.
+
+- [ ] **Step 6: Implement `buildCorroborationSet` with no scoring**
 
 Define these private helpers exactly in the same module:
 
 ```text
 assertUniqueObjectDigests(records, field)
-  - Set-based duplicate detection; throw ValidationError on duplicate.
+  Set-based duplicate detection; throw ValidationError on duplicate.
 
 assertAttestationSubjectsPresent(signals, attestations)
-  - Every attestation.subject_signal_digest must match a signal.signal_digest in the same set.
+  Every attestation.subject_signal_digest must match an included signal.signal_digest.
 
 sortedDigests(records, field)
-  - Return ascending lexicographic digest array.
+  Ascending lexicographic digests.
 
 countDirectObservations(signals)
-  - Count observation_kind === 'direct_local_observation'.
+  Count signal.observation_kind === 'direct_local_observation'.
 
 countReproductions(signals, attestations)
-  - Count signals with observation_kind === 'bounded_lab_reproduction'
-    plus attestations with result === 'reproduced'.
+  Count bounded_lab_reproduction signals plus reproduced attestations.
 
 staleDigests(records, computedAt)
-  - Return sorted record digests whose expires_or_review_at <= computedAt.
+  Sorted record digests with expires_or_review_at <= computedAt.
 
 unresolvedQuestions(records, computedAt)
-  - Return sorted unique tokens from:
-    'contradictory_evidence_present' when any attestation result is 'contradicts';
-    'unknown_or_insufficient_evidence_present' when result is 'unknown' or 'insufficient_evidence';
-    'unknown_independence:<dimension>' for any dimension with null/missing correlation key;
-    'stale_evidence_present' when staleDigests is non-empty.
+  Sorted unique tokens: contradictory_evidence_present,
+  unknown_or_insufficient_evidence_present,
+  unknown_independence:<dimension>, stale_evidence_present, as applicable.
 ```
 
-Then implement `buildCorroborationSet`:
+Then construct and verify:
 
 ```js
 export function buildCorroborationSet({
@@ -739,8 +546,8 @@ export function buildCorroborationSet({
   assertUniqueObjectDigests(verifiedSignals, 'signal_digest');
   assertUniqueObjectDigests(verifiedAttestations, 'attestation_digest');
   assertAttestationSubjectsPresent(verifiedSignals, verifiedAttestations);
-
   const records = [...verifiedSignals, ...verifiedAttestations];
+
   const raw = {
     schema: CORROBORATION_SET_SCHEMA,
     corroboration_id: `immune:corroboration:${subjectDigest.slice(7, 23)}`,
@@ -760,6 +567,7 @@ export function buildCorroborationSet({
     computed_at: computedAt,
     review_at: reviewAt
   };
+
   return verifyCorroborationSet({
     ...raw,
     corroboration_digest: contractDigest(raw, 'corroboration_digest')
@@ -767,24 +575,13 @@ export function buildCorroborationSet({
 }
 ```
 
-Do not add a score, weight, trust scalar, lane transition, or action recommendation.
-
-- [ ] **Step 5: Run H1 correlation tests**
+- [ ] **Step 7: Run Task 2 tests and commit**
 
 ```bash
 cd mesh
-node --test \
-  test/cooperative-immune-contracts.test.mjs \
-  test/immune-corroboration.test.mjs
-```
-
-Expected: PASS.
-
-- [ ] **Step 6: Commit Task 2**
-
-```bash
-git add \
-  mesh/src/lib/immune-corroboration.mjs \
+node --test test/cooperative-immune-contracts.test.mjs test/immune-corroboration.test.mjs
+cd ..
+git add mesh/src/lib/immune-corroboration.mjs \
   mesh/fixtures/cooperative-immune/correlation-v0.vectors.json \
   mesh/test/immune-corroboration.test.mjs
 git commit -m "feat: summarize immune evidence independence"
@@ -792,7 +589,7 @@ git commit -m "feat: summarize immune evidence independence"
 
 ---
 
-### Task 3: H2 deterministic adversarial multi-node simulation
+### Task 3: Add deterministic adversarial multi-node simulation
 
 **Files:**
 - Create: `mesh/src/lib/cooperative-immune-simulator.mjs`
@@ -800,22 +597,17 @@ git commit -m "feat: summarize immune evidence independence"
 - Test: `mesh/test/cooperative-immune-simulation.test.mjs`
 
 **Interfaces:**
-- Consumes: Task 1 contract constants/verifiers, Task 2 `buildCorroborationSet`, `digestObject`, and `contractDigest`.
+- Consumes: Task 1 contracts, Task 2 `buildCorroborationSet`, `digestObject`, `contractDigest`.
 - Produces:
   - `expandSyntheticScenario(spec)` -> `{ signals, attestations }`
   - `runSyntheticImmuneScenario(spec)` -> verified `CorroborationSet`
-- No sockets, filesystem mutation, timers, subprocesses, providers, or external effects.
+- No I/O or external effects.
 
-- [ ] **Step 1: Write the failing simulation tests**
+- [ ] **Step 1: Write failing simulation tests**
 
-Create `mesh/test/cooperative-immune-simulation.test.mjs`:
+Use JSON import attributes and these local helpers:
 
 ```js
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import scenarios from '../fixtures/cooperative-immune/adversarial-v0.scenarios.json' with { type: 'json' };
-import { runSyntheticImmuneScenario } from '../src/lib/cooperative-immune-simulator.mjs';
-
 function scenario(id) {
   const value = scenarios.find(item => item.id === id);
   assert.ok(value, `missing scenario ${id}`);
@@ -832,10 +624,7 @@ function assertNoAuthorityKeys(value) {
     'policy_patch', 'capability', 'credential', 'retaliation_target',
     'reputation_score', 'decision_lane'
   ]);
-  if (Array.isArray(value)) {
-    for (const item of value) assertNoAuthorityKeys(item);
-    return;
-  }
+  if (Array.isArray(value)) return value.forEach(assertNoAuthorityKeys);
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
       assert.equal(forbidden.has(key), false, `forbidden authority key ${key}`);
@@ -843,7 +632,11 @@ function assertNoAuthorityKeys(value) {
     }
   }
 }
+```
 
+Required tests include:
+
+```js
 test('Sybil majority cannot manufacture operator independence', () => {
   const set = runSyntheticImmuneScenario(scenario('sybil-majority-1000'));
   assert.equal(set.signal_digests.length, 1000);
@@ -853,7 +646,7 @@ test('Sybil majority cannot manufacture operator independence', () => {
   assertNoAuthorityKeys(set);
 });
 
-test('same-model correlated false positive remains one detector cluster', () => {
+test('same-model false positive remains correlated', () => {
   const set = runSyntheticImmuneScenario(scenario('same-model-correlated-false-positive'));
   assert.ok(dimension(set, 'operator').known_cluster_count > 1);
   assert.equal(dimension(set, 'detector').known_cluster_count, 1);
@@ -867,20 +660,18 @@ test('malicious contradiction cannot erase direct evidence', () => {
 });
 ```
 
-Add tests for every scenario listed in Step 3 plus a determinism test that runs every scenario twice and compares `corroboration_digest`.
+Also run every scenario twice and assert identical `corroboration_digest`.
 
-- [ ] **Step 2: Run the simulation test and verify RED**
+- [ ] **Step 2: Verify RED**
 
 ```bash
 cd mesh
 node --test test/cooperative-immune-simulation.test.mjs
 ```
 
-Expected: FAIL because the simulator and scenario file do not exist.
+- [ ] **Step 3: Add compact synthetic scenario fixtures**
 
-- [ ] **Step 3: Add the compact scenario fixture format**
-
-Create `mesh/fixtures/cooperative-immune/adversarial-v0.scenarios.json` with at least:
+`mesh/fixtures/cooperative-immune/adversarial-v0.scenarios.json` must contain:
 
 ```text
 honest-independent-corroboration
@@ -899,7 +690,7 @@ version-config-not-applicable
 missing-independence-metadata
 ```
 
-Each object uses this exact compact shape:
+Exact scenario shape:
 
 ```json
 {
@@ -930,138 +721,68 @@ Each object uses this exact compact shape:
 }
 ```
 
-Use `null` as a dimension's group count to generate unknown independence metadata. Group counts must be positive integers `<= population` when non-null.
+Use the same `subject_seed` for `version-config-applicable` and `version-config-not-applicable` so they represent the same threat family under different local applicability scopes. A null group count means unknown independence. Total attestations across all result buckets must be <= 1,024.
 
-- [ ] **Step 4: Implement deterministic synthetic expansion with every helper defined**
+- [ ] **Step 4: Implement strict scenario validation**
 
-Create `mesh/src/lib/cooperative-immune-simulator.mjs` with:
+In `mesh/src/lib/cooperative-immune-simulator.mjs`, define exact key sets:
 
 ```js
-import { digestObject, ValidationError } from './canonical.mjs';
-import { contractDigest } from './threat-intelligence-contracts.mjs';
-import {
-  IMMUNE_SIGNAL_SCHEMA,
-  IMMUNE_ATTESTATION_SCHEMA,
-  INDEPENDENCE_DIMENSIONS,
-  verifyImmuneSignal,
-  verifyImmuneAttestation
-} from './cooperative-immune-contracts.mjs';
-import { buildCorroborationSet } from './immune-corroboration.mjs';
+const SCENARIO_FIELDS = new Set([
+  'id', 'subject_seed', 'population', 'observation_kind', 'threat_class',
+  'correlation_groups', 'attestations', 'stale_signals', 'applicability_scope'
+]);
+const GROUP_FIELDS = new Set(INDEPENDENCE_DIMENSIONS);
+const ATTESTATION_FIELDS = new Set(['corroborates', 'contradicts', 'reproduced', 'unknown']);
+```
 
+Define `assertExactKeys(object, allowed, name)` and use it for the scenario and both nested objects. `validateScenarioSpec(spec)` must enforce population 1..1024, each non-null group count 1..population, `stale_signals` 0..population, each attestation bucket 0..1024, and the sum of all attestation buckets <=1024.
+
+- [ ] **Step 5: Implement deterministic generation with valid stale timing**
+
+Use fixed times:
+
+```js
+const OBSERVED_AT = '2026-09-13T21:00:00.000Z';
+const STALE_EXPIRY = '2026-09-13T22:30:00.000Z';
 const COMPUTED_AT = '2026-09-13T23:00:00.000Z';
-const FUTURE = '2026-09-14T23:00:00.000Z';
-const STALE = '2026-09-12T23:00:00.000Z';
-const digest = value => `sha256:${digestObject(value)}`;
+const FUTURE_EXPIRY = '2026-09-14T23:00:00.000Z';
+```
 
-function validateGroupCount(value, population, name) {
-  if (value === null) return;
-  if (!Number.isSafeInteger(value) || value < 1 || value > population) {
-    throw new ValidationError(`${name} must be null or an integer 1..population`);
-  }
-}
+This ordering is mandatory:
 
-function validateScenarioSpec(spec) {
-  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
-    throw new ValidationError('scenario must be an object');
-  }
-  if (!Number.isSafeInteger(spec.population) || spec.population < 1 || spec.population > 1024) {
-    throw new ValidationError('scenario.population must be 1..1024');
-  }
-  for (const dimension of INDEPENDENCE_DIMENSIONS) {
-    validateGroupCount(spec.correlation_groups[dimension], spec.population, `correlation_groups.${dimension}`);
-  }
-  if (!Number.isSafeInteger(spec.stale_signals) || spec.stale_signals < 0 || spec.stale_signals > spec.population) {
-    throw new ValidationError('stale_signals must be 0..population');
-  }
-  for (const result of ['corroborates', 'contradicts', 'reproduced', 'unknown']) {
-    const count = spec.attestations[result];
-    if (!Number.isSafeInteger(count) || count < 0 || count > 1024) {
-      throw new ValidationError(`attestations.${result} must be 0..1024`);
-    }
-  }
-}
+```text
+OBSERVED_AT < STALE_EXPIRY <= COMPUTED_AT < FUTURE_EXPIRY
+```
 
-function groupDigest(spec, dimension, index) {
-  const groups = spec.correlation_groups[dimension];
-  if (groups === null) return null;
-  return digest({ scenario: spec.id, dimension, group: index % groups });
-}
+Define these private helpers in the same file:
 
-function independenceClaims(spec, index) {
-  return INDEPENDENCE_DIMENSIONS.map(dimension => {
-    const key = groupDigest(spec, dimension, index);
-    return {
-      dimension,
-      correlation_key_digest: key,
-      claim_basis: key === null ? 'unknown' : 'deterministic_derivation',
-      evidence_binding: key === null ? null : digest({ scenario: spec.id, evidence: dimension, key })
-    };
-  });
-}
+```text
+groupDigest(spec, dimension, index)
+  null when group count is null; otherwise digest of scenario/dimension/(index % groupCount).
 
-function makeSyntheticSignal(spec, index) {
-  const raw = {
-    schema: IMMUNE_SIGNAL_SCHEMA,
-    signal_id: `immune:signal:${spec.id}:${index}`,
-    origin_scope: 'synthetic_peer',
-    origin_principal_or_node_ref: `peer:synthetic:${spec.id}:${index}`,
-    observation_digest: digest({ scenario: spec.id, observation: index }),
-    threat_class: spec.threat_class,
-    affected_surface: ['synthetic:surface'],
-    behavioral_indicators: [`synthetic:${spec.id}`],
-    observation_kind: spec.observation_kind,
-    confidence: 'observed',
-    observed_at: '2026-09-13T22:00:00.000Z',
-    last_observed_at: '2026-09-13T22:00:00.000Z',
-    expires_or_review_at: index < spec.stale_signals ? STALE : FUTURE,
-    software_state_ref: groupDigest(spec, 'software', index) ?? digest({ unknownSoftware: index }),
-    runtime_or_detector_ref: groupDigest(spec, 'detector', index) ?? digest({ unknownDetector: index }),
-    source_lineage: [groupDigest(spec, 'source', index) ?? digest({ unknownSource: index })],
-    independence_claims: independenceClaims(spec, index),
-    sensitivity_class: 'synthetic_security',
-    disclosure_profile: 'minimized_peer_v0',
-    evidence_bindings: [digest({ scenario: spec.id, binding: index })],
-    signed_envelope_ref: null
-  };
-  return verifyImmuneSignal({ ...raw, signal_digest: contractDigest(raw, 'signal_digest') });
-}
+independenceClaims(spec, index)
+  all nine dimensions; null keys use claim_basis 'unknown' and null evidence_binding.
 
-function makeSyntheticAttestation(spec, signals, result, index) {
-  const signal = signals[index % signals.length];
-  const raw = {
-    schema: IMMUNE_ATTESTATION_SCHEMA,
-    attestation_id: `immune:attestation:${spec.id}:${result}:${index}`,
-    subject_signal_digest: signal.signal_digest,
-    observer_scope: 'synthetic_peer',
-    observer_principal_or_node_ref: `peer:synthetic:attestor:${spec.id}:${index}`,
-    result,
-    observation_method: 'synthetic_review',
-    observation_digest: digest({ scenario: spec.id, attestation: result, index }),
-    evidence_bindings: [digest({ scenario: spec.id, attestationBinding: result, index })],
-    independence_claims: independenceClaims(spec, index + spec.population),
-    software_state_ref: digest({ scenario: spec.id, attestorSoftware: 0 }),
-    runtime_or_detector_ref: digest({ scenario: spec.id, attestorDetector: 0 }),
-    confidence: result === 'unknown' ? 'insufficient_evidence' : 'observed',
-    observed_at: '2026-09-13T22:30:00.000Z',
-    expires_or_review_at: FUTURE,
-    signed_envelope_ref: null
-  };
-  return verifyImmuneAttestation({ ...raw, attestation_digest: contractDigest(raw, 'attestation_digest') });
-}
+makeSyntheticSignal(spec, index)
+  builds and verifies an ImmuneSignal; first stale_signals entries use STALE_EXPIRY,
+  remaining entries use FUTURE_EXPIRY; observed_at and last_observed_at use OBSERVED_AT.
 
-function makeSyntheticAttestations(spec, signals) {
-  const result = [];
-  for (const type of ['corroborates', 'contradicts', 'reproduced', 'unknown']) {
-    for (let index = 0; index < spec.attestations[type]; index += 1) {
-      result.push(makeSyntheticAttestation(spec, signals, type, result.length));
-    }
-  }
-  return result;
-}
+makeSyntheticAttestation(spec, signals, result, index)
+  round-robin target signal; deterministic synthetic evidence; expires at FUTURE_EXPIRY.
 
+makeSyntheticAttestations(spec, signals)
+  expands the four count buckets in fixed order: corroborates, contradicts, reproduced, unknown.
+```
+
+Public functions:
+
+```js
 export function expandSyntheticScenario(spec) {
   validateScenarioSpec(spec);
-  const signals = Array.from({ length: spec.population }, (_, index) => makeSyntheticSignal(spec, index));
+  const signals = Array.from({ length: spec.population }, (_, index) =>
+    makeSyntheticSignal(spec, index)
+  );
   const attestations = makeSyntheticAttestations(spec, signals);
   return { signals, attestations };
 }
@@ -1069,51 +790,41 @@ export function expandSyntheticScenario(spec) {
 export function runSyntheticImmuneScenario(spec) {
   const { signals, attestations } = expandSyntheticScenario(spec);
   return buildCorroborationSet({
-    subjectDigest: digest({ scenario: spec.subject_seed }),
+    subjectDigest: `sha256:${digestObject({ scenario: spec.subject_seed })}`,
     signals,
     attestations,
     applicabilityScope: spec.applicability_scope,
     computedAt: COMPUTED_AT,
-    reviewAt: FUTURE
+    reviewAt: FUTURE_EXPIRY
   });
 }
 ```
 
-No helper in this module may read a file, open a socket, spawn a process, call a provider, or consult wall-clock time.
+No helper may read files, open sockets, spawn processes, call providers, consult wall-clock time, or mutate external state.
 
-- [ ] **Step 5: Add scenario-specific assertions**
+- [ ] **Step 6: Assert every required adversarial property**
 
-Required expected properties:
+- honest independent corroboration -> multiple independent operator/node/source clusters;
+- 1000-Sybil majority -> one operator cluster, no authority output;
+- one operator many agents -> many origins do not imply operator independence;
+- same model/detector -> one detector cluster across multiple operators;
+- copied upstream feed -> one source cluster;
+- conflicting evidence -> contradiction preserved;
+- stale replay -> stale digests explicit without timestamp refresh;
+- compromised previously reliable peer -> no historical-reputation field or special authority;
+- benign novelty -> remains unscored, not declared hostile;
+- malicious contradiction -> cannot erase direct observation;
+- quarantine DoS attempt -> produces no quarantine/action field;
+- applicable/not-applicable pair -> same subject digest, different local applicability scope;
+- missing metadata -> null correlation keys count as unknown, not singleton independence.
 
-- `honest-independent-corroboration`: multiple independent operator/node/source clusters are preserved.
-- `sybil-majority-1000`: 1000 signals, one operator cluster, no authority-bearing output.
-- `one-operator-many-agents`: many origins do not imply many independent operators.
-- `same-model-correlated-false-positive`: multiple operators can still share one detector cluster.
-- `copied-upstream-feed`: many peers preserve one source correlation cluster.
-- `conflicting-independent-evidence`: contradiction remains explicit.
-- `stale-replay`: stale digests remain explicit and do not refresh themselves.
-- `compromised-previously-reliable-peer`: no historical-reputation field is introduced; new evidence stands on current provenance.
-- `benign-novelty`: anomaly evidence remains unscored and does not create hostility classification.
-- `malicious-contradiction`: contradiction cannot erase direct observation.
-- `quarantine-denial-of-service-attempt`: large duplicated input creates no quarantine action or action field.
-- `version-config-applicable` and `version-config-not-applicable`: identical threat family may carry different local applicability scopes without remote evidence overriding the local scope.
-- `missing-independence-metadata`: null correlation keys count as unknown, not singleton independent clusters.
-
-- [ ] **Step 6: Run H2 deterministic simulations repeatedly**
+- [ ] **Step 7: Run repeated simulation and combined regressions**
 
 ```bash
 cd mesh
 for i in 1 2 3; do
   node --test test/cooperative-immune-simulation.test.mjs || exit 1
 done
-```
-
-Expected: all three runs PASS with identical fixture-driven digests.
-
-- [ ] **Step 7: Run H1/H2 combined regression set**
-
-```bash
-cd mesh
 node --test \
   test/cooperative-immune-contracts.test.mjs \
   test/immune-corroboration.test.mjs \
@@ -1124,11 +835,11 @@ node --test \
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit Task 3**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add \
-  mesh/src/lib/cooperative-immune-simulator.mjs \
+cd ..
+git add mesh/src/lib/cooperative-immune-simulator.mjs \
   mesh/fixtures/cooperative-immune/adversarial-v0.scenarios.json \
   mesh/test/cooperative-immune-simulation.test.mjs
 git commit -m "test: simulate adversarial immune corroboration"
@@ -1136,22 +847,20 @@ git commit -m "test: simulate adversarial immune corroboration"
 
 ---
 
-### Task 4: Threat model, executable backlog, and canonical-document registration
+### Task 4: Add threat model, executable backlog, and documentation registration
 
 **Files:**
 - Create: `docs/security/COOPERATIVE-IMMUNE-FABRIC-THREAT-MODEL.md`
 - Create: `docs/MASTER-TODO-COOPERATIVE-IMMUNE-FABRIC.md`
 - Modify: `docs/README.md`
 - Modify: `mesh/src/check-docs.mjs`
-- Modify: `docs/superpowers/plans/2026-09-13-cooperative-immune-fabric-h1-h2.md` only if the repository workflow records completed plan checkboxes.
+- Modify: this plan only if the repository workflow records completed checkboxes.
 
 **Interfaces:**
-- Consumes: approved Stage 5B design and H1/H2 implementation evidence.
-- Produces: canonical claim boundary, later-slice backlog H3-H6, and doc-verifier coverage.
+- Consumes: approved Stage 5B design and H1/H2 evidence.
+- Produces: canonical non-claims, later H3-H6 backlog, and doc-verifier coverage.
 
-- [ ] **Step 1: Write the threat-model document**
-
-`docs/security/COOPERATIVE-IMMUNE-FABRIC-THREAT-MODEL.md` must contain these exact top-level sections:
+- [ ] **Step 1: Create the threat model with exact sections**
 
 ```text
 # Cooperative Immune Fabric Threat Model
@@ -1171,11 +880,9 @@ git commit -m "test: simulate adversarial immune corroboration"
 ## Required evidence before H3
 ```
 
-The non-claims section must explicitly say H1/H2 provide no live federation, automatic containment, reputation system, credential revocation, policy mutation, or retaliation capability.
+The non-claims section explicitly states that H1/H2 provide no live federation, automatic containment, reputation system, credential revocation, policy mutation, or retaliation capability.
 
-- [ ] **Step 2: Write the executable master backlog**
-
-`docs/MASTER-TODO-COOPERATIVE-IMMUNE-FABRIC.md` must use these sections:
+- [ ] **Step 2: Create the master backlog with exact sections**
 
 ```text
 # Cooperative Immune Fabric Master TODO
@@ -1193,11 +900,11 @@ The non-claims section must explicitly say H1/H2 provide no live federation, aut
 ## Completion rule
 ```
 
-Mark H3-H6 as unimplemented/future and preserve the fresh-gate requirements from the spec.
+H3-H6 remain explicitly unimplemented/future.
 
-- [ ] **Step 3: Register the documents in `docs/README.md`**
+- [ ] **Step 3: Register the spec, plan, threat model, and backlog in `docs/README.md`**
 
-Add links for:
+Register:
 
 ```text
 docs/superpowers/specs/2026-09-13-cooperative-immune-fabric-stage5b-design.md
@@ -1206,11 +913,11 @@ docs/security/COOPERATIVE-IMMUNE-FABRIC-THREAT-MODEL.md
 docs/MASTER-TODO-COOPERATIVE-IMMUNE-FABRIC.md
 ```
 
-Do not change production/capability claims.
+Do not promote capability or production claims.
 
-- [ ] **Step 4: Register canonical docs and required strings in `mesh/src/check-docs.mjs`**
+- [ ] **Step 4: Register canonical-document checks**
 
-Add all four paths above to `CANONICAL_DOCUMENTS` and add required-content checks:
+Add all four paths above to `CANONICAL_DOCUMENTS` in `mesh/src/check-docs.mjs`, plus required-content checks:
 
 ```js
 'docs/superpowers/specs/2026-09-13-cooperative-immune-fabric-stage5b-design.md': [
@@ -1220,8 +927,8 @@ Add all four paths above to `CANONICAL_DOCUMENTS` and add required-content check
 ],
 'docs/superpowers/plans/2026-09-13-cooperative-immune-fabric-h1-h2.md': [
   '## Exact changed-file envelope',
-  '### Task 1: H1 closed Cooperative Immune Fabric contracts',
-  '### Task 3: H2 deterministic adversarial multi-node simulation'
+  '### Task 1: Add closed inert Cooperative Immune Fabric contracts',
+  '### Task 3: Add deterministic adversarial multi-node simulation'
 ],
 'docs/security/COOPERATIVE-IMMUNE-FABRIC-THREAT-MODEL.md': [
   '## Sybil and correlation attacks',
@@ -1235,46 +942,36 @@ Add all four paths above to `CANONICAL_DOCUMENTS` and add required-content check
 ]
 ```
 
-- [ ] **Step 5: Run documentation verifier**
+- [ ] **Step 5: Verify documentation and commit**
 
 ```bash
 cd mesh
 node src/check-docs.mjs
-```
-
-Expected: PASS.
-
-- [ ] **Step 6: Commit Task 4**
-
-```bash
-git add \
-  docs/security/COOPERATIVE-IMMUNE-FABRIC-THREAT-MODEL.md \
+cd ..
+git add docs/security/COOPERATIVE-IMMUNE-FABRIC-THREAT-MODEL.md \
   docs/MASTER-TODO-COOPERATIVE-IMMUNE-FABRIC.md \
-  docs/README.md \
-  mesh/src/check-docs.mjs \
+  docs/README.md mesh/src/check-docs.mjs \
   docs/superpowers/plans/2026-09-13-cooperative-immune-fabric-h1-h2.md
 git commit -m "docs: register cooperative immune H1 H2 boundary"
 ```
+
+Expected: doc check PASS before commit.
 
 ---
 
 ### Task 5: Final authority, scope, and release verification
 
-**Files:** none unless a failure reveals a defect within the exact changed-file envelope.
+**Files:** none unless a failure exposes a defect inside the exact changed-file envelope.
 
-**Interfaces:**
-- Consumes: all H1/H2 work.
-- Produces: evidence that the branch is ready for reviewed PR consideration without claiming H3+ capability.
-
-- [ ] **Step 1: Run whitespace and patch sanity checks**
+- [ ] **Step 1: Patch sanity**
 
 ```bash
 git diff --check main...HEAD
 ```
 
-Expected: no output; exit 0.
+Expected: no output.
 
-- [ ] **Step 2: Verify no forbidden capability/config paths changed**
+- [ ] **Step 2: Prove forbidden paths did not change**
 
 ```bash
 if git diff --name-only main...HEAD | grep -E '^(mesh/config/capabilities\.json|mesh/src/(gateway|hypervisor|sandbox|grid)|.*credential|.*network|.*relay)'; then
@@ -1285,7 +982,7 @@ fi
 
 Expected: no matches.
 
-- [ ] **Step 3: Verify H1/H2 source contains no live-network or subprocess imports**
+- [ ] **Step 3: Prove H1/H2 source contains no live I/O primitive**
 
 ```bash
 if grep -REn "node:(http|https|net|tls|dgram|child_process)|\bfetch\s*\(" \
@@ -1299,7 +996,7 @@ fi
 
 Expected: no matches.
 
-- [ ] **Step 4: Run focused H0+H1+H2 tests**
+- [ ] **Step 4: Run focused H0+H1+H2 verification**
 
 ```bash
 cd mesh
@@ -1311,22 +1008,21 @@ node --test \
   test/cooperative-immune-contracts.test.mjs \
   test/immune-corroboration.test.mjs \
   test/cooperative-immune-simulation.test.mjs
+cd ..
 ```
 
 Expected: PASS.
 
-- [ ] **Step 5: Run repository-required verification**
-
-From the repository root:
+- [ ] **Step 5: Run repository-required verification from repository root**
 
 ```bash
 npm run check
 npm run release:verify
 ```
 
-Expected: PASS. If unrelated pre-existing failures occur, record them exactly and do not misreport the branch as fully green.
+Expected: PASS. If unrelated pre-existing failures occur, record them exactly and do not call the branch fully green.
 
-- [ ] **Step 6: Inspect final diff for claim integrity**
+- [ ] **Step 6: Final claim-integrity inspection**
 
 ```bash
 git diff --stat main...HEAD
@@ -1339,14 +1035,14 @@ git diff main...HEAD -- \
   docs/MASTER-TODO-COOPERATIVE-IMMUNE-FABRIC.md
 ```
 
-Confirm manually that:
+Confirm:
 
 - no output object carries authority;
-- 1000-Sybil simulation remains one operator cluster when configured that way;
+- the 1000-Sybil scenario has one operator cluster when configured that way;
 - contradictory and stale evidence remain explicit;
 - `confidence_band` remains `unscored`;
 - no live transport or containment implementation exists;
-- H3-H6 remain documented future work.
+- H3-H6 remain future work.
 
 - [ ] **Step 7: Open a draft implementation PR**
 
@@ -1360,13 +1056,13 @@ gh pr create \
   --body "Implements only approved Cooperative Immune Fabric H1-H2: inert evidence contracts, deterministic independence/correlation summaries, and synthetic adversarial multi-node simulations. No live networking, containment effects, reputation system, capability mutation, credential authority, production promotion, or retaliation capability. H0/PR #1573 is a prerequisite; H3+ remains separately gated."
 ```
 
-Expected: draft PR opened against `main`.
-
 ## Self-review record
 
-- **Spec coverage:** H1 contract semantics, independence/correlation representation, no one-agent-one-vote, contradiction, staleness, privacy-oriented inert references, and H2 adversarial scenarios map to Tasks 1-3. Threat model, H3-H6 backlog, canonical documentation, and claim boundary map to Task 4. Authority/no-retaliation and scope enforcement are rechecked in Task 5.
-- **Deliberate exclusions:** live exchange, cryptographic portable-package verification, actual local containment, credential revocation, policy mutation, adaptive-memory propagation across live peers, BFT/shared finality, and retaliation are H3+ work requiring later gates.
-- **Type consistency:** `ImmuneSignal`, `ImmuneAttestation`, `CorroborationSet`, independence dimensions, correlation clusters, and the simulator use the exact names and field contracts defined in Task 1.
-- **Helper completeness:** every helper referenced in Task 2 or Task 3 is either shown as code or defined by exact signature and behavior in the same task.
-- **No hidden score:** `confidence_band` is fixed to `unscored`; H1/H2 expose evidence structure rather than a universal trust formula.
-- **No unresolved placeholders:** implementation steps use exact files, interfaces, tests, commands, expected outcomes, and stop conditions.
+- **Spec coverage:** H1 contracts, independence/correlation, Sybil/correlation resistance, contradiction, staleness, inert privacy-oriented evidence, and all required H2 adversarial scenarios map to Tasks 1-3. Threat model, later H3-H6 backlog, canonical documentation, and non-claims map to Task 4. Authority/no-retaliation and scope enforcement are rechecked in Task 5.
+- **Deliberate exclusions:** live exchange, signed portable-package verification, real containment, credential revocation, policy mutation, live adaptive-memory propagation, BFT/shared finality, and retaliation are H3+ work requiring later gates.
+- **Type consistency:** all tasks use the exact `ImmuneSignal`, `ImmuneAttestation`, `CorroborationSet`, independence-dimension, and correlation-cluster names defined in Task 1.
+- **Helper completeness:** exported correlation helpers validate their inputs; every private helper referenced by Task 2 or Task 3 has an exact signature/behavior in this plan.
+- **Timing consistency:** synthetic stale evidence is observed before it expires, and expires before/equal to corroboration time.
+- **Cardinality consistency:** scenario validation caps total attestations at 1,024, matching the contract.
+- **No hidden score:** `confidence_band` is fixed to `unscored`.
+- **No unresolved placeholders:** tasks contain exact files, interfaces, tests, commands, expected outcomes, and stop conditions.
