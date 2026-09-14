@@ -8,7 +8,13 @@ import {
   verifySignedRequest
 } from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
-import { AxiomError, assertPlainObject, digestObject, newId } from '../lib/canonical.mjs';
+import {
+  AxiomError,
+  ValidationError,
+  assertPlainObject,
+  digestObject,
+  newId
+} from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
@@ -22,6 +28,7 @@ import {
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
+import { normalizeMachinePrincipalDefinition } from '../lib/machine-principal.mjs';
 import { executeSandboxBuiltin } from './education-executor.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -147,6 +154,28 @@ export async function createSandboxService(config = meshConfig()) {
     }
     if (claims.subject !== intent.principal.id) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
+    }
+    if (intent.principal.schema === 'axiom-machine-principal.v1') {
+      let currentPrincipal;
+      try {
+        currentPrincipal = normalizeMachinePrincipalDefinition(intent.principal, {
+          now: new Date()
+        });
+      } catch (error) {
+        if (!(error instanceof ValidationError)) throw error;
+        throw new AxiomError(
+          'machine_principal_currentness_invalid',
+          'Machine principal authority is no longer valid at the effect boundary',
+          403
+        );
+      }
+      if (currentPrincipal.authority_digest !== claims.authority_digest) {
+        throw new AxiomError(
+          'machine_authority_stale',
+          'Machine principal authority no longer matches the issued capability',
+          403
+        );
+      }
     }
     const startedAt = new Date().toISOString();
     const builtinResult = executeSandboxBuiltin({
