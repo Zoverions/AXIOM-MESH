@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/threat-hypothesis.v0.schema.json",
+  "title": "AXIOM Threat Hypothesis v0",
+  "description": "Non-authoritative AXIOM applicability hypothesis derived from threat observations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "hypothesis_id", "observation_ids", "axiom_boundary_or_component",
+    "precondition_mapping", "expected_failure_mode", "applicability_state", "confidence",
+    "contradicting_evidence", "required_reproduction", "confirmation_basis", "evidence_bindings",
+    "created_by_principal_or_process", "created_at", "review_at", "hypothesis_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-threat-hypothesis.v0" },
+    "hypothesis_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "observation_ids": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 }, "minItems": 1, "maxItems": 32, "uniqueItems": true },
+    "axiom_boundary_or_component": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 512 }, "minItems": 1, "maxItems": 32, "uniqueItems": true },
+    "precondition_mapping": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 2048 }, "maxItems": 32, "uniqueItems": true },
+    "expected_failure_mode": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "applicability_state": { "type": "string", "enum": [
+      "unassessed", "plausible", "not_applicable", "lab_confirmed",
+      "current_build_blocked", "current_build_vulnerable", "obsolete"
+    ] },
+    "confidence": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "contradicting_evidence": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 2048 }, "maxItems": 32, "uniqueItems": true },
+    "required_reproduction": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 2048 }, "maxItems": 32, "uniqueItems": true },
+    "confirmation_basis": { "type": "string", "enum": [
+      "unassessed", "model_only", "deterministic_build_fact_mapping", "reproducible_verifier", "authorized_review"
+    ] },
+    "evidence_bindings": { "type": "array", "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "maxItems": 32, "uniqueItems": true },
+    "created_by_principal_or_process": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "created_at": { "type": "string", "format": "date-time", "pattern": "Z$", "maxLength": 64 },
+    "review_at": { "type": "string", "format": "date-time", "pattern": "Z$", "maxLength": 64 },
+    "hypothesis_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "allOf": [{
+    "if": {
+      "properties": { "applicability_state": { "enum": ["lab_confirmed", "current_build_blocked", "current_build_vulnerable"] } },
+      "required": ["applicability_state"]
+    },
+    "then": {
+      "properties": {
+        "confirmation_basis": { "not": { "const": "model_only" } },
+        "evidence_bindings": { "minItems": 1 }
+      }
+    }
+  }]
+}
