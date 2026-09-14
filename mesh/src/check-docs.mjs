@@ -27,6 +27,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md',
   'docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md',
   'docs/MASTER-TODO-EPISTEMIC-FABRIC.md',
+  'docs/MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md',
   'docs/ROADMAP.md',
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md',
@@ -67,6 +68,11 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
+  'docs/architecture/contracts/threat-observation.v0.schema.json',
+  'docs/architecture/contracts/threat-hypothesis.v0.schema.json',
+  'docs/architecture/contracts/reproduction-case.v0.schema.json',
+  'docs/architecture/contracts/regression-candidate.v0.schema.json',
+  'docs/architecture/contracts/threat-adaptation-receipt.v0.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -93,6 +99,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md',
+  'docs/security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md',
   'docs/superpowers/specs/2026-08-27-emergent-coordination-collective-authority-design.md',
   'docs/superpowers/specs/2026-08-29-sovereign-agent-composition-continuity-design.md',
   'docs/superpowers/specs/2026-08-29-extensible-agent-provider-substrate-design.md',
@@ -215,6 +222,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Priority 6 — Later work remains parked',
     '## Completion rule'
   ],
+  'docs/MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md': [
+    '## Priority 0 — Protect current authority truth',
+    '## Priority 6 — Slice F live feed gate',
+    '## Completion rule'
+  ],
   'docs/ROADMAP.md': ['## Promotion rules', '## Current Phase 2'],
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': [
     '## Compatibility commitments effective immediately',
@@ -310,6 +322,21 @@ const REQUIRED_CONTENT = Object.freeze({
     'https://axiom.invalid/schemas/personal-agent-pack.v1.schema.json',
     'axiom-personal-agent-pack.v1',
     'secret_material_included'
+  ],
+  'docs/architecture/contracts/threat-observation.v0.schema.json': [
+    'axiom-threat-observation.v0'
+  ],
+  'docs/architecture/contracts/threat-hypothesis.v0.schema.json': [
+    'axiom-threat-hypothesis.v0'
+  ],
+  'docs/architecture/contracts/reproduction-case.v0.schema.json': [
+    'axiom-threat-reproduction-case.v0'
+  ],
+  'docs/architecture/contracts/regression-candidate.v0.schema.json': [
+    'axiom-threat-regression-candidate.v0'
+  ],
+  'docs/architecture/contracts/threat-adaptation-receipt.v0.schema.json': [
+    'axiom-threat-adaptation-receipt.v0'
   ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
@@ -425,6 +452,12 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Threats and required controls',
     '## Required negative tests',
     '## Non-claims'
+  ],
+  'docs/security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md': [
+    '## Scope and non-claims',
+    'no live threat feed claim',
+    '## Authority non-amplification',
+    '## Deferred Slice C-G risks'
   ],
   'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md': [
     'Risk is not prohibition',
