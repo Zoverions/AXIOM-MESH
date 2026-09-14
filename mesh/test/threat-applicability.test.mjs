@@ -9,9 +9,20 @@ import {
 
 const NOW = '2026-09-10T20:00:00.000Z';
 const REVIEW = '2026-10-10T20:01:00.000Z';
+const SET_FIELDS = [
+  'boundaries',
+  'implemented_protocols',
+  'absent_capabilities',
+  'active_controls',
+  'dependencies'
+];
 
 function withFactDigest(raw) {
-  return { ...raw, fact_digest: contractDigest(raw, 'fact_digest') };
+  const normalized = { ...raw };
+  for (const field of SET_FIELDS) {
+    normalized[field] = [...raw[field]].sort();
+  }
+  return { ...raw, fact_digest: contractDigest(normalized, 'fact_digest') };
 }
 
 function buildFacts(overrides = {}) {
@@ -61,7 +72,7 @@ test('unsupported external capability maps to not_applicable rather than vulnera
   const hypothesis = evaluate(observation('browser_automation', 'browser_remote_execution'));
   assert.equal(hypothesis.applicability_state, 'not_applicable');
   assert.equal(hypothesis.confirmation_basis, 'deterministic_build_fact_mapping');
-  assert.deepEqual(hypothesis.observation_ids.length, 1);
+  assert.equal(hypothesis.observation_ids.length, 1);
 });
 
 test('matching boundary is plausible and unknown boundary remains unassessed', () => {
