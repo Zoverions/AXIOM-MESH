@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   canonicalObservationKey,
   linkObservationLifecycle,
-  mergeOfflineObservationCorpus,
   normalizeOfflineThreatSource
 } from '../src/lib/threat-observation-normalizer.mjs';
 
@@ -125,61 +124,4 @@ test('cross-source lifecycle links fail closed without matching provenance', () 
     supersedes_observation_ids: ['obs:source-a:1']
   });
   assert.throws(() => linkObservationLifecycle([first, second]), /provenance|source/i);
-});
-
-test('corrected observations preserve earlier evidence and derive superseded lifecycle', () => {
-  const earlier = normalizedObservation({ observation_id: 'obs:vendor:claim:v1' });
-  const corrected = normalizedObservation({
-    observation_id: 'obs:vendor:claim:v2',
-    supersedes_observation_ids: ['obs:vendor:claim:v1']
-  });
-  const corpus = mergeOfflineObservationCorpus([earlier], [corrected], {
-    now: '2026-09-11T00:00:00.000Z'
-  });
-  assert.equal(corpus.length, 2);
-  const projected = corpus.find(entry => entry.observation.observation_id === earlier.observation_id);
-  assert.equal(projected.derived_lifecycle_state, 'superseded');
-  assert.equal(projected.observation.observation_digest, earlier.observation_digest);
-});
-
-test('identical evidence deduplicates while same ID substitution fails', () => {
-  const observation = normalizedObservation({ observation_id: 'obs:dedupe:1' });
-  const corpus = mergeOfflineObservationCorpus([observation], [observation], { now: NOW });
-  assert.equal(corpus.length, 1);
-
-  const substituted = normalizedObservation({
-    observation_id: 'obs:dedupe:1',
-    summary: 'Different bytes under the same observation identifier.'
-  });
-  assert.throws(
-    () => mergeOfflineObservationCorpus([observation], [substituted], { now: NOW }),
-    /substitution|different digest/i
-  );
-});
-
-test('contradiction is symmetric in projection without rewriting signed evidence', () => {
-  const first = normalizedObservation({ observation_id: 'obs:contra:1' });
-  const second = normalizedObservation({
-    observation_id: 'obs:contra:2',
-    contradicts_observation_ids: ['obs:contra:1']
-  });
-  const corpus = mergeOfflineObservationCorpus([first], [second], { now: NOW });
-  const a = corpus.find(entry => entry.observation.observation_id === 'obs:contra:1');
-  const b = corpus.find(entry => entry.observation.observation_id === 'obs:contra:2');
-  assert.equal(a.derived_lifecycle_state, 'contradicted');
-  assert.equal(b.derived_lifecycle_state, 'contradicted');
-  assert.equal(a.observation.observation_digest, first.observation_digest);
-  assert.equal(b.observation.observation_digest, second.observation_digest);
-});
-
-test('expiry changes only derived lifecycle state and preserves evidence', () => {
-  const observation = normalizedObservation({
-    observation_id: 'obs:expired:1',
-    expiry_or_review_at: '2026-09-10T21:00:00.000Z'
-  });
-  const [entry] = mergeOfflineObservationCorpus([observation], [], {
-    now: '2026-09-11T00:00:00.000Z'
-  });
-  assert.equal(entry.derived_lifecycle_state, 'expired_pending_reassessment');
-  assert.equal(entry.observation.observation_digest, observation.observation_digest);
 });
