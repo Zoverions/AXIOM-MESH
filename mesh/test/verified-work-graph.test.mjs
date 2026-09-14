@@ -156,12 +156,41 @@ test('verified work graph digest is deterministic', () => {
   assert.equal(verifiedWorkGraphDigest(graph()), verifiedWorkGraphDigest(graph()));
 });
 
+test('verified work graph digest ignores semantically irrelevant node and dependency ordering', () => {
+  const original = mutateNode(graph(), 'verify.a', {
+    dependencies: ['task.a', 'artifact.a']
+  });
+  const reordered = {
+    ...original,
+    nodes: [...original.nodes]
+      .reverse()
+      .map(node => node.node_id === 'verify.a'
+        ? { ...node, dependencies: [...node.dependencies].reverse() }
+        : { ...node, dependencies: [...node.dependencies] })
+  };
+
+  assert.equal(verifiedWorkGraphDigest(original), verifiedWorkGraphDigest(reordered));
+
+  const normalized = validateVerifiedWorkGraph(reordered);
+  assert.deepEqual(
+    normalized.nodes.map(node => node.node_id),
+    ['artifact.a', 'goal', 'task.a', 'verify.a']
+  );
+  assert.deepEqual(
+    normalized.nodes.find(node => node.node_id === 'verify.a').dependencies,
+    ['artifact.a', 'task.a']
+  );
+});
+
 test('verified work graph JSON schema mirrors strict node boundary', async () => {
   const schema = JSON.parse(await readFile(new URL('../config/verified-work-graph-v0.schema.json', import.meta.url), 'utf8'));
   assert.equal(schema.additionalProperties, false);
   assert.equal(schema.properties.schema.const, VERIFIED_WORK_GRAPH_SCHEMA);
   assert.equal(schema.$defs.node.additionalProperties, false);
   assert.deepEqual(schema.$defs.node.properties.kind.enum, ['goal', 'task', 'artifact', 'verification']);
+  assert.deepEqual(schema.properties.nodes.contains.properties.kind, { const: 'goal' });
+  assert.equal(schema.properties.nodes.minContains, 1);
+  assert.equal(schema.properties.nodes.maxContains, 1);
   assert.equal(schema.properties.authority_effect.const, 'none');
   assert.equal(schema.properties.execution_authority.const, false);
 });
