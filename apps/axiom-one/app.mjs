@@ -2,7 +2,7 @@ import {
   createGatewayClient,
   GatewayClientError
 } from '/vendor/axiom-client.mjs';
-import { createHumanPresenter } from '/presentation.mjs';
+import { createHumanPresenter, projectCapabilityParity } from '/presentation.mjs';
 import { buildBrowserOrganizeDraft } from '/local-organize.mjs';
 
 const ROUTES = new Set([
@@ -22,6 +22,10 @@ const state = {
   route: 'overview',
   lastIntent: null,
   pendingIntent: null,
+  social: {
+    pending: null,
+    last: null
+  },
   vault: {
     pending: null,
     last: null,
@@ -71,6 +75,8 @@ disconnectButton.addEventListener('click', () => {
   connectionLabel.textContent = 'Not connected';
   state.lastIntent = null;
   state.pendingIntent = null;
+  state.social.pending = null;
+  state.social.last = null;
   state.vault.pending = null;
   state.vault.last = null;
   announce('Disconnected and cleared the in-memory token');
@@ -147,18 +153,21 @@ async function renderOverview() {
   ]);
   const counts = status.capability_counts ?? {};
   const runtime = status.runtime ?? {};
+  const parity = projectCapabilityParity(capabilities);
   view.replaceChildren(
     header('A clear view of this node',
       'Health and capability information comes from the authenticated Gateway. A healthy preview is not a production-promotion claim.'),
     grid([
       metricCard('Kernel', status.kernel_version, 'Current development build'),
-      metricCard('Implemented', String(counts.implemented ?? 0), 'Registry-backed capabilities'),
+      metricCard('Implemented', String(parity.implemented ?? counts.implemented ?? 0), 'Registry-backed runnable claims'),
       metricCard('Services', String(Object.keys(runtime).length), 'Gateway-reported runtime units'),
       card('Node state', summarizeRuntime(runtime), { wide: true, badge: ['Connected', 'good'] }),
-      card('Capability registry', `${capabilities.capabilities?.length ?? 0} declared capabilities. Only registry entries marked implemented are runnable claims.`, {
+      card('Capability registry', `${parity.total} declared capabilities. Only registry entries marked implemented are runnable claims.`, {
         badge: ['Exact source', 'good']
       })
-    ])
+    ]),
+    notice('Implemented means the Mesh registry supports the capability; it does not mean this principal is authorized to execute it. Authority is evaluated separately through the normal intent and policy path.'),
+    rawDetails('Capability parity projection', parity)
   );
 }
 
@@ -346,6 +355,133 @@ async function renderSocial() {
     ? response.corpus.transitions
     : [];
   const localOnly = response.network_effect === 'none';
+  const activeActor = actors.find(actor => actor.status === 'active') ?? actors[0] ?? null;
+  const activePersona = personas.find(persona => persona.status === 'active') ?? null;
+  const review = element('div', { className: 'stack', attrs: { id: 'social-review' } });
+  const result = element('div', { className: 'stack', attrs: { id: 'social-result' } });
+  const writeButtons = [];
+  let activeController;
+
+  const setWritesLocked = locked => {
+    for (const button of writeButtons) button.disabled = locked;
+  };
+
+  const renderLast = () => {
+    result.replaceChildren();
+    const last = state.social.last;
+    if (!last) return;
+    const actions = [];
+    if (last.model.retrySameRequest && state.social.pending) {
+      const retry = element('button', {
+        className: 'button button-primary',
+        text: 'Retry same social request safely',
+        attrs: { type: 'button' }
+      });
+      retry.addEventListener('click', () => executePending());
+      actions.push(retry);
+    }
+    result.append(humanExplanation(
+      last.model,
+      'Raw social intent result and evidence',
+      last.raw,
+      actions
+    ));
+  };
+
+  const renderReview = () => {
+    review.replaceChildren();
+    const pending = state.social.pending;
+    if (!pending) return;
+    const send = element('button', {
+      className: 'button button-primary',
+      text: 'Send reviewed social request',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Cancel without sending',
+      attrs: { type: 'button' }
+    });
+    send.addEventListener('click', () => executePending());
+    change.addEventListener('click', async () => {
+      state.social.pending = null;
+      announce('Social review closed without sending');
+      await renderSocial();
+    });
+    review.append(humanExplanation(
+      human.requestPreview(pending.body),
+      'Exact local Social request to submit',
+      pending.body,
+      [send, change]
+    ));
+  };
+
+  const executePending = async () => {
+    const pending = state.social.pending;
+    if (!pending || activeController) return;
+    activeController = new AbortController();
+    setWritesLocked(true);
+    review.replaceChildren();
+    const cancelWait = element('button', {
+      className: 'button button-secondary',
+      text: 'Cancel browser wait',
+      attrs: { type: 'button' }
+    });
+    cancelWait.addEventListener('click', () => activeController?.abort());
+    result.replaceChildren(
+      notice('Submitting the reviewed local Social request through Gateway → Hypervisor → Sandbox → Grid…'),
+      element('div', { className: 'actions' }, [cancelWait])
+    );
+    try {
+      const raw = await state.client.call('intents.submit', {
+        body: pending.body,
+        idempotencyKey: pending.idempotencyKey,
+        signal: activeController.signal
+      });
+      const model = human.intentSuccess({
+        request: pending.body,
+        response: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.social.last = { model, raw };
+      state.social.pending = null;
+      announce(`${model.title}; the local Social view is refreshing`);
+      await renderSocial();
+    } catch (error) {
+      const raw = serializableError(error);
+      const model = human.intentFailure({
+        request: pending.body,
+        error: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.social.last = { model, raw };
+      if (!model.retrySameRequest) {
+        state.social.pending = null;
+        announce('Local Social request did not complete');
+        await renderSocial();
+        return;
+      }
+      setWritesLocked(true);
+      renderReview();
+      renderLast();
+      announce('Social outcome is not confirmed; same-request recovery is available');
+    } finally {
+      activeController = null;
+      if (!state.social.pending) setWritesLocked(false);
+    }
+  };
+
+  const startReview = body => {
+    if (state.social.pending) return;
+    state.social.pending = {
+      body,
+      idempotencyKey: `axiom-one:social:${crypto.randomUUID()}`
+    };
+    setWritesLocked(true);
+    renderReview();
+    announce('Local Social review is ready; nothing has been sent');
+    review.scrollIntoView({ block: 'nearest' });
+  };
 
   const actorCards = actors.length
     ? element('div', { className: 'stack' }, actors.map(actor => element('article', {
@@ -370,25 +506,206 @@ async function renderSocial() {
     }))
     : empty('No publication persona is visible to this authenticated principal.');
 
+  const identityControls = element('div', { className: 'stack' });
+  if (!actors.length) {
+    const createActor = element('button', {
+      className: 'button button-primary',
+      text: 'Review local social actor creation',
+      attrs: { type: 'button' }
+    });
+    writeButtons.push(createActor);
+    createActor.addEventListener('click', () => startReview({
+      action: 'social.actor.create',
+      input: {},
+      purpose: 'local-social-identity',
+      data_scopes: ['social:identity']
+    }));
+    identityControls.append(
+      notice('Creating an actor writes one owner-local social identity only. It does not publish, federate, follow, or create external identity authority.'),
+      createActor
+    );
+  } else if (activeActor && !activePersona) {
+    const personaForm = element('form', { className: 'stack' });
+    const attributionMode = element('select', {
+      attrs: { id: 'social-attribution-mode', name: 'attribution_mode', required: '' }
+    }, [
+      element('option', { text: 'Pseudonymous', attrs: { value: 'pseudonymous', selected: '' } }),
+      element('option', { text: 'Public-identifiable', attrs: { value: 'public-identifiable' } }),
+      element('option', { text: 'Anonymous', attrs: { value: 'anonymous' } })
+    ]);
+    const createPersona = element('button', {
+      className: 'button button-primary',
+      text: 'Review local publication persona',
+      attrs: { type: 'submit' }
+    });
+    writeButtons.push(createPersona);
+    personaForm.append(
+      notice('This creates one local publication persona. Selectively attributable and organization-delegated modes remain unavailable in this browser tranche because they require additional evidence or authority.'),
+      field('Attribution mode', attributionMode, 'social-attribution-mode'),
+      element('div', { className: 'actions' }, [createPersona])
+    );
+    personaForm.addEventListener('submit', event => {
+      event.preventDefault();
+      startReview({
+        action: 'social.persona.create',
+        input: {
+          actor_id: activeActor.actor_id,
+          attribution_mode: attributionMode.value
+        },
+        purpose: 'local-social-persona',
+        data_scopes: ['social:identity']
+      });
+    });
+    identityControls.append(personaForm);
+  } else {
+    identityControls.append(notice(
+      'The current local actor/persona identity layer is present. Publication creation can now be reviewed separately below.'
+    ));
+  }
+
+  const publicationControls = element('div', { className: 'stack' });
+  if (activeActor && activePersona) {
+    const publicationForm = element('form', { className: 'stack' });
+    const publicationText = element('textarea', {
+      attrs: {
+        id: 'social-publication-text',
+        name: 'publication_text',
+        required: '',
+        maxlength: '10000',
+        placeholder: 'Write a publication to retain in the owner-local Social corpus.'
+      }
+    });
+    const createPublication = element('button', {
+      className: 'button button-primary',
+      text: 'Review local publication',
+      attrs: { type: 'submit' }
+    });
+    writeButtons.push(createPublication);
+    publicationForm.append(
+      notice('This creates one owner-local public/listed human-authored publication. It stays on this node: no federation, remote following, recommendation, relay, or distribution occurs. Supersede and retract controls for active local publications appear in the corpus below.'),
+      field('Publication text', publicationText, 'social-publication-text'),
+      element('div', { className: 'actions' }, [createPublication])
+    );
+    publicationForm.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!publicationText.value.trim()) {
+        publicationText.setCustomValidity('Enter publication text containing at least one visible character.');
+        publicationText.reportValidity();
+        return;
+      }
+      publicationText.setCustomValidity('');
+      startReview({
+        action: 'social.publication.create',
+        input: {
+          actor_id: activeActor.actor_id,
+          actor_state_digest: activeActor.actor_state_digest,
+          protected_persona: activePersona.protected_persona,
+          content: {
+            media_type: 'text/plain',
+            text: publicationText.value
+          },
+          audience: { mode: 'public' },
+          discoverability: 'listed',
+          authorship_mode: 'human-authored'
+        },
+        purpose: 'social-publish',
+        data_scopes: ['publication-projection']
+      });
+    });
+    publicationControls.append(publicationForm);
+  } else {
+    publicationControls.append(empty(
+      'Create the owner-local actor and active publication persona before composing a publication.'
+    ));
+  }
+
   const publicationCards = publications.length
-    ? element('div', { className: 'stack' }, publications.map(publication => {
+    ? element('div', { className: 'stack' }, publications.map((publication, index) => {
       const projection = publication.publication ?? {};
       const status = publication.status ?? 'unknown';
       const text = typeof projection.content?.text === 'string'
         ? projection.content.text
         : 'No text projection is available.';
+      const lifecycleControls = element('div', { className: 'stack' });
+      if (status === 'active' && activeActor && activePersona) {
+        const revisionText = element('textarea', {
+          attrs: {
+            id: `social-publication-revision-${index}`,
+            name: `publication_revision_${index}`,
+            required: '',
+            maxlength: '10000',
+            placeholder: 'Write replacement text. The prior publication remains in append-only history.'
+          }
+        });
+        revisionText.value = typeof projection.content?.text === 'string'
+          ? projection.content.text
+          : '';
+        const supersedePublication = element('button', {
+          className: 'button button-secondary',
+          text: 'Review superseding publication',
+          attrs: { type: 'button' }
+        });
+        const retractPublication = element('button', {
+          className: 'button button-secondary',
+          text: 'Review local retraction',
+          attrs: { type: 'button' }
+        });
+        writeButtons.push(supersedePublication, retractPublication);
+        supersedePublication.addEventListener('click', () => {
+          if (!revisionText.value.trim()) {
+            revisionText.setCustomValidity('Enter replacement publication text containing at least one visible character.');
+            revisionText.reportValidity();
+            return;
+          }
+          revisionText.setCustomValidity('');
+          startReview({
+            action: 'social.publication.supersede',
+            input: {
+              actor_id: activeActor.actor_id,
+              actor_state_digest: activeActor.actor_state_digest,
+              protected_persona: activePersona.protected_persona,
+              previous_publication: publication.publication,
+              content: {
+                media_type: 'text/plain',
+                text: revisionText.value
+              },
+              audience: { mode: 'public' },
+              discoverability: 'listed',
+              authorship_mode: 'human-authored'
+            },
+            purpose: 'social-publish',
+            data_scopes: ['publication-projection']
+          });
+        });
+        retractPublication.addEventListener('click', () => startReview({
+          action: 'social.publication.retract',
+          input: {
+            actor_id: activeActor.actor_id,
+            previous_publication: publication.publication,
+            reason_code: 'author-retracted'
+          },
+          purpose: 'social-publish',
+          data_scopes: ['publication-projection']
+        }));
+        lifecycleControls.append(
+          notice('Supersede appends a replacement while retaining the prior publication. Retract requests local stop-serving only; neither action deletes third-party copies, federates, or rewrites append-only history.'),
+          field('Replacement text', revisionText, `social-publication-revision-${index}`),
+          element('div', { className: 'actions' }, [supersedePublication, retractPublication])
+        );
+      }
       return element('article', { className: 'card full' }, [
         element('span', {
           className: `badge ${status === 'active' ? 'good' : 'pending'}`,
           text: status
         }),
-        element('h2', { text: text }),
+        element('h2', { text }),
         element('p', {
           text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
         }),
         projection.supersedes_digest
           ? element('p', { text: `Supersedes: ${projection.supersedes_digest}` })
           : element('p', { text: 'Original local publication projection.' }),
+        lifecycleControls,
         rawDetails('Inspect exact publication projection', publication)
       ]);
     }))
@@ -396,7 +713,7 @@ async function renderSocial() {
 
   view.replaceChildren(
     header('Owner-local Social corpus',
-      'Inspect the social identity, persona, and append-only publication history already held by this node. This read surface derives the owner only from the authenticated principal.'),
+      'Inspect local social state and create, supersede, or retract owner-bound publications through reviewed local intents. Remote distribution remains disabled.'),
     grid([
       metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
       metricCard('Personas', String(personas.length), 'Publication personas'),
@@ -406,7 +723,17 @@ async function renderSocial() {
         badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
       })
     ]),
-    notice('This tranche is read-only in AXIOM One. Local actor/persona/publication mutation already exists in the kernel, but browser write controls remain disabled until their human explanation and reviewed-request flows are separately bound and tested.'),
+    notice('Local actor and persona creation plus publication create, supersede, and retract are enabled only through the reviewed intent path. Federation, remote following, recommendation, relay, distribution, hard deletion, and third-party deletion claims remain disabled in AXIOM One.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-identity-controls-heading' } }, [
+      element('h2', { text: 'Local identity controls', attrs: { id: 'social-identity-controls-heading' } }),
+      identityControls
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-publication-controls-heading' } }, [
+      element('h2', { text: 'Local publication composer', attrs: { id: 'social-publication-controls-heading' } }),
+      publicationControls
+    ]),
+    review,
+    result,
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
       element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
       actorCards
@@ -425,6 +752,11 @@ async function renderSocial() {
     ]),
     rawDetails('Raw owner-local Social snapshot', response)
   );
+  if (state.social.pending) {
+    setWritesLocked(true);
+    renderReview();
+  }
+  renderLast();
 }
 
 async function renderApprovals() {
@@ -733,7 +1065,6 @@ async function renderVault() {
     ));
     announce('Local organize review is ready; nothing has been written');
   });
-
 
   const review = element('div', { className: 'stack', attrs: { id: 'vault-review' } });
   const result = element('div', { className: 'stack', attrs: { id: 'vault-result' } });
@@ -1044,18 +1375,226 @@ async function renderVault() {
 async function renderReceipts() {
   const response = await state.client.call('events.list', { query: { limit: 50 } });
   const events = response.events ?? [];
-  view.replaceChildren(
-    header('Receipts and evidence timeline',
-      'Every current kernel event kind has a bounded plain-language mapping while raw payload, trace, and event identifiers remain available.'),
-    events.length
-      ? element('div', { className: 'stack' }, events.map(item => humanExplanation(
+  let audit = null;
+  let auditError = null;
+  try {
+    audit = await state.client.call('audit.verify');
+  } catch (error) {
+    auditError = error;
+  }
+
+  const auditIntegrity = auditError
+    ? errorBox(auditError, 'Live audit integrity is unavailable')
+    : (audit?.valid === true
+      ? element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: 'Integrity verified' }),
+        element('h2', { text: 'Live audit integrity' }),
+        element('p', { text: 'The authenticated audit.verify read reports the local Grid chain as internally valid. This is integrity evidence only; it is not external-world truth and grants no authority.' }),
+        rawDetails('Raw live audit integrity response', audit)
+      ])
+      : element('article', { className: 'card full' }, [
+        element('span', { className: 'badge danger', text: 'Not verified' }),
+        element('h2', { text: 'Live audit integrity not verified' }),
+        element('p', { text: 'The audit route did not report valid=true. No verified-chain claim is synthesized; inspect the raw response before relying on this evidence.' }),
+        rawDetails('Raw live audit integrity response', audit)
+      ]));
+
+  const verifyPanel = element('div', {
+    className: 'stack',
+    attrs: { id: 'offline-verify-panel' }
+  });
+  const verifyResult = element('div', {
+    className: 'stack',
+    attrs: { id: 'offline-verify-result' }
+  });
+
+  const mode = element('select', {
+    attrs: { id: 'offline-verify-mode', name: 'offline_verify_mode' }
+  });
+  for (const [value, label] of [
+    ['auto', 'Auto-detect artifact kind'],
+    ['receipt', 'Machine receipt'],
+    ['continuity', 'Continuity anchor'],
+    ['export', 'Selective export package']
+  ]) {
+    mode.append(element('option', { text: label, attrs: { value } }));
+  }
+
+  const artifact = element('textarea', {
+    attrs: {
+      id: 'offline-verify-artifact',
+      name: 'offline_verify_artifact',
+      required: '',
+      maxlength: '200000',
+      placeholder: 'Paste a machine-receipt, continuity-anchor, or export-package JSON artifact. Click Verify offline on a visible event to prefill its raw JSON.'
+    }
+  });
+  const publicKey = element('textarea', {
+    attrs: {
+      id: 'offline-verify-public-key',
+      name: 'offline_verify_public_key',
+      required: '',
+      maxlength: '16000',
+      placeholder: 'Owner-supplied Ed25519 public key PEM used only for local offline Verify. Not fetched from Gateway.'
+    }
+  });
+  const chainSegment = element('textarea', {
+    attrs: {
+      id: 'offline-verify-chain-segment',
+      name: 'offline_verify_chain_segment',
+      maxlength: '200000',
+      placeholder: 'Optional chain-segment JSON for continuity mode (genesis through retained head).'
+    }
+  });
+  const exportFiles = element('textarea', {
+    attrs: {
+      id: 'offline-verify-export-files',
+      name: 'offline_verify_export_files',
+      maxlength: '200000',
+      placeholder: 'Optional export files JSON map: {"file.name":"utf8-bytes-or-base64:..."} for export mode.'
+    }
+  });
+
+  const run = element('button', {
+    className: 'button button-primary',
+    text: 'Run offline Verify',
+    attrs: { type: 'button' }
+  });
+  run.addEventListener('click', async () => {
+    run.disabled = true;
+    verifyResult.replaceChildren(notice('Running local offline Verify on the loopback preview helper…'));
+    try {
+      const report = await runOfflineVerify({
+        mode: mode.value,
+        artifactText: artifact.value,
+        publicKeyPem: publicKey.value,
+        chainSegmentText: chainSegment.value,
+        exportFilesText: exportFiles.value
+      });
+      verifyResult.replaceChildren(
+        humanExplanation(
+          human.verifyReport(report),
+          'Raw offline verification report',
+          report
+        )
+      );
+      announce(report?.verdict === 'PASS' ? 'Offline Verify reported PASS' : 'Offline Verify reported FAIL');
+    } catch (error) {
+      verifyResult.replaceChildren(errorBox(error, 'Offline Verify is unavailable'));
+    } finally {
+      run.disabled = false;
+    }
+  });
+
+  verifyPanel.append(
+    header('Verify offline (experimental)',
+      'Integrity versus truth: PASS is cryptographic integrity under the owner-supplied key and declared schema — not external-world truth, not authority, and not Mesh production promotion.'),
+    notice('Experimental MVP only. Not a released Verify product. Local Verify does not call Gateway as an authority client. Hermes pin remains provisional; SEC-002 pending.'),
+    field('Artifact kind', mode, 'offline-verify-mode'),
+    field('Artifact JSON', artifact, 'offline-verify-artifact'),
+    field('Verification public key PEM', publicKey, 'offline-verify-public-key'),
+    field('Continuity chain segment JSON (optional)', chainSegment, 'offline-verify-chain-segment'),
+    field('Export files map JSON (optional)', exportFiles, 'offline-verify-export-files'),
+    element('div', { className: 'actions' }, [run]),
+    verifyResult
+  );
+
+  const cards = events.length
+    ? element('div', { className: 'stack' }, events.map(item => {
+      const verifyButton = element('button', {
+        className: 'button button-secondary',
+        text: 'Verify offline',
+        attrs: { type: 'button' }
+      });
+      verifyButton.addEventListener('click', () => {
+        artifact.value = JSON.stringify(item, null, 2);
+        mode.value = 'auto';
+        verifyResult.replaceChildren(
+          notice('Prefilling the selected visible receipt/event JSON. Supply the verification public key PEM, then run offline Verify. Kernel events that are not machine-receipt artifacts fail closed with a human reason.')
+        );
+        verifyPanel.scrollIntoView({ block: 'start' });
+        announce('Visible receipt loaded into offline Verify');
+      });
+      return humanExplanation(
         human.receipt(item),
         'Raw event evidence',
-        item
-      )))
-      : empty('No events are visible to this principal.'),
+        item,
+        [verifyButton]
+      );
+    }))
+    : empty('No events are visible to this principal.');
+
+  view.replaceChildren(
+    header('Receipts and evidence timeline',
+      'Owner-visible events, live audit integrity, and offline artifact verification stay distinct. Integrity evidence never grants authority or proves external-world truth.'),
+    auditIntegrity,
+    cards,
+    verifyPanel,
     rawDetails('Raw event response', response)
   );
+}
+
+async function runOfflineVerify({
+  mode,
+  artifactText,
+  publicKeyPem,
+  chainSegmentText,
+  exportFilesText
+}) {
+  let parsedArtifact;
+  try {
+    parsedArtifact = JSON.parse(artifactText);
+  } catch {
+    throw new Error('Artifact JSON is invalid');
+  }
+  const body = {
+    mode,
+    artifact: parsedArtifact,
+    public_key_pem: publicKeyPem
+  };
+  if (typeof chainSegmentText === 'string' && chainSegmentText.trim()) {
+    try {
+      body.chain_segment = JSON.parse(chainSegmentText);
+    } catch {
+      throw new Error('Continuity chain segment JSON is invalid');
+    }
+  }
+  if (typeof exportFilesText === 'string' && exportFilesText.trim()) {
+    try {
+      body.files = JSON.parse(exportFilesText);
+    } catch {
+      throw new Error('Export files map JSON is invalid');
+    }
+  }
+  const response = await fetch('/local/verify', {
+    method: 'POST',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'error',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > 2_097_152) {
+    throw new Error('Offline Verify response is too large');
+  }
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    throw new Error('Offline Verify response is not valid JSON');
+  }
+  if (!response.ok) {
+    const message = payload?.error?.message ?? `Offline Verify failed with status ${response.status}`;
+    throw new Error(message);
+  }
+  if (!payload || typeof payload !== 'object' || payload.schema !== 'axiom-verify-report.v0') {
+    throw new Error('Offline Verify returned an unexpected report shape');
+  }
+  return payload;
 }
 
 async function renderShare() {

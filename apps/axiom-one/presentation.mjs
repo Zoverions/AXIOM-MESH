@@ -36,8 +36,49 @@ const ACTION_BOUNDARIES = Object.freeze({
   'ai.local-organize': Object.freeze({
     consequence: 'non-consequential-local-draft',
     confirmations: Object.freeze([])
+  }),
+  'social.actor.create': Object.freeze({
+    consequence: 'durable-local-social-actor-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.persona.create': Object.freeze({
+    consequence: 'durable-local-social-persona-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.create': Object.freeze({
+    consequence: 'durable-local-social-publication-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.supersede': Object.freeze({
+    consequence: 'durable-local-social-publication-supersede',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.retract': Object.freeze({
+    consequence: 'durable-local-social-publication-retract',
+    confirmations: Object.freeze([])
   })
 });
+
+export function projectCapabilityParity(response) {
+  const entries = Array.isArray(response?.capabilities) ? response.capabilities : [];
+  const capabilities = entries.map(item => ({
+    id: typeof item?.id === 'string' ? item.id : 'unknown',
+    family: typeof item?.family === 'string' ? item.family : 'other',
+    status: typeof item?.status === 'string' ? item.status : 'unknown',
+    summary: typeof item?.summary === 'string' ? item.summary : '',
+    runnable_claim: item?.status === 'implemented',
+    authorized_to_principal: null
+  }));
+  const families = [...new Set(capabilities.map(item => item.family))].sort();
+  return {
+    source: 'capabilities.list',
+    authority: 'not-inferred-from-discovery',
+    total: capabilities.length,
+    implemented: capabilities.filter(item => item.runnable_claim).length,
+    families,
+    capabilities
+  };
+}
 
 export function createHumanPresenter(contract) {
   validateHumanContract(contract);
@@ -48,7 +89,8 @@ export function createHumanPresenter(contract) {
     intentSuccess: input => intentSuccess(stableContract, input),
     intentFailure: input => intentFailure(stableContract, input),
     approval: (record, now) => approval(stableContract, record, now),
-    receipt: event => receipt(stableContract, event)
+    receipt: event => receipt(stableContract, event),
+    verifyReport: report => verifyReport(report)
   });
 }
 
@@ -358,6 +400,58 @@ function receipt(contract, event) {
     guidance: [
       'Integrity-linked evidence shows what this node recorded; it does not prove an external statement is true.',
       'Raw event payload and chain identifiers remain available below.'
+    ],
+    retrySameRequest: false
+  });
+}
+
+function verifyReport(report) {
+  const value = plainObject(report) ? report : {};
+  const passed = value.ok === true && value.verdict === 'PASS';
+  const integrity = typeof value.integrity_versus_truth === 'string' && value.integrity_versus_truth.length
+    ? value.integrity_versus_truth
+    : [
+      'Integrity versus truth: a PASS means the supplied bytes, digests, signatures,',
+      'and declared scopes match under the verification keys and schemas provided to Verify.',
+      'It does not mean the underlying statement about the external world is true.'
+    ].join(' ');
+  const facts = [];
+  for (const [label, field] of [
+    ['Verdict', value.verdict],
+    ['Verify status', value.status],
+    ['Artifact schema', value.artifact_schema],
+    ['Reason code', value.code],
+    ['Receipt digest', value.receipt_digest],
+    ['Anchor digest', value.anchor_digest],
+    ['Bundle digest', value.bundle_digest],
+    ['Intent', value.intent_id],
+    ['Anchor', value.anchor_id],
+    ['Export', value.export_id]
+  ]) {
+    if (typeof field === 'string' && field.length) facts.push(fact(label, field));
+  }
+  if (typeof value.reason === 'string' && value.reason.length) {
+    facts.push(fact('Human reason', value.reason));
+  }
+  const summary = typeof value.reason === 'string' && value.reason.length
+    ? value.reason
+    : (passed
+      ? 'Local offline Verify reported PASS for the supplied artifact and key material.'
+      : 'Local offline Verify reported FAIL for the supplied artifact and key material.');
+  return model({
+    kind: 'verify-report',
+    state: passed ? 'verify-pass' : 'verify-fail',
+    tone: passed ? 'complete' : 'blocked',
+    badge: passed ? 'PASS' : 'FAIL',
+    title: passed ? 'Offline verification passed' : 'Offline verification failed',
+    summary,
+    facts,
+    guidance: [
+      integrity,
+      'PASS is cryptographic integrity under the keys and schemas you supplied — not external-world truth, model correctness, or operator honesty beyond the signed bytes.',
+      'This experimental local Verify path does not call Gateway as an authority client and does not promote Mesh production.',
+      'Not a released Verify product. Hermes pin remains provisional; SEC-002 pending.',
+      'Inspect the raw verification report below.'
     ],
     retrySameRequest: false
   });
