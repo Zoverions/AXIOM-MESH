@@ -34,6 +34,7 @@ test('human explanation contract exactly covers stable errors and kernel events'
     'memory.tombstone',
     'social.actor.create',
     'social.persona.create',
+    'social.publication.create',
     'system.echo'
   ]);
   assert.equal(
