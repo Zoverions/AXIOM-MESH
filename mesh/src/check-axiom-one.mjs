@@ -180,6 +180,7 @@ function validatePolicy(policy) {
     'security',
     'human_explanations',
     'memory_lifecycle',
+    'capability_parity',
     'surfaces',
     'gateway_routes',
     'non_claims'
@@ -280,6 +281,23 @@ function validatePolicy(policy) {
     || policy.memory_lifecycle.restore !== false
     || policy.memory_lifecycle.sharing !== false
   ) throw new ValidationError('AXIOM One memory lifecycle boundary is weakened');
+  exactObject(policy.capability_parity, 'AXIOM One capability parity policy', [
+    'status',
+    'capability_route',
+    'runnable_claim_statuses',
+    'principal_authority',
+    'discovery_grants_authority',
+    'browser_mutation'
+  ]);
+  if (
+    policy.capability_parity.status !== 'experimental-read-only-projection'
+    || policy.capability_parity.capability_route !== 'capabilities.list'
+    || canonicalJson(policy.capability_parity.runnable_claim_statuses)
+      !== canonicalJson(['implemented'])
+    || policy.capability_parity.principal_authority !== 'not-inferred-from-discovery'
+    || policy.capability_parity.discovery_grants_authority !== false
+    || policy.capability_parity.browser_mutation !== false
+  ) throw new ValidationError('AXIOM One capability parity boundary is weakened');
   if (
     canonicalJson(policy.surfaces) !== canonicalJson(EXPECTED_SURFACES)
     || canonicalJson(policy.gateway_routes) !== canonicalJson(EXPECTED_ROUTES)
