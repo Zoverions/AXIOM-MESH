@@ -133,6 +133,22 @@
       "reversibility": "This preview cannot delete or retire the persona and cannot erase its append-only local evidence.",
       "required_confirmations": [],
       "independent_approval": false
+    },
+    "social.publication.create": {
+      "label": "Create local publication",
+      "consequence": "durable-local-social-publication-write",
+      "effect": "Create one owner-local public publication bound to the authenticated owner's current local actor state and active publication persona.",
+      "provider": "No external provider; the verified built-in local Social executor is used.",
+      "destination": "The encrypted local Grid Social store on this node.",
+      "information_scope": "The exact current local actor state digest, protected local persona binding, publication text, public audience, listed discoverability, and human-authored mode only.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "The publication remains in encrypted local append-only Social state with append-only integrity evidence; no federation or remote distribution occurs.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
+      "reversibility": "This browser tranche cannot revise or retract the publication and cannot erase its append-only local evidence.",
+      "required_confirmations": [],
+      "independent_approval": false
     }
   },
   "gateway_outcomes": {
