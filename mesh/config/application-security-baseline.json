@@ -1,0 +1,29 @@
+{
+  "schema": "axiom-application-security-baseline.v1",
+  "version": 1,
+  "browser_trust": "untrusted",
+  "unknown_state": "deny",
+  "control_states": ["enforced", "inherited", "not-applicable"],
+  "adapters": [
+    "hosted_web",
+    "relational_database",
+    "reusable_session",
+    "password_store",
+    "file_upload"
+  ],
+  "universal_controls": [
+    "secret_non_disclosure",
+    "server_authentication",
+    "server_authorization",
+    "record_access",
+    "field_integrity",
+    "input_validation",
+    "output_encoding",
+    "response_minimization",
+    "security_headers",
+    "transport_policy",
+    "request_bounding",
+    "security_event_redaction",
+    "dependency_integrity"
+  ]
+}
