@@ -25,7 +25,7 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.public_shell_cache, true);
   assert.equal(result.api_cache, false);
   assert.equal(result.remote_origins_allowed, false);
-  assert.equal(result.explained_actions, 9);
+  assert.equal(result.explained_actions, 11);
   assert.equal(result.memory_lifecycle_status, 'experimental-bounded-lifecycle');
   assert.equal(result.provenance_relations, 3);
   assert.equal(result.self_links, false);
@@ -42,7 +42,8 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.match(app, /action:\s*'social\.actor\.create'/);
   assert.match(app, /action:\s*'social\.persona\.create'/);
   assert.match(app, /action:\s*'social\.publication\.create'/);
-  assert.doesNotMatch(app, /action:\s*'social\.publication\.(?:supersede|retract)'/);
+  assert.match(app, /action:\s*'social\.publication\.supersede'/);
+  assert.match(app, /action:\s*'social\.publication\.retract'/);
   assert.doesNotMatch(app, /localStorage|sessionStorage|indexedDB|document\.cookie|innerHTML/);
   assert.match(app, /action:\s*'ai\.local-organize'/);
   assert.match(app, /buildBrowserOrganizeDraft/);
