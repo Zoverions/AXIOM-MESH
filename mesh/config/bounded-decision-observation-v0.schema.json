@@ -17,6 +17,7 @@
     "offering_revision_evidence",
     "question_schema_id",
     "question_schema_digest",
+    "question_domain",
     "state_digest",
     "state_classification",
     "observed_at",
@@ -36,14 +37,30 @@
     "selection_effect"
   ],
   "properties": {
-    "schema": { "const": "axiom-bounded-decision-observation.v0" },
-    "version": { "const": 0 },
-    "status": { "const": "inert-bounded-decision-observation" },
-    "observation_id": { "$ref": "#/$defs/identifier" },
-    "provider_profile_id": { "$ref": "#/$defs/identifier" },
-    "provider_profile_digest": { "$ref": "#/$defs/sha256" },
-    "catalog_entry_digest": { "$ref": "#/$defs/sha256" },
-    "offering_ref": { "$ref": "#/$defs/identifier" },
+    "schema": {
+      "const": "axiom-bounded-decision-observation.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-bounded-decision-observation"
+    },
+    "observation_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "provider_profile_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "provider_profile_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "catalog_entry_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "offering_ref": {
+      "$ref": "#/$defs/identifier"
+    },
     "offering_version_or_revision": {
       "type": "string",
       "minLength": 1,
@@ -51,13 +68,28 @@
     },
     "offering_revision_evidence": {
       "type": "string",
-      "enum": ["exact-artifact", "provider-versioned", "mutable-alias", "unknown"]
+      "enum": [
+        "exact-artifact",
+        "provider-versioned",
+        "mutable-alias",
+        "unknown"
+      ]
     },
-    "question_schema_id": { "$ref": "#/$defs/identifier" },
-    "question_schema_digest": { "$ref": "#/$defs/sha256" },
-    "state_digest": { "$ref": "#/$defs/sha256" },
-    "state_classification": { "$ref": "#/$defs/identifier" },
-    "observed_at": { "$ref": "#/$defs/dateTime" },
+    "question_schema_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "question_schema_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "state_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "state_classification": {
+      "$ref": "#/$defs/identifier"
+    },
+    "observed_at": {
+      "$ref": "#/$defs/dateTime"
+    },
     "latency_ms": {
       "type": "integer",
       "minimum": 0,
@@ -65,9 +97,15 @@
     },
     "answer": {
       "oneOf": [
-        { "$ref": "#/$defs/choiceAnswer" },
-        { "$ref": "#/$defs/scoreAnswer" },
-        { "$ref": "#/$defs/binaryAnswer" }
+        {
+          "$ref": "#/$defs/choiceAnswer"
+        },
+        {
+          "$ref": "#/$defs/scoreAnswer"
+        },
+        {
+          "$ref": "#/$defs/binaryAnswer"
+        }
       ]
     },
     "probability_evidence": {
@@ -76,37 +114,71 @@
           "type": "array",
           "minItems": 2,
           "maxItems": 64,
-          "items": { "$ref": "#/$defs/choiceProbability" }
+          "items": {
+            "$ref": "#/$defs/choiceProbability"
+          }
         },
         {
           "type": "array",
           "minItems": 2,
           "maxItems": 10,
-          "items": { "$ref": "#/$defs/scoreProbability" }
+          "items": {
+            "$ref": "#/$defs/scoreProbability"
+          }
         },
         {
           "type": "array",
           "minItems": 2,
           "maxItems": 2,
-          "items": { "$ref": "#/$defs/binaryProbability" }
+          "items": {
+            "$ref": "#/$defs/binaryProbability"
+          }
         }
       ]
     },
     "provider_confidence": {
-      "type": ["number", "null"],
+      "type": [
+        "number",
+        "null"
+      ],
       "minimum": 0,
       "maximum": 1
     },
-    "usage_evidence": { "$ref": "#/$defs/usageEvidence" },
-    "calibration_report_ref": { "$ref": "#/$defs/nullableBoundedString" },
-    "transport_evidence_ref": { "$ref": "#/$defs/nullableBoundedString" },
-    "observation_digest": { "$ref": "#/$defs/sha256" },
-    "authority_effect": { "const": "none" },
-    "assurance_effect": { "const": "none" },
-    "network_effect": { "const": "none" },
-    "credential_visibility": { "const": "none" },
-    "runtime_activation": { "const": false },
-    "selection_effect": { "const": "evidence-only" }
+    "usage_evidence": {
+      "$ref": "#/$defs/usageEvidence"
+    },
+    "calibration_report_ref": {
+      "$ref": "#/$defs/nullableBoundedString"
+    },
+    "transport_evidence_ref": {
+      "$ref": "#/$defs/nullableBoundedString"
+    },
+    "observation_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "assurance_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "selection_effect": {
+      "const": "evidence-only"
+    },
+    "question_domain": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    }
   },
   "$defs": {
     "identifier": {
@@ -125,64 +197,111 @@
     },
     "nullableBoundedString": {
       "anyOf": [
-        { "type": "null" },
-        { "type": "string", "minLength": 1, "maxLength": 512 }
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
       ]
     },
     "usageEvidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["input_units", "output_units", "compute_class", "provider_report_ref"],
+      "required": [
+        "input_units",
+        "output_units",
+        "compute_class",
+        "provider_report_ref"
+      ],
       "properties": {
         "input_units": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 0,
           "maximum": 1000000000000
         },
         "output_units": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 0,
           "maximum": 1000000000000
         },
         "compute_class": {
           "anyOf": [
-            { "type": "null" },
-            { "type": "string", "minLength": 1, "maxLength": 256 }
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
           ]
         },
-        "provider_report_ref": { "$ref": "#/$defs/nullableBoundedString" }
+        "provider_report_ref": {
+          "$ref": "#/$defs/nullableBoundedString"
+        }
       }
     },
     "choiceAnswer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "selected_option_id", "tied_option_ids"],
+      "required": [
+        "kind",
+        "selected_option_id",
+        "tied_option_ids"
+      ],
       "properties": {
-        "kind": { "const": "choice" },
-        "selected_option_id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "const": "choice"
+        },
+        "selected_option_id": {
+          "$ref": "#/$defs/identifier"
+        },
         "tied_option_ids": {
           "type": "array",
           "maxItems": 64,
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/identifier" }
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
         }
       }
     },
     "scoreAnswer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "score"],
+      "required": [
+        "kind",
+        "score"
+      ],
       "properties": {
-        "kind": { "const": "score" },
-        "score": { "type": "number" }
+        "kind": {
+          "const": "score"
+        },
+        "score": {
+          "type": "number"
+        }
       }
     },
     "binaryAnswer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "p_true"],
+      "required": [
+        "kind",
+        "p_true"
+      ],
       "properties": {
-        "kind": { "const": "binary-probability" },
+        "kind": {
+          "const": "binary-probability"
+        },
         "p_true": {
           "type": "number",
           "minimum": 0,
@@ -193,33 +312,55 @@
     "choiceProbability": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["option_id", "probability"],
+      "required": [
+        "option_id",
+        "probability"
+      ],
       "properties": {
-        "option_id": { "$ref": "#/$defs/identifier" },
-        "probability": { "$ref": "#/$defs/probability" }
+        "option_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "probability": {
+          "$ref": "#/$defs/probability"
+        }
       }
     },
     "scoreProbability": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["level_id", "position", "probability"],
+      "required": [
+        "level_id",
+        "position",
+        "probability"
+      ],
       "properties": {
-        "level_id": { "$ref": "#/$defs/identifier" },
+        "level_id": {
+          "$ref": "#/$defs/identifier"
+        },
         "position": {
           "type": "integer",
           "minimum": 0,
           "maximum": 9
         },
-        "probability": { "$ref": "#/$defs/probability" }
+        "probability": {
+          "$ref": "#/$defs/probability"
+        }
       }
     },
     "binaryProbability": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "probability"],
+      "required": [
+        "value",
+        "probability"
+      ],
       "properties": {
-        "value": { "type": "boolean" },
-        "probability": { "$ref": "#/$defs/probability" }
+        "value": {
+          "type": "boolean"
+        },
+        "probability": {
+          "$ref": "#/$defs/probability"
+        }
       }
     },
     "probability": {

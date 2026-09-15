@@ -263,6 +263,9 @@ function calibrationReason(observation, calibration, policy, nowMs) {
   ) {
     return 'calibration-revision-mismatch';
   }
+  if (calibration.domain !== observation.question_domain) {
+    return 'calibration-domain-mismatch';
+  }
   const schemaMatch = calibration.question_schema_family_refs.some(
     item => item.question_schema_digest === observation.question_schema_digest
   );

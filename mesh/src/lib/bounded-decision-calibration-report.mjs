@@ -338,9 +338,13 @@ export function resolveBoundedDecisionCalibrationReport(document, providerProfil
     providerProfile.offering_ref,
     providerProfile.catalog_entry_id
   ]);
+  const providerDigests = new Set([
+    profileDigest,
+    providerProfile.catalog_entry_digest
+  ]);
   for (const source of document.outcome_source_refs) {
-    if (aliases.has(source.outcome_ref)) {
-      throw new ValidationError('calibration outcome source must remain independently sourced from provider identity');
+    if (aliases.has(source.outcome_ref) || providerDigests.has(source.outcome_digest)) {
+      throw new ValidationError('calibration outcome source must remain independently sourced from provider identity and digests');
     }
   }
 

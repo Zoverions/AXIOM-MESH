@@ -424,6 +424,7 @@ offering_version_or_revision
 offering_revision_evidence
 question_schema_id
 question_schema_digest
+question_domain
 state_digest
 state_classification
 observed_at
@@ -437,7 +438,7 @@ transport_evidence_ref
 observation_digest
 ```
 
-`state_classification` records the AXIOM sensitivity/disclosure class applied before invocation. Raw state is not duplicated into the observation.
+`question_domain` preserves the domain committed by the exact question schema so later interpretation can reject calibration evidence declared for a different domain without retaining raw state. `state_classification` records the AXIOM sensitivity/disclosure class applied before invocation. Raw state is not duplicated into the observation.
 
 `provider_confidence` may be null where the primitive does not provide a separate confidence statistic. The probability evidence remains the primary observable uncertainty evidence.
 
@@ -538,7 +539,7 @@ report_digest
 
 Metrics may include Brier score, log loss, calibration error, reliability bins, class-specific error, confusion evidence, and abstention/escalation performance where applicable. The contract does not prescribe one universal metric as sufficient.
 
-A report must not treat the model's own confidence values as its ground truth.
+A report must not treat the model's own confidence values as its ground truth. Outcome evidence that aliases the bound provider identity or exact provider/catalog digests is not independent evidence and must fail resolution.
 
 A report from a materially different provider revision, schema wording, domain, language, population, or state distribution may be useful evidence but cannot be silently relabeled as in-domain calibration.
 

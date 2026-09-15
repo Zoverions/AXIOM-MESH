@@ -45,6 +45,7 @@ const OBSERVATION_FIELDS = Object.freeze([
   'offering_revision_evidence',
   'question_schema_id',
   'question_schema_digest',
+  'question_domain',
   'state_digest',
   'state_classification',
   'observed_at',
@@ -326,6 +327,7 @@ function validateObservationShape(document) {
   requireEnum(document.offering_revision_evidence, REVISION_EVIDENCE, 'offering_revision_evidence');
   requireIdentifier(document.question_schema_id, 'question_schema_id');
   requireDigest(document.question_schema_digest, 'question_schema_digest');
+  requireString(document.question_domain, 'question_domain', 512);
   requireDigest(document.state_digest, 'state_digest');
   requireIdentifier(document.state_classification, 'state_classification');
   requireTimestamp(document.observed_at, 'observed_at');
@@ -420,6 +422,9 @@ function validateObservationBinding(document, providerProfile, questionSchema) {
   if (document.question_schema_digest !== questionDigest) {
     throw new ValidationError('observation question schema digest does not match supplied question schema');
   }
+  if (document.question_domain !== questionSchema.domain) {
+    throw new ValidationError('observation question domain does not match supplied question schema');
+  }
   if (document.answer.kind !== questionSchema.question_kind) {
     throw new ValidationError('observation answer kind does not match supplied question schema');
   }
@@ -473,6 +478,7 @@ export function validateBoundedDecisionObservation(document, providerProfile, qu
     provider_profile_digest: document.provider_profile_digest,
     question_schema_id: document.question_schema_id,
     question_schema_digest: document.question_schema_digest,
+    question_domain: document.question_domain,
     answer_kind: document.answer.kind,
     state_digest: document.state_digest,
     authority_effect: 'none',
@@ -656,6 +662,7 @@ export function normalizeBoundedDecisionProviderResult(input, providerProfile, q
     offering_revision_evidence: providerProfile.offering_revision_evidence,
     question_schema_id: questionSchema.question_schema_id,
     question_schema_digest: boundedDecisionQuestionSchemaDigest(questionSchema),
+    question_domain: questionSchema.domain,
     state_digest: input.state_digest,
     state_classification: input.state_classification,
     observed_at: input.observed_at,
