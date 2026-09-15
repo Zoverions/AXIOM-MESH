@@ -36,6 +36,14 @@ const ACTION_BOUNDARIES = Object.freeze({
   'ai.local-organize': Object.freeze({
     consequence: 'non-consequential-local-draft',
     confirmations: Object.freeze([])
+  }),
+  'social.actor.create': Object.freeze({
+    consequence: 'durable-local-social-actor-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.persona.create': Object.freeze({
+    consequence: 'durable-local-social-persona-write',
+    confirmations: Object.freeze([])
   })
 });
 

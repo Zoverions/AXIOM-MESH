@@ -31,7 +31,9 @@
       "memory.link",
       "memory.tombstone",
       "export.create",
-      "ai.local-organize"
+      "ai.local-organize",
+      "social.actor.create",
+      "social.persona.create"
     ],
     "stable_gateway_errors": 20,
     "event_kinds": 37,

@@ -41,7 +41,9 @@ const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'memory.link',
   'memory.tombstone',
   'export.create',
-  'ai.local-organize'
+  'ai.local-organize',
+  'social.actor.create',
+  'social.persona.create'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -429,7 +431,13 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     "response.network_effect === 'none'",
     "publication.status ?? 'unknown'",
     'Owner-local Social corpus',
-    'No federation'
+    'No federation',
+    "action: 'social.actor.create'",
+    "action: 'social.persona.create'",
+    "purpose: 'local-social-identity'",
+    "purpose: 'local-social-persona'",
+    "data_scopes: ['social:identity']",
+    'axiom-one:social:'
   ];
   if (socialMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One owner-local Social surface is incomplete');

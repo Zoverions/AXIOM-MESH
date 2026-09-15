@@ -22,6 +22,10 @@ const state = {
   route: 'overview',
   lastIntent: null,
   pendingIntent: null,
+  social: {
+    pending: null,
+    last: null
+  },
   vault: {
     pending: null,
     last: null,
@@ -71,6 +75,8 @@ disconnectButton.addEventListener('click', () => {
   connectionLabel.textContent = 'Not connected';
   state.lastIntent = null;
   state.pendingIntent = null;
+  state.social.pending = null;
+  state.social.last = null;
   state.vault.pending = null;
   state.vault.last = null;
   announce('Disconnected and cleared the in-memory token');
@@ -349,6 +355,133 @@ async function renderSocial() {
     ? response.corpus.transitions
     : [];
   const localOnly = response.network_effect === 'none';
+  const activeActor = actors.find(actor => actor.status === 'active') ?? actors[0] ?? null;
+  const activePersona = personas.find(persona => persona.status === 'active') ?? null;
+  const review = element('div', { className: 'stack', attrs: { id: 'social-review' } });
+  const result = element('div', { className: 'stack', attrs: { id: 'social-result' } });
+  const writeButtons = [];
+  let activeController;
+
+  const setWritesLocked = locked => {
+    for (const button of writeButtons) button.disabled = locked;
+  };
+
+  const renderLast = () => {
+    result.replaceChildren();
+    const last = state.social.last;
+    if (!last) return;
+    const actions = [];
+    if (last.model.retrySameRequest && state.social.pending) {
+      const retry = element('button', {
+        className: 'button button-primary',
+        text: 'Retry same social request safely',
+        attrs: { type: 'button' }
+      });
+      retry.addEventListener('click', () => executePending());
+      actions.push(retry);
+    }
+    result.append(humanExplanation(
+      last.model,
+      'Raw social intent result and evidence',
+      last.raw,
+      actions
+    ));
+  };
+
+  const renderReview = () => {
+    review.replaceChildren();
+    const pending = state.social.pending;
+    if (!pending) return;
+    const send = element('button', {
+      className: 'button button-primary',
+      text: 'Send reviewed social request',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Cancel without sending',
+      attrs: { type: 'button' }
+    });
+    send.addEventListener('click', () => executePending());
+    change.addEventListener('click', async () => {
+      state.social.pending = null;
+      announce('Social review closed without sending');
+      await renderSocial();
+    });
+    review.append(humanExplanation(
+      human.requestPreview(pending.body),
+      'Exact local Social request to submit',
+      pending.body,
+      [send, change]
+    ));
+  };
+
+  const executePending = async () => {
+    const pending = state.social.pending;
+    if (!pending || activeController) return;
+    activeController = new AbortController();
+    setWritesLocked(true);
+    review.replaceChildren();
+    const cancelWait = element('button', {
+      className: 'button button-secondary',
+      text: 'Cancel browser wait',
+      attrs: { type: 'button' }
+    });
+    cancelWait.addEventListener('click', () => activeController?.abort());
+    result.replaceChildren(
+      notice('Submitting the reviewed local Social request through Gateway → Hypervisor → Sandbox → Grid…'),
+      element('div', { className: 'actions' }, [cancelWait])
+    );
+    try {
+      const raw = await state.client.call('intents.submit', {
+        body: pending.body,
+        idempotencyKey: pending.idempotencyKey,
+        signal: activeController.signal
+      });
+      const model = human.intentSuccess({
+        request: pending.body,
+        response: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.social.last = { model, raw };
+      state.social.pending = null;
+      announce(`${model.title}; the local Social view is refreshing`);
+      await renderSocial();
+    } catch (error) {
+      const raw = serializableError(error);
+      const model = human.intentFailure({
+        request: pending.body,
+        error: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.social.last = { model, raw };
+      if (!model.retrySameRequest) {
+        state.social.pending = null;
+        announce('Local Social request did not complete');
+        await renderSocial();
+        return;
+      }
+      setWritesLocked(true);
+      renderReview();
+      renderLast();
+      announce('Social outcome is not confirmed; same-request recovery is available');
+    } finally {
+      activeController = null;
+      if (!state.social.pending) setWritesLocked(false);
+    }
+  };
+
+  const startReview = body => {
+    if (state.social.pending) return;
+    state.social.pending = {
+      body,
+      idempotencyKey: `axiom-one:social:${crypto.randomUUID()}`
+    };
+    setWritesLocked(true);
+    renderReview();
+    announce('Local Social review is ready; nothing has been sent');
+    review.scrollIntoView({ block: 'nearest' });
+  };
 
   const actorCards = actors.length
     ? element('div', { className: 'stack' }, actors.map(actor => element('article', {
@@ -372,6 +505,63 @@ async function renderSocial() {
       ]);
     }))
     : empty('No publication persona is visible to this authenticated principal.');
+
+  const identityControls = element('div', { className: 'stack' });
+  if (!actors.length) {
+    const createActor = element('button', {
+      className: 'button button-primary',
+      text: 'Review local social actor creation',
+      attrs: { type: 'button' }
+    });
+    writeButtons.push(createActor);
+    createActor.addEventListener('click', () => startReview({
+      action: 'social.actor.create',
+      input: {},
+      purpose: 'local-social-identity',
+      data_scopes: ['social:identity']
+    }));
+    identityControls.append(
+      notice('Creating an actor writes one owner-local social identity only. It does not publish, federate, follow, or create external identity authority.'),
+      createActor
+    );
+  } else if (activeActor && !activePersona) {
+    const personaForm = element('form', { className: 'stack' });
+    const attributionMode = element('select', {
+      attrs: { id: 'social-attribution-mode', name: 'attribution_mode', required: '' }
+    }, [
+      element('option', { text: 'Pseudonymous', attrs: { value: 'pseudonymous', selected: '' } }),
+      element('option', { text: 'Public-identifiable', attrs: { value: 'public-identifiable' } }),
+      element('option', { text: 'Anonymous', attrs: { value: 'anonymous' } })
+    ]);
+    const createPersona = element('button', {
+      className: 'button button-primary',
+      text: 'Review local publication persona',
+      attrs: { type: 'submit' }
+    });
+    writeButtons.push(createPersona);
+    personaForm.append(
+      notice('This creates one local publication persona. Selectively attributable and organization-delegated modes remain unavailable in this browser tranche because they require additional evidence or authority.'),
+      field('Attribution mode', attributionMode, 'social-attribution-mode'),
+      element('div', { className: 'actions' }, [createPersona])
+    );
+    personaForm.addEventListener('submit', event => {
+      event.preventDefault();
+      startReview({
+        action: 'social.persona.create',
+        input: {
+          actor_id: activeActor.actor_id,
+          attribution_mode: attributionMode.value
+        },
+        purpose: 'local-social-persona',
+        data_scopes: ['social:identity']
+      });
+    });
+    identityControls.append(personaForm);
+  } else {
+    identityControls.append(notice(
+      'The current local actor/persona identity tranche is already present. Publication mutation remains disabled in AXIOM One.'
+    ));
+  }
 
   const publicationCards = publications.length
     ? element('div', { className: 'stack' }, publications.map(publication => {
@@ -399,7 +589,7 @@ async function renderSocial() {
 
   view.replaceChildren(
     header('Owner-local Social corpus',
-      'Inspect the social identity, persona, and append-only publication history already held by this node. This read surface derives the owner only from the authenticated principal.'),
+      'Inspect local social state and create the owner-bound actor/persona identity layer through reviewed local intents. Remote distribution remains disabled.'),
     grid([
       metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
       metricCard('Personas', String(personas.length), 'Publication personas'),
@@ -409,7 +599,13 @@ async function renderSocial() {
         badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
       })
     ]),
-    notice('This tranche is read-only in AXIOM One. Local actor/persona/publication mutation already exists in the kernel, but browser write controls remain disabled until their human explanation and reviewed-request flows are separately bound and tested.'),
+    notice('Local actor and persona creation are enabled only through the reviewed intent path. Publication creation, revision, retraction, federation, remote following, and distribution remain disabled in AXIOM One.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-identity-controls-heading' } }, [
+      element('h2', { text: 'Local identity controls', attrs: { id: 'social-identity-controls-heading' } }),
+      identityControls
+    ]),
+    review,
+    result,
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
       element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
       actorCards
@@ -428,6 +624,11 @@ async function renderSocial() {
     ]),
     rawDetails('Raw owner-local Social snapshot', response)
   );
+  if (state.social.pending) {
+    setWritesLocked(true);
+    renderReview();
+  }
+  renderLast();
 }
 
 async function renderApprovals() {
