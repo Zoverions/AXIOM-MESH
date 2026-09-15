@@ -23,6 +23,6 @@ test('AXIOM One exposes bounded local actor and persona writes only through revi
   assert.equal(contract.actions['social.actor.create'].independent_approval, false);
   assert.equal(contract.actions['social.persona.create'].external_egress, false);
   assert.equal(contract.actions['social.persona.create'].independent_approval, false);
-  assert.match(contract.actions['social.actor.create'].effect, /owner-local/i);
-  assert.match(contract.actions['social.persona.create'].effect, /local publication persona/i);
+  assert.match(contract.actions['social.actor.create'].effect, /local social actor identity/i);
+  assert.match(contract.actions['social.persona.create'].effect, /publication persona bound to the authenticated owner's existing local social actor/i);
 });
