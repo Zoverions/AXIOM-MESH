@@ -33,7 +33,8 @@
       "export.create",
       "ai.local-organize",
       "social.actor.create",
-      "social.persona.create"
+      "social.persona.create",
+      "social.publication.create"
     ],
     "stable_gateway_errors": 20,
     "event_kinds": 37,
