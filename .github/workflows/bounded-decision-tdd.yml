@@ -6,16 +6,15 @@ on:
       - main
     paths:
       - '.github/workflows/bounded-decision-tdd.yml'
-      - 'mesh/src/lib/bounded-decision-provider-profile.mjs'
-      - 'mesh/config/bounded-decision-provider-profile-v0.schema.json'
-      - 'mesh/test/bounded-decision-provider-profile.test.mjs'
-      - 'mesh/test/bounded-decision-provider-profile-schema.test.mjs'
+      - 'mesh/src/lib/bounded-decision-*.mjs'
+      - 'mesh/config/bounded-decision-*.schema.json'
+      - 'mesh/test/bounded-decision-*.test.mjs'
 
 permissions:
   contents: read
 
 jobs:
-  task1:
+  slice-a:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -25,6 +24,6 @@ jobs:
         with:
           node-version: 24.18.0
           package-manager-cache: false
-      - name: Run Task 1 contract tests
+      - name: Run bounded decision Slice A tests
         working-directory: mesh
-        run: node --test test/bounded-decision-provider-profile.test.mjs test/bounded-decision-provider-profile-schema.test.mjs
+        run: node --test test/bounded-decision-*.test.mjs
