@@ -1,0 +1,71 @@
+{
+  "schema": "axiom-host-install-policy.v1",
+  "version": 1,
+  "kernel_version": "0.12.0-dev.3",
+  "status": "planner-implemented-installer-not-implemented",
+  "authority_effect": "none",
+  "host_mutation_enabled": false,
+  "planner": {
+    "status": "implemented-non-mutating",
+    "platforms": ["linux"],
+    "architectures": ["x64", "arm64"],
+    "required_facts": [
+      "platform",
+      "architecture",
+      "distro_id",
+      "distro_version",
+      "init_system",
+      "package_manager",
+      "node_version",
+      "memory_bytes",
+      "root_filesystem_free_bytes"
+    ],
+    "unsupported_host_behavior": "fail-closed-with-blockers",
+    "mutation_performed": false
+  },
+  "mutating_installer": {
+    "status": "not-implemented",
+    "requires_signed_release_manifest": true,
+    "requires_disposable_host_evidence": true,
+    "requires_reboot_update_restore_evidence": true,
+    "public_ingress_default": false,
+    "external_egress_default": "deny",
+    "mesh_enrollment": "explicit-separate-step",
+    "installation_grants_authority": false
+  },
+  "profiles": {
+    "personal-local": {
+      "topology": "single-host",
+      "service_units": "supported-option",
+      "runtime_identity": "axiom-mesh",
+      "data_dir": "/var/lib/axiom-mesh/data",
+      "secret_dir": "/etc/axiom-mesh/secrets",
+      "run_dir": "/run/axiom-mesh",
+      "log_dir": "/var/log/axiom-mesh",
+      "applications": ["axiom-one", "axiom-education"]
+    },
+    "infrastructure-node": {
+      "topology": "independent-service-units",
+      "service_units": "required",
+      "runtime_identity": "axiom-mesh",
+      "data_dir": "/var/lib/axiom-mesh/data",
+      "secret_dir": "/etc/axiom-mesh/secrets",
+      "units_dir": "/var/lib/axiom-mesh/units",
+      "run_dir": "/run/axiom-mesh",
+      "log_dir": "/var/log/axiom-mesh",
+      "network_participation": "not-enrolled-by-install"
+    }
+  },
+  "stages": [
+    "preflight",
+    "release-selection",
+    "artifact-verification",
+    "toolchain-acquisition",
+    "host-boundary-creation",
+    "axiom-provisioning",
+    "service-deployment",
+    "readiness-proof",
+    "human-handoff",
+    "optional-integrations"
+  ]
+}
