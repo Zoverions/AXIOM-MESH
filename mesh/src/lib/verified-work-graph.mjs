@@ -54,6 +54,12 @@ function assertExactFields(value, fields, name) {
   }
 }
 
+function compareCodeUnits(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function identifier(value, name) {
   return assertString(value, name, { max: 160, pattern: IDENTIFIER });
 }
@@ -120,7 +126,7 @@ function validateNode(input, index) {
     kind,
     label: assertString(value.label, `${name}.label`, { max: 512 }),
     state,
-    dependencies: Object.freeze([...dependencies]),
+    dependencies: Object.freeze([...dependencies].sort(compareCodeUnits)),
     artifact_digest: artifactDigest,
     verification_result: verificationResult,
     verifier_ref: verifierRef,
@@ -141,8 +147,9 @@ function topologicalOrderFromNodes(nodes) {
     }
   }
 
-  for (const dependents of outgoing.values()) dependents.sort();
-  const ready = [...nodes.filter(node => inDegree.get(node.node_id) === 0).map(node => node.node_id)].sort();
+  for (const dependents of outgoing.values()) dependents.sort(compareCodeUnits);
+  const ready = [...nodes.filter(node => inDegree.get(node.node_id) === 0).map(node => node.node_id)]
+    .sort(compareCodeUnits);
   const order = [];
 
   while (ready.length > 0) {
@@ -153,7 +160,7 @@ function topologicalOrderFromNodes(nodes) {
       inDegree.set(dependent, remaining);
       if (remaining === 0) {
         ready.push(dependent);
-        ready.sort();
+        ready.sort(compareCodeUnits);
       }
     }
   }
@@ -188,6 +195,9 @@ export function validateVerifiedWorkGraph(input) {
   if (goals.length !== 1) throw new ValidationError('verified work graph requires exactly one goal');
 
   topologicalOrderFromNodes(nodes);
+  const canonicalNodes = Object.freeze(
+    [...nodes].sort((left, right) => compareCodeUnits(left.node_id, right.node_id))
+  );
 
   const createdAt = assertString(value.created_at, 'verified work graph.created_at', { max: 32, pattern: ISO_TIMESTAMP });
   if (!Number.isFinite(Date.parse(createdAt))) throw new ValidationError('verified work graph.created_at is not a valid timestamp');
@@ -198,7 +208,7 @@ export function validateVerifiedWorkGraph(input) {
     status: STATUS,
     graph_id: identifier(value.graph_id, 'verified work graph.graph_id'),
     subject_ref: assertString(value.subject_ref, 'verified work graph.subject_ref', { max: 512 }),
-    nodes: Object.freeze(nodes),
+    nodes: canonicalNodes,
     created_at: createdAt,
     contains_secret_material: false,
     authority_effect: 'none',
