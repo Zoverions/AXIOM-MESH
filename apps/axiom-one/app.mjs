@@ -2,7 +2,7 @@ import {
   createGatewayClient,
   GatewayClientError
 } from '/vendor/axiom-client.mjs';
-import { createHumanPresenter } from '/presentation.mjs';
+import { createHumanPresenter, projectCapabilityParity } from '/presentation.mjs';
 import { buildBrowserOrganizeDraft } from '/local-organize.mjs';
 
 const ROUTES = new Set([
@@ -147,18 +147,21 @@ async function renderOverview() {
   ]);
   const counts = status.capability_counts ?? {};
   const runtime = status.runtime ?? {};
+  const parity = projectCapabilityParity(capabilities);
   view.replaceChildren(
     header('A clear view of this node',
       'Health and capability information comes from the authenticated Gateway. A healthy preview is not a production-promotion claim.'),
     grid([
       metricCard('Kernel', status.kernel_version, 'Current development build'),
-      metricCard('Implemented', String(counts.implemented ?? 0), 'Registry-backed capabilities'),
+      metricCard('Implemented', String(parity.implemented ?? counts.implemented ?? 0), 'Registry-backed runnable claims'),
       metricCard('Services', String(Object.keys(runtime).length), 'Gateway-reported runtime units'),
       card('Node state', summarizeRuntime(runtime), { wide: true, badge: ['Connected', 'good'] }),
-      card('Capability registry', `${capabilities.capabilities?.length ?? 0} declared capabilities. Only registry entries marked implemented are runnable claims.`, {
+      card('Capability registry', `${parity.total} declared capabilities. Only registry entries marked implemented are runnable claims.`, {
         badge: ['Exact source', 'good']
       })
-    ])
+    ]),
+    notice('Implemented means the Mesh registry supports the capability; it does not mean this principal is authorized to execute it. Authority is evaluated separately through the normal intent and policy path.'),
+    rawDetails('Capability parity projection', parity)
   );
 }
 
