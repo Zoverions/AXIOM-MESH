@@ -31,6 +31,12 @@ body:
         - Protocol translation widens or detaches authority
         - Degraded mode removes controls or widens authority
         - Advisory tooling becomes a shadow authorizer
+        - Concurrent evaluators overspend or compose shared authority
+        - Abort or target-scope loss fails to terminate effect authority
+        - Semantic interpretation manufactures authority
+        - Bootstrap lifecycle widens authority or deadlocks readiness
+        - External side effects become unauthorized agent communication
+        - Delegate key possession forges ancestry or handoff evidence
         - Other authority-boundary mismatch
     validations:
       required: true
@@ -52,6 +58,12 @@ body:
         - RT-REL-008 - Claims must not outrun built, enabled, exposed, or promoted state
         - RT-AUTH-009 - Exact-effect authorization must survive protocol translation
         - RT-RES-010 - Frontier-provider loss must not remove or widen governance controls
+        - RT-CONC-011 - Shared authority state must serialize across evaluators
+        - RT-ABORT-012 - Abort and scope loss must terminate outstanding effect authority
+        - RT-SEM-013 - Semantic interpretation must not manufacture authority
+        - RT-LIFE-014 - Bootstrap authority must remain narrow and lifecycle-aware
+        - RT-SWARM-015 - Externally observable state must not become unauthorized swarm communication
+        - RT-DELEG-016 - Delegate possession must not prove delegation ancestry
     validations:
       required: false
 

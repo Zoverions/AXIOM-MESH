@@ -17,6 +17,25 @@ const expectedScopes = [
   'resilience-degraded-mode'
 ];
 
+const expectedTargetIds = [
+  'RT-AUTH-001',
+  'RT-NET-002',
+  'RT-CRED-003',
+  'RT-EVID-004',
+  'RT-KERN-005',
+  'RT-PROV-006',
+  'RT-REC-007',
+  'RT-REL-008',
+  'RT-AUTH-009',
+  'RT-RES-010',
+  'RT-CONC-011',
+  'RT-ABORT-012',
+  'RT-SEM-013',
+  'RT-LIFE-014',
+  'RT-SWARM-015',
+  'RT-DELEG-016'
+];
+
 async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
 }
@@ -61,13 +80,16 @@ test('red-team target catalog stays bounded, review-aligned, discoverable, and i
   assert.match(triage, /Reports that do not map cleanly to a catalog target remain valid intake/i);
   assert.match(triage, /Target mapping is classification only/i);
 
-  assert.equal(catalog.targets.length, expectedScopes.length);
-  assert.deepEqual(catalog.targets.map((target) => target.review_scope), expectedScopes);
+  assert.deepEqual(catalog.targets.map((target) => target.id), expectedTargetIds);
   assert.equal(new Set(catalog.targets.map((target) => target.id)).size, catalog.targets.length);
+  for (const scope of expectedScopes) {
+    assert.ok(catalog.targets.some((target) => target.review_scope === scope), `catalog must retain review scope ${scope}`);
+  }
 
   let previousFormIndex = -1;
   for (const target of catalog.targets) {
     assert.match(target.id, /^RT-[A-Z]+-\d{3}$/);
+    assert.ok(expectedScopes.includes(target.review_scope), `unexpected review scope ${target.review_scope}`);
     assert.equal(typeof target.title, 'string');
     assert.equal(typeof target.claim_boundary, 'string');
     assert.equal(typeof target.challenge_question, 'string');
