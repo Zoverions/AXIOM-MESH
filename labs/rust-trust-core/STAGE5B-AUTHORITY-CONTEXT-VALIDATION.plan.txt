@@ -1,0 +1,185 @@
+Rust Trust-Core Stage 5B — Authority Context Validation Execution Clarification
+Date: 2026-09-06
+Status: implementation-plan review gate; no implementation authority
+Canonical plan: docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md, Stage 5B amendment
+Design: labs/rust-trust-core/STAGE5B-AUTHORITY-CONTEXT-VALIDATION.design.txt
+
+PURPOSE
+
+This record resolves transport/envelope details found during plan self-review. It does not widen Stage 5B scope or authority.
+
+The selected target remains laboratory-only structural validation. Node remains authoritative. Stage 5A evidence remains evidence/provenance only.
+
+SEPARATE THREE LAYERS
+
+1. Fixture transport grammar
+   Restricted printable-ASCII JSONL used only by the laboratory.
+
+2. Stage 5B fixture envelope
+   Exact outer fields:
+   case_id
+   grant
+   intent
+   request
+   history
+   restrictions
+
+3. Supported Node authority-context structural semantics
+   The nested structures validated by the real evaluateAuthorityComposition() implementation.
+
+A rejection at layer 1 or 2 is laboratory-envelope rejection. It must not be reported as proof that the supported Node evaluator itself rejects that raw outer representation.
+
+A rejection at layer 3 is supported-evaluator structural rejection.
+
+The differential claim must always say it applies within the frozen Stage 5B fixture envelope.
+
+OUTER-ENVELOPE RULE
+
+The Node oracle wrapper and Rust parser both enforce the exact six-field Stage 5B fixture envelope before nested structural comparison.
+
+Therefore:
+- missing_top_level_history is an envelope rejection, even though the supported evaluator has a default history=[] parameter;
+- missing_top_level_restrictions is an envelope rejection, even though the supported evaluator has a default restrictions=[] parameter;
+- extra_top_level_field is an envelope rejection;
+- malformed or duplicate case_id is an envelope rejection.
+
+These cases are useful evidence that both laboratory paths consume the same frozen envelope. They are not claims about raw JavaScript argument-destructuring behavior.
+
+NODE RESTRICTED-JSON PREFLIGHT
+
+The Node oracle must not rely on JSON.parse alone to enforce the restricted transport grammar because JSON.parse does not report duplicate object keys.
+
+Before JSON.parse, implement a test-only recursive preflight scanner with these functions:
+
+validateRestrictedJsonLine(line)
+scanValue(cursor)
+scanObject(cursor)
+scanArray(cursor)
+scanString(cursor)
+
+The scanner operates over JavaScript string code units but admits ASCII only, so code-unit and byte ordering questions do not arise.
+
+Rules:
+- whitespace outside strings: ASCII space only; tabs/newlines exist only as JSONL record separators and are not admitted inside a line;
+- values: object, array, string, true, false, null only;
+- numbers are rejected;
+- string raw characters must be U+0020..U+007E excluding unescaped quote and backslash;
+- admitted escapes are only \" and \\;
+- \u and all control escapes are rejected;
+- every object tracks decoded key text in a Set and rejects a repeated key before JSON.parse;
+- commas and colons must appear exactly where required;
+- trailing non-space content after the root value is rejected;
+- maximum input line size is 2 MiB;
+- no repair, normalization, truncation, key sorting, or duplicate overwriting is allowed.
+
+After validateRestrictedJsonLine succeeds, JSON.parse may be used to create the JavaScript object passed to the Stage 5B envelope checker and supported evaluator.
+
+RUST RESTRICTED-JSON PARSER
+
+The Rust parser implements the same transport grammar directly and also rejects duplicate object keys before creating JsonValue::Object.
+
+The restricted parser is evidence transport, not a candidate production JSON implementation.
+
+NODE ORACLE FLOW
+
+For each parseable JSONL line:
+
+restricted transport preflight
+-> JSON.parse
+-> exact Stage 5B six-field envelope check
+-> case_id validation
+-> call real evaluateAuthorityComposition({grant,intent,request,history,restrictions,now: fixedNow})
+-> if supported evaluator returns: structurally_admitted=true
+-> if supported evaluator throws ValidationError: structurally_admitted=false
+-> discard returned allow/reasons/authority_effect/other fields
+-> emit only case_id<TAB>true|false
+
+Unexpected non-ValidationError exceptions are harness failures and terminate non-zero. They are not converted into structurally_admitted=false.
+
+RUST FLOW
+
+For each JSONL line:
+
+restricted Rust JSON parser
+-> exact Stage 5B six-field envelope check
+-> case_id validation
+-> nested structural validation
+-> Ok(()) means structurally_admitted=true
+-> AuthorityContextError means structurally_admitted=false
+
+No Rust function performs currentness, principal/policy equality, scope membership, intent attenuation, composition restriction matching, or an allow decision.
+
+INVALID EVIDENCE CLASSIFICATION
+
+Envelope/transport rejection cases include:
+- missing_top_level_history
+- missing_top_level_restrictions
+- extra_top_level_field
+- malformed case_id
+- duplicate case_id
+- duplicate JSON object key
+- number value
+- unsupported JSON escape
+- raw control/non-ASCII character
+- over-2-MiB fixture line
+
+Supported nested structural rejection cases include:
+- grant_not_object
+- grant_verified_false
+- grant_missing_id
+- grant_extra_field
+- grant_bad_id
+- grant_bad_digest
+- grant_bad_timestamp
+- grant_unsorted_actions
+- grant_duplicate_actions
+- grant_empty_set_member
+- intent_bound_false
+- intent_extra_field
+- request_missing_protocol
+- request_bad_policy_digest
+- history_not_array
+- history_entry_missing_field
+- history_entry_extra_field
+- restriction_not_array
+- restriction_missing_id
+- restriction_one_action
+- restriction_seventeen_actions
+- over-width sets/history/restrictions
+- overlong set member or identifier
+
+The test report must keep these classifications distinct.
+
+GENERATED CAMPAIGN
+
+The 256 generated invalid cases in the canonical plan may include envelope-invalid cases, but the differential harness records each case classification as either envelope_rejected or structural_rejected.
+
+For every generated invalid case:
+- Node must reject at the declared layer;
+- Rust must reject at the same declared layer;
+- a mismatch in rejection layer fails the test even if both ultimately reject.
+
+This prevents a transport bug from being mistaken for structural parity.
+
+ACCEPTANCE WORDING
+
+Permitted claim:
+
+At the accepted exact head, the laboratory-only Rust Stage 5B candidate matched the Stage 5B Node oracle's structural-admission result and rejection layer within the frozen printable-ASCII JSONL fixture envelope across the declared hand-curated and deterministic generated corpora. The Node oracle invoked the real supported evaluateAuthorityComposition() for nested structural validation and discarded all authorization output. Node remained authoritative and no production runtime or effect authority was promoted.
+
+Do not shorten this to “Rust matches evaluateAuthorityComposition()” because Stage 5B does not compare authorization semantics.
+
+IMPLEMENTATION GATE
+
+No Stage 5B implementation source exists at this review gate.
+
+Approval of this plan authorizes only the bounded laboratory implementation tasks in the canonical Stage 5B plan amendment. Any material change to target, authority map, TCB, dependency/unsafe/bridge policy, state reachability, or effect reachability reopens design review before code changes continue.
+
+SELF-REVIEW RESULT
+
+- No Stage 5B implementation code is present.
+- No new Markdown file is added outside the existing canonical documentation inventory.
+- The canonical plan contains no Stage 5B TBD/TODO or symbolic SHA placeholder.
+- The plan distinguishes laboratory transport/envelope rejection from supported-evaluator nested structural rejection.
+- The Node oracle is required to discard all authorization output.
+- The Rust public API returns Result<(), AuthorityContextError> and cannot mint an authority token.
