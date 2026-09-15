@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/bounded-decision-question-schema-v0.schema.json",
+  "title": "AXIOM Bounded Decision Question Schema v0",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "version", "status", "question_schema_id", "question_kind",
+        "instructions", "purpose", "domain", "state_contract_ref", "known_limitations",
+        "created_at", "options", "other_option_policy", "schema_digest"
+      ],
+      "properties": {
+        "schema": { "const": "axiom-bounded-decision-question-schema.v0" },
+        "version": { "const": 0 },
+        "status": { "const": "inert-bounded-decision-question-schema" },
+        "question_schema_id": { "$ref": "#/$defs/identifier" },
+        "question_kind": { "const": "choice" },
+        "instructions": { "$ref": "#/$defs/instructions" },
+        "purpose": { "$ref": "#/$defs/boundedString" },
+        "domain": { "$ref": "#/$defs/boundedString" },
+        "state_contract_ref": { "$ref": "#/$defs/boundedString" },
+        "known_limitations": { "$ref": "#/$defs/limitations" },
+        "created_at": { "$ref": "#/$defs/dateTime" },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/option" }
+        },
+        "other_option_policy": {
+          "type": "string",
+          "enum": ["required", "allowed", "forbidden"]
+        },
+        "schema_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "version", "status", "question_schema_id", "question_kind",
+        "instructions", "purpose", "domain", "state_contract_ref", "known_limitations",
+        "created_at", "levels", "schema_digest"
+      ],
+      "properties": {
+        "schema": { "const": "axiom-bounded-decision-question-schema.v0" },
+        "version": { "const": 0 },
+        "status": { "const": "inert-bounded-decision-question-schema" },
+        "question_schema_id": { "$ref": "#/$defs/identifier" },
+        "question_kind": { "const": "score" },
+        "instructions": { "$ref": "#/$defs/instructions" },
+        "purpose": { "$ref": "#/$defs/boundedString" },
+        "domain": { "$ref": "#/$defs/boundedString" },
+        "state_contract_ref": { "$ref": "#/$defs/boundedString" },
+        "known_limitations": { "$ref": "#/$defs/limitations" },
+        "created_at": { "$ref": "#/$defs/dateTime" },
+        "levels": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/level" }
+        },
+        "schema_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "version", "status", "question_schema_id", "question_kind",
+        "instructions", "purpose", "domain", "state_contract_ref", "known_limitations",
+        "created_at", "true_meaning", "false_meaning", "schema_digest"
+      ],
+      "properties": {
+        "schema": { "const": "axiom-bounded-decision-question-schema.v0" },
+        "version": { "const": 0 },
+        "status": { "const": "inert-bounded-decision-question-schema" },
+        "question_schema_id": { "$ref": "#/$defs/identifier" },
+        "question_kind": { "const": "binary-probability" },
+        "instructions": { "$ref": "#/$defs/instructions" },
+        "purpose": { "$ref": "#/$defs/boundedString" },
+        "domain": { "$ref": "#/$defs/boundedString" },
+        "state_contract_ref": { "$ref": "#/$defs/boundedString" },
+        "known_limitations": { "$ref": "#/$defs/limitations" },
+        "created_at": { "$ref": "#/$defs/dateTime" },
+        "true_meaning": { "$ref": "#/$defs/meaning" },
+        "false_meaning": { "$ref": "#/$defs/meaning" },
+        "schema_digest": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "instructions": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "boundedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "meaning": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_id", "description"],
+      "properties": {
+        "option_id": { "$ref": "#/$defs/identifier" },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "level": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level_id", "position", "description"],
+      "properties": {
+        "level_id": { "$ref": "#/$defs/identifier" },
+        "position": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/bounded-decision-question-schema.mjs",
+  "x-axiom-semantic-rules": [
+    "schema digest covers every material semantic field except schema_digest itself",
+    "bounded decision questions must be atomic and composite judgments belong in deterministic code over separate observations",
+    "required other-option policy requires an explicit other or none fallback option",
+    "score level positions must be contiguous and exactly ordered from zero",
+    "binary true and false meanings must be explicit and distinct"
+  ],
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "tool-execution",
+    "runtime-activation",
+    "semantic-correctness",
+    "calibration-truth",
+    "chain-of-thought-provenance"
+  ]
+}
