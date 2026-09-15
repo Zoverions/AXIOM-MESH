@@ -34,7 +34,9 @@
       "ai.local-organize",
       "social.actor.create",
       "social.persona.create",
-      "social.publication.create"
+      "social.publication.create",
+      "social.publication.supersede",
+      "social.publication.retract"
     ],
     "stable_gateway_errors": 20,
     "event_kinds": 37,
