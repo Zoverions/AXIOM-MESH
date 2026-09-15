@@ -1375,18 +1375,226 @@ async function renderVault() {
 async function renderReceipts() {
   const response = await state.client.call('events.list', { query: { limit: 50 } });
   const events = response.events ?? [];
-  view.replaceChildren(
-    header('Receipts and evidence timeline',
-      'Every current kernel event kind has a bounded plain-language mapping while raw payload, trace, and event identifiers remain available.'),
-    events.length
-      ? element('div', { className: 'stack' }, events.map(item => humanExplanation(
+  let audit = null;
+  let auditError = null;
+  try {
+    audit = await state.client.call('audit.verify');
+  } catch (error) {
+    auditError = error;
+  }
+
+  const auditIntegrity = auditError
+    ? errorBox(auditError, 'Live audit integrity is unavailable')
+    : (audit?.valid === true
+      ? element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: 'Integrity verified' }),
+        element('h2', { text: 'Live audit integrity' }),
+        element('p', { text: 'The authenticated audit.verify read reports the local Grid chain as internally valid. This is integrity evidence only; it is not external-world truth and grants no authority.' }),
+        rawDetails('Raw live audit integrity response', audit)
+      ])
+      : element('article', { className: 'card full' }, [
+        element('span', { className: 'badge danger', text: 'Not verified' }),
+        element('h2', { text: 'Live audit integrity not verified' }),
+        element('p', { text: 'The audit route did not report valid=true. No verified-chain claim is synthesized; inspect the raw response before relying on this evidence.' }),
+        rawDetails('Raw live audit integrity response', audit)
+      ]));
+
+  const verifyPanel = element('div', {
+    className: 'stack',
+    attrs: { id: 'offline-verify-panel' }
+  });
+  const verifyResult = element('div', {
+    className: 'stack',
+    attrs: { id: 'offline-verify-result' }
+  });
+
+  const mode = element('select', {
+    attrs: { id: 'offline-verify-mode', name: 'offline_verify_mode' }
+  });
+  for (const [value, label] of [
+    ['auto', 'Auto-detect artifact kind'],
+    ['receipt', 'Machine receipt'],
+    ['continuity', 'Continuity anchor'],
+    ['export', 'Selective export package']
+  ]) {
+    mode.append(element('option', { text: label, attrs: { value } }));
+  }
+
+  const artifact = element('textarea', {
+    attrs: {
+      id: 'offline-verify-artifact',
+      name: 'offline_verify_artifact',
+      required: '',
+      maxlength: '200000',
+      placeholder: 'Paste a machine-receipt, continuity-anchor, or export-package JSON artifact. Click Verify offline on a visible event to prefill its raw JSON.'
+    }
+  });
+  const publicKey = element('textarea', {
+    attrs: {
+      id: 'offline-verify-public-key',
+      name: 'offline_verify_public_key',
+      required: '',
+      maxlength: '16000',
+      placeholder: 'Owner-supplied Ed25519 public key PEM used only for local offline Verify. Not fetched from Gateway.'
+    }
+  });
+  const chainSegment = element('textarea', {
+    attrs: {
+      id: 'offline-verify-chain-segment',
+      name: 'offline_verify_chain_segment',
+      maxlength: '200000',
+      placeholder: 'Optional chain-segment JSON for continuity mode (genesis through retained head).'
+    }
+  });
+  const exportFiles = element('textarea', {
+    attrs: {
+      id: 'offline-verify-export-files',
+      name: 'offline_verify_export_files',
+      maxlength: '200000',
+      placeholder: 'Optional export files JSON map: {"file.name":"utf8-bytes-or-base64:..."} for export mode.'
+    }
+  });
+
+  const run = element('button', {
+    className: 'button button-primary',
+    text: 'Run offline Verify',
+    attrs: { type: 'button' }
+  });
+  run.addEventListener('click', async () => {
+    run.disabled = true;
+    verifyResult.replaceChildren(notice('Running local offline Verify on the loopback preview helper…'));
+    try {
+      const report = await runOfflineVerify({
+        mode: mode.value,
+        artifactText: artifact.value,
+        publicKeyPem: publicKey.value,
+        chainSegmentText: chainSegment.value,
+        exportFilesText: exportFiles.value
+      });
+      verifyResult.replaceChildren(
+        humanExplanation(
+          human.verifyReport(report),
+          'Raw offline verification report',
+          report
+        )
+      );
+      announce(report?.verdict === 'PASS' ? 'Offline Verify reported PASS' : 'Offline Verify reported FAIL');
+    } catch (error) {
+      verifyResult.replaceChildren(errorBox(error, 'Offline Verify is unavailable'));
+    } finally {
+      run.disabled = false;
+    }
+  });
+
+  verifyPanel.append(
+    header('Verify offline (experimental)',
+      'Integrity versus truth: PASS is cryptographic integrity under the owner-supplied key and declared schema — not external-world truth, not authority, and not Mesh production promotion.'),
+    notice('Experimental MVP only. Not a released Verify product. Local Verify does not call Gateway as an authority client. Hermes pin remains provisional; SEC-002 pending.'),
+    field('Artifact kind', mode, 'offline-verify-mode'),
+    field('Artifact JSON', artifact, 'offline-verify-artifact'),
+    field('Verification public key PEM', publicKey, 'offline-verify-public-key'),
+    field('Continuity chain segment JSON (optional)', chainSegment, 'offline-verify-chain-segment'),
+    field('Export files map JSON (optional)', exportFiles, 'offline-verify-export-files'),
+    element('div', { className: 'actions' }, [run]),
+    verifyResult
+  );
+
+  const cards = events.length
+    ? element('div', { className: 'stack' }, events.map(item => {
+      const verifyButton = element('button', {
+        className: 'button button-secondary',
+        text: 'Verify offline',
+        attrs: { type: 'button' }
+      });
+      verifyButton.addEventListener('click', () => {
+        artifact.value = JSON.stringify(item, null, 2);
+        mode.value = 'auto';
+        verifyResult.replaceChildren(
+          notice('Prefilling the selected visible receipt/event JSON. Supply the verification public key PEM, then run offline Verify. Kernel events that are not machine-receipt artifacts fail closed with a human reason.')
+        );
+        verifyPanel.scrollIntoView({ block: 'start' });
+        announce('Visible receipt loaded into offline Verify');
+      });
+      return humanExplanation(
         human.receipt(item),
         'Raw event evidence',
-        item
-      )))
-      : empty('No events are visible to this principal.'),
+        item,
+        [verifyButton]
+      );
+    }))
+    : empty('No events are visible to this principal.');
+
+  view.replaceChildren(
+    header('Receipts and evidence timeline',
+      'Owner-visible events, live audit integrity, and offline artifact verification stay distinct. Integrity evidence never grants authority or proves external-world truth.'),
+    auditIntegrity,
+    cards,
+    verifyPanel,
     rawDetails('Raw event response', response)
   );
+}
+
+async function runOfflineVerify({
+  mode,
+  artifactText,
+  publicKeyPem,
+  chainSegmentText,
+  exportFilesText
+}) {
+  let parsedArtifact;
+  try {
+    parsedArtifact = JSON.parse(artifactText);
+  } catch {
+    throw new Error('Artifact JSON is invalid');
+  }
+  const body = {
+    mode,
+    artifact: parsedArtifact,
+    public_key_pem: publicKeyPem
+  };
+  if (typeof chainSegmentText === 'string' && chainSegmentText.trim()) {
+    try {
+      body.chain_segment = JSON.parse(chainSegmentText);
+    } catch {
+      throw new Error('Continuity chain segment JSON is invalid');
+    }
+  }
+  if (typeof exportFilesText === 'string' && exportFilesText.trim()) {
+    try {
+      body.files = JSON.parse(exportFilesText);
+    } catch {
+      throw new Error('Export files map JSON is invalid');
+    }
+  }
+  const response = await fetch('/local/verify', {
+    method: 'POST',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'error',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > 2_097_152) {
+    throw new Error('Offline Verify response is too large');
+  }
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    throw new Error('Offline Verify response is not valid JSON');
+  }
+  if (!response.ok) {
+    const message = payload?.error?.message ?? `Offline Verify failed with status ${response.status}`;
+    throw new Error(message);
+  }
+  if (!payload || typeof payload !== 'object' || payload.schema !== 'axiom-verify-report.v0') {
+    throw new Error('Offline Verify returned an unexpected report shape');
+  }
+  return payload;
 }
 
 async function renderShare() {
