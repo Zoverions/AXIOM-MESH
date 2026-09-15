@@ -1,0 +1,122 @@
+name: Apply Bounded Decision Review Hardening
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/bounded-decision-review-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Apply review hardening
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'patch anchor missing in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          obs = 'mesh/src/lib/bounded-decision-observation.mjs'
+          replace_once(
+              obs,
+              "  'question_schema_digest',\n  'state_digest',",
+              "  'question_schema_digest',\n  'question_domain',\n  'state_digest',"
+          )
+          replace_once(
+              obs,
+              "  requireDigest(document.question_schema_digest, 'question_schema_digest');\n  requireDigest(document.state_digest, 'state_digest');",
+              "  requireDigest(document.question_schema_digest, 'question_schema_digest');\n  requireString(document.question_domain, 'question_domain', 512);\n  requireDigest(document.state_digest, 'state_digest');"
+          )
+          replace_once(
+              obs,
+              "  if (document.question_schema_digest !== questionDigest) {\n    throw new ValidationError('observation question schema digest does not match supplied question schema');\n  }\n  if (document.answer.kind !== questionSchema.question_kind) {",
+              "  if (document.question_schema_digest !== questionDigest) {\n    throw new ValidationError('observation question schema digest does not match supplied question schema');\n  }\n  if (document.question_domain !== questionSchema.domain) {\n    throw new ValidationError('observation question domain does not match supplied question schema');\n  }\n  if (document.answer.kind !== questionSchema.question_kind) {"
+          )
+          replace_once(
+              obs,
+              "    question_schema_id: questionSchema.question_schema_id,\n    question_schema_digest: boundedDecisionQuestionSchemaDigest(questionSchema),\n    state_digest: input.state_digest,",
+              "    question_schema_id: questionSchema.question_schema_id,\n    question_schema_digest: boundedDecisionQuestionSchemaDigest(questionSchema),\n    question_domain: questionSchema.domain,\n    state_digest: input.state_digest,"
+          )
+          replace_once(
+              obs,
+              "    question_schema_id: document.question_schema_id,\n    question_schema_digest: document.question_schema_digest,\n    answer_kind: document.answer.kind,",
+              "    question_schema_id: document.question_schema_id,\n    question_schema_digest: document.question_schema_digest,\n    question_domain: document.question_domain,\n    answer_kind: document.answer.kind,"
+          )
+
+          schema_path = Path('mesh/config/bounded-decision-observation-v0.schema.json')
+          schema = json.loads(schema_path.read_text(encoding='utf-8'))
+          required = schema['required']
+          if 'question_domain' not in required:
+              idx = required.index('question_schema_digest') + 1
+              required.insert(idx, 'question_domain')
+          schema['properties']['question_domain'] = {
+              'type': 'string', 'minLength': 1, 'maxLength': 512
+          }
+          schema_path.write_text(json.dumps(schema, indent=2) + '\n', encoding='utf-8')
+
+          cal = 'mesh/src/lib/bounded-decision-calibration-report.mjs'
+          replace_once(
+              cal,
+              "  const aliases = new Set([\n    providerProfile.profile_id,\n    providerProfile.offering_ref,\n    providerProfile.catalog_entry_id\n  ]);\n  for (const source of document.outcome_source_refs) {\n    if (aliases.has(source.outcome_ref)) {\n      throw new ValidationError('calibration outcome source must remain independently sourced from provider identity');\n    }\n  }",
+              "  const aliases = new Set([\n    providerProfile.profile_id,\n    providerProfile.offering_ref,\n    providerProfile.catalog_entry_id\n  ]);\n  const providerDigests = new Set([\n    profileDigest,\n    providerProfile.catalog_entry_digest\n  ]);\n  for (const source of document.outcome_source_refs) {\n    if (aliases.has(source.outcome_ref) || providerDigests.has(source.outcome_digest)) {\n      throw new ValidationError('calibration outcome source must remain independently sourced from provider identity and digests');\n    }\n  }"
+          )
+
+          interp = 'mesh/src/lib/bounded-decision-interpretation.mjs'
+          replace_once(
+              interp,
+              "  if (\n    calibration.offering_version_or_revision !== observation.offering_version_or_revision\n    || calibration.offering_revision_evidence !== observation.offering_revision_evidence\n  ) {\n    return 'calibration-revision-mismatch';\n  }\n  const schemaMatch = calibration.question_schema_family_refs.some(",
+              "  if (\n    calibration.offering_version_or_revision !== observation.offering_version_or_revision\n    || calibration.offering_revision_evidence !== observation.offering_revision_evidence\n  ) {\n    return 'calibration-revision-mismatch';\n  }\n  if (calibration.domain !== observation.question_domain) {\n    return 'calibration-domain-mismatch';\n  }\n  const schemaMatch = calibration.question_schema_family_refs.some("
+          )
+
+          spec = 'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md'
+          replace_once(
+              spec,
+              "question_schema_id\nquestion_schema_digest\nstate_digest",
+              "question_schema_id\nquestion_schema_digest\nquestion_domain\nstate_digest"
+          )
+          replace_once(
+              spec,
+              "`state_classification` records the AXIOM sensitivity/disclosure class applied before invocation. Raw state is not duplicated into the observation.",
+              "`question_domain` preserves the domain committed by the exact question schema so later interpretation can reject calibration evidence declared for a different domain without retaining raw state. `state_classification` records the AXIOM sensitivity/disclosure class applied before invocation. Raw state is not duplicated into the observation."
+          )
+          replace_once(
+              spec,
+              "A report must not treat the model's own confidence values as its ground truth.",
+              "A report must not treat the model's own confidence values as its ground truth. Outcome evidence that aliases the bound provider identity or exact provider/catalog digests is not independent evidence and must fail resolution."
+          )
+          PY
+      - name: Verify bounded decision suite
+        working-directory: mesh
+        run: node --test test/bounded-decision-*.test.mjs
+      - name: Commit review hardening
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            mesh/src/lib/bounded-decision-observation.mjs \
+            mesh/config/bounded-decision-observation-v0.schema.json \
+            mesh/src/lib/bounded-decision-calibration-report.mjs \
+            mesh/src/lib/bounded-decision-interpretation.mjs \
+            docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md
+          git commit -m 'fix: harden bounded decision evidence binding'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
