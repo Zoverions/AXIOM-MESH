@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/bounded-decision-observation-v0.schema.json",
+  "title": "AXIOM Bounded Decision Observation v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "observation_id",
+    "provider_profile_id",
+    "provider_profile_digest",
+    "catalog_entry_digest",
+    "offering_ref",
+    "offering_version_or_revision",
+    "offering_revision_evidence",
+    "question_schema_id",
+    "question_schema_digest",
+    "state_digest",
+    "state_classification",
+    "observed_at",
+    "latency_ms",
+    "answer",
+    "probability_evidence",
+    "provider_confidence",
+    "usage_evidence",
+    "calibration_report_ref",
+    "transport_evidence_ref",
+    "observation_digest",
+    "authority_effect",
+    "assurance_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-bounded-decision-observation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-bounded-decision-observation" },
+    "observation_id": { "$ref": "#/$defs/identifier" },
+    "provider_profile_id": { "$ref": "#/$defs/identifier" },
+    "provider_profile_digest": { "$ref": "#/$defs/sha256" },
+    "catalog_entry_digest": { "$ref": "#/$defs/sha256" },
+    "offering_ref": { "$ref": "#/$defs/identifier" },
+    "offering_version_or_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "offering_revision_evidence": {
+      "type": "string",
+      "enum": ["exact-artifact", "provider-versioned", "mutable-alias", "unknown"]
+    },
+    "question_schema_id": { "$ref": "#/$defs/identifier" },
+    "question_schema_digest": { "$ref": "#/$defs/sha256" },
+    "state_digest": { "$ref": "#/$defs/sha256" },
+    "state_classification": { "$ref": "#/$defs/identifier" },
+    "observed_at": { "$ref": "#/$defs/dateTime" },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 300000
+    },
+    "answer": {
+      "oneOf": [
+        { "$ref": "#/$defs/choiceAnswer" },
+        { "$ref": "#/$defs/scoreAnswer" },
+        { "$ref": "#/$defs/binaryAnswer" }
+      ]
+    },
+    "probability_evidence": {
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/choiceProbability" }
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/scoreProbability" }
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/binaryProbability" }
+        }
+      ]
+    },
+    "provider_confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "usage_evidence": { "$ref": "#/$defs/usageEvidence" },
+    "calibration_report_ref": { "$ref": "#/$defs/nullableBoundedString" },
+    "transport_evidence_ref": { "$ref": "#/$defs/nullableBoundedString" },
+    "observation_digest": { "$ref": "#/$defs/sha256" },
+    "authority_effect": { "const": "none" },
+    "assurance_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "credential_visibility": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "selection_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableBoundedString": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "string", "minLength": 1, "maxLength": 512 }
+      ]
+    },
+    "usageEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_units", "output_units", "compute_class", "provider_report_ref"],
+      "properties": {
+        "input_units": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 1000000000000
+        },
+        "output_units": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 1000000000000
+        },
+        "compute_class": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 256 }
+          ]
+        },
+        "provider_report_ref": { "$ref": "#/$defs/nullableBoundedString" }
+      }
+    },
+    "choiceAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "selected_option_id", "tied_option_ids"],
+      "properties": {
+        "kind": { "const": "choice" },
+        "selected_option_id": { "$ref": "#/$defs/identifier" },
+        "tied_option_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        }
+      }
+    },
+    "scoreAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "score"],
+      "properties": {
+        "kind": { "const": "score" },
+        "score": { "type": "number" }
+      }
+    },
+    "binaryAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "p_true"],
+      "properties": {
+        "kind": { "const": "binary-probability" },
+        "p_true": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "choiceProbability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_id", "probability"],
+      "properties": {
+        "option_id": { "$ref": "#/$defs/identifier" },
+        "probability": { "$ref": "#/$defs/probability" }
+      }
+    },
+    "scoreProbability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level_id", "position", "probability"],
+      "properties": {
+        "level_id": { "$ref": "#/$defs/identifier" },
+        "position": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "probability": { "$ref": "#/$defs/probability" }
+      }
+    },
+    "binaryProbability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "probability"],
+      "properties": {
+        "value": { "type": "boolean" },
+        "probability": { "$ref": "#/$defs/probability" }
+      }
+    },
+    "probability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/bounded-decision-observation.mjs",
+  "x-axiom-semantic-rules": [
+    "choice and score probability distributions must preserve every declared option or level exactly once and sum to 1 within strict tolerance",
+    "score answer must equal the probability-weighted mean of the bound ordered levels",
+    "choice ties must be represented explicitly and deterministically rather than silently broken by provider ordering",
+    "binary probability evidence derives false probability as one minus p_true instead of accepting an independent contradictory value",
+    "raw state is never duplicated into the durable observation and only its digest plus classification are retained",
+    "provider confidence and probability evidence never create or raise AXIOM assurance"
+  ],
+  "x-axiom-non-claims": [
+    "semantic-correctness",
+    "authority-grant",
+    "assurance-promotion",
+    "tool-execution",
+    "provider-availability",
+    "calibration-truth"
+  ]
+}
