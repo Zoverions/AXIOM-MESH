@@ -4,6 +4,15 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import appPolicy from './app-policy.json' with { type: 'json' };
 import gatewayContract from '../../mesh/config/gateway-client-contract.json' with { type: 'json' };
+import {
+  MACHINE_INTENT_RECEIPT_SCHEMA,
+  GRID_CONTINUITY_ANCHOR_SCHEMA,
+  EXPORT_PACKAGE_FORMAT,
+  verifyMachineReceiptLike,
+  verifyContinuityAnchor,
+  verifyExportPackage,
+  buildVerificationReport
+} from '../../packages/axiom-verify/index.mjs';
 
 const APP_ROOT = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..');
@@ -116,11 +125,207 @@ async function handleRequest({ req, res, port, gatewayOrigin, fetchImpl }) {
     }, req.method === 'HEAD');
     return;
   }
+  if (url.pathname === '/local/verify') {
+    await handleLocalVerify(req, res);
+    return;
+  }
   if (url.pathname.startsWith('/v1/')) {
     await proxyGateway({ req, res, url, gatewayOrigin, fetchImpl });
     return;
   }
   await serveStatic(req, res, url);
+}
+
+async function handleLocalVerify(req, res) {
+  if (req.method !== 'POST') {
+    sendPlain(res, 405, 'Method not allowed', { allow: 'POST' });
+    return;
+  }
+  if (!validBrowserBoundary(req)) {
+    sendJson(res, 403, {
+      error: {
+        code: 'forbidden',
+        message: 'Cross-origin preview request denied'
+      }
+    });
+    return;
+  }
+  if (mediaType(req.headers['content-type']) !== 'application/json') {
+    sendJson(res, 415, {
+      error: {
+        code: 'validation_error',
+        message: 'Local verify request must be JSON'
+      }
+    });
+    return;
+  }
+  let raw;
+  try {
+    raw = await readRequest(req, MAX_REQUEST_BYTES);
+  } catch {
+    sendJson(res, 413, {
+      error: {
+        code: 'body_too_large',
+        message: 'Request exceeds the preview byte limit'
+      }
+    });
+    return;
+  }
+  let input;
+  try {
+    input = JSON.parse(raw.toString('utf8'));
+  } catch {
+    sendJson(res, 400, {
+      error: {
+        code: 'validation_error',
+        message: 'Local verify body is not valid JSON'
+      }
+    });
+    return;
+  }
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    sendJson(res, 400, {
+      error: {
+        code: 'validation_error',
+        message: 'Local verify body must be a plain object'
+      }
+    });
+    return;
+  }
+  const report = runLocalVerify(input);
+  sendJson(res, 200, {
+    ...report,
+    verify_transport: 'axiom-one-loopback-local-verify',
+    gateway_authority_client: false,
+    experimental: true,
+    non_claims: [
+      'not-a-released-verify-product',
+      'not-mesh-production-promotion',
+      'pass-is-not-external-world-truth',
+      'hermes-pin-provisional',
+      'sec-002-pending'
+    ]
+  });
+}
+
+function runLocalVerify(input) {
+  const publicKeyPem = input.public_key_pem;
+  if (typeof publicKeyPem !== 'string' || !publicKeyPem.includes('BEGIN')) {
+    return buildVerificationReport({
+      ok: false,
+      code: 'missing_public_key',
+      reason:
+        'Owner-supplied verification public key PEM is required. Local Verify does not fetch keys from Gateway and is not an authority client.',
+      schema: null
+    });
+  }
+
+  let mode = typeof input.mode === 'string' ? input.mode : 'auto';
+  if (!['auto', 'receipt', 'continuity', 'export'].includes(mode)) {
+    return buildVerificationReport({
+      ok: false,
+      code: 'invalid_mode',
+      reason: `Unsupported local verify mode '${mode}'`,
+      schema: null
+    });
+  }
+
+  const artifact = input.artifact;
+  if (mode === 'auto') {
+    mode = detectVerifyMode(artifact, input);
+  }
+
+  try {
+    if (mode === 'receipt') {
+      return verifyMachineReceiptLike(artifact, { publicKeyPem }).report;
+    }
+    if (mode === 'continuity') {
+      return verifyContinuityAnchor(artifact, {
+        publicKeyPem,
+        chainSegment: input.chain_segment
+      }).report;
+    }
+    if (mode === 'export') {
+      const packageInput = normalizeExportPackageInput(artifact, input);
+      return verifyExportPackage(packageInput, { publicKeyPem }).report;
+    }
+  } catch (error) {
+    return buildVerificationReport({
+      ok: false,
+      code: 'verify_exception',
+      reason: `Local Verify failed closed: ${error?.message ?? 'unknown error'}`,
+      schema: null
+    });
+  }
+
+  return buildVerificationReport({
+    ok: false,
+    code: 'invalid_mode',
+    reason: `Unsupported local verify mode '${mode}'`,
+    schema: null
+  });
+}
+
+function detectVerifyMode(artifact, input) {
+  const value = plainJsonObject(artifact) ?? (
+    typeof artifact === 'string'
+      ? (() => {
+        try {
+          return plainJsonObject(JSON.parse(artifact));
+        } catch {
+          return null;
+        }
+      })()
+      : null
+  );
+  if (value?.schema === MACHINE_INTENT_RECEIPT_SCHEMA) return 'receipt';
+  if (value?.schema === GRID_CONTINUITY_ANCHOR_SCHEMA) return 'continuity';
+  if (
+    value?.format === EXPORT_PACKAGE_FORMAT
+    || value?.manifest !== undefined
+    || input?.files !== undefined
+  ) return 'export';
+  return 'receipt';
+}
+
+function normalizeExportPackageInput(artifact, input) {
+  let base = artifact;
+  if (typeof artifact === 'string') {
+    try {
+      base = JSON.parse(artifact);
+    } catch {
+      return artifact;
+    }
+  }
+  if (!base || typeof base !== 'object' || Array.isArray(base)) return artifact;
+  if (base.manifest !== undefined && (base.files !== undefined || input.files === undefined)) {
+    return decodeExportFiles(base);
+  }
+  return decodeExportFiles({
+    manifest: base.manifest ?? base,
+    files: input.files ?? base.files ?? {}
+  });
+}
+
+function decodeExportFiles(packageInput) {
+  if (!packageInput || typeof packageInput !== 'object' || Array.isArray(packageInput)) {
+    return packageInput;
+  }
+  const files = packageInput.files;
+  if (!files || typeof files !== 'object' || Array.isArray(files)) return packageInput;
+  const decoded = {};
+  for (const [name, value] of Object.entries(files)) {
+    if (typeof value === 'string' && value.startsWith('base64:')) {
+      decoded[name] = Buffer.from(value.slice('base64:'.length), 'base64');
+    } else {
+      decoded[name] = value;
+    }
+  }
+  return { ...packageInput, files: decoded };
+}
+
+function plainJsonObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
 }
 
 async function serveStatic(req, res, url) {
