@@ -143,14 +143,17 @@ function requireEnum(value, allowed, name) {
 }
 
 function requireEnumArray(value, allowed, name, { min = 1, max = allowed.length } = {}) {
-  if (!Array.isArray(value) || value.length < min || value.length > max) {
-    throw new ValidationError(`${name} must contain ${min}-${max} values`);
+  if (!Array.isArray(value)) {
+    throw new ValidationError(`${name} must be an array`);
   }
   const seen = new Set();
   for (const item of value) {
     requireEnum(item, allowed, name);
     if (seen.has(item)) throw new ValidationError(`${name} contains duplicate value ${item}`);
     seen.add(item);
+  }
+  if (value.length < min || value.length > max) {
+    throw new ValidationError(`${name} must contain ${min}-${max} values`);
   }
   return value;
 }
