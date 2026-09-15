@@ -135,6 +135,29 @@
       "response_media_type": "application/json"
     },
     {
+      "id": "delegations.get",
+      "method": "GET",
+      "path": "/v1/delegations",
+      "access": "owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [],
+      "query_parameters": [],
+      "request_schema": null,
+      "response_schema": "axiom-delegation-inspector.v1",
+      "required_response_fields": [
+        "schema",
+        "owner",
+        "configured",
+        "root_authority",
+        "ledger",
+        "grants",
+        "revocations",
+        "execution_authority_granted",
+        "digest"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
       "id": "operations.get",
       "method": "GET",
       "path": "/v1/operations",
