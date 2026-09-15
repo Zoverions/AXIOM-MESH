@@ -582,7 +582,7 @@ async function renderSocial() {
     });
     writeButtons.push(createPublication);
     publicationForm.append(
-      notice('This creates one owner-local public/listed human-authored publication. It stays on this node: no federation, remote following, recommendation, relay, or distribution occurs. Revision and retraction remain unavailable in this browser tranche.'),
+      notice('This creates one owner-local public/listed human-authored publication. It stays on this node: no federation, remote following, recommendation, relay, or distribution occurs. Supersede and retract controls for active local publications appear in the corpus below.'),
       field('Publication text', publicationText, 'social-publication-text'),
       element('div', { className: 'actions' }, [createPublication])
     );
@@ -620,12 +620,79 @@ async function renderSocial() {
   }
 
   const publicationCards = publications.length
-    ? element('div', { className: 'stack' }, publications.map(publication => {
+    ? element('div', { className: 'stack' }, publications.map((publication, index) => {
       const projection = publication.publication ?? {};
       const status = publication.status ?? 'unknown';
       const text = typeof projection.content?.text === 'string'
         ? projection.content.text
         : 'No text projection is available.';
+      const lifecycleControls = element('div', { className: 'stack' });
+      if (status === 'active' && activeActor && activePersona) {
+        const revisionText = element('textarea', {
+          attrs: {
+            id: `social-publication-revision-${index}`,
+            name: `publication_revision_${index}`,
+            required: '',
+            maxlength: '10000',
+            placeholder: 'Write replacement text. The prior publication remains in append-only history.'
+          }
+        });
+        revisionText.value = typeof projection.content?.text === 'string'
+          ? projection.content.text
+          : '';
+        const supersedePublication = element('button', {
+          className: 'button button-secondary',
+          text: 'Review superseding publication',
+          attrs: { type: 'button' }
+        });
+        const retractPublication = element('button', {
+          className: 'button button-secondary',
+          text: 'Review local retraction',
+          attrs: { type: 'button' }
+        });
+        writeButtons.push(supersedePublication, retractPublication);
+        supersedePublication.addEventListener('click', () => {
+          if (!revisionText.value.trim()) {
+            revisionText.setCustomValidity('Enter replacement publication text containing at least one visible character.');
+            revisionText.reportValidity();
+            return;
+          }
+          revisionText.setCustomValidity('');
+          startReview({
+            action: 'social.publication.supersede',
+            input: {
+              actor_id: activeActor.actor_id,
+              actor_state_digest: activeActor.actor_state_digest,
+              protected_persona: activePersona.protected_persona,
+              previous_publication: publication.publication,
+              content: {
+                media_type: 'text/plain',
+                text: revisionText.value
+              },
+              audience: { mode: 'public' },
+              discoverability: 'listed',
+              authorship_mode: 'human-authored'
+            },
+            purpose: 'social-publish',
+            data_scopes: ['publication-projection']
+          });
+        });
+        retractPublication.addEventListener('click', () => startReview({
+          action: 'social.publication.retract',
+          input: {
+            actor_id: activeActor.actor_id,
+            previous_publication: publication.publication,
+            reason_code: 'author-retracted'
+          },
+          purpose: 'social-publish',
+          data_scopes: ['publication-projection']
+        }));
+        lifecycleControls.append(
+          notice('Supersede appends a replacement while retaining the prior publication. Retract requests local stop-serving only; neither action deletes third-party copies, federates, or rewrites append-only history.'),
+          field('Replacement text', revisionText, `social-publication-revision-${index}`),
+          element('div', { className: 'actions' }, [supersedePublication, retractPublication])
+        );
+      }
       return element('article', { className: 'card full' }, [
         element('span', {
           className: `badge ${status === 'active' ? 'good' : 'pending'}`,
@@ -638,6 +705,7 @@ async function renderSocial() {
         projection.supersedes_digest
           ? element('p', { text: `Supersedes: ${projection.supersedes_digest}` })
           : element('p', { text: 'Original local publication projection.' }),
+        lifecycleControls,
         rawDetails('Inspect exact publication projection', publication)
       ]);
     }))
@@ -645,7 +713,7 @@ async function renderSocial() {
 
   view.replaceChildren(
     header('Owner-local Social corpus',
-      'Inspect local social state and create the owner-bound actor, persona, and publication layer through reviewed local intents. Remote distribution remains disabled.'),
+      'Inspect local social state and create, supersede, or retract owner-bound publications through reviewed local intents. Remote distribution remains disabled.'),
     grid([
       metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
       metricCard('Personas', String(personas.length), 'Publication personas'),
@@ -655,7 +723,7 @@ async function renderSocial() {
         badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
       })
     ]),
-    notice('Local actor, persona, and publication creation are enabled only through the reviewed intent path. Publication revision, retraction, federation, remote following, recommendation, relay, and distribution remain disabled in AXIOM One.'),
+    notice('Local actor and persona creation plus publication create, supersede, and retract are enabled only through the reviewed intent path. Federation, remote following, recommendation, relay, distribution, hard deletion, and third-party deletion claims remain disabled in AXIOM One.'),
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-identity-controls-heading' } }, [
       element('h2', { text: 'Local identity controls', attrs: { id: 'social-identity-controls-heading' } }),
       identityControls
