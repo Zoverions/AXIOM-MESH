@@ -17,7 +17,7 @@ test('AXIOM One exposes bounded local actor and persona writes only through revi
   assert.match(app, /human\.requestPreview\(pending\.body\)/);
   assert.match(app, /state\.client\.call\('intents\.submit'/);
   assert.match(app, /network_effect === 'none'/);
-  assert.doesNotMatch(app, /action:\s*'social\.publication\.(?:supersede|retract)'/);
+  assert.doesNotMatch(app, /state\.client\.call\('social\.mutate'/);
 
   assert.equal(contract.actions['social.actor.create'].external_egress, false);
   assert.equal(contract.actions['social.actor.create'].independent_approval, false);
@@ -27,7 +27,7 @@ test('AXIOM One exposes bounded local actor and persona writes only through revi
   assert.match(contract.actions['social.persona.create'].effect, /publication persona bound to the authenticated owner's existing local social actor/i);
 });
 
-test('AXIOM One publication creation stays owner-local, reviewed, and narrower than revision or retraction', async () => {
+test('AXIOM One publication creation stays owner-local and reviewed', async () => {
   const [app, contractText] = await Promise.all([
     readFile(appUrl, 'utf8'),
     readFile(humanContractUrl, 'utf8')
@@ -42,7 +42,7 @@ test('AXIOM One publication creation stays owner-local, reviewed, and narrower t
   assert.match(app, /audience:\s*\{\s*mode:\s*'public'\s*\}/s);
   assert.match(app, /discoverability:\s*'listed'/);
   assert.match(app, /authorship_mode:\s*'human-authored'/);
-  assert.doesNotMatch(app, /action:\s*'social\.publication\.(?:supersede|retract)'/);
+  assert.doesNotMatch(app, /state\.client\.call\('social\.mutate'/);
 
   const publication = contract.actions['social.publication.create'];
   assert.ok(publication);
