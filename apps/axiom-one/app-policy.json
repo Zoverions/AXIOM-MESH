@@ -65,6 +65,16 @@
     "restore": false,
     "sharing": false
   },
+  "capability_parity": {
+    "status": "experimental-read-only-projection",
+    "capability_route": "capabilities.list",
+    "runnable_claim_statuses": [
+      "implemented"
+    ],
+    "principal_authority": "not-inferred-from-discovery",
+    "discovery_grants_authority": false,
+    "browser_mutation": false
+  },
   "surfaces": [
     "overview",
     "ask",
