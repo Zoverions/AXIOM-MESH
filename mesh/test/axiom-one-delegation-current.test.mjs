@@ -34,7 +34,10 @@ test('AXIOM One delegation inspector is owner-scoped, GET-only, and non-authoriz
     'digest'
   ]);
 
-  assert.ok(policy.gateway_routes.includes('delegations.get'));
+  assert.ok(
+    policy.gateway_routes.includes('delegations.get'),
+    'Axiom One must explicitly allow the read-only delegation route'
+  );
   assert.match(app, /\['Delegations',\s*'delegations\.get'\]/);
   assert.match(app, /Delegation inspector/);
   assert.match(app, /execution_authority_granted/);
