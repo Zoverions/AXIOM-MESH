@@ -44,7 +44,9 @@ const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'ai.local-organize',
   'social.actor.create',
   'social.persona.create',
-  'social.publication.create'
+  'social.publication.create',
+  'social.publication.supersede',
+  'social.publication.retract'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -436,18 +438,23 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     "action: 'social.actor.create'",
     "action: 'social.persona.create'",
     "action: 'social.publication.create'",
+    "action: 'social.publication.supersede'",
+    "action: 'social.publication.retract'",
     "purpose: 'local-social-identity'",
     "purpose: 'local-social-persona'",
     "purpose: 'social-publish'",
     "data_scopes: ['social:identity']",
     "data_scopes: ['publication-projection']",
     'if (activeActor && activePersona)',
+    "if (status === 'active' && activeActor && activePersona)",
     'actor_state_digest: activeActor.actor_state_digest',
     'protected_persona: activePersona.protected_persona',
+    'previous_publication: publication.publication',
     "media_type: 'text/plain'",
     "audience: { mode: 'public' }",
     "discoverability: 'listed'",
     "authorship_mode: 'human-authored'",
+    "reason_code: 'author-retracted'",
     'axiom-one:social:'
   ];
   if (socialMarkers.some(marker => !app.includes(marker))) {
