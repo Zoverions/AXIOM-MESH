@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+// This test is intentionally production-RED before the bounded browser tranche lands.
 const appUrl = new URL('../../apps/axiom-one/app.mjs', import.meta.url);
 const humanContractUrl = new URL('../../apps/axiom-one/human-contract.json', import.meta.url);
 
