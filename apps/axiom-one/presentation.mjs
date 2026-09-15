@@ -44,6 +44,10 @@ const ACTION_BOUNDARIES = Object.freeze({
   'social.persona.create': Object.freeze({
     consequence: 'durable-local-social-persona-write',
     confirmations: Object.freeze([])
+  }),
+  'social.publication.create': Object.freeze({
+    consequence: 'durable-local-social-publication-write',
+    confirmations: Object.freeze([])
   })
 });
 
