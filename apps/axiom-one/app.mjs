@@ -559,7 +559,63 @@ async function renderSocial() {
     identityControls.append(personaForm);
   } else {
     identityControls.append(notice(
-      'The current local actor/persona identity tranche is already present. Publication mutation remains disabled in AXIOM One.'
+      'The current local actor/persona identity layer is present. Publication creation can now be reviewed separately below.'
+    ));
+  }
+
+  const publicationControls = element('div', { className: 'stack' });
+  if (activeActor && activePersona) {
+    const publicationForm = element('form', { className: 'stack' });
+    const publicationText = element('textarea', {
+      attrs: {
+        id: 'social-publication-text',
+        name: 'publication_text',
+        required: '',
+        maxlength: '10000',
+        placeholder: 'Write a publication to retain in the owner-local Social corpus.'
+      }
+    });
+    const createPublication = element('button', {
+      className: 'button button-primary',
+      text: 'Review local publication',
+      attrs: { type: 'submit' }
+    });
+    writeButtons.push(createPublication);
+    publicationForm.append(
+      notice('This creates one owner-local public/listed human-authored publication. It stays on this node: no federation, remote following, recommendation, relay, or distribution occurs. Revision and retraction remain unavailable in this browser tranche.'),
+      field('Publication text', publicationText, 'social-publication-text'),
+      element('div', { className: 'actions' }, [createPublication])
+    );
+    publicationForm.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!publicationText.value.trim()) {
+        publicationText.setCustomValidity('Enter publication text containing at least one visible character.');
+        publicationText.reportValidity();
+        return;
+      }
+      publicationText.setCustomValidity('');
+      startReview({
+        action: 'social.publication.create',
+        input: {
+          actor_id: activeActor.actor_id,
+          actor_state_digest: activeActor.actor_state_digest,
+          protected_persona: activePersona.protected_persona,
+          content: {
+            media_type: 'text/plain',
+            text: publicationText.value
+          },
+          audience: { mode: 'public' },
+          discoverability: 'listed',
+          authorship_mode: 'human-authored'
+        },
+        purpose: 'social-publish',
+        data_scopes: ['publication-projection']
+      });
+    });
+    publicationControls.append(publicationForm);
+  } else {
+    publicationControls.append(empty(
+      'Create the owner-local actor and active publication persona before composing a publication.'
     ));
   }
 
@@ -575,7 +631,7 @@ async function renderSocial() {
           className: `badge ${status === 'active' ? 'good' : 'pending'}`,
           text: status
         }),
-        element('h2', { text: text }),
+        element('h2', { text }),
         element('p', {
           text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
         }),
@@ -589,7 +645,7 @@ async function renderSocial() {
 
   view.replaceChildren(
     header('Owner-local Social corpus',
-      'Inspect local social state and create the owner-bound actor/persona identity layer through reviewed local intents. Remote distribution remains disabled.'),
+      'Inspect local social state and create the owner-bound actor, persona, and publication layer through reviewed local intents. Remote distribution remains disabled.'),
     grid([
       metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
       metricCard('Personas', String(personas.length), 'Publication personas'),
@@ -599,10 +655,14 @@ async function renderSocial() {
         badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
       })
     ]),
-    notice('Local actor and persona creation are enabled only through the reviewed intent path. Publication creation, revision, retraction, federation, remote following, and distribution remain disabled in AXIOM One.'),
+    notice('Local actor, persona, and publication creation are enabled only through the reviewed intent path. Publication revision, retraction, federation, remote following, recommendation, relay, and distribution remain disabled in AXIOM One.'),
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-identity-controls-heading' } }, [
       element('h2', { text: 'Local identity controls', attrs: { id: 'social-identity-controls-heading' } }),
       identityControls
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-publication-controls-heading' } }, [
+      element('h2', { text: 'Local publication composer', attrs: { id: 'social-publication-controls-heading' } }),
+      publicationControls
     ]),
     review,
     result,
@@ -937,7 +997,6 @@ async function renderVault() {
     ));
     announce('Local organize review is ready; nothing has been written');
   });
-
 
   const review = element('div', { className: 'stack', attrs: { id: 'vault-review' } });
   const result = element('div', { className: 'stack', attrs: { id: 'vault-result' } });
