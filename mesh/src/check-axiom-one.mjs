@@ -43,7 +43,8 @@ const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'export.create',
   'ai.local-organize',
   'social.actor.create',
-  'social.persona.create'
+  'social.persona.create',
+  'social.publication.create'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -434,9 +435,19 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     'No federation',
     "action: 'social.actor.create'",
     "action: 'social.persona.create'",
+    "action: 'social.publication.create'",
     "purpose: 'local-social-identity'",
     "purpose: 'local-social-persona'",
+    "purpose: 'social-publish'",
     "data_scopes: ['social:identity']",
+    "data_scopes: ['publication-projection']",
+    'if (activeActor && activePersona)',
+    'actor_state_digest: activeActor.actor_state_digest',
+    'protected_persona: activePersona.protected_persona',
+    "media_type: 'text/plain'",
+    "audience: { mode: 'public' }",
+    "discoverability: 'listed'",
+    "authorship_mode: 'human-authored'",
     'axiom-one:social:'
   ];
   if (socialMarkers.some(marker => !app.includes(marker))) {
