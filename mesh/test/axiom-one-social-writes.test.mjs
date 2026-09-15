@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+
+const appUrl = new URL('../../apps/axiom-one/app.mjs', import.meta.url);
+const humanContractUrl = new URL('../../apps/axiom-one/human-contract.json', import.meta.url);
+
+test('AXIOM One exposes bounded local actor and persona writes only through reviewed intents', async () => {
+  const [app, contractText] = await Promise.all([
+    readFile(appUrl, 'utf8'),
+    readFile(humanContractUrl, 'utf8')
+  ]);
+  const contract = JSON.parse(contractText);
+
+  assert.match(app, /action:\s*'social\.actor\.create'/);
+  assert.match(app, /action:\s*'social\.persona\.create'/);
+  assert.match(app, /human\.requestPreview\(pending\.body\)/);
+  assert.match(app, /state\.client\.call\('intents\.submit'/);
+  assert.match(app, /network_effect === 'none'/);
+  assert.doesNotMatch(app, /action:\s*'social\.publication\./);
+
+  assert.equal(contract.actions['social.actor.create'].external_egress, false);
+  assert.equal(contract.actions['social.actor.create'].independent_approval, false);
+  assert.equal(contract.actions['social.persona.create'].external_egress, false);
+  assert.equal(contract.actions['social.persona.create'].independent_approval, false);
+  assert.match(contract.actions['social.actor.create'].effect, /owner-local/i);
+  assert.match(contract.actions['social.persona.create'].effect, /local publication persona/i);
+});
