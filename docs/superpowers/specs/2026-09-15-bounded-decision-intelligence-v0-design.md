@@ -237,6 +237,7 @@ catalog_entry_version
 catalog_entry_digest
 offering_ref
 offering_version_or_revision
+offering_revision_evidence
 provider_mode
 supported_question_kinds[]
 max_questions_per_request
@@ -251,6 +252,15 @@ training_use_posture_ref
 created_at
 review_at
 ```
+
+`offering_revision_evidence` closed vocabulary:
+
+- `exact-artifact`
+- `provider-versioned`
+- `mutable-alias`
+- `unknown`
+
+A mutable alias such as a provider's `latest` model name is not equivalent to an exact model revision. It may be recorded and used experimentally, but calibration tied only to a mutable alias cannot be represented as exact-artifact calibration.
 
 `provider_mode` closed vocabulary:
 
@@ -281,6 +291,25 @@ Only `provider-native-closed-set` may claim that off-schema answer values are im
 - `none`
 
 The first policy-eligible implementation requires `full-distribution` for Choice and Score and at least `binary-probability-only` for binary questions.
+
+`latency_class` reuses the existing coarse cognitive-routing vocabulary:
+
+- `local-fast`
+- `interactive`
+- `slow`
+- `batch`
+- `unknown`
+
+`calibration_claim` closed vocabulary:
+
+- `none`
+- `provider-claimed`
+- `local-experimental`
+- `local-reviewed`
+
+The value is descriptive. Only an independently validated `axiom-bounded-decision-calibration-report.v0` can satisfy an interpretation policy that requires reviewed local calibration.
+
+`retention_posture_ref` and `training_use_posture_ref` are nullable references to separately reviewed provider/data-policy evidence. A null or unknown posture does not make a remote provider ineligible universally, but it cannot satisfy a caller that requires a known retention or training-use posture.
 
 ### 8.3 Hard boundary constants
 
@@ -392,6 +421,7 @@ provider_profile_digest
 catalog_entry_digest
 offering_ref
 offering_version_or_revision
+offering_revision_evidence
 question_schema_id
 question_schema_digest
 state_digest
@@ -409,7 +439,13 @@ observation_digest
 
 `state_classification` records the AXIOM sensitivity/disclosure class applied before invocation. Raw state is not duplicated into the observation.
 
-`provider_confidence` may be null where the primitive does not provide a separate confidence statistic. The probability evidence remains authoritative as the observable model output.
+`provider_confidence` may be null where the primitive does not provide a separate confidence statistic. The probability evidence remains the primary observable uncertainty evidence.
+
+`calibration_report_ref` is required as a field but may be null for uncalibrated or experimental evidence. A null value cannot satisfy an interpretation policy requiring calibration.
+
+`transport_evidence_ref` is required as a field but may be null for a purely local fixture/provider path that has no remote transport evidence. Remote provider policies may require it to be non-null.
+
+`usage_evidence` is bounded accounting metadata such as input units, output units where applicable, provider-reported usage, or local compute class. It cannot contain credentials or raw state.
 
 ### 10.1 Choice answer
 
@@ -477,6 +513,7 @@ Required fields:
 calibration_report_id
 provider_profile_digest
 offering_version_or_revision
+offering_revision_evidence
 question_schema_family_refs[]
 domain
 population_description
@@ -504,6 +541,8 @@ Metrics may include Brier score, log loss, calibration error, reliability bins, 
 A report must not treat the model's own confidence values as its ground truth.
 
 A report from a materially different provider revision, schema wording, domain, language, population, or state distribution may be useful evidence but cannot be silently relabeled as in-domain calibration.
+
+A calibration report bound only to `mutable-alias` or `unknown` revision evidence must preserve that limitation. It cannot satisfy a policy requiring exact-artifact or provider-versioned reproducibility unless separate provider evidence proves the serving revision remained unchanged for the relevant evaluation and use periods.
 
 ---
 
@@ -553,6 +592,7 @@ maximum_observation_age
 minimum_calibration_state
 minimum_sample_count
 allowed_provider_profiles[]
+allowed_revision_evidence[]
 confidence_or_probability_predicates[]
 disagreement_rule
 fallback_route
@@ -664,6 +704,8 @@ Controls include:
 
 A routing intermediary or provider must not silently substitute an unrecorded model/offering. The observation must bind the requested provider profile and the observed/returned offering identity where available. Mismatch is explicit evidence and may fail policy.
 
+A mutable alias must remain marked as such. AXIOM must not manufacture an exact revision identifier merely to improve audit appearance.
+
 ### 16.3 Data disclosure
 
 Provider eligibility does not authorize data disclosure. Before a remote call, AXIOM must separately establish that the state may be sent to that destination for the stated purpose under current retention/training-use constraints.
@@ -716,7 +758,8 @@ AXIOM must preserve the provider's own nuance:
 - confidence describes the returned distribution, not guaranteed correctness;
 - TypeSafe advises thresholds based on consequences, but AXIOM additionally requires that confidence never substitute for independent authority/assurance;
 - the public workflow evaluations are provider-created and use frontier-model predictions as reference probabilities rather than independently established universal ground truth;
-- Jev is early access as of 2026-09-15.
+- Jev is early access as of 2026-09-15;
+- examples currently use a mutable offering name such as `jev-latest`, so exact serving-revision evidence may be unavailable unless the provider exposes stronger version metadata.
 
 Therefore Jev should enter AXIOM, if separately implemented, as an **experimental provider adapter** with explicit calibration and conformance evidence, not as a privileged or default trust root.
 
@@ -753,7 +796,7 @@ Only after separate review:
 - add an adapter for a selected provider such as Jev;
 - keep credentials brokered and outside model state;
 - enforce data-disclosure policy before egress;
-- record requested/observed offering identity;
+- record requested/observed offering identity and revision-evidence strength;
 - bind cost/latency/transport evidence;
 - keep the adapter disabled unless explicitly configured;
 - prevent the adapter from minting capability or entering the authority path directly.
@@ -779,17 +822,18 @@ The v0 contract implementation is acceptable only if tests demonstrate all of th
 5. Score observations reject incorrect weighted means or invalid level distributions;
 6. binary probability rejects values outside `[0,1]` and derives the complementary probability deterministically;
 7. schema-digest changes occur for material question/criteria changes;
-8. observations bind exact provider profile, offering, schema, and state digests;
+8. observations bind exact provider profile, offering, revision-evidence class, schema, and state digests;
 9. raw state is not required in durable observation receipts;
 10. model confidence cannot populate or mutate AXIOM assurance fields;
 11. failed provider evidence cannot generate a default semantic answer;
-12. stale/rejected calibration cannot satisfy a caller requiring reviewed current calibration;
-13. conflicting evidence remains conflicting rather than being silently averaged away;
-14. speculative unused results create no execution effect;
-15. no contract validation or interpretation helper performs filesystem, network, subprocess, credential, wallet, Grid, or runtime operations;
-16. no private chain-of-thought field is accepted as required decision provenance;
-17. high model confidence with missing A3 approval still cannot yield an A3 executable plan;
-18. provider failure cannot widen policy or bypass a required decision gate.
+12. null, stale, or rejected calibration cannot satisfy a caller requiring reviewed current calibration;
+13. mutable-alias calibration cannot satisfy a caller requiring exact-version reproducibility;
+14. conflicting evidence remains conflicting rather than being silently averaged away;
+15. speculative unused results create no execution effect;
+16. no contract validation or interpretation helper performs filesystem, network, subprocess, credential, wallet, Grid, or runtime operations;
+17. no private chain-of-thought field is accepted as required decision provenance;
+18. high model confidence with missing A3 approval still cannot yield an A3 executable plan;
+19. provider failure cannot widen policy or bypass a required decision gate.
 
 ---
 
@@ -831,7 +875,8 @@ The following choices are normative for the implementation plan unless a new des
 11. `axiom-plan.v1` remains unchanged in the first implementation slice.
 12. A future plan-version extension may add explicit bounded-evidence references only after the v0 evidence contracts have implementation and conformance history.
 13. Jev, if added later, begins as an experimental disabled-by-default adapter.
-14. Any future production use for consequential actions requires a separate calibration, routing, disclosure, and authority review.
+14. Provider offering revision evidence must remain explicit; mutable aliases are not silently promoted to exact version identity.
+15. Any future production use for consequential actions requires a separate calibration, routing, disclosure, and authority review.
 
 ---
 
