@@ -48,7 +48,7 @@ export function validateExplorationPolicy(input) {
     assertBoundedId(feature.feature_id, `derived_features[${index}].feature_id`);
     assertSha256(feature.feature_digest, `derived_features[${index}].feature_digest`);
     if (seen.has(feature.feature_id)) throw new ValidationError('derived_features cannot contain duplicate feature_id values');
-    if (previous !== null && feature.feature_id.localeCompare(previous) <= 0) {
+    if (previous !== null && feature.feature_id <= previous) {
       throw new ValidationError('derived_features must be strictly ordered by feature_id');
     }
     seen.add(feature.feature_id);
