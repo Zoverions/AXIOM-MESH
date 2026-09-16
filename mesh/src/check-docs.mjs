@@ -64,6 +64,12 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/resource-envelope.v0.schema.json',
   'docs/architecture/contracts/resource-observation.v0.schema.json',
   'docs/architecture/contracts/capability-surfaces.v0.schema.json',
+  'docs/architecture/contracts/discovery-trace.v0.schema.json',
+  'docs/architecture/contracts/replay-world.v0.schema.json',
+  'docs/architecture/contracts/exploration-policy.v0.schema.json',
+  'docs/architecture/contracts/replay-objective.v0.schema.json',
+  'docs/architecture/contracts/replay-world-pool.v0.schema.json',
+  'docs/architecture/contracts/replay-policy-evaluation.v0.schema.json',
   'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
@@ -172,6 +178,40 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
 ]);
 
 const REQUIRED_CONTENT = Object.freeze({
+  'docs/architecture/contracts/discovery-trace.v0.schema.json': [
+    'axiom-discovery-trace.v0',
+    '"authority_effect": { "const": "none" }',
+    '"network_effect": { "const": "none" }',
+    '"external_effects": { "const": 0 }'
+  ],
+  'docs/architecture/contracts/replay-world.v0.schema.json': [
+    'axiom-replay-world.v0',
+    'after-parent-revealed',
+    'record-and-stop',
+    '"runtime_activation": { "const": false }'
+  ],
+  'docs/architecture/contracts/exploration-policy.v0.schema.json': [
+    'axiom-exploration-policy.v0',
+    'not-executed-by-replay-core',
+    '"authority_effect": { "const": "none" }'
+  ],
+  'docs/architecture/contracts/replay-objective.v0.schema.json': [
+    'axiom-replay-objective.v0',
+    '"comparison_mode": { "const": "lexicographic" }',
+    '"max_external_effects": { "const": 0 }'
+  ],
+  'docs/architecture/contracts/replay-world-pool.v0.schema.json': [
+    'axiom-replay-world-pool.v0',
+    'sealed-holdout',
+    'acceptance-sealed',
+    '"production_promotion": { "const": false }'
+  ],
+  'docs/architecture/contracts/replay-policy-evaluation.v0.schema.json': [
+    'axiom-replay-policy-evaluation.v0',
+    'fixed-replay-pool-and-objective-only',
+    'live-world-monotonic-improvement',
+    '"authority_effect": { "const": "none" }'
+  ],
   '.agents/skills/typesafe-ai/SKILL.md': [
     'name: typesafe-ai',
     'The live TypeSafe docs are the source of truth',
