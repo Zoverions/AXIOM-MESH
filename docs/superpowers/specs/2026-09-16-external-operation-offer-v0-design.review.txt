@@ -1,0 +1,10 @@
+External Operation Offer v0 design self-review — 2026-09-16
+
+- Placeholder scan: no TODO/TBD placeholders in the design.
+- Consistency: durable broker/provider identity remains in axiom-runtime-connector-catalog-entry.v1; volatile per-operation price/health/schema/effect observations are adjunct only.
+- Authority: no live provider, credential, wallet, egress, Gateway route, capability promotion, or production execution is authorized.
+- Reuse: money, destination, task uncertainty, evidence, catalog identity, and provider lifecycle semantics remain existing AXIOM concepts rather than parallel systems.
+- Cognitive Federation refinement: external models/tools/services are replaceable specialized cognitive modules; capability may compose, authority does not compose ambiently; provider loss degrades capability rather than entity continuity.
+- Scope: first implementation slice is one schema, pure validation/digest helpers, offline fixtures/tests, one pinned Monid fixture, and documentation alignment.
+- Main dependency risk: draft PR #1597 is not merged and may change. The design therefore treats its Knowledge -> Operation -> Authority wording as complementary, not normative; existing Runtime & Connector Fabric invariants remain controlling.
+- Review gate: user review/approval required before implementation planning.
