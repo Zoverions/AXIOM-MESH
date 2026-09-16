@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/replay-world.v0.schema.json",
+  "title": "AXIOM Replay World v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "world_id", "trace_id", "trace_digest", "compiler", "evaluator_digest", "objective_digest", "semantics", "ceilings", "created_at", "authority_effect", "network_effect", "runtime_activation", "production_promotion"],
+  "properties": {
+    "schema": { "const": "axiom-replay-world.v0" },
+    "status": { "const": "inert-replay-world" },
+    "world_id": { "$ref": "#/$defs/id" },
+    "trace_id": { "$ref": "#/$defs/id" },
+    "trace_digest": { "$ref": "#/$defs/sha256" },
+    "compiler": { "$ref": "#/$defs/compiler" },
+    "evaluator_digest": { "$ref": "#/$defs/sha256" },
+    "objective_digest": { "$ref": "#/$defs/sha256" },
+    "semantics": { "$ref": "#/$defs/semantics" },
+    "ceilings": { "$ref": "#/$defs/ceilings" },
+    "created_at": { "$ref": "#/$defs/instant" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "production_promotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "instant": { "type": "string", "format": "date-time" },
+    "positive": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "compiler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compiler_id", "compiler_version", "compiler_digest"],
+      "properties": {
+        "compiler_id": { "const": "axiom-replay-world-compiler.v0" },
+        "compiler_version": { "const": "0" },
+        "compiler_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opening", "child_reveal", "sibling_order", "out_of_support", "terminal"],
+      "properties": {
+        "opening": { "const": "root-children" },
+        "child_reveal": { "const": "after-parent-revealed" },
+        "sibling_order": { "const": "creation-ordinal" },
+        "out_of_support": { "const": "record-and-stop" },
+        "terminal": { "const": "stop-or-no-eligible-or-round-limit" }
+      }
+    },
+    "ceilings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_worker_slots", "max_rounds"],
+      "properties": { "max_worker_slots": { "$ref": "#/$defs/positive" }, "max_rounds": { "$ref": "#/$defs/positive" } }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/replay-world.mjs",
+  "x-axiom-semantic-rules": ["trace id and digest bind exactly", "evaluator and objective digests match the trace", "prefix projection reveals no unrevealed outcomes", "unknown continuations are never synthesized"],
+  "x-axiom-non-claims": ["world-model", "unobserved-outcome-prediction", "authority-grant", "network-effect", "runtime-activation", "production-promotion"]
+}
