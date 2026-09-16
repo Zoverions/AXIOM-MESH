@@ -14,9 +14,34 @@ jobs:
   focused:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Verify deterministic derived-feature ordering GREEN
-        run: node --test mesh/test/replay-policy-contracts.test.mjs
+      - name: Verify complete Replay Core focused suite
+        shell: bash
+        run: |
+          set -o pipefail
+          node --test \
+            mesh/test/discovery-trace.test.mjs \
+            mesh/test/replay-world.test.mjs \
+            mesh/test/replay-policy-contracts.test.mjs \
+            mesh/test/replay-engine.test.mjs \
+            mesh/test/replay-world-pool.test.mjs \
+            mesh/test/replay-policy-evaluation.test.mjs \
+            mesh/test/replay-schema-parity.test.mjs \
+            mesh/test/replay-boundary-static.test.mjs \
+            2>&1 | tee replay-focused-verification.txt
+      - name: Verify canonical docs
+        shell: bash
+        run: node mesh/src/check-docs.mjs 2>&1 | tee replay-docs-verification.txt
+      - name: Upload focused verification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: replay-core-focused-${{ github.sha }}
+          path: |
+            replay-focused-verification.txt
+            replay-docs-verification.txt
+          if-no-files-found: error
+          retention-days: 7
