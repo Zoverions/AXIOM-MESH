@@ -15,7 +15,7 @@
 - related open work in PR #1455, `Agent Improvement Experiment v0`, if and when that stack lands; this specification does not treat unmerged PR content as current `main`
 - related open recursive-subagent lineage/currentness work in PR #1451, if and when that stack lands; this specification does not depend on dynamic spawning
 
-**Research motivation:** Tong Zheng et al., *Dream-RSI: Recursive Self-Improvement through Evolving Worlds*, arXiv:2609.14858, motivates treating completed discovery histories as empirical replay simulators for improving exploration policy while keeping the underlying discovery agent and evaluator fixed. TypeSafe System One documentation independently motivates keeping deterministic workflow and side effects in code while using narrow typed judgments, explicit probabilities/confidence, and risk-dependent escalation for semantic decisions. These sources are architectural inputs, not normative dependencies.
+**Research motivation:** Tong Zheng et al., *Dream-RSI: Recursive Self-Improvement through Evolving Worlds*, arXiv:2609.14858 (`https://arxiv.org/abs/2609.14858`), motivates treating completed discovery histories as empirical replay simulators for improving exploration policy while keeping the underlying discovery agent and evaluator fixed. TypeSafe System One documentation (`https://docs.typesafe.ai/concepts/how-to-build-with-system-one`, `https://docs.typesafe.ai/confidence`, and `https://docs.typesafe.ai/cookbooks/autoresearch_feature_discovery`) independently motivates keeping deterministic workflow and side effects in code while using narrow typed judgments, explicit probabilities/confidence, and risk-dependent escalation for semantic decisions. These sources are architectural inputs, not normative dependencies.
 
 **Authority boundary:** `mesh/config/capabilities.json` remains authoritative. Nothing in this design grants authority, widens an existing grant, performs network access, exposes credentials, activates a model, launches a subagent, executes an external effect, changes production state, merges code, or promotes an exploration policy. Replay superiority is evidence about a fixed recorded history, not authority to install the candidate and not proof of better live behavior.
 
@@ -348,6 +348,32 @@ or
 
 > candidate X may now be deployed.
 
+### 9.1 Replay World Pool Manifest v0
+
+`axiom-replay-world-pool.v0` binds the exact set of worlds used for one evaluation role. This closes the otherwise ambiguous gap between an individual world and an aggregate policy evaluation.
+
+A pool manifest binds:
+
+- `pool_id` and schema/version/status;
+- `role`: `training | validation | sealed-holdout`;
+- exact ordered world identifiers and digests;
+- exact compatibility/currentness disposition for each world;
+- selection/split provenance and deterministic seed or explicit assignment evidence where applicable;
+- creation timestamp and cycle identifier;
+- visibility class: `development-visible | acceptance-sealed`;
+- fixed no-authority semantics.
+
+Rules:
+
+- duplicate world digests in one pool fail closed;
+- a world cannot appear in both a development-visible pool and the sealed holdout for the same acceptance cycle;
+- the candidate/policy-development process must not receive the contents or membership details of an `acceptance-sealed` pool during that cycle;
+- changing pool membership changes the pool digest and requires a new evaluation;
+- compatibility exclusion is explicit evidence rather than silent deletion;
+- the pool manifest cannot change evaluator/objective semantics.
+
+The evaluation report references the exact pool digest, so aggregate claims remain reproducible and scoped.
+
 ## 10. Training, validation, sealed holdout, and canary
 
 AXIOM should not let a policy-development process repeatedly optimize against every historical world and then call the same worlds independent evidence.
@@ -544,7 +570,8 @@ The first executable slice must demonstrate at minimum:
 19. missing/uncertain semantic annotations fail to `unknown` or an explicit fallback rather than silently inventing certainty;
 20. no replay/evaluation artifact can set runtime activation, network effect, credential visibility, merge authority, deployment authority, or production promotion;
 21. platform-neutral deterministic serialization is verified through the supported kernel test matrix for the pure contracts/engine;
-22. negative results and regressions remain represented in the evaluation digest.
+22. negative results and regressions remain represented in the evaluation digest;
+23. duplicate world membership and development/holdout overlap for one acceptance cycle fail closed.
 
 ## 16. Implementation slices
 
@@ -563,6 +590,7 @@ Implement strict validators, canonicalization, digesting, resolvers, schemas, an
 
 - Discovery Trace v0;
 - Replay World v0;
+- Replay World Pool Manifest v0;
 - Exploration Policy Manifest v0;
 - Replay Objective Profile v0;
 - Replay Policy Evaluation v0.
@@ -583,7 +611,7 @@ No production identities, credentials, egress, or authority.
 
 ### Slice E — evaluation-pool discipline
 
-Add deterministic train/validation/sealed-holdout pool manifests, leakage tests, and reproduction reports.
+Add deterministic train/validation/sealed-holdout pool manifests, overlap/leakage tests, access separation, and reproduction reports.
 
 ### Slice F — optional TypeSafe semantic annotations
 
