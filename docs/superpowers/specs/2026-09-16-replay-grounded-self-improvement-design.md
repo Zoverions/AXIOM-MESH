@@ -1,6 +1,6 @@
 # Replay-Grounded Self-Improvement — Design
 
-**Status:** approved architectural design; Replay Core v0 implementation plan approved for execution; implementation not yet verified
+**Status:** approved architectural design; Replay Core v0 implemented as an inert, zero-authority laboratory; production promotion not claimed
 
 **Date:** 2026-09-16
 
