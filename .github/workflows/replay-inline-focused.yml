@@ -18,5 +18,16 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Verify Replay Core authority privacy and static boundary
-        run: node --test mesh/test/replay-boundary-static.test.mjs
+      - name: Verify complete Replay Core focused suite
+        run: |
+          node --test \
+            mesh/test/discovery-trace.test.mjs \
+            mesh/test/replay-world.test.mjs \
+            mesh/test/replay-policy-contracts.test.mjs \
+            mesh/test/replay-engine.test.mjs \
+            mesh/test/replay-world-pool.test.mjs \
+            mesh/test/replay-policy-evaluation.test.mjs \
+            mesh/test/replay-schema-parity.test.mjs \
+            mesh/test/replay-boundary-static.test.mjs
+      - name: Verify canonical docs
+        run: node mesh/src/check-docs.mjs
