@@ -19,14 +19,10 @@ jobs:
           ref: design/replay-grounded-self-improvement
           fetch-depth: 0
           persist-credentials: true
-      - uses: actions/setup-node@1e60f620b9541d2b9f5c59b1540b1e0b4255ee90
-        with:
-          node-version: 24.18.0
-          cache: npm
-          cache-dependency-path: package-lock.json
       - name: Witness expected focused RED
         shell: bash
         run: |
+          node --version
           mkdir -p tmp
           set +e
           node --test mesh/test/discovery-trace.test.mjs > tmp/replay-task2-red.txt 2>&1
