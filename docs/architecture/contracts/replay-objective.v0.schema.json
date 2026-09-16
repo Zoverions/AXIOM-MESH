@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/replay-objective.v0.schema.json",
+  "title": "AXIOM Replay Objective v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "objective_id", "comparison_mode", "quality_scale", "hard_limits", "metrics", "created_at", "authority_effect", "network_effect", "runtime_activation", "production_promotion"],
+  "properties": {
+    "schema": { "const": "axiom-replay-objective.v0" },
+    "status": { "const": "inert-objective" },
+    "objective_id": { "$ref": "#/$defs/id" },
+    "comparison_mode": { "const": "lexicographic" },
+    "quality_scale": { "$ref": "#/$defs/positive" },
+    "hard_limits": { "$ref": "#/$defs/hardLimits" },
+    "metrics": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/metric" } },
+    "created_at": { "$ref": "#/$defs/instant" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "production_promotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "instant": { "type": "string", "format": "date-time" },
+    "positive": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "hardLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_rounds", "max_worker_slots", "max_generation_calls", "max_evaluation_calls", "max_token_or_cost_units", "max_wall_clock_ms", "max_storage_bytes", "max_external_effects"],
+      "properties": {
+        "max_rounds": { "$ref": "#/$defs/positive" },
+        "max_worker_slots": { "$ref": "#/$defs/positive" },
+        "max_generation_calls": { "$ref": "#/$defs/positive" },
+        "max_evaluation_calls": { "$ref": "#/$defs/positive" },
+        "max_token_or_cost_units": { "$ref": "#/$defs/positive" },
+        "max_wall_clock_ms": { "$ref": "#/$defs/positive" },
+        "max_storage_bytes": { "$ref": "#/$defs/positive" },
+        "max_external_effects": { "const": 0 }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "direction"],
+      "properties": {
+        "metric": { "enum": ["best_quality", "generation_calls", "evaluation_calls", "token_or_cost_units", "wall_clock_ms", "storage_bytes", "worker_slot_peak", "rounds", "out_of_support_requests", "failed_attempts"] },
+        "direction": { "enum": ["maximize", "minimize"] }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/replay-objective.mjs",
+  "x-axiom-semantic-rules": ["metric names are unique and order is comparison-significant", "hard constraints are checked before lexicographic optimization", "external effects remain zero"],
+  "x-axiom-non-claims": ["universal-objective", "weighted-compensation", "authority-grant", "network-effect", "runtime-activation", "production-promotion"]
+}
