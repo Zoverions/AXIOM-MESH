@@ -1,0 +1,47 @@
+name: Replay Inline Task 2 RED Capture
+
+on:
+  push:
+    branches:
+      - design/replay-grounded-self-improvement
+    paths:
+      - .github/workflows/replay-inline-task2-red-capture.yml
+
+permissions:
+  contents: write
+
+jobs:
+  capture-red:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: design/replay-grounded-self-improvement
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@1e60f620b9541d2b9f5c59b1540b1e0b4255ee90
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Witness expected focused RED
+        shell: bash
+        run: |
+          mkdir -p tmp
+          set +e
+          node --test mesh/test/discovery-trace.test.mjs > tmp/replay-task2-red.txt 2>&1
+          status=$?
+          set -e
+          cat tmp/replay-task2-red.txt
+          if [ "$status" -eq 0 ]; then
+            echo "focused test unexpectedly passed" >&2
+            exit 1
+          fi
+          grep -F "ERR_MODULE_NOT_FOUND" tmp/replay-task2-red.txt
+          grep -F "discovery-trace.mjs" tmp/replay-task2-red.txt
+          printf '\nEXPECTED_RED_EXIT=%s\n' "$status" >> tmp/replay-task2-red.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tmp/replay-task2-red.txt
+          git commit -m "test: record discovery trace RED evidence"
+          git push origin HEAD:design/replay-grounded-self-improvement
