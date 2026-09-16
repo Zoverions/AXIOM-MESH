@@ -18,7 +18,7 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Witness Exploration Policy and Replay Objective RED
+      - name: Witness Exploration Policy and Replay Objective RED after test contract
         shell: bash
         run: |
           set +e
@@ -28,3 +28,4 @@ jobs:
           printf '%s\n' "$output"
           test "$status" -ne 0
           printf '%s\n' "$output" | grep -F "ERR_MODULE_NOT_FOUND"
+          printf '%s\n' "$output" | grep -E "exploration-policy\.mjs|replay-objective\.mjs"
