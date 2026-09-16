@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/exploration-policy.v0.schema.json",
+  "title": "AXIOM Exploration Policy v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "policy_id", "version", "artifact_digest", "implementation", "interface_version", "observation_schema", "derived_features", "max_internal_state_bytes", "proposer", "created_at", "authority_effect", "network_effect", "runtime_activation", "production_promotion"],
+  "properties": {
+    "schema": { "const": "axiom-exploration-policy.v0" },
+    "status": { "const": "inert-policy-manifest" },
+    "policy_id": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/id" },
+    "artifact_digest": { "$ref": "#/$defs/sha256" },
+    "implementation": { "$ref": "#/$defs/implementation" },
+    "interface_version": { "const": "axiom-replay-policy-interface.v0" },
+    "observation_schema": { "const": "axiom-replay-observation.v0" },
+    "derived_features": { "type": "array", "items": { "$ref": "#/$defs/feature" }, "maxItems": 256 },
+    "max_internal_state_bytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "proposer": { "$ref": "#/$defs/proposer" },
+    "created_at": { "$ref": "#/$defs/instant" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "production_promotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "instant": { "type": "string", "format": "date-time" },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "runtime"],
+      "properties": { "kind": { "const": "external-artifact" }, "runtime": { "const": "not-executed-by-replay-core" } }
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature_id", "feature_digest"],
+      "properties": { "feature_id": { "$ref": "#/$defs/id" }, "feature_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "proposer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "digest"],
+      "properties": {
+        "kind": { "enum": ["human", "agent", "optimizer", "imported", "unknown"] },
+        "ref": { "$ref": "#/$defs/id" },
+        "digest": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }] }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/exploration-policy.mjs",
+  "x-axiom-semantic-rules": ["derived feature ids are unique and strictly ordered", "candidate artifacts are never executed by Replay Core v0"],
+  "x-axiom-non-claims": ["authority-grant", "candidate-execution", "network-effect", "runtime-activation", "production-promotion"]
+}
