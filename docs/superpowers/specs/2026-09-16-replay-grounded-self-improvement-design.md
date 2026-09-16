@@ -1,6 +1,6 @@
 # Replay-Grounded Self-Improvement — Design
 
-**Status:** design direction approved in chat; written specification pending user review; implementation not started
+**Status:** approved architectural design; Replay Core v0 implementation plan approved for execution; implementation not yet verified
 
 **Date:** 2026-09-16
 
