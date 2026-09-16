@@ -7,8 +7,7 @@ on:
     paths:
       - '.github/workflows/bounded-decision-slice-b-tdd.yml'
       - 'mesh/src/lib/bounded-decision-local-conformance-adapter.mjs'
-      - 'mesh/test/bounded-decision-local-conformance-adapter.test.mjs'
-      - 'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md'
+      - 'mesh/test/bounded-decision-local-conformance-*.test.mjs'
 
 permissions:
   contents: read
@@ -24,6 +23,9 @@ jobs:
         with:
           node-version: 24.18.0
           package-manager-cache: false
-      - name: Run Slice B local conformance tests
+      - name: Run complete bounded decision suite
         working-directory: mesh
-        run: node --test test/bounded-decision-local-conformance-adapter.test.mjs
+        run: node --test test/bounded-decision-*.test.mjs
+      - name: Run repository checks
+        working-directory: mesh
+        run: npm run check
