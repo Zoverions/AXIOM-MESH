@@ -18,7 +18,5 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Verify Replay Schema parity GREEN
-        run: node --test mesh/test/replay-schema-parity.test.mjs
-      - name: Verify canonical docs GREEN
-        run: node mesh/src/check-docs.mjs
+      - name: Verify Replay Core authority privacy and static boundary
+        run: node --test mesh/test/replay-boundary-static.test.mjs
