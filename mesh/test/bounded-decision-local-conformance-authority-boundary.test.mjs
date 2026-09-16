@@ -4,35 +4,25 @@ import test from 'node:test';
 
 const sourceUrl = new URL('../src/lib/bounded-decision-local-conformance-adapter.mjs', import.meta.url);
 
-const forbiddenImports = [
-  'node:fs',
-  'node:net',
-  'node:http',
-  'node:https',
-  'node:child_process',
-  '@typesafe-ai/sdk',
-  'credential',
-  'token-broker',
-  'wallet',
-  'payment',
-  'capability-issuance',
-  'grid-store'
+const forbiddenPatterns = [
+  /from\s+['"]node:(?:fs(?:\/promises)?|net|http|https|child_process)['"]/,
+  /from\s+['"][^'"]*@typesafe-ai\/sdk[^'"]*['"]/,
+  /from\s+['"][^'"]*(?:provider-client|credential-broker|token-broker|wallet|payment|capability-issuance)[^'"]*['"]/,
+  /from\s+['"][^'"]*(?:grid\/store|grid\/backup|grid-store)[^'"]*['"]/,
+  /from\s+['"][^'"]*(?:gateway|hypervisor|sandbox)\.mjs['"]/,
+  /issueCapability|grantCapability|mintCapability/,
+  /\bfetch\s*\(/,
+  /\bprocess\.env\b/,
+  /TYPESAFE_API_KEY/,
+  /\ballow\s*:/,
+  /\bauthorized\s*:/,
+  /\bachieved_assurance\b/,
+  /\brequired_assurance\b/
 ];
 
 test('Slice B local conformance adapter remains network-free credential-free and evidence-only', async () => {
   const source = await readFile(sourceUrl, 'utf8');
-  for (const forbidden of forbiddenImports) {
-    assert.equal(
-      source.includes(`from '${forbidden}`) || source.includes(`from "${forbidden}`),
-      false,
-      `unexpected effectful import: ${forbidden}`
-    );
+  for (const pattern of forbiddenPatterns) {
+    assert.doesNotMatch(source, pattern, `local adapter must remain inert: ${pattern}`);
   }
-  assert.equal(source.includes('fetch('), false);
-  assert.equal(source.includes('process.env'), false);
-  assert.equal(source.includes('TYPESAFE_API_KEY'), false);
-  assert.equal(source.includes('allow:'), false);
-  assert.equal(source.includes('authorized:'), false);
-  assert.equal(source.includes('achieved_assurance'), false);
-  assert.equal(source.includes('required_assurance'), false);
 });
