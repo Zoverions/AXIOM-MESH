@@ -18,13 +18,5 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Witness deterministic derived-feature ordering RED
-        shell: bash
-        run: |
-          set +e
-          output=$(node --test mesh/test/replay-policy-contracts.test.mjs 2>&1)
-          status=$?
-          set -e
-          printf '%s\n' "$output"
-          test "$status" -ne 0
-          printf '%s\n' "$output" | grep -F "derived feature ordering uses deterministic code-unit comparison"
+      - name: Verify deterministic derived-feature ordering GREEN
+        run: node --test mesh/test/replay-policy-contracts.test.mjs
