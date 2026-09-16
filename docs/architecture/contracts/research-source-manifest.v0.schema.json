@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/research-source-manifest.v0.schema.json",
+  "title": "AXIOM Research Source Manifest v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "manifest_id",
+    "source_kind",
+    "canonical_identifier",
+    "source_locator",
+    "title",
+    "published_at",
+    "retrieved_at",
+    "manuscript_digest",
+    "source_version",
+    "supplement_refs",
+    "data_refs",
+    "code_refs",
+    "code_revision",
+    "license_refs",
+    "authorship_refs",
+    "correction_refs",
+    "currentness_state",
+    "manifest_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-research-source-manifest.v0" },
+    "manifest_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "source_kind": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "canonical_identifier": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "source_locator": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "published_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "retrieved_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "manuscript_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "source_version": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "supplement_refs": { "$ref": "#/$defs/referenceArray" },
+    "data_refs": { "$ref": "#/$defs/referenceArray" },
+    "code_refs": { "$ref": "#/$defs/referenceArray" },
+    "code_revision": {
+      "anyOf": [
+        { "type": "string", "minLength": 1, "maxLength": 512 },
+        { "type": "null" }
+      ]
+    },
+    "license_refs": { "$ref": "#/$defs/referenceArray" },
+    "authorship_refs": { "$ref": "#/$defs/referenceArray" },
+    "correction_refs": { "$ref": "#/$defs/referenceArray" },
+    "currentness_state": {
+      "enum": ["current", "stale_revision", "corrected", "retracted", "withdrawn", "unknown"]
+    },
+    "manifest_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "referenceArray": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    }
+  }
+}
