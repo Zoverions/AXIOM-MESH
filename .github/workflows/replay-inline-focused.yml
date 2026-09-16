@@ -18,9 +18,14 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Verify replay engine pool and policy evaluation GREEN
+      - name: Witness Replay Schema parity RED
+        shell: bash
         run: |
-          node --test \
-            mesh/test/replay-engine.test.mjs \
-            mesh/test/replay-world-pool.test.mjs \
-            mesh/test/replay-policy-evaluation.test.mjs
+          set +e
+          output=$(node --test mesh/test/replay-schema-parity.test.mjs 2>&1)
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -ne 0
+          printf '%s\n' "$output" | grep -E "ENOENT|no such file or directory"
+          printf '%s\n' "$output" | grep -E "discovery-trace\.v0\.schema\.json|replay-world\.v0\.schema\.json|exploration-policy\.v0\.schema\.json|replay-objective\.v0\.schema\.json|replay-world-pool\.v0\.schema\.json|replay-policy-evaluation\.v0\.schema\.json"
