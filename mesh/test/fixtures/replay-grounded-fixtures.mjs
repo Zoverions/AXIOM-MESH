@@ -1,3 +1,5 @@
+import { digestDiscoveryTrace } from '../../src/lib/discovery-trace.mjs';
+
 export const H = 'a'.repeat(64);
 export const H2 = 'b'.repeat(64);
 export const H3 = 'c'.repeat(64);
@@ -137,5 +139,46 @@ export function makeDiscoveryTrace(overrides = {}) {
     objective: { ...base.objective, ...(overrides.objective ?? {}) },
     environment: { ...base.environment, ...(overrides.environment ?? {}) },
     nodes: clone(nodes)
+  };
+}
+
+export function makeReplayWorld(trace = makeDiscoveryTrace(), overrides = {}) {
+  const base = {
+    schema: 'axiom-replay-world.v0',
+    status: 'inert-replay-world',
+    world_id: 'world.example',
+    trace_id: trace.trace_id,
+    trace_digest: digestDiscoveryTrace(trace),
+    compiler: {
+      compiler_id: 'axiom-replay-world-compiler.v0',
+      compiler_version: '0',
+      compiler_digest: H
+    },
+    evaluator_digest: trace.evaluator.evaluator_digest,
+    objective_digest: trace.objective.objective_digest,
+    semantics: {
+      opening: 'root-children',
+      child_reveal: 'after-parent-revealed',
+      sibling_order: 'creation-ordinal',
+      out_of_support: 'record-and-stop',
+      terminal: 'stop-or-no-eligible-or-round-limit'
+    },
+    ceilings: {
+      max_worker_slots: 2,
+      max_rounds: 16
+    },
+    created_at: '2026-09-16T13:00:00.000Z',
+    authority_effect: 'none',
+    network_effect: 'none',
+    runtime_activation: false,
+    production_promotion: false
+  };
+
+  return {
+    ...clone(base),
+    ...clone(overrides),
+    compiler: { ...base.compiler, ...(overrides.compiler ?? {}) },
+    semantics: { ...base.semantics, ...(overrides.semantics ?? {}) },
+    ceilings: { ...base.ceilings, ...(overrides.ceilings ?? {}) }
   };
 }
