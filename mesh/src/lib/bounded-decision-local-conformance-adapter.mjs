@@ -141,7 +141,7 @@ function exactKeys(value, expected, name) {
     actual.length !== wanted.length
     || actual.some((key, index) => key !== wanted[index])
   ) {
-    throw new ValidationError(`${name} keys do not exactly match the bound question`);
+    throw new ValidationError(`${name} distribution keys do not exactly match the bound question`);
   }
 }
 
