@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   validateExplorationPolicy,
   digestExplorationPolicy,
@@ -127,6 +128,17 @@ test('derived features must be unique and ordered by feature_id', () => {
   assert.throws(() => validateExplorationPolicy(makePolicy({
     derived_features: [ordered[0], { feature_id: 'feature.a', feature_digest: H3 }]
   })));
+});
+
+test('derived feature ordering uses deterministic code-unit comparison, never locale collation', async () => {
+  const source = await readFile(new URL('../src/lib/exploration-policy.mjs', import.meta.url), 'utf8');
+  assert.equal(source.includes('.localeCompare('), false);
+  const codeUnitOrdered = [
+    { feature_id: 'feature.Z', feature_digest: H },
+    { feature_id: 'feature.a', feature_digest: H2 }
+  ];
+  assert.doesNotThrow(() => validateExplorationPolicy(makePolicy({ derived_features: codeUnitOrdered })));
+  assert.throws(() => validateExplorationPolicy(makePolicy({ derived_features: [...codeUnitOrdered].reverse() })));
 });
 
 test('objective hard ceilings are exact and external effects remain zero', () => {
