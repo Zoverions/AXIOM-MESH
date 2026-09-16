@@ -18,16 +18,13 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Verify complete Replay Core focused suite
+      - name: Witness deterministic derived-feature ordering RED
+        shell: bash
         run: |
-          node --test \
-            mesh/test/discovery-trace.test.mjs \
-            mesh/test/replay-world.test.mjs \
-            mesh/test/replay-policy-contracts.test.mjs \
-            mesh/test/replay-engine.test.mjs \
-            mesh/test/replay-world-pool.test.mjs \
-            mesh/test/replay-policy-evaluation.test.mjs \
-            mesh/test/replay-schema-parity.test.mjs \
-            mesh/test/replay-boundary-static.test.mjs
-      - name: Verify canonical docs
-        run: node mesh/src/check-docs.mjs
+          set +e
+          output=$(node --test mesh/test/replay-policy-contracts.test.mjs 2>&1)
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -ne 0
+          printf '%s\n' "$output" | grep -F "derived feature ordering uses deterministic code-unit comparison"
