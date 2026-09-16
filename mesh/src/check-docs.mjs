@@ -161,6 +161,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
+  '.agents/skills/typesafe-ai/SKILL.md',
   'agent-skills/axiom-authority-auditor/SKILL.md',
   'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
   'labs/rust-trust-core/EXPERIMENT.md',
@@ -169,6 +170,11 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
 ]);
 
 const REQUIRED_CONTENT = Object.freeze({
+  '.agents/skills/typesafe-ai/SKILL.md': [
+    'name: typesafe-ai',
+    'The live TypeSafe docs are the source of truth',
+    'System One models'
+  ],
   'README.md': [
     'mesh/config/capabilities.json',
     'docs/whitepapers_and_research/WHITEPAPER.md',
