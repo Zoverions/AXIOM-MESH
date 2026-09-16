@@ -152,9 +152,8 @@ test('rejects probability semantics without reviewed matching calibration eviden
     const item = profile();
     const dimension = item.populations[0].dimensions[0];
     mutation(dimension);
-    item.profile_digest = computeBehavioralAssuranceProfileDigest(item);
     assert.throws(
-      () => validateBehavioralAssuranceProfile(item),
+      () => computeBehavioralAssuranceProfileDigest(item),
       /probability.*calibration|calibration.*probability/i
     );
   }
@@ -165,11 +164,17 @@ test('requires sample sufficiency state to match the declared sample threshold',
   tooSmall.populations[0].sample_count = 10;
   tooSmall.populations[0].dimensions[0].sample_count = 10;
   tooSmall.populations[0].dimensions[1].sample_count = 10;
-  tooSmall.profile_digest = computeBehavioralAssuranceProfileDigest(tooSmall);
-  assert.throws(() => validateBehavioralAssuranceProfile(tooSmall), /sample_sufficiency|minimum_sample_count/);
+  assert.throws(
+    () => computeBehavioralAssuranceProfileDigest(tooSmall),
+    /sample_sufficiency|minimum_sample_count/
+  );
 
-  const explicitInsufficient = clone(tooSmall);
+  const explicitInsufficient = profile();
+  explicitInsufficient.populations[0].sample_count = 10;
+  explicitInsufficient.populations[0].minimum_sample_count = 100;
   explicitInsufficient.populations[0].sample_sufficiency = 'insufficient';
+  explicitInsufficient.populations[0].dimensions[0].sample_count = 10;
+  explicitInsufficient.populations[0].dimensions[1].sample_count = 10;
   explicitInsufficient.profile_digest = computeBehavioralAssuranceProfileDigest(explicitInsufficient);
   assert.equal(validateBehavioralAssuranceProfile(explicitInsufficient).valid, true);
 });
@@ -196,8 +201,10 @@ test('rejects self-digest mutation and any boundary widening', () => {
     ['runtime_activation', true],
     ['selection_effect', 'select-and-run']
   ]) {
-    const widened = profile({ [field]: value });
-    assert.throws(() => computeBehavioralAssuranceProfileDigest(widened), /boundary effect|effect is invalid/i);
+    assert.throws(
+      () => profile({ [field]: value }),
+      /boundary effect|effect is invalid/i
+    );
   }
 });
 
