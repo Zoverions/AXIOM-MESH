@@ -18,5 +18,14 @@ jobs:
         with:
           ref: design/replay-grounded-self-improvement
           persist-credentials: false
-      - name: Verify Replay World Pool v0 GREEN
-        run: node --test mesh/test/replay-world-pool.test.mjs
+      - name: Witness Replay Policy Evaluation v0 RED
+        shell: bash
+        run: |
+          set +e
+          output=$(node --test mesh/test/replay-policy-evaluation.test.mjs 2>&1)
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -ne 0
+          printf '%s\n' "$output" | grep -F "ERR_MODULE_NOT_FOUND"
+          printf '%s\n' "$output" | grep -F "replay-policy-evaluation.mjs"
