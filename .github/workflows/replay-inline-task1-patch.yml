@@ -1,0 +1,87 @@
+name: Replay Inline Task 1 Patch
+
+on:
+  push:
+    branches:
+      - design/replay-grounded-self-improvement
+    paths:
+      - .github/workflows/replay-inline-task1-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: design/replay-grounded-self-improvement
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Apply exact documentation-boundary edits
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          check = Path('mesh/src/check-docs.mjs')
+          text = check.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  "  'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',\n",
+                  "  'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',\n"
+                  "  'docs/superpowers/specs/2026-09-16-replay-grounded-self-improvement-design.md',\n"
+              ),
+              (
+                  "  'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',\n",
+                  "  'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',\n"
+                  "  'docs/superpowers/plans/2026-09-16-replay-grounded-self-improvement-core-v0.md',\n"
+              ),
+              (
+                  "  'agent-skills/axiom-authority-auditor/SKILL.md',\n",
+                  "  '.agents/skills/typesafe-ai/SKILL.md',\n"
+                  "  'agent-skills/axiom-authority-auditor/SKILL.md',\n"
+              ),
+              (
+                  "const REQUIRED_CONTENT = Object.freeze({\n  'README.md': [\n",
+                  "const REQUIRED_CONTENT = Object.freeze({\n"
+                  "  '.agents/skills/typesafe-ai/SKILL.md': [\n"
+                  "    'name: typesafe-ai',\n"
+                  "    'The live TypeSafe docs are the source of truth',\n"
+                  "    'System One models'\n"
+                  "  ],\n"
+                  "  'docs/superpowers/specs/2026-09-16-replay-grounded-self-improvement-design.md': [\n"
+                  "    'Replay improvement is evidence for a promotion request, never authority to self-promote.',\n"
+                  "    'prefix-only',\n"
+                  "    'out-of-support',\n"
+                  "    'Improve the search. Preserve the evidence. Hold the authority boundary.'\n"
+                  "  ],\n"
+                  "  'README.md': [\n"
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'missing expected anchor: {old!r}')
+              text = text.replace(old, new, 1)
+
+          check.write_text(text, encoding='utf-8')
+
+          spec = Path('docs/superpowers/specs/2026-09-16-replay-grounded-self-improvement-design.md')
+          s = spec.read_text(encoding='utf-8')
+          old_status = '**Status:** design direction approved in chat; written specification pending user review; implementation not started'
+          new_status = '**Status:** approved architectural design; Replay Core v0 implementation plan approved for execution; implementation not yet verified'
+          if old_status not in s:
+              raise SystemExit('expected replay design status line not found')
+          spec.write_text(s.replace(old_status, new_status, 1), encoding='utf-8')
+          PY
+
+          git diff --check
+          git diff -- mesh/src/check-docs.mjs docs/superpowers/specs/2026-09-16-replay-grounded-self-improvement-design.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mesh/src/check-docs.mjs docs/superpowers/specs/2026-09-16-replay-grounded-self-improvement-design.md
+          git commit -m "docs: approve replay-grounded self-improvement plan"
+          git push origin HEAD:design/replay-grounded-self-improvement
