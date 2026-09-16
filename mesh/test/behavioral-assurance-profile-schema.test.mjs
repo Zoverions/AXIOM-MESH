@@ -12,6 +12,8 @@ test('Behavioral Assurance Profile v0 schema is strict probability-calibrated an
   assert.equal(schema.properties.version.const, 0);
   assert.equal(schema.properties.status.const, 'inert-behavioral-assurance-evidence');
   assert.equal(schema.additionalProperties, false);
+  assert.equal(Object.hasOwn(schema.properties, 'alignment_score'), false);
+  assert.equal(Object.hasOwn(schema.properties, 'global_failure_probability'), false);
 
   const subject = schema.$defs.subject;
   assert.equal(subject.additionalProperties, false);
