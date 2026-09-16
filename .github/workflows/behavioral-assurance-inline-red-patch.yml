@@ -1,0 +1,64 @@
+name: Behavioral Assurance Inline RED Patch
+
+on:
+  push:
+    branches:
+      - feat/behavioral-assurance-profiles-v0
+    paths:
+      - .github/workflows/behavioral-assurance-inline-red-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/behavioral-assurance-profiles-v0
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Register current project-local TypeSafe skill in documentation boundary
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          check = Path('mesh/src/check-docs.mjs')
+          text = check.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  "  'agent-skills/axiom-authority-auditor/SKILL.md',\n",
+                  "  '.agents/skills/typesafe-ai/SKILL.md',\n"
+                  "  'agent-skills/axiom-authority-auditor/SKILL.md',\n"
+              ),
+              (
+                  "const REQUIRED_CONTENT = Object.freeze({\n  'README.md': [\n",
+                  "const REQUIRED_CONTENT = Object.freeze({\n"
+                  "  '.agents/skills/typesafe-ai/SKILL.md': [\n"
+                  "    'name: typesafe-ai',\n"
+                  "    'The live TypeSafe docs are the source of truth',\n"
+                  "    'System One models'\n"
+                  "  ],\n"
+                  "  'README.md': [\n"
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'missing expected anchor: {old!r}')
+              text = text.replace(old, new, 1)
+
+          check.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          git diff -- mesh/src/check-docs.mjs
+          git rm .github/workflows/behavioral-assurance-inline-red-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mesh/src/check-docs.mjs
+          git commit -m "fix: register project-local TypeSafe skill in doc boundary"
+          git push origin HEAD:feat/behavioral-assurance-profiles-v0
