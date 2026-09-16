@@ -29,61 +29,62 @@ jobs:
           text = path.read_text(encoding='utf-8')
 
           anchor = "  'docs/architecture/contracts/capability-surfaces.v0.schema.json',\n"
-          addition = (
-              anchor
-              + "  'docs/architecture/contracts/discovery-trace.v0.schema.json',\n"
-              + "  'docs/architecture/contracts/replay-world.v0.schema.json',\n"
-              + "  'docs/architecture/contracts/exploration-policy.v0.schema.json',\n"
-              + "  'docs/architecture/contracts/replay-objective.v0.schema.json',\n"
-              + "  'docs/architecture/contracts/replay-world-pool.v0.schema.json',\n"
-              + "  'docs/architecture/contracts/replay-policy-evaluation.v0.schema.json',\n"
-          )
+          schema_paths = [
+              'docs/architecture/contracts/discovery-trace.v0.schema.json',
+              'docs/architecture/contracts/replay-world.v0.schema.json',
+              'docs/architecture/contracts/exploration-policy.v0.schema.json',
+              'docs/architecture/contracts/replay-objective.v0.schema.json',
+              'docs/architecture/contracts/replay-world-pool.v0.schema.json',
+              'docs/architecture/contracts/replay-policy-evaluation.v0.schema.json',
+          ]
           if anchor not in text:
               raise SystemExit('canonical schema anchor missing')
-          if 'docs/architecture/contracts/discovery-trace.v0.schema.json' not in text:
+          if schema_paths[0] not in text:
+              addition = anchor + ''.join(f"  '{item}',\n" for item in schema_paths)
               text = text.replace(anchor, addition, 1)
 
           required_anchor = "const REQUIRED_CONTENT = Object.freeze({\n"
-          required_entries = """const REQUIRED_CONTENT = Object.freeze({
-  'docs/architecture/contracts/discovery-trace.v0.schema.json': [
-    'axiom-discovery-trace.v0',
-    '\"authority_effect\": { \"const\": \"none\" }',
-    '\"network_effect\": { \"const\": \"none\" }',
-    '\"external_effects\": { \"const\": 0 }'
-  ],
-  'docs/architecture/contracts/replay-world.v0.schema.json': [
-    'axiom-replay-world.v0',
-    'after-parent-revealed',
-    'record-and-stop',
-    '\"runtime_activation\": { \"const\": false }'
-  ],
-  'docs/architecture/contracts/exploration-policy.v0.schema.json': [
-    'axiom-exploration-policy.v0',
-    'not-executed-by-replay-core',
-    '\"authority_effect\": { \"const\": \"none\" }'
-  ],
-  'docs/architecture/contracts/replay-objective.v0.schema.json': [
-    'axiom-replay-objective.v0',
-    '\"comparison_mode\": { \"const\": \"lexicographic\" }',
-    '\"max_external_effects\": { \"const\": 0 }'
-  ],
-  'docs/architecture/contracts/replay-world-pool.v0.schema.json': [
-    'axiom-replay-world-pool.v0',
-    'sealed-holdout',
-    'acceptance-sealed',
-    '\"production_promotion\": { \"const\": false }'
-  ],
-  'docs/architecture/contracts/replay-policy-evaluation.v0.schema.json': [
-    'axiom-replay-policy-evaluation.v0',
-    'fixed-replay-pool-and-objective-only',
-    'live-world-monotonic-improvement',
-    '\"authority_effect\": { \"const\": \"none\" }'
-  ],
-"""
+          required_lines = [
+              "const REQUIRED_CONTENT = Object.freeze({",
+              "  'docs/architecture/contracts/discovery-trace.v0.schema.json': [",
+              "    'axiom-discovery-trace.v0',",
+              "    '\"authority_effect\": { \"const\": \"none\" }',",
+              "    '\"network_effect\": { \"const\": \"none\" }',",
+              "    '\"external_effects\": { \"const\": 0 }'",
+              "  ],",
+              "  'docs/architecture/contracts/replay-world.v0.schema.json': [",
+              "    'axiom-replay-world.v0',",
+              "    'after-parent-revealed',",
+              "    'record-and-stop',",
+              "    '\"runtime_activation\": { \"const\": false }'",
+              "  ],",
+              "  'docs/architecture/contracts/exploration-policy.v0.schema.json': [",
+              "    'axiom-exploration-policy.v0',",
+              "    'not-executed-by-replay-core',",
+              "    '\"authority_effect\": { \"const\": \"none\" }'",
+              "  ],",
+              "  'docs/architecture/contracts/replay-objective.v0.schema.json': [",
+              "    'axiom-replay-objective.v0',",
+              "    '\"comparison_mode\": { \"const\": \"lexicographic\" }',",
+              "    '\"max_external_effects\": { \"const\": 0 }'",
+              "  ],",
+              "  'docs/architecture/contracts/replay-world-pool.v0.schema.json': [",
+              "    'axiom-replay-world-pool.v0',",
+              "    'sealed-holdout',",
+              "    'acceptance-sealed',",
+              "    '\"production_promotion\": { \"const\": false }'",
+              "  ],",
+              "  'docs/architecture/contracts/replay-policy-evaluation.v0.schema.json': [",
+              "    'axiom-replay-policy-evaluation.v0',",
+              "    'fixed-replay-pool-and-objective-only',",
+              "    'live-world-monotonic-improvement',",
+              "    '\"authority_effect\": { \"const\": \"none\" }'",
+              "  ],",
+          ]
           if required_anchor not in text:
               raise SystemExit('required content anchor missing')
           if "'docs/architecture/contracts/discovery-trace.v0.schema.json': [" not in text:
-              text = text.replace(required_anchor, required_entries, 1)
+              text = text.replace(required_anchor, '\n'.join(required_lines) + '\n', 1)
 
           path.write_text(text, encoding='utf-8')
           PY
