@@ -1,0 +1,22 @@
+name: Replay Inline Task 2 GREEN
+
+on:
+  push:
+    branches:
+      - design/replay-grounded-self-improvement
+    paths:
+      - .github/workflows/replay-inline-task2-green.yml
+
+permissions:
+  contents: read
+
+jobs:
+  discovery-trace:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: design/replay-grounded-self-improvement
+          persist-credentials: false
+      - name: Focused Discovery Trace v0 suite
+        run: node --test mesh/test/discovery-trace.test.mjs
