@@ -151,36 +151,24 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "observation_schema",
         "observation_id",
         "observation_digest",
-        "dimension_id",
-        "value_kind",
-        "value",
-        "calibration_ref",
-        "calibration_digest",
+        "calibration_report_schema",
+        "calibration_report_id",
+        "calibration_report_digest",
         "calibration_state",
         "evidence_state"
       ],
       "properties": {
+        "observation_schema": { "const": "axiom-bounded-decision-observation.v0" },
         "observation_id": { "$ref": "#/$defs/identifier" },
         "observation_digest": { "$ref": "#/$defs/digest" },
-        "dimension_id": { "$ref": "#/$defs/identifier" },
-        "value_kind": { "enum": ["probability", "rate", "count", "score"] },
-        "value": { "type": "number" },
-        "calibration_ref": {
-          "oneOf": [
-            { "$ref": "#/$defs/identifier" },
-            { "type": "null" }
-          ]
-        },
-        "calibration_digest": {
-          "oneOf": [
-            { "$ref": "#/$defs/digest" },
-            { "type": "null" }
-          ]
-        },
+        "calibration_report_schema": { "const": "axiom-bounded-decision-calibration-report.v0" },
+        "calibration_report_id": { "$ref": "#/$defs/identifier" },
+        "calibration_report_digest": { "$ref": "#/$defs/digest" },
         "calibration_state": {
-          "enum": ["reviewed", "experimental", "rejected", "expired", "not-applicable"]
+          "enum": ["experimental", "reviewed", "expired", "rejected"]
         },
         "evidence_state": {
           "enum": [
@@ -225,7 +213,8 @@
   "x-axiom-semantic-rules": [
     "A deterministic current failure cannot be overruled by historical behavioral probability or semantic support.",
     "Independent confirmation counts cannot treat correlated verifiers in the same independence group as independent.",
-    "Probability-valued semantic evidence requires reviewed calibration with an exact calibration reference and digest.",
+    "Semantic observations bind exact Bounded Decision Observation and Calibration Report artifacts by schema identity, ID, and digest rather than restating provider probability values.",
+    "Accepted semantic evidence requires a reviewed bounded-decision calibration report binding.",
     "Behavioral profile evidence transfers only when the bound producer and environment harness match and the profile remains current.",
     "Out-of-domain or consequence-class transfer is surfaced as out-of-distribution rather than inheriting historical probability."
   ],
