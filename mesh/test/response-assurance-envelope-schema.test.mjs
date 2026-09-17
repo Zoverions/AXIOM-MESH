@@ -25,8 +25,20 @@ test('Response Assurance Envelope v0 schema is strict evidence-only and non-auth
   assert.equal(schema.$defs.deterministicCheck.properties.result.enum.includes('PASS'), true);
   assert.equal(schema.$defs.deterministicCheck.properties.result.enum.includes('FAIL'), true);
   assert.equal(schema.$defs.verifierEvidence.additionalProperties, false);
-  assert.ok(schema.$defs.semanticObservation.properties.value_kind.enum.includes('probability'));
-  assert.ok(schema.$defs.semanticObservation.properties.value_kind.enum.includes('score'));
+  assert.equal(
+    schema.$defs.semanticObservation.properties.observation_schema.const,
+    'axiom-bounded-decision-observation.v0'
+  );
+  assert.equal(
+    schema.$defs.semanticObservation.properties.calibration_report_schema.const,
+    'axiom-bounded-decision-calibration-report.v0'
+  );
+  assert.equal(Object.hasOwn(schema.$defs.semanticObservation.properties, 'value_kind'), false);
+  assert.equal(Object.hasOwn(schema.$defs.semanticObservation.properties, 'value'), false);
+  assert.deepEqual(
+    schema.$defs.semanticObservation.properties.calibration_state.enum,
+    ['experimental', 'reviewed', 'expired', 'rejected']
+  );
 
   assert.equal(schema.properties.authority_effect.const, 'none');
   assert.equal(schema.properties.network_effect.const, 'none');
@@ -41,7 +53,7 @@ test('Response Assurance Envelope v0 schema is strict evidence-only and non-auth
   );
   assert.ok(schema['x-axiom-semantic-rules'].some(rule => /deterministic/i.test(rule) && /cannot/i.test(rule)));
   assert.ok(schema['x-axiom-semantic-rules'].some(rule => /independ/i.test(rule) && /correlat/i.test(rule)));
-  assert.ok(schema['x-axiom-semantic-rules'].some(rule => /probability/i.test(rule) && /calibration/i.test(rule)));
+  assert.ok(schema['x-axiom-semantic-rules'].some(rule => /bounded decision/i.test(rule) && /digest/i.test(rule)));
   assert.ok(schema['x-axiom-non-claims'].includes('authorization-decision'));
   assert.ok(schema['x-axiom-non-claims'].includes('safe-to-execute'));
 });
