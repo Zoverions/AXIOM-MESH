@@ -163,7 +163,13 @@ function validateCandidates(candidates) {
     requireEnum(candidate.currentness, CURRENTNESS, 'candidate.currentness');
 
     return {
-      profile: validatedProfile,
+      profile: deepFreeze({
+        profile_id: validatedProfile.profile_id,
+        provider_mode: validatedProfile.provider_mode,
+        supported_question_kinds: [...validatedProfile.supported_question_kinds],
+        max_choice_cardinality: candidate.profile.max_choice_cardinality,
+        max_score_levels: candidate.profile.max_score_levels
+      }),
       available: candidate.available,
       policy_eligible: candidate.policy_eligible,
       disclosure_eligible: candidate.disclosure_eligible,
