@@ -20,6 +20,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'CONTRIBUTING.md',
   'AGENTS.md',
   'AGENT-ENTRY.md',
+  '.agents/skills/typesafe-ai/SKILL.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
@@ -73,6 +74,10 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/reproduction-case.v0.schema.json',
   'docs/architecture/contracts/regression-candidate.v0.schema.json',
   'docs/architecture/contracts/threat-adaptation-receipt.v0.schema.json',
+  'docs/architecture/contracts/research-source-manifest.v0.schema.json',
+  'docs/architecture/contracts/research-knowledge-projection.v0.schema.json',
+  'docs/architecture/contracts/research-operation-candidate.v0.schema.json',
+  'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -119,6 +124,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
   'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md',
   'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
+  'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -136,6 +142,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md',
   'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md',
   'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',
+  'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -191,6 +198,11 @@ const REQUIRED_CONTENT = Object.freeze({
     'Gateway -> Hypervisor -> Sandbox -> Grid',
     'agent-readiness/CONTRIBUTION-RESULT.schema.json',
     'Zero-cost participation'
+  ],
+  '.agents/skills/typesafe-ai/SKILL.md': [
+    'name: typesafe-ai',
+    'The live TypeSafe docs are the source of truth',
+    'Code owns the workflow'
   ],
   'docs/README.md': [
     '## Canonical documents',
@@ -341,6 +353,22 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/architecture/contracts/threat-adaptation-receipt.v0.schema.json': [
     'axiom-threat-adaptation-receipt.v0'
   ],
+  'docs/architecture/contracts/research-source-manifest.v0.schema.json': [
+    'axiom-research-source-manifest.v0'
+  ],
+  'docs/architecture/contracts/research-knowledge-projection.v0.schema.json': [
+    'axiom-research-knowledge-projection.v0',
+    'instruction_authority'
+  ],
+  'docs/architecture/contracts/research-operation-candidate.v0.schema.json': [
+    'axiom-research-operation-candidate.v0',
+    'execution_authority'
+  ],
+  'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json': [
+    'axiom-research-reproduction-evidence.v0',
+    'truth_established',
+    'authority_effect'
+  ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
     '## 3. Adaptive assurance profiles',
@@ -488,6 +516,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## 22. Migration and compatibility contract',
     '## 26. Stage 5B approval state'
   ],
+  'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md': [
+    'Knowledge is not authority',
+    'Operation is not authority',
+    'Reproduction is not truth'
+  ],
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': [
     '## Gate 0 — exact candidate inventory',
     '## Task 1 — common inert record envelope',
@@ -504,6 +537,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Exact changed-file envelope',
     '### Task 1: Slice A closed threat-intelligence contracts',
     '## Plan self-review results',
+    '## Landing gate'
+  ],
+  'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md': [
+    '## Exact changed-file envelope',
+    '### Task 1: RED contract and fixture surface',
     '## Landing gate'
   ],
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
