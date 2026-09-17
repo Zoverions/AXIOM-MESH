@@ -4,7 +4,8 @@ import { validateBoundedDecisionProviderProfile } from './bounded-decision-provi
 export const BOUNDED_DECISION_ROUTE_PROPOSAL_SCHEMA =
   'axiom-bounded-decision-route-proposal.v0';
 
-const USER_MODES = Object.freeze(['auto', 'prefer', 'require', 'local-only']);
+const USER_MODES = Object.freeze(['auto', 'prefer', 'require']);
+const LOCALITY_POLICIES = Object.freeze(['any', 'local-only']);
 const QUESTION_KINDS = Object.freeze(['choice', 'score', 'binary-probability']);
 const CURRENTNESS = Object.freeze(['current', 'stale', 'unknown']);
 const FALLBACK_ROUTES = Object.freeze(['system-two', 'human', 'abstain']);
@@ -26,6 +27,7 @@ const REQUEST_FIELDS = Object.freeze([
 ]);
 const USER_POLICY_FIELDS = Object.freeze([
   'mode',
+  'locality',
   'preferred_profile_id',
   'excluded_profile_ids'
 ]);
@@ -161,7 +163,7 @@ function validateCandidates(candidates) {
     requireEnum(candidate.currentness, CURRENTNESS, 'candidate.currentness');
 
     return {
-      profile: candidate.profile,
+      profile: validatedProfile,
       available: candidate.available,
       policy_eligible: candidate.policy_eligible,
       disclosure_eligible: candidate.disclosure_eligible,
@@ -199,6 +201,7 @@ function validateUserPolicy(policy) {
   requireFields(policy, USER_POLICY_FIELDS, 'User routing policy');
   rejectUnknown(policy, USER_POLICY_FIELDS, 'User routing policy');
   requireEnum(policy.mode, USER_MODES, 'User routing policy mode');
+  requireEnum(policy.locality, LOCALITY_POLICIES, 'User routing policy locality');
   const preferred = nullableIdentifier(policy.preferred_profile_id, 'preferred_profile_id');
   const excluded = identifierArray(policy.excluded_profile_ids, 'excluded_profile_ids');
 
@@ -211,6 +214,7 @@ function validateUserPolicy(policy) {
 
   return {
     mode: policy.mode,
+    locality: policy.locality,
     preferred_profile_id: preferred,
     excluded_profile_ids: excluded
   };
@@ -234,7 +238,7 @@ function candidateEligibility(candidate, request, userPolicy) {
   if (userPolicy.excluded_profile_ids.includes(profile.profile_id)) {
     reasons.push('provider-excluded');
   }
-  if (userPolicy.mode === 'local-only' && profile.provider_mode !== 'owner-local') {
+  if (userPolicy.locality === 'local-only' && profile.provider_mode !== 'owner-local') {
     reasons.push('remote-provider-excluded');
   }
   if (!profile.supported_question_kinds.includes(request.question_kind)) {
