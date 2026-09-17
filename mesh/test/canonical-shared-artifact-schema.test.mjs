@@ -38,6 +38,20 @@ test('canonical shared artifact schema mirrors bounded causal and projection arr
   assert.equal(schema.properties.current_heads.maxItems, 32);
 });
 
+test('canonical shared artifact schema requires semantic validation for full invariants', async () => {
+  const schema = await loadSchema();
+  assert.equal(schema.$defs.timestamp.format, 'date-time');
+  assert.equal(schema['x-axiom-semantic-validator'], 'mesh/src/lib/canonical-shared-artifact.mjs');
+  assert.equal(schema['x-axiom-validation-requirement'], 'semantic-validator-required');
+  assert.deepEqual(schema['x-axiom-semantic-invariants'], [
+    'timestamp calendar validity and canonical ISO round-trip are enforced by the semantic validator',
+    'declared current_heads exactly match derived causal heads',
+    'conflicts remain explicit until a resolution names every current head',
+    'state and current_content_digest are derived from current causal heads',
+    'authorization and verified-work bindings are evidence only and create no authority effect'
+  ]);
+});
+
 test('canonical shared artifact schema keeps authority network and runtime inert', async () => {
   const schema = await loadSchema();
   assert.deepEqual(schema.properties.authority_effect, { const: 'none' });
