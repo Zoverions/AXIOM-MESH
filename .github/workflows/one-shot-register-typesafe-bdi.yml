@@ -1,0 +1,46 @@
+name: One-shot register TypeSafe skill for BDI
+
+on:
+  push:
+    branches:
+      - docs/system-one-bounded-decision-provider-20260915
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Register current TypeSafe skill and remove helper
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('mesh/src/check-docs.mjs')
+          text = path.read_text()
+
+          old_docs = "  'docs/whitepapers_and_research/WHITEPAPER.md',\n  'agent-skills/axiom-authority-auditor/SKILL.md',"
+          new_docs = "  'docs/whitepapers_and_research/WHITEPAPER.md',\n  '.agents/skills/typesafe-ai/SKILL.md',\n  'agent-skills/axiom-authority-auditor/SKILL.md',"
+          if old_docs not in text:
+              raise SystemExit('canonical document anchor missing')
+          text = text.replace(old_docs, new_docs, 1)
+
+          old_required = "const REQUIRED_CONTENT = Object.freeze({\n  'README.md': ["
+          new_required = "const REQUIRED_CONTENT = Object.freeze({\n  '.agents/skills/typesafe-ai/SKILL.md': [\n    'name: typesafe-ai',\n    'The live TypeSafe docs are the source of truth',\n    'System One models'\n  ],\n  'README.md': ["
+          if old_required not in text:
+              raise SystemExit('required-content anchor missing')
+          text = text.replace(old_required, new_required, 1)
+          path.write_text(text)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-shot-register-typesafe-bdi.yml
+          git add mesh/src/check-docs.mjs
+          git commit -m "fix: register TypeSafe skill in canonical docs"
+          git push origin HEAD:docs/system-one-bounded-decision-provider-20260915
