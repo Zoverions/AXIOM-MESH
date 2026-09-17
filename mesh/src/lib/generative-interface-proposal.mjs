@@ -150,9 +150,10 @@ function validateComponentRegistry(input) {
     const value = assertPlainObject(entry, `component registry[${index}]`);
     exactFields(value, REGISTRY_FIELDS, `component registry[${index}]`);
     const type = identifier(value.type, `component registry[${index}].type`);
-    if (!types.add(type)) {
+    if (types.has(type)) {
       throw new ValidationError(`component registry contains duplicate type ${type}`);
     }
+    types.add(type);
   }
   return types;
 }
@@ -242,9 +243,10 @@ function validateActionRequests(input, operations) {
       value.request_id,
       `generative interface action_requests[${index}].request_id`
     );
-    if (!ids.add(requestId)) {
+    if (ids.has(requestId)) {
       throw new ValidationError(`generative interface contains duplicate action request ${requestId}`);
     }
+    ids.add(requestId);
     const operationRef = identifier(
       value.operation_ref,
       `generative interface action_requests[${index}].operation_ref`
@@ -304,9 +306,10 @@ function validateComponents(input, componentTypes, actionRequestIds) {
       value.component_id,
       `generative interface components[${index}].component_id`
     );
-    if (!ids.add(componentId)) {
+    if (ids.has(componentId)) {
       throw new ValidationError(`generative interface contains duplicate component ${componentId}`);
     }
+    ids.add(componentId);
     const type = identifier(value.type, `generative interface components[${index}].type`);
     if (!componentTypes.has(type)) {
       throw new ValidationError(`component type ${type} is not registered`);
