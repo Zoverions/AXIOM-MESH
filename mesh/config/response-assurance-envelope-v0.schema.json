@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.local/schemas/response-assurance-envelope-v0.schema.json",
+  "title": "AXIOM Response Assurance Envelope v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "envelope_id",
+    "response_digest",
+    "task",
+    "producer",
+    "profile_binding",
+    "deterministic_checks",
+    "semantic_observations",
+    "verifiers",
+    "claimed_independent_confirmations",
+    "surfaced_because",
+    "unresolved_unknowns",
+    "observed_at",
+    "envelope_digest",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-response-assurance-envelope.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-response-assurance-evidence" },
+    "envelope_id": { "$ref": "#/$defs/identifier" },
+    "response_digest": { "$ref": "#/$defs/digest" },
+    "task": { "$ref": "#/$defs/task" },
+    "producer": { "$ref": "#/$defs/producer" },
+    "profile_binding": { "$ref": "#/$defs/profileBinding" },
+    "deterministic_checks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/deterministicCheck" }
+    },
+    "semantic_observations": {
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/semanticObservation" }
+    },
+    "verifiers": {
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/verifierEvidence" }
+    },
+    "claimed_independent_confirmations": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 128
+    },
+    "surfaced_because": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "unresolved_unknowns": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+    },
+    "observed_at": { "$ref": "#/$defs/timestamp" },
+    "envelope_digest": { "$ref": "#/$defs/digest" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "selection_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 40,
+      "pattern": "Z$"
+    },
+    "consequenceClass": {
+      "enum": [
+        "informational",
+        "digital-reversible",
+        "digital-consequential",
+        "physical-reversible",
+        "physical-safety-relevant",
+        "physical-potentially-irreversible"
+      ]
+    },
+    "resolutionStatus": {
+      "enum": [
+        "supported",
+        "supported-with-caveats",
+        "conflicting-evidence",
+        "insufficient-evidence",
+        "stale-profile",
+        "out-of-distribution",
+        "invalid-evidence"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["purpose", "domain", "consequence_class"],
+      "properties": {
+        "purpose": { "$ref": "#/$defs/identifier" },
+        "domain": { "$ref": "#/$defs/identifier" },
+        "consequence_class": { "$ref": "#/$defs/consequenceClass" }
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_id", "subject_digest", "environment_harness_digest"],
+      "properties": {
+        "subject_id": { "$ref": "#/$defs/identifier" },
+        "subject_digest": { "$ref": "#/$defs/digest" },
+        "environment_harness_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "profileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "profile_digest", "population_id"],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/identifier" },
+        "profile_digest": { "$ref": "#/$defs/digest" },
+        "population_id": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "deterministicCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "check_digest", "result"],
+      "properties": {
+        "check_id": { "$ref": "#/$defs/identifier" },
+        "check_digest": { "$ref": "#/$defs/digest" },
+        "result": { "enum": ["PASS", "FAIL", "UNKNOWN", "NOT-APPLICABLE"] }
+      }
+    },
+    "semanticObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_schema",
+        "observation_id",
+        "observation_digest",
+        "calibration_report_schema",
+        "calibration_report_id",
+        "calibration_report_digest",
+        "calibration_state",
+        "evidence_state"
+      ],
+      "properties": {
+        "observation_schema": { "const": "axiom-bounded-decision-observation.v0" },
+        "observation_id": { "$ref": "#/$defs/identifier" },
+        "observation_digest": { "$ref": "#/$defs/digest" },
+        "calibration_report_schema": { "const": "axiom-bounded-decision-calibration-report.v0" },
+        "calibration_report_id": { "$ref": "#/$defs/identifier" },
+        "calibration_report_digest": { "$ref": "#/$defs/digest" },
+        "calibration_state": {
+          "enum": ["experimental", "reviewed", "expired", "rejected"]
+        },
+        "evidence_state": {
+          "enum": [
+            "accepted-evidence",
+            "insufficient-evidence",
+            "conflicting-evidence",
+            "stale-evidence",
+            "invalid-evidence"
+          ]
+        }
+      }
+    },
+    "verifierEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verifier_id",
+        "verifier_digest",
+        "source_class",
+        "independence_group",
+        "result"
+      ],
+      "properties": {
+        "verifier_id": { "$ref": "#/$defs/identifier" },
+        "verifier_digest": { "$ref": "#/$defs/digest" },
+        "source_class": {
+          "enum": [
+            "deterministic-checker",
+            "human-adjudication",
+            "semantic-verifier",
+            "model-verifier",
+            "provider-evaluator",
+            "other-reviewed"
+          ]
+        },
+        "independence_group": { "$ref": "#/$defs/identifier" },
+        "result": { "enum": ["supports", "contradicts", "abstains"] }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/response-assurance-envelope.mjs",
+  "x-axiom-semantic-rules": [
+    "A deterministic current failure cannot be overruled by historical behavioral probability or semantic support.",
+    "Independent confirmation counts cannot treat correlated verifiers in the same independence group as independent.",
+    "Semantic observations bind exact Bounded Decision Observation and Calibration Report artifacts by schema identity, ID, and digest rather than restating provider probability values.",
+    "Accepted semantic evidence requires a reviewed bounded-decision calibration report binding.",
+    "Behavioral profile evidence transfers only when the bound producer and environment harness match and the profile remains current.",
+    "Out-of-domain or consequence-class transfer is surfaced as out-of-distribution rather than inheriting historical probability."
+  ],
+  "x-axiom-non-claims": [
+    "authorization-decision",
+    "safe-to-execute",
+    "runtime-selection",
+    "provider-routing",
+    "universal-alignment-score",
+    "global-safety-probability"
+  ]
+}

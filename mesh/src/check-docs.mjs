@@ -119,6 +119,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
   'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md',
   'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
+  'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -136,6 +137,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md',
   'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md',
   'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',
+  'docs/superpowers/plans/2026-09-15-bounded-decision-intelligence-v0.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -161,6 +163,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
+  '.agents/skills/typesafe-ai/SKILL.md',
   'agent-skills/axiom-authority-auditor/SKILL.md',
   'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
   'labs/rust-trust-core/EXPERIMENT.md',
@@ -169,6 +172,11 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
 ]);
 
 const REQUIRED_CONTENT = Object.freeze({
+  '.agents/skills/typesafe-ai/SKILL.md': [
+    'name: typesafe-ai',
+    'The live TypeSafe docs are the source of truth',
+    'System One models'
+  ],
   'README.md': [
     'mesh/config/capabilities.json',
     'docs/whitepapers_and_research/WHITEPAPER.md',
