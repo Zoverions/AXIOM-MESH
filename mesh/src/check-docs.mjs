@@ -20,7 +20,6 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'CONTRIBUTING.md',
   'AGENTS.md',
   'AGENT-ENTRY.md',
-  '.agents/skills/typesafe-ai/SKILL.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
@@ -120,7 +119,6 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
   'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md',
   'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
-  'docs/superpowers/specs/2026-09-17-canonical-shared-artifact-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -138,7 +136,6 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md',
   'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md',
   'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',
-  'docs/superpowers/plans/2026-09-17-canonical-shared-artifact-v0.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -890,7 +887,7 @@ async function verifySupportedDocumentationBoundary(repositoryRoot) {
 
 export async function repositoryMarkdownFiles(directory, prefix = '') {
   const files = [];
-  const excludedDirectories = new Set(['.git', '.data', 'node_modules']);
+  const excludedDirectories = new Set(['.git', '.data', '.agents', 'node_modules']);
   const entries = await readdir(directory, { withFileTypes: true });
   if (prefix && entries.some(entry => entry.name === '.git')) return files;
   for (const entry of entries) {
