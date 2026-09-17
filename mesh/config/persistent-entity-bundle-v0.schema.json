@@ -68,6 +68,7 @@
     },
     "created_at": {
       "type": "string",
+      "format": "date-time",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
     },
     "authority_effect": { "const": "none" },
@@ -182,11 +183,13 @@
     }
   },
   "x-axiom-semantic-validator": "mesh/src/lib/persistent-entity-bundle.mjs",
+  "x-axiom-validation-requirement": "semantic-validator-required",
   "x-axiom-semantic-invariants": [
     "declared scopes exactly match carried record kinds",
     "singleton record kinds occur at most once",
     "reference record identifiers are unique within their kind",
-    "forbidden credential authority and implementation-lock-in field names are rejected recursively"
+    "forbidden credential authority and implementation-lock-in field names are rejected recursively",
+    "created_at calendar validity and canonical ISO round-trip are enforced by the semantic validator"
   ],
   "x-axiom-non-claims": [
     "credential-portability",
