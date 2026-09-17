@@ -100,4 +100,13 @@ jobs:
         run: |
           test "$(git -C .tools/bend rev-parse HEAD)" = "8008146ab90abb98b496fa2a6ffe555da7fb0dd5"
           test "$(bun --version)" = "1.4.2"
+          test "$(bun --revision)" = "1.4.2+744846f84"
           bun run .tools/bend/bend2/main.ts labs/rust-trust-core/formal/bend/PROOF.bend
+      - name: Verify Bend rejects false authority proof
+        run: |
+          if bun run .tools/bend/bend2/main.ts labs/rust-trust-core/formal/bend/NEGATIVE_PROOF.bend > bend-negative-control.log 2>&1; then
+            cat bend-negative-control.log
+            echo "Bend negative control unexpectedly verified" >&2
+            exit 1
+          fi
+          cat bend-negative-control.log
