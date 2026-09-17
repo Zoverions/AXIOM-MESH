@@ -146,10 +146,24 @@ test('generated action requests cannot downgrade a catalog confirmation requirem
   assert.throws(() => createGenerativeInterfaceProposal(input), /confirmation.*catalog/i);
 });
 
-test('a caller catalog cannot mark a consequential operation as confirmation-free', () => {
+test('generated action requests cannot rewrite catalog consequence metadata', () => {
   const input = proposalInput();
-  input.operationCatalog[2].confirmation = 'not-required';
-  assert.throws(() => createGenerativeInterfaceProposal(input), /consequential.*canonical confirmation/i);
+  input.actionRequests[0].consequence = 'non-consequential-local-draft';
+  assert.throws(() => createGenerativeInterfaceProposal(input), /consequence.*catalog/i);
+});
+
+test('confirmation requirements are preserved independently from consequence labels', () => {
+  const input = proposalInput();
+  input.operationCatalog[0].consequence = 'consequential';
+  input.operationCatalog[0].confirmation = 'not-required';
+  input.actionRequests[0].consequence = 'consequential';
+  input.actionRequests[0].confirmation = 'not-required';
+
+  const proposal = createGenerativeInterfaceProposal(input);
+  assert.equal(proposal.action_requests[0].consequence, 'consequential');
+  assert.equal(proposal.action_requests[0].confirmation, 'not-required');
+  assert.equal(proposal.action_requests[0].authorization_claim, 'none');
+  assert.equal(proposal.action_requests[0].execution_effect, 'none');
 });
 
 test('generated arguments cannot smuggle authority approval grant credential or token material', () => {
