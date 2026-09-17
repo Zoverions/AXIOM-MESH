@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/replay-policy-evaluation.v0.schema.json",
+  "title": "AXIOM Replay Policy Evaluation v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "evaluation_id", "candidate_policy", "baseline_policy", "world_pool", "objective", "runner", "world_results", "aggregate", "claim_scope", "evaluated_at", "authority_effect", "network_effect", "runtime_activation", "production_promotion"],
+  "properties": {
+    "schema": { "const": "axiom-replay-policy-evaluation.v0" },
+    "status": { "const": "inert-evaluation-evidence" },
+    "evaluation_id": { "$ref": "#/$defs/id" },
+    "candidate_policy": { "$ref": "#/$defs/policyRef" },
+    "baseline_policy": { "$ref": "#/$defs/policyRef" },
+    "world_pool": { "$ref": "#/$defs/poolRef" },
+    "objective": { "$ref": "#/$defs/objectiveRef" },
+    "runner": { "$ref": "#/$defs/runner" },
+    "world_results": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/worldResult" } },
+    "aggregate": { "$ref": "#/$defs/aggregate" },
+    "claim_scope": { "const": "fixed-replay-pool-and-objective-only" },
+    "evaluated_at": { "$ref": "#/$defs/instant" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "production_promotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "instant": { "type": "string", "format": "date-time" },
+    "nonnegative": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "policyRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id", "policy_digest"],
+      "properties": { "policy_id": { "$ref": "#/$defs/id" }, "policy_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "poolRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pool_id", "pool_digest", "role"],
+      "properties": {
+        "pool_id": { "$ref": "#/$defs/id" },
+        "pool_digest": { "$ref": "#/$defs/sha256" },
+        "role": { "enum": ["training", "validation", "sealed-holdout"] }
+      }
+    },
+    "objectiveRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objective_id", "objective_digest"],
+      "properties": { "objective_id": { "$ref": "#/$defs/id" }, "objective_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runner_id", "runner_version", "runner_digest"],
+      "properties": {
+        "runner_id": { "const": "axiom-replay-engine.v0" },
+        "runner_version": { "const": "0" },
+        "runner_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "worldResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["world_id", "world_digest", "candidate_run_digest", "baseline_run_digest", "compatibility"],
+      "properties": {
+        "world_id": { "$ref": "#/$defs/id" },
+        "world_digest": { "$ref": "#/$defs/sha256" },
+        "candidate_run_digest": { "$ref": "#/$defs/sha256" },
+        "baseline_run_digest": { "$ref": "#/$defs/sha256" },
+        "compatibility": { "enum": ["historical-valid", "current-compatible", "incompatible", "unverified"] }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["best_quality", "generation_calls", "evaluation_calls", "token_or_cost_units", "wall_clock_ms", "storage_bytes", "worker_slot_peak", "rounds", "out_of_support_requests", "failed_attempts"],
+      "properties": {
+        "best_quality": { "$ref": "#/$defs/nonnegative" },
+        "generation_calls": { "$ref": "#/$defs/nonnegative" },
+        "evaluation_calls": { "$ref": "#/$defs/nonnegative" },
+        "token_or_cost_units": { "$ref": "#/$defs/nonnegative" },
+        "wall_clock_ms": { "$ref": "#/$defs/nonnegative" },
+        "storage_bytes": { "$ref": "#/$defs/nonnegative" },
+        "worker_slot_peak": { "$ref": "#/$defs/nonnegative" },
+        "rounds": { "$ref": "#/$defs/nonnegative" },
+        "out_of_support_requests": { "$ref": "#/$defs/nonnegative" },
+        "failed_attempts": { "$ref": "#/$defs/nonnegative" }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_metrics", "baseline_metrics", "relation", "no_worse_on_fixed_history", "compared_world_count", "excluded_world_count", "out_of_support_requests", "failure_count", "regression_world_ids"],
+      "properties": {
+        "candidate_metrics": { "$ref": "#/$defs/metrics" },
+        "baseline_metrics": { "$ref": "#/$defs/metrics" },
+        "relation": { "enum": ["better", "equivalent", "worse"] },
+        "no_worse_on_fixed_history": { "type": "boolean" },
+        "compared_world_count": { "$ref": "#/$defs/nonnegative" },
+        "excluded_world_count": { "$ref": "#/$defs/nonnegative" },
+        "out_of_support_requests": { "$ref": "#/$defs/nonnegative" },
+        "failure_count": { "$ref": "#/$defs/nonnegative" },
+        "regression_world_ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/replay-policy-evaluation.mjs",
+  "x-axiom-semantic-rules": ["candidate and baseline policy digests are distinct", "world results and regression ids are strictly ordered", "world counts match the result set", "no-worse cannot coexist with an aggregate worse relation or any regression", "derivation independently verifies run, policy, world, pool, trace and objective bindings"],
+  "x-axiom-non-claims": ["promotion-eligibility", "authority-grant", "deployment-authority", "merge-authority", "network-effect", "runtime-activation", "production-promotion", "live-world-monotonic-improvement"]
+}

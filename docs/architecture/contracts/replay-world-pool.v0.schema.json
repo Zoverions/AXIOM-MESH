@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/replay-world-pool.v0.schema.json",
+  "title": "AXIOM Replay World Pool v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "pool_id", "cycle_id", "role", "visibility", "worlds", "selection", "created_at", "authority_effect", "network_effect", "runtime_activation", "production_promotion"],
+  "properties": {
+    "schema": { "const": "axiom-replay-world-pool.v0" },
+    "status": { "const": "inert-world-pool" },
+    "pool_id": { "$ref": "#/$defs/id" },
+    "cycle_id": { "$ref": "#/$defs/id" },
+    "role": { "enum": ["training", "validation", "sealed-holdout"] },
+    "visibility": { "enum": ["development-visible", "acceptance-sealed"] },
+    "worlds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/worldEntry" } },
+    "selection": { "$ref": "#/$defs/selection" },
+    "created_at": { "$ref": "#/$defs/instant" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "production_promotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "instant": { "type": "string", "format": "date-time" },
+    "worldEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["world_id", "world_digest", "compatibility"],
+      "properties": {
+        "world_id": { "$ref": "#/$defs/id" },
+        "world_digest": { "$ref": "#/$defs/sha256" },
+        "compatibility": { "enum": ["historical-valid", "current-compatible", "incompatible", "unverified"] }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "seed", "evidence_ref", "evidence_digest"],
+      "properties": {
+        "method": { "enum": ["explicit", "seeded"] },
+        "seed": { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0, "maximum": 4294967295 }] },
+        "evidence_ref": { "$ref": "#/$defs/id" },
+        "evidence_digest": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/replay-world-pool.mjs",
+  "x-axiom-semantic-rules": ["training and validation are development-visible", "sealed-holdout is acceptance-sealed", "world ids and digests are unique and world ids are strictly ordered", "explicit selection uses null seed and seeded selection uses uint32 seed", "same-cycle development and holdout pools cannot overlap by world digest"],
+  "x-axiom-non-claims": ["holdout-disclosure", "authority-grant", "network-effect", "runtime-activation", "production-promotion"]
+}

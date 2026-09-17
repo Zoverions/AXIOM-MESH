@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/discovery-trace.v0.schema.json",
+  "title": "AXIOM Discovery Trace v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "trace_id", "domain", "task_definition", "root_state", "online_policy", "evaluator", "objective", "environment", "resource_envelope", "started_at", "ended_at", "privacy_class", "nodes", "contains_secret_material", "authority_effect", "network_effect", "runtime_activation", "production_promotion"],
+  "properties": {
+    "schema": { "const": "axiom-discovery-trace.v0" },
+    "status": { "const": "inert-evidence" },
+    "trace_id": { "$ref": "#/$defs/id" },
+    "domain": { "const": "coding" },
+    "task_definition": { "$ref": "#/$defs/refDigest" },
+    "root_state": { "$ref": "#/$defs/rootState" },
+    "online_policy": { "$ref": "#/$defs/onlinePolicy" },
+    "evaluator": { "$ref": "#/$defs/evaluator" },
+    "objective": { "$ref": "#/$defs/objective" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "resource_envelope": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/refDigest" }] },
+    "started_at": { "$ref": "#/$defs/instant" },
+    "ended_at": { "$ref": "#/$defs/instant" },
+    "privacy_class": { "enum": ["public", "owner-private", "restricted"] },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" }, "maxItems": 100000 },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "production_promotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "instant": { "type": "string", "format": "date-time" },
+    "safeNonNegative": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "safePositive": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "refDigest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest"],
+      "properties": { "ref": { "$ref": "#/$defs/id" }, "digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "rootState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "state_ref", "state_digest"],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/id" },
+        "state_ref": { "$ref": "#/$defs/id" },
+        "state_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "onlinePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id", "artifact_digest"],
+      "properties": { "policy_id": { "$ref": "#/$defs/id" }, "artifact_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluator_id", "evaluator_digest"],
+      "properties": { "evaluator_id": { "$ref": "#/$defs/id" }, "evaluator_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objective_id", "objective_digest"],
+      "properties": { "objective_id": { "$ref": "#/$defs/id" }, "objective_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_ref", "runtime_digest"],
+      "properties": { "runtime_ref": { "$ref": "#/$defs/id" }, "runtime_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "scale"],
+      "properties": { "value": { "$ref": "#/$defs/safeNonNegative" }, "scale": { "$ref": "#/$defs/safePositive" } }
+    },
+    "evaluatorResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest", "quality"],
+      "properties": { "ref": { "$ref": "#/$defs/id" }, "digest": { "$ref": "#/$defs/sha256" }, "quality": { "$ref": "#/$defs/quality" } }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation_calls", "evaluation_calls", "token_or_cost_units", "wall_clock_ms", "storage_bytes", "worker_slots", "external_effects"],
+      "properties": {
+        "generation_calls": { "$ref": "#/$defs/safeNonNegative" },
+        "evaluation_calls": { "$ref": "#/$defs/safeNonNegative" },
+        "token_or_cost_units": { "$ref": "#/$defs/safeNonNegative" },
+        "wall_clock_ms": { "$ref": "#/$defs/safeNonNegative" },
+        "storage_bytes": { "$ref": "#/$defs/safeNonNegative" },
+        "worker_slots": { "$ref": "#/$defs/safePositive" },
+        "external_effects": { "const": 0 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_ref", "model_ref", "provider_ref"],
+      "properties": { "runtime_ref": { "$ref": "#/$defs/id" }, "model_ref": { "$ref": "#/$defs/id" }, "provider_ref": { "$ref": "#/$defs/id" } }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "primary_parent_id", "creation_ordinal", "prefix_state_digest", "attempt_digest", "state_snapshot", "candidate_artifact", "evaluator_result", "diagnostics", "resources", "runtime", "tool_capability_ids", "receipt_refs", "started_at", "ended_at", "termination"],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/id" },
+        "primary_parent_id": { "$ref": "#/$defs/id" },
+        "creation_ordinal": { "$ref": "#/$defs/safePositive" },
+        "prefix_state_digest": { "$ref": "#/$defs/sha256" },
+        "attempt_digest": { "$ref": "#/$defs/sha256" },
+        "state_snapshot": { "$ref": "#/$defs/refDigest" },
+        "candidate_artifact": { "$ref": "#/$defs/refDigest" },
+        "evaluator_result": { "$ref": "#/$defs/evaluatorResult" },
+        "diagnostics": { "$ref": "#/$defs/refDigest" },
+        "resources": { "$ref": "#/$defs/resources" },
+        "runtime": { "$ref": "#/$defs/runtime" },
+        "tool_capability_ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "receipt_refs": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "started_at": { "$ref": "#/$defs/instant" },
+        "ended_at": { "$ref": "#/$defs/instant" },
+        "termination": { "enum": ["completed", "failed", "cancelled", "budget-exhausted", "unsupported"] }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/discovery-trace.mjs",
+  "x-axiom-semantic-rules": ["replay-causal parents must reference root or an earlier node", "creation ordinals are contiguous and ordered", "quality value cannot exceed scale", "node chronology is contained by trace chronology"],
+  "x-axiom-non-claims": ["authority-grant", "network-effect", "runtime-activation", "production-promotion", "live-repeatability", "raw-chain-of-thought-requirement"]
+}
