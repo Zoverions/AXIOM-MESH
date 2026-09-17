@@ -179,11 +179,6 @@ function validateOperationCatalog(input) {
       `operation catalog[${index}].confirmation`,
       { min: 1, max: 80 }
     );
-    if (consequence === 'consequential' && confirmation !== 'canonical-required') {
-      throw new ValidationError(
-        `consequential operation ${operationRef} requires canonical confirmation`
-      );
-    }
     if (operations.has(operationRef)) {
       throw new ValidationError(`operation catalog contains duplicate operation ${operationRef}`);
     }
