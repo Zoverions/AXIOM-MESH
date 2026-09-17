@@ -415,7 +415,7 @@
       ]
     },
     "payload": {
-      "oneOf": [
+      "anyOf": [
         {
           "type": "null"
         },
