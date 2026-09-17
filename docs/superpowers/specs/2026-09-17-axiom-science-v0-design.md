@@ -10,19 +10,15 @@
 
 **Purpose:** define the smallest science-domain layer that can support increasingly autonomous research while preserving AXIOM's existing epistemic, authority, consent, provenance, privacy, and effect boundaries.
 
-**External triggers:**
-
-- Guo et al., “Toward autonomous science with agentic artificial intelligence,” *Cell* (2026), DOI `10.1016/j.cell.2026.08.052`;
-- Miao et al., “Reimagining research papers as interactive and reliable AI agents,” *Nature* (2026), DOI `10.1038/s41586-026-11044-y`, already tracked in #1602/#1603;
-- the September 17, 2026 `1kpapers`/Jev workflow report demonstrating low-cost heterogeneous research summarization plus typed semantic classification, captured on #1605.
+**External triggers:** Guo et al., “Toward autonomous science with agentic artificial intelligence,” *Cell* (2026), DOI `10.1016/j.cell.2026.08.052`; Miao et al., “Reimagining research papers as interactive and reliable AI agents,” *Nature* (2026), DOI `10.1038/s41586-026-11044-y`; and the September 17 `1kpapers`/Jev heterogeneous research-classification workflow captured on #1605.
 
 **Builds on:**
 
 - `docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md`;
 - `docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md` from draft PR #1603;
-- `docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md` and the `Knowledge -> Operation -> Authority` separation;
+- `docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md` and `Knowledge -> Operation -> Authority`;
 - the existing `Gateway -> Hypervisor -> Sandbox -> Grid` authority path;
-- machine principals, consent, exact-effect authorization, receipts, causal history, selective disclosure, recovery, and plural-authority/Circle architecture.
+- machine principals, consent, exact-effect authorization, receipts, selective disclosure, recovery, and plural-authority/Circle architecture.
 
 This design creates no second epistemic engine, no second authority engine, no autonomous truth service, no experiment authority, and no new production capability.
 
@@ -33,17 +29,17 @@ This design creates no second epistemic engine, no second authority engine, no a
 Axiom Science is a **thin domain layer** over existing AXIOM primitives.
 
 ```text
-Research Capsule / source provenance
+Research Capsule / exact source provenance
               |
               v
         Epistemic Fabric
- Source / Claim / Evidence / Assessment
- Unknown / Relationship / contradiction
+ sources / claims / evidence
+ assessments / unknowns / relationships as later phases add them
               |
               v
         Axiom Science
- study / experiment proposal / run evidence
- scientific profiles / critique / replication
+ study envelope / experiment proposal
+ science-specific profiles and workflow semantics
               |
               v
     existing AXIOM authority path
@@ -56,238 +52,201 @@ Research Capsule / source provenance
  receipts / evidence / append-only lineage
 ```
 
-The domain adds scientific workflow semantics. It does not redefine canonical evidence or what grants authority.
-
 The governing doctrine is:
 
 > **Scientific autonomy is not scientific authority.**
 
-An agent may be capable of selecting a method, drafting an experiment, interpreting a result, or operating a tool without acquiring permission to perform any consequential effect.
+An agent may be capable of choosing a method, drafting an experiment, interpreting a result, or operating a tool without acquiring permission to perform any consequential effect.
+
+### Alternatives rejected
+
+**Expand Research Capsule v0 into autonomous science:** rejected because #1603 is deliberately a zero-authority provenance/evidence substrate.
+
+**Put science semantics directly into Epistemic Fabric:** rejected because the Fabric must remain domain-neutral.
+
+**Chosen:** a thin science domain consuming Research Capsule, Epistemic Fabric, and ordinary AXIOM authority without replacing any of them.
 
 ---
 
-## 2. Alternatives considered
+## 2. Hard invariants
 
-### 2.1 Expand Research Capsule v0 into autonomous science
-
-Rejected.
-
-Research Capsule v0 is intentionally a zero-authority provenance/evidence substrate. Expanding it into orchestration, experiment execution, scientific adjudication, and collaboration would erase a useful boundary and widen draft PR #1603 beyond its verified scope.
-
-### 2.2 Put science semantics directly into Epistemic Fabric
-
-Rejected.
-
-The Epistemic Fabric must remain domain-neutral. It should represent claims, evidence, assessments, unknowns, contradictions, provenance, and reproducibility closure for many domains. Scientific preregistration, experimental protocols, lab resources, replication semantics, and publication are domain-specific.
-
-### 2.3 Thin Axiom Science domain over Research Capsule + Epistemic Fabric + ordinary authority
-
-Chosen.
-
-This preserves one knowledge substrate and one authority plane while allowing science-specific workflows and policy.
-
----
-
-## 3. Hard invariants
-
-1. **Scientific autonomy is not scientific authority.** Capability, model quality, tool access, or prior success does not grant permission.
-2. **Knowledge is not authority.** Research sources, claims, models, reviews, and scientific consensus do not mint runtime authority.
-3. **Operation is not authority.** A method, notebook, workflow, MCP tool, instrument command, or generated protocol remains inert until separately authorized.
+1. **Scientific autonomy is not scientific authority.** Capability, model quality, tool access, or prior success grants no permission.
+2. **Knowledge is not authority.** Sources, claims, reviews, and consensus do not mint runtime authority.
+3. **Operation is not authority.** A method, notebook, workflow, MCP tool, or instrument command remains inert until separately authorized.
 4. **Provenance is not correctness. Extraction is not endorsement.** Exact source preservation does not certify a source statement.
-5. **Reproduction is not truth.** A successful replay establishes only the exact closure reproduced.
-6. **Execution success is not epistemic validation.** A completed experiment or computation does not automatically establish its interpretation.
-7. **No self-promotion of claims.** A proposer or executor may emit its own assessment, but that assessment remains attributable to the same lineage and cannot masquerade as independent validation or global establishment.
+5. **Reproduction is not truth.** A replay establishes only the exact closure reproduced.
+6. **Execution success is not epistemic validation.** A completed experiment or computation does not establish its interpretation by itself.
+7. **No self-promotion of claims.** A proposer/executor may emit an assessment, but it remains attributable to the same lineage and cannot masquerade as independent validation or global establishment.
 8. **Negative knowledge is first-class.** Failed, falsifying, inconclusive, excluded, superseded, and contradicted work remains attributable and append-only.
-9. **Unknown remains unknown.** Missing independence, provenance, applicability, calibration, or validation state is never inferred as favorable.
-10. **Scientific decisions do not mint effect authority.** Peer review, Circle votes, committee approval, publication, citation count, or institutional status may inform policy but cannot create a capability/grant by themselves.
-11. **Private evidence remains private unless separately disclosed.** Participation in research does not imply blanket data release.
-12. **No second canonical engine.** Science composes the Epistemic Fabric, Research Capsules, and existing Mesh authority/receipt paths.
-13. **No global truth primitive.** Science may expose scoped assessments and derived views, never `global_truth = true` or an equivalent scalar threshold.
-14. **Currentness matters.** Source, code, model, dataset, protocol, environment, instrument calibration, and policy drift can narrow or invalidate prior applicability.
-15. **Typed model output is not truth or permission.** A structured interface can eliminate parsing ambiguity while remaining probabilistic evidence that must be calibrated for its use.
+9. **Unknown remains unknown.** Missing independence, provenance, applicability, calibration, or validation is never inferred as favorable.
+10. **Scientific decisions do not mint effect authority.** Peer review, Circle votes, publication, citation count, or institutional status may inform policy but cannot create a capability/grant.
+11. **Private evidence remains private unless separately disclosed.** Research participation does not imply blanket data release.
+12. **No second canonical engine.** Science composes existing canonicalization, Epistemic Fabric, Research Capsules, and Mesh authority/receipt paths.
+13. **No global truth primitive.** Scoped assessments may exist; `global_truth = true` or scalar-threshold equivalents do not.
+14. **Currentness matters.** Source, code, model, dataset, protocol, environment, instrument calibration, and policy drift may narrow prior applicability.
+15. **Typed model output is not truth or permission.** Typed outputs remove parsing ambiguity; they remain probabilistic judgments whose use must be calibrated.
 
 ---
 
-## 4. Reuse before invention
+## 3. Reuse before invention
 
-Axiom Science must reuse the generic Epistemic Fabric wherever the concept is not genuinely science-specific.
+Current `main` already implements the Epistemic Fabric E0/E1 proposal-only `Source`, `Claim`, and `Evidence` contracts. `Assessment`, `Unknown`, generic `Relationship`, contradiction mutation, and canonical epistemic admission remain later phases. Axiom Science must not pretend those future primitives are implemented.
 
-| Scientific concept | Canonical underlying primitive |
+The target mapping is:
+
+| Scientific concept | AXIOM representation |
 |---|---|
-| research source / paper / dataset | `Source` + Research Source Manifest |
-| source statement / scientific proposition | `Claim` |
-| research question / unresolved problem | `Unknown` plus relationships |
-| hypothesis | `Claim` with a science-domain hypothesis profile |
-| observation / measurement | `Evidence` with a science-domain observation profile |
-| critique / interpretation | `Assessment` + `Relationship` |
-| contradiction | Epistemic contradiction/relationship semantics |
-| semantic classifier output | `Assessment` with a Research Judgment profile |
-| reproduction result | Research Reproduction Evidence + `Evidence` |
-| competing explanation | multiple `Claim` objects and explicit relationships |
-| correction / retraction / supersession | append-only epistemic events/revisions |
+| paper/dataset/source | implemented Epistemic `Source` + Research Source Manifest |
+| scientific proposition | implemented Epistemic `Claim` |
+| hypothesis | implemented `Claim` with `claim_kind: hypothesis` plus science-domain references |
+| observation/result evidence | implemented Epistemic `Evidence` plus exact run/reproduction artifacts |
+| research question | future Epistemic `Unknown` profile; until then referenced as bounded study text/digest, not a competing generic object |
+| critique/interpretation | future Epistemic `Assessment` profile |
+| semantic classifier output | future `Assessment` Research Judgment profile |
+| contradiction | future Epistemic relationship/contradiction semantics |
+| replication assessment | future `Assessment` profile plus multidimensional independence vector |
+| correction/retraction | append-only revision/currentness events; never silent rewrite |
 
-Axiom Science therefore needs only a small set of new domain objects for study/workflow state that the generic fabric should not own.
-
----
-
-## 5. Minimal science-domain objects
-
-### 5.1 Science Study
-
-A bounded study/project envelope.
-
-Conceptual fields include:
-
-- study identifier;
-- purpose and research-question references;
-- scope/population/domain constraints;
-- participating principal references;
-- methodology/profile references;
-- disclosure/publication policy references;
-- preregistration references where applicable;
-- exact Research Capsule/source references;
-- created/revised timestamps;
-- content/provenance digests.
-
-A Science Study is an organizational object. It grants no execution or disclosure authority.
-
-### 5.2 Experiment Proposal
-
-A proposal-plane object describing a potential scientific operation before authority exists.
-
-It must be able to bind:
-
-- study/question/hypothesis references;
-- protocol/method/operation-candidate digests;
-- declared inputs and outputs;
-- data classes;
-- expected evidence or discriminating observation;
-- environment/instrument/resource requirements;
-- network/filesystem/credential requirements;
-- cost/spend requirements;
-- safety constraints;
-- stopping conditions;
-- expected failure classes;
-- analysis plan reference;
-- declared effect classes;
-- proposed execution principal;
-- proposal digest.
-
-An Experiment Proposal contains no embedded grant and no portable authority.
-
-### 5.3 Experiment Run Evidence
-
-A record of what actually occurred after an experiment was separately authorized and executed through the ordinary AXIOM path.
-
-It references, rather than replaces:
-
-- exact authorization/grant receipt;
-- executing principal;
-- operation/protocol digest;
-- source/code/model/data/environment closure;
-- instrument identity/configuration/calibration where applicable;
-- exact input/fixture digests;
-- start/end time;
-- observed outputs and logs/evidence references;
-- failure/termination state;
-- effect receipt references;
-- privacy/disclosure constraints.
-
-The run record must not reinterpret its own output as a scientific conclusion.
-
-### 5.4 Replication Assessment
-
-A science-domain profile over `Assessment` that binds a reproduction/run result to an explicit independence and closure vector.
-
-A replication is never represented as a bare boolean.
+The first Axiom Science implementation therefore adds only science-specific objects that are not already represented by E0/E1.
 
 ---
 
-## 6. Canonical research graph
+## 4. Science Study v0
 
-The scientific workflow is represented as a graph over generic epistemic objects plus the small science-domain envelope.
+A **Science Study** is a zero-authority organizational envelope that binds the scientific work together without becoming a truth or execution object.
+
+Its first contract must bind at least:
+
+```text
+schema
+study_id
+purpose
+question_digest
+scope
+population_or_domain_constraints[]
+participant_principal_refs[]
+methodology_refs[]
+source_manifest_digests[]
+epistemic_object_refs[]
+disclosure_policy_refs[]
+preregistration_refs[]
+created_at
+study_digest
+authority_effect = none
+```
+
+All arrays are bounded. References are inert identifiers/digests. A Study grants no execution, disclosure, publication, spending, or canonical epistemic authority.
+
+---
+
+## 5. Experiment Proposal v0
+
+An **Experiment Proposal** describes a potential scientific operation before authority exists.
+
+Its first contract must bind at least:
+
+```text
+schema
+experiment_proposal_id
+study_digest
+question_digest
+hypothesis_claim_refs[]
+operation_candidate_refs[]
+protocol_refs[]
+declared_inputs[]
+declared_outputs[]
+data_classes[]
+environment_requirements[]
+instrument_requirements[]
+network_requirement
+filesystem_requirement
+credential_requirement
+spend_requirement
+declared_effect_classes[]
+safety_constraint_refs[]
+stopping_conditions[]
+analysis_plan_ref
+proposed_execution_principal
+created_at
+proposal_digest
+execution_authority = none
+authority_effect = none
+```
+
+The proposal may reference a Research Operation Candidate from #1603 but cannot activate it. It contains no portable grant and no hidden approval.
+
+---
+
+## 6. Research graph semantics
+
+Axiom Science is a graph composed from existing/future epistemic objects plus the two science-specific v0 envelopes.
 
 ```text
 ScienceStudy
     |
-    +--> Unknown / Research Question
+    +--> question digest / later Unknown
     |          |
     |          v
-    |        Claim / Hypothesis
+    |       Claim / Hypothesis
     |          |
     |          v
-    |     prior EvidenceSet
+    |    prior Source/Evidence
     |          |
     |          v
     +--> ExperimentProposal
                |
-               +----> authority request / decision
+               +----> separate authority request
                |            |
-               |            +---- denied/expired --> provenance only
+               |            +---- denied/expired -> provenance only
                |
                v
-         authorized execution
+          authorized effect
                |
                v
-       ExperimentRunEvidence
+  ordinary receipts + run/reproduction artifacts
                |
                v
-         Observation/Evidence
+      Epistemic Evidence / Claim
                |
                v
-          Analysis Record
-               |
-               v
-          Claim/Assessment
-          /      |       \
-      critique replication supersession
+ future Assessment / critique / replication
 ```
 
-The graph may contain several competing hypotheses and incompatible assessments at once. Contradiction is preserved instead of being averaged into a synthetic consensus.
+Axiom Science v0 does **not** create a new `ExperimentRunEvidence` canonical object. Computational reproduction already has Research Reproduction Evidence in #1603, and generic observations/results belong in Epistemic `Evidence`. Future physical/institutional execution may justify a separate run profile only after an execution-phase design proves that existing evidence/receipt contracts are insufficient.
 
 ---
 
-## 7. Analysis records and claim-to-evidence lineage
+## 7. Claim-to-evidence lineage
 
-A scientific claim should be traversable to the evidence and derivations that support or challenge it.
+A scientific conclusion must remain traversable to the evidence and derivations offered for or against it.
 
-A bounded Analysis Record binds:
-
-- input evidence digests;
-- code/model/method/verifier profile;
-- environment/dependency closure;
-- parameters and decision thresholds;
-- statistical, formal, or causal assumptions;
-- result artifacts;
-- analyst/agent provenance;
-- limitations and scope;
-- output claim/evidence references.
-
-Conceptually:
+The target lineage is:
 
 ```text
 Claim
-  -> Assessment(s)
-  -> Analysis Record(s)
-  -> Observation/Evidence
-  -> Experiment Run Evidence
+  -> future Assessment(s)
+  -> analysis artifact/source references
+  -> Epistemic Evidence
+  -> reproduction/run artifact
   -> exact protocol / code / data / model / environment
   -> authority/effect receipts where execution occurred
 ```
 
-This does not require that every scientific claim become machine-proven. It requires that the system distinguish unsupported prose, source statements, model inference, measured observation, analyzed evidence, and independent critique.
+Analysis is represented through source/evidence artifacts and methodology references unless a later design demonstrates a genuinely missing domain primitive. Axiom Science v0 must not create an `Analysis Record` merely to duplicate existing Source/Evidence semantics.
+
+The system distinguishes unsupported prose, source statements, model inference, measured observation, analyzed evidence, and independent critique without requiring that every claim become machine-proven.
 
 ---
 
-## 8. Scientific state is assessment, not a global lifecycle flag
+## 8. Scientific state is scoped assessment, not a truth lifecycle
 
-Axiom Science must not introduce a universal lifecycle such as:
+Axiom Science must never introduce:
 
 ```text
 hypothesis -> proven -> true
 ```
 
-A named evaluator, methodology, Circle, institution, or policy profile may instead produce scoped assessments such as:
+When the Epistemic Fabric later implements `Assessment`, science profiles may express evaluator-relative dispositions such as:
 
 - `supports_within_scope`;
 - `weakens_within_scope`;
@@ -298,500 +257,302 @@ A named evaluator, methodology, Circle, institution, or policy profile may inste
 - `methodologically_invalid`;
 - `insufficient_evidence`.
 
-Each assessment is bound to:
-
-- evaluator/principal;
-- evidence set;
-- methodology/profile;
-- claim scope;
-- time/currentness;
-- limitations;
-- provenance.
-
-Different legitimate assessments may coexist.
-
-An application may derive a view such as “currently supported under profile X,” but that view is not written back as global truth.
+Each assessment binds evaluator, evidence set, methodology/profile, claim scope, currentness, limitations, and provenance. Different legitimate assessments may coexist. A user-facing view may derive “currently supported under profile X”; that derived view never becomes global truth.
 
 ---
 
 ## 9. Heterogeneous model pipeline
 
-Axiom Science should assume that different computational stages may be best served by different models, algorithms, or deterministic tools.
+Axiom Science should assume different stages are best served by different models, algorithms, or deterministic tools.
 
-The September 17 `1kpapers`/Jev report is useful evidence for this architecture: one model generated research summaries and a specialized System One model performed typed topic classification. The reported cost/latency numbers are external benchmark evidence, not AXIOM invariants and not a guarantee for another corpus.
+The `1kpapers`/Jev workflow is useful evidence for this architecture: one model summarized papers and a specialized System One model performed typed topic classification. The reported cost/latency is external benchmark evidence, not an AXIOM invariant or quality guarantee.
 
-The architectural pattern is:
+Target pattern:
 
 ```text
 exact source bytes / source manifest
         |
         v
- deterministic extraction where possible
+deterministic extraction where possible
         |
         v
- source-bounded summary / knowledge projection
+source-bounded summary / knowledge projection
         |
         v
- fast typed semantic judgments
+fast typed semantic judgments
         |
         +--> confident + low consequence -> code consumes result
         |
         +--> uncertain / high consequence -> deeper evaluator / human review
         |
         v
- selective reasoning / critique / synthesis
+selective reasoning / critique / synthesis
         |
         v
- deterministic verification where available
+deterministic verification where available
         |
         v
- Epistemic Fabric + Science-domain graph
+Epistemic Fabric + Science graph
 ```
 
-The durable object is the result and provenance, not the provider brand.
-
-Model routing may consider cost, latency, quality, privacy, context length, specialization, calibration, and current availability, but routing itself grants no effect authority.
+Routing may consider cost, latency, quality, privacy, context length, specialization, calibration, and current availability. Routing grants no effect authority.
 
 ---
 
-## 10. Research Judgment profile
+## 10. Research Judgment future profile
 
-Typed semantic decisions from Jev/System One or comparable future systems should be represented as a profile over Epistemic `Assessment`, not as a new truth object.
+Jev/System One or comparable typed semantic outputs belong in a **future profile over Epistemic `Assessment`**, not a new v0 truth object. Because `Assessment` is not yet implemented on current `main`, Axiom Science S0 must not add a competing canonical Research Judgment schema.
 
-A Research Judgment must be able to bind:
+The future profile must bind at least:
 
 ```text
 input/source digest
 question/taxonomy/profile digest
-provider/model/version or exact evaluator identity
+provider/model/version or evaluator identity
 typed answer/distribution
 confidence/calibration metadata
 created_at
-currentness/expiry where applicable
+currentness/expiry
 evaluation profile/reference
 downstream-use class
 judgment digest
 ```
 
-Initial downstream-use classes:
+Downstream-use classes should include:
 
-- `discovery_only`;
-- `routing_only`;
-- `ranking_only`;
-- `epistemic_proposal`;
-- `requires_review`.
+```text
+discovery_only
+routing_only
+ranking_only
+epistemic_proposal
+requires_review
+```
 
-No downstream-use class carries runtime authority.
+No class carries runtime authority.
 
-Suitable uses include:
+Appropriate uses include topic/domain classification, method/evidence-shape classification, relevance/reranking, source/specialist routing, resource-only vs operation-bearing routing, candidate contradiction/replication prioritization, and uncertainty detection.
 
-- topic/domain classification;
-- method/evidence-shape classification;
-- relevance screening and reranking;
-- source and specialist routing;
-- likely resource-only vs operation-bearing research routing;
-- candidate contradiction/replication prioritization;
-- uncertainty detection;
-- deciding which expensive evaluator should inspect a case next.
+Inappropriate final roles include scientific truth, evidence independence, consent, execution authority, consequential effect classification where deterministic evidence exists, independent-replication declaration, or publication as established fact.
 
-Unsuitable final decision roles include:
+### Cascade rule
 
-- scientific truth;
-- evidence independence;
-- consent/authority;
-- experiment execution permission;
-- repository/deployment authority;
-- consequential effect classification where deterministic effect evidence exists;
-- declaring a claim independently replicated;
-- publication as an established result.
+Low-confidence or high-consequence semantic judgments escalate to a stronger evaluator or human/scientific review. Thresholds are application-specific and must be evaluated on target-domain outcomes; vendor/demo thresholds are not universal policy.
 
-### 10.1 Cascade rule
+### Reuse rule
 
-Semantic uncertainty must be explicit.
-
-Low-confidence or high-consequence judgments escalate to a stronger evaluator or human/scientific review instead of silently increasing model effort everywhere or treating uncertainty as permission.
-
-Thresholds are application/profile specific and must be evaluated against target-domain outcomes. Demo thresholds and vendor benchmark results are not universal policy.
-
-### 10.2 Reuse rule
-
-When the exact input digest, question/profile digest, evaluator/model version, and relevant currentness conditions are unchanged, a prior semantic judgment may be reused according to its retention/expiry policy. Reuse must remain visible in provenance.
+A judgment may be reused only when its exact input digest, question/profile digest, evaluator/model version, and relevant currentness conditions remain applicable. Reuse remains visible in provenance.
 
 ---
 
 ## 11. Reproducibility closure
 
-A replication or reproduction claim may not exceed what was actually replayed.
+A reproduction claim may not exceed the closure actually replayed.
 
-A reproducibility closure should be able to bind, as applicable:
+Future reproduction/replication evidence must expose, as applicable:
 
 - exact claim/target digest;
 - source/paper version;
 - code revision;
 - data/sample digest;
-- model/checkpoint digest or exact provider/model version;
-- prompt/configuration/profile digest where relevant;
-- dependency closure / lockfile / SBOM digest;
-- execution environment/container/runtime digest;
+- model/checkpoint or exact provider/model version;
+- prompt/configuration/profile digest;
+- dependency/lockfile/SBOM closure;
+- execution environment/container/runtime;
 - instrument identity and calibration state;
 - protocol version;
 - analysis harness/version;
-- random seed or stochastic policy;
+- stochastic policy/seed where meaningful;
 - dependencies freshly rebuilt versus reused;
 - independent replay identity;
-- output comparison/tolerance method;
+- comparison/tolerance method;
 - result and limitations.
 
-A cached dependency, shared model checkpoint, common analysis script, or reused dataset is not hidden merely because the run succeeded.
+Cached dependencies, common datasets, shared model checkpoints, or shared harnesses remain visible rather than disappearing behind a successful result.
 
 ---
 
 ## 12. Replication independence is multidimensional
 
-Independent replication cannot be self-declared with a boolean.
+A future Replication Assessment must not reduce independence to a boolean or scalar.
 
-At minimum, a Replication Assessment should expose whether the new work shares or differs in:
+It must expose whether the work is `same`, `different`, or `unknown` for at least:
 
 - source data;
 - study population/sample;
 - code/implementation;
 - model/checkpoint;
 - dependency/environment;
-- experimental protocol;
+- protocol;
 - instrument/lab;
 - operator/research team;
 - analysis harness;
 - source/evidence lineage;
-- funding/sponsor where relevant to the methodology.
+- funding/sponsor where methodology makes it relevant.
 
-Each dimension is initially:
+Unknown independence remains unknown. Any scalar summary is derived view state only and cannot replace the vector.
 
-```text
-same | different | unknown
-```
-
-A later domain profile may define richer semantics, but unknown independence must never be silently counted as independent confirmation.
-
-A scalar independence score may be computed for a specific application, but it is derived view state only and cannot replace the vector.
+This profile waits for the Epistemic Fabric `Assessment` phase rather than creating a parallel v0 assessment object.
 
 ---
 
-## 13. Negative knowledge and failure provenance
+## 13. Negative knowledge and long-running research
 
-Failed research is evidence about what was attempted.
-
-Axiom Science preserves at least:
-
-- successful result;
-- empirical falsification;
-- formal counterexample/refutation;
-- inconclusive result;
-- null result;
-- excluded run;
-- tool/instrument failure;
-- dependency/environment failure;
-- resource exhaustion;
-- protocol deviation;
-- scope mismatch;
-- analysis failure;
-- safety/policy denial;
-- duplicate route;
-- abandoned route with reason.
+Axiom Science preserves successful, falsifying, inconclusive, null, excluded, failed-tool, failed-environment, resource-exhausted, protocol-deviating, scope-mismatched, safety-denied, duplicate, and abandoned routes with their exact reasons.
 
 A failure is not automatically a falsification.
 
-Historical negative routes remain attributable so another agent can avoid waste or deliberately retry when assumptions, methods, evidence, or tools change.
+Long-running agents should reuse the Epistemic Fabric continuation-packet architecture. A science continuation packet may carry unresolved targets, graph/snapshot references, attempted routes, counterexamples, open evidence obligations, experiment proposals, resource expenditure, remaining search budget, and provenance.
+
+Continuation packets carry **knowledge/proposals only**. They never transfer credentials, consent, spending, experiment, network, repository, instrument, or publication authority.
 
 ---
 
-## 14. Continuation and long-running autonomous research
+## 14. Science Circles
 
-The Epistemic Fabric's continuation-packet direction is the correct substrate for long-running autonomous research.
+Research groups are a natural future Circle profile: human researchers, research agents, critique agents, analysts, data custodians, lab/instrument service principals, external replicators, and auditors may coordinate shared study state while retaining independently owned node state.
 
-A science continuation packet may reference:
-
-- unresolved question/hypothesis;
-- exact graph/snapshot;
-- evidence-state vectors;
-- attempted and failed routes;
-- current experiment proposals;
-- open evidence obligations;
-- contradictions/discriminating observations;
-- promising unexplored routes;
-- exact agent/model/run provenance;
-- resource expenditure;
-- remaining declared search budget;
-- disclosure constraints.
-
-Importing a continuation packet imports knowledge/proposals only.
-
-It does not transfer:
-
-- experiment authority;
-- credentials;
-- consent;
-- spending authority;
-- instrument authority;
-- network authority;
-- repository authority;
-- publication authority.
+Circle proposals, votes, reviews, or publication decisions remain governance/evidence state. They do not mint Sandbox/Grid authority. Explicit shared projections cross the Circle boundary; private state remains private unless separately disclosed.
 
 ---
 
-## 15. Science Circles
+## 15. Privacy, human subjects, and publication
 
-Research collaboration is a natural future Circle profile.
+Autonomous science must not become a reason to centralize raw participant data.
 
-A Science Circle may coordinate:
+Sensitive research state remains under its sovereign/domain boundary. Purpose and disclosure are separately authorized. Derived evidence does not imply permission to reveal raw inputs. Aggregate research should use the privacy-preserving collective-intelligence substrate where applicable, and audit evidence must not become a secondary identity-correlation database.
 
-- human researchers;
-- research agents;
-- review/critique agents;
-- lab/instrument service principals;
-- statisticians/analysts;
-- data custodians;
-- external replicators;
-- auditors.
+This design does not claim legal/ethics-board compliance, clinical-trial authority, biosafety approval, or human-subject authorization. Future institutional adapters may represent such approvals but cannot fabricate them.
 
-The Circle can maintain shared study state, proposals, roles, objections, tasks, and explicitly shared evidence projections while participants retain independently owned node state.
-
-A Circle decision remains evidence/governance state. It does not itself mint Sandbox/Grid authority.
-
-A member should be able to determine why the Circle believes it may request a task, which evidence is shared, which state remains private, and how to object/withdraw under the applicable charter and law/policy.
+Publication is an external effect and provenance event, not a truth transition. Future publication must separately bind exact artifact/version, submitting principal, destination, disclosure policy, authorship assertions, applicable approval/consent, authority, and receipt. Peer review, acceptance, correction, concern, retraction, and supersession remain append-only provenance/currentness events or assessments.
 
 ---
 
-## 16. Private data, human subjects, and selective disclosure
-
-Axiom Science must not make “autonomous science” a pretext for centralizing raw participant data.
-
-Where research uses sensitive or private state:
-
-- data remains under the applicable sovereign/domain boundary;
-- purpose and disclosure remain separately authorized;
-- derived evidence does not imply permission to reveal raw inputs;
-- collective/statistical research should prefer the shared privacy-preserving collective-intelligence substrate where applicable;
-- audit evidence must not become a secondary identity-correlation database.
-
-This design does not claim legal/ethics-board compliance, clinical-trial authority, biosafety approval, or human-subjects authorization. Those are separate institutional and jurisdictional requirements that future adapters may represent but cannot fabricate.
-
----
-
-## 17. Publication and scientific communication
-
-Publication is an external effect and a provenance event, not a truth transition.
-
-A future publication action must separately bind:
-
-- exact artifact/version;
-- submitting principal;
-- destination/journal/repository;
-- disclosure policy;
-- authorship/contributor assertions;
-- applicable approval/consent;
-- publication authority;
-- receipt.
-
-Peer review, acceptance, correction, expression of concern, retraction, and supersession become append-only source/currentness events and assessments.
-
-Publication status may affect discovery/reputation views. It must not become runtime authority or automatic correctness.
-
----
-
-## 18. Error and fail-closed semantics
+## 16. Fail-closed semantics
 
 | Condition | Required result |
 |---|---|
 | invalid science-domain schema | reject |
-| missing required provenance | stage/deny canonical admission |
+| missing provenance | stage/deny admission |
 | missing authority for consequential experiment | deny execution |
-| semantic classifier uncertainty | retain probability/uncertainty; escalate per profile |
-| typed model result conflicts with deterministic evidence | deterministic evidence/policy governs the applicable deterministic property; preserve conflict |
-| stale source/code/model/environment | prior evidence remains historical; current applicability narrows |
-| unknown replication independence | `unknown`; never assume independent |
-| successful run with failed analysis | preserve run evidence; no scientific claim promotion |
+| semantic uncertainty | retain probability/uncertainty; escalate per profile |
+| typed judgment conflicts with deterministic evidence | deterministic property follows deterministic evidence/policy; preserve conflict |
+| stale source/code/model/environment | historical evidence remains; current applicability narrows |
+| unknown replication independence | remain `unknown` |
+| successful run with failed analysis | preserve run evidence; no claim promotion |
 | failed run due to tooling | record tool failure; do not call hypothesis falsified |
-| private evidence lacks disclosure authority | keep private / deny disclosure |
-| Circle/committee approval without runtime grant | no execution authority |
-| experiment proposal contains undeclared effects | deny admission/execution until corrected and separately authorized |
-| agent attempts to rewrite historical negative result | deny mutation; append supersession/correction only |
+| private evidence lacks disclosure authority | deny disclosure |
+| Circle/committee approval lacks runtime grant | no execution authority |
+| proposal contains undeclared effects | deny until corrected and separately authorized |
+| historical negative result is rewritten | deny mutation; append correction/supersession only |
 
 ---
 
-## 19. Threat model additions
+## 17. Threat classes
 
-Future Axiom Science work must explicitly test at least:
+Future Axiom Science work must test at least:
 
 - source/paper prompt injection;
-- provenance laundering;
-- publication-prestige laundering;
+- provenance or publication-prestige laundering;
 - model-confidence laundering;
 - reproduction-to-truth laundering;
 - execution-success-to-truth laundering;
 - semantic-classifier-to-authority laundering;
 - correlated-agent agreement masquerading as independence;
-- shared dataset/code/model masquerading as independent replication;
+- shared data/code/model masquerading as independent replication;
 - selective reporting / failed-run deletion;
-- p-hacking or analysis-profile switching without provenance;
 - post-outcome preregistration mutation;
-- stale model/checkpoint/environment reuse;
-- instrument calibration/currentness drift;
+- analysis-profile switching without provenance;
+- stale model/environment/instrument state;
 - private-data exfiltration through research outputs;
 - tool metadata lying about effects;
-- research-resource exhaustion;
-- continuation packet authority smuggling;
-- Circle governance attempting to bypass local non-waivable protections;
-- publication action without disclosure/authority.
+- resource exhaustion;
+- continuation-packet authority smuggling;
+- Circle governance bypassing local non-waivable protections;
+- publication without disclosure/authority.
 
-The design records these threat classes only. It does not authorize dangerous experimental execution or operational red-team activity.
+Recording these threat classes authorizes no dangerous experimental execution or operational red-team activity.
 
 ---
 
-## 20. Resource and cost controls
+## 18. Resource and cost controls
 
-Autonomous research loops can consume unbounded inference, retrieval, compute, laboratory, and human-review resources.
+Future executable research must carry finite budgets for applicable dimensions: inference spend, tokens/context, retrieval/fetch count, storage, CPU/GPU time, wall time, attempts, instrument time, external APIs, network destinations, and human-review requests.
 
-Every future executable research plan must therefore support bounded budgets for the dimensions it can consume, including where applicable:
-
-- model/inference spend;
-- tokens/context;
-- retrieval/fetch count;
-- storage;
-- CPU/GPU time;
-- wall-clock duration;
-- experiment attempts;
-- instrument time;
-- external API calls;
-- network destinations;
-- human-review requests.
-
-Unknown budget dimensions fail closed for consequential execution rather than becoming unlimited.
+Unknown consequential resource dimensions fail closed rather than becoming unlimited.
 
 Fast semantic models may reduce routine cost. Cost optimization never reduces evidence, privacy, safety, or authority requirements.
 
 ---
 
-## 21. v0 implementation boundary
+## 19. Exact S0 implementation boundary
 
-The first implementation slice must remain **zero-authority and execution-free**.
+The first implementation slice is **zero-authority, network-free, provider-free, and execution-free**.
 
-It may add only inert documentation/contracts/fixtures/verifiers for the smallest new science-domain surface, likely:
+It may add only:
 
-- `Science Study v0`;
-- `Experiment Proposal v0`;
-- `Experiment Run Evidence v0` as an inert evidence contract without a live executor;
-- `Replication Assessment v0` / Research Judgment science profiles where the generic Epistemic contracts cannot represent required metadata cleanly;
-- synthetic research-graph fixtures;
-- authority/epistemic-boundary falsification tests;
-- canonical documentation/index/checker registration.
+1. `Science Study v0` inert JSON Schema;
+2. `Experiment Proposal v0` inert JSON Schema;
+3. one zero-dependency semantic verifier for those two contracts using the repository's existing canonicalization/validation discipline;
+4. synthetic fixtures composing the new contracts with the already-implemented Epistemic `Source`/`Claim`/`Evidence` contracts and, when #1603 is an accepted base dependency, its Research Capsule contracts;
+5. focused tests proving authority neutrality, boundedness, exact digest/currentness behavior, and no second canonical engine;
+6. canonical documentation/index/checker registration.
 
-Before implementation, the plan must inspect the exact current Epistemic Fabric contracts and reuse them instead of duplicating `Claim`, `Evidence`, `Assessment`, `Unknown`, or generic `Relationship` semantics.
+S0 must **not** add `Assessment`, `Unknown`, `Relationship`, Research Judgment, Replication Assessment, a new generic run-evidence type, or another Claim/Evidence contract. Those wait for their corresponding Epistemic Fabric phases or a fresh design proving a missing primitive.
 
-The first slice must **not** add:
-
-- autonomous paper fetching;
-- live web/research ingestion;
-- remote MCP/tool connection;
-- provider credential access;
-- package installation;
-- subprocess/container execution;
-- model/provider routing in production;
-- physical instrument control;
-- wet-lab/chemical/biological execution;
-- clinical/human-subject execution;
-- external spending/procurement;
-- publication/submission;
-- new Gateway routes;
-- `mesh/config/capabilities.json` changes;
-- production network widening;
-- autonomous truth adjudication;
-- production promotion.
+S0 must not add autonomous fetching, live ingestion, remote MCP/tool connections, provider credentials, package installation, subprocess/container execution, production model routing, physical/wet-lab/clinical execution, spending/procurement, publication, Gateway routes, capability-registry changes, network widening, autonomous truth adjudication, or production promotion.
 
 ---
 
-## 22. Acceptance requirements for the first implementation proposal
+## 20. S0 acceptance requirements
 
-At minimum, future executable work must prove:
+A future implementation proposal must prove at minimum:
 
-1. Science-domain objects cannot mint capabilities, consent, grants, or execution authority.
-2. Research Capsule and Epistemic Fabric objects are reused rather than copied into a second canonical graph.
-3. A source statement can remain exactly preserved while a later assessment marks it unsupported/incorrect/contested.
-4. A successful experiment run cannot automatically promote a hypothesis or claim.
-5. A failed tool/environment run cannot masquerade as empirical falsification.
-6. Historical failed/inconclusive results cannot be silently deleted.
-7. A semantic judgment carries exact evaluator/question/input provenance and uncertainty.
-8. Semantic confidence cannot grant authority or establish truth.
-9. Unknown replication independence remains unknown.
-10. Shared code/data/model lineage cannot masquerade as independent replication.
-11. Reproducibility claims cannot exceed the exact closure replayed.
-12. Stale source/code/model/environment evidence remains historical rather than current by default.
-13. A Circle/committee decision cannot bypass ordinary AXIOM execution authority.
-14. Continuation packets cannot transfer credentials, grants, consent, spending, experiment, network, repository, or publication authority.
-15. Private evidence cannot become public merely because it supports a scientific claim.
-16. No first-slice module performs provider I/O, network I/O, subprocess execution, live filesystem mutation beyond tests, or Grid/capability mutation.
-17. Clean-kernel, supported-platform, documentation, and security-boundary verification remain intact.
+1. Science Study and Experiment Proposal cannot mint capabilities, consent, grants, or execution authority.
+2. Current Epistemic `Source`/`Claim`/`Evidence` contracts are reused rather than duplicated.
+3. Research Capsule objects are referenced rather than copied into a second canonical graph.
+4. `Claim claim_kind: hypothesis` is reused rather than inventing a Hypothesis schema.
+5. Missing future `Assessment`/`Unknown` functionality is not simulated by misleading substitute truth objects.
+6. An Experiment Proposal remains valid provenance after denial/expiry but cannot execute.
+7. Undeclared/unknown consequential requirements fail validation or remain explicitly unknown; they never imply permission.
+8. Exact study/proposal inputs and references are digest-bound and bounded.
+9. No semantic-confidence field can grant authority or establish truth.
+10. No first-slice module performs provider I/O, network I/O, subprocess execution, production filesystem mutation, Grid mutation, or capability mutation.
+11. Clean-kernel, documentation, supported-platform, and security-boundary verification remain intact.
 
 ---
 
-## 23. Migration path
+## 21. Migration path
 
-Axiom Science should progress through independent gates rather than one autonomy switch.
+Axiom Science advances through independent gates:
 
-### S0 — domain contracts
+**S0 — domain contracts:** Science Study + Experiment Proposal only; inert fixtures/verifier/tests.
 
-Inert study/proposal/run-evidence/replication/judgment profiles and synthetic fixtures only.
+**S1 — local research graph:** owner-local composition over Research Capsules and Epistemic proposals; no external effects.
 
-### S1 — local research graph
+**S2 — bounded semantic pipeline:** provider-backed summarization/classification/routing only after provider authority, exact provenance, budgets, evaluation/calibration, and the generic Assessment substrate exist or a fresh compatible profile is approved. Outputs remain epistemic proposals/assessments.
 
-Owner-local proposal/evidence graph composed from Research Capsules and Epistemic objects. No external effects.
+**S3 — computational reproduction sandbox:** separately authorized disposable execution of specifically admitted low-consequence computational operations; exact effect/environment receipts; no physical lab authority.
 
-### S2 — bounded semantic pipeline
+**S4 — Science Circle pilot:** low-consequence multi-principal collaboration over shared projections, critique, replication, objections, and export.
 
-Optional provider-backed summarization/classification/routing under existing provider authority, exact provenance, budgets, privacy rules, and evaluation gates. Outputs remain epistemic proposals/assessments.
+**S5 — controlled continuous ingestion:** bounded feeds create source manifests, knowledge projections, semantic proposals, and reassessment proposals; continuous ingestion still stops before effects.
 
-### S3 — computational reproduction sandbox
+**S6 — autonomous research planning:** agents maintain continuation/frontier state and propose experiments under explicit budgets; planning autonomy remains distinct from execution authority.
 
-Separately authorized disposable execution for specifically admitted low-consequence computational research operations. Exact environment/effect receipts required. No physical lab authority.
-
-### S4 — multi-principal Science Circle pilot
-
-Low-consequence collaboration over explicit shared projections, critique, replication, objections, and export.
-
-### S5 — controlled continuous ingestion
-
-Bounded feeds can create source manifests, knowledge projections, semantic judgments, and reassessment proposals. Continuous ingestion still stops before external effects.
-
-### S6 — autonomous research planning
-
-Agents may maintain frontier/continuation state and propose experiments under explicit resource budgets. Proposal autonomy remains distinct from execution authority.
-
-### S7 — separately governed physical/institutional adapters
-
-Only after independent designs, threat models, legal/institutional review, and authority gates. No approval is inherited from S0-S6.
+**S7 — physical/institutional adapters:** only after independent designs, threat models, legal/institutional review, and fresh authority gates. No approval is inherited from S0-S6.
 
 ---
 
-## 24. Claim boundary
+## 22. Claim boundary
 
 Approval of this design means only that Axiom Science should be developed as a thin, provenance-preserving, authority-neutral scientific domain over the existing Mesh architecture.
 
-It does **not** establish that AXIOM currently provides:
-
-- autonomous scientific discovery;
-- scientific truth determination;
-- continuous research ingestion;
-- production semantic-model routing;
-- laboratory automation;
-- clinical or human-subject research authorization;
-- remote research-agent execution;
-- publication authority;
-- independently validated scientific replication;
-- production Axiom Science capabilities.
+It does **not** establish autonomous scientific discovery, scientific truth determination, continuous ingestion, production semantic-model routing, laboratory automation, clinical/human-subject authorization, remote research-agent execution, publication authority, independently validated replication, or production Axiom Science capabilities.
 
 The intended direction is:
 
-> **Let research agents become increasingly autonomous in discovery, planning, analysis, and collaboration while making the evidence, provenance, uncertainty, resource use, and authority boundaries more explicit—not less.**
+> **Let research agents become increasingly autonomous in discovery, planning, analysis, and collaboration while making evidence, provenance, uncertainty, resource use, and authority boundaries more explicit—not less.**
 
-And the durable system rule is:
+The durable efficiency rule is:
 
 > **Fast semantic judgment may reduce reasoning cost. It may not reduce the evidence, privacy, safety, or authority burden.**
