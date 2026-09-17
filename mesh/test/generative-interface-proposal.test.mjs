@@ -251,3 +251,53 @@ test('unknown proposal fields malformed timestamps and tampered action payloads 
   tampered.action_requests[0].arguments.artifact_id = 'artifact:other';
   assert.throws(() => validateGenerativeInterfaceProposal(tampered, validationContext()), /action requests digest/i);
 });
+
+test('duplicate component registry types fail closed', () => {
+  const input = proposalInput();
+  input.componentRegistry = [...componentRegistry(), { type: 'heading' }];
+  assert.throws(
+    () => createGenerativeInterfaceProposal(input),
+    /component registry contains duplicate type heading/i
+  );
+});
+
+test('duplicate component ids fail closed', () => {
+  const input = proposalInput();
+  input.components = [
+    ...input.components,
+    {
+      component_id: 'component:title',
+      type: 'text',
+      props: { text: 'duplicate id' },
+      action_request_id: null
+    }
+  ];
+  assert.throws(
+    () => createGenerativeInterfaceProposal(input),
+    /duplicate component component:title/i
+  );
+});
+
+test('duplicate action request ids fail closed even with different arguments', () => {
+  const input = proposalInput();
+  input.actionRequests = [
+    ...input.actionRequests,
+    {
+      request_id: 'request:edit',
+      operation_ref: 'verify.receipt.inspect',
+      arguments: { receipt_id: 'receipt:other' },
+      consequence: 'read-only',
+      confirmation: 'not-required'
+    }
+  ];
+  input.components.push({
+    component_id: 'component:inspect',
+    type: 'action',
+    props: { label: 'Inspect' },
+    action_request_id: 'request:edit'
+  });
+  assert.throws(
+    () => createGenerativeInterfaceProposal(input),
+    /duplicate action request request:edit/i
+  );
+});
