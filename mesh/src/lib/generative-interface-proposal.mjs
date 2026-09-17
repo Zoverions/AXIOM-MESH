@@ -19,7 +19,7 @@ const RESERVED_AUTHORITY_FIELDS = new Set([
   'grant',
   'credential',
   'token',
-  'capability_proof'
+  'capabilityproof'
 ]);
 
 const PROPOSAL_FIELDS = Object.freeze([
@@ -192,6 +192,10 @@ function validateOperationCatalog(input) {
   return operations;
 }
 
+function normalizeAuthorityFieldName(key) {
+  return key.normalize('NFKC').replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+}
+
 function assertNoAuthorityFields(value, path = 'generated action arguments') {
   if (Array.isArray(value)) {
     for (const [index, item] of value.entries()) {
@@ -202,7 +206,7 @@ function assertNoAuthorityFields(value, path = 'generated action arguments') {
   if (value === null || typeof value !== 'object') return;
   const object = assertPlainObject(value, path);
   for (const [key, child] of Object.entries(object)) {
-    if (RESERVED_AUTHORITY_FIELDS.has(key.toLowerCase())) {
+    if (RESERVED_AUTHORITY_FIELDS.has(normalizeAuthorityFieldName(key))) {
       throw new ValidationError(
         `reserved authority field ${key} is not allowed in generated action arguments`
       );
