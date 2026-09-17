@@ -84,3 +84,20 @@ jobs:
         run: cargo clippy --manifest-path labs/rust-trust-core/Cargo.toml --all-targets -- -D warnings
       - name: Verify trust-core laboratory tests
         run: cargo test --manifest-path labs/rust-trust-core/Cargo.toml --locked
+      - name: Checkout pinned Bend 2 checker source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: bendlang/bend
+          ref: 8008146ab90abb98b496fa2a6ffe555da7fb0dd5
+          path: .tools/bend
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up pinned Bun runtime for Bend laboratory
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2 source pin
+        with:
+          bun-version: "1.4.2"
+      - name: Verify Bend authority-v0 laws
+        run: |
+          test "$(git -C .tools/bend rev-parse HEAD)" = "8008146ab90abb98b496fa2a6ffe555da7fb0dd5"
+          test "$(bun --version)" = "1.4.2"
+          bun run .tools/bend/bend2/main.ts labs/rust-trust-core/formal/bend/PROOF.bend
