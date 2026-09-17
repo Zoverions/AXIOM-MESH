@@ -43,17 +43,11 @@ test('macOS Apple Silicon and Intel lanes are pinned inside the release-governed
   );
   assert.doesNotMatch(workflow, /runs-on:\s*(?:windows|macos)-latest/);
 
-  for (const triggerPath of [
-    '- "mesh/**"',
-    '- "docs/**"',
-    '- "AGENT-ENTRY.md"',
-    '- "agent-readiness/**"',
-    '- ".github/ISSUE_TEMPLATE/**"',
-    '- ".github/workflows/**"'
-  ]) {
-    const count = workflow.split(triggerPath).length - 1;
-    assert.equal(count, 2, `push and pull_request must both cover ${triggerPath}`);
-  }
+  assert.doesNotMatch(
+    workflow,
+    /^\s+paths(?:-ignore)?:/m,
+    'push and pull_request must cover every change'
+  );
 
   assert.match(releaseSource, /windows_compatibility:\s*verifyWindowsWorkflow\(windowsWorkflow\)/);
   assert.match(releaseSource, /paths\.windowsWorkflow/);

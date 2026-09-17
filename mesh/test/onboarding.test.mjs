@@ -130,6 +130,47 @@ test('doctor verifies setup and every configured service port without provisioni
   assert.match(formatDoctorResult(result), /sandbox: 127\.0\.0\.1:4012 blocked \(EADDRINUSE\)/);
 });
 
+test('doctor reports the Git toolchain the credential-history audit requires', async () => {
+  const outdated = await runDoctor({
+    config: CONFIG,
+    verifySetup: async () => ({
+      valid: true,
+      runtime: { node: '24.18.0', npm: '11.9.0' },
+      dependency_packages: 0
+    }),
+    checkGridLock: async () => ({ ready: true, state: 'absent' }),
+    checkPort: async () => ({ available: true, code: null }),
+    detectGit: () => ({
+      available: true,
+      version: '2.20.0',
+      supported: false,
+      minimum_version: '2.34.0'
+    })
+  });
+
+  assert.equal(outdated.version_control.supported, false);
+  assert.match(formatDoctorResult(outdated), /Git: 2\.20\.0 is below the required 2\.34\.0/);
+
+  const absent = await runDoctor({
+    config: CONFIG,
+    verifySetup: async () => ({
+      valid: true,
+      runtime: { node: '24.18.0', npm: '11.9.0' },
+      dependency_packages: 0
+    }),
+    checkGridLock: async () => ({ ready: true, state: 'absent' }),
+    checkPort: async () => ({ available: true, code: null }),
+    detectGit: () => ({
+      available: false,
+      version: null,
+      supported: false,
+      minimum_version: '2.34.0'
+    })
+  });
+
+  assert.match(formatDoctorResult(absent), /Git: not found/);
+});
+
 test('doctor gives exact remediation for unsupported Node and npm versions', () => {
   assert.match(
     doctorFailureMessage(new Error('Node.js 22.16.0 is outside 24.14.0 <= version < 25.0.0')),
