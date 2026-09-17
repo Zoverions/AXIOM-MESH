@@ -12,7 +12,8 @@ function providerProfile({
   latencyClass = 'interactive',
   revisionEvidence = 'provider-versioned',
   maxChoiceCardinality = 64,
-  maxScoreLevels = 10
+  maxScoreLevels = 10,
+  probabilitySupport = 'full-distribution'
 }) {
   return {
     schema: 'axiom-bounded-decision-provider-profile.v0',
@@ -31,7 +32,7 @@ function providerProfile({
     max_choice_cardinality: maxChoiceCardinality,
     max_score_levels: maxScoreLevels,
     type_guarantee: 'provider-native-closed-set',
-    probability_support: 'full-distribution',
+    probability_support: probabilitySupport,
     latency_class: latencyClass,
     calibration_claim: 'local-reviewed',
     retention_posture_ref: null,
@@ -275,6 +276,46 @@ test('question-kind and cardinality compatibility fail closed before provider ra
   });
 
   assert.equal(result.selected_profile_id, local.profile_id);
+});
+
+test('choice routing excludes providers that cannot produce the required full distribution', () => {
+  const confidenceOnly = providerProfile({
+    profileId: 'bounded.provider.confidence-only.v1',
+    providerMode: 'owner-local',
+    probabilitySupport: 'confidence-only'
+  });
+
+  const result = route({
+    candidates: [candidate(confidenceOnly), candidate(local)],
+    intentPreferred: [confidenceOnly.profile_id]
+  });
+
+  assert.equal(result.selected_profile_id, local.profile_id);
+});
+
+test('binary routing accepts binary-probability-only providers but rejects confidence-only providers', () => {
+  const binaryOnly = providerProfile({
+    profileId: 'bounded.provider.binary-only.v1',
+    providerMode: 'owner-local',
+    probabilitySupport: 'binary-probability-only'
+  });
+  const confidenceOnly = providerProfile({
+    profileId: 'bounded.provider.binary-confidence-only.v1',
+    providerMode: 'owner-local',
+    probabilitySupport: 'confidence-only'
+  });
+
+  const result = route({
+    candidates: [candidate(confidenceOnly), candidate(binaryOnly)],
+    req: request({
+      question_kind: 'binary-probability',
+      choice_cardinality: null,
+      score_levels: null
+    }),
+    intentPreferred: [confidenceOnly.profile_id]
+  });
+
+  assert.equal(result.selected_profile_id, binaryOnly.profile_id);
 });
 
 test('no eligible bounded provider escalates instead of bypassing the semantic gate', () => {
