@@ -68,6 +68,13 @@ const DRIFT_STATUSES = new Set([
   'incompatible'
 ]);
 const METRIC_KINDS = new Set(['probability', 'rate', 'count', 'score']);
+const INCOMPATIBILITY_CHANGE_FACTOR = Object.freeze({
+  'domain-mismatch': 'domain',
+  'task-family-mismatch': 'task-family',
+  'consequence-class-mismatch': 'consequence-class',
+  'dimension-set-mismatch': 'dimension-set',
+  'metric-kind-mismatch': 'calibration-evidence'
+});
 
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -329,6 +336,15 @@ function computeChangeFactors(predecessorProfile, candidateProfile, predecessorP
   return factors;
 }
 
+function comparableChangeFactors(factors, reasons) {
+  const incompatibleAxes = new Set(
+    reasons
+      .map(reason => INCOMPATIBILITY_CHANGE_FACTOR[reason])
+      .filter(Boolean)
+  );
+  return factors.filter(factor => !incompatibleAxes.has(factor));
+}
+
 function arraysEqual(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -392,17 +408,20 @@ export function resolveBehavioralDriftComparison(document, predecessorProfile, c
     candidatePopulation
   );
 
-  const expectedFactors = computeChangeFactors(
-    predecessorProfile,
-    candidateProfile,
-    predecessorPopulation,
-    candidatePopulation
+  const reasons = compatibilityReasons(predecessorPopulation, candidatePopulation);
+  const expectedFactors = comparableChangeFactors(
+    computeChangeFactors(
+      predecessorProfile,
+      candidateProfile,
+      predecessorPopulation,
+      candidatePopulation
+    ),
+    reasons
   );
   if (!arraysEqual(document.declared_change_factors, expectedFactors)) {
-    throw new ValidationError('declared change factors must match exact subject and evaluation changes');
+    throw new ValidationError('declared change factors must match exact comparable subject and evaluation changes');
   }
 
-  const reasons = compatibilityReasons(predecessorPopulation, candidatePopulation);
   const insufficient = predecessorPopulation.sample_sufficiency !== 'sufficient'
     || candidatePopulation.sample_sufficiency !== 'sufficient';
 
