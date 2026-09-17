@@ -28,21 +28,26 @@ principal_verified
 
 `LAWS.bend` states deny-dominance for the four required gates plus positive laws for the fully satisfied state and for optional consent/budget state. `PROOF.bend` supplies the machine-checkable proofs.
 
+`NEGATIVE_LAWS.bend` and `NEGATIVE_PROOF.bend` deliberately attempt the false claim that a fully satisfied state denies. CI must observe the checker reject that proof. This negative control distinguishes a working proof check from a command that merely exits successfully.
+
 The Rust laboratory separately binds its evaluator to `fixtures/authority-truth-table.v0.txt`, which exhausts all 64 semantic combinations. The Bend theorem check and the Rust truth-table check are deliberately separate evidence paths.
 
 ## Checker profile used by this research PR
 
 The laboratory workflow pins:
 
-- Bend source: `bendlang/bend@8008146ab90abb98b496fa2a6ffe555da7fb0dd5` (Bend 2 second beta);
-- Bun: `1.4.2`;
+- Bend source: `bendlang/bend@8008146ab90abb98b496fa2a6ffe555da7fb0dd5` (`Bend 2.0.4` at that revision);
+- Bun version: `1.4.2`;
+- Bun revision: `1.4.2+744846f84`;
 - `oven-sh/setup-bun` action source: `0c5077e51419868618aeaa5fe8019c62421857d6`.
 
-The workflow verifies the checked-out Bend source SHA and Bun version before invoking:
+The workflow verifies the checked-out Bend source SHA, Bun version, and Bun revision before invoking:
 
 ```text
 bun run .tools/bend/bend2/main.ts labs/rust-trust-core/formal/bend/PROOF.bend
 ```
+
+It then requires the same checker invocation to reject `NEGATIVE_PROOF.bend`.
 
 This is a **research checker profile**, not yet an admitted `axiom-formal-proof-verification.v1` profile. It does not yet provide the complete executable digest, dependency-closure materialization, offline bundle, resource-policy digest, transcript contract, or AXIOM Verify adapter required by FORMAL-001.
 
