@@ -887,7 +887,7 @@ async function verifySupportedDocumentationBoundary(repositoryRoot) {
 
 export async function repositoryMarkdownFiles(directory, prefix = '') {
   const files = [];
-  const excludedDirectories = new Set(['.git', '.data', 'node_modules']);
+  const excludedDirectories = new Set(['.git', '.data', '.agents', 'node_modules']);
   const entries = await readdir(directory, { withFileTypes: true });
   if (prefix && entries.some(entry => entry.name === '.git')) return files;
   for (const entry of entries) {
