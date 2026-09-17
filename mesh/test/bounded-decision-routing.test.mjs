@@ -165,6 +165,17 @@ test('PREFER falls back when the preferred provider is unavailable', () => {
   assert.equal(result.selected_profile_id, local.profile_id);
 });
 
+test('PREFER cannot override a hard disclosure constraint', () => {
+  const result = route({
+    candidates: [candidate(jev, { disclosure_eligible: false }), candidate(local)],
+    user: userPolicy({ mode: 'prefer', preferred_profile_id: jev.profile_id }),
+    firstSeat: [jev.profile_id]
+  });
+
+  assert.equal(result.status, 'selected');
+  assert.equal(result.selected_profile_id, local.profile_id);
+});
+
 test('REQUIRE never silently substitutes another provider', () => {
   const result = route({
     candidates: [candidate(jev, { available: false }), candidate(local)],
@@ -177,6 +188,19 @@ test('REQUIRE never silently substitutes another provider', () => {
   assert.deepEqual(result.fallback_profile_ids, []);
   assert.equal(result.escalation, 'system-two');
   assert.ok(result.reasons.includes('required-provider-ineligible'));
+});
+
+test('REQUIRE cannot override a hard disclosure constraint', () => {
+  const result = route({
+    candidates: [candidate(jev, { disclosure_eligible: false }), candidate(local)],
+    user: userPolicy({ mode: 'require', preferred_profile_id: jev.profile_id }),
+    firstSeat: [jev.profile_id]
+  });
+
+  assert.equal(result.status, 'no-route');
+  assert.equal(result.selected_profile_id, null);
+  assert.deepEqual(result.fallback_profile_ids, []);
+  assert.equal(result.escalation, 'system-two');
 });
 
 test('LOCAL_ONLY excludes remote providers even when they are first-seat', () => {
