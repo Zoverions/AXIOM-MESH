@@ -97,7 +97,9 @@ function digest(value, name) {
 }
 
 function timestamp(value, name) {
-  assertString(value, name, { min: 24, max: 24, pattern: CANONICAL_TIMESTAMP });
+  if (typeof value !== 'string' || !CANONICAL_TIMESTAMP.test(value)) {
+    throw new ValidationError(`${name} must be a canonical UTC timestamp`);
+  }
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString() !== value) {
     throw new ValidationError(`${name} must be a canonical UTC timestamp`);
@@ -201,10 +203,26 @@ function assertNoAuthorityFields(value, path = 'generated action arguments') {
   const object = assertPlainObject(value, path);
   for (const [key, child] of Object.entries(object)) {
     if (RESERVED_AUTHORITY_FIELDS.has(key.toLowerCase())) {
-      throw new ValidationError(`reserved authority field ${key} is not allowed in generated action arguments`);
+      throw new ValidationError(
+        `reserved authority field ${key} is not allowed in generated action arguments`
+      );
     }
     assertNoAuthorityFields(child, `${path}.${key}`);
   }
+}
+
+function actionRequestDigestShape(requests) {
+  return requests.map(request => ({
+    request_id: request.request_id,
+    operation_ref: request.operation_ref,
+    arguments: request.arguments,
+    consequence: request.consequence,
+    confirmation: request.confirmation
+  }));
+}
+
+function actionRequestsDigest(requests) {
+  return digestObject(actionRequestDigestShape(requests));
 }
 
 function validateActionRequests(input, operations) {
@@ -237,10 +255,14 @@ function validateActionRequests(input, operations) {
       throw new ValidationError(`operation ${operationRef} is not in the supplied catalog`);
     }
     if (value.consequence !== catalogEntry.consequence) {
-      throw new ValidationError(`action request consequence must match the supplied catalog for ${operationRef}`);
+      throw new ValidationError(
+        `action request consequence must match the supplied catalog for ${operationRef}`
+      );
     }
     if (value.confirmation !== catalogEntry.confirmation) {
-      throw new ValidationError(`action request confirmation must match the supplied catalog for ${operationRef}`);
+      throw new ValidationError(
+        `action request confirmation must match the supplied catalog for ${operationRef}`
+      );
     }
     const argumentsValue = assertPlainObject(
       value.arguments,
@@ -301,7 +323,9 @@ function validateComponents(input, componentTypes, actionRequestIds) {
         `generative interface components[${index}].action_request_id`
       );
       if (!actionRequestIds.has(actionRequestId)) {
-        throw new ValidationError(`component ${componentId} references unknown action request ${actionRequestId}`);
+        throw new ValidationError(
+          `component ${componentId} references unknown action request ${actionRequestId}`
+        );
       }
     }
     return Object.freeze({
@@ -338,7 +362,7 @@ function validateBindings(value, context) {
   if (value.components_digest !== digestObject(value.components)) {
     throw new ValidationError('components digest does not match generated components');
   }
-  if (value.action_requests_digest !== digestObject(value.action_requests)) {
+  if (value.action_requests_digest !== actionRequestsDigest(value.action_requests)) {
     throw new ValidationError('action requests digest does not match generated action requests');
   }
   return { components, actionRequests };
@@ -368,7 +392,7 @@ export function createGenerativeInterfaceProposal(input) {
     components,
     components_digest: digestObject(components),
     action_requests: actionRequests,
-    action_requests_digest: digestObject(actionRequests),
+    action_requests_digest: actionRequestsDigest(actionRequests),
     proposed_at: timestamp(value.proposedAt, 'generative interface proposal.proposed_at'),
     authority_effect: 'none',
     network_effect: 'none',
@@ -417,7 +441,10 @@ export function validateGenerativeInterfaceProposal(input, context) {
   digest(value.action_requests_digest, 'generative interface proposal.action_requests_digest');
   const proposedAt = timestamp(value.proposed_at, 'generative interface proposal.proposed_at');
 
-  const validationContext = assertPlainObject(context, 'generative interface validation context');
+  const validationContext = assertPlainObject(
+    context,
+    'generative interface validation context'
+  );
   const { components, actionRequests } = validateBindings(value, validationContext);
 
   return Object.freeze({
@@ -429,7 +456,7 @@ export function validateGenerativeInterfaceProposal(input, context) {
     context_projection_digest: value.context_projection_digest,
     capability_snapshot_digest: value.capability_snapshot_digest,
     components_digest: digestObject(components),
-    action_requests_digest: digestObject(actionRequests),
+    action_requests_digest: actionRequestsDigest(actionRequests),
     proposed_at: proposedAt,
     authority_effect: 'none',
     network_effect: 'none',
