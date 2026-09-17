@@ -5,6 +5,12 @@ import {
   digestObject
 } from './canonical.mjs';
 import { validateBehavioralAssuranceProfile } from './behavioral-assurance-profile.mjs';
+import {
+  BOUNDED_DECISION_OBSERVATION_SCHEMA
+} from './bounded-decision-observation.mjs';
+import {
+  BOUNDED_DECISION_CALIBRATION_REPORT_SCHEMA
+} from './bounded-decision-calibration-report.mjs';
 
 export const RESPONSE_ASSURANCE_ENVELOPE_SCHEMA = 'axiom-response-assurance-envelope.v0';
 
@@ -40,13 +46,12 @@ const PRODUCER_KEYS = Object.freeze(['subject_id', 'subject_digest', 'environmen
 const PROFILE_BINDING_KEYS = Object.freeze(['profile_id', 'profile_digest', 'population_id']);
 const DETERMINISTIC_CHECK_KEYS = Object.freeze(['check_id', 'check_digest', 'result']);
 const SEMANTIC_OBSERVATION_KEYS = Object.freeze([
+  'observation_schema',
   'observation_id',
   'observation_digest',
-  'dimension_id',
-  'value_kind',
-  'value',
-  'calibration_ref',
-  'calibration_digest',
+  'calibration_report_schema',
+  'calibration_report_id',
+  'calibration_report_digest',
   'calibration_state',
   'evidence_state'
 ]);
@@ -67,8 +72,7 @@ const CONSEQUENCE_CLASSES = new Set([
   'physical-potentially-irreversible'
 ]);
 const DETERMINISTIC_RESULTS = new Set(['PASS', 'FAIL', 'UNKNOWN', 'NOT-APPLICABLE']);
-const VALUE_KINDS = new Set(['probability', 'rate', 'count', 'score']);
-const CALIBRATION_STATES = new Set(['reviewed', 'experimental', 'rejected', 'expired', 'not-applicable']);
+const CALIBRATION_STATES = new Set(['experimental', 'reviewed', 'expired', 'rejected']);
 const EVIDENCE_STATES = new Set([
   'accepted-evidence',
   'insufficient-evidence',
@@ -138,13 +142,6 @@ function assertInteger(value, name, { min = 0, max = Number.MAX_SAFE_INTEGER } =
   return value;
 }
 
-function assertFiniteNumber(value, name) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new ValidationError(`${name} must be a finite number`);
-  }
-  return value;
-}
-
 function assertArray(value, name, { minItems = 0, maxItems = 128 } = {}) {
   if (!Array.isArray(value) || value.length < minItems || value.length > maxItems) {
     throw new ValidationError(`${name} must be an array with ${minItems}-${maxItems} items`);
@@ -193,41 +190,23 @@ function validateSemanticObservations(observations) {
   observations.forEach((observation, index) => {
     const name = `semantic_observations[${index}]`;
     assertExactKeys(observation, SEMANTIC_OBSERVATION_KEYS, name);
+    if (observation.observation_schema !== BOUNDED_DECISION_OBSERVATION_SCHEMA) {
+      throw new ValidationError(`${name}.observation_schema must be ${BOUNDED_DECISION_OBSERVATION_SCHEMA}`);
+    }
     assertId(observation.observation_id, `${name}.observation_id`);
     assertDigest(observation.observation_digest, `${name}.observation_digest`);
-    assertId(observation.dimension_id, `${name}.dimension_id`);
-    assertEnum(observation.value_kind, VALUE_KINDS, `${name}.value_kind`);
-    assertFiniteNumber(observation.value, `${name}.value`);
+    if (observation.calibration_report_schema !== BOUNDED_DECISION_CALIBRATION_REPORT_SCHEMA) {
+      throw new ValidationError(
+        `${name}.calibration_report_schema must be ${BOUNDED_DECISION_CALIBRATION_REPORT_SCHEMA}`
+      );
+    }
+    assertId(observation.calibration_report_id, `${name}.calibration_report_id`);
+    assertDigest(observation.calibration_report_digest, `${name}.calibration_report_digest`);
     assertEnum(observation.calibration_state, CALIBRATION_STATES, `${name}.calibration_state`);
     assertEnum(observation.evidence_state, EVIDENCE_STATES, `${name}.evidence_state`);
 
-    if (observation.value_kind === 'probability' || observation.value_kind === 'rate') {
-      if (observation.value < 0 || observation.value > 1) {
-        throw new ValidationError(`${name}.value must be between 0 and 1 for ${observation.value_kind}`);
-      }
-    } else if (observation.value_kind === 'count' && (!Number.isSafeInteger(observation.value) || observation.value < 0)) {
-      throw new ValidationError(`${name}.value must be a non-negative integer for count evidence`);
-    }
-
-    if (observation.calibration_ref !== null) assertId(observation.calibration_ref, `${name}.calibration_ref`);
-    if (observation.calibration_digest !== null) assertDigest(observation.calibration_digest, `${name}.calibration_digest`);
-
-    if (observation.value_kind === 'probability') {
-      if (
-        observation.calibration_state !== 'reviewed'
-        || observation.calibration_ref === null
-        || observation.calibration_digest === null
-      ) {
-        throw new ValidationError(`${name} probability evidence requires reviewed calibration`);
-      }
-    }
-
-    if (observation.calibration_state === 'not-applicable') {
-      if (observation.calibration_ref !== null || observation.calibration_digest !== null) {
-        throw new ValidationError(`${name} not-applicable calibration cannot carry a calibration reference`);
-      }
-    } else if ((observation.calibration_ref === null) !== (observation.calibration_digest === null)) {
-      throw new ValidationError(`${name} calibration reference and digest must be present together`);
+    if (observation.evidence_state === 'accepted-evidence' && observation.calibration_state !== 'reviewed') {
+      throw new ValidationError(`${name} accepted semantic evidence requires reviewed calibration`);
     }
 
     if (seen.has(observation.observation_id)) {
