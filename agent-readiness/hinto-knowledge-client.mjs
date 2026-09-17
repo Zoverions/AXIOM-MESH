@@ -9,6 +9,73 @@ function requireText(value, label) {
   return value.trim();
 }
 
+function concatUint8Arrays(chunks, totalBytes) {
+  const out = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
+/**
+ * Read response body with a hard byte budget. Rejects as soon as the budget is
+ * exceeded and does not retain the oversize remainder.
+ */
+export async function readBoundedResponseText(response, maxJsonBytes) {
+  if (!Number.isInteger(maxJsonBytes) || maxJsonBytes <= 0) {
+    throw new Error('Hinto maxJsonBytes must be a positive integer');
+  }
+
+  const contentLengthHeader = response?.headers?.get?.('content-length');
+  if (contentLengthHeader != null && contentLengthHeader !== '') {
+    const declared = Number(contentLengthHeader);
+    if (Number.isFinite(declared) && declared > maxJsonBytes) {
+      // Do not open/read the body when the declared size already exceeds budget.
+      throw new Error('Hinto API response exceeds size limit');
+    }
+  }
+
+  const body = response?.body;
+  if (body && typeof body.getReader === 'function') {
+    const reader = body.getReader();
+    const chunks = [];
+    let totalBytes = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        if (!value) {
+          continue;
+        }
+        const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+        totalBytes += chunk.byteLength;
+        if (totalBytes > maxJsonBytes) {
+          try {
+            await reader.cancel();
+          } catch {
+            // ignore
+          }
+          chunks.length = 0;
+          throw new Error('Hinto API response exceeds size limit');
+        }
+        chunks.push(chunk);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Hinto API response exceeds size limit') {
+        throw error;
+      }
+      throw new Error('Hinto API returned invalid JSON');
+    }
+    return new TextDecoder().decode(concatUint8Arrays(chunks, totalBytes));
+  }
+
+  throw new Error('Hinto API unavailable');
+}
+
 export function createHintoKnowledgeClient({
   apiKey,
   transport = globalThis.fetch,
@@ -49,16 +116,15 @@ export function createHintoKnowledgeClient({
 
     let bodyText;
     try {
-      bodyText = await response.text();
-    } catch {
+      bodyText = await readBoundedResponseText(response, maxJsonBytes);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Hinto API response exceeds size limit') {
+        throw error;
+      }
+      if (error instanceof Error && error.message === 'Hinto API unavailable') {
+        throw error;
+      }
       throw new Error('Hinto API returned invalid JSON');
-    }
-
-    if (typeof bodyText !== 'string') {
-      throw new Error('Hinto API returned invalid JSON');
-    }
-    if (bodyText.length > maxJsonBytes) {
-      throw new Error('Hinto API response exceeds size limit');
     }
 
     try {
