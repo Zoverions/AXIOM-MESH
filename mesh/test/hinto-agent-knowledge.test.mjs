@@ -4,10 +4,9 @@ import test from 'node:test';
 const MODULE_URL = new URL('../../agent-readiness/hinto-knowledge-client.mjs', import.meta.url);
 const BASE_URL = 'https://app.hintoai.com/api/external/v2';
 
-async function loadCreateClient() {
+async function loadModule() {
   try {
-    const module = await import(`${MODULE_URL.href}?t=${Date.now()}`);
-    return module.createHintoKnowledgeClient;
+    return await import(`${MODULE_URL.href}?t=${Date.now()}`);
   } catch (error) {
     if (error?.code === 'ERR_MODULE_NOT_FOUND') {
       return undefined;
@@ -16,21 +15,54 @@ async function loadCreateClient() {
   }
 }
 
-function fakeResponse(body, { status = 200, contentType = 'application/json' } = {}) {
+async function loadCreateClient() {
+  const module = await loadModule();
+  return module?.createHintoKnowledgeClient;
+}
+
+function streamBodyFromBytes(bytes, { chunkSize = 8 } = {}) {
+  let offset = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (offset >= bytes.byteLength) {
+        controller.close();
+        return;
+      }
+      const end = Math.min(offset + chunkSize, bytes.byteLength);
+      controller.enqueue(bytes.subarray(offset, end));
+      offset = end;
+    },
+    cancel() {
+      offset = bytes.byteLength;
+    },
+  });
+}
+
+function fakeResponse(body, { status = 200, contentType = 'application/json', contentLength, chunkSize = 8 } = {}) {
   const text = typeof body === 'string' ? body : JSON.stringify(body);
+  const bytes = new TextEncoder().encode(text);
+  const headers = {
+    get(name) {
+      const key = name.toLowerCase();
+      if (key === 'content-type') return contentType;
+      if (key === 'content-length') {
+        if (contentLength === null) return null;
+        if (contentLength !== undefined) return String(contentLength);
+        return String(bytes.byteLength);
+      }
+      return null;
+    },
+  };
   return {
     ok: status >= 200 && status < 300,
     status,
-    headers: {
-      get(name) {
-        return name.toLowerCase() === 'content-type' ? contentType : null;
-      },
+    headers,
+    body: streamBodyFromBytes(bytes, { chunkSize }),
+    async text() {
+      throw new Error('text() must not be used for bounded reads in tests');
     },
     async json() {
-      return typeof body === 'string' ? JSON.parse(body) : body;
-    },
-    async text() {
-      return text;
+      throw new Error('json() must not be used for bounded reads in tests');
     },
   };
 }
@@ -169,13 +201,50 @@ test('transport failures fail closed without exposing transport or credential de
   );
 });
 
-test('oversized JSON responses fail closed', async () => {
-  const createClient = await requireCreateClient();
+test('oversized streamed JSON responses fail closed on byte budget mid-read', async () => {
+  const module = await loadModule();
+  assert.equal(typeof module?.readBoundedResponseText, 'function');
+  const createClient = module.createHintoKnowledgeClient;
+  const payload = { id: 'project-too-large-for-limit', pad: 'x'.repeat(64) };
   const client = createClient({
     apiKey: 'hinto_test_key',
     maxJsonBytes: 16,
-    transport: async () => fakeResponse({ id: 'project-too-large-for-limit' }),
+    transport: async () => fakeResponse(payload, { chunkSize: 4, contentLength: null }),
   });
 
   await assert.rejects(client.getProject(), /Hinto API response exceeds size limit/);
+});
+
+test('declared Content-Length over budget rejects without opening the body stream', async () => {
+  const createClient = await requireCreateClient();
+  let bodyAccessed = false;
+  const client = createClient({
+    apiKey: 'hinto_test_key',
+    maxJsonBytes: 16,
+    transport: async () => {
+      const response = {
+        ok: true,
+        status: 200,
+        headers: {
+          get(name) {
+            if (name.toLowerCase() === 'content-length') return '9999';
+            return null;
+          },
+        },
+        async text() {
+          throw new Error('text() must not be used');
+        },
+      };
+      Object.defineProperty(response, 'body', {
+        get() {
+          bodyAccessed = true;
+          throw new Error('body must not be opened when Content-Length exceeds budget');
+        },
+      });
+      return response;
+    },
+  });
+
+  await assert.rejects(client.getProject(), /Hinto API response exceeds size limit/);
+  assert.equal(bodyAccessed, false);
 });
