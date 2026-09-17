@@ -6,14 +6,18 @@ const BASE_URL = 'https://app.hintoai.com/api/external/v2';
 
 async function loadCreateClient() {
   try {
-    const module = await import(MODULE_URL.href);
+    const module = await import(`${MODULE_URL.href}?t=${Date.now()}`);
     return module.createHintoKnowledgeClient;
-  } catch {
-    return undefined;
+  } catch (error) {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
+      return undefined;
+    }
+    throw error;
   }
 }
 
 function fakeResponse(body, { status = 200, contentType = 'application/json' } = {}) {
+  const text = typeof body === 'string' ? body : JSON.stringify(body);
   return {
     ok: status >= 200 && status < 300,
     status,
@@ -23,10 +27,10 @@ function fakeResponse(body, { status = 200, contentType = 'application/json' } =
       },
     },
     async json() {
-      return body;
+      return typeof body === 'string' ? JSON.parse(body) : body;
     },
     async text() {
-      return typeof body === 'string' ? body : JSON.stringify(body);
+      return text;
     },
   };
 }
@@ -67,6 +71,8 @@ test('getProject uses the fixed Hinto v2 origin and X-API-Key header', async () 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, `${BASE_URL}/project`);
   assert.equal(calls[0].init.method, 'GET');
+  assert.equal(calls[0].init.redirect, 'error');
+  assert.ok(calls[0].init.signal instanceof AbortSignal);
   assert.equal(calls[0].init.headers['X-API-Key'], 'hinto_test_key');
   assert.equal(calls[0].init.headers.Accept, 'application/json');
 });
@@ -87,6 +93,7 @@ test('getProjectStructure reads the project tree without widening authority', as
   assert.deepEqual(result, { folders: [], articles: [] });
   assert.equal(calls[0].url, `${BASE_URL}/project/structure`);
   assert.equal(calls[0].init.method, 'GET');
+  assert.equal(calls[0].init.redirect, 'error');
 });
 
 test('listArticles stays read-only and supports an optional folder filter', async () => {
@@ -160,4 +167,15 @@ test('transport failures fail closed without exposing transport or credential de
       return true;
     }
   );
+});
+
+test('oversized JSON responses fail closed', async () => {
+  const createClient = await requireCreateClient();
+  const client = createClient({
+    apiKey: 'hinto_test_key',
+    maxJsonBytes: 16,
+    transport: async () => fakeResponse({ id: 'project-too-large-for-limit' }),
+  });
+
+  await assert.rejects(client.getProject(), /Hinto API response exceeds size limit/);
 });
