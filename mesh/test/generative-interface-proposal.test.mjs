@@ -166,6 +166,20 @@ test('generated arguments cannot smuggle authority approval grant credential or 
   }
 });
 
+test('authority field spelling variants cannot bypass generated argument filtering', () => {
+  for (const forbidden of ['capabilityProof', 'capability-proof', 'capability proof']) {
+    const input = proposalInput();
+    input.actionRequests[0].arguments = {
+      artifact_id: 'artifact:workspace',
+      nested: { [forbidden]: 'fabricated-by-ui-model' }
+    };
+    assert.throws(
+      () => createGenerativeInterfaceProposal(input),
+      /reserved authority field/i
+    );
+  }
+});
+
 test('validation binds the proposal to exact context capability registry and operation snapshots', () => {
   const proposal = createGenerativeInterfaceProposal(proposalInput());
 
