@@ -136,14 +136,11 @@ export function scanGitHistory({
   const root = resolve(repositoryRoot);
   const tip = gitText(gitExecutable, ['rev-parse', '--verify', `${ref}^{commit}`], root);
   if (!OBJECT_ID.test(tip)) throw new ValidationError(`Git ref did not resolve to a commit: ${ref}`);
-  const listed = scope === 'history'
-    ? gitText(gitExecutable, ['rev-list', '--objects', ref], root)
-    : gitText(
-      gitExecutable,
-      ['ls-tree', '-r', '--full-tree', '--format=%(objectname) %(path)', ref],
-      root
+  const objects = scope === 'history'
+    ? parseObjectList(gitText(gitExecutable, ['rev-list', '--objects', ref], root))
+    : parseTreeObjectList(
+      gitBuffer(gitExecutable, ['ls-tree', '-r', '-z', '--full-tree', ref], root)
     );
-  const objects = parseObjectList(listed);
   const metadata = inspectObjects(gitExecutable, root, objects);
   const oversizedHighRiskPaths = metadata
     .filter(item => item.type === 'blob' && item.size > MAX_BLOB_BYTES && HIGH_RISK_PATH.test(item.path))
@@ -706,6 +703,33 @@ function parseObjectList(output) {
     if (!OBJECT_ID.test(id) || seen.has(id)) continue;
     seen.add(id);
     objects.push({ id, path });
+  }
+  return objects;
+}
+
+function parseTreeObjectList(buffer) {
+  const seen = new Set();
+  const objects = [];
+  let offset = 0;
+  while (offset < buffer.length) {
+    const end = buffer.indexOf(0, offset);
+    if (end < 0) throw new ValidationError('Credential audit Git tree listing is not NUL terminated');
+    if (end === offset) {
+      offset = end + 1;
+      continue;
+    }
+    const record = buffer.subarray(offset, end);
+    offset = end + 1;
+    const tab = record.indexOf(9);
+    if (tab <= 0) throw new ValidationError('Credential audit Git tree record is malformed');
+    const metadata = record.subarray(0, tab).toString('ascii').split(' ');
+    if (metadata.length !== 3) {
+      throw new ValidationError('Credential audit Git tree metadata is malformed');
+    }
+    const [, , id] = metadata;
+    if (!OBJECT_ID.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    objects.push({ id, path: normalizePath(record.subarray(tab + 1).toString('utf8')) });
   }
   return objects;
 }
