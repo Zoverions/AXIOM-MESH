@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use axiom_trust_core_lab::{
     AuthorityEvidence, CapabilityEvidence, ConsentEvidence, DenyReason, EffectBudgetEvidence,
     PrincipalEvidence, evaluate_authority,
@@ -79,6 +81,65 @@ fn authority_vectors_match_expected_decisions() {
 
         assert_eq!(allowed, expected_allowed, "case {case_id}");
     }
+}
+
+#[test]
+fn authority_fixture_exhausts_the_six_input_boolean_state_space() {
+    let fixture = include_str!("../fixtures/authority-vectors.v0.tsv");
+    let mut lines = fixture.lines();
+    assert_eq!(lines.next(), Some(HEADER));
+
+    let mut case_ids = BTreeSet::new();
+    let mut combinations = BTreeSet::new();
+    let mut row_count = 0usize;
+
+    for (index, line) in lines.enumerate() {
+        if line.is_empty() {
+            continue;
+        }
+
+        let fields: Vec<_> = line.split('\t').collect();
+        assert_eq!(fields.len(), 8, "invalid fixture row {}", index + 2);
+
+        let case_id = fields[0];
+        let principal_verified = parse_bool(fields[1]);
+        let capability_authorized = parse_bool(fields[2]);
+        let consent_required = parse_bool(fields[3]);
+        let consent_valid = parse_bool(fields[4]);
+        let budget_required = parse_bool(fields[5]);
+        let budget_remaining = fields[6]
+            .parse::<u64>()
+            .unwrap_or_else(|_| panic!("invalid budget fixture value for {case_id}"));
+        let budget_positive = budget_remaining > 0;
+
+        assert!(case_ids.insert(case_id), "duplicate case id: {case_id}");
+        assert!(
+            combinations.insert((
+                principal_verified,
+                capability_authorized,
+                consent_required,
+                consent_valid,
+                budget_required,
+                budget_positive,
+            )),
+            "duplicate semantic authority state: {case_id}"
+        );
+
+        let expected_allowed = principal_verified
+            && capability_authorized
+            && (!consent_required || consent_valid)
+            && (!budget_required || budget_positive);
+        let expected = if expected_allowed { "allow" } else { "deny" };
+        assert_eq!(fields[7], expected, "fixture formula mismatch for {case_id}");
+        row_count += 1;
+    }
+
+    assert_eq!(row_count, 64, "authority fixture must contain all 64 semantic states");
+    assert_eq!(
+        combinations.len(),
+        64,
+        "authority fixture must cover every semantic state exactly once"
+    );
 }
 
 #[test]
