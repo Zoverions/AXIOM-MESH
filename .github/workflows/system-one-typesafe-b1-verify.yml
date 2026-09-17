@@ -4,7 +4,10 @@ on:
   pull_request:
     branches: ["main"]
     paths:
+      - "mesh/src/lib/bounded-decision-routing.mjs"
       - "mesh/src/lib/bounded-decision-typesafe-system-one-adapter.mjs"
+      - "mesh/test/bounded-decision-provider-profile.test.mjs"
+      - "mesh/test/bounded-decision-routing.test.mjs"
       - "mesh/test/bounded-decision-typesafe-system-one-adapter.test.mjs"
       - ".github/workflows/system-one-typesafe-b1-verify.yml"
   workflow_dispatch:
@@ -24,5 +27,9 @@ jobs:
         with:
           node-version: "24.18.0"
           package-manager-cache: false
-      - name: Verify TypeSafe System One fixture adapter B1
-        run: node --test --test-reporter=spec mesh/test/bounded-decision-typesafe-system-one-adapter.test.mjs
+      - name: Verify combined Bounded Decision routing and TypeSafe adapter chain
+        run: |
+          node --test --test-reporter=spec \
+            mesh/test/bounded-decision-provider-profile.test.mjs \
+            mesh/test/bounded-decision-routing.test.mjs \
+            mesh/test/bounded-decision-typesafe-system-one-adapter.test.mjs
