@@ -8,6 +8,7 @@ const fixtureUrl = new URL('../fixtures/axiom-science/axiom-science-v0.vectors.j
 const studySchemaUrl = new URL('../../docs/architecture/contracts/axiom-science-study.v0.schema.json', import.meta.url);
 const proposalSchemaUrl = new URL('../../docs/architecture/contracts/axiom-science-experiment-proposal.v0.schema.json', import.meta.url);
 
+// Deliberate RED: production verifier is intentionally absent at this checkpoint.
 test('Axiom Science S0 verifier exists before contract checks run', async () => {
   assert.equal(existsSync(moduleUrl), true, 'Axiom Science S0 verifier is not implemented');
   const vectors = JSON.parse(await readFile(fixtureUrl, 'utf8'));
