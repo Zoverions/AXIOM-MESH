@@ -73,6 +73,7 @@ function request(overrides = {}) {
 function userPolicy(overrides = {}) {
   return {
     mode: 'auto',
+    locality: 'any',
     preferred_profile_id: null,
     excluded_profile_ids: [],
     ...overrides
@@ -206,12 +207,30 @@ test('REQUIRE cannot override a hard disclosure constraint', () => {
 test('LOCAL_ONLY excludes remote providers even when they are first-seat', () => {
   const result = route({
     candidates: [candidate(jev), candidate(local)],
-    user: userPolicy({ mode: 'local-only' }),
+    user: userPolicy({ locality: 'local-only' }),
     firstSeat: [jev.profile_id]
   });
 
   assert.equal(result.selected_profile_id, local.profile_id);
   assert.deepEqual(result.fallback_profile_ids, []);
+});
+
+test('REQUIRE composes with LOCAL_ONLY and fails closed for a required remote provider', () => {
+  const result = route({
+    candidates: [candidate(jev), candidate(local)],
+    user: userPolicy({
+      mode: 'require',
+      locality: 'local-only',
+      preferred_profile_id: jev.profile_id
+    }),
+    firstSeat: [jev.profile_id]
+  });
+
+  assert.equal(result.status, 'no-route');
+  assert.equal(result.selected_profile_id, null);
+  assert.deepEqual(result.fallback_profile_ids, []);
+  assert.equal(result.escalation, 'system-two');
+  assert.ok(result.reasons.includes('required-provider-ineligible'));
 });
 
 test('explicit provider exclusion cannot be undone by intent or system preference', () => {
@@ -292,5 +311,15 @@ test('invalid routing policy fails closed rather than guessing provider intent',
       user: userPolicy({ mode: 'whatever-is-fastest' })
     }),
     /mode|routing policy/i
+  );
+});
+
+test('invalid locality policy fails closed', () => {
+  assert.throws(
+    () => route({
+      candidates: [candidate(jev)],
+      user: userPolicy({ locality: 'send-anywhere' })
+    }),
+    /locality|routing policy/i
   );
 });
