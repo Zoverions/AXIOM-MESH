@@ -130,11 +130,17 @@ fn authority_fixture_exhausts_the_six_input_boolean_state_space() {
             && (!consent_required || consent_valid)
             && (!budget_required || budget_positive);
         let expected = if expected_allowed { "allow" } else { "deny" };
-        assert_eq!(fields[7], expected, "fixture formula mismatch for {case_id}");
+        assert_eq!(
+            fields[7], expected,
+            "fixture formula mismatch for {case_id}"
+        );
         row_count += 1;
     }
 
-    assert_eq!(row_count, 64, "authority fixture must contain all 64 semantic states");
+    assert_eq!(
+        row_count, 64,
+        "authority fixture must contain all 64 semantic states"
+    );
     assert_eq!(
         combinations.len(),
         64,
