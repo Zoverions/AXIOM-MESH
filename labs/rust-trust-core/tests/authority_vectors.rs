@@ -100,7 +100,10 @@ fn authority_truth_table_exhausts_the_six_input_boolean_state_space() {
         "authority truth table must contain exactly 64 decisions"
     );
     assert_eq!(
-        truth_table.bytes().filter(|decision| *decision == b'1').count(),
+        truth_table
+            .bytes()
+            .filter(|decision| *decision == b'1')
+            .count(),
         9,
         "authority v0 should allow exactly nine semantic states"
     );
