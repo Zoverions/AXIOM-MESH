@@ -112,13 +112,12 @@ function envelope(profileDocument, overrides = {}) {
       result: 'PASS'
     }],
     semantic_observations: [{
-      observation_id: 'semantic.source-support.v1',
+      observation_schema: 'axiom-bounded-decision-observation.v0',
+      observation_id: 'decision-observation.source-support.v1',
       observation_digest: D,
-      dimension_id: 'source-provenance-fidelity',
-      value_kind: 'probability',
-      value: 0.93,
-      calibration_ref: 'calibration.semantic-source-support.v1',
-      calibration_digest: E,
+      calibration_report_schema: 'axiom-bounded-decision-calibration-report.v0',
+      calibration_report_id: 'calibration.semantic-source-support.v1',
+      calibration_report_digest: E,
       calibration_state: 'reviewed',
       evidence_state: 'accepted-evidence'
     }],
@@ -222,17 +221,27 @@ test('rejects correlated verifiers being counted as independent confirmations', 
   );
 });
 
-test('rejects probability-valued current semantic evidence without reviewed calibration', () => {
+test('accepted bounded-decision semantic evidence requires reviewed calibration', () => {
   const p = profile();
-  for (const mutation of [
-    observation => { observation.calibration_ref = null; observation.calibration_digest = null; },
-    observation => { observation.calibration_state = 'experimental'; }
+  const item = envelope(p);
+  item.semantic_observations[0].calibration_state = 'experimental';
+  assert.throws(
+    () => computeResponseAssuranceEnvelopeDigest(item),
+    /accepted.*reviewed calibration|reviewed calibration.*accepted/i
+  );
+});
+
+test('rejects semantic evidence that does not bind the exact bounded-decision schemas', () => {
+  const p = profile();
+  for (const [field, value] of [
+    ['observation_schema', 'axiom-other-observation.v0'],
+    ['calibration_report_schema', 'axiom-other-calibration.v0']
   ]) {
     const item = envelope(p);
-    mutation(item.semantic_observations[0]);
+    item.semantic_observations[0][field] = value;
     assert.throws(
       () => computeResponseAssuranceEnvelopeDigest(item),
-      /probability.*calibration|calibration.*probability/i
+      /bounded-decision|schema/i
     );
   }
 });
