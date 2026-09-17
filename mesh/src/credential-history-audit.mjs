@@ -24,6 +24,8 @@ const MAX_BLOB_BYTES = 64 * 1024 * 1024;
 const MAX_BATCH_BYTES = 8 * 1024 * 1024;
 const MAX_BATCH_OBJECTS = 128;
 const OBJECT_ID = /^[a-f0-9]{40,64}$/;
+export const GIT_MINIMUM_VERSION = '2.34.0';
+const MAX_GIT_DIAGNOSTIC_CHARACTERS = 240;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CREDENTIAL_ID = /^hmac-sha256:[a-f0-9]{64}$/;
 const HIGH_RISK_PATH = /(?:^|\/)(?:\.env(?:\..*)?|[^/]*(?:secret|credential|keystore|wallet)[^/]*\.(?:conf|env|ini|json|pem|toml|txt|ya?ml)|[^/]*\.(?:key|p12|pfx|jks|keystore)|private(?:[-_.][^/]*)?\.pem)$/i;
@@ -119,6 +121,52 @@ export function findCredentialCandidates(content, path, auditKey) {
       labels: [...candidate.labels].sort()
     }))
     .sort(compareCredentialRecords);
+}
+
+export function parseGitVersion(output) {
+  const match = /^git version (\d+)\.(\d+)\.(\d+)/.exec(String(output).trim());
+  if (!match) throw new ValidationError('Git version output is unrecognized');
+  return match.slice(1, 4).join('.');
+}
+
+export function detectGitVersion({
+  gitExecutable = process.env.AXIOM_GIT_EXECUTABLE || 'git'
+} = {}) {
+  let version;
+  try {
+    version = parseGitVersion(execFileSync(gitExecutable, ['--version'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    }));
+  } catch {
+    return {
+      available: false,
+      version: null,
+      supported: false,
+      minimum_version: GIT_MINIMUM_VERSION
+    };
+  }
+  return {
+    available: true,
+    version,
+    supported: compareVersions(version, GIT_MINIMUM_VERSION) >= 0,
+    minimum_version: GIT_MINIMUM_VERSION
+  };
+}
+
+export function assertSupportedGit(state = detectGitVersion()) {
+  if (!state.available) {
+    throw new ValidationError(
+      `Credential history audit requires Git >=${GIT_MINIMUM_VERSION}; no Git executable was found`
+    );
+  }
+  if (!state.supported) {
+    throw new ValidationError(
+      `Credential history audit requires Git >=${GIT_MINIMUM_VERSION} (you have ${state.version})`
+    );
+  }
+  return state;
 }
 
 export function scanGitHistory({
@@ -464,6 +512,7 @@ export async function runCredentialHistoryAudit({
   gitExecutable = process.env.AXIOM_GIT_EXECUTABLE || 'git',
   generatedAt
 } = {}) {
+  assertSupportedGit(detectGitVersion({ gitExecutable }));
   const legacyInventory = scanGitHistory({
     repositoryRoot,
     ref: deprecatedRef,
@@ -748,9 +797,43 @@ function gitBuffer(executable, args, cwd, input) {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true
     });
-  } catch {
-    throw new ValidationError(`Credential history audit Git operation failed: ${args[0]}`);
+  } catch (error) {
+    throw new ValidationError(
+      `Credential history audit Git operation failed: ${args[0]} (${gitFailureDetail(error)})`
+    );
   }
+}
+
+function gitFailureDetail(error) {
+  const parts = [];
+  if (error?.code) parts.push(`code ${error.code}`);
+  if (Number.isInteger(error?.status)) parts.push(`exit ${error.status}`);
+  if (error?.signal) parts.push(`signal ${error.signal}`);
+  const stderr = boundedDiagnostic(error?.stderr);
+  if (stderr) parts.push(`stderr: ${stderr}`);
+  return parts.length ? parts.join('; ') : 'no diagnostic available';
+}
+
+function boundedDiagnostic(stderr) {
+  if (!stderr) return '';
+  const text = (Buffer.isBuffer(stderr) ? stderr.toString('utf8') : String(stderr))
+    .replaceAll(/[\p{Cc}\p{Cf}]+/gu, ' ')
+    .trim()
+    .replaceAll(/\s+/g, ' ');
+  return text.length > MAX_GIT_DIAGNOSTIC_CHARACTERS
+    ? `${text.slice(0, MAX_GIT_DIAGNOSTIC_CHARACTERS)}...`
+    : text;
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split('.').map(Number);
+  const rightParts = right.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (leftParts[index] !== rightParts[index]) {
+      return leftParts[index] > rightParts[index] ? 1 : -1;
+    }
+  }
+  return 0;
 }
 
 function normalizePath(path) {

@@ -487,6 +487,19 @@ export async function verifyReleaseReadiness() {
   };
 }
 
+export function assertUnfilteredWorkflowTriggers(workflow, label) {
+  if (/^\s+paths(?:-ignore)?:/m.test(workflow)) {
+    throw new ValidationError(
+      `${label} must verify every change without path filters`
+    );
+  }
+  for (const trigger of ['  push:', '  pull_request:']) {
+    if (!workflow.includes(`\n${trigger}\n`)) {
+      throw new ValidationError(`${label} is missing trigger: ${trigger.trim()}`);
+    }
+  }
+}
+
 export function verifyWindowsWorkflow(workflow) {
   if (typeof workflow !== 'string') {
     throw new ValidationError('Windows compatibility workflow is missing');
@@ -505,6 +518,7 @@ export function verifyWindowsWorkflow(workflow) {
       throw new ValidationError(`Windows compatibility workflow is missing: ${required}`);
     }
   }
+  assertUnfilteredWorkflowTriggers(workflow, 'Windows compatibility workflow');
   const actionReferences = [...workflow.matchAll(/^\s*-\s+uses:\s+([^\s#]+)/gm)]
     .map(match => match[1]);
   if (
@@ -716,8 +730,6 @@ export function verifyProductionDeployment({
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',
     'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7',
     'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7',
-    '- "apps/**"',
-    '- "packages/**"',
     'npm run setup:install',
     'fetch-depth: 0',
     'AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}',
@@ -776,10 +788,9 @@ export function verifyProductionDeployment({
       throw new ValidationError(`Kernel CI workflow is missing: ${required}`);
     }
   }
+  assertUnfilteredWorkflowTriggers(workflow, 'Kernel CI workflow');
   for (const [required, minimum] of [
-    ['runs-on: ubuntu-24.04', 2],
-    ['- "apps/**"', 2],
-    ['- "packages/**"', 2]
+    ['runs-on: ubuntu-24.04', 2]
   ]) {
     const count = workflow.split(required).length - 1;
     if (count < minimum) {
