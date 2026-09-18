@@ -108,6 +108,9 @@ export function resolveSignedFetchTimeoutMs({
   }
 
   const principal = body?.intent?.principal;
+  const assuranceRules = plan.decision_provenance.rules.filter(rule => (
+    typeof rule === 'string' && rule.startsWith('agent-assurance:')
+  ));
   if (principal?.schema === 'axiom-machine-principal.v1') {
     const machineDecision = evaluateMachineIntentWithAssurance(principal, {
       action: body?.intent?.action,
@@ -122,6 +125,25 @@ export function resolveSignedFetchTimeoutMs({
         403
       );
     }
+    if (machineDecision.assurance) {
+      const expectedRule = `agent-assurance:${machineDecision.assurance.evidence_digest}`;
+      if (
+        assuranceRules.length !== 1
+        || assuranceRules[0] !== expectedRule
+      ) {
+        throw new ValidationError(
+          'Sandbox assurance evidence does not match the digest-bound plan provenance'
+        );
+      }
+    } else if (assuranceRules.length > 0) {
+      throw new ValidationError(
+        'Sandbox plan requires agent assurance evidence that is missing from the intent'
+      );
+    }
+  } else if (assuranceRules.length > 0) {
+    throw new ValidationError(
+      'Non-machine sandbox plan cannot carry agent assurance provenance'
+    );
   }
   return planTimeoutMs;
 }
