@@ -648,6 +648,7 @@ function evaluateStatus({
   statusStatements,
   issuer,
   subjectId,
+  subjectType,
   at
 }) {
   const candidates = relevantStatusCandidates(
@@ -666,6 +667,7 @@ function evaluateStatus({
     });
   }
 
+  const atMs = timestampMs(at);
   const verified = [];
   for (const candidate of candidates) {
     let status;
@@ -693,6 +695,24 @@ function evaluateStatus({
         status_age_seconds: null
       });
     }
+    if (subjectType !== null && status.claims.subject_type !== subjectType) {
+      return Object.freeze({
+        result: 'quarantined',
+        reason_code: 'status_subject_type_mismatch',
+        status_evidence_digest: amnTrustEvidenceDigest(status),
+        status_state: 'quarantined',
+        status_age_seconds: null
+      });
+    }
+    if (timestampMs(status.issued_at) > atMs) {
+      return Object.freeze({
+        result: 'quarantined',
+        reason_code: 'status_future_issued',
+        status_evidence_digest: amnTrustEvidenceDigest(status),
+        status_state: 'quarantined',
+        status_age_seconds: null
+      });
+    }
     verified.push(status);
   }
 
@@ -715,7 +735,6 @@ function evaluateStatus({
     bySequence.set(sequence, status);
   }
 
-  const atMs = timestampMs(at);
   const effective = [...bySequence.values()]
     .filter(status => timestampMs(status.claims.effective_at) <= atMs)
     .sort((left, right) => left.claims.sequence - right.claims.sequence);
@@ -820,6 +839,19 @@ export function evaluateAmnTrustDomainAdmission({
   }
 
   const subjectId = verified.subject_id;
+  if (timestampMs(verified.issued_at) > timestampMs(verifiedBundle.evaluated_at)) {
+    return admissionFrom(verifiedBundle, metadata, {
+      issuer_id: issuer.issuer_id,
+      issuer_trust_domain: issuer.trust_domain,
+      subject_id: subjectId,
+      statement_schema: verified.schema,
+      statement_digest: amnTrustStatementDigest(verified),
+      evidence_digest: amnTrustEvidenceDigest(verified),
+      result: 'quarantined',
+      reason_code: 'evidence_future_issued'
+    });
+  }
+
   if (
     verified.schema === AMN_TRUST_SCHEMAS.node_identity
     && verified.claims.trust_domain !== issuer.trust_domain
@@ -853,6 +885,7 @@ export function evaluateAmnTrustDomainAdmission({
     statusStatements,
     issuer,
     subjectId,
+    subjectType: verified.schema === AMN_TRUST_SCHEMAS.node_identity ? 'node' : null,
     at: verifiedBundle.evaluated_at
   });
 
@@ -873,6 +906,9 @@ export function evaluateAmnTrustDomainAdmission({
 
 export function normalizeAmnDomainAdmission(raw) {
   const value = exactKeys(raw, ADMISSION_KEYS, 'AMN domain admission');
+  if (value.schema !== AMN_DOMAIN_ADMISSION_SCHEMA) {
+    throw new ValidationError('AMN domain admission schema is unsupported');
+  }
   const admissionDigest = digest(value.admission_digest, 'AMN domain admission digest');
   const { admission_digest: _ignored, ...core } = value;
   const normalized = finalizeAdmission(core);
@@ -895,6 +931,13 @@ export function createAmnDomainSnapshot(admissions) {
 
   if (new Set(normalized.map(item => item.admission_digest)).size !== normalized.length) {
     throw new ValidationError('AMN domain snapshot cannot count duplicate admissions');
+  }
+
+  const identityKeys = normalized.map(item => (
+    `${item.issuer_id ?? ''}\u0000${item.subject_id ?? ''}\u0000${item.statement_schema ?? ''}`
+  ));
+  if (new Set(identityKeys).size !== identityKeys.length) {
+    throw new ValidationError('AMN domain snapshot cannot count duplicate admission identities');
   }
 
   const bundleDigests = new Set(normalized.map(item => item.bundle_digest));
