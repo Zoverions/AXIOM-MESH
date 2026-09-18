@@ -123,18 +123,44 @@ reference as an ordinary operation argument. The operation carries only the
 opaque reference identifier and declared secret kind. The factory is a
 laboratory reference constructor, not a secret manager or credential resolver.
 
+Durably prepared effects can also be re-imported for replay:
+
+```prax
+requires prepared prior: Deploy @ Production;
+commit prior as receipt;
+```
+
+The host must supply a branded `createHostPreparedRef(...)` bound to the exact
+operation, authority evidence, and durable preparation digest. The preparation
+digest becomes the executor idempotency key. An uncertain replay does not
+consume the prepared reference; successful completion or durable cancellation
+does. This supports recovery without minting a second permit.
+
+Cancellation is a terminal transition:
+
+```prax
+requires prepared prior: Deploy @ Production;
+cancel prior as canceled;
+```
+
+Rollback is deliberately **not** a generic v0 primitive. Different effects have
+different compensating-action semantics, so rollback remains an explicit
+conformance gap rather than pretending every effect can be reversed uniformly.
+
 ## v0 grammar
 
 ```text
 requires permit <name>: <Action> @ <Scope>;
 requires lease <name>: <Action> @ <Scope>;
 requires secret <name>: <SecretKind>;
+requires prepared <name>: <Action> @ <Scope>;
 observe <name> = <literal-or-reference> from "<provenance>";
 verify <name> = <knowledge> with <Policy>;
 assess <name> = <knowledge> with <Policy>;
 op <name> = <Action>(<args...>) @ <Scope> [using secrets <name>, ...];
 authorize <operation> using <permit-or-lease> as <name>;
 prepare <authorized-operation> as <name>;
+cancel <prepared-operation> as <cancellation-receipt>;
 commit <prepared-operation> as <receipt>;
 ```
 
@@ -149,7 +175,7 @@ The compiler rejects:
 - authorizing with an assessment, receipt, or other non-authority value;
 - action/scope mismatches between an operation and permit/lease;
 - reuse of a linear permit or lease in one program;
-- repeated preparation or commit of a linear operation;
+- repeated preparation or multiple terminal transitions of a linear operation;
 - embedding a permit, lease, prepared operation, or secret reference as an ordinary operation argument;
 - binding a non-secret value through the secret-reference channel;
 - verification of non-evidence values;
@@ -165,7 +191,8 @@ The runtime additionally rejects:
 - preparation evidence not bound to the exact operation;
 - `commit` without both an executor and durable completion recorder;
 - uncertain executor outcomes or unverified receipts as completed effects;
-- completion evidence not bound to the same operation and preparation.
+- completion evidence not bound to the same operation and preparation;
+- reuse of an imported prepared effect after durable completion or cancellation.
 
 ## IR
 
@@ -182,6 +209,7 @@ ASSESS
 PLAN
 AUTHORIZE
 PREPARE
+CANCEL
 COMMIT
 ```
 
