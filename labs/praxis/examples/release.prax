@@ -6,4 +6,5 @@ assess release_candidate = verified_source with ReleasePolicy;
 
 op release = Deploy(verified_source) @ Production;
 authorize release using deploy_prod as armed_release;
-commit armed_release as release_receipt;
+prepare armed_release as prepared_release;
+commit prepared_release as release_receipt;
