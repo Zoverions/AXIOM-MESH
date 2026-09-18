@@ -98,14 +98,6 @@ impl ContextItemState {
         }
     }
 
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Active => "active",
-            Self::Quarantined => "quarantined",
-            Self::Stale => "stale",
-            Self::Superseded => "superseded",
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
