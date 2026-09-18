@@ -16,6 +16,10 @@ application code.
 
 Praxis v0 is **built only as an inert laboratory**.
 
+The P0 language core exists. Initial P1 semantic-corpus and P2 pure differential
+evidence also exist, but those are research/conformance milestones, not runtime
+promotion. Praxis remains production-unreachable.
+
 It is not enabled as an AXIOM runtime, is not network exposed, is not
 production promoted, and grants no Mesh, Grid, Hypervisor, Sandbox, repository,
 credential, deployment, spending, or external-effect authority.
@@ -222,11 +226,17 @@ state, or deployment path depends on it.
 
 ## Reproducibility
 
-Run the focused test through the existing Mesh test harness:
+Run the focused tests through the existing Mesh test harness:
 
 ```bash
 node --test mesh/test/praxis-language-v0.test.mjs
+node --test mesh/test/praxis-conformance-v0.test.mjs
 ```
+
+The semantic corpus is stored at
+`labs/praxis/conformance/semantic-corpus.v0.json`. Its coverage table is
+deliberately allowed to say `pending`; missing semantics must remain visible
+rather than being inferred from passing adjacent tests.
 
 Or run the full repository test command:
 
