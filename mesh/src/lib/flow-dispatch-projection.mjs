@@ -167,6 +167,13 @@ function requireNullableIdentifier(value, name) {
   return requireIdentifier(value, name);
 }
 
+function requireBoundedString(value, name, maxLength = 256) {
+  if (typeof value !== 'string' || value.length < 1 || value.length > maxLength) {
+    throw new ValidationError(`${name} must be a bounded non-empty string`);
+  }
+  return value;
+}
+
 function requireInteger(value, name, min, max) {
   if (!Number.isSafeInteger(value) || value < min || value > max) {
     throw new ValidationError(`${name} must be an integer in [${min}, ${max}]`);
@@ -330,7 +337,8 @@ function validateInputShape(input) {
     boundNodes.add(binding.work_node_id);
   }
 
-  const planStepIds = new Set(input.plan.steps.map(step => step.step_id));
+  const planStepById = new Map(input.plan.steps.map(step => [step.step_id, step]));
+  const planStepIds = new Set(planStepById.keys());
   if (bindingByStep.size !== planStepIds.size) {
     throw new ValidationError('bindings must cover every flow step exactly once');
   }
@@ -391,6 +399,13 @@ function validateInputShape(input) {
   for (const binding of bindings) {
     if (binding.handoff_task_id !== null && !handoffById.has(binding.handoff_task_id)) {
       throw new ValidationError(`binding ${binding.step_id} references missing handoff task`);
+    }
+    if (binding.handoff_task_id !== null) {
+      const handoff = handoffById.get(binding.handoff_task_id);
+      const step = planStepById.get(binding.step_id);
+      if (handoff.request.runtime_operation !== step.operation_id) {
+        throw new ValidationError(`binding ${binding.step_id} handoff operation does not match flow step`);
+      }
     }
   }
 
@@ -514,6 +529,7 @@ function classifySteps(input, context, claimState) {
   const workNodeByStep = new Map(
     context.bindings.map(binding => [binding.step_id, context.graphById.get(binding.work_node_id)])
   );
+  const completedSet = new Set();
 
   for (const step of input.plan.steps) {
     const binding = context.bindingByStep.get(step.step_id);
@@ -526,6 +542,7 @@ function classifySteps(input, context, claimState) {
         reasons.push(handoffReason);
       } else {
         completed.push(step.step_id);
+        completedSet.add(step.step_id);
         continue;
       }
     } else if (workNode.state === 'rejected') {
@@ -540,9 +557,14 @@ function classifySteps(input, context, claimState) {
 
     if (workNode.state === 'ready') {
       for (const dependency of step.depends_on) {
-        const dependencyNode = workNodeByStep.get(dependency);
-        if (!dependencyNode || dependencyNode.state !== 'accepted') {
+        if (!completedSet.has(dependency)) {
           reasons.push(`dependency-not-accepted:${dependency}`);
+        }
+      }
+      for (const dependency of workNode.dependencies) {
+        const dependencyNode = context.graphById.get(dependency);
+        if (!dependencyNode || dependencyNode.state !== 'accepted') {
+          reasons.push(`work-dependency-not-accepted:${dependency}`);
         }
       }
 
@@ -750,7 +772,7 @@ function validateProjectionShape(projection) {
     requireIdentifier(proposal.step_id, `${name}.step_id`);
     requireUniqueIdentifiers(proposal.candidate_worker_refs, `${name}.candidate_worker_refs`, 4096);
     requireNullableString(proposal.selected_worker_ref, `${name}.selected_worker_ref`);
-    requireIdentifier(proposal.selection_reason, `${name}.selection_reason`);
+    requireBoundedString(proposal.selection_reason, `${name}.selection_reason`);
     if (
       proposal.selected_worker_ref !== null
       && !proposal.candidate_worker_refs.includes(proposal.selected_worker_ref)
@@ -783,7 +805,7 @@ function validateProjectionShape(projection) {
     requireNullableString(proposal.producer_lineage_ref, `${name}.producer_lineage_ref`);
     requireUniqueIdentifiers(proposal.candidate_verifier_refs, `${name}.candidate_verifier_refs`, 4096);
     requireNullableString(proposal.selected_verifier_ref, `${name}.selected_verifier_ref`);
-    requireIdentifier(proposal.selection_reason, `${name}.selection_reason`);
+    requireBoundedString(proposal.selection_reason, `${name}.selection_reason`);
     if (
       proposal.selected_verifier_ref !== null
       && !proposal.candidate_verifier_refs.includes(proposal.selected_verifier_ref)
