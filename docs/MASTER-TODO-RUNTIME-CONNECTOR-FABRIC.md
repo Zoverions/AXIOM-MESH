@@ -8,7 +8,7 @@
 
 This queue does not create an alternate authority system and does not promote any capability.
 
-**Google managed-agent candidate (2026-09-18):** the runtime/provider catalog now includes `runtime:google-antigravity-managed:preview-09-2026@0.1.0` as a remote-service agent-runtime candidate. A zero-I/O request builder pins the harness/model, requires an explicit AXIOM grant, forces disabled or exact finite egress, rejects wildcards and arbitrary inline secret/header shapes, and reasserts network policy on environment reuse. This does not invoke Google, create credentials, certify the service, or promote `capabilities.json`.
+**Google managed-agent candidate (2026-09-18):** the runtime/provider catalog now includes `runtime:google-antigravity-managed:preview-09-2026@0.1.0` as a remote-service agent-runtime candidate. A zero-I/O request builder pins the harness/model, requires an explicit AXIOM grant, forces disabled or exact finite egress, rejects wildcards, refuses provider credential brokerage until credential handles are grant-bound, and reasserts network policy on environment reuse. This does not invoke Google, create credentials, certify the service, or promote `capabilities.json`.
 
 ## P0 — preserve the authority boundary
 
