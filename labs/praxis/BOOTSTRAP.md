@@ -41,10 +41,14 @@ the trust must be established.
 
 ### P0 — inert laboratory
 
-Current stage.
+Current authority stage.
 
 Praxis may parse, type-check, compile to inspectable IR, and execute only
 against explicitly injected synthetic/test hosts.
+
+Initial P1 corpus work and one P2 pure differential target may be developed
+while the authority stage remains P0. Evidence maturity and runtime authority
+are intentionally separate axes.
 
 No production authority.
 
