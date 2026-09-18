@@ -24,10 +24,10 @@ fn registration_and_consumption_survive_restart_without_replay() {
             .register_envelope("offline-envelope:1")
             .expect("register envelope");
         journal
-            .consume_effect("offline-envelope:1", 1)
+            .consume_effect("offline-envelope:1", 1, b"intent-one")
             .expect("consume sequence 1");
         journal
-            .consume_effect("offline-envelope:1", 2)
+            .consume_effect("offline-envelope:1", 2, b"intent-two")
             .expect("consume sequence 2");
         assert_eq!(journal.consumed_sequence("offline-envelope:1"), Some(2));
         assert!(!journal.snapshot().grants_authority());
@@ -36,16 +36,24 @@ fn registration_and_consumption_survive_restart_without_replay() {
     {
         let mut reopened = OfflineJournal::open(&path).expect("reopen journal");
         assert_eq!(reopened.consumed_sequence("offline-envelope:1"), Some(2));
+        let recovered = reopened
+            .consumptions_for("offline-envelope:1")
+            .expect("recovered consumption payloads");
+        assert_eq!(recovered.len(), 2);
+        assert_eq!(recovered[0].sequence, 1);
+        assert_eq!(recovered[0].payload, b"intent-one");
+        assert_eq!(recovered[1].sequence, 2);
+        assert_eq!(recovered[1].payload, b"intent-two");
         assert!(matches!(
             reopened.register_envelope("offline-envelope:1"),
             Err(JournalError::DuplicateEnvelope)
         ));
         assert!(matches!(
-            reopened.consume_effect("offline-envelope:1", 2),
+            reopened.consume_effect("offline-envelope:1", 2, b"intent-two"),
             Err(JournalError::ConsumptionSequenceMismatch)
         ));
         reopened
-            .consume_effect("offline-envelope:1", 3)
+            .consume_effect("offline-envelope:1", 3, b"intent-three")
             .expect("continue monotonic consumption after restart");
     }
 
@@ -109,7 +117,7 @@ fn torn_trailing_record_fails_closed_on_reopen() {
     }
     {
         let mut file = OpenOptions::new().append(true).open(&path).expect("append");
-        file.write_all(b"v1\t2\tconsume\toffline-envelope:torn")
+        file.write_all(b"v2\t2\tconsume\toffline-envelope:torn")
             .expect("write torn tail");
         file.sync_data().expect("sync torn tail");
     }
@@ -130,7 +138,7 @@ fn tampered_historical_record_fails_chain_verification() {
             .register_envelope("offline-envelope:tamper")
             .expect("register");
         journal
-            .consume_effect("offline-envelope:tamper", 1)
+            .consume_effect("offline-envelope:tamper", 1, b"tamper-intent")
             .expect("consume");
     }
 
@@ -157,7 +165,7 @@ fn unknown_envelope_and_sequence_gaps_do_not_append_records() {
     let path = temp_path("invalid");
     let mut journal = OfflineJournal::open(&path).expect("open journal");
     assert!(matches!(
-        journal.consume_effect("offline-envelope:missing", 1),
+        journal.consume_effect("offline-envelope:missing", 1, b"missing"),
         Err(JournalError::UnknownEnvelope)
     ));
     journal
@@ -165,7 +173,7 @@ fn unknown_envelope_and_sequence_gaps_do_not_append_records() {
         .expect("register");
     let before = read(&path).expect("read before invalid sequence");
     assert!(matches!(
-        journal.consume_effect("offline-envelope:valid", 2),
+        journal.consume_effect("offline-envelope:valid", 2, b"gap"),
         Err(JournalError::ConsumptionSequenceMismatch)
     ));
     let after = read(&path).expect("read after invalid sequence");
