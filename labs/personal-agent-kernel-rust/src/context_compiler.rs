@@ -707,11 +707,7 @@ fn canonical_context_preimage(bundle: &ContextBundle) -> String {
 
 fn canonical_memory_assessment_preimage(assessment: &MemoryAssessment) -> String {
     let mut out = String::new();
-    push_field(
-        &mut out,
-        "schema",
-        "axiom-personal-memory-assessment.v0",
-    );
+    push_field(&mut out, "schema", "axiom-personal-memory-assessment.v0");
     push_field(&mut out, "candidate_id", &assessment.candidate_id);
     push_field(
         &mut out,
@@ -719,7 +715,11 @@ fn canonical_memory_assessment_preimage(assessment: &MemoryAssessment) -> String
         memory_disposition_str(assessment.disposition),
     );
 
-    let mut reasons = assessment.reasons.iter().map(String::as_str).collect::<Vec<_>>();
+    let mut reasons = assessment
+        .reasons
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
     reasons.sort_unstable();
     reasons.dedup();
     for reason in reasons {
