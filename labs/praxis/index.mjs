@@ -3325,7 +3325,9 @@ export async function run(source, {
         break;
       }
 
-      case 'COMMIT': {
+      case 'COMMIT':
+      case 'FINALIZE': {
+        const finality = instruction.op === 'FINALIZE' ? 'finalize' : 'commit';
         if (typeof executor !== 'function') {
           throw new PraxisRuntimeError(
             'PRAXIS_EXECUTOR_REQUIRED',
@@ -3358,10 +3360,35 @@ export async function run(source, {
           charterContext
         });
 
+        if (
+          prepared.operation.effect !== undefined
+          && typeof prepared.operation.irreversible !== 'boolean'
+        ) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_IR_MALFORMED',
+            'measured prepared operation has invalid irreversibility metadata'
+          );
+        }
+        if (prepared.operation.irreversible === true && finality !== 'finalize') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_IRREVERSIBLE_REQUIRES_FINALIZE',
+            'host-measured irreversible operation requires finalize'
+          );
+        }
+        if (finality === 'finalize' && prepared.operation.irreversible !== true) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_FINALIZE_REQUIRES_IRREVERSIBLE',
+            'finalize requires a host-measured irreversible operation'
+          );
+        }
+
         const expectedDigest = prepared.operation.operation_digest;
         const preparationDigest = prepared.preparation.preparation_digest;
         const request = Object.freeze({
-          schema: 'praxis-commit-request.v0',
+          schema: finality === 'finalize'
+            ? 'praxis-finalize-request.v0'
+            : 'praxis-commit-request.v0',
+          finality,
           operation: prepared.operation,
           authority: prepared.authority,
           preparation: prepared.preparation,
@@ -3402,6 +3429,10 @@ export async function run(source, {
           || !result.receipt
           || result.receipt.operation_digest !== expectedDigest
           || result.receipt.preparation_digest !== preparationDigest
+          || (
+            prepared.operation.effect !== undefined
+            && result.receipt.finality !== finality
+          )
         ) {
           throw new PraxisRuntimeError(
             'PRAXIS_EXTERNAL_RECEIPT_UNVERIFIED',
@@ -3417,6 +3448,7 @@ export async function run(source, {
 
         const completionRequest = Object.freeze({
           schema: 'praxis-completion-request.v0',
+          finality,
           operation_digest: expectedDigest,
           preparation_digest: preparationDigest,
           receipt: Object.freeze({ ...result.receipt })
@@ -3444,6 +3476,10 @@ export async function run(source, {
           || completion.evidence.durable !== true
           || completion.evidence.operation_digest !== expectedDigest
           || completion.evidence.preparation_digest !== preparationDigest
+          || (
+            prepared.operation.effect !== undefined
+            && completion.evidence.finality !== finality
+          )
         ) {
           throw new PraxisRuntimeError(
             'PRAXIS_COMPLETION_EVIDENCE_INVALID',
@@ -3467,6 +3503,7 @@ export async function run(source, {
           operation_digest: expectedDigest,
           preparation_digest: preparationDigest,
           authority_id: prepared.authority.authority_id,
+          finality,
           executor_receipt: Object.freeze({ ...result.receipt }),
           completion_evidence: Object.freeze({ ...completion.evidence })
         }));
