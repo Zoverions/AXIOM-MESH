@@ -18,6 +18,13 @@ const ACTION = 'adapter.reference.echo';
 const PURPOSE = 'test.conformance';
 const PRINCIPAL_ID = 'principal:rt-auth-014';
 const DEFAULT_INPUT_SHA256 = sha256('synthetic reference input');
+const BUDGET = Object.freeze({
+  max_requests_per_minute: 60,
+  max_concurrent_requests: 1,
+  max_execution_ms: 1_000,
+  max_request_bytes: 4_096,
+  max_response_bytes: 4_096
+});
 
 function expectedPurposeCommitment(purpose, inputSha256 = DEFAULT_INPUT_SHA256) {
   return sha256(canonicalJson({
@@ -28,12 +35,22 @@ function expectedPurposeCommitment(purpose, inputSha256 = DEFAULT_INPUT_SHA256) 
   }));
 }
 
+function expectedBudgetCommitment(inputSha256) {
+  return sha256(canonicalJson({
+    schema: 'axiom-effect-budget-commitment.v1',
+    axiom_action: ACTION,
+    budget: BUDGET,
+    input_sha256: inputSha256
+  }));
+}
+
 function authorizationDetail(overrides = {}) {
   return {
     type: 'axiom-runtime-effect.v1',
     runtime_operation: 'reference.echo',
     axiom_action: ACTION,
     purpose: PURPOSE,
+    budget: BUDGET,
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference'],
@@ -57,7 +74,10 @@ test('recognized external purpose is bound into the signed input commitment', ()
     grantId: 'grant:rt-auth-014-translated'
   }));
 
-  assert.equal(translated.input_sha256, expectedPurposeCommitment(PURPOSE));
+  assert.equal(
+    translated.input_sha256,
+    expectedBudgetCommitment(expectedPurposeCommitment(PURPOSE))
+  );
   assert.equal(Object.hasOwn(translated, 'purpose'), false);
   assert.equal(canonicalJson(translated).includes(PURPOSE), false);
 });
@@ -76,7 +96,9 @@ test('purpose binding uses the native synthetic default input digest', () => {
 
   assert.equal(
     translated.input_sha256,
-    expectedPurposeCommitment(PURPOSE, nativeRequest.input_sha256)
+    expectedBudgetCommitment(
+      expectedPurposeCommitment(PURPOSE, nativeRequest.input_sha256)
+    )
   );
 });
 

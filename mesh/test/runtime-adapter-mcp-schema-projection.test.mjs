@@ -17,6 +17,13 @@ const ACTION = 'adapter.reference.echo';
 const INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
 const PURPOSE = 'test.conformance';
 const PRINCIPAL_ID = 'principal:rt-auth-012';
+const BUDGET = Object.freeze({
+  max_requests_per_minute: 60,
+  max_concurrent_requests: 1,
+  max_execution_ms: 1_000,
+  max_request_bytes: 4_096,
+  max_response_bytes: 4_096
+});
 
 function authorizationDetail(overrides = {}) {
   return {
@@ -24,6 +31,7 @@ function authorizationDetail(overrides = {}) {
     runtime_operation: 'reference.echo',
     axiom_action: ACTION,
     purpose: PURPOSE,
+    budget: BUDGET,
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference'],
@@ -38,11 +46,17 @@ function expectedCommitment(argumentsObject) {
     input_schema_ref: INPUT_SCHEMA_REF,
     arguments: argumentsObject
   }));
-  return sha256(canonicalJson({
+  const purposeBoundInputSha256 = sha256(canonicalJson({
     schema: 'axiom-effect-purpose-commitment.v1',
     axiom_action: ACTION,
     purpose: PURPOSE,
     input_sha256: structuredInputSha256
+  }));
+  return sha256(canonicalJson({
+    schema: 'axiom-effect-budget-commitment.v1',
+    axiom_action: ACTION,
+    budget: BUDGET,
+    input_sha256: purposeBoundInputSha256
   }));
 }
 
@@ -109,8 +123,10 @@ test('MCP tools/call projects schema-valid arguments into native effect authorit
   assert.equal(translated.axiom_action, ACTION);
   assert.equal(translated.input_sha256, expectedCommitment(argumentsObject));
   assert.equal(Object.hasOwn(translated, 'mcpRequest'), false);
+  assert.equal(Object.hasOwn(translated, 'budget'), false);
   assert.equal(canonicalJson(translated).includes('hello'), false);
   assert.equal(canonicalJson(translated).includes(PURPOSE), false);
+  assert.equal(canonicalJson(translated).includes('max_execution_ms'), false);
 });
 
 test('MCP metadata is non-authoritative and object-key order is canonical', () => {
