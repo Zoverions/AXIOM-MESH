@@ -1,7 +1,7 @@
 import https from 'node:https';
 import { AxiomError, ValidationError } from './canonical.mjs';
 import { signedRequestHeaders } from './identity.mjs';
-import { evaluateMachineIntent } from './machine-principal.mjs';
+import { evaluateMachineIntentWithAssurance } from './agent-assurance-authority-binding.mjs';
 import { validatePlan } from './plan.mjs';
 import {
   serviceDnsName,
@@ -109,10 +109,11 @@ export function resolveSignedFetchTimeoutMs({
 
   const principal = body?.intent?.principal;
   if (principal?.schema === 'axiom-machine-principal.v1') {
-    const machineDecision = evaluateMachineIntent(principal, {
+    const machineDecision = evaluateMachineIntentWithAssurance(principal, {
       action: body?.intent?.action,
       purpose: body?.intent?.purpose,
-      requested_execution_ms: planTimeoutMs
+      requested_execution_ms: planTimeoutMs,
+      assurance_evidence: body?.intent?.assurance_evidence
     });
     if (!machineDecision.allow) {
       throw new AxiomError(
