@@ -10,6 +10,7 @@ export const RESEARCH_SOURCE_MANIFEST_SCHEMA = 'axiom-research-source-manifest.v
 export const RESEARCH_KNOWLEDGE_PROJECTION_SCHEMA = 'axiom-research-knowledge-projection.v0';
 export const RESEARCH_OPERATION_CANDIDATE_SCHEMA = 'axiom-research-operation-candidate.v0';
 export const RESEARCH_REPRODUCTION_EVIDENCE_SCHEMA = 'axiom-research-reproduction-evidence.v0';
+export const RESEARCH_CLAIM_ADJUDICATION_SCHEMA = 'axiom-research-claim-adjudication.v0';
 
 const MAX_OBJECT_BYTES = 65_536;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
@@ -73,6 +74,14 @@ const REPRODUCTION_DISPOSITIONS = new Set([
 const REPRODUCTION_NETWORK_PROFILES = new Set([
   'none',
   'synthetic_loopback_only'
+]);
+
+const CLAIM_ADJUDICATION_STATUSES = new Set([
+  'supported',
+  'corrected',
+  'contested',
+  'unsupported',
+  'insufficient_evidence'
 ]);
 
 const SOURCE_MANIFEST_FIELDS = Object.freeze([
@@ -160,6 +169,27 @@ const REPRODUCTION_EVIDENCE_FIELDS = Object.freeze([
   'authority_effect',
   'evidence_digest'
 ]);
+
+const CLAIM_ADJUDICATION_FIELDS = Object.freeze([
+  'schema',
+  'adjudication_id',
+  'source_manifest_digest',
+  'knowledge_projection_digest',
+  'entry_id',
+  'entry_content_digest',
+  'assessed_at',
+  'adjudication_method',
+  'evidence_refs',
+  'evidence_digests',
+  'status',
+  'correction_summary',
+  'source_statement_mutation',
+  'truth_established',
+  'instruction_authority',
+  'authority_effect',
+  'adjudication_digest'
+]);
+
 
 export function researchContractDigest(value, digestField) {
   assertPlainObject(value, 'contract');
@@ -291,6 +321,72 @@ export function verifyResearchReproductionEvidence(value) {
   assertDigest(object.evidence_digest, 'ResearchReproductionEvidence.evidence_digest');
   assertSelfDigest(object, 'evidence_digest', 'ResearchReproductionEvidence');
   return object;
+}
+
+export function verifyResearchClaimAdjudication(value) {
+  const object = boundedCanonical(value, 'ResearchClaimAdjudication');
+  assertExactFields(object, CLAIM_ADJUDICATION_FIELDS, 'ResearchClaimAdjudication');
+  assertSchema(object.schema, RESEARCH_CLAIM_ADJUDICATION_SCHEMA, 'ResearchClaimAdjudication');
+  assertIdentifier(object.adjudication_id, 'ResearchClaimAdjudication.adjudication_id');
+  assertDigest(object.source_manifest_digest, 'ResearchClaimAdjudication.source_manifest_digest');
+  assertDigest(object.knowledge_projection_digest, 'ResearchClaimAdjudication.knowledge_projection_digest');
+  assertIdentifier(object.entry_id, 'ResearchClaimAdjudication.entry_id');
+  assertDigest(object.entry_content_digest, 'ResearchClaimAdjudication.entry_content_digest');
+  assertTimestamp(object.assessed_at, 'ResearchClaimAdjudication.assessed_at');
+  assertToken(object.adjudication_method, 'ResearchClaimAdjudication.adjudication_method');
+  assertUniqueStrings(object.evidence_refs, 'ResearchClaimAdjudication.evidence_refs', { maxItems: 32, itemMax: 2048 });
+  assertUniqueDigests(object.evidence_digests, 'ResearchClaimAdjudication.evidence_digests', 32);
+  assertEnum(object.status, CLAIM_ADJUDICATION_STATUSES, 'ResearchClaimAdjudication.status');
+  if (
+    object.status !== 'insufficient_evidence' &&
+    (object.evidence_refs.length === 0 || object.evidence_digests.length === 0)
+  ) {
+    throw new ValidationError('ResearchClaimAdjudication substantive status requires evidence refs and digests');
+  }
+  assertNullableString(object.correction_summary, 'ResearchClaimAdjudication.correction_summary', 8192);
+  if (object.status === 'corrected' && object.correction_summary === null) {
+    throw new ValidationError('ResearchClaimAdjudication.correction_summary is required when status is corrected');
+  }
+  if (object.status !== 'corrected' && object.correction_summary !== null) {
+    throw new ValidationError('ResearchClaimAdjudication.correction_summary must be null unless status is corrected');
+  }
+  if (object.source_statement_mutation !== 'none') {
+    throw new ValidationError('ResearchClaimAdjudication.source_statement_mutation must equal none');
+  }
+  if (object.truth_established !== false) {
+    throw new ValidationError('ResearchClaimAdjudication.truth_established must equal false');
+  }
+  if (object.instruction_authority !== 'none') {
+    throw new ValidationError('ResearchClaimAdjudication.instruction_authority must equal none');
+  }
+  if (object.authority_effect !== 'none') {
+    throw new ValidationError('ResearchClaimAdjudication.authority_effect must equal none');
+  }
+  assertDigest(object.adjudication_digest, 'ResearchClaimAdjudication.adjudication_digest');
+  assertSelfDigest(object, 'adjudication_digest', 'ResearchClaimAdjudication');
+  return object;
+}
+
+export function verifyResearchClaimAdjudicationBinding(adjudicationValue, knowledgeProjectionValue) {
+  const adjudication = verifyResearchClaimAdjudication(adjudicationValue);
+  const knowledgeProjection = verifyResearchKnowledgeProjection(knowledgeProjectionValue);
+
+  if (adjudication.source_manifest_digest !== knowledgeProjection.source_manifest_digest) {
+    throw new ValidationError('ResearchClaimAdjudication source manifest digest binding mismatch');
+  }
+  if (adjudication.knowledge_projection_digest !== knowledgeProjection.projection_digest) {
+    throw new ValidationError('ResearchClaimAdjudication knowledge projection digest binding mismatch');
+  }
+
+  const entry = knowledgeProjection.entries.find(item => item.entry_id === adjudication.entry_id);
+  if (!entry) {
+    throw new ValidationError('ResearchClaimAdjudication entry binding not found');
+  }
+  if (entry.content_digest !== adjudication.entry_content_digest) {
+    throw new ValidationError('ResearchClaimAdjudication entry content digest binding mismatch');
+  }
+
+  return adjudication;
 }
 
 function boundedCanonical(value, name) {

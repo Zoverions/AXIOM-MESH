@@ -540,3 +540,142 @@ test('independent reproduction coverage suppresses descendant frontier attention
     assert.equal(item.authority_effect, 'none');
   }
 });
+
+
+test('adverse claim adjudications force-include covered frontier tips without granting coverage or truth', async () => {
+  const graphApi = await api();
+  const capsuleApi = await import(new URL('../src/lib/research-capsule-contracts.mjs', import.meta.url).href);
+
+  const h1 = contribution({
+    id: 'research:adj-h1',
+    kind: 'hypothesis',
+    createdAt: '2026-09-18T10:00:00.000Z',
+    summary: 'Adjudication bridge root'
+  });
+  const r1 = contribution({
+    id: 'research:adj-r1',
+    kind: 'result',
+    createdAt: '2026-09-18T10:10:00.000Z',
+    summary: 'Independently covered result'
+  });
+  const v1 = contribution({
+    id: 'research:adj-v1',
+    kind: 'verification',
+    createdAt: '2026-09-18T10:20:00.000Z',
+    summary: 'Independent reproduction'
+  });
+
+  function adjudication({ id, status, evidence = true }) {
+    const base = {
+      schema: 'axiom-research-claim-adjudication.v0',
+      adjudication_id: id,
+      source_manifest_digest: 'sha256:' + 'a'.repeat(64),
+      knowledge_projection_digest: 'sha256:' + 'b'.repeat(64),
+      entry_id: 'entry:1',
+      entry_content_digest: 'sha256:' + 'c'.repeat(64),
+      assessed_at: '2026-09-18T11:00:00.000Z',
+      adjudication_method: 'manual_review',
+      evidence_refs: evidence ? ['evidence:1'] : [],
+      evidence_digests: evidence ? ['sha256:' + 'd'.repeat(64)] : [],
+      status,
+      correction_summary: status === 'corrected' ? 'Corrected reading' : null,
+      source_statement_mutation: 'none',
+      truth_established: false,
+      instruction_authority: 'none',
+      authority_effect: 'none'
+    };
+    return {
+      ...base,
+      adjudication_digest: capsuleApi.researchContractDigest(base, 'adjudication_digest')
+    };
+  }
+
+  const contested = adjudication({ id: 'adj:contested', status: 'contested' });
+  const supported = adjudication({ id: 'adj:supported', status: 'supported' });
+  const insufficient = adjudication({
+    id: 'adj:insufficient',
+    status: 'insufficient_evidence',
+    evidence: false
+  });
+
+  const sAdverseBound = contribution({
+    id: 'research:adj-s-adverse',
+    kind: 'synthesis',
+    createdAt: '2026-09-18T10:30:00.000Z',
+    summary: 'Covered tip with contested adjudication',
+    artifacts: [contested.adjudication_digest]
+  });
+  const sSupportedBound = contribution({
+    id: 'research:adj-s-supported',
+    kind: 'synthesis',
+    createdAt: '2026-09-18T10:40:00.000Z',
+    summary: 'Covered tip with supported adjudication only',
+    artifacts: [supported.adjudication_digest]
+  });
+  const sInsufficient = contribution({
+    id: 'research:adj-s-insufficient',
+    kind: 'synthesis',
+    createdAt: '2026-09-18T10:50:00.000Z',
+    summary: 'Covered tip with insufficient_evidence only',
+    evidence: [insufficient.adjudication_digest]
+  });
+
+  const relations = [
+    relation({
+      id: 'relation:adj-r-builds-h',
+      subject: r1.contribution_digest,
+      predicate: 'builds_on',
+      object: h1.contribution_digest
+    }),
+    relation({
+      id: 'relation:adj-v-repro-r',
+      subject: v1.contribution_digest,
+      predicate: 'reproduces',
+      object: r1.contribution_digest,
+      independence: 'independent'
+    }),
+    relation({
+      id: 'relation:adj-sa-builds-r',
+      subject: sAdverseBound.contribution_digest,
+      predicate: 'builds_on',
+      object: r1.contribution_digest
+    }),
+    relation({
+      id: 'relation:adj-ss-builds-r',
+      subject: sSupportedBound.contribution_digest,
+      predicate: 'builds_on',
+      object: r1.contribution_digest
+    }),
+    relation({
+      id: 'relation:adj-si-builds-r',
+      subject: sInsufficient.contribution_digest,
+      predicate: 'builds_on',
+      object: r1.contribution_digest
+    })
+  ];
+
+  const graph = graphApi.buildResearchCompositionGraph({
+    contributions: [h1, r1, v1, sAdverseBound, sSupportedBound, sInsufficient],
+    relations,
+    claim_adjudications: [contested, supported, insufficient]
+  });
+
+  assert.equal(graph.metrics.independent_reproduction_count, 1);
+  assert.ok(
+    graph.attention_candidate_digests.includes(sAdverseBound.contribution_digest),
+    'contested adjudication must force-include covered tip'
+  );
+  assert.equal(
+    graph.attention_candidate_digests.includes(sSupportedBound.contribution_digest),
+    false,
+    'supported adjudication must not keep covered tip in attention'
+  );
+  assert.equal(
+    graph.attention_candidate_digests.includes(sInsufficient.contribution_digest),
+    false,
+    'insufficient_evidence must not invent attention or suppress coverage'
+  );
+  assert.equal(contested.truth_established, false);
+  assert.equal(contested.authority_effect, 'none');
+  assert.equal(supported.authority_effect, 'none');
+});

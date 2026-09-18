@@ -306,6 +306,7 @@ navigation evidence only and create no truth, reputation, execution, merge,
 or deployment authority. Future semantic-diversity judgments may add evidence to
 this graph, but do not become truth or authority. Lineage relations remain
 acyclic; support and contradiction may remain cyclic as visible disagreement.
+Research Claim Adjudication v0 records supported/corrected/contested/unsupported/insufficient_evidence assessments as source-preserving evidence only (`truth_established: false`, `authority_effect: none`); adverse adjudications referenced from composition contributions force-include those tips in attention without granting reputation or coverage suppression.
 The two Runtime & Connector Fabric v1 schema files are now raw-byte
 pinned by the zero-dependency frozen-contract verifier and protected test surface
 at:
