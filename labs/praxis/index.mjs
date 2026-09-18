@@ -1715,10 +1715,78 @@ function resolveValue(arg, values) {
   return values.get(arg.name);
 }
 
+function validateCharteredAuthorityToken(token, requirement, charterContext, nowMs) {
+  if (!token?.charter_digest) return;
+  if (!charterContext) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_CHARTER_REQUIRED',
+      'chartered authority requires the signed charter at runtime'
+    );
+  }
+  if (token.charter_digest !== charterContext.digest) {
+    throw new PraxisRuntimeError('PRAXIS_CHARTER_SIGNATURE', 'authority charter digest mismatch');
+  }
+  const policyEntry = charterContext.body.policies?.[token.policy_name];
+  if (!policyEntry || policyEntry.digest !== token.policy_digest) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_UNPINNED',
+      'authority policy is not pinned by the runtime charter'
+    );
+  }
+  const policy = policyEntry.def;
+  const expectedKind = requirement.authority_kind ?? 'Permit';
+  if (
+    policy.authority_kind !== expectedKind
+    || policy.action !== token.action
+    || policy.scope !== token.scope
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_UNPINNED',
+      'chartered authority does not match the pinned policy'
+    );
+  }
+  if (expectedKind === 'Quorum') {
+    const policyMembers = [...(policy.members ?? [])].sort();
+    const tokenMembers = [...(token.members ?? [])].sort();
+    if (
+      policy.threshold !== token.threshold
+      || policyMembers.length !== tokenMembers.length
+      || policyMembers.some((member, index) => member !== tokenMembers[index])
+      || (policy.humans ?? 0) !== (token.human_minimum ?? 0)
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'chartered quorum was weakened relative to the pinned policy'
+      );
+    }
+  }
+  for (const evidence of token.evidence ?? []) {
+    const verifier = charterContext.body.verifiers?.[evidence.verifier_name];
+    if (!verifier || verifier.digest !== evidence.verifier_digest) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_VERIFIER_UNPINNED',
+        'authority evidence uses an unpinned verifier'
+      );
+    }
+    if (nowMs >= evidence.valid_until_ms) {
+      throw new PraxisRuntimeError('PRAXIS_EVIDENCE_STALE', 'authority evidence is stale');
+    }
+  }
+  if (policy.advisor) {
+    if (!token.advice || token.advice.advisor !== policy.advisor || token.advice.deny !== false) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_ADVISOR_REQUIRED',
+        'pinned advisor result is missing from authority'
+      );
+    }
+  }
+}
+
 function validateAuthorityToken(token, requirement, {
   nowMs,
   revokedAuthorityIds,
-  operationDigest: expectedOperationDigest = null
+  operationDigest: expectedOperationDigest = null,
+  charterContext = null
 }) {
   const expectedKind = requirement.authority_kind ?? 'Permit';
   if (!token || token[HOST_AUTHORITY] !== expectedKind) {
@@ -1733,12 +1801,17 @@ function validateAuthorityToken(token, requirement, {
       `host authority token ${token.id} is revoked`
     );
   }
-  if (expectedKind === 'Lease' && nowMs >= token.expires_at_ms) {
+  if (
+    token.expires_at_ms !== null
+    && token.expires_at_ms !== undefined
+    && nowMs >= token.expires_at_ms
+  ) {
     throw new PraxisRuntimeError(
       'PRAXIS_HOST_AUTHORITY_EXPIRED',
-      `host authority lease ${token.id} expired`
+      `host authority token ${token.id} expired`
     );
   }
+  validateCharteredAuthorityToken(token, requirement, charterContext, nowMs);
   if (expectedKind === 'Quorum') {
     const expectedMembers = [...requirement.members].sort();
     const actualMembers = Array.isArray(token.members) ? [...token.members].sort() : [];
