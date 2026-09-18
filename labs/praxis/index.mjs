@@ -155,6 +155,58 @@ export function irDigestPraxis(ir) {
   return `sha256:${digestPraxis(body)}`;
 }
 
+function deepFreezePraxis(value) {
+  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const item of Object.values(value)) deepFreezePraxis(item);
+  return Object.freeze(value);
+}
+
+function immutablePraxisSnapshot(value) {
+  return deepFreezePraxis(canonicalizePraxis(value));
+}
+
+export function createOperationDescriptorPraxis({
+  action,
+  scope,
+  args = [],
+  secretReferences = []
+}) {
+  if (!action || !scope) throw new TypeError('Praxis operation descriptor requires action and scope');
+  const body = immutablePraxisSnapshot({
+    schema: 'praxis-operation.v0',
+    action: String(action),
+    scope: String(scope),
+    args,
+    secret_references: secretReferences
+  });
+  return Object.freeze({
+    kind: 'Operation',
+    ...body,
+    operation_digest: operationDigest(body)
+  });
+}
+
+function validateOperationDescriptorPraxis(operation) {
+  if (!operation || operation.kind !== 'Operation' || operation.schema !== 'praxis-operation.v0') {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_SUBJECT_REQUIRED',
+      'policy evaluation requires a Praxis Operation descriptor'
+    );
+  }
+  const {
+    kind: ignoredKind,
+    operation_digest: claimedDigest,
+    ...body
+  } = operation;
+  const expected = operationDigest(body);
+  if (claimedDigest !== expected) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_SUBJECT_INVALID',
+      'operation descriptor digest does not match its content'
+    );
+  }
+  return operation;
+}
 
 function keyToPublicDerBase64(key) {
   if (typeof key === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(key)) return key;
@@ -225,6 +277,98 @@ function normalizeAgentBindings(agents, principals) {
   return output;
 }
 
+
+const POLICY_COMPARATORS = new Set(['eq', 'neq', 'lt', 'lte', 'gt', 'gte']);
+const FORBIDDEN_POLICY_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function policyPremiseError(message) {
+  return new PraxisRuntimeError('PRAXIS_POLICY_PREMISE', message);
+}
+
+function normalizePolicyPath(path, label) {
+  if (path === undefined || path === null) return Object.freeze([]);
+  if (!Array.isArray(path)) {
+    throw policyPremiseError(label + ' path must be an array');
+  }
+  const normalized = path.map(segment => {
+    if (
+      !(typeof segment === 'string' || (Number.isSafeInteger(segment) && segment >= 0))
+    ) {
+      throw policyPremiseError(label + ' path contains an invalid segment');
+    }
+    if (typeof segment === 'string' && FORBIDDEN_POLICY_PATH_SEGMENTS.has(segment)) {
+      throw policyPremiseError(label + ' path contains a forbidden host-runtime name');
+    }
+    return segment;
+  });
+  return Object.freeze(normalized);
+}
+
+function normalizePolicyOperand(operand, label) {
+  if (!operand || typeof operand !== 'object' || Array.isArray(operand)) {
+    throw policyPremiseError(label + ' must be a policy operand object');
+  }
+  if (operand.source === 'const') {
+    if (!Object.hasOwn(operand, 'value')) {
+      throw policyPremiseError(label + ' constant is missing value');
+    }
+    return Object.freeze({
+      source: 'const',
+      value: immutablePraxisSnapshot(operand.value)
+    });
+  }
+  if (operand.source === 'evidence') {
+    if (typeof operand.verifier !== 'string' || operand.verifier.length === 0) {
+      throw policyPremiseError(label + ' evidence operand requires verifier');
+    }
+    return Object.freeze({
+      source: 'evidence',
+      verifier: operand.verifier,
+      path: normalizePolicyPath(operand.path, label)
+    });
+  }
+  if (operand.source === 'operation') {
+    const path = normalizePolicyPath(operand.path, label);
+    if (path.length === 0) {
+      throw policyPremiseError(label + ' operation operand requires a path');
+    }
+    if (!['action', 'scope', 'args', 'operation_digest'].includes(path[0])) {
+      throw policyPremiseError(label + ' operation path may read only action, scope, args, or operation_digest');
+    }
+    return Object.freeze({
+      source: 'operation',
+      path
+    });
+  }
+  throw policyPremiseError(
+    label + ' may use only verified evidence, exact operation fields, or constants'
+  );
+}
+
+function normalizePolicyPredicate(predicate, index, requiredVerifiers) {
+  if (!predicate || typeof predicate !== 'object' || Array.isArray(predicate)) {
+    throw policyPremiseError('require[' + index + '] must be an object');
+  }
+  if (!POLICY_COMPARATORS.has(predicate.op)) {
+    throw policyPremiseError('require[' + index + '] uses unsupported comparator ' + predicate.op);
+  }
+  const left = normalizePolicyOperand(predicate.left, 'require[' + index + '].left');
+  const right = normalizePolicyOperand(predicate.right, 'require[' + index + '].right');
+  for (const operand of [left, right]) {
+    if (operand.source === 'evidence' && !requiredVerifiers.has(operand.verifier)) {
+      throw policyPremiseError(
+        'require[' + index + '] references evidence verifier ' + operand.verifier
+        + ' without declaring it in requires_evidence'
+      );
+    }
+  }
+  return Object.freeze({
+    op: predicate.op,
+    left,
+    right
+  });
+}
+
 function normalizePolicyDefinition(name, definition) {
   if (!definition || !['Permit', 'Quorum'].includes(definition.authority_kind)) {
     throw new TypeError('policy ' + name + ' must declare authority_kind Permit or Quorum');
@@ -235,13 +379,23 @@ function normalizePolicyDefinition(name, definition) {
   if (!Number.isSafeInteger(definition.expires_ms) || definition.expires_ms <= 0) {
     throw new TypeError('policy ' + name + ' requires positive expires_ms');
   }
+  if (definition.require !== undefined && !Array.isArray(definition.require)) {
+    throw policyPremiseError('policy ' + name + ' require must be an array');
+  }
+  const requiresEvidence = Object.freeze(
+    [...new Set((definition.requires_evidence ?? []).map(String))].sort()
+  );
+  const requiredVerifierSet = new Set(requiresEvidence);
   const normalized = {
     authority_kind: definition.authority_kind,
     action: String(definition.action),
     scope: String(definition.scope),
     expires_ms: definition.expires_ms,
-    requires_evidence: Object.freeze(
-      [...new Set((definition.requires_evidence ?? []).map(String))].sort()
+    requires_evidence: requiresEvidence,
+    require: Object.freeze(
+      (definition.require ?? []).map((predicate, index) =>
+        normalizePolicyPredicate(predicate, index, requiredVerifierSet)
+      )
     ),
     advisor: definition.advisor ? String(definition.advisor) : null
   };
@@ -325,6 +479,22 @@ function validateCharterBody(body) {
     if (!entry?.def || entry.digest !== signatureBodyDigest(entry.def)) {
       throw new PraxisRuntimeError('PRAXIS_POLICY_UNPINNED', 'policy ' + name + ' digest mismatch');
     }
+    let normalizedPolicy;
+    try {
+      normalizedPolicy = normalizePolicyDefinition(name, entry.def);
+    } catch (error) {
+      if (error instanceof PraxisRuntimeError) throw error;
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'policy ' + name + ' is not a valid normalized policy'
+      );
+    }
+    if (canonicalJsonPraxis(normalizedPolicy) !== canonicalJsonPraxis(entry.def)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'policy ' + name + ' is not in canonical normalized form'
+      );
+    }
     for (const verifierName of entry.def.requires_evidence ?? []) {
       if (!Object.hasOwn(body.verifiers ?? {}, verifierName)) {
         throw new PraxisRuntimeError(
@@ -359,6 +529,21 @@ function validateCharterBody(body) {
   for (const [name, entry] of Object.entries(body.verifiers ?? {})) {
     if (!entry?.def || entry.digest !== signatureBodyDigest(entry.def)) {
       throw new PraxisRuntimeError('PRAXIS_VERIFIER_UNPINNED', 'verifier ' + name + ' digest mismatch');
+    }
+    let normalizedVerifier;
+    try {
+      normalizedVerifier = normalizeVerifierDefinition(name, entry.def);
+    } catch {
+      throw new PraxisRuntimeError(
+        'PRAXIS_VERIFIER_UNPINNED',
+        'verifier ' + name + ' is not a valid normalized verifier'
+      );
+    }
+    if (canonicalJsonPraxis(normalizedVerifier) !== canonicalJsonPraxis(entry.def)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_VERIFIER_UNPINNED',
+        'verifier ' + name + ' is not in canonical normalized form'
+      );
     }
     for (const signer of entry.def.signers ?? []) {
       if (!Object.hasOwn(body.principals ?? {}, signer)) {
@@ -453,7 +638,7 @@ export function createHostObservation({
   const body = Object.freeze({
     schema: 'praxis-observation.v0',
     source: String(source),
-    value,
+    value: immutablePraxisSnapshot(value),
     issued_at_ms: issuedAtMs,
     principal: String(principal),
     nonce: String(nonce)
@@ -535,6 +720,7 @@ export function verifyHostObservation({
 
 function requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowMs) {
   const items = Array.isArray(evidence) ? evidence : [];
+  const byVerifier = Object.create(null);
   for (const item of items) {
     if (!item || item[VERIFIED_EVIDENCE] !== true || item.kind !== 'Verified') {
       throw new PraxisRuntimeError(
@@ -555,16 +741,23 @@ function requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowM
     if (nowMs >= item.valid_until_ms) {
       throw new PraxisRuntimeError('PRAXIS_EVIDENCE_STALE', 'authority evidence is stale');
     }
+    if (Object.hasOwn(byVerifier, item.verifier_name)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EVIDENCE_AMBIGUOUS',
+        'multiple authority evidence values were supplied for verifier ' + item.verifier_name
+      );
+    }
+    byVerifier[item.verifier_name] = item;
   }
   for (const required of policy.requires_evidence ?? []) {
-    if (!items.some(item => item.verifier_name === required)) {
+    if (!Object.hasOwn(byVerifier, required)) {
       throw new PraxisRuntimeError(
         'PRAXIS_EVIDENCE_REQUIRED',
         'policy requires verified evidence from ' + required
       );
     }
   }
-  return Object.freeze(items.map(item => Object.freeze({
+  const metadata = Object.freeze(items.map(item => Object.freeze({
     verifier_name: item.verifier_name,
     verifier_digest: item.verifier_digest,
     evidence_digest: item.evidence_digest,
@@ -572,6 +765,120 @@ function requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowM
     source: item.provenance,
     signer: item.signer
   })));
+  return Object.freeze({
+    items: Object.freeze([...items]),
+    by_verifier: Object.freeze(byVerifier),
+    metadata
+  });
+}
+
+function readPolicyPath(root, path, label) {
+  let current = root;
+  for (const segment of path) {
+    if (
+      current === null
+      || current === undefined
+      || (typeof current !== 'object' && typeof current !== 'string')
+      || !Object.hasOwn(Object(current), segment)
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_ERROR',
+        label + ' path does not exist'
+      );
+    }
+    current = current[segment];
+  }
+  return current;
+}
+
+function resolvePolicyOperand(operand, evidenceByVerifier, operation) {
+  if (operand.source === 'const') return operand.value;
+  if (operand.source === 'evidence') {
+    const evidence = evidenceByVerifier[operand.verifier];
+    if (!evidence) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EVIDENCE_REQUIRED',
+        'policy premise evidence ' + operand.verifier + ' is unavailable'
+      );
+    }
+    return readPolicyPath(
+      evidence.value,
+      operand.path,
+      'evidence ' + operand.verifier
+    );
+  }
+  if (operand.source === 'operation') {
+    if (!operation) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_SUBJECT_REQUIRED',
+        'policy premise references the operation but no exact descriptor was supplied'
+      );
+    }
+    return readPolicyPath(operation, operand.path, 'operation');
+  }
+  throw new PraxisRuntimeError('PRAXIS_POLICY_ERROR', 'unknown policy operand source');
+}
+
+function policyValuesEqual(left, right) {
+  try {
+    return canonicalJsonPraxis(left) === canonicalJsonPraxis(right);
+  } catch {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_ERROR',
+      'policy equality comparison received a non-canonical value'
+    );
+  }
+}
+
+function comparePolicyValues(op, left, right) {
+  if (op === 'eq') return policyValuesEqual(left, right);
+  if (op === 'neq') return !policyValuesEqual(left, right);
+  const leftType = typeof left;
+  const rightType = typeof right;
+  if (
+    leftType !== rightType
+    || !['number', 'string'].includes(leftType)
+    || (leftType === 'number' && (!Number.isFinite(left) || !Number.isFinite(right)))
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_ERROR',
+      'ordered policy comparison requires two finite numbers or two strings'
+    );
+  }
+  if (op === 'lt') return left < right;
+  if (op === 'lte') return left <= right;
+  if (op === 'gt') return left > right;
+  if (op === 'gte') return left >= right;
+  throw new PraxisRuntimeError('PRAXIS_POLICY_ERROR', 'unknown policy comparator ' + op);
+}
+
+function evaluatePolicyRequirements(policy, evidenceContext, operation) {
+  const results = [];
+  for (const [index, predicate] of (policy.require ?? []).entries()) {
+    const left = resolvePolicyOperand(predicate.left, evidenceContext.by_verifier, operation);
+    const right = resolvePolicyOperand(predicate.right, evidenceContext.by_verifier, operation);
+    let satisfied;
+    try {
+      satisfied = comparePolicyValues(predicate.op, left, right);
+    } catch (error) {
+      if (error instanceof PraxisRuntimeError) throw error;
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_ERROR',
+        'policy require[' + index + '] evaluation failed closed'
+      );
+    }
+    if (satisfied !== true) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_REQUIRE',
+        'policy require[' + index + '] was not satisfied'
+      );
+    }
+    results.push(Object.freeze({
+      predicate_digest: signatureBodyDigest(predicate),
+      result: true
+    }));
+  }
+  return Object.freeze(results);
 }
 
 function resolveRequesterPrincipal(charterContext, requester) {
@@ -700,13 +1007,38 @@ function validateApprovalRequest({
   }
 }
 
+function normalizeAuthoritySubject(operation, suppliedDigest) {
+  if (operation !== null && operation !== undefined) {
+    const validated = validateOperationDescriptorPraxis(operation);
+    if (suppliedDigest !== null && suppliedDigest !== undefined) {
+      normalizeOperationDigest(suppliedDigest);
+      if (suppliedDigest !== validated.operation_digest) {
+        throw new PraxisRuntimeError(
+          'PRAXIS_POLICY_SUBJECT_INVALID',
+          'supplied operation digest does not match the exact operation descriptor'
+        );
+      }
+    }
+    return Object.freeze({
+      operation: validated,
+      operation_digest: validated.operation_digest
+    });
+  }
+  normalizeOperationDigest(suppliedDigest);
+  return Object.freeze({
+    operation: null,
+    operation_digest: suppliedDigest
+  });
+}
+
 async function createCharteredHostAuthority({
   id,
   authorityKind,
   charter,
   trustedRootKeys,
   policyName,
-  operationDigest,
+  operation = null,
+  operationDigest = null,
   evidence = [],
   requester,
   request = null,
@@ -717,7 +1049,8 @@ async function createCharteredHostAuthority({
   if (!id || !policyName || !requester) {
     throw new TypeError('chartered authority requires id, policyName, and requester');
   }
-  normalizeOperationDigest(operationDigest);
+  const subject = normalizeAuthoritySubject(operation, operationDigest);
+  const subjectDigest = subject.operation_digest;
   const nowMs = typeof now === 'number' ? now : Date.parse(String(now));
   if (!Number.isFinite(nowMs)) throw new TypeError('authority time is invalid');
   const charterContext = verifySyntheticCharter(charter, trustedRootKeys);
@@ -732,12 +1065,29 @@ async function createCharteredHostAuthority({
       'policy ' + policyName + ' grants ' + policy.authority_kind + ', not ' + authorityKind
     );
   }
+  if (
+    subject.operation
+    && (subject.operation.action !== policy.action || subject.operation.scope !== policy.scope)
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_SUBJECT_INVALID',
+      'operation descriptor action/scope does not match the pinned policy'
+    );
+  }
   const requesterPrincipal = resolveRequesterPrincipal(charterContext, requester);
-  const evidenceMetadata = requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowMs);
+  const evidenceContext = requireVerifiedAuthorityEvidence(
+    evidence,
+    policy,
+    charterContext,
+    nowMs
+  );
+  const premises = evaluatePolicyRequirements(policy, evidenceContext, subject.operation);
+  const evidenceMetadata = evidenceContext.metadata;
   const advice = await runPinnedAdvisor(policy, advisors, {
     policy_name: policyName,
-    operation_digest: operationDigest,
+    operation_digest: subjectDigest,
     evidence_digests: evidenceMetadata.map(item => item.evidence_digest),
+    premise_digests: premises.map(item => item.predicate_digest),
     requester: requesterPrincipal
   });
 
@@ -751,7 +1101,7 @@ async function createCharteredHostAuthority({
       charterContext,
       policyName,
       policyEntry,
-      operationDigest,
+      operationDigest: subjectDigest,
       evidenceMetadata,
       requester,
       nowMs
@@ -808,7 +1158,7 @@ async function createCharteredHostAuthority({
     id: String(id),
     action: policy.action,
     scope: policy.scope,
-    operation_digest: operationDigest,
+    operation_digest: subjectDigest,
     expires_at_ms: expiry,
     threshold: authorityKind === 'Quorum' ? policy.threshold : null,
     members: authorityKind === 'Quorum' ? policy.members : null,
@@ -820,6 +1170,7 @@ async function createCharteredHostAuthority({
     requester: requesterPrincipal,
     request_digest: requestDigest,
     evidence: evidenceMetadata,
+    premises,
     advice
   });
 }
@@ -1789,6 +2140,20 @@ function validateCharteredAuthorityToken(token, requirement, charterContext, now
       throw new PraxisRuntimeError('PRAXIS_EVIDENCE_STALE', 'authority evidence is stale');
     }
   }
+  const expectedPremises = policy.require ?? [];
+  const actualPremises = token.premises ?? [];
+  if (
+    expectedPremises.length !== actualPremises.length
+    || expectedPremises.some((predicate, index) =>
+      actualPremises[index]?.result !== true
+      || actualPremises[index]?.predicate_digest !== signatureBodyDigest(predicate)
+    )
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_REQUIRE',
+      'chartered authority does not preserve its pinned premise results'
+    );
+  }
   if (policy.advisor) {
     if (!token.advice || token.advice.advisor !== policy.advisor || token.advice.deny !== false) {
       throw new PraxisRuntimeError(
@@ -2066,6 +2431,20 @@ function validatePreparedAuthorityState(prepared, {
         );
       }
     }
+    const expectedPremises = policy.require ?? [];
+    const actualPremises = authority.premises ?? [];
+    if (
+      expectedPremises.length !== actualPremises.length
+      || expectedPremises.some((predicate, index) =>
+        actualPremises[index]?.result !== true
+        || actualPremises[index]?.predicate_digest !== signatureBodyDigest(predicate)
+      )
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_REQUIRE',
+        'prepared authority does not preserve its pinned premise results'
+      );
+    }
     if (policy.advisor) {
       if (
         !authority.advice
@@ -2178,6 +2557,7 @@ export async function run(source, {
       requester: token.requester ?? null,
       request_digest: token.request_digest ?? null,
       evidence: token.evidence ?? null,
+      premises: token.premises ?? null,
       advice: token.advice ?? null
     });
   }
@@ -2462,6 +2842,7 @@ export async function run(source, {
             requester: token.requester ?? null,
             request_digest: token.request_digest ?? null,
             evidence: token.evidence ?? null,
+            premises: token.premises ?? null,
             advice: token.advice ?? null
           })
         }));
