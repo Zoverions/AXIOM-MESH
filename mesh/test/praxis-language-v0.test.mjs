@@ -8,6 +8,7 @@ import {
   createHostLease,
   createHostPermit,
   createHostPreparedRef,
+  createHostQuorum,
   createHostSecretRef,
   run
 } from '../../labs/praxis/index.mjs';
@@ -414,6 +415,125 @@ test('Praxis returns a receipt only after prepare, execute, and durable completi
   assert.equal(result.values.release_receipt.preparation_digest, PREPARATION_DIGEST);
   assert.equal(result.values.release_receipt.authority_id, 'permit:success');
   assert.equal(result.values.release_receipt.completion_evidence.durable, true);
+});
+
+test('Praxis compiles explicit threshold quorum authority', () => {
+  const ir = compile(`
+requires quorum release_gate: Deploy @ Production threshold 2 of Operator, Security, Provider;
+op release = Deploy("artifact") @ Production;
+authorize release using release_gate as armed;
+prepare armed as prepared;
+`);
+
+  assert.deepEqual(
+    ir.instructions.map(instruction => instruction.op),
+    ['REQUIRE_QUORUM', 'PLAN', 'AUTHORIZE', 'PREPARE']
+  );
+  assert.deepEqual(ir.required_permits, [{
+    name: 'release_gate',
+    authority_kind: 'Quorum',
+    action: 'Deploy',
+    scope: 'Production',
+    threshold: 2,
+    members: ['Operator', 'Provider', 'Security']
+  }]);
+  assert.equal(ir.bindings.release_gate.kind, 'Quorum');
+});
+
+test('Praxis rejects invalid or duplicate quorum declarations', () => {
+  assert.throws(
+    () => compile(`
+requires quorum release_gate: Deploy @ Production threshold 0 of Operator, Security;
+`),
+    error => error instanceof PraxisTypeError
+      && error.code === 'PRAXIS_INVALID_QUORUM'
+  );
+
+  assert.throws(
+    () => compile(`
+requires quorum release_gate: Deploy @ Production threshold 2 of Operator, Operator;
+`),
+    error => error instanceof PraxisTypeError
+      && error.code === 'PRAXIS_INVALID_QUORUM'
+  );
+});
+
+test('Praxis quorum authority requires the exact declared membership and threshold', async () => {
+  const source = `
+requires quorum release_gate: Deploy @ Production threshold 2 of Operator, Security, Provider;
+op release = Deploy("artifact") @ Production;
+authorize release using release_gate as armed;
+prepare armed as prepared;
+`;
+
+  const sufficient = createHostQuorum({
+    id: 'quorum:release',
+    action: 'Deploy',
+    scope: 'Production',
+    members: ['Security', 'Provider', 'Operator'],
+    approvedBy: ['Operator', 'Security']
+  });
+
+  const result = await run(source, {
+    authorities: { release_gate: sufficient },
+    preparer: durablePreparer()
+  });
+  assert.equal(result.values.release_gate.kind, 'Quorum');
+  assert.deepEqual(result.values.release_gate.approved_by, ['Operator', 'Security']);
+  assert.equal(result.values.prepared.kind, 'PreparedOperation');
+
+  const insufficient = createHostQuorum({
+    id: 'quorum:insufficient',
+    action: 'Deploy',
+    scope: 'Production',
+    members: ['Operator', 'Security', 'Provider'],
+    approvedBy: ['Operator']
+  });
+  await assert.rejects(
+    () => run(source, {
+      authorities: { release_gate: insufficient },
+      preparer: durablePreparer()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_QUORUM_INSUFFICIENT'
+  );
+
+  const wrongMembers = createHostQuorum({
+    id: 'quorum:wrong-members',
+    action: 'Deploy',
+    scope: 'Production',
+    members: ['Operator', 'Security', 'Auditor'],
+    approvedBy: ['Operator', 'Security']
+  });
+  await assert.rejects(
+    () => run(source, {
+      authorities: { release_gate: wrongMembers },
+      preparer: durablePreparer()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_QUORUM_MISMATCH'
+  );
+});
+
+test('Praxis never pools ordinary permits into quorum authority', async () => {
+  const source = `
+requires quorum release_gate: Deploy @ Production threshold 2 of Operator, Security, Provider;
+op release = Deploy("artifact") @ Production;
+authorize release using release_gate as armed;
+`;
+  const ordinaryPermit = createHostPermit({
+    id: 'permit:not-a-quorum',
+    action: 'Deploy',
+    scope: 'Production'
+  });
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: { release_gate: ordinaryPermit }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_REQUIRED'
+  );
 });
 
 test('Praxis compiles Lease as a distinct expiring authority requirement', () => {
