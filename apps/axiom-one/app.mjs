@@ -4,6 +4,11 @@ import {
 } from '/vendor/axiom-client.mjs';
 import { createHumanPresenter } from '/presentation.mjs';
 import { buildBrowserOrganizeDraft } from '/local-organize.mjs';
+import {
+  AXIOM_ONE_FEED_DIMENSION_SUPPORT,
+  DEFAULT_AXIOM_ONE_FEED_WEIGHTS,
+  buildAxiomOneSocialFeedPreview
+} from '/shared/axiom-one-social-feed-preview.mjs';
 
 const ROUTES = new Set([
   'overview',
@@ -14,6 +19,16 @@ const ROUTES = new Set([
   'receipts',
   'share',
   'explore'
+]);
+
+const FEED_OBJECTIVES = Object.freeze([
+  ['relevance', 'Relevance'],
+  ['relationship', 'Relationship'],
+  ['recency', 'Recency'],
+  ['novelty', 'Novelty'],
+  ['source_diversity', 'Source diversity'],
+  ['perspective_expansion', 'Perspective expansion'],
+  ['learning_value', 'Learning value']
 ]);
 
 const state = {
@@ -27,6 +42,10 @@ const state = {
     last: null,
     organizePending: null,
     organizeDraft: null
+  },
+  feed: {
+    mode: 'chronological',
+    weights: { ...DEFAULT_AXIOM_ONE_FEED_WEIGHTS }
   }
 };
 
@@ -347,6 +366,131 @@ async function renderSocial() {
     : [];
   const localOnly = response.network_effect === 'none';
 
+  const feedStatus = element('div', {
+    className: 'feed-status',
+    attrs: { id: 'social-feed-status', 'aria-live': 'polite' }
+  });
+  const feedItems = element('div', {
+    className: 'stack',
+    attrs: { id: 'social-feed-items' }
+  });
+  const modeSelect = element('select', {
+    attrs: {
+      id: 'social-feed-mode',
+      name: 'feed-mode',
+      'aria-describedby': 'social-feed-mode-help'
+    }
+  }, [
+    element('option', { text: 'Chronological', attrs: { value: 'chronological' } }),
+    element('option', { text: 'Ranked preview', attrs: { value: 'weighted' } })
+  ]);
+  modeSelect.value = state.feed.mode;
+
+  const objectiveControls = element('div', { className: 'feed-objectives' });
+  for (const [dimension, label] of FEED_OBJECTIVES) {
+    const support = AXIOM_ONE_FEED_DIMENSION_SUPPORT[dimension];
+    const available = support !== 'unavailable';
+    const inputId = `feed-objective-${dimension}`;
+    const helpId = `${inputId}-help`;
+    const output = element('output', {
+      text: available ? `${Math.round((state.feed.weights[dimension] ?? 0) * 100)}` : '0',
+      attrs: { for: inputId, 'aria-label': `${label} priority` }
+    });
+    const input = element('input', {
+      attrs: {
+        id: inputId,
+        name: dimension,
+        type: 'range',
+        min: '0',
+        max: '100',
+        step: '5',
+        value: String(Math.round((state.feed.weights[dimension] ?? 0) * 100)),
+        'aria-describedby': helpId,
+        ...(available ? {} : { disabled: '', 'aria-disabled': 'true' })
+      }
+    });
+    input.addEventListener('input', () => {
+      state.feed.weights = {
+        ...state.feed.weights,
+        [dimension]: Number(input.value) / 100
+      };
+      output.textContent = input.value;
+      if (state.feed.mode === 'weighted') renderFeedPreview();
+    });
+    input.addEventListener('change', () => {
+      announce('Feed priorities updated in memory for this session');
+    });
+    objectiveControls.append(element('div', {
+      className: `feed-objective${available ? '' : ' unavailable'}`
+    }, [
+      element('label', { text: label, attrs: { for: inputId } }),
+      element('p', {
+        className: 'feed-objective-help',
+        text: available
+          ? `Signal: ${support}. Relative priority is normalized by the canonical ranking core.`
+          : 'Unavailable in S2A; this objective remains fixed at zero.',
+        attrs: { id: helpId }
+      }),
+      element('div', { className: 'feed-slider-row' }, [
+        input,
+        output
+      ])
+    ]));
+  }
+
+  const feedControls = element('section', {
+    className: 'card full feed-controls',
+    attrs: { 'aria-labelledby': 'social-feed-controls-heading' }
+  }, [
+    element('h2', { text: 'Feed / Discovery preview', attrs: { id: 'social-feed-controls-heading' } }),
+    element('p', {
+      text: 'Choose chronological order or a ranked preview. These preferences exist only in this page session and are cleared on disconnect or refresh.'
+    }),
+    field('Feed mode', modeSelect, 'social-feed-mode'),
+    element('p', {
+      className: 'feed-objective-help',
+      text: 'Chronological is always available. Ranked mode changes display order only; it cannot make an excluded publication eligible.',
+      attrs: { id: 'social-feed-mode-help' }
+    }),
+    objectiveControls
+  ]);
+
+  function renderFeedPreview() {
+    const result = buildAxiomOneSocialFeedPreview({
+      publications,
+      mode: state.feed.mode,
+      weights: state.feed.weights
+    });
+    const effectiveLabel = result.effective_mode === 'weighted'
+      ? 'Ranked preview'
+      : result.effective_mode === 'chronological-fallback'
+        ? 'Chronological fallback'
+        : 'Chronological';
+    const statusChildren = [
+      element('p', {
+        text: `Effective mode: ${effectiveLabel}. Visible feed items: ${result.items.length}. History excluded from feed eligibility: ${result.excluded.length}.`
+      })
+    ];
+    if (result.effective_mode === 'chronological-fallback') {
+      statusChildren.push(notice(
+        'Ranked evidence was unavailable or invalid, so AXIOM One failed closed to the deterministic chronological view.'
+      ));
+    }
+    feedStatus.replaceChildren(...statusChildren);
+    const cards = result.items.map(item => socialFeedCard(item, result.effective_mode));
+    feedItems.replaceChildren(...(cards.length
+      ? cards
+      : [empty('No active owner-local publications are eligible for this feed preview.')]));
+  }
+
+  modeSelect.addEventListener('change', () => {
+    state.feed.mode = modeSelect.value === 'weighted' ? 'weighted' : 'chronological';
+    renderFeedPreview();
+    announce(state.feed.mode === 'weighted'
+      ? 'Ranked feed preview selected; priorities remain session-only'
+      : 'Chronological feed selected');
+  });
+
   const actorCards = actors.length
     ? element('div', { className: 'stack' }, actors.map(actor => element('article', {
       className: 'card full'
@@ -382,7 +526,7 @@ async function renderSocial() {
           className: `badge ${status === 'active' ? 'good' : 'pending'}`,
           text: status
         }),
-        element('h2', { text: text }),
+        element('h2', { text }),
         element('p', {
           text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
         }),
@@ -394,19 +538,26 @@ async function renderSocial() {
     }))
     : empty('No local publications are visible to this authenticated principal.');
 
+  renderFeedPreview();
   view.replaceChildren(
-    header('Owner-local Social corpus',
-      'Inspect the social identity, persona, and append-only publication history already held by this node. This read surface derives the owner only from the authenticated principal.'),
+    header('Owner-local Feed / Discovery',
+      'Use a chronological baseline or a transparent ranked preview over the active owner-local Social corpus. Ranking changes local display order only.'),
     grid([
       metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
       metricCard('Personas', String(personas.length), 'Publication personas'),
-      metricCard('Publications', String(publications.length), 'Bounded corpus entries'),
+      metricCard('Publications', String(publications.length), 'Append-only corpus entries'),
       card('Network effect', localOnly ? 'None. No federation or remote distribution occurs.' : 'Unexpected network-effect value returned; inspect the raw response.', {
         wide: true,
         badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
       })
     ]),
-    notice('This tranche is read-only in AXIOM One. Local actor/persona/publication mutation already exists in the kernel, but browser write controls remain disabled until their human explanation and reviewed-request flows are separately bound and tested.'),
+    notice('This S2A surface is read-only. It uses only the authenticated owner-local Social snapshot; remote-review objects are not feed candidates and no browser Social mutation action is added.'),
+    feedControls,
+    feedStatus,
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-feed-heading' } }, [
+      element('h2', { text: 'Active feed', attrs: { id: 'social-feed-heading' } }),
+      feedItems
+    ]),
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
       element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
       actorCards
@@ -416,7 +567,7 @@ async function renderSocial() {
       personaCards
     ]),
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-corpus-heading' } }, [
-      element('h2', { text: 'Append-only publication corpus', attrs: { id: 'social-corpus-heading' } }),
+      element('h2', { text: 'Append-only publication history', attrs: { id: 'social-corpus-heading' } }),
       publicationCards
     ]),
     grid([
@@ -425,6 +576,48 @@ async function renderSocial() {
     ]),
     rawDetails('Raw owner-local Social snapshot', response)
   );
+}
+
+function socialFeedCard(item, effectiveMode) {
+  const publication = item.publication ?? {};
+  const projection = publication.publication ?? {};
+  const text = typeof projection.content?.text === 'string'
+    ? projection.content.text
+    : 'No text projection is available.';
+  const reasons = Array.isArray(item.why?.source_reasons) ? item.why.source_reasons : [];
+  const contributors = Array.isArray(item.why?.contributors) ? item.why.contributors : [];
+  const why = element('details', { className: 'raw-details' }, [
+    element('summary', { text: 'Why am I seeing this?' }),
+    element('p', {
+      text: `Source reasons: ${reasons.length ? reasons.join(', ') : 'none reported'}.`
+    }),
+    contributors.length
+      ? list(contributors, contributor => ({
+          title: contributor.dimension,
+          detail: `weight ${feedNumber(contributor.weight)} · signal ${feedNumber(contributor.signal)} · contribution ${feedNumber(contributor.contribution)}`
+        }))
+      : element('p', {
+          text: effectiveMode === 'chronological'
+            ? 'Chronological mode has no weighted contributors.'
+            : 'No positive weighted contributor changed this item score.'
+        })
+  ]);
+  return element('article', { className: 'card full feed-item' }, [
+    element('span', { className: 'badge good', text: 'active' }),
+    element('h2', { text }),
+    element('p', {
+      text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'}`
+    }),
+    item.score === null
+      ? element('p', { className: 'feed-score', text: 'Ordered chronologically' })
+      : element('p', { className: 'feed-score', text: `Rank score: ${feedNumber(item.score)}` }),
+    why,
+    rawDetails('Inspect exact source projection', publication)
+  ]);
+}
+
+function feedNumber(value) {
+  return Number.isFinite(value) ? Number(value).toFixed(3) : 'unavailable';
 }
 
 async function renderApprovals() {
@@ -1325,6 +1518,8 @@ function clearSession() {
   if (state.session) state.session.token = '';
   state.session = null;
   state.client = null;
+  state.feed.mode = 'chronological';
+  state.feed.weights = { ...DEFAULT_AXIOM_ONE_FEED_WEIGHTS };
 }
 
 function announce(message) {
