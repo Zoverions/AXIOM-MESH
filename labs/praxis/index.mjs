@@ -1201,9 +1201,61 @@ function normalizeRuntimeTime(now) {
 }
 
 function normalizeRevocations(value) {
-  if (value instanceof Set) return new Set([...value].map(String));
-  if (Array.isArray(value)) return new Set(value.map(String));
+  if (value instanceof Set) {
+    return Object.freeze({
+      has(id) {
+        return value.has(id) || value.has(String(id));
+      }
+    });
+  }
+  if (Array.isArray(value)) {
+    const snapshot = new Set(value.map(String));
+    return Object.freeze({
+      has(id) {
+        return snapshot.has(String(id));
+      }
+    });
+  }
   throw new TypeError('revokedAuthorityIds must be an array or Set');
+}
+
+function runtimeTime(now) {
+  return normalizeRuntimeTime(typeof now === 'function' ? now() : now);
+}
+
+function validatePreparedAuthorityState(prepared, {
+  nowMs,
+  revokedAuthorityIds
+}) {
+  const authority = prepared?.authority;
+  const operation = prepared?.operation;
+  if (
+    !authority
+    || !operation
+    || authority.operation_digest !== operation.operation_digest
+    || typeof authority.authority_id !== 'string'
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_IR_MALFORMED',
+      'prepared operation authority binding is invalid'
+    );
+  }
+  if (revokedAuthorityIds.has(authority.authority_id)) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_AUTHORITY_REVOKED',
+      `host authority token ${authority.authority_id} is revoked at commit`
+    );
+  }
+  if (
+    authority.expires_at_ms !== null
+    && authority.expires_at_ms !== undefined
+    && nowMs >= authority.expires_at_ms
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_AUTHORITY_EXPIRED',
+      `host authority token ${authority.authority_id} expired before commit`
+    );
+  }
 }
 
 export async function run(source, {
@@ -1230,7 +1282,6 @@ export async function run(source, {
   const secretRefs = new Map();
   const preparedRefs = new Map();
   const terminalPreparedValues = new WeakSet();
-  const nowMs = normalizeRuntimeTime(now);
   const revoked = normalizeRevocations(revokedAuthorityIds);
 
   const bindValue = (name, value) => {
@@ -1249,7 +1300,7 @@ export async function run(source, {
   for (const requirement of ir.required_permits) {
     const token = authorities[requirement.name];
     validateAuthorityToken(token, requirement, {
-      nowMs,
+      nowMs: runtimeTime(now),
       revokedAuthorityIds: revoked
     });
     authorityTokens.set(requirement.name, token);
@@ -1259,9 +1310,10 @@ export async function run(source, {
       action: token.action,
       scope: token.scope,
       expires_at_ms: token.expires_at_ms ?? null,
-      threshold: requirement.threshold ?? null,
-      members: requirement.members ?? null,
-      approved_by: token.approved_by ?? null
+      threshold: token.threshold ?? null,
+      members: token.members ?? null,
+      approved_by: token.approved_by ?? null,
+      operation_digest: token.operation_digest
     });
   }
 
@@ -1474,9 +1526,14 @@ export async function run(source, {
           permit_name: instruction.permit,
           authority: Object.freeze({
             authority_id: token.id,
+            authority_kind: requirement.authority_kind ?? 'Permit',
             action: token.action,
             scope: token.scope,
-            operation_digest: token.operation_digest
+            operation_digest: token.operation_digest,
+            expires_at_ms: token.expires_at_ms ?? null,
+            threshold: token.threshold ?? null,
+            members: token.members ?? null,
+            approved_by: token.approved_by ?? null
           })
         }));
         break;
@@ -1656,6 +1713,11 @@ export async function run(source, {
             'prepared operation already has a terminal transition'
           );
         }
+        validatePreparedAuthorityState(prepared, {
+          nowMs: runtimeTime(now),
+          revokedAuthorityIds: revoked
+        });
+
         const expectedDigest = prepared.operation.operation_digest;
         const preparationDigest = prepared.preparation.preparation_digest;
         const request = Object.freeze({
