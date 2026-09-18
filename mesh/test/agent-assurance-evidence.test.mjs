@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { digestObject } from './canonical.mjs';
+import { digestObject } from '../src/lib/canonical.mjs';
 import {
   assessAgentAssuranceEvidence,
   normalizeAgentAssuranceEvidence,
   sealAgentAssuranceEvidence,
   verifySealedAgentAssuranceEvidence
-} from './agent-assurance-evidence.mjs';
+} from '../src/lib/agent-assurance-evidence.mjs';
 
 const D = char => char.repeat(64);
 
