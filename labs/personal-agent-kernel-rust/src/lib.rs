@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod state_lanes;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{Display, Formatter};

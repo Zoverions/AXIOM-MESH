@@ -278,3 +278,30 @@ This laboratory may move toward production only after all of the following are t
 - documented rollback to the supported Node authority path.
 
 Until those gates pass, Node remains authoritative and this Rust lane is evidence rather than production authority.
+
+## State-lane control plane — local tool coordination
+
+Receipt-gated memory answers whether a candidate may become durable memory. It does not, by itself, solve the coordination failure where several tools mutate one logical state surface or validate against a stale view.
+
+The Personal Agent Kernel laboratory therefore adds a separate state-lane control-plane invariant:
+
+1. **One mutation lane per tool.** A registered tool owns exactly one lane in a registry. It cannot write another tool's lane, and duplicate ownership fails closed.
+2. **Append-only mutations.** Every accepted mutation advances the lane revision, retains the prior operation, binds a content digest, and carries explicit provenance.
+3. **Optimistic concurrency is explicit.** Every mutation names the exact lane revision it observed. A stale expected revision is rejected rather than silently overwriting newer state.
+4. **Cross-tool reads require an explicit merge.** A merge names the exact revision of every lane it consumes. Any revision drift rejects the merge.
+5. **Conflicts remain visible.** If two lanes expose the same state key with different value digests, the merge returns an unresolved conflict. There is no implicit last-writer-wins rule.
+6. **Agreement does not erase provenance.** Identical values may coalesce in the merge view, but every contributing lane, operation, revision, and provenance reference remains attached.
+7. **Merge views can expire.** A previously materialized view can be revalidated against current lane revisions; if any lane advanced, the old view is stale.
+8. **State is not authority or truth.** Lane registration, mutation, merge consistency, and provenance create neither AXIOM effect authority nor a truth certificate.
+
+This is deliberately a laboratory coordination semantic only. It adds no network path, persistence adapter, credential access, Gateway route, Grid mutation, capability registration, production activation, merge authority, or deployment authority.
+
+The intended composition is:
+
+tool-owned append-only lanes
+  -> exact-revision explicit merge
+  -> visible agreement/conflict + provenance
+  -> ordinary memory/evidence assessment where applicable
+  -> Knowledge -> Operation -> Authority
+
+The operator surface should render the merge view and its unresolved conflicts, not silently flatten collisions in the underlying lanes.
