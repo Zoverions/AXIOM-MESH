@@ -317,9 +317,32 @@ class Parser {
       };
     }
 
+    if (resourceType === 'quorum') {
+      const action = this.identifier();
+      this.take('@');
+      const scope = this.identifier();
+      this.word('threshold');
+      const threshold = this.take('number').value;
+      this.word('of');
+      const members = [this.identifier()];
+      while (this.current().type === ',') {
+        this.take(',');
+        members.push(this.identifier());
+      }
+      this.take(';');
+      return {
+        kind: 'RequireQuorum',
+        name,
+        action,
+        scope,
+        threshold,
+        members
+      };
+    }
+
     if (resourceType !== 'permit' && resourceType !== 'lease') {
       throw new PraxisSyntaxError(
-        'requires must declare permit, lease, secret, or prepared',
+        'requires must declare permit, lease, quorum, secret, or prepared',
         this.tokens[this.index - 2]
       );
     }
@@ -485,6 +508,51 @@ export function analyze(ast) {
     assertFreshName(env, node.name);
 
     switch (node.kind) {
+      case 'RequireQuorum': {
+        if (
+          !Number.isSafeInteger(node.threshold)
+          || node.threshold < 1
+          || node.threshold > node.members.length
+        ) {
+          throw new PraxisTypeError(
+            'PRAXIS_INVALID_QUORUM',
+            'quorum threshold must be an integer between 1 and the declared member count'
+          );
+        }
+        if (new Set(node.members).size !== node.members.length) {
+          throw new PraxisTypeError(
+            'PRAXIS_INVALID_QUORUM',
+            'quorum members must be unique'
+          );
+        }
+        const members = [...node.members].sort();
+        env.set(node.name, {
+          kind: 'Quorum',
+          action: node.action,
+          scope: node.scope,
+          threshold: node.threshold,
+          members,
+          linear: true
+        });
+        requiredPermits.push({
+          name: node.name,
+          authority_kind: 'Quorum',
+          action: node.action,
+          scope: node.scope,
+          threshold: node.threshold,
+          members
+        });
+        ir.push({
+          op: 'REQUIRE_QUORUM',
+          name: node.name,
+          action: node.action,
+          scope: node.scope,
+          threshold: node.threshold,
+          members
+        });
+        break;
+      }
+
       case 'RequirePermit':
       case 'RequireLease': {
         const authorityKind = node.kind === 'RequireLease' ? 'Lease' : 'Permit';
@@ -597,6 +665,7 @@ export function analyze(ast) {
           if (
             input.kind === 'Permit'
             || input.kind === 'Lease'
+            || input.kind === 'Quorum'
             || input.kind === 'SecretRef'
             || input.kind === 'AuthorizedOperation'
             || input.kind === 'PreparedOperation'
@@ -655,10 +724,10 @@ export function analyze(ast) {
             `authorize requires Operation, received ${operation.kind}`
           );
         }
-        if (permit.kind !== 'Permit' && permit.kind !== 'Lease') {
+        if (permit.kind !== 'Permit' && permit.kind !== 'Lease' && permit.kind !== 'Quorum') {
           throw new PraxisTypeError(
             'PRAXIS_AUTHORIZE_REQUIRES_PERMIT',
-            `authorize requires Permit or Lease, received ${permit.kind}`
+            `authorize requires Permit, Lease, or Quorum, received ${permit.kind}`
           );
         }
         if (permit.action !== operation.action || permit.scope !== operation.scope) {
@@ -816,6 +885,39 @@ export function createHostLease({ action, scope, id, expiresAt }) {
   });
 }
 
+export function createHostQuorum({ id, action, scope, members, approvedBy }) {
+  if (!id || !action || !scope) {
+    throw new TypeError('host quorum requires id, action, and scope');
+  }
+  if (!Array.isArray(members) || members.length === 0) {
+    throw new TypeError('host quorum requires at least one member');
+  }
+  if (!Array.isArray(approvedBy)) {
+    throw new TypeError('host quorum approvedBy must be an array');
+  }
+  const normalizedMembers = members.map(String);
+  const normalizedApprovals = approvedBy.map(String);
+  if (new Set(normalizedMembers).size !== normalizedMembers.length) {
+    throw new TypeError('host quorum members must be unique');
+  }
+  if (new Set(normalizedApprovals).size !== normalizedApprovals.length) {
+    throw new TypeError('host quorum approvals must be unique');
+  }
+  const memberSet = new Set(normalizedMembers);
+  if (normalizedApprovals.some(member => !memberSet.has(member))) {
+    throw new TypeError('host quorum approval is not a declared member');
+  }
+  return Object.freeze({
+    [HOST_AUTHORITY]: 'Quorum',
+    schema: 'praxis-host-quorum.v0',
+    id: String(id),
+    action: String(action),
+    scope: String(scope),
+    members: Object.freeze([...normalizedMembers].sort()),
+    approved_by: Object.freeze([...normalizedApprovals].sort())
+  });
+}
+
 export function createHostSecretRef({ id, kind }) {
   if (!id || !kind) throw new TypeError('host secret reference requires id and kind');
   return Object.freeze({
@@ -912,6 +1014,25 @@ function validateAuthorityToken(token, requirement, {
       `host authority lease ${token.id} expired`
     );
   }
+  if (expectedKind === 'Quorum') {
+    const expectedMembers = [...requirement.members].sort();
+    const actualMembers = Array.isArray(token.members) ? [...token.members].sort() : [];
+    if (
+      expectedMembers.length !== actualMembers.length
+      || expectedMembers.some((member, index) => member !== actualMembers[index])
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_QUORUM_MISMATCH',
+        `host quorum ${token.id} does not match the declared member set`
+      );
+    }
+    if (!Array.isArray(token.approved_by) || token.approved_by.length < requirement.threshold) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_QUORUM_INSUFFICIENT',
+        `host quorum ${token.id} has insufficient approvals for threshold ${requirement.threshold}`
+      );
+    }
+  }
   if (consumedAuthorityTokens.has(token)) {
     throw new PraxisRuntimeError(
       'PRAXIS_HOST_AUTHORITY_CONSUMED',
@@ -980,7 +1101,10 @@ export async function run(source, {
       authority_id: token.id,
       action: token.action,
       scope: token.scope,
-      expires_at_ms: token.expires_at_ms ?? null
+      expires_at_ms: token.expires_at_ms ?? null,
+      threshold: requirement.threshold ?? null,
+      members: requirement.members ?? null,
+      approved_by: token.approved_by ?? null
     });
   }
 
@@ -1041,6 +1165,7 @@ export async function run(source, {
     switch (instruction.op) {
       case 'REQUIRE_PERMIT':
       case 'REQUIRE_LEASE':
+      case 'REQUIRE_QUORUM':
       case 'REQUIRE_SECRET':
       case 'REQUIRE_PREPARED':
         break;
