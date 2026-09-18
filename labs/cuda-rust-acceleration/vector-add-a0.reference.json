@@ -1,0 +1,40 @@
+{
+  "schema": "axiom-cuda-rust-reference-vector.v0",
+  "version": 0,
+  "fixture_id": "cuda-rust.vector-add-f32.a0",
+  "operation": "elementwise-add-f32",
+  "dtype": "f32",
+  "x": [
+    1,
+    -2,
+    3.5,
+    0,
+    8,
+    -0.5,
+    1024,
+    0.125
+  ],
+  "y": [
+    2,
+    4,
+    -1.5,
+    0.25,
+    -3,
+    0.5,
+    -24,
+    0.375
+  ],
+  "expected": [
+    3,
+    2,
+    2,
+    0.25,
+    5,
+    0,
+    1000,
+    0.5
+  ],
+  "absolute_tolerance": 0,
+  "purpose": "CPU reference vector for future cutile-rs differential execution; no GPU result is recorded here.",
+  "authority_effect": "none"
+}
