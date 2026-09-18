@@ -574,6 +574,25 @@ test('trusted verification recomputes the proposal from exact caller-supplied in
   );
 });
 
+test('equal semantic support uses locale-independent raw code-unit ordering', () => {
+  const upper = candidate('operation.Z', B);
+  const lower = candidate('operation.a', C);
+
+  const result = proposal({
+    candidates: [lower, upper],
+    semanticEvidence: [
+      semanticEvidence(lower, 0.7),
+      semanticEvidence(upper, 0.7)
+    ]
+  });
+
+  assert.equal(result.selection_mode, 'semantic-top-k');
+  assert.deepEqual(
+    result.selected.map(item => item.operation_id),
+    ['operation.Z', 'operation.a']
+  );
+});
+
 test('production selector remains pure and has no live provider or authority surface', () => {
   const source = readFileSync(
     new URL('../src/lib/operation-candidate-selection.mjs', import.meta.url),
