@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-23
+**Updated:** 2026-09-18
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -97,6 +97,7 @@ explicitly opened.
 | UX-007 | Pending | Signed local packaging/onboarding | Safe update/rollback/recovery/uninstall/first-use evidence |
 | SOCIAL-001 | In progress | Owner-local actor/persona/publication + remote-review surface | Intent-authorized local create/supersede/retract; A2 non-raw publication projection; owner-derived `/v1/social`; owner-only read-only `/v1/social/remote-review` with no schema creation or social/network effect; no federation/network distribution; AXIOM One UI next |
 | ARCH-001 | Complete for draft specification; no runtime capability | Define Personal Compute Fabric and Local Trust Plane `1.0.0-draft.1` | Canonical architecture, explicit non-claims, phased MVP, and five JSON Schemas for Personal Agent Pack, Runtime Capsule, Runtime Adapter, Compute Node Profile, and Local Trust Envelope; documentation checks only |
+| SECRET-001 | Specified; runtime pending | Secret containment and credential brokerage v0 | Issue #1703; AXIOM-native/external/hardware custody model; opaque secret reference + one-use secret-use grant + digest-only receipt contracts; no reveal/export/delegation, provider I/O, Gateway route, capability promotion, or production activation |
 | AI-001 | In progress | One least-privilege AI provider | Local deterministic organize/summarize stub + invoke envelope + fail-closed tests + AXIOM One draft-only Vault path; capabilities.json `ai.providers` remains `adapter_required`; not production AI |
 | AI-002 | Pending | Local/user-supplied providers under same contract | Replacement/offline/degraded/no-authority-expansion conformance |
 | AI-003 | Pending | Bounded useful personal workflows | Usefulness/provenance/correction/privacy/cost/latency/cancellation/human-confirmation evaluation |

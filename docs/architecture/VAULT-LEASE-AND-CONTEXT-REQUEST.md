@@ -204,6 +204,24 @@ When a Context Capsule expires, an external recipient must submit a new request 
 
 A local lease expiry similarly requires a new authorization decision. Repeated access may be streamlined by owner policy, but it remains observable and revocable.
 
+## Secret-material boundary
+
+A Vault Access Lease is not sufficient authority to reveal, export, copy,
+delegate, or apply protected secret material.
+
+When a Sovereign Vault contains passwords, tokens, private/signing keys,
+recovery secrets, reusable payment credentials, or comparable authority-bearing
+material, ordinary lease `read`/`derive` semantics apply only to policy-safe
+metadata or derived context unless a separate secret-use authorization exists.
+
+Protected secret use follows
+[Secret Containment and Credential Brokerage](SECRET-CONTAINMENT-AND-BROKERAGE.md).
+The v0 secret-use contract is one-use, purpose- and destination-bound, and
+explicitly forbids reveal, export, persistence, logging, model-context exposure,
+requester access to secret bytes, and delegation.
+
+Secret reveal/export/delegation are not created by this lease contract.
+
 ## Sensitive and regulated domains
 
 Health, psychological, legal, financial, biometric, intimate, minor-related, and other high-sensitivity domains can use stricter rules than this base contract.

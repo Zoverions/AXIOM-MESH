@@ -54,6 +54,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
   'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
   'docs/architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md',
+  'docs/architecture/SECRET-CONTAINMENT-AND-BROKERAGE.md',
   'docs/architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
   'docs/architecture/contracts/agent-challenge.v1.schema.json',
@@ -74,6 +75,9 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
+  'docs/architecture/contracts/secret-reference.v1.schema.json',
+  'docs/architecture/contracts/secret-use-grant.v1.schema.json',
+  'docs/architecture/contracts/secret-use-receipt.v1.schema.json',
   'docs/architecture/contracts/threat-observation.v0.schema.json',
   'docs/architecture/contracts/threat-hypothesis.v0.schema.json',
   'docs/architecture/contracts/reproduction-case.v0.schema.json',
@@ -342,6 +346,29 @@ const REQUIRED_CONTENT = Object.freeze({
     'https://axiom.invalid/schemas/personal-agent-pack.v1.schema.json',
     'axiom-personal-agent-pack.v1',
     'secret_material_included'
+  ],
+  'docs/architecture/SECRET-CONTAINMENT-AND-BROKERAGE.md': [
+    'Secret use is not secret reveal',
+    'AXIOM-native local custody',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'creates no Gateway route',
+    'capability registry remains authoritative'
+  ],
+  'docs/architecture/contracts/secret-reference.v1.schema.json': [
+    'axiom-secret-reference.v1',
+    'secret_material_in_reference',
+    'grants_secret_use_authority'
+  ],
+  'docs/architecture/contracts/secret-use-grant.v1.schema.json': [
+    'axiom-secret-use-grant.v1',
+    'permits_reveal',
+    'returns_secret_bytes_to_requester',
+    'requires_revocation_check_before_use'
+  ],
+  'docs/architecture/contracts/secret-use-receipt.v1.schema.json': [
+    'axiom-secret-use-receipt.v1',
+    'contains_plaintext_secret',
+    'grants_authority'
   ],
   'docs/architecture/contracts/threat-observation.v0.schema.json': [
     'axiom-threat-observation.v0'
@@ -744,6 +771,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
   'docs/architecture/contracts/compute-node-profile.v1.schema.json': 9_000,
   'docs/architecture/contracts/local-trust-envelope.v1.schema.json': 10_000,
+  'docs/architecture/SECRET-CONTAINMENT-AND-BROKERAGE.md': 7_000,
   'docs/architecture/contracts/personal-agent-pack.v1.schema.json': 5_000,
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 10_000,
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
