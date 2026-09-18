@@ -403,10 +403,7 @@ pub fn assess_strict_component_host(
     }
 
     for capability in &manifest.requested_ambient_capabilities {
-        blockers.insert(format!(
-            "ambient-capability-denied:{}",
-            capability.label()
-        ));
+        blockers.insert(format!("ambient-capability-denied:{}", capability.label()));
     }
 
     Ok(ComponentHostAssessment {
@@ -1000,8 +997,7 @@ impl Kernel {
             Some(_) => {}
         }
 
-        if proposal.effect_requested
-            && proposal.requested_autonomy != AutonomyLevel::RequestEffect
+        if proposal.effect_requested && proposal.requested_autonomy != AutonomyLevel::RequestEffect
         {
             blockers.insert("effect-request-requires-request-effect-level".to_string());
         }
@@ -1033,10 +1029,7 @@ impl Kernel {
 
         for request in &proposal.budget_requests {
             if !applicable.contains_key(request.budget_id.as_str()) {
-                blockers.insert(format!(
-                    "unbound-budget-request:{}",
-                    request.budget_id
-                ));
+                blockers.insert(format!("unbound-budget-request:{}", request.budget_id));
             }
         }
 
