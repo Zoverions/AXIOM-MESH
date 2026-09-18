@@ -36,6 +36,13 @@ interface contracts {
     effect-digest: string,
     success: bool,
   }
+
+  record receipt-witness {
+    witness-node-ref: string,
+    receipt-ref: string,
+    effect-digest: string,
+    witnessed-at-unix-s: u64,
+  }
 }
 
 interface mesh-authority {
@@ -48,7 +55,13 @@ interface effect-host {
   execute: async func(proof: mesh-proof) -> result<effect-receipt, string>;
 }
 
+interface mesh-observer {
+  use contracts.{effect-receipt, receipt-witness};
+  witness: async func(receipt: effect-receipt) -> result<receipt-witness, string>;
+}
+
 world personal-kernel-runtime {
   import mesh-authority;
   import effect-host;
+  import mesh-observer;
 }
