@@ -84,7 +84,7 @@ A hosted agent service may combine a model, agent harness, remote sandbox, files
 The first concrete candidate is Google's September 2026 Antigravity managed-agent preview. Its provider environment is useful because it exposes an isolated Linux workspace, file ingress/egress, explicit network controls, environment continuation, token budgets, and credential references. Those features do not weaken AXIOM's boundary:
 
 - provider environment or interaction IDs are continuation locators, not principal identity;
-- provider-side credential references are opaque integration data, not authority grants;
+- provider-side credential references are opaque integration data, not authority grants; the current candidate refuses them entirely until each reference can be bound to a verified AXIOM runtime-adapter grant;
 - a remote sandbox may perform only work already bound to an AXIOM task/grant;
 - the adapter must explicitly disable remote egress or declare an exact finite allowlist; omission is rejected because the provider's current default is unrestricted outbound access;
 - wildcard egress is not accepted by the AXIOM candidate profile;
