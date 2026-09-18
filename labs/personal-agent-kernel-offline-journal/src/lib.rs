@@ -143,13 +143,7 @@ impl OfflineJournal {
             .global_sequence
             .checked_add(1)
             .ok_or(JournalError::SequenceMismatch)?;
-        let record = build_record(
-            next_global,
-            "register",
-            envelope_ref,
-            0,
-            &self.tail_hash,
-        );
+        let record = build_record(next_global, "register", envelope_ref, 0, &self.tail_hash);
         self.append_durable(&record)?;
 
         self.global_sequence = next_global;
@@ -275,14 +269,10 @@ impl RecoveredState {
             return Err(JournalError::InvalidRecord);
         }
 
-        let global_sequence: u64 = fields[1]
-            .parse()
-            .map_err(|_| JournalError::InvalidRecord)?;
+        let global_sequence: u64 = fields[1].parse().map_err(|_| JournalError::InvalidRecord)?;
         let kind = fields[2];
         let envelope_ref = fields[3];
-        let effect_sequence: u64 = fields[4]
-            .parse()
-            .map_err(|_| JournalError::InvalidRecord)?;
+        let effect_sequence: u64 = fields[4].parse().map_err(|_| JournalError::InvalidRecord)?;
         let predecessor_hash = fields[5];
         let entry_hash = fields[6];
 
