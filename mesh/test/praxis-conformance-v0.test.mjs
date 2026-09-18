@@ -51,10 +51,7 @@ test('Praxis semantic conformance corpus pins current authority invariants and g
     .sort();
 
   assert.deepEqual(pending, [
-    'cancellation-idempotency-replay-rollback',
-    'durable-preparation-before-external-io',
-    'secret-reference-separation',
-    'uncertain-external-outcome-remains-uncertain'
+    'cancellation-idempotency-replay-rollback'
   ]);
 });
 
@@ -136,7 +133,8 @@ test('Praxis operation digest is byte-equivalent to AXIOM canonical object diges
       schema: 'praxis-operation.v0',
       action: 'Deploy',
       scope: 'Production',
-      args: ['artifact']
+      args: ['artifact'],
+      secret_references: []
     })}`
   );
 });
@@ -146,7 +144,8 @@ test('Praxis conformance layer remains incapable of external execution by itself
 requires permit p: Deploy @ Production;
 op release = Deploy("artifact") @ Production;
 authorize release using p as armed;
-commit armed as receipt;
+prepare armed as prepared;
+commit prepared as receipt;
 `;
 
   await assert.rejects(
@@ -191,6 +190,7 @@ test('Praxis CLI exposes compile/check surfaces only and cannot invoke run', asy
   assert.equal(source.includes('executor'), false);
   assert.equal(source.includes('createHostPermit'), false);
   assert.equal(source.includes('createHostLease'), false);
+  assert.equal(source.includes('createHostSecretRef'), false);
 });
 
 test('plain objects cannot forge host authority tokens', async () => {
