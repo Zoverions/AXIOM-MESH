@@ -307,3 +307,22 @@ tool-owned append-only lanes
 The operator surface should render the merge view and its unresolved conflicts, not silently flatten collisions in the underlying lanes.
 
 Tool identity references in this laboratory are typed coordination inputs; a production adapter must bind them to the trusted component/host identity rather than accepting a model-supplied string as proof of tool identity.
+
+### Snapshot-bound validation receipts
+
+State-lane isolation prevents tools from silently overwriting each other, but validation itself must also be bound to current state.
+
+The laboratory therefore treats a validation result as a sealed receipt over one exact conflict-free merge snapshot:
+
+- the merge consumer and validator identity must match;
+- the receipt binds the exact merge ID, source lane revisions, and merged state-key/value digests;
+- the validator supplies an external result digest plus bounded supporting evidence references;
+- unresolved merge conflicts cannot be laundered into a validation receipt;
+- duplicate validation IDs fail closed;
+- any later mutation to any source lane makes the receipt stale;
+- a stale receipt remains historical evidence but is unusable as current validation;
+- conformance, non-conformance, or inconclusive status grants no AXIOM authority and certifies no underlying truth.
+
+This closes the specific race where a tool validates a fix against revision N of a specification while another tool has already advanced the specification to revision N+1. Consumers must call the currentness check before treating the validation as applicable.
+
+The first laboratory deliberately invalidates the whole receipt on any source-lane revision change, even when the changed key may appear unrelated. Finer dependency-scoped validation can be added later only if it preserves an explicit dependency graph and cannot create a stale-state bypass.

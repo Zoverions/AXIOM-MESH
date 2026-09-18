@@ -280,10 +280,88 @@ impl MergeView {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValidationDisposition {
+    Conforms,
+    DoesNotConform,
+    Inconclusive,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidationEvidenceInput {
+    pub validation_id: String,
+    pub validator_tool_ref: String,
+    pub merge_id: String,
+    pub disposition: ValidationDisposition,
+    pub result_digest: String,
+    pub evidence_refs: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatedValue {
+    pub state_key: String,
+    pub value_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidationReceipt {
+    validation_id: String,
+    validator_tool_ref: String,
+    merge_id: String,
+    inputs: Vec<MergeInput>,
+    values: Vec<ValidatedValue>,
+    disposition: ValidationDisposition,
+    result_digest: String,
+    evidence_refs: Vec<String>,
+}
+
+impl ValidationReceipt {
+    pub fn validation_id(&self) -> &str {
+        &self.validation_id
+    }
+
+    pub fn validator_tool_ref(&self) -> &str {
+        &self.validator_tool_ref
+    }
+
+    pub fn merge_id(&self) -> &str {
+        &self.merge_id
+    }
+
+    pub fn inputs(&self) -> &[MergeInput] {
+        &self.inputs
+    }
+
+    pub fn values(&self) -> &[ValidatedValue] {
+        &self.values
+    }
+
+    pub fn disposition(&self) -> ValidationDisposition {
+        self.disposition
+    }
+
+    pub fn result_digest(&self) -> &str {
+        &self.result_digest
+    }
+
+    pub fn evidence_refs(&self) -> &[String] {
+        &self.evidence_refs
+    }
+
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+
+    pub fn truth_certified(&self) -> bool {
+        false
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct StateLaneRegistry {
     lanes: BTreeMap<String, StateLane>,
     owner_lanes: BTreeMap<String, String>,
+    validation_ids: BTreeSet<String>,
 }
 
 impl StateLaneRegistry {
@@ -449,6 +527,116 @@ impl StateLaneRegistry {
             values: merged_values,
             conflicts,
         })
+    }
+
+    pub fn issue_validation_receipt(
+        &mut self,
+        view: &MergeView,
+        evidence: ValidationEvidenceInput,
+    ) -> StateLaneResult<ValidationReceipt> {
+        self.require_merge_fresh(view)?;
+        view.require_consistent()?;
+
+        require_id(&evidence.validation_id, "validation id")?;
+        require_id(&evidence.validator_tool_ref, "validator tool ref")?;
+        require_id(&evidence.merge_id, "validation merge id")?;
+        require_sha256(&evidence.result_digest, "validation result digest")?;
+
+        if evidence.merge_id != view.merge_id {
+            return Err(StateLaneError::new(
+                "validation evidence is bound to another merge",
+            ));
+        }
+        if evidence.validator_tool_ref != view.consumer_tool_ref {
+            return Err(StateLaneError::new(
+                "validator did not consume the merge view being validated",
+            ));
+        }
+        if view.values.is_empty() {
+            return Err(StateLaneError::new(
+                "validation requires at least one merged state value",
+            ));
+        }
+        if evidence.evidence_refs.is_empty()
+            || evidence.evidence_refs.len() > MAX_PROVENANCE_REFS
+        {
+            return Err(StateLaneError::new(
+                "validation requires bounded supporting evidence",
+            ));
+        }
+
+        let mut refs = BTreeSet::<String>::new();
+        for reference in &evidence.evidence_refs {
+            require_id(reference, "validation evidence ref")?;
+            if !refs.insert(reference.clone()) {
+                return Err(StateLaneError::new(
+                    "duplicate validation evidence ref",
+                ));
+            }
+        }
+
+        if self.validation_ids.contains(&evidence.validation_id) {
+            return Err(StateLaneError::new("duplicate validation id"));
+        }
+
+        let values = view
+            .values
+            .iter()
+            .map(|value| ValidatedValue {
+                state_key: value.state_key.clone(),
+                value_digest: value.value_digest.clone(),
+            })
+            .collect();
+
+        let receipt = ValidationReceipt {
+            validation_id: evidence.validation_id.clone(),
+            validator_tool_ref: evidence.validator_tool_ref,
+            merge_id: evidence.merge_id,
+            inputs: view.inputs.clone(),
+            values,
+            disposition: evidence.disposition,
+            result_digest: evidence.result_digest,
+            evidence_refs: refs.into_iter().collect(),
+        };
+
+        self.validation_ids.insert(evidence.validation_id);
+        Ok(receipt)
+    }
+
+    pub fn require_validation_current(
+        &self,
+        receipt: &ValidationReceipt,
+    ) -> StateLaneResult<()> {
+        if receipt.inputs.is_empty() || receipt.inputs.len() > MAX_LANES_PER_MERGE {
+            return Err(StateLaneError::new(
+                "validation receipt has invalid lane bindings",
+            ));
+        }
+        if receipt.values.is_empty() {
+            return Err(StateLaneError::new(
+                "validation receipt has no validated values",
+            ));
+        }
+
+        let mut seen = BTreeSet::<String>::new();
+        for input in &receipt.inputs {
+            if !seen.insert(input.lane_id.clone()) {
+                return Err(StateLaneError::new(
+                    "validation receipt contains duplicate lane binding",
+                ));
+            }
+            let lane = self
+                .lanes
+                .get(&input.lane_id)
+                .ok_or_else(|| StateLaneError::new("validated lane no longer exists"))?;
+            if lane.revision != input.expected_revision {
+                return Err(StateLaneError::new(format!(
+                    "validation receipt is stale:{} expected:{} current:{}",
+                    input.lane_id, input.expected_revision, lane.revision
+                )));
+            }
+        }
+        Ok(())
     }
 
     pub fn require_merge_fresh(&self, view: &MergeView) -> StateLaneResult<()> {

@@ -1,5 +1,6 @@
 use axiom_personal_agent_kernel_rust_lab::state_lanes::{
-    LaneMutationInput, MergeInput, MergeRequest, StateLaneRegistry,
+    LaneMutationInput, MergeInput, MergeRequest, StateLaneRegistry, ValidationDisposition,
+    ValidationEvidenceInput,
 };
 
 fn digest(byte: char) -> String {
@@ -418,4 +419,260 @@ fn merge_is_deterministic_and_neither_registry_nor_view_grants_authority() {
     assert!(!registry.grants_authority());
     assert!(!first.grants_authority());
     assert!(!first.truth_certified());
+}
+
+fn validation_input(
+    validation_id: &str,
+    validator_tool_ref: &str,
+    merge_id: &str,
+    result_digest: String,
+) -> ValidationEvidenceInput {
+    ValidationEvidenceInput {
+        validation_id: validation_id.to_string(),
+        validator_tool_ref: validator_tool_ref.to_string(),
+        merge_id: merge_id.to_string(),
+        disposition: ValidationDisposition::Conforms,
+        result_digest,
+        evidence_refs: vec!["evidence.validation.1".to_string()],
+    }
+}
+
+#[test]
+fn validation_receipt_becomes_stale_when_any_source_lane_advances() {
+    let mut registry = StateLaneRegistry::new();
+    registry
+        .register_lane("lane.spec", "tool.spec")
+        .expect("spec lane");
+    registry
+        .register_lane("lane.coder", "tool.coder")
+        .expect("coder lane");
+
+    registry
+        .append(
+            "lane.spec",
+            mutation(
+                "op.spec.1",
+                "tool.spec",
+                0,
+                "spec.digest",
+                digest('a'),
+                "prov.spec.1",
+            ),
+        )
+        .expect("spec write");
+    registry
+        .append(
+            "lane.coder",
+            mutation(
+                "op.coder.1",
+                "tool.coder",
+                0,
+                "fix.digest",
+                digest('b'),
+                "prov.coder.1",
+            ),
+        )
+        .expect("coder write");
+
+    let view = registry
+        .merge(&MergeRequest {
+            merge_id: "merge.validator.1".to_string(),
+            consumer_tool_ref: "tool.validator".to_string(),
+            inputs: vec![
+                MergeInput {
+                    lane_id: "lane.spec".to_string(),
+                    expected_revision: 1,
+                },
+                MergeInput {
+                    lane_id: "lane.coder".to_string(),
+                    expected_revision: 1,
+                },
+            ],
+        })
+        .expect("validator merge");
+
+    let receipt = registry
+        .issue_validation_receipt(
+            &view,
+            validation_input(
+                "validation.1",
+                "tool.validator",
+                "merge.validator.1",
+                digest('c'),
+            ),
+        )
+        .expect("validation receipt");
+
+    registry
+        .require_validation_current(&receipt)
+        .expect("validation starts current");
+    assert_eq!(receipt.inputs().len(), 2);
+    assert_eq!(receipt.values().len(), 2);
+    assert_eq!(receipt.disposition(), ValidationDisposition::Conforms);
+    assert!(!receipt.grants_authority());
+    assert!(!receipt.truth_certified());
+
+    registry
+        .append(
+            "lane.spec",
+            mutation(
+                "op.spec.2",
+                "tool.spec",
+                1,
+                "spec.digest",
+                digest('d'),
+                "prov.spec.2",
+            ),
+        )
+        .expect("spec advances");
+
+    assert!(
+        registry.require_validation_current(&receipt).is_err(),
+        "validation against the old merged spec must become unusable"
+    );
+}
+
+#[test]
+fn validation_requires_the_actual_merge_consumer_and_rejects_duplicate_ids() {
+    let mut registry = StateLaneRegistry::new();
+    registry
+        .register_lane("lane.spec", "tool.spec")
+        .expect("spec lane");
+    registry
+        .append(
+            "lane.spec",
+            mutation(
+                "op.spec.1",
+                "tool.spec",
+                0,
+                "spec.digest",
+                digest('a'),
+                "prov.spec.1",
+            ),
+        )
+        .expect("spec write");
+
+    let view = registry
+        .merge(&MergeRequest {
+            merge_id: "merge.validator.1".to_string(),
+            consumer_tool_ref: "tool.validator".to_string(),
+            inputs: vec![MergeInput {
+                lane_id: "lane.spec".to_string(),
+                expected_revision: 1,
+            }],
+        })
+        .expect("merge");
+
+    assert!(
+        registry
+            .issue_validation_receipt(
+                &view,
+                validation_input(
+                    "validation.wrong-consumer",
+                    "tool.other",
+                    "merge.validator.1",
+                    digest('b'),
+                ),
+            )
+            .is_err(),
+        "a tool that did not consume the view cannot validate it"
+    );
+
+    registry
+        .issue_validation_receipt(
+            &view,
+            validation_input(
+                "validation.unique",
+                "tool.validator",
+                "merge.validator.1",
+                digest('c'),
+            ),
+        )
+        .expect("first validation");
+
+    assert!(
+        registry
+            .issue_validation_receipt(
+                &view,
+                validation_input(
+                    "validation.unique",
+                    "tool.validator",
+                    "merge.validator.1",
+                    digest('d'),
+                ),
+            )
+            .is_err(),
+        "validation ids are single-use within the registry"
+    );
+}
+
+#[test]
+fn conflicted_merge_cannot_be_laundered_into_a_validation_receipt() {
+    let mut registry = StateLaneRegistry::new();
+    registry
+        .register_lane("lane.spec", "tool.spec")
+        .expect("spec lane");
+    registry
+        .register_lane("lane.reviewer", "tool.reviewer")
+        .expect("reviewer lane");
+
+    registry
+        .append(
+            "lane.spec",
+            mutation(
+                "op.spec.1",
+                "tool.spec",
+                0,
+                "release.spec",
+                digest('a'),
+                "prov.spec.1",
+            ),
+        )
+        .expect("spec write");
+    registry
+        .append(
+            "lane.reviewer",
+            mutation(
+                "op.reviewer.1",
+                "tool.reviewer",
+                0,
+                "release.spec",
+                digest('b'),
+                "prov.reviewer.1",
+            ),
+        )
+        .expect("reviewer write");
+
+    let view = registry
+        .merge(&MergeRequest {
+            merge_id: "merge.validator.conflict".to_string(),
+            consumer_tool_ref: "tool.validator".to_string(),
+            inputs: vec![
+                MergeInput {
+                    lane_id: "lane.spec".to_string(),
+                    expected_revision: 1,
+                },
+                MergeInput {
+                    lane_id: "lane.reviewer".to_string(),
+                    expected_revision: 1,
+                },
+            ],
+        })
+        .expect("conflicted merge is visible");
+
+    assert!(!view.is_consistent());
+    assert!(
+        registry
+            .issue_validation_receipt(
+                &view,
+                validation_input(
+                    "validation.conflict",
+                    "tool.validator",
+                    "merge.validator.conflict",
+                    digest('c'),
+                ),
+            )
+            .is_err(),
+        "unresolved state conflicts must not be converted into a clean validation receipt"
+    );
 }
