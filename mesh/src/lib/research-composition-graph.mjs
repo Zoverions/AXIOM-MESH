@@ -300,7 +300,9 @@ export function buildResearchCompositionGraph(value) {
     .length;
 
   const problemDigests = new Set();
-  const independentTargets = new Set();
+  // Digests that are the object of an independent `reproduces` relation.
+  // Attention is for unverified / uncovered / problematic frontier tips — not reputation.
+  const independentlyCovered = new Set();
 
   for (const relation of relations) {
     if (relation.predicate === 'contradicts' || relation.predicate === 'failed_to_reproduce') {
@@ -311,16 +313,41 @@ export function buildResearchCompositionGraph(value) {
       relation.predicate === 'reproduces'
       && relation.independence_state === 'independent'
     ) {
-      independentTargets.add(relation.object_contribution_digest);
+      independentlyCovered.add(relation.object_contribution_digest);
     }
   }
 
+  const ancestorMemo = new Map();
+  const ancestorsIncludingSelf = digest => {
+    if (ancestorMemo.has(digest)) return ancestorMemo.get(digest);
+    const result = new Set([digest]);
+    const stack = [...(parentsBySubject.get(digest) ?? [])];
+    while (stack.length > 0) {
+      const parent = stack.pop();
+      if (result.has(parent)) continue;
+      result.add(parent);
+      stack.push(...(parentsBySubject.get(parent) ?? []));
+    }
+    ancestorMemo.set(digest, result);
+    return result;
+  };
+
+  const hasIndependentlyCoveredAncestor = digest => {
+    for (const ancestor of ancestorsIncludingSelf(digest)) {
+      if (independentlyCovered.has(ancestor)) return true;
+    }
+    return false;
+  };
+
+  // Attention candidates: frontier tips that are problematic, or else unverified and
+  // not independently covered via any ancestor (including self). Coverage never
+  // grants reputation or permission — it only suppresses neglected-branch attention.
   const attentionCandidates = frontier
     .filter(digest => {
       const contribution = byDigest.get(digest);
       if (problemDigests.has(digest)) return true;
       if (contribution.contribution_kind === 'verification') return false;
-      return !independentTargets.has(digest);
+      return !hasIndependentlyCoveredAncestor(digest);
     })
     .sort();
 

@@ -219,7 +219,10 @@ test('Research Composition Graph v0 preserves lineage, disagreement, and zero-au
   assert.equal(graph.metrics.dominant_root_frontier_share, 1);
   assert.ok(graph.attention_candidate_digests.includes(byId.f1.contribution_digest));
   assert.ok(graph.attention_candidate_digests.includes(byId.n1.contribution_digest));
-  assert.ok(graph.attention_candidate_digests.includes(byId.s1.contribution_digest));
+  // s1 builds_on independently-reproduced r1 and has no problem edge → covered, not attention
+  assert.equal(graph.attention_candidate_digests.includes(byId.s1.contribution_digest), false);
+  // verification frontier tip without problem force-include stays excluded
+  assert.equal(graph.attention_candidate_digests.includes(byId.v1.contribution_digest), false);
 });
 
 test('Research Composition Graph v0 fails closed on authority, truth, reference, duplicate, self-edge, and lineage-cycle widening', async () => {
@@ -400,5 +403,140 @@ test('Research Composition Graph v0 contains no live network, process, capabilit
     'git '
   ]) {
     assert.equal(source.toLowerCase().includes(forbidden), false, `research graph module contains ${forbidden}`);
+  }
+});
+
+test('independent reproduction coverage suppresses descendant frontier attention without granting reputation', async () => {
+  const graphApi = await api();
+
+  const h1 = contribution({
+    id: 'research:cov-h1',
+    kind: 'hypothesis',
+    createdAt: '2026-09-18T00:00:00.000Z',
+    summary: 'Coverage root'
+  });
+  const rCovered = contribution({
+    id: 'research:cov-r',
+    kind: 'result',
+    createdAt: '2026-09-18T01:00:00.000Z',
+    summary: 'Independently reproduced result'
+  });
+  const rNeglected = contribution({
+    id: 'research:neg-r',
+    kind: 'result',
+    createdAt: '2026-09-18T01:30:00.000Z',
+    summary: 'Uncovered sibling result'
+  });
+  const vIndependent = contribution({
+    id: 'research:cov-v',
+    kind: 'verification',
+    createdAt: '2026-09-18T02:00:00.000Z',
+    summary: 'Independent reproduction of covered result'
+  });
+  const sCovered = contribution({
+    id: 'research:cov-s',
+    kind: 'synthesis',
+    createdAt: '2026-09-18T03:00:00.000Z',
+    summary: 'Builds on covered result'
+  });
+  const sNeglected = contribution({
+    id: 'research:neg-s',
+    kind: 'synthesis',
+    createdAt: '2026-09-18T03:30:00.000Z',
+    summary: 'Builds on uncovered sibling'
+  });
+  const sProblem = contribution({
+    id: 'research:prob-s',
+    kind: 'synthesis',
+    createdAt: '2026-09-18T04:00:00.000Z',
+    summary: 'Covered lineage but contradicted tip'
+  });
+  const nContra = contribution({
+    id: 'research:prob-n',
+    kind: 'negative_result',
+    createdAt: '2026-09-18T04:30:00.000Z',
+    summary: 'Contradiction against covered tip'
+  });
+
+  const relations = [
+    relation({
+      id: 'relation:cov-r-builds-h',
+      subject: rCovered.contribution_digest,
+      predicate: 'builds_on',
+      object: h1.contribution_digest
+    }),
+    relation({
+      id: 'relation:neg-r-builds-h',
+      subject: rNeglected.contribution_digest,
+      predicate: 'builds_on',
+      object: h1.contribution_digest
+    }),
+    relation({
+      id: 'relation:v-reproduces-r',
+      subject: vIndependent.contribution_digest,
+      predicate: 'reproduces',
+      object: rCovered.contribution_digest,
+      independence: 'independent'
+    }),
+    relation({
+      id: 'relation:s-builds-covered-r',
+      subject: sCovered.contribution_digest,
+      predicate: 'builds_on',
+      object: rCovered.contribution_digest
+    }),
+    relation({
+      id: 'relation:s-builds-neglected-r',
+      subject: sNeglected.contribution_digest,
+      predicate: 'builds_on',
+      object: rNeglected.contribution_digest
+    }),
+    relation({
+      id: 'relation:prob-s-builds-covered-r',
+      subject: sProblem.contribution_digest,
+      predicate: 'builds_on',
+      object: rCovered.contribution_digest
+    }),
+    relation({
+      id: 'relation:n-contradicts-prob-s',
+      subject: nContra.contribution_digest,
+      predicate: 'contradicts',
+      object: sProblem.contribution_digest,
+      independence: 'independent'
+    })
+  ];
+
+  const graph = graphApi.buildResearchCompositionGraph({
+    contributions: [h1, rCovered, rNeglected, vIndependent, sCovered, sNeglected, sProblem, nContra],
+    relations
+  });
+
+  assert.equal(graph.metrics.independent_reproduction_count, 1);
+  assert.equal(
+    graph.attention_candidate_digests.includes(sCovered.contribution_digest),
+    false,
+    'descendant of independently covered result must leave attention'
+  );
+  assert.ok(
+    graph.attention_candidate_digests.includes(sNeglected.contribution_digest),
+    'sibling lineage without independent coverage stays in attention'
+  );
+  assert.ok(
+    graph.attention_candidate_digests.includes(sProblem.contribution_digest),
+    'problem override keeps covered tip in attention'
+  );
+  assert.ok(
+    graph.attention_candidate_digests.includes(nContra.contribution_digest),
+    'contradiction subject stays in attention'
+  );
+  assert.equal(
+    graph.attention_candidate_digests.includes(vIndependent.contribution_digest),
+    false,
+    'verification kind remains excluded from attention'
+  );
+  for (const item of [h1, rCovered, rNeglected, vIndependent, sCovered, sNeglected, sProblem, nContra]) {
+    assert.equal(item.authority_effect, 'none');
+  }
+  for (const item of relations) {
+    assert.equal(item.authority_effect, 'none');
   }
 });
