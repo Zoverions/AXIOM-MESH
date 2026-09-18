@@ -214,14 +214,34 @@ pub struct MergeConflict {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MergeView {
-    pub merge_id: String,
-    pub consumer_tool_ref: String,
-    pub inputs: Vec<MergeInput>,
-    pub values: Vec<MergedValue>,
-    pub conflicts: Vec<MergeConflict>,
+    merge_id: String,
+    consumer_tool_ref: String,
+    inputs: Vec<MergeInput>,
+    values: Vec<MergedValue>,
+    conflicts: Vec<MergeConflict>,
 }
 
 impl MergeView {
+    pub fn merge_id(&self) -> &str {
+        &self.merge_id
+    }
+
+    pub fn consumer_tool_ref(&self) -> &str {
+        &self.consumer_tool_ref
+    }
+
+    pub fn inputs(&self) -> &[MergeInput] {
+        &self.inputs
+    }
+
+    pub fn values(&self) -> &[MergedValue] {
+        &self.values
+    }
+
+    pub fn conflicts(&self) -> &[MergeConflict] {
+        &self.conflicts
+    }
+
     pub fn is_consistent(&self) -> bool {
         self.conflicts.is_empty()
     }

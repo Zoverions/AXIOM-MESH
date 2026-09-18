@@ -305,3 +305,5 @@ tool-owned append-only lanes
   -> Knowledge -> Operation -> Authority
 
 The operator surface should render the merge view and its unresolved conflicts, not silently flatten collisions in the underlying lanes.
+
+Tool identity references in this laboratory are typed coordination inputs; a production adapter must bind them to the trusted component/host identity rather than accepting a model-supplied string as proof of tool identity.

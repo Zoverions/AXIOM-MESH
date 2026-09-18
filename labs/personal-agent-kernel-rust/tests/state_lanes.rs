@@ -278,9 +278,9 @@ fn divergent_same_key_values_surface_as_conflict_instead_of_last_writer_wins() {
         .expect("merge");
 
     assert!(!view.is_consistent());
-    assert_eq!(view.conflicts.len(), 1);
-    assert_eq!(view.conflicts[0].state_key, "release.spec");
-    assert_eq!(view.conflicts[0].variants.len(), 2);
+    assert_eq!(view.conflicts().len(), 1);
+    assert_eq!(view.conflicts()[0].state_key, "release.spec");
+    assert_eq!(view.conflicts()[0].variants.len(), 2);
     assert!(
         view.value_digest("release.spec").is_err(),
         "a conflicted key must have no silent merged value"
@@ -340,9 +340,9 @@ fn identical_cross_lane_values_coalesce_without_erasing_provenance() {
         .expect("merge");
 
     assert!(view.is_consistent());
-    assert_eq!(view.values.len(), 1);
-    assert_eq!(view.values[0].value_digest, shared);
-    assert_eq!(view.values[0].origins.len(), 2);
+    assert_eq!(view.values().len(), 1);
+    assert_eq!(view.values()[0].value_digest, shared);
+    assert_eq!(view.values()[0].origins.len(), 2);
     assert_eq!(
         view.value_digest("tested.head")
             .expect("not conflicted")
