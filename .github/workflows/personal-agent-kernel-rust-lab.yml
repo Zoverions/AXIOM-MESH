@@ -135,10 +135,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Prove laboratory is not imported by supported runtime
+      - name: Prove Personal Kernel laboratories are not imported by supported runtime
         shell: bash
         run: |
-          if git grep -n "personal-agent-kernel-rust" -- mesh/src mesh/config; then
-            echo "Rust personal-kernel laboratory must remain unreachable from supported runtime"
+          if git grep -n -E "labs/personal-agent-kernel-(rust|rust-crypto|wasmtime-host|offline-journal)|personal-agent-kernel-(rust-crypto|wasmtime-host|offline-journal)" -- mesh/src mesh/config packages/axiom-client; then
+            echo "Personal Kernel laboratories must remain unreachable from supported runtime"
             exit 1
           fi
