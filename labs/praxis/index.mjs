@@ -2736,6 +2736,7 @@ function validatePreparedAuthorityState(prepared, {
       }
     }
   }
+  validateEffectEnvelope(authority, operation, charterContext);
   for (const evidence of authority.evidence ?? []) {
     if (authority.charter_digest) {
       const verifier = charterContext?.body.verifiers?.[evidence.verifier_name];
@@ -3146,6 +3147,7 @@ export async function run(source, {
           operationDigest: operation.operation_digest,
           charterContext
         });
+        validateEffectEnvelope(token, operation, charterContext);
         bindValue(instruction.name, Object.freeze({
           kind: 'AuthorizedOperation',
           operation,
@@ -3197,6 +3199,7 @@ export async function run(source, {
           operationDigest: authorized.operation.operation_digest,
           charterContext
         });
+        validateEffectEnvelope(token, authorized.operation, charterContext);
 
         const request = Object.freeze({
           schema: 'praxis-prepare-request.v0',
