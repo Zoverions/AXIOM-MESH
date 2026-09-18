@@ -282,7 +282,7 @@ test('host registry missing an effectful operation fails closed', async () => {
   );
 });
 
-test('host operation registry rejects hidden or unknown contract fields', () => {
+test('host operation registry rejects hidden or incomplete contract fields', () => {
   assert.throws(
     () => createHostOperationRegistry({
       Deploy: {
@@ -293,6 +293,54 @@ test('host operation registry rejects hidden or unknown contract fields', () => 
         egress: 'provider:prod',
         hidden_authority: true
       }
+    }),
+    TypeError
+  );
+
+  assert.throws(
+    () => createHostOperationRegistry({
+      Deploy: {
+        action: 'Deploy',
+        scope: 'Production',
+        effect: 'deploy_release',
+        egress: 'provider:prod'
+      }
+    }),
+    TypeError
+  );
+
+  assert.throws(
+    () => createHostOperationRegistry({
+      Deploy: {
+        action: 'Deploy',
+        scope: 'Production',
+        effect: 'deploy_release',
+        irreversible: false
+      }
+    }),
+    TypeError
+  );
+});
+
+test('measured operation descriptor requires explicit finality and egress metadata', () => {
+  assert.throws(
+    () => createOperationDescriptorPraxis({
+      action: 'Deploy',
+      scope: 'Production',
+      args: ['artifact'],
+      effect: 'deploy_release',
+      egress: 'provider:prod'
+    }),
+    TypeError
+  );
+
+  assert.throws(
+    () => createOperationDescriptorPraxis({
+      action: 'Deploy',
+      scope: 'Production',
+      args: ['artifact'],
+      effect: 'deploy_release',
+      irreversible: false
     }),
     TypeError
   );
