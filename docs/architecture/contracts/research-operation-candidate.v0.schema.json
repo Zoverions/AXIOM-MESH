@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/research-operation-candidate.v0.schema.json",
+  "title": "AXIOM Research Operation Candidate v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "operation_id",
+    "source_manifest_digest",
+    "source_revision",
+    "adapter_kind",
+    "interface_kind",
+    "source_code_ref",
+    "declared_inputs",
+    "declared_outputs",
+    "dependency_refs",
+    "environment_digest",
+    "network_requirement",
+    "filesystem_requirement",
+    "credential_requirement",
+    "declared_effect_class",
+    "data_classes",
+    "determinism_class",
+    "reference_output_digests",
+    "domain_constraints",
+    "execution_authority",
+    "operation_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-research-operation-candidate.v0" },
+    "operation_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "source_manifest_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "source_revision": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "adapter_kind": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "interface_kind": { "enum": ["mcp_metadata", "function", "notebook", "script", "workflow"] },
+    "source_code_ref": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "declared_inputs": { "$ref": "#/$defs/referenceArray" },
+    "declared_outputs": { "$ref": "#/$defs/referenceArray" },
+    "dependency_refs": { "$ref": "#/$defs/referenceArray" },
+    "environment_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "network_requirement": { "enum": ["none", "synthetic_loopback_only", "external_required", "unknown"] },
+    "filesystem_requirement": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "credential_requirement": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "declared_effect_class": { "enum": ["read_only", "local_mutation", "external_mutation", "external_message", "publication", "unknown"] },
+    "data_classes": { "$ref": "#/$defs/referenceArray" },
+    "determinism_class": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "reference_output_digests": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    },
+    "domain_constraints": { "$ref": "#/$defs/referenceArray" },
+    "execution_authority": { "const": "none" },
+    "operation_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "referenceArray": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    }
+  }
+}
