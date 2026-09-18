@@ -5,6 +5,7 @@ import {
   PraxisRuntimeError,
   PraxisTypeError,
   compile,
+  createHostLease,
   createHostPermit,
   run
 } from '../../labs/praxis/index.mjs';
@@ -34,6 +35,7 @@ commit armed_release as receipt;
   );
   assert.deepEqual(ir.required_permits, [{
     name: 'deploy_prod',
+    authority_kind: 'Permit',
     action: 'Deploy',
     scope: 'Production'
   }]);
@@ -171,6 +173,101 @@ test('Praxis returns a receipt only after exact host authority and executor rece
     result.values.release.operation_digest
   );
   assert.equal(result.values.release_receipt.authority_id, 'permit:success');
+});
+
+test('Praxis compiles Lease as a distinct expiring authority requirement', () => {
+  const ir = compile(`
+requires lease deploy_window: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_window as armed;
+`);
+
+  assert.deepEqual(
+    ir.instructions.map(instruction => instruction.op),
+    ['REQUIRE_LEASE', 'PLAN', 'AUTHORIZE']
+  );
+  assert.deepEqual(ir.required_permits, [{
+    name: 'deploy_window',
+    authority_kind: 'Lease',
+    action: 'Deploy',
+    scope: 'Production'
+  }]);
+  assert.equal(ir.bindings.deploy_window.kind, 'Lease');
+});
+
+test('Praxis rejects an expired authority lease before authorization', async () => {
+  const source = `
+requires lease deploy_window: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_window as armed;
+`;
+  const lease = createHostLease({
+    id: 'lease:expired',
+    action: 'Deploy',
+    scope: 'Production',
+    expiresAt: '2026-09-18T12:00:00.000Z'
+  });
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: { deploy_window: lease },
+      now: '2026-09-18T12:00:00.000Z'
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_EXPIRED'
+  );
+});
+
+test('Praxis rejects explicitly revoked host authority', async () => {
+  const source = `
+requires permit deploy_prod: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_prod as armed;
+`;
+  const permit = createHostPermit({
+    id: 'permit:revoked',
+    action: 'Deploy',
+    scope: 'Production'
+  });
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: { deploy_prod: permit },
+      revokedAuthorityIds: ['permit:revoked']
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_REVOKED'
+  );
+});
+
+test('Praxis accepts an unexpired non-revoked lease and still consumes it linearly', async () => {
+  const source = `
+requires lease deploy_window: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_window as armed;
+`;
+  const lease = createHostLease({
+    id: 'lease:valid',
+    action: 'Deploy',
+    scope: 'Production',
+    expiresAt: '2026-09-18T13:00:00.000Z'
+  });
+
+  const result = await run(source, {
+    authorities: { deploy_window: lease },
+    now: '2026-09-18T12:00:00.000Z'
+  });
+  assert.equal(result.values.deploy_window.kind, 'Lease');
+  assert.equal(result.values.armed.kind, 'AuthorizedOperation');
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: { deploy_window: lease },
+      now: '2026-09-18T12:30:00.000Z'
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_CONSUMED'
+  );
 });
 
 test('Praxis host authority tokens are one-use across runs', async () => {
