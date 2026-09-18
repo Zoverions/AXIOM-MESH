@@ -479,6 +479,22 @@ function validateCharterBody(body) {
     if (!entry?.def || entry.digest !== signatureBodyDigest(entry.def)) {
       throw new PraxisRuntimeError('PRAXIS_POLICY_UNPINNED', 'policy ' + name + ' digest mismatch');
     }
+    let normalizedPolicy;
+    try {
+      normalizedPolicy = normalizePolicyDefinition(name, entry.def);
+    } catch (error) {
+      if (error instanceof PraxisRuntimeError) throw error;
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'policy ' + name + ' is not a valid normalized policy'
+      );
+    }
+    if (canonicalJsonPraxis(normalizedPolicy) !== canonicalJsonPraxis(entry.def)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'policy ' + name + ' is not in canonical normalized form'
+      );
+    }
     for (const verifierName of entry.def.requires_evidence ?? []) {
       if (!Object.hasOwn(body.verifiers ?? {}, verifierName)) {
         throw new PraxisRuntimeError(
@@ -513,6 +529,21 @@ function validateCharterBody(body) {
   for (const [name, entry] of Object.entries(body.verifiers ?? {})) {
     if (!entry?.def || entry.digest !== signatureBodyDigest(entry.def)) {
       throw new PraxisRuntimeError('PRAXIS_VERIFIER_UNPINNED', 'verifier ' + name + ' digest mismatch');
+    }
+    let normalizedVerifier;
+    try {
+      normalizedVerifier = normalizeVerifierDefinition(name, entry.def);
+    } catch {
+      throw new PraxisRuntimeError(
+        'PRAXIS_VERIFIER_UNPINNED',
+        'verifier ' + name + ' is not a valid normalized verifier'
+      );
+    }
+    if (canonicalJsonPraxis(normalizedVerifier) !== canonicalJsonPraxis(entry.def)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_VERIFIER_UNPINNED',
+        'verifier ' + name + ' is not in canonical normalized form'
+      );
     }
     for (const signer of entry.def.signers ?? []) {
       if (!Object.hasOwn(body.principals ?? {}, signer)) {
