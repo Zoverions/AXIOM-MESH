@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "feat/personal-agent-kernel-rust-vnext-*"
+      - "feat/personal-agent-context-compiler-*"
     paths:
       - "labs/personal-agent-kernel-rust/**"
       - "labs/personal-agent-kernel-rust-crypto/**"
@@ -16,6 +17,7 @@ on:
     branches:
       - "main"
       - "feat/personal-agent-kernel-v0-20260918"
+      - "feat/personal-agent-kernel-rust-vnext-*"
     paths:
       - "labs/personal-agent-kernel-rust/**"
       - "labs/personal-agent-kernel-rust-crypto/**"
