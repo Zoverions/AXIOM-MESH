@@ -204,6 +204,16 @@ implemented/supported claims until complete production-path code, negative
 tests, human evidence, packaging, documentation, and independent review satisfy
 the capability acceptance rule.
 
+The intended first daily-use entry surface is **Social Discovery / Feed** after
+current-Mesh parity. The product should make high-quality discovery useful
+before a user needs to understand Mesh internals, while preserving a
+chronological option, user-owned ranking objectives, explanation/provenance,
+portable social state, and a strict separation between recommendation,
+visibility policy, moderation, truth, and authority. A ranking algorithm may
+order already-eligible material for local display; it may not make excluded
+material eligible, mint authority, or become the canonical owner of the
+person's social graph, corpus, or preferences.
+
 The current experimental human-explanation slice reviews five exact actions
 before sending: the non-consequential echo, owner-scoped private memory creation,
 one of three fixed directional provenance links, confirmation-bound
@@ -511,8 +521,9 @@ current project status, or deployment evidence.
 Work proceeds in parallel:
 
 1. close authentic single-node pilot blockers;
-2. maintain the implemented versioned Gateway client and complete the
-   experimental AXIOM One human-shell gates;
+2. maintain the implemented versioned Gateway client, complete the
+   experimental AXIOM One human-shell gates, and prioritize Social Discovery /
+   Feed as the first daily-use entry surface after current-Mesh parity;
 3. mature machine-principal invocation semantics without enabling autonomous
    delegation or remote execution;
 4. add one bounded AI provider and useful personal workflows;
