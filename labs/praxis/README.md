@@ -27,6 +27,12 @@ credential, deployment, spending, or external-effect authority.
 The CLI supports only parsing, static checking, and IR inspection. It has no
 `run` command.
 
+Compiled IR is sealed with a canonical module digest, but the runtime does not
+treat that digest as proof that the compiler was trustworthy. Hand-edited,
+re-sealed IR is an explicit adversarial input: the runtime re-checks authority
+kind, exact-plan binding, quorum threshold, information-flow restrictions, and
+prepared-effect terminal linearity before an effect can advance.
+
 The embedding API contains a `run()` function solely for conformance testing
 and future host integration. A consequential operation must cross both
 `authorize` and `prepare` before `commit`. Preparation fails closed unless
@@ -89,7 +95,8 @@ commit prepared_release as release_receipt;
 ```
 
 The source code does not mint `deploy_prod`. It declares an authority
-requirement. A host must provide a matching authority token.
+requirement. A host must provide a matching authority token bound to the exact
+operation digest that may be armed.
 
 Time-bounded authority is expressed as a lease:
 
@@ -114,16 +121,17 @@ op release = Deploy("artifact") @ Production;
 authorize release using release_gate as armed_release;
 ```
 
-A host `createHostQuorum(...)` envelope must match the exact member set and
-satisfy the declared threshold. Ordinary permits are not pooled, votes are not
-authority by themselves, and a quorum for one action/scope cannot authorize
-another.
+A host `createHostQuorum(...)` envelope must match the exact member set,
+threshold, and operation digest. Ordinary permits are not pooled, votes are not
+authority by themselves, and a quorum for one action/scope/plan cannot
+authorize another.
 
 `createHostPermit(...)` and `createHostLease(...)` are laboratory embedding
-APIs. They are not a secure production issuer and must never be exposed to
-untrusted Praxis source, agents, plugins, or remote callers. A future AXIOM
-adapter must derive these runtime objects only from already-authorized AXIOM
-evidence; the factory functions themselves do not create AXIOM authority.
+APIs. Each laboratory token is bound to one exact operation digest. They are
+not a secure production issuer and must never be exposed to untrusted Praxis
+source, agents, plugins, or remote callers. A future AXIOM adapter must derive
+these runtime objects only from already-authorized AXIOM evidence; the factory
+functions themselves do not create AXIOM authority.
 
 Secrets are represented separately from values:
 
@@ -200,8 +208,10 @@ The compiler rejects:
 
 The runtime additionally rejects:
 
-- absent, forged, mismatched, expired, revoked, or already consumed host authority tokens;
-- quorum envelopes with the wrong membership or insufficient approvals;
+- tampered or malformed IR before interpretation;
+- hand-edited IR that attempts to bypass runtime kind, flow, or linearity checks;
+- absent, forged, mismatched, expired, revoked, already consumed, or wrong-plan host authority tokens;
+- quorum envelopes with the wrong membership, threshold, or insufficient approvals;
 - absent, forged, or wrong-kind opaque host secret references;
 - missing verifier or assessor implementations;
 - verification/assessment results without explicit `ok: true`;
@@ -274,9 +284,12 @@ It specifically defends against:
 - synthetic success from a missing or malformed executor receipt;
 - completion being claimed without durable completion evidence.
 
-This slice does not claim protection from a malicious embedding host, compiler
-subversion, compromised Node.js runtime, hardware compromise, or an executor
-that lies while still producing a structurally valid receipt.
+This slice does not claim protection from a malicious embedding host,
+compromised Node.js runtime, hardware compromise, or an executor that lies while
+still producing a structurally valid receipt. It also does not claim formal
+compiler correctness. Instead, the current authority/runtime invariants are
+tested against hand-edited, re-sealed IR so a compiler defect cannot by itself
+turn those tested violations into authority.
 
 ## Ground-up AXIOM rewrite boundary
 
@@ -309,9 +322,9 @@ would fail this experiment.
 
 ## Failure criteria
 
-The experiment fails if any tested program can:
+The experiment fails if any tested program or hand-edited IR can:
 
-- commit without a host-supplied matching permit/lease and durable preparation;
+- commit without a host-supplied matching, exact-plan permit/lease/quorum and durable preparation;
 - convert knowledge or assessment directly into authority;
 - use one linear authority token more than once;
 - expose an opaque secret reference as an ordinary value;
