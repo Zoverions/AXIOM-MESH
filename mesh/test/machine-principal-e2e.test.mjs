@@ -319,3 +319,30 @@ test('an expired constrained agent loses the whole authenticated Gateway surface
     assert.equal(response.body.error.code, 'machine_principal_expired');
   }
 });
+
+
+test('public intent requests cannot self-report assurance evidence', async t => {
+  const { client } = await startMachineStack(t, 'axiom-machine-assurance-spoof-');
+
+  await assert.rejects(
+    () => client.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: 'self-reported-assurance' },
+        purpose: 'test.conformance',
+        assurance_evidence: {
+          agent: {
+            principal_id: 'agent.machine-test',
+            authority_digest: '0'.repeat(64)
+          }
+        }
+      },
+      idempotencyKey: 'machine-assurance-spoof-0001'
+    }),
+    error => (
+      error.code === 'validation_error'
+      && error.status === 400
+      && /cannot supply agent assurance evidence/i.test(error.message)
+    )
+  );
+});
