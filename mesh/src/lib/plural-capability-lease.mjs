@@ -295,10 +295,13 @@ export function evaluatePluralCapabilityLeaseCandidate(raw) {
       expires_at: approval.expires_at,
       currentness: approval.currentness
     }))
-    .sort((left, right) => (
-      left.approver_ref.localeCompare(right.approver_ref)
-      || left.approval_id.localeCompare(right.approval_id)
-    ));
+    .sort((left, right) => {
+      if (left.approver_ref < right.approver_ref) return -1;
+      if (left.approver_ref > right.approver_ref) return 1;
+      if (left.approval_id < right.approval_id) return -1;
+      if (left.approval_id > right.approval_id) return 1;
+      return 0;
+    });
 
   const normalizedCandidate = {
     schema: PLURAL_CAPABILITY_LEASE_CANDIDATE_SCHEMA,
