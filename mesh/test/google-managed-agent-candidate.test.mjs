@@ -105,13 +105,13 @@ test('managed-agent candidate reasserts network policy when reusing environment 
   const request = buildGoogleManagedAgentInteraction({
     handoff: handoff(),
     input: 'Continue with the existing files but no network.',
-    environmentId: 'environment:managed-001',
-    previousInteractionId: 'interaction:managed-001',
+    environmentId: 'environments/managed-001',
+    previousInteractionId: 'interactions/managed-001',
     maxTotalTokens: 10000
   });
 
-  assert.equal(request.environment.environment_id, 'environment:managed-001');
-  assert.equal(request.previous_interaction_id, 'interaction:managed-001');
+  assert.equal(request.environment.environment_id, 'environments/managed-001');
+  assert.equal(request.previous_interaction_id, 'interactions/managed-001');
   assert.equal(request.environment.network, 'disabled');
 });
 
@@ -199,4 +199,15 @@ test('managed-agent candidate rejects the wrong catalog target', () => {
     }),
     /not pinned/
   );
+});
+
+test('managed-agent candidate does not silently fall back to another harness identifier', () => {
+  const request = buildGoogleManagedAgentInteraction({
+    handoff: handoff(),
+    input: 'Do bounded work.',
+    maxTotalTokens: 1000
+  });
+
+  assert.equal(request.agent, 'antigravity-preview-09-2026');
+  assert.notEqual(request.agent, 'antigravity-preview-05-2026');
 });
