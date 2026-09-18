@@ -89,7 +89,7 @@ explicitly opened.
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 31 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
-| UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views; local social UI integration, onboarding/session/device/accessibility/package work remain |
+| UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views plus owner-local chronological/ranked Social feed preview with session-only controls; remote candidate eligibility, onboarding/session/device hardening, broader accessibility/usability, and package work remain |
 | UX-003 | In progress | Human authority explanations | Five bounded actions, stable outcomes/events, approval states, raw evidence, uncertainty recovery; broader authoritative consequential plan/execute + comprehension evidence pending |
 | UX-004 | In progress | Governed memory lifecycle | Owner create/list, three exact provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives; edge deletion/hard deletion/restore/bulk ingestion pending |
 | UX-005 | Pending | Browser security boundary | CSP/CSRF/origin/session/cookie/token/clickjacking/device-revocation/storage tests |
