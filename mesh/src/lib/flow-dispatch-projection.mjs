@@ -434,6 +434,25 @@ function validateInputShape(input) {
       if (handoff.request.runtime_operation !== step.operation_id) {
         throw new ValidationError(`binding ${binding.step_id} handoff operation does not match flow step`);
       }
+      if (!workers.some(worker =>
+        workerSupportsStep(worker, step, binding, handoffById)
+      )) {
+        throw new ValidationError(
+          `binding ${binding.step_id} handoff target has no compatible worker runtime`
+        );
+      }
+    }
+  }
+
+  for (const claim of claims) {
+    const binding = bindingByStep.get(claim.step_id);
+    if (binding.handoff_task_id === null) continue;
+    const handoff = handoffById.get(binding.handoff_task_id);
+    const worker = workerByRef.get(claim.worker_ref);
+    if (worker.runtime_ref !== handoff.execution_target.integration_id) {
+      throw new ValidationError(
+        `claim ${claim.claim_id} worker runtime does not match handoff target`
+      );
     }
   }
 
