@@ -13,6 +13,7 @@ import {
   normalizeMachinePrincipalDefinition
 } from '../src/lib/machine-principal.mjs';
 import { buildPlan } from '../src/lib/plan.mjs';
+import { resolveSignedFetchTimeoutMs } from '../src/lib/client.mjs';
 
 const D = char => char.repeat(64);
 
@@ -277,4 +278,77 @@ test('plan provenance binds the normalized assurance evidence digest without wid
   assert.ok(plan.decision_provenance.rules.includes(`agent-assurance:${assuranceDigest}`));
   assert.equal(plan.capability.authority_digest, machine.authority_digest);
   assert.equal(Object.hasOwn(plan.capability, 'assurance_digest'), false);
+});
+
+
+test('sandbox handoff requires assurance evidence to match plan provenance', () => {
+  const machine = principal();
+  const assuranceEvidence = evidence(machine);
+  const intent = {
+    intent_id: 'intent_assurance_sandbox_test',
+    principal: machine,
+    action: 'system.echo',
+    purpose: 'test.conformance',
+    input: { message: 'sandbox-bound' },
+    data_scopes: [],
+    approval_ids: [],
+    assurance_evidence: assuranceEvidence
+  };
+  const plan = buildPlan(intent, policyDecision());
+  const body = { intent, plan };
+
+  assert.equal(resolveSignedFetchTimeoutMs({
+    audience: 'sandbox',
+    url: 'http://127.0.0.1:31002/internal/v1/execute',
+    body
+  }), 1_000);
+
+  const swapped = structuredClone(body);
+  swapped.intent.assurance_evidence.agent.run_id = 'run:assurance:swapped';
+  assert.throws(() => resolveSignedFetchTimeoutMs({
+    audience: 'sandbox',
+    url: 'http://127.0.0.1:31002/internal/v1/execute',
+    body: swapped
+  }), /does not match the digest-bound plan provenance/);
+
+  const missing = structuredClone(body);
+  delete missing.intent.assurance_evidence;
+  assert.throws(() => resolveSignedFetchTimeoutMs({
+    audience: 'sandbox',
+    url: 'http://127.0.0.1:31002/internal/v1/execute',
+    body: missing
+  }), /requires agent assurance evidence that is missing/);
+});
+
+test('sandbox handoff re-denies observed environment expansion before execution', () => {
+  const machine = principal();
+  const expandedEvidence = evidence(machine, {
+    environment: {
+      declared: evidence(machine).environment.declared,
+      observed: {
+        ...evidence(machine).environment.observed,
+        tools: ['tool:test', 'tool:shell']
+      }
+    }
+  });
+  const intent = {
+    intent_id: 'intent_assurance_sandbox_deny',
+    principal: machine,
+    action: 'system.echo',
+    purpose: 'test.conformance',
+    input: { message: 'deny-before-execute' },
+    data_scopes: [],
+    approval_ids: [],
+    assurance_evidence: expandedEvidence
+  };
+  const plan = buildPlan(intent, policyDecision());
+
+  assert.throws(() => resolveSignedFetchTimeoutMs({
+    audience: 'sandbox',
+    url: 'http://127.0.0.1:31002/internal/v1/execute',
+    body: { intent, plan }
+  }), error => (
+    error?.code === 'machine_assurance_environment_denied'
+    && error?.status === 403
+  ));
 });
