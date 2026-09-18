@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use axiom_personal_agent_kernel_rust_lab::MeshProofInput;
 use ed25519_dalek::{Signature, VerifyingKey};
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -12,6 +14,8 @@ pub enum VerifyError {
     InvalidPublicKey,
     InvalidSignatureEncoding,
     SignatureMismatch,
+    NonCanonicalBody,
+    InvalidProofBody,
 }
 
 impl Display for VerifyError {
@@ -21,12 +25,27 @@ impl Display for VerifyError {
             Self::InvalidPublicKey => "invalid Ed25519 public key",
             Self::InvalidSignatureEncoding => "invalid Ed25519 signature encoding",
             Self::SignatureMismatch => "Ed25519 signature verification failed",
+            Self::NonCanonicalBody => "proof body is not canonical AXIOM JSON",
+            Self::InvalidProofBody => "proof body does not match the typed Mesh proof schema",
         };
         f.write_str(message)
     }
 }
 
 impl Error for VerifyError {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SignedMeshProofBody {
+    capability_ref: String,
+    expires_at_unix_s: u64,
+    grant_ref: String,
+    max_delegation_hops: u8,
+    node_id: String,
+    owner_subject_ref: String,
+    plan_digest: String,
+    revocation_epoch: u64,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerifiedCryptoEvidence {
@@ -70,6 +89,42 @@ pub fn verify_axiom_ed25519_attestation(
     Ok(VerifiedCryptoEvidence {
         digest_hex: actual_digest_hex,
         public_key_raw_hex: public_key_raw_hex.to_string(),
+    })
+}
+
+pub fn verify_and_build_mesh_proof_input(
+    canonical_body: &[u8],
+    expected_digest_hex: &str,
+    signature_b64url: &str,
+    public_key_raw_hex: &str,
+) -> Result<MeshProofInput, VerifyError> {
+    verify_axiom_ed25519_attestation(
+        canonical_body,
+        expected_digest_hex,
+        signature_b64url,
+        public_key_raw_hex,
+    )?;
+
+    let value: serde_json::Value =
+        serde_json::from_slice(canonical_body).map_err(|_| VerifyError::InvalidProofBody)?;
+    let canonical =
+        serde_json::to_vec(&value).map_err(|_| VerifyError::InvalidProofBody)?;
+    if canonical != canonical_body {
+        return Err(VerifyError::NonCanonicalBody);
+    }
+
+    let proof: SignedMeshProofBody =
+        serde_json::from_value(value).map_err(|_| VerifyError::InvalidProofBody)?;
+
+    Ok(MeshProofInput {
+        grant_ref: proof.grant_ref,
+        owner_subject_ref: proof.owner_subject_ref,
+        plan_digest: proof.plan_digest,
+        node_id: proof.node_id,
+        capability_ref: proof.capability_ref,
+        revocation_epoch: proof.revocation_epoch,
+        expires_at_unix_s: proof.expires_at_unix_s,
+        max_delegation_hops: proof.max_delegation_hops,
     })
 }
 
