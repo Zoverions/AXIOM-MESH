@@ -21,7 +21,7 @@
     },
     {
       "invariant": "collective-agreement-cannot-amplify-authority",
-      "status": "partial-assessment-only"
+      "status": "covered-synthetic-host-contract"
     },
     {
       "invariant": "permit-action-scope-binding",
@@ -250,6 +250,26 @@
       "expect": {
         "ok": false,
         "code": "PRAXIS_LINEAR_OPERATION_REUSE"
+      }
+    },
+    {
+      "name": "valid-explicit-quorum-authority",
+      "source": "requires quorum gate: Deploy @ Production threshold 2 of Operator, Security, Provider;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using gate as armed;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_QUORUM",
+          "PLAN",
+          "AUTHORIZE"
+        ]
+      }
+    },
+    {
+      "name": "invalid-quorum-threshold",
+      "source": "requires quorum gate: Deploy @ Production threshold 3 of Operator, Security;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_INVALID_QUORUM"
       }
     }
   ],
