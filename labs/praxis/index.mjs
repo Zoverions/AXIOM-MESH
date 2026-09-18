@@ -2002,6 +2002,14 @@ function validatePreparedAuthorityState(prepared, {
       `host authority token ${authority.authority_id} expired before commit`
     );
   }
+  for (const evidence of authority.evidence ?? []) {
+    if (nowMs >= evidence.valid_until_ms) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EVIDENCE_STALE',
+        'authority evidence expired before commit'
+      );
+    }
+  }
 }
 
 export async function run(source, {
