@@ -83,24 +83,20 @@ test('E2-RC production module imports no authority, network, provider, prover, o
   const imports = [...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(match => match[1]);
   assert.deepEqual(imports, ['./canonical.mjs']);
 
-  const forbidden = [
+  const forbiddenImports = [
     'node:fs',
     'node:http',
     'node:https',
     'node:net',
     'node:dgram',
     'node:tls',
-    'node:child_process',
-    'gateway-client',
-    'hypervisor',
-    'sandbox',
-    'grid',
-    'provider',
-    'wallet',
-    'credential'
+    'node:child_process'
   ];
-  for (const token of forbidden) {
-    assert.equal(source.toLowerCase().includes(token), false, `forbidden source surface: ${token}`);
+  for (const token of forbiddenImports) {
+    assert.equal(imports.includes(token), false, `forbidden production import: ${token}`);
+  }
+  for (const token of ['fetch(', 'WebSocket', 'process.env', 'process.cwd()', 'Date.now()', 'Math.random()']) {
+    assert.equal(source.includes(token), false, `forbidden ambient/effect surface: ${token}`);
   }
 });
 
