@@ -1516,7 +1516,7 @@ export async function run(source, {
           );
         }
         validateAuthorityToken(token, requirement, {
-          nowMs,
+          nowMs: runtimeTime(now),
           revokedAuthorityIds: revoked,
           operationDigest: operation.operation_digest
         });
@@ -1557,7 +1557,7 @@ export async function run(source, {
         const requirement = requirements.get(authorized.permit_name);
         const token = authorityTokens.get(authorized.permit_name);
         validateAuthorityToken(token, requirement, {
-          nowMs,
+          nowMs: runtimeTime(now),
           revokedAuthorityIds: revoked,
           operationDigest: authorized.operation.operation_digest
         });
