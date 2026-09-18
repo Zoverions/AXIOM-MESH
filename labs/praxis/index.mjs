@@ -2416,6 +2416,35 @@ function validateCharteredAuthorityToken(token, requirement, charterContext, now
   }
 }
 
+function validateMeasuredOperationAgainstRegistry(operation, registry) {
+  if (!operation || operation.effect === undefined) return;
+  if (!registry) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REQUIRED',
+      'measured operation requires the host operation registry at terminal use'
+    );
+  }
+  const measured = registry.operations[operation.host_operation];
+  if (!measured) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REQUIRED',
+      'measured host operation ' + operation.host_operation + ' is not registered'
+    );
+  }
+  if (
+    measured.action !== operation.action
+    || measured.scope !== operation.scope
+    || measured.effect !== operation.effect
+    || measured.irreversible !== operation.irreversible
+    || measured.egress !== operation.egress
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_LINK_MISMATCH',
+      'prepared operation no longer matches the host-measured contract'
+    );
+  }
+}
+
 function validateEffectEnvelope(authority, operation, charterContext) {
   if (!operation || operation.effect === undefined) return;
   if (!authority?.charter_digest) return;
@@ -3359,6 +3388,7 @@ export async function run(source, {
           revokedAuthorityIds: revoked,
           charterContext
         });
+        validateMeasuredOperationAgainstRegistry(prepared.operation, hostOperationRegistry);
 
         if (
           prepared.operation.effect !== undefined
