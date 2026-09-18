@@ -22,37 +22,41 @@ function signal(id, dimension, level) {
   };
 }
 
-function accountEvaluation() {
+function accountCase() {
   const signals = [
     signal('fit-1', 'fit', 3),
     signal('timing-1', 'timing', 3),
     signal('intent-1', 'intent', 2)
   ];
-  return evaluateGtmAccount({
+  const accountEvidence = {
     schema: 'axiom-gtm-account-evidence.v0',
     evaluation_version: 'axiom-gtm-priority.v0',
     account_id: 'acct.example',
     created_at: '2026-09-18',
     declared_lane: 'HIGH_SIGNAL',
     signals
-  }, {
+  };
+  const trustedProvenance = new Map(signals.map(item => [
+    item.id,
+    { source_url: item.source_url, source_kind: item.source_kind }
+  ]));
+  const evaluation = evaluateGtmAccount(accountEvidence, {
     evaluationTime: EVALUATION_TIME,
-    trustedProvenance: new Map(signals.map(item => [
-      item.id,
-      { source_url: item.source_url, source_kind: item.source_kind }
-    ]))
+    trustedProvenance
   });
+  return { accountEvidence, trustedProvenance, evaluation };
 }
 
 function receipt(overrides = {}) {
-  const evaluation = accountEvaluation();
+  const account = accountCase();
   return {
     input: {
       schema: 'axiom-gtm-outcome-receipt.v0',
       receipt_id: 'outcome-001',
       campaign_id: 'campaign.devtools.001',
-      account_id: evaluation.account_id,
-      evidence_digest: evaluation.evidence_digest,
+      account_id: account.evaluation.account_id,
+      evaluated_on: account.evaluation.evaluated_on,
+      evidence_digest: account.evaluation.evidence_digest,
       operation_ref: 'human:founder-outreach:001',
       outcome_class: 'qualified_conversation',
       occurred_at: '2026-09-18',
@@ -60,14 +64,18 @@ function receipt(overrides = {}) {
       outcome_evidence_digest: 'a'.repeat(64),
       summary: 'Founder conversation confirmed the problem, ownership, and a plausible evaluation path.'
     },
-    evaluation,
+    ...account,
     ...overrides
   };
 }
 
+function validate(input, accountEvidence, trustedProvenance) {
+  return evaluateGtmOutcomeReceipt(input, { accountEvidence, trustedProvenance });
+}
+
 test('binds a qualified conversation to the exact account evidence digest', () => {
-  const { input, evaluation } = receipt();
-  const result = evaluateGtmOutcomeReceipt(input, { accountEvaluation: evaluation });
+  const { input, evaluation, accountEvidence, trustedProvenance } = receipt();
+  const result = validate(input, accountEvidence, trustedProvenance);
 
   assert.equal(result.valid, true);
   assert.equal(result.account_id, evaluation.account_id);
@@ -77,47 +85,47 @@ test('binds a qualified conversation to the exact account evidence digest', () =
 });
 
 test('rejects a receipt bound to a different evidence digest', () => {
-  const { input, evaluation } = receipt();
+  const { input, accountEvidence, trustedProvenance } = receipt();
   input.evidence_digest = 'b'.repeat(64);
 
   assert.throws(
-    () => evaluateGtmOutcomeReceipt(input, { accountEvaluation: evaluation }),
+    () => validate(input, accountEvidence, trustedProvenance),
     error => error instanceof GtmOutcomeReceiptError
       && /evidence_digest does not match account evaluation/.test(error.message)
   );
 });
 
 test('rejects outcomes dated before the account evaluation', () => {
-  const { input, evaluation } = receipt();
+  const { input, accountEvidence, trustedProvenance } = receipt();
   input.occurred_at = '2026-09-17';
 
   assert.throws(
-    () => evaluateGtmOutcomeReceipt(input, { accountEvaluation: evaluation }),
+    () => validate(input, accountEvidence, trustedProvenance),
     /occurred_at cannot precede account evaluation/
   );
 });
 
 test('requires explicit revenue for paid-pilot outcomes', () => {
-  const { input, evaluation } = receipt();
+  const { input, accountEvidence, trustedProvenance } = receipt();
   input.outcome_class = 'paid_pilot';
 
   assert.throws(
-    () => evaluateGtmOutcomeReceipt(input, { accountEvaluation: evaluation }),
+    () => validate(input, accountEvidence, trustedProvenance),
     /revenue is required for paid_pilot/
   );
 });
 
 test('accepts bounded revenue only for paid outcomes', () => {
-  const { input, evaluation } = receipt();
+  const { input, accountEvidence, trustedProvenance } = receipt();
   input.outcome_class = 'paid_pilot';
   input.revenue = { currency: 'CAD', amount_minor: 250000 };
 
-  const result = evaluateGtmOutcomeReceipt(input, { accountEvaluation: evaluation });
+  const result = validate(input, accountEvidence, trustedProvenance);
   assert.deepEqual(result.revenue, { currency: 'CAD', amount_minor: 250000 });
 
   input.outcome_class = 'qualified_conversation';
   assert.throws(
-    () => evaluateGtmOutcomeReceipt(input, { accountEvaluation: evaluation }),
+    () => validate(input, accountEvidence, trustedProvenance),
     /revenue must be null unless outcome_class is paid_pilot or revenue_confirmed/
   );
 });
