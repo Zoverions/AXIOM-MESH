@@ -629,6 +629,97 @@ authorize release using deploy_prod as armed;
   );
 });
 
+test('Praxis re-checks lease expiry immediately before commit execution', async () => {
+  const source = `
+requires lease deploy_window: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_window as armed;
+prepare armed as prepared;
+commit prepared as receipt;
+`;
+  let nowMs = Date.parse('2026-09-18T12:00:00.000Z');
+  let executorCalls = 0;
+  const lease = createHostLease({
+    id: 'lease:expires-after-prepare',
+    action: 'Deploy',
+    scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST,
+    expiresAt: '2026-09-18T12:01:00.000Z'
+  });
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: { deploy_window: lease },
+      now: () => nowMs,
+      preparer: async request => {
+        nowMs = Date.parse('2026-09-18T12:02:00.000Z');
+        return {
+          ok: true,
+          evidence: {
+            durable: true,
+            operation_digest: request.operation.operation_digest,
+            preparation_digest: PREPARATION_DIGEST
+          }
+        };
+      },
+      executor: async request => {
+        executorCalls += 1;
+        return completedExecutor()(request);
+      },
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_EXPIRED'
+  );
+
+  assert.equal(executorCalls, 0);
+});
+
+test('Praxis re-checks operator revocation immediately before commit execution', async () => {
+  const source = `
+requires permit deploy_prod: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_prod as armed;
+prepare armed as prepared;
+commit prepared as receipt;
+`;
+  const revoked = new Set();
+  let executorCalls = 0;
+  const permit = createHostPermit({
+    id: 'permit:revoked-after-prepare',
+    action: 'Deploy',
+    scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST
+  });
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: { deploy_prod: permit },
+      revokedAuthorityIds: revoked,
+      preparer: async request => {
+        revoked.add('permit:revoked-after-prepare');
+        return {
+          ok: true,
+          evidence: {
+            durable: true,
+            operation_digest: request.operation.operation_digest,
+            preparation_digest: PREPARATION_DIGEST
+          }
+        };
+      },
+      executor: async request => {
+        executorCalls += 1;
+        return completedExecutor()(request);
+      },
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_REVOKED'
+  );
+
+  assert.equal(executorCalls, 0);
+});
+
 test('Praxis consumes an unexpired lease only after durable preparation', async () => {
   const source = `
 requires lease deploy_window: Deploy @ Production;
