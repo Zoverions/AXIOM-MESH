@@ -378,6 +378,7 @@ pub struct MemoryPromotionDecision {
     pub promotion_id: String,
     pub candidate_id: String,
     pub candidate_content_sha256: String,
+    pub assessment_sha256: String,
     pub context_bundle_sha256: String,
     pub disposition: MemoryPromotionDisposition,
     pub reasons: Vec<String>,
@@ -405,6 +406,17 @@ impl MemoryPromotionDecision {
 pub struct MemoryPromotionGate;
 
 impl MemoryPromotionGate {
+    pub fn assessment_sha256(
+        assessment: &MemoryAssessment,
+        digest_port: &impl Sha256Port,
+    ) -> ContextResult<String> {
+        require_id(&assessment.candidate_id, "memory assessment candidate id")?;
+        let canonical = canonical_memory_assessment_preimage(assessment);
+        let digest = digest_port.sha256_hex(canonical.as_bytes())?;
+        require_sha256(&digest, "memory assessment sha256")?;
+        Ok(digest)
+    }
+
     pub fn assess(
         expected_owner_subject_ref: &str,
         assessment: &MemoryAssessment,
@@ -421,6 +433,13 @@ impl MemoryPromotionGate {
         if assessment.candidate_id != input.candidate_id {
             return Err(ContextError::new(
                 "memory assessment candidate does not match promotion candidate",
+            ));
+        }
+
+        let bound_assessment_sha256 = Self::assessment_sha256(assessment, digest_port)?;
+        if input.assessment_sha256 != bound_assessment_sha256 {
+            return Err(ContextError::new(
+                "memory assessment digest does not match assessed content",
             ));
         }
 
@@ -481,6 +500,7 @@ impl MemoryPromotionGate {
             promotion_id: input.promotion_id.clone(),
             candidate_id: input.candidate_id.clone(),
             candidate_content_sha256: input.candidate_content_sha256.clone(),
+            assessment_sha256: bound_assessment_sha256,
             context_bundle_sha256: input.context_bundle_sha256.clone(),
             disposition,
             reasons,
@@ -685,6 +705,30 @@ fn canonical_context_preimage(bundle: &ContextBundle) -> String {
     out
 }
 
+fn canonical_memory_assessment_preimage(assessment: &MemoryAssessment) -> String {
+    let mut out = String::new();
+    push_field(
+        &mut out,
+        "schema",
+        "axiom-personal-memory-assessment.v0",
+    );
+    push_field(&mut out, "candidate_id", &assessment.candidate_id);
+    push_field(
+        &mut out,
+        "disposition",
+        memory_disposition_str(assessment.disposition),
+    );
+
+    let mut reasons = assessment.reasons.iter().map(String::as_str).collect::<Vec<_>>();
+    reasons.sort_unstable();
+    reasons.dedup();
+    for reason in reasons {
+        push_field(&mut out, "reason", reason);
+    }
+
+    out
+}
+
 fn canonical_promotion_preimage(
     input: &MemoryPromotionInput,
     disposition: MemoryPromotionDisposition,
@@ -749,6 +793,14 @@ fn sorted_refs(values: &[String]) -> Vec<&str> {
     let mut refs = values.iter().map(String::as_str).collect::<Vec<_>>();
     refs.sort_unstable();
     refs
+}
+
+fn memory_disposition_str(disposition: MemoryDisposition) -> &'static str {
+    match disposition {
+        MemoryDisposition::AdmitDurable => "admit-durable",
+        MemoryDisposition::RetainEphemeral => "retain-ephemeral",
+        MemoryDisposition::Quarantine => "quarantine",
+    }
 }
 
 fn memory_source_kind_str(kind: MemorySourceKind) -> &'static str {
