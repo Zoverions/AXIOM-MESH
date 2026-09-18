@@ -62,9 +62,7 @@ function candidate() {
         'class:governance'
       ],
       min_distinct_authority_domains: 3,
-      max_duration_seconds: 10800,
-      renewal_requires_fresh_approvals: true,
-      lease_can_self_renew: false
+      max_duration_seconds: 10800
     },
     approvals: [
       approval({
@@ -93,7 +91,8 @@ function candidate() {
       authority_effect: 'none',
       runtime_activation: false,
       capability_registry_change: false,
-      requires_effect_admission: true
+      requires_effect_admission: true,
+      renewal_supported: false
     }
   };
 }
@@ -110,6 +109,7 @@ test('current independent threshold approvals produce only an eligible inert can
   assert.equal(result.runtime_activation, false);
   assert.equal(result.capability_registry_change, false);
   assert.equal(result.requires_effect_admission, true);
+  assert.equal(result.renewal_supported, false);
 });
 
 test('insufficient approval count fails closed', () => {
@@ -244,19 +244,28 @@ test('semantic approval reordering produces the same candidate digest', () => {
   assert.equal(leftResult.candidate_digest, rightResult.candidate_digest);
 });
 
-test('renewal cannot self-authorize or bypass fresh approvals', () => {
-  const selfRenew = candidate();
-  selfRenew.policy.lease_can_self_renew = true;
+test('P0 rejects renewal semantics rather than pretending to prove fresh renewal', () => {
+  const renewal = candidate();
+  renewal.renewal = {
+    previous_candidate_digest: 'd'.repeat(64)
+  };
   assert.throws(
-    () => evaluatePluralCapabilityLeaseCandidate(selfRenew),
-    /cannot self-renew/
+    () => evaluatePluralCapabilityLeaseCandidate(renewal),
+    /unsupported field renewal/
   );
 
-  const staleRenewal = candidate();
-  staleRenewal.policy.renewal_requires_fresh_approvals = false;
+  const unsafe = candidate();
+  unsafe.safety.renewal_supported = true;
   assert.throws(
-    () => evaluatePluralCapabilityLeaseCandidate(staleRenewal),
-    /renewal requires fresh approvals/
+    () => evaluatePluralCapabilityLeaseCandidate(unsafe),
+    /do not support renewal/
+  );
+
+  const misleadingPolicy = candidate();
+  misleadingPolicy.policy.renewal_requires_fresh_approvals = true;
+  assert.throws(
+    () => evaluatePluralCapabilityLeaseCandidate(misleadingPolicy),
+    /unsupported field renewal_requires_fresh_approvals/
   );
 });
 
@@ -269,10 +278,27 @@ test('authority and runtime smuggling fields fail closed', () => {
     /unsupported field authorized/
   );
 
-  const unsafe = candidate();
-  unsafe.safety.runtime_activation = true;
+  const hidden = candidate();
+  Object.defineProperty(hidden, 'authorized', {
+    value: true,
+    enumerable: false
+  });
   assert.throws(
-    () => evaluatePluralCapabilityLeaseCandidate(unsafe),
+    () => evaluatePluralCapabilityLeaseCandidate(hidden),
+    /property authorized must be an enumerable data property/
+  );
+
+  const symbolField = candidate();
+  symbolField[Symbol('authorized')] = true;
+  assert.throws(
+    () => evaluatePluralCapabilityLeaseCandidate(symbolField),
+    /cannot contain symbol-keyed state/
+  );
+
+  const runtime = candidate();
+  runtime.safety.runtime_activation = true;
+  assert.throws(
+    () => evaluatePluralCapabilityLeaseCandidate(runtime),
     /runtime_activation must be false/
   );
 
@@ -281,6 +307,19 @@ test('authority and runtime smuggling fields fail closed', () => {
   assert.throws(
     () => evaluatePluralCapabilityLeaseCandidate(promoted),
     /capability_registry_change must be false/
+  );
+});
+
+test('sparse approvals arrays are rejected as malformed input', () => {
+  const value = candidate();
+  const sparse = new Array(3);
+  sparse[0] = value.approvals[0];
+  sparse[2] = value.approvals[2];
+  value.approvals = sparse;
+
+  assert.throws(
+    () => evaluatePluralCapabilityLeaseCandidate(value),
+    /cannot contain sparse indexes/
   );
 });
 
@@ -312,13 +351,13 @@ test('evaluator source has no effect-capable runtime imports', async () => {
   const source = await readFile(sourceUrl, 'utf8');
 
   for (const forbidden of [
-    "node:fs",
-    "node:net",
-    "node:http",
-    "node:https",
-    "node:child_process",
-    "gateway",
-    "credentials"
+    'node:fs',
+    'node:net',
+    'node:http',
+    'node:https',
+    'node:child_process',
+    'gateway',
+    'credentials'
   ]) {
     assert.equal(
       source.includes(forbidden),
