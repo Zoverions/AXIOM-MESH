@@ -115,3 +115,21 @@ test('digest changes when supporting evidence changes', () => {
   const right = evaluateGtmAccount(changed, { evaluationTime: EVALUATION_TIME });
   assert.notEqual(left.evidence_digest, right.evidence_digest);
 });
+
+
+test('digest is stable when the same evidence is reordered', () => {
+  const signals = [
+    signal('fit-1', 'fit', 3),
+    signal('timing-1', 'timing', 3),
+    signal('intent-1', 'intent', 2)
+  ];
+  const reordered = [signals[2], signals[0], signals[1]];
+
+  const left = evaluateGtmAccount(account(signals, 'HIGH_SIGNAL'), {
+    evaluationTime: EVALUATION_TIME
+  });
+  const right = evaluateGtmAccount(account(reordered, 'HIGH_SIGNAL'), {
+    evaluationTime: EVALUATION_TIME
+  });
+  assert.equal(left.evidence_digest, right.evidence_digest);
+});
