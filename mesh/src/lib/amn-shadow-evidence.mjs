@@ -23,6 +23,7 @@ const PROVIDER_KINDS = new Set(['local', 'axiom-shadow']);
 const TRUST_STATES = new Set(['verified', 'rejected']);
 const SHADOW_STATES = new Set(['disabled', 'queued', 'duplicate', 'not-queued', 'failed']);
 const SINK_KINDS = new Set(['test-shadow-sink', 'axiom-grid-shadow-candidate']);
+const PROVIDER_VERIFICATIONS = new WeakSet();
 
 const VERIFICATION_KEYS = new Set([
   'schema',
@@ -209,7 +210,7 @@ function safeEnvelopeMetadata(raw) {
   };
 }
 
-function finalizeVerification(core) {
+function finalizeVerification(core, { providerProduced = false } = {}) {
   const normalized = Object.freeze({
     schema: AMN_VERIFICATION_RESULT_SCHEMA,
     provider_kind: oneOf(core.provider_kind, 'AMN verification provider_kind', PROVIDER_KINDS),
@@ -244,10 +245,12 @@ function finalizeVerification(core) {
       ? false
       : (() => { throw new ValidationError('AMN verification global_currentness_claimed must be false'); })()
   });
-  return Object.freeze({
+  const result = Object.freeze({
     ...normalized,
     verification_result_digest: digestObject(normalized)
   });
+  if (providerProduced) PROVIDER_VERIFICATIONS.add(result);
+  return result;
 }
 
 function verifiedResult(providerKind, verified) {
@@ -267,7 +270,7 @@ function verifiedResult(providerKind, verified) {
     truth_claimed: false,
     hardware_attestation_claimed: false,
     global_currentness_claimed: false
-  });
+  }, { providerProduced: true });
 }
 
 function rejectedResult(providerKind, raw, reasonCode) {
@@ -284,7 +287,7 @@ function rejectedResult(providerKind, raw, reasonCode) {
     truth_claimed: false,
     hardware_attestation_claimed: false,
     global_currentness_claimed: false
-  });
+  }, { providerProduced: true });
 }
 
 export function normalizeAmnVerificationResult(raw) {
@@ -415,6 +418,9 @@ export function createAmnShadowRecord(verification, {
   sequence,
   enqueuedAt
 } = {}) {
+  if (!PROVIDER_VERIFICATIONS.has(verification)) {
+    throw new ValidationError('AMN shadow record requires provider-produced verification');
+  }
   const verified = normalizeAmnVerificationResult(verification);
   if (verified.trust_state !== 'verified') {
     throw new ValidationError('AMN shadow record requires verified evidence');
@@ -527,6 +533,9 @@ export class AmnShadowEvidenceQueue {
   }
 
   enqueue(verification, { at } = {}) {
+    if (!PROVIDER_VERIFICATIONS.has(verification)) {
+      throw new ValidationError('AMN shadow queue requires provider-produced verification');
+    }
     const verified = normalizeAmnVerificationResult(verification);
     if (verified.trust_state !== 'verified') {
       return shadowResult({
@@ -660,7 +669,7 @@ export function createAxiomShadowAmnTrustProvider({
       ...localVerification,
       provider_kind: 'axiom-shadow',
       verification_result_digest: undefined
-    });
+    }, { providerProduced: true });
 
     if (shadowVerification.trust_state !== 'verified') {
       return providerResult('axiom-shadow', shadowVerification, shadowResult({
