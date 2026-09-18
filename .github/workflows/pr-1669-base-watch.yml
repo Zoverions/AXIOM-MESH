@@ -84,7 +84,7 @@ jobs:
 
                   - Event: review submitted
                   - Reviewer: @{actor}
-                  - State: \`{state}\`
+                  - State: `{state}`
                   - Review: {url}
                   - Meaningful change: {summary}
 
@@ -109,7 +109,7 @@ jobs:
 
                   - Event: new inline review feedback
                   - Reviewer: @{actor}
-                  - Location: \`{location}\`
+                  - Location: `{location}`
                   - Comment: {url}
                   - Meaningful change: {summary}
 
@@ -145,9 +145,9 @@ jobs:
 
           if base_status in {"ahead", "identical"}:
               plan = textwrap.dedent(f"""\
-                  **Prepared path: retarget-only.** GitHub reports merged #{watch_pr} head \`{merged_head}\` is an ancestor of \`{default_branch}\`, so #{stacked_pr} can be retargeted without rewriting its current head.
+                  **Prepared path: retarget-only.** GitHub reports merged #{watch_pr} head `{merged_head}` is an ancestor of `{default_branch}`, so #{stacked_pr} can be retargeted without rewriting its current head.
 
-                  \`\`\`bash
+                  ```bash
                   EXPECTED_HEAD="{stacked_head}"
                   gh pr edit {stacked_pr} --repo "{repo}" --base "{default_branch}"
                   ACTUAL_HEAD="$(gh api "repos/{repo}/pulls/{stacked_pr}" --jq '.head.sha')"
@@ -155,15 +155,15 @@ jobs:
                   test "$(gh pr view {stacked_pr} --repo "{repo}" --json isDraft --jq '.isDraft')" = "true"
                   gh api "repos/{repo}/commits/$EXPECTED_HEAD/check-runs?per_page=100" \\
                     --jq '.check_runs[] | [.name, .status, (.conclusion // "pending")] | @tsv'
-                  \`\`\`
+                  ```
 
-                  Exact-head invariant: verification belongs to \`{stacked_head}\`; retargeting must not change that SHA.
+                  Exact-head invariant: verification belongs to `{stacked_head}`; retargeting must not change that SHA.
               """)
           elif stack_status == "ahead":
               plan = textwrap.dedent(f"""\
-                  **Prepared path: rebase then retarget.** The merged #{watch_pr} head is not an ancestor of \`{default_branch}\` (consistent with squash/rebase-style integration), while #{stacked_pr} still descends from exact base head \`{merged_head}\`.
+                  **Prepared path: rebase then retarget.** The merged #{watch_pr} head is not an ancestor of `{default_branch}` (consistent with squash/rebase-style integration), while #{stacked_pr} still descends from exact base head `{merged_head}`.
 
-                  \`\`\`bash
+                  ```bash
                   git fetch origin "{default_branch}" "{stacked_head_ref}"
                   git switch "{stacked_head_ref}"
                   test -z "$(git status --porcelain)"
@@ -177,27 +177,27 @@ jobs:
                   test "$(gh pr view {stacked_pr} --repo "{repo}" --json isDraft --jq '.isDraft')" = "true"
                   gh api "repos/{repo}/commits/$NEW_HEAD/check-runs?per_page=100" \\
                     --jq '.check_runs[] | [.name, .status, (.conclusion // "pending")] | @tsv'
-                  \`\`\`
+                  ```
 
-                  Exact-head invariant: treat \`$NEW_HEAD\` as the only valid verification target after the history rewrite.
+                  Exact-head invariant: treat `$NEW_HEAD` as the only valid verification target after the history rewrite.
               """)
           else:
               plan = textwrap.dedent(f"""\
-                  **Prepared path: fail closed for ancestry inspection.** #{stacked_pr} no longer cleanly descends from merged base head \`{merged_head}\` (compare status: \`{stack_status}\`). Do not retarget or rewrite history until stack ancestry is inspected. Re-read #{stacked_pr}'s current commits against \`{default_branch}\`, then choose a minimal rebase/cherry-pick that preserves only the Rust-lab delta.
+                  **Prepared path: fail closed for ancestry inspection.** #{stacked_pr} no longer cleanly descends from merged base head `{merged_head}` (compare status: `{stack_status}`). Do not retarget or rewrite history until stack ancestry is inspected. Re-read #{stacked_pr}'s current commits against `{default_branch}`, then choose a minimal rebase/cherry-pick that preserves only the Rust-lab delta.
 
-                  Current #{stacked_pr} exact head remains \`{stacked_head}\`; any later verification must bind to the post-repair head, not this pre-repair SHA.
+                  Current #{stacked_pr} exact head remains `{stacked_head}`; any later verification must bind to the post-repair head, not this pre-repair SHA.
               """)
 
           post_comment(textwrap.dedent(f"""\
               ### Base watch: PR #{watch_pr} merged
 
               - Base PR: {merged_url}
-              - Merged source head: \`{merged_head}\`
-              - Merge commit reported by GitHub: \`{merge_commit}\`
-              - Default branch: \`{default_branch}\`
-              - #{stacked_pr} current base: \`{stacked_base_ref}\`
-              - #{stacked_pr} current head: \`{stacked_head}\`
-              - #{stacked_pr} draft: \`{str(stacked_draft).lower()}\`
+              - Merged source head: `{merged_head}`
+              - Merge commit reported by GitHub: `{merge_commit}`
+              - Default branch: `{default_branch}`
+              - #{stacked_pr} current base: `{stacked_base_ref}`
+              - #{stacked_pr} current head: `{stacked_head}`
+              - #{stacked_pr} draft: `{str(stacked_draft).lower()}`
 
               {plan}
 
