@@ -36,6 +36,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/growth/ACQUISITION-EXPERIMENTS.md',
   'docs/community/AGENT-IDENTITY.md',
   'docs/community/BOOKS-AND-ARCHITECTURE.md',
   'docs/community/COMMUNITY-TESTNET-V0.md',
