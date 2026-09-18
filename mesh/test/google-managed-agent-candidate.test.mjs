@@ -81,25 +81,21 @@ test('managed-agent candidate pins harness/model and disables network by default
   assert.equal(Object.hasOwn(request.environment, 'env'), false);
 });
 
-test('managed-agent candidate permits only exact authorized egress with credential references', () => {
+test('managed-agent candidate permits only exact authorized unauthenticated egress', () => {
   const request = buildGoogleManagedAgentInteraction({
     handoff: handoff(['api.github.com']),
-    input: 'Inspect the authorized repository API.',
+    input: 'Inspect the authorized public repository API.',
     allowedDomains: ['api.github.com'],
-    credentialBindings: [{
-      domain: 'api.github.com',
-      credential_id: 'credential:github-production'
-    }],
     maxTotalTokens: 25000
   });
 
   assert.deepEqual(request.environment.network, {
     allowlist: [{
-      domain: 'api.github.com',
-      credential: 'credential:github-production'
+      domain: 'api.github.com'
     }]
   });
 });
+
 
 test('managed-agent candidate reasserts network policy when reusing environment state', () => {
   const request = buildGoogleManagedAgentInteraction({
@@ -154,23 +150,7 @@ test('managed-agent candidate rejects egress not bound by the handoff', () => {
   );
 });
 
-test('managed-agent candidate rejects credential references for unapproved domains', () => {
-  assert.throws(
-    () => buildGoogleManagedAgentInteraction({
-      handoff: handoff(['api.github.com']),
-      input: 'Do work.',
-      allowedDomains: ['api.github.com'],
-      credentialBindings: [{
-        domain: 'example.com',
-        credential_id: 'credential:other'
-      }],
-      maxTotalTokens: 1000
-    }),
-    /explicitly allowed domain/
-  );
-});
-
-test('managed-agent candidate rejects arbitrary credential/header shapes', () => {
+test('managed-agent candidate rejects provider credential brokerage until grant binding exists', () => {
   assert.throws(
     () => buildGoogleManagedAgentInteraction({
       handoff: handoff(['api.github.com']),
@@ -178,14 +158,14 @@ test('managed-agent candidate rejects arbitrary credential/header shapes', () =>
       allowedDomains: ['api.github.com'],
       credentialBindings: [{
         domain: 'api.github.com',
-        credential_id: 'credential:github-production',
-        token: 'secret'
+        credential_id: 'credential:github-production'
       }],
       maxTotalTokens: 1000
     }),
-    /permit only domain and credential_id/
+    /credential brokerage is disabled/
   );
 });
+
 
 test('managed-agent candidate rejects the wrong catalog target', () => {
   const candidate = handoff();
