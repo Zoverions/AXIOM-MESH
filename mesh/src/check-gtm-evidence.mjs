@@ -123,7 +123,31 @@ function evaluationDate(value) {
   return instant.toISOString().slice(0, 10);
 }
 
-function normalizeSignal(input, index, evaluatedOn) {
+function normalizeTrustedProvenance(value) {
+  if (value === undefined) return new Map();
+  if (!(value instanceof Map)) {
+    throw new GtmEvidenceError('trustedProvenance must be a Map');
+  }
+  return value;
+}
+
+function verifiedSourceQuality(signalId, sourceUrl, sourceKind, trustedProvenance) {
+  const trusted = trustedProvenance.get(signalId);
+  if (trusted === undefined) return 0;
+  const value = exactFields(trusted, ['source_url', 'source_kind'], `trusted provenance ${signalId}`);
+  const trustedSourceUrl = httpsUrl(value.source_url, `trusted provenance ${signalId}.source_url`);
+  const trustedSourceKind = enumValue(
+    value.source_kind,
+    Object.keys(SOURCE_QUALITY),
+    `trusted provenance ${signalId}.source_kind`
+  );
+  if (trustedSourceUrl !== sourceUrl || trustedSourceKind !== sourceKind) {
+    throw new GtmEvidenceError(`trusted provenance ${signalId} does not match claimed source metadata`);
+  }
+  return SOURCE_QUALITY[trustedSourceKind];
+}
+
+function normalizeSignal(input, index, evaluatedOn, trustedProvenance) {
   const value = exactFields(input, SIGNAL_FIELDS, `signal[${index}]`);
   const observedAt = date(value.observed_at, `signal[${index}].observed_at`);
   const validUntil = date(value.valid_until, `signal[${index}].valid_until`);
@@ -140,13 +164,16 @@ function normalizeSignal(input, index, evaluatedOn) {
     `signal[${index}].source_kind`
   );
 
+  const signalId = string(value.id, `signal[${index}].id`, { pattern: IDENTIFIER, max: 128 });
+  const sourceUrl = httpsUrl(value.source_url, `signal[${index}].source_url`);
+
   return Object.freeze({
-    id: string(value.id, `signal[${index}].id`, { pattern: IDENTIFIER, max: 128 }),
+    id: signalId,
     dimension: enumValue(value.dimension, DIMENSIONS, `signal[${index}].dimension`),
     level: level(value.level, `signal[${index}].level`),
-    source_url: httpsUrl(value.source_url, `signal[${index}].source_url`),
+    source_url: sourceUrl,
     source_kind: sourceKind,
-    source_quality: SOURCE_QUALITY[sourceKind],
+    source_quality: verifiedSourceQuality(signalId, sourceUrl, sourceKind, trustedProvenance),
     observed_at: observedAt,
     valid_until: validUntil,
     independence_group: string(
@@ -205,8 +232,12 @@ function laneFor(vector) {
   return 'HIGH_SIGNAL';
 }
 
-export function evaluateGtmAccount(input, { evaluationTime = new Date() } = {}) {
+export function evaluateGtmAccount(
+  input,
+  { evaluationTime = new Date(), trustedProvenance } = {}
+) {
   const evaluatedOn = evaluationDate(evaluationTime);
+  const trusted = normalizeTrustedProvenance(trustedProvenance);
   const value = exactFields(input, PACKAGE_FIELDS, 'gtm account evidence');
   if (value.schema !== GTM_ACCOUNT_EVIDENCE_SCHEMA) {
     throw new GtmEvidenceError(
@@ -236,7 +267,7 @@ export function evaluateGtmAccount(input, { evaluationTime = new Date() } = {}) 
   }
 
   const signals = value.signals.map((signal, index) =>
-    normalizeSignal(signal, index, evaluatedOn)
+    normalizeSignal(signal, index, evaluatedOn, trusted)
   );
   const ids = new Set();
   const groupBySourceUrl = new Map();
@@ -268,6 +299,7 @@ export function evaluateGtmAccount(input, { evaluationTime = new Date() } = {}) 
   return Object.freeze({
     valid: true,
     account_id: accountId,
+    evaluated_on: evaluatedOn,
     lane,
     vector,
     active_signals: activeSignals.length,
