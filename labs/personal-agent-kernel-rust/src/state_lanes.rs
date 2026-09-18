@@ -113,9 +113,7 @@ impl StateLane {
                 input.expected_lane_revision, self.revision
             )));
         }
-        if input.provenance_refs.is_empty()
-            || input.provenance_refs.len() > MAX_PROVENANCE_REFS
-        {
+        if input.provenance_refs.is_empty() || input.provenance_refs.len() > MAX_PROVENANCE_REFS {
             return Err(StateLaneError::new(
                 "lane mutation requires bounded provenance",
             ));
@@ -311,9 +309,7 @@ impl StateLaneRegistry {
             return Err(StateLaneError::new("duplicate state lane id"));
         }
         if self.owner_lanes.contains_key(&owner_tool_ref) {
-            return Err(StateLaneError::new(
-                "tool already owns a state lane",
-            ));
+            return Err(StateLaneError::new("tool already owns a state lane"));
         }
 
         self.owner_lanes
@@ -378,8 +374,7 @@ impl StateLaneRegistry {
         }
 
         let mut normalized_inputs = Vec::<MergeInput>::new();
-        let mut values =
-            BTreeMap::<String, BTreeMap<String, Vec<MergeOrigin>>>::new();
+        let mut values = BTreeMap::<String, BTreeMap<String, Vec<MergeOrigin>>>::new();
 
         for (lane_id, expected_revision) in requested {
             let lane = self
