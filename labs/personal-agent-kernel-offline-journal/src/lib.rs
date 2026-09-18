@@ -22,6 +22,7 @@ pub enum JournalError {
     DuplicateEnvelope,
     UnknownEnvelope,
     ConsumptionSequenceMismatch,
+    WriterLeaseUnavailable,
 }
 
 impl Display for JournalError {
@@ -36,6 +37,7 @@ impl Display for JournalError {
             Self::DuplicateEnvelope => "offline envelope was already registered",
             Self::UnknownEnvelope => "offline envelope is not registered",
             Self::ConsumptionSequenceMismatch => "offline consumption sequence is invalid",
+            Self::WriterLeaseUnavailable => "offline journal writer lease is unavailable",
         };
         f.write_str(message)
     }
@@ -72,6 +74,8 @@ impl JournalSnapshot {
 #[derive(Debug)]
 pub struct OfflineJournal {
     path: PathBuf,
+    lease_path: PathBuf,
+    lease_file: File,
     file: File,
     global_sequence: u64,
     tail_hash: String,
@@ -81,35 +85,57 @@ pub struct OfflineJournal {
 impl OfflineJournal {
     pub fn open(path: impl AsRef<Path>) -> Result<Self, JournalError> {
         let path = path.as_ref().to_path_buf();
-        let mut bytes = Vec::new();
-
-        if path.exists() {
-            let mut reader = OpenOptions::new().read(true).open(&path)?;
-            reader.read_to_end(&mut bytes)?;
-        }
-
-        let mut state = RecoveredState::default();
-        if !bytes.is_empty() {
-            if !bytes.ends_with(b"\n") {
-                return Err(JournalError::TornTail);
-            }
-            let text = std::str::from_utf8(&bytes).map_err(|_| JournalError::InvalidRecord)?;
-            for line in text.lines() {
-                state.apply_line(line)?;
-            }
-        }
-
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
             std::fs::create_dir_all(parent)?;
         }
-        let file = OpenOptions::new()
+
+        let lease_path = lease_path_for(&path);
+        let mut lease_file = match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&lease_path)
+        {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                return Err(JournalError::WriterLeaseUnavailable);
+            }
+            Err(error) => return Err(JournalError::Io(error)),
+        };
+        lease_file.write_all(
+            format!("pid={}\n", std::process::id()).as_bytes()
+        )?;
+        lease_file.sync_all()?;
+
+        let recovered = recover_state(&path);
+        let state = match recovered {
+            Ok(state) => state,
+            Err(error) => {
+                drop(lease_file);
+                std::fs::remove_file(&lease_path).ok();
+                return Err(error);
+            }
+        };
+
+        let file = match OpenOptions::new()
             .create(true)
             .append(true)
             .read(true)
-            .open(&path)?;
+            .open(&path)
+        {
+            Ok(file) => file,
+            Err(error) => {
+                drop(lease_file);
+                std::fs::remove_file(&lease_path).ok();
+                return Err(JournalError::Io(error));
+            }
+        };
 
         Ok(Self {
             path,
+            lease_path,
+            lease_file,
             file,
             global_sequence: state.global_sequence,
             tail_hash: state.tail_hash,
@@ -194,9 +220,43 @@ impl OfflineJournal {
         let line = record.line();
         self.file.write_all(line.as_bytes())?;
         self.file.write_all(b"\n")?;
-        self.file.sync_data()?;
+        self.file.sync_all()?;
         Ok(())
     }
+}
+
+impl Drop for OfflineJournal {
+    fn drop(&mut self) {
+        self.lease_file.sync_all().ok();
+        std::fs::remove_file(&self.lease_path).ok();
+    }
+}
+
+fn recover_state(path: &Path) -> Result<RecoveredState, JournalError> {
+    let mut bytes = Vec::new();
+    if path.exists() {
+        let mut reader = OpenOptions::new().read(true).open(path)?;
+        reader.read_to_end(&mut bytes)?;
+    }
+
+    let mut state = RecoveredState::default();
+    if bytes.is_empty() {
+        return Ok(state);
+    }
+    if !bytes.ends_with(b"\n") {
+        return Err(JournalError::TornTail);
+    }
+    let text = std::str::from_utf8(&bytes).map_err(|_| JournalError::InvalidRecord)?;
+    for line in text.lines() {
+        state.apply_line(line)?;
+    }
+    Ok(state)
+}
+
+fn lease_path_for(path: &Path) -> PathBuf {
+    let mut value = path.as_os_str().to_os_string();
+    value.push(".writer-lock");
+    PathBuf::from(value)
 }
 
 #[derive(Debug, Clone)]
@@ -280,7 +340,11 @@ impl RecoveredState {
         validate_hash(predecessor_hash)?;
         validate_hash(entry_hash)?;
 
-        if global_sequence != self.global_sequence + 1 {
+        let expected_global = self
+            .global_sequence
+            .checked_add(1)
+            .ok_or(JournalError::SequenceMismatch)?;
+        if global_sequence != expected_global {
             return Err(JournalError::SequenceMismatch);
         }
         if predecessor_hash != self.tail_hash {
@@ -309,7 +373,10 @@ impl RecoveredState {
                     .get(envelope_ref)
                     .copied()
                     .ok_or(JournalError::UnknownEnvelope)?;
-                if effect_sequence != current + 1 {
+                let expected_effect = current
+                    .checked_add(1)
+                    .ok_or(JournalError::ConsumptionSequenceMismatch)?;
+                if effect_sequence != expected_effect {
                     return Err(JournalError::ConsumptionSequenceMismatch);
                 }
                 self.envelopes
