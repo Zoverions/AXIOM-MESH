@@ -168,17 +168,13 @@ impl OfflineJournal {
         self.envelopes.get(envelope_ref).copied()
     }
 
-    pub fn registration_payload(
-        &self,
-        envelope_ref: &str,
-    ) -> Result<Vec<u8>, JournalError> {
+    pub fn registration_payload(&self, envelope_ref: &str) -> Result<Vec<u8>, JournalError> {
         validate_id(envelope_ref)?;
         self.registration_payloads
             .get(envelope_ref)
             .cloned()
             .ok_or(JournalError::UnknownEnvelope)
     }
-
 
     pub fn consumptions_for(
         &self,
