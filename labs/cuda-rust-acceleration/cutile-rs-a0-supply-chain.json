@@ -1,0 +1,128 @@
+{
+  "schema": "axiom-cuda-rust-supply-chain-review.v0",
+  "version": 0,
+  "candidate_id": "cuda-rust.cutile-rs.a0",
+  "issue": 1637,
+  "reviewed_date": "2026-09-18",
+  "upstream": {
+    "repository": "https://github.com/NVlabs/cutile-rs",
+    "revision": "d92c160949f58328ba6e96d81005e7110ba6f2b3",
+    "workspace_version": "0.4.0",
+    "workspace_license": "Apache-2.0",
+    "rust_version_floor": "1.89"
+  },
+  "source_bindings": [
+    {
+      "path": "Cargo.toml",
+      "git_blob_sha": "a711e1376285c88e896f221f9c222ac304cc707d"
+    },
+    {
+      "path": "Cargo.lock",
+      "git_blob_sha": "9829c3cd326133ce17c2f618b5f275a56bb73fa0"
+    },
+    {
+      "path": ".gitmodules",
+      "git_blob_sha": "2d5ae24c3449904752b6b9db40ff73936cffdde6"
+    },
+    {
+      "path": "deny.toml",
+      "git_blob_sha": "8b50733ff8881430b7515bfa6ad10037c38f0d49"
+    },
+    {
+      "path": "README.md",
+      "git_blob_sha": "b8bd895389039fa8db9de1f226dc99fe70c24583"
+    },
+    {
+      "path": "LICENSE",
+      "git_blob_sha": "f13d24c3fa482d61605d600e5ac1248799bd4107"
+    },
+    {
+      "path": "cuda-bindings/Cargo.toml",
+      "git_blob_sha": "6f0d0805cb145671bd2602fbb3debd0c84af9cfa"
+    },
+    {
+      "path": "cuda-bindings/build.rs",
+      "git_blob_sha": "d2d567ed1c2aef100a20c8e9e97a7e3d1489464d"
+    },
+    {
+      "path": "cuda-bindings/src/lib.rs",
+      "git_blob_sha": "423c935cf274aad3c6ebe71ced4fd1e0ac246566"
+    },
+    {
+      "path": ".github/workflows/pr.yml",
+      "git_blob_sha": "2249009474d04266f1975381ecb218cb902ebc97"
+    }
+  ],
+  "cargo_lock": {
+    "package_records": 263,
+    "crates_io_registry_packages": 251,
+    "workspace_or_path_packages": 12,
+    "git_packages": 0,
+    "checksummed_registry_packages": 251,
+    "allowed_registry": "https://github.com/rust-lang/crates.io-index"
+  },
+  "source_policy": {
+    "unknown_registry": "deny",
+    "unknown_git": "deny",
+    "allowed_git_sources": [],
+    "ignored_advisories": [
+      {
+        "id": "RUSTSEC-2024-0436",
+        "package": "paste",
+        "upstream_note": "unmaintained; upstream deny.toml states no known security issue"
+      }
+    ],
+    "locally_executed_cargo_deny": false,
+    "locally_executed_cargo_audit": false
+  },
+  "submodule_boundary": {
+    "path": "cuda-tile-rs/cuda-tile",
+    "repository": "https://github.com/NVIDIA/cuda-tile.git",
+    "revision": "0859212ad19f71133a9b940c05323286cbf28a05",
+    "included_in_default_members": false,
+    "required_for_a0_vector_add": false
+  },
+  "generated_ffi_boundary": {
+    "crate": "cuda-bindings",
+    "build_time_bindgen": true,
+    "build_reads_cuda_headers": true,
+    "generated_output_directory": "OUT_DIR",
+    "runtime_dynamic_loading": true,
+    "runtime_libraries": [
+      "CUDA driver (libcuda)",
+      "cuRAND (libcurand)"
+    ],
+    "unsafe_ffi_boundary_present": true,
+    "minimum_host_cuda_toolkit": "13.0",
+    "tile_stack_minimum_cuda_toolkit": "13.2"
+  },
+  "upstream_ci_observation": {
+    "source_path": ".github/workflows/pr.yml",
+    "compile_container": "nvidia/cuda:13.3.0-devel-ubuntu24.04",
+    "cpu_compile_and_test_lane": true,
+    "gpu_execution_proven": false,
+    "upstream_action_and_container_digest_pinning_verified": false,
+    "source_blob_sha": "2249009474d04266f1975381ecb218cb902ebc97"
+  },
+  "review_result": {
+    "classification": "lab-only-preflight-acceptable",
+    "production_dependency_eligible": false,
+    "execution_eligible": false,
+    "blockers": [
+      "no verified eligible GPU runner",
+      "no exact live driver/toolkit/runtime-library identity",
+      "no locally executed cargo-deny/cargo-audit evidence",
+      "no reviewed offline/vendor dependency bundle",
+      "dynamic CUDA/cuRAND runtime library digests not observed",
+      "generated bindgen output not yet captured as AXIOM evidence"
+    ]
+  },
+  "boundaries": {
+    "authority_effect": "none",
+    "network_effect": "none",
+    "credential_visibility": "none",
+    "runtime_activation": false,
+    "capability_promotion": false,
+    "production_dependency": false
+  }
+}
