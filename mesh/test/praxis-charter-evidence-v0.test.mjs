@@ -326,6 +326,37 @@ test('runtime source verification consumes the signed observation without a requ
   assert.equal(result.values.checked.verifier_name, 'BuildVerified');
 });
 
+test('legacy program-asserted Verified data cannot satisfy chartered authority evidence', async () => {
+  const source = [
+    'observe build = "artifact" from "ci.build";',
+    'verify checked = build with BuildVerified;'
+  ].join('\n');
+
+  const legacy = await run(source, {
+    verifiers: {
+      BuildVerified: async () => ({ ok: true, evidence: 'legacy-host-callback' })
+    },
+    now: BASE + 1_000
+  });
+
+  assert.equal(legacy.values.checked.kind, 'Verified');
+
+  await assert.rejects(
+    () => createCharteredHostPermit({
+      id: 'permit:legacy-assertion',
+      charter,
+      trustedRootKeys: trustedRoots,
+      policyName: 'EvidencePermit',
+      operationDigest: DEPLOY_DIGEST,
+      evidence: [legacy.values.checked],
+      requester: 'ReleaseAgent',
+      now: BASE + 1_000
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EVIDENCE_REQUIRED'
+  );
+});
+
 test('an Assessment object cannot satisfy an authority evidence premise', async () => {
   await assert.rejects(
     () => createCharteredHostPermit({
