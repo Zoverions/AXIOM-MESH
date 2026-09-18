@@ -426,42 +426,53 @@ test('no eligible candidates produces an explicit inert escalation proposal', ()
 
 test('proposal validation rejects boundary widening and digest tampering', () => {
   const primary = candidate('operation.primary', B, { deterministicMatch: true });
-  const result = proposal({
+  const trusted = {
+    taskPurposeDigest: F,
     candidates: [primary],
-    semanticEvidence: []
-  });
+    semanticEvidence: [],
+    policy: policy()
+  };
+  const result = createOperationCandidateSelectionProposal(trusted);
 
-  assert.equal(validateOperationCandidateSelectionProposal(result).valid, true);
+  assert.throws(
+    () => validateOperationCandidateSelectionProposal(result),
+    /trusted inputs are required/i
+  );
+  assert.equal(validateOperationCandidateSelectionProposal(result, trusted).valid, true);
 
   const widened = structuredClone(result);
   widened.authority_effect = 'allow';
   assert.throws(
-    () => validateOperationCandidateSelectionProposal(widened),
+    () => validateOperationCandidateSelectionProposal(widened, trusted),
     /effect boundary/i
   );
 
   const inconsistent = structuredClone(result);
   inconsistent.unresolved = true;
   assert.throws(
-    () => validateOperationCandidateSelectionProposal(inconsistent),
+    () => validateOperationCandidateSelectionProposal(inconsistent, trusted),
     /mode semantics/i
   );
 
   const tampered = structuredClone(result);
   tampered.proposal_digest = D;
   assert.throws(
-    () => validateOperationCandidateSelectionProposal(tampered),
+    () => validateOperationCandidateSelectionProposal(tampered, trusted),
     /proposal digest/i
   );
 
-  const withOther = proposal({
-    candidates: [primary, candidate('operation.other', C)],
-    semanticEvidence: []
-  });
+  const other = candidate('operation.other', C);
+  const trustedWithOther = {
+    taskPurposeDigest: F,
+    candidates: [primary, other],
+    semanticEvidence: [],
+    policy: policy()
+  };
+  const withOther = createOperationCandidateSelectionProposal(trustedWithOther);
   const wrongWithheldReason = structuredClone(withOther);
   wrongWithheldReason.withheld[0].reason = 'fallback-escalation';
   assert.throws(
-    () => validateOperationCandidateSelectionProposal(wrongWithheldReason),
+    () => validateOperationCandidateSelectionProposal(wrongWithheldReason, trustedWithOther),
     /withheld reason is inconsistent with mode/i
   );
 });
