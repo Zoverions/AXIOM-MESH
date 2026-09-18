@@ -2,7 +2,7 @@
 
 use axiom_personal_agent_kernel_rust_lab::{
     BudgetRequest, EffectPort, Kernel, KernelError, OfflineConsumptionIntent, OfflineEffectReceipt,
-    OfflineEnvelopeLedger, RuntimeSurface,
+    OfflineEnvelopeBinding, OfflineEnvelopeLedger, RuntimeSurface,
 };
 use axiom_personal_kernel_offline_journal_lab::{JournalError, OfflineJournal};
 use serde::{Deserialize, Serialize};
@@ -18,6 +18,7 @@ pub enum DurableOfflineError {
     InvalidPayload,
     SchemaMismatch,
     SequenceMismatch,
+    EnvelopeBindingMismatch,
 }
 
 impl Display for DurableOfflineError {
@@ -28,6 +29,7 @@ impl Display for DurableOfflineError {
             Self::InvalidPayload => "offline durable payload is invalid or noncanonical",
             Self::SchemaMismatch => "offline durable payload schema is unsupported",
             Self::SequenceMismatch => "offline durable payload sequence does not match journal",
+            Self::EnvelopeBindingMismatch => "offline journal registration does not match envelope",
         };
         f.write_str(message)
     }
@@ -65,6 +67,33 @@ struct StoredBudgetRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct StoredRuntimeSurface {
+    model_digest: String,
+    runtime_digest: String,
+    capability_surface_digest: String,
+    attestation_epoch: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StoredEnvelopeBinding {
+    schema: String,
+    envelope_ref: String,
+    parent_grant_ref: String,
+    owner_subject_ref: String,
+    target_device_ref: String,
+    plan_digest: String,
+    node_id: String,
+    capability_ref: String,
+    revocation_epoch: u64,
+    expires_at_unix_s: u64,
+    max_effects: u64,
+    budget_limits: Vec<StoredBudgetRequest>,
+    runtime_surface: StoredRuntimeSurface,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct StoredIntent {
     schema: String,
     envelope_ref: String,
@@ -83,15 +112,20 @@ pub fn recover_or_register(
     ledger: &mut OfflineEnvelopeLedger,
     journal: &mut OfflineJournal,
 ) -> Result<u64, DurableOfflineError> {
-    let envelope_ref = ledger.envelope_ref();
+    let envelope_ref = ledger.envelope_ref().to_string();
+    let binding_payload = encode_binding(&ledger.binding())?;
 
-    match journal.consumed_sequence(envelope_ref) {
+    match journal.consumed_sequence(&envelope_ref) {
         None => {
-            journal.register_envelope(envelope_ref)?;
+            journal.register_envelope(&envelope_ref, &binding_payload)?;
             Ok(0)
         }
         Some(_) => {
-            let records = journal.consumptions_for(envelope_ref)?;
+            if journal.registration_payload(&envelope_ref)? != binding_payload {
+                return Err(DurableOfflineError::EnvelopeBindingMismatch);
+            }
+
+            let records = journal.consumptions_for(&envelope_ref)?;
             for record in records {
                 let intent = decode_intent(&record.payload)?;
                 if intent.sequence != record.sequence {
@@ -137,6 +171,38 @@ pub fn execute_durable_offline(
         kernel.commit_offline_consumption(ledger, &intent, current_surface, now_unix_s)?;
 
     Ok(kernel.execute_committed_offline(&committed, port)?)
+}
+
+fn encode_binding(binding: &OfflineEnvelopeBinding) -> Result<Vec<u8>, DurableOfflineError> {
+    let stored = StoredEnvelopeBinding {
+        schema: "axiom-personal-offline-envelope-binding.v0".to_string(),
+        envelope_ref: binding.envelope_ref.clone(),
+        parent_grant_ref: binding.parent_grant_ref.clone(),
+        owner_subject_ref: binding.owner_subject_ref.clone(),
+        target_device_ref: binding.target_device_ref.clone(),
+        plan_digest: binding.plan_digest.clone(),
+        node_id: binding.node_id.clone(),
+        capability_ref: binding.capability_ref.clone(),
+        revocation_epoch: binding.revocation_epoch,
+        expires_at_unix_s: binding.expires_at_unix_s,
+        max_effects: binding.max_effects,
+        budget_limits: binding
+            .budget_limits
+            .iter()
+            .map(|request| StoredBudgetRequest {
+                budget_id: request.budget_id.clone(),
+                amount: request.amount,
+                currency: request.currency.clone(),
+            })
+            .collect(),
+        runtime_surface: StoredRuntimeSurface {
+            model_digest: binding.runtime_surface.model_digest.clone(),
+            runtime_digest: binding.runtime_surface.runtime_digest.clone(),
+            capability_surface_digest: binding.runtime_surface.capability_surface_digest.clone(),
+            attestation_epoch: binding.runtime_surface.attestation_epoch,
+        },
+    };
+    serde_json::to_vec(&stored).map_err(|_| DurableOfflineError::InvalidPayload)
 }
 
 fn encode_intent(intent: &OfflineConsumptionIntent) -> Result<Vec<u8>, DurableOfflineError> {
