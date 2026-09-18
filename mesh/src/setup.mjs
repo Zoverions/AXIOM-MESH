@@ -109,7 +109,7 @@ export function validateSourceSetupPolicy(policy) {
     || policy.runtime.compatibility_ci_version !== COMPATIBILITY_NODE_MINIMUM
     || policy.runtime.ci_version !== '24.18.0'
     || policy.runtime.hosted_production_version !== HOSTED_PRODUCTION_NODE_VERSION
-    || policy.runtime.production_version !== '24.19.0'
+    || policy.runtime.production_version !== '24.21.0'
   ) throw new ValidationError('Source setup runtime policy weakens the current build');
 
   exactObject(policy.package_manager, 'Source setup package-manager policy', [

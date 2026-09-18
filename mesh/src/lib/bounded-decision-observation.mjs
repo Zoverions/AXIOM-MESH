@@ -516,6 +516,9 @@ function normalizeChoice(input, questionSchema) {
   if (!Array.isArray(input.probability_evidence)) {
     throw new ValidationError('choice probability distribution is required');
   }
+  if (input.probability_evidence.length !== questionSchema.options.length) {
+    throw new ValidationError('choice distribution cardinality must exactly match declared options');
+  }
   const byId = new Map();
   for (const [index, item] of input.probability_evidence.entries()) {
     requireFields(item, ['option_id', 'probability'], `probability_evidence[${index}]`);
@@ -564,6 +567,9 @@ function normalizeScore(input, questionSchema) {
   }
   if (!Array.isArray(input.probability_evidence)) {
     throw new ValidationError('score probability distribution is required');
+  }
+  if (input.probability_evidence.length !== questionSchema.levels.length) {
+    throw new ValidationError('score distribution cardinality must exactly match declared levels');
   }
   const byId = new Map();
   for (const [index, item] of input.probability_evidence.entries()) {

@@ -1,9 +1,12 @@
 import { ValidationError } from './canonical.mjs';
 import {
-  computeBoundedDecisionObservationDigest
+  boundedDecisionProviderProfileDigest
+} from './bounded-decision-provider-profile.mjs';
+import {
+  validateBoundedDecisionObservation
 } from './bounded-decision-observation.mjs';
 import {
-  validateBoundedDecisionCalibrationReport
+  resolveBoundedDecisionCalibrationReport
 } from './bounded-decision-calibration-report.mjs';
 
 const POLICY_FIELDS = Object.freeze([
@@ -222,21 +225,68 @@ function report(status, observations, calibrations, reasons, policy) {
   });
 }
 
-function validateEvidenceArrays(observations, calibrationReports) {
-  if (!Array.isArray(observations) || !Array.isArray(calibrationReports)) {
-    return false;
+function validateEvidenceArrays(
+  observations,
+  calibrationReports,
+  providerProfiles,
+  questionSchemas
+) {
+  return (
+    Array.isArray(observations)
+    && Array.isArray(calibrationReports)
+    && Array.isArray(providerProfiles)
+    && Array.isArray(questionSchemas)
+  );
+}
+
+function requireUniqueMatch(values, predicate, name) {
+  const matches = values.filter(predicate);
+  if (matches.length !== 1) {
+    throw new ValidationError(`${name} must resolve to exactly one trusted binding`);
   }
+  return matches[0];
+}
+
+function validateObservationIntegrity(observation, providerProfiles, questionSchemas) {
+  const providerProfile = requireUniqueMatch(
+    providerProfiles,
+    item => item?.profile_id === observation?.provider_profile_id,
+    'observation provider profile'
+  );
+  const questionSchema = requireUniqueMatch(
+    questionSchemas,
+    item => item?.question_schema_id === observation?.question_schema_id,
+    'observation question schema'
+  );
+  validateBoundedDecisionObservation(observation, providerProfile, questionSchema);
   return true;
 }
 
-function validateObservationIntegrity(observation) {
-  const expected = computeBoundedDecisionObservationDigest(observation);
-  return expected === observation.observation_digest;
-}
-
-function validateCalibrationIntegrity(calibration) {
-  validateBoundedDecisionCalibrationReport(calibration);
-  return true;
+function resolveCalibrationIntegrity(calibration, providerProfiles, questionSchemas) {
+  const providerProfile = requireUniqueMatch(
+    providerProfiles,
+    item => {
+      try {
+        return boundedDecisionProviderProfileDigest(item) === calibration?.provider_profile_digest;
+      } catch {
+        return false;
+      }
+    },
+    'calibration provider profile'
+  );
+  if (!Array.isArray(calibration?.question_schema_family_refs)) {
+    throw new ValidationError('calibration question schema family is invalid');
+  }
+  const resolvedSchemas = calibration.question_schema_family_refs.map(ref => requireUniqueMatch(
+    questionSchemas,
+    item => item?.question_schema_id === ref?.question_schema_id,
+    'calibration question schema'
+  ));
+  return resolveBoundedDecisionCalibrationReport(
+    calibration,
+    providerProfile,
+    resolvedSchemas
+  );
 }
 
 function reviewStateSatisfies(actual, minimum) {
@@ -273,8 +323,12 @@ function calibrationReason(observation, calibration, policy, nowMs) {
   if (!reviewStateSatisfies(calibration.review_state, policy.minimum_calibration_state)) {
     return 'calibration-not-reviewed';
   }
+  const createdAt = Date.parse(calibration.created_at);
+  if (!Number.isFinite(createdAt) || createdAt > nowMs) {
+    return 'calibration-created-in-future';
+  }
   const validUntil = Date.parse(calibration.valid_until);
-  if (!Number.isFinite(validUntil) || validUntil < nowMs) return 'calibration-expired';
+  if (!Number.isFinite(validUntil) || validUntil <= nowMs) return 'calibration-expired';
   if (calibration.sample_count < policy.minimum_sample_count) return 'calibration-sample-count';
   return null;
 }
@@ -313,26 +367,48 @@ function evaluatePredicate(predicate, observation) {
   return null;
 }
 
-export function interpretBoundedDecisionEvidence({ observations, calibrationReports, policy, now }) {
+export function interpretBoundedDecisionEvidence({
+  observations,
+  calibrationReports,
+  providerProfiles,
+  questionSchemas,
+  policy,
+  now
+}) {
   validateBoundedDecisionInterpretationPolicy(policy);
   const nowMs = parseNow(now);
 
-  if (!validateEvidenceArrays(observations, calibrationReports)) {
+  if (!validateEvidenceArrays(
+    observations,
+    calibrationReports,
+    providerProfiles,
+    questionSchemas
+  )) {
     return report('invalid-evidence', [], [], ['evidence-array-invalid'], policy);
   }
 
   for (const observation of observations) {
     try {
-      if (!validateObservationIntegrity(observation)) {
-        return report('invalid-evidence', [], [], ['observation-invalid'], policy);
-      }
+      validateObservationIntegrity(observation, providerProfiles, questionSchemas);
     } catch {
       return report('invalid-evidence', [], [], ['observation-invalid'], policy);
     }
   }
+
+  const calibrationIds = new Set();
+  for (const calibration of calibrationReports) {
+    if (calibrationIds.has(calibration?.calibration_report_id)) {
+      return report('invalid-evidence', [], [], ['calibration-id-duplicate'], policy);
+    }
+    calibrationIds.add(calibration?.calibration_report_id);
+  }
+
+  const resolvedCalibrations = [];
   for (const calibration of calibrationReports) {
     try {
-      validateCalibrationIntegrity(calibration);
+      resolvedCalibrations.push(
+        resolveCalibrationIntegrity(calibration, providerProfiles, questionSchemas)
+      );
     } catch {
       return report('invalid-evidence', [], [], ['calibration-invalid'], policy);
     }
@@ -389,7 +465,7 @@ export function interpretBoundedDecisionEvidence({ observations, calibrationRepo
   const usedCalibrations = [];
   if (policy.minimum_calibration_state !== 'none') {
     for (const observation of fresh) {
-      const calibration = findCalibrationForObservation(observation, calibrationReports);
+      const calibration = findCalibrationForObservation(observation, resolvedCalibrations);
       const reason = calibrationReason(observation, calibration, policy, nowMs);
       if (reason) {
         return report('insufficient-evidence', fresh, usedCalibrations, [reason], policy);
@@ -415,6 +491,15 @@ export function interpretBoundedDecisionEvidence({ observations, calibrationRepo
     }
     const distinct = new Set(results);
     if (distinct.size > 1) {
+      if (policy.disagreement_rule === 'require-unanimity') {
+        return report(
+          'insufficient-evidence',
+          fresh,
+          usedCalibrations,
+          ['predicate-unanimity-required'],
+          policy
+        );
+      }
       return report(
         'conflicting-evidence',
         fresh,

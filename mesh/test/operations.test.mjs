@@ -273,9 +273,12 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     incidentResponsePolicy,
     telemetryRoutingPolicy,
     resilienceDrillPolicy,
-    workflow: workflow.replace('      - "apps/**"\n', ''),
+    workflow: workflow.replace(
+      '  pull_request:\n',
+      '  pull_request:\n    paths:\n      - "mesh/**"\n'
+    ),
     repositoryIgnore
-  }), /requires 2 occurrences of: - "apps/);
+  }), /without path filters/);
   assert.throws(() => verifyProductionDeployment({
     dockerfile: dockerfile.replace(/@sha256:[a-f0-9]{64}/, ''),
     dockerignore,
@@ -455,6 +458,12 @@ test('Windows compatibility workflow is immutable and release-governed', async (
       )
     ),
     /mutable action or runner/
+  );
+  assert.throws(
+    () => verifyWindowsWorkflow(
+      workflow.replace('  push:\n', '  push:\n    paths:\n      - "mesh/**"\n')
+    ),
+    /without path filters/
   );
 });
 

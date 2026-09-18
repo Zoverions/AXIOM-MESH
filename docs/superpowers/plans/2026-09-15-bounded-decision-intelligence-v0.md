@@ -4,7 +4,7 @@
 
 **Goal:** Implement Slice A of Bounded Decision Intelligence v0 as strict, provider-neutral, network-free evidence contracts plus deterministic interpretation helpers, without adding Jev access, provider credentials, production routing, capability grants, or authority changes.
 
-**Architecture:** Add four closed-world v0 contracts as pure Node.js ESM modules with matching JSON Schema 2020-12 mirrors: provider profile, question schema, decision observation, and calibration report. Add one pure interpretation module that consumes already-validated evidence and returns evidence-quality states only. Bind provider profiles to exact runtime/provider catalog entries, content-address question semantics, preserve complete probability evidence, and keep all execution authority in the existing policy/plan path.
+**Architecture:** Add four closed-world v0 contracts as pure Node.js ESM modules with matching JSON Schema 2020-12 mirrors: provider profile, question schema, decision observation, and calibration report. Add one pure interpretation module that consumes evidence together with trusted provider/question bindings, re-validates and re-resolves those bindings, and returns evidence-quality states only. Bind provider profiles to exact runtime/provider catalog entries, content-address question semantics, preserve complete probability evidence, and keep all execution authority in the existing policy/plan path.
 
 **Tech Stack:** Node.js ESM, Node built-in `node:test`, existing `mesh/src/lib/canonical.mjs` (`digestObject`, `ValidationError`), existing `validateRuntimeConnectorCatalogEntry`, JSON Schema 2020-12. No new npm dependency.
 
@@ -436,8 +436,8 @@ git commit -m "feat: add bounded decision calibration report v0"
 
 **Interfaces:**
 - Produces `validateBoundedDecisionInterpretationPolicy(policy)`.
-- Produces `interpretBoundedDecisionEvidence({ observations, calibrationReports, policy, now })`.
-- Consumes Task 3 observations and Task 4 calibration reports.
+- Produces `interpretBoundedDecisionEvidence({ observations, calibrationReports, providerProfiles, questionSchemas, policy, now })`.
+- Consumes Task 3 observations and Task 4 calibration reports plus trusted provider profiles and question schemas used to re-resolve their claimed identities.
 - Returns only evidence states, never `allow`, `authorized`, an assurance tier, a capability, or an executable plan.
 
 - [ ] **Step 1: Write failing interpretation tests**
