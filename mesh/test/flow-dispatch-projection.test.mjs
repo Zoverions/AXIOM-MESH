@@ -798,3 +798,296 @@ test('supports the Flow Compiler v0 maximum step count without widening authorit
   assert.equal(projection.authority_effect, 'none');
   assert.equal(projection.execution_effect, 'none');
 });
+
+
+test('rejects duplicate non-null handoff bindings across flow steps', () => {
+  const shared = handoff();
+  const source = input({
+    bindings: [
+      binding('collect', 'task.collect', 'handoff.collect'),
+      binding('analyze', 'task.analyze', 'handoff.collect')
+    ],
+    handoffs: [shared]
+  });
+
+  assert.throws(
+    () => deriveFlowDispatchProjection(source),
+    /duplicate handoff_task_id/i
+  );
+});
+
+test('accepted task cannot launder unmet flow or work-graph dependencies into completion', () => {
+  const inconsistent = graph({
+    collectState: 'ready',
+    analyzeState: 'accepted'
+  });
+  const projection = deriveFlowDispatchProjection(input({ workGraph: inconsistent }));
+
+  assert.equal(projection.completed_step_ids.includes('analyze'), false);
+  assert.deepEqual(
+    projection.blocked_steps.find(entry => entry.step_id === 'analyze').reasons,
+    ['dependency-not-accepted:collect', 'work-dependency-not-accepted:task.collect']
+  );
+});
+
+test('rejected and blocked work dependencies preserve their terminal blocker state', () => {
+  for (const state of ['rejected', 'blocked']) {
+    const workGraph = graph({
+      collectState: state,
+      analyzeState: 'ready'
+    });
+    const projection = deriveFlowDispatchProjection(input({ workGraph }));
+    const analyze = projection.blocked_steps.find(entry => entry.step_id === 'analyze');
+
+    assert.ok(analyze.reasons.includes(`work-dependency-${state}:task.collect`));
+    assert.ok(analyze.reasons.includes('dependency-not-accepted:collect'));
+  }
+});
+
+test('handoff-bound dispatch requires the worker runtime to match the execution target', () => {
+  const queued = handoff({ state: 'queued' });
+  const wrongRuntime = worker({
+    worker_ref: 'worker.search.wrong-runtime',
+    runtime_ref: 'runtime.other',
+    lineage_ref: 'lineage.search.other',
+    operation_ids: ['research.search'],
+    capability_ids: ['research.read']
+  });
+  const source = input({
+    bindings: [
+      binding('collect', 'task.collect', 'handoff.collect'),
+      binding('analyze', 'task.analyze')
+    ],
+    workers: [
+      wrongRuntime,
+      defaultWorkers().find(entry => entry.worker_ref === 'worker.analyze')
+    ],
+    handoffs: [queued]
+  });
+  const projection = deriveFlowDispatchProjection(source);
+
+  assert.deepEqual(projection.ready_step_ids, []);
+  assert.ok(
+    projection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
+      'handoff-active:queued'
+    )
+  );
+
+  const unboundReady = clone(source);
+  unboundReady.handoffs[0].lifecycle.state = 'failed';
+  unboundReady.handoffs[0].lifecycle.terminal_receipt_id = 'receipt.handoff.collect';
+  unboundReady.handoffs[0].lifecycle.state_reason = 'reason.failed';
+  const failedProjection = deriveFlowDispatchProjection(unboundReady);
+  assert.equal(
+    failedProjection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
+      'handoff-terminal:failed'
+    ),
+    true
+  );
+});
+
+test('completed handoff target mismatch cannot make a ready task redispatchable', () => {
+  const completed = handoff({ state: 'completed' });
+  const source = input({
+    workGraph: graph({ collectState: 'ready' }),
+    bindings: [
+      binding('collect', 'task.collect', 'handoff.collect'),
+      binding('analyze', 'task.analyze')
+    ],
+    workers: [
+      worker({
+        worker_ref: 'worker.search.other',
+        runtime_ref: 'runtime.other',
+        lineage_ref: 'lineage.other',
+        operation_ids: ['research.search'],
+        capability_ids: ['research.read']
+      }),
+      defaultWorkers().find(entry => entry.worker_ref === 'worker.analyze')
+    ],
+    handoffs: [completed]
+  });
+  const projection = deriveFlowDispatchProjection(source);
+
+  assert.deepEqual(projection.ready_step_ids, []);
+  assert.ok(
+    projection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
+      'handoff-completed-work-not-accepted'
+    )
+  );
+});
+
+test('future-dated graph and handoff evidence is rejected at the evaluation boundary', () => {
+  const futureGraph = graph();
+  futureGraph.created_at = '2026-09-18T17:00:01.000Z';
+  assert.throws(
+    () => deriveFlowDispatchProjection(input({ workGraph: futureGraph })),
+    /work graph was created after evaluation_at/i
+  );
+
+  const futureHandoff = handoff({
+    state: 'queued',
+    updated_at: '2026-09-18T17:00:01.000Z'
+  });
+  assert.throws(
+    () => deriveFlowDispatchProjection(input({
+      bindings: [
+        binding('collect', 'task.collect', 'handoff.collect'),
+        binding('analyze', 'task.analyze')
+      ],
+      handoffs: [futureHandoff]
+    })),
+    /lifecycle evidence after evaluation_at/i
+  );
+});
+
+test('accepted pass only suppresses review when verifier lineage is known and independent', () => {
+  const artifact = node({
+    node_id: 'artifact.collect',
+    kind: 'artifact',
+    state: 'accepted',
+    dependencies: ['task.collect'],
+    artifact_digest: sha256('artifact.collect.independence'),
+    lineage_ref: 'lineage.search'
+  });
+  const sameLineagePass = node({
+    node_id: 'verification.same',
+    kind: 'verification',
+    state: 'accepted',
+    dependencies: ['artifact.collect'],
+    verification_result: 'pass',
+    verifier_ref: 'worker.search',
+    verification_evidence_digest: sha256('verification.same'),
+    lineage_ref: 'lineage.search'
+  });
+  const independentPass = node({
+    node_id: 'verification.independent',
+    kind: 'verification',
+    state: 'accepted',
+    dependencies: ['artifact.collect'],
+    verification_result: 'pass',
+    verifier_ref: 'worker.verify',
+    verification_evidence_digest: sha256('verification.independent'),
+    lineage_ref: 'lineage.verify'
+  });
+  const verifier = worker({
+    worker_ref: 'worker.verify',
+    runtime_ref: 'runtime.verify',
+    lineage_ref: 'lineage.verify',
+    operation_ids: [],
+    can_verify: true
+  });
+
+  const sameLineageGraph = graph({
+    collectState: 'accepted',
+    analyzeState: 'proposed',
+    extraNodes: [artifact, sameLineagePass]
+  });
+  const sameLineageProjection = deriveFlowDispatchProjection(input({
+    workGraph: sameLineageGraph,
+    workers: [...defaultWorkers(), verifier]
+  }));
+  assert.equal(sameLineageProjection.verification_proposals.length, 1);
+  assert.equal(
+    sameLineageProjection.verification_proposals[0].selected_verifier_ref,
+    'worker.verify'
+  );
+
+  const independentGraph = graph({
+    collectState: 'accepted',
+    analyzeState: 'proposed',
+    extraNodes: [artifact, independentPass]
+  });
+  const independentProjection = deriveFlowDispatchProjection(input({
+    workGraph: independentGraph,
+    workers: [...defaultWorkers(), verifier]
+  }));
+  assert.deepEqual(independentProjection.verification_proposals, []);
+});
+
+test('verifier selection respects worker and campaign capacity', () => {
+  const artifact = node({
+    node_id: 'artifact.collect',
+    kind: 'artifact',
+    state: 'accepted',
+    dependencies: ['task.collect'],
+    artifact_digest: sha256('artifact.collect.capacity'),
+    lineage_ref: 'lineage.search'
+  });
+  const workGraph = graph({
+    collectState: 'accepted',
+    analyzeState: 'ready',
+    extraNodes: [artifact]
+  });
+  const verifier = worker({
+    worker_ref: 'worker.verify',
+    runtime_ref: 'runtime.verify',
+    lineage_ref: 'lineage.verify',
+    operation_ids: ['research.compare'],
+    max_concurrency: 1,
+    can_verify: true
+  });
+  const workers = [
+    defaultWorkers().find(entry => entry.worker_ref === 'worker.search'),
+    worker({
+      worker_ref: 'worker.analyze',
+      runtime_ref: 'runtime.analyze',
+      lineage_ref: 'lineage.analyze',
+      operation_ids: ['research.compare'],
+      can_verify: false
+    }),
+    verifier
+  ];
+  const claim = activeClaim({
+    claim_id: 'claim.verify.busy',
+    step_id: 'analyze',
+    worker_ref: 'worker.verify'
+  });
+
+  const workerLimited = deriveFlowDispatchProjection(input({
+    workGraph,
+    workers,
+    claims: [claim],
+    maxParallelTasks: 2
+  }));
+  const workerProposal = workerLimited.verification_proposals[0];
+  assert.deepEqual(workerProposal.candidate_verifier_refs, []);
+  assert.equal(workerProposal.selected_verifier_ref, null);
+  assert.equal(workerProposal.selection_reason, 'verifier-capacity-exhausted');
+
+  const campaignLimited = deriveFlowDispatchProjection(input({
+    workGraph,
+    workers: [...defaultWorkers(), verifier],
+    maxParallelTasks: 1
+  }));
+  const campaignProposal = campaignLimited.verification_proposals[0];
+  assert.equal(campaignProposal.selected_verifier_ref, null);
+  assert.equal(campaignProposal.selection_reason, 'campaign-concurrency-exhausted');
+});
+
+test('canonical dispatch ordering uses code-unit order for punctuation-bearing identifiers', () => {
+  const first = worker({
+    worker_ref: 'worker:search',
+    runtime_ref: 'runtime.search',
+    lineage_ref: 'lineage:a',
+    operation_ids: ['research.search'],
+    capability_ids: ['research.read']
+  });
+  const second = worker({
+    worker_ref: 'worker.search',
+    runtime_ref: 'runtime.search',
+    lineage_ref: 'lineage.b',
+    operation_ids: ['research.search'],
+    capability_ids: ['research.read']
+  });
+  const projection = deriveFlowDispatchProjection(input({
+    workers: [
+      defaultWorkers().find(entry => entry.worker_ref === 'worker.analyze'),
+      first,
+      second
+    ]
+  }));
+  const collect = projection.dispatch_proposals.find(entry => entry.step_id === 'collect');
+
+  assert.deepEqual(collect.candidate_worker_refs, ['worker.search', 'worker:search']);
+  assert.equal(collect.selection_reason, 'ambiguous-worker-candidates');
+});
