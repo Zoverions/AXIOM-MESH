@@ -310,6 +310,113 @@ impl AutonomyState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyProposal {
+    pub proposal_id: String,
+    pub owner_subject_ref: String,
+    pub capability_ref: String,
+    pub requested_autonomy: AutonomyLevel,
+    pub budget_requests: Vec<BudgetRequest>,
+    pub uses_quarantined_memory: bool,
+    pub effect_requested: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyAssessment {
+    pub proposal_id: String,
+    pub eligible_within_personal_policy: bool,
+    pub blockers: Vec<String>,
+}
+
+impl PolicyAssessment {
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AmbientCapability {
+    Filesystem,
+    Network,
+    Environment,
+    WallClock,
+    Process,
+    CredentialStore,
+}
+
+impl AmbientCapability {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Filesystem => "filesystem",
+            Self::Network => "network",
+            Self::Environment => "environment",
+            Self::WallClock => "wall-clock",
+            Self::Process => "process",
+            Self::CredentialStore => "credential-store",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ComponentManifest {
+    pub component_id: String,
+    pub imports: Vec<String>,
+    pub requested_ambient_capabilities: Vec<AmbientCapability>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ComponentHostAssessment {
+    pub component_id: String,
+    pub allowed: bool,
+    pub blockers: Vec<String>,
+}
+
+impl ComponentHostAssessment {
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+pub fn assess_strict_component_host(
+    manifest: &ComponentManifest,
+) -> KernelResult<ComponentHostAssessment> {
+    require_id(&manifest.component_id, "component id")?;
+
+    const ALLOWED_IMPORTS: [&str; 3] = [
+        "axiom:personal-kernel/mesh-authority",
+        "axiom:personal-kernel/effect-host",
+        "axiom:personal-kernel/mesh-observer",
+    ];
+
+    let mut blockers = BTreeSet::<String>::new();
+    let mut imports = BTreeSet::<String>::new();
+
+    for import in &manifest.imports {
+        if import.is_empty() || import.len() > 192 || !import.is_ascii() {
+            return Err(KernelError::new("invalid component import"));
+        }
+        if !imports.insert(import.clone()) {
+            return Err(KernelError::new("duplicate component import"));
+        }
+        if !ALLOWED_IMPORTS.contains(&import.as_str()) {
+            blockers.insert(format!("unapproved-component-import:{import}"));
+        }
+    }
+
+    for capability in &manifest.requested_ambient_capabilities {
+        blockers.insert(format!(
+            "ambient-capability-denied:{}",
+            capability.label()
+        ));
+    }
+
+    Ok(ComponentHostAssessment {
+        component_id: manifest.component_id.clone(),
+        allowed: blockers.is_empty(),
+        blockers: blockers.into_iter().collect(),
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanNode {
     pub node_id: String,
     pub depends_on: Vec<String>,
@@ -376,6 +483,29 @@ pub struct AuthorityRequest {
 }
 
 impl AuthorityRequest {
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MeshAdapterRequest {
+    pub schema: &'static str,
+    pub kernel_id: String,
+    pub principal_ref: String,
+    pub owner_subject_ref: String,
+    pub plan_digest: String,
+    pub node_id: String,
+    pub capability_ref: String,
+    pub revocation_epoch: u64,
+    pub budget_requests: Vec<BudgetRequest>,
+}
+
+impl MeshAdapterRequest {
+    pub fn requires_existing_mesh_verification(&self) -> bool {
+        true
+    }
+
     pub fn grants_authority(&self) -> bool {
         false
     }
@@ -837,6 +967,141 @@ impl Kernel {
 
     pub fn revocation_epoch(&self) -> u64 {
         self.revocation_epoch
+    }
+
+    pub fn assess_policy_proposal(
+        &self,
+        proposal: &PolicyProposal,
+        now_unix_s: u64,
+    ) -> KernelResult<PolicyAssessment> {
+        self.constitution.validate()?;
+        require_id(&proposal.proposal_id, "policy proposal id")?;
+        require_id(
+            &proposal.owner_subject_ref,
+            "policy proposal owner subject ref",
+        )?;
+        require_id(&proposal.capability_ref, "policy proposal capability ref")?;
+
+        if proposal.owner_subject_ref != self.identity.owner_subject_ref {
+            return Err(KernelError::new(
+                "policy proposal owner does not match kernel owner",
+            ));
+        }
+
+        let mut blockers = BTreeSet::<String>::new();
+
+        match self.autonomy.get(&proposal.capability_ref) {
+            Some(autonomy) if proposal.requested_autonomy > autonomy.level => {
+                blockers.insert("requested-autonomy-exceeds-earned-ceiling".to_string());
+            }
+            None => {
+                blockers.insert("capability-has-no-earned-autonomy-state".to_string());
+            }
+            Some(_) => {}
+        }
+
+        if proposal.effect_requested
+            && proposal.requested_autonomy != AutonomyLevel::RequestEffect
+        {
+            blockers.insert("effect-request-requires-request-effect-level".to_string());
+        }
+
+        if proposal.uses_quarantined_memory {
+            blockers.insert("quarantined-memory-cannot-support-proposal".to_string());
+        }
+
+        let mut requests_by_id = BTreeMap::<String, &BudgetRequest>::new();
+        for request in &proposal.budget_requests {
+            request.validate()?;
+            if requests_by_id
+                .insert(request.budget_id.clone(), request)
+                .is_some()
+            {
+                return Err(KernelError::new(format!(
+                    "duplicate proposal budget_id: {}",
+                    request.budget_id
+                )));
+            }
+        }
+
+        let applicable: BTreeMap<&str, &AuthorityBudget> = self
+            .budgets
+            .values()
+            .filter(|budget| budget.capability_ref == proposal.capability_ref)
+            .map(|budget| (budget.budget_id.as_str(), budget))
+            .collect();
+
+        for request in &proposal.budget_requests {
+            if !applicable.contains_key(request.budget_id.as_str()) {
+                blockers.insert(format!(
+                    "unbound-budget-request:{}",
+                    request.budget_id
+                ));
+            }
+        }
+
+        for (budget_id, budget) in applicable {
+            let Some(request) = requests_by_id.get(budget_id) else {
+                blockers.insert(format!("missing-applicable-budget:{budget_id}"));
+                continue;
+            };
+
+            if !budget.is_current(now_unix_s) {
+                blockers.insert(format!("budget-not-current:{budget_id}"));
+            }
+            if request.currency != budget.currency {
+                blockers.insert(format!("budget-currency-mismatch:{budget_id}"));
+            }
+            if request.amount > budget.remaining() {
+                blockers.insert(format!("budget-exceeded:{budget_id}"));
+            }
+        }
+
+        let blockers: Vec<String> = blockers.into_iter().collect();
+        Ok(PolicyAssessment {
+            proposal_id: proposal.proposal_id.clone(),
+            eligible_within_personal_policy: blockers.is_empty(),
+            blockers,
+        })
+    }
+
+    pub fn build_mesh_adapter_request(
+        &self,
+        request: &AuthorityRequest,
+    ) -> KernelResult<MeshAdapterRequest> {
+        if request.owner_subject_ref != self.identity.owner_subject_ref {
+            return Err(KernelError::new("mesh adapter owner binding mismatch"));
+        }
+        require_sha256(&request.plan_digest, "mesh adapter plan digest")?;
+        require_id(&request.node_id, "mesh adapter node id")?;
+        require_id(&request.capability_ref, "mesh adapter capability ref")?;
+        if request.revocation_epoch != self.revocation_epoch {
+            return Err(KernelError::new(
+                "mesh adapter request revocation epoch is stale",
+            ));
+        }
+
+        let mut budget_ids = BTreeSet::<String>::new();
+        for budget in &request.budget_requests {
+            budget.validate()?;
+            if !budget_ids.insert(budget.budget_id.clone()) {
+                return Err(KernelError::new(
+                    "mesh adapter request contains duplicate budgets",
+                ));
+            }
+        }
+
+        Ok(MeshAdapterRequest {
+            schema: "axiom-personal-kernel-mesh-adapter-request.v0",
+            kernel_id: self.identity.kernel_id.clone(),
+            principal_ref: self.identity.principal_ref.clone(),
+            owner_subject_ref: request.owner_subject_ref.clone(),
+            plan_digest: request.plan_digest.clone(),
+            node_id: request.node_id.clone(),
+            capability_ref: request.capability_ref.clone(),
+            revocation_epoch: request.revocation_epoch,
+            budget_requests: request.budget_requests.clone(),
+        })
     }
 
     pub fn compile_plan(
