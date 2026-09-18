@@ -1,6 +1,6 @@
 # AXIOM-MESH Master TODO — Epistemic Fabric
 
-**Status:** subordinate Stage 5B queue; E0/E1 merged; E2-RC reproducibility-closure candidate is separately gated and remains inert evidence only
+**Status:** subordinate Stage 5B queue; E0/E1 and E2-RC merged; formal-checker E2-RC profile separately gated; E3+ remains parked
 
 **Date:** 2026-09-08
 
@@ -109,9 +109,9 @@ No earlier Stage 5A approval substitutes for this gate, and no part of this work
 
 ## Amendment B implementation track — E2-RC reproducibility closure
 
-E2-RC is an inert evidence candidate only. It records exact target/verifier/environment/dependency/replay scope and remains proposal-only.
+E2-RC is a merged inert evidence substrate. It records exact target/verifier/environment/dependency/replay scope and remains proposal-only.
 
-Fresh implementation gate: issue #1644 against exact base `e3def4421495306a3f1b0516d95c84389c4b2d14`.
+Fresh implementation gate #1644 was implemented by PR #1646 and squash-merged to `main` as `390348c4a42c0d2c988aa15f949f7936151354b5`.
 
 Implemented candidate surfaces:
 
@@ -134,7 +134,22 @@ Non-claims:
 - no independent-reproduction truth claim;
 - no capability, policy, network, repository, spending, deployment, or experiment authority.
 
-Candidate readiness requires protected checks on the exact implementation head. This section does not itself promote the candidate.
+PR #1646 exact head `a4214dabc963b95caf11504121943cc03e609f4c` passed Clean Kernel, Node 22 compatibility, container isolation, Windows, macOS Apple Silicon, macOS Intel, and CodeQL before merge. Merge did not add a capability, network path, canonical admission, or execution authority.
+
+## Formal-checker profile over E2-RC
+
+Fresh gate #1650 is test-only and based on merged E2-RC commit `390348c4a42c0d2c988aa15f949f7936151354b5`.
+
+The profile proves how formal-checker observations map into the existing E2-RC vocabulary without adding a second verification contract:
+
+- external hypotheses remain explicit reused dependencies;
+- admitted/`sorry`-like obligations remain unavailable obligations and prevent whole-closure claims;
+- checker warnings remain digest-bound limitations;
+- import/library byte changes change closure identity;
+- timeout/resource failure remains error/indeterminate evidence rather than falsification;
+- formal proof does not imply implementation conformance or source/formalization alignment;
+- checker success grants no capability, consent, merge, deployment, or execution authority;
+- no live AXLE, Lean, MCP, provider, network, or process invocation exists in this profile slice.
 
 ## Priority 6 — Later work remains parked
 

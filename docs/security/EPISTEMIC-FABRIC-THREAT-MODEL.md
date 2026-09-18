@@ -232,7 +232,9 @@ Amendment B introduces additional failure modes that future E2/E4/E7 work must a
 
 **Controls:** bind exact target, verifier/profile, environment, dependency-closure digest, freshly checked subset, reused subset, and replay status. Claims must not exceed the closure actually checked.
 
-**E2-RC candidate status:** the separately gated candidate now encodes exact target/verifier/environment/dependency/replay scope and coverage bounds as inert proposal evidence. It does not create a generic `verified=true` state.
+**E2-RC current status:** the merged E2-RC substrate encodes exact target/verifier/environment/dependency/replay scope and coverage bounds as inert proposal evidence. It does not create a generic `verified=true` state.
+
+**Formal-checker profile gate #1650:** static regression fixtures map external hypotheses, admitted/`sorry`-like obligations, checker warnings, import-byte changes, and timeout/resource failures into that bounded E2-RC vocabulary. A checker accepting an artifact therefore cannot silently erase unresolved obligations or upgrade partial closure into end-to-end verification. The profile invokes no live checker or provider.
 
 ### Dependency shadowing
 
@@ -240,7 +242,7 @@ Amendment B introduces additional failure modes that future E2/E4/E7 work must a
 
 **Controls:** content-address dependency identity, exact version/profile binding, environment digest, deterministic reconstruction where claimed, and fail closed on unresolved required dependency identity.
 
-**E2-RC candidate status:** direct dependencies are content-addressed, uniquely referenced, canonically ordered, and bound into a domain-separated dependency-closure digest; checked/reused/unavailable dispositions remain explicit.
+**E2-RC current status:** direct dependencies are content-addressed, uniquely referenced, canonically ordered, and bound into a domain-separated dependency-closure digest; checked/reused/unavailable dispositions remain explicit.
 
 ### Replay-depth spoofing
 
@@ -248,7 +250,7 @@ Amendment B introduces additional failure modes that future E2/E4/E7 work must a
 
 **Controls:** bind replay actor/run identity, inputs, environment, closure, outputs, and receipts/evidence where applicable; unknown independence remains unknown.
 
-**E2-RC candidate status:** replay is classified as original, same-context, separate-context, or unknown-context. Separate-context replay requires bound separation evidence, but the candidate deliberately exposes no epistemic-independence field or score.
+**E2-RC current status:** replay is classified as original, same-context, separate-context, or unknown-context. Separate-context replay requires bound separation evidence, but E2-RC deliberately exposes no epistemic-independence field or score.
 
 ### Failed-route erasure
 
@@ -320,6 +322,6 @@ These tests belong only to the separately gated future implementation slices; th
 
 ## Amendment B non-claims
 
-The separately gated E2-RC candidate records bounded closure/replay evidence only; it does not prove that a verifier is trustworthy, that dependencies are externally true, that a replay is epistemically independent, or that any external effect is permitted.
+The merged E2-RC substrate records bounded closure/replay evidence only; it does not prove that a verifier is trustworthy, that dependencies are externally true, that a replay is epistemically independent, or that any external effect is permitted.
 
-This threat delta still does not claim implementation of E3 canonical admission, E4 evidence-state vectors or failure provenance, continuation packets, frontier computation, live MAP/Lean ingestion, or autonomous mathematical/scientific research. The E2-RC candidate remains proposal-only until exact-head protected verification and authorized merge.
+The formal-checker profile adds only static regression semantics over E2-RC. It does not claim implementation of a live AXLE/Lean/Bend/Rocq/SMT adapter, source-to-formalization alignment, implementation conformance, E3 canonical admission, E4 evidence-state vectors or failure provenance, continuation packets, frontier computation, or autonomous mathematical/scientific research.
