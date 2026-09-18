@@ -10,10 +10,21 @@ import {
   createHostPreparedRef,
   createHostQuorum,
   createHostSecretRef,
+  operationDigestPraxis,
   run
 } from '../../labs/praxis/index.mjs';
 
 const PREPARATION_DIGEST = `sha256:${'a'.repeat(64)}`;
+const MINIMAL_PLAN_DIGEST = operationDigestPraxis({
+  action: 'Deploy',
+  scope: 'Production',
+  args: ['artifact:sha256:abc']
+});
+const DEPLOY_ARTIFACT_PLAN_DIGEST = operationDigestPraxis({
+  action: 'Deploy',
+  scope: 'Production',
+  args: ['artifact']
+});
 
 const minimal = `
 requires permit deploy_prod: Deploy @ Production;
@@ -261,7 +272,8 @@ test('Praxis refuses to execute when durable preparation is unavailable', async 
   const permit = createHostPermit({
     id: 'permit:no-preparer',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -277,7 +289,8 @@ test('Praxis does not invoke the executor when durable preparation fails', async
   const permit = createHostPermit({
     id: 'permit:prepare-fail',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
   let executorCalls = 0;
 
@@ -304,7 +317,8 @@ test('Praxis commit fails closed without an injected host executor after prepara
   const permit = createHostPermit({
     id: 'permit:no-executor',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -321,7 +335,8 @@ test('Praxis leaves an uncertain external outcome in prepared state', async () =
   const permit = createHostPermit({
     id: 'permit:uncertain',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -343,7 +358,8 @@ test('Praxis leaves an unverified receipt in prepared state', async () => {
   const permit = createHostPermit({
     id: 'permit:bad-receipt',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -369,7 +385,8 @@ test('Praxis keeps verified-but-uncommitted completion bound to the same prepara
   const permit = createHostPermit({
     id: 'permit:completion-fail',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -392,7 +409,8 @@ test('Praxis returns a receipt only after prepare, execute, and durable completi
   const permit = createHostPermit({
     id: 'permit:success',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: MINIMAL_PLAN_DIGEST
   });
   const order = [];
 
@@ -470,6 +488,8 @@ prepare armed as prepared;
     id: 'quorum:release',
     action: 'Deploy',
     scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST,
+    threshold: 2,
     members: ['Security', 'Provider', 'Operator'],
     approvedBy: ['Operator', 'Security']
   });
@@ -486,6 +506,8 @@ prepare armed as prepared;
     id: 'quorum:insufficient',
     action: 'Deploy',
     scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST,
+    threshold: 2,
     members: ['Operator', 'Security', 'Provider'],
     approvedBy: ['Operator']
   });
@@ -502,6 +524,8 @@ prepare armed as prepared;
     id: 'quorum:wrong-members',
     action: 'Deploy',
     scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST,
+    threshold: 2,
     members: ['Operator', 'Security', 'Auditor'],
     approvedBy: ['Operator', 'Security']
   });
@@ -524,7 +548,8 @@ authorize release using release_gate as armed;
   const ordinaryPermit = createHostPermit({
     id: 'permit:not-a-quorum',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -567,6 +592,7 @@ authorize release using deploy_window as armed;
     id: 'lease:expired',
     action: 'Deploy',
     scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST,
     expiresAt: '2026-09-18T12:00:00.000Z'
   });
 
@@ -589,7 +615,8 @@ authorize release using deploy_prod as armed;
   const permit = createHostPermit({
     id: 'permit:revoked',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -613,6 +640,7 @@ prepare armed as prepared;
     id: 'lease:valid',
     action: 'Deploy',
     scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST,
     expiresAt: '2026-09-18T13:00:00.000Z'
   });
 
@@ -646,7 +674,8 @@ prepare armed as prepared;
   const permit = createHostPermit({
     id: 'permit:retry-after-prepare-fail',
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST
   });
 
   await assert.rejects(
@@ -695,7 +724,8 @@ async function makePreparedReference(id = 'prepared:replay') {
   const permit = createHostPermit({
     id: `permit:${id}`,
     action: 'Deploy',
-    scope: 'Production'
+    scope: 'Production',
+    operationDigest: DEPLOY_ARTIFACT_PLAN_DIGEST
   });
   const source = `
 requires permit p: Deploy @ Production;
