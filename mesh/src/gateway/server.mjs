@@ -222,6 +222,11 @@ export async function createGatewayService(config = meshConfig()) {
       pattern: /^[A-Za-z0-9_.:-]+$/
     });
     const request = assertPlainObject(parseJsonBody(body), 'intent');
+    if (Object.hasOwn(request, 'assurance_evidence')) {
+      throw new ValidationError(
+        'Public intent requests cannot supply agent assurance evidence'
+      );
+    }
     const intentId = `intent_${sha256(`${principal.id}\n${idempotencyKey}`)}`;
     const intent = {
       intent_id: intentId,
