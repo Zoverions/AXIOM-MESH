@@ -449,6 +449,7 @@ function normalizeInput(input, context) {
     handoff_refs: [...context.handoffById.values()]
       .map(handoff => ({
         task_id: handoff.task_id,
+        handoff_digest: digestObject(handoff),
         state: handoff.lifecycle.state,
         updated_at: handoff.lifecycle.updated_at,
         terminal_receipt_id: handoff.lifecycle.terminal_receipt_id ?? null,
