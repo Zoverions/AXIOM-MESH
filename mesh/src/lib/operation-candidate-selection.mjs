@@ -189,15 +189,21 @@ function deepFreeze(value) {
   return value;
 }
 
+function compareCodeUnits(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function sortCandidates(left, right) {
-  return left.operation_id.localeCompare(right.operation_id)
-    || left.manifest_digest.localeCompare(right.manifest_digest);
+  return compareCodeUnits(left.operation_id, right.operation_id)
+    || compareCodeUnits(left.manifest_digest, right.manifest_digest);
 }
 
 function sortSemantic(left, right) {
   return right.support - left.support
-    || left.operation_id.localeCompare(right.operation_id)
-    || left.manifest_digest.localeCompare(right.manifest_digest);
+    || compareCodeUnits(left.operation_id, right.operation_id)
+    || compareCodeUnits(left.manifest_digest, right.manifest_digest);
 }
 
 function normalizeCandidate(candidate, index) {
@@ -918,8 +924,8 @@ export function createOperationCandidateSelectionProposal(input) {
         question_schema_input_digest: digestObject(entry.questionSchema)
       }))
       .sort((left, right) =>
-        left.operation_id.localeCompare(right.operation_id)
-        || left.manifest_digest.localeCompare(right.manifest_digest)
+        compareCodeUnits(left.operation_id, right.operation_id)
+        || compareCodeUnits(left.manifest_digest, right.manifest_digest)
       )
   );
   const policyDigest = digestObject(policy);
