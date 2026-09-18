@@ -87,25 +87,31 @@ launch, contract, or engagement signals naturally stop influencing priority.
 
 ## Confidence
 
-Confidence is derived from the provenance class supporting the decisive signal,
-not authored as an arbitrary score.
+Confidence is derived from verified provenance supporting the decisive signal,
+not authored as an arbitrary score. The `source_kind` inside an account signal is
+only a claim. By itself it contributes quality 0.
 
-| Source kind | Quality |
+| Trusted source kind | Quality |
 |---|---:|
 | `semantic_inference` | 0 |
 | `public_secondary` | 1 |
 | `public_primary` | 2 |
 | `owned_first_party` | 3 |
 
-The account confidence component is the weakest provenance quality among the
-decisive fit and timing evidence, plus intent when positive intent is present.
+To grant quality above 0, the evaluator requires a separate `trustedProvenance`
+map whose entry matches the signal ID, source URL, and source kind exactly.
+Missing trust leaves the signal at quality 0; contradictory trusted metadata
+fails closed. The evaluator does not create this trusted map from the signal
+itself.
 
-This makes confidence deny-dominant: a strong-looking account cannot become
-`HIGH_SIGNAL` when a decisive claim depends on weak secondary material or a
-semantic inference.
+For each dimension, the selected level uses the strongest separately verified
+provenance among active signals tied at that level. Adding a weaker duplicate
+therefore cannot erase independently verified evidence. Account confidence is
+then the weakest verified quality across the decisive fit and timing dimensions,
+plus intent when positive intent is present.
 
-Semantic systems may classify or propose signals. They do not get to upgrade their
-own evidence quality.
+This keeps promotion deny-dominant across dimensions while preventing a caller or
+semantic classifier from upgrading its own evidence quality.
 
 ## Advisory lanes
 
@@ -129,21 +135,26 @@ stored claims synchronized with the evidence.
 Every successful evaluation returns a SHA-256 `evidence_digest` over the
 normalized account evidence and evaluation date.
 
-That digest is the handoff point for the next GTM layer. A future outcome record
-can bind:
+That digest is the handoff point for the outcome layer.
+`axiom-gtm-outcome-receipt.v0` now binds a recorded result to:
 
-- campaign ID;
-- account ID;
-- evidence digest used for the decision;
-- operation type;
-- operator or authorized automation identity;
-- outcome class;
-- outcome timestamp;
-- optional revenue or conversion evidence.
+- receipt and campaign IDs;
+- the exact account ID and account-evidence digest;
+- an opaque `operation_ref` that attributes, but does not authorize, the action;
+- a bounded outcome class;
+- an outcome date no earlier than the account evaluation;
+- a digest of the evidence supporting the recorded outcome;
+- optional ISO-currency revenue in minor units only for `paid_pilot` or
+  `revenue_confirmed` outcomes.
 
-This creates the training loop without rewriting history. New evidence produces a
-new digest; later outcomes can still be attributed to the exact state that
-motivated the action.
+The receipt validator requires the actual account-evaluation result and rejects a
+mismatched account or evidence digest. This creates the training loop without
+rewriting history. New evidence produces a new digest; later outcomes remain
+attributable to the exact state that motivated the separately authorized action.
+
+An outcome receipt is evidence of what AXIOM recorded, not independent proof that
+an external-world event or revenue claim is true. It grants no authority to
+perform the referenced operation.
 
 ## Relationship to the Demand Evidence Gate
 
@@ -179,7 +190,10 @@ Current tests pin these boundaries:
 - one source cannot masquerade as several independent groups;
 - stored lane declarations fail closed when they overstate the computed lane;
 - the evidence digest changes when the supporting evidence changes.
-- the evidence digest is stable when the same signal set is reordered.
+- the evidence digest is stable when the same signal set is reordered;
+- self-asserted source kinds cannot raise confidence without trusted provenance;
+- outcome receipts must match the exact evaluated account digest and chronology;
+- paid outcomes require bounded currency/revenue data, while non-paid outcomes reject it.
 
 ## Next bounded increment
 
