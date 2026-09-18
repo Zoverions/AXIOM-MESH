@@ -2066,7 +2066,14 @@ export async function run(source, {
       threshold: token.threshold ?? null,
       members: token.members ?? null,
       approved_by: token.approved_by ?? null,
-      operation_digest: token.operation_digest
+      operation_digest: token.operation_digest,
+      charter_digest: token.charter_digest ?? null,
+      policy_name: token.policy_name ?? null,
+      policy_digest: token.policy_digest ?? null,
+      requester: token.requester ?? null,
+      request_digest: token.request_digest ?? null,
+      evidence: token.evidence ?? null,
+      advice: token.advice ?? null
     });
   }
 
@@ -2326,7 +2333,8 @@ export async function run(source, {
         validateAuthorityToken(token, requirement, {
           nowMs: runtimeTime(now),
           revokedAuthorityIds: revoked,
-          operationDigest: operation.operation_digest
+          operationDigest: operation.operation_digest,
+          charterContext
         });
         bindValue(instruction.name, Object.freeze({
           kind: 'AuthorizedOperation',
@@ -2341,7 +2349,14 @@ export async function run(source, {
             expires_at_ms: token.expires_at_ms ?? null,
             threshold: token.threshold ?? null,
             members: token.members ?? null,
-            approved_by: token.approved_by ?? null
+            approved_by: token.approved_by ?? null,
+            charter_digest: token.charter_digest ?? null,
+            policy_name: token.policy_name ?? null,
+            policy_digest: token.policy_digest ?? null,
+            requester: token.requester ?? null,
+            request_digest: token.request_digest ?? null,
+            evidence: token.evidence ?? null,
+            advice: token.advice ?? null
           })
         }));
         break;
@@ -2367,7 +2382,8 @@ export async function run(source, {
         validateAuthorityToken(token, requirement, {
           nowMs: runtimeTime(now),
           revokedAuthorityIds: revoked,
-          operationDigest: authorized.operation.operation_digest
+          operationDigest: authorized.operation.operation_digest,
+          charterContext
         });
 
         const request = Object.freeze({
