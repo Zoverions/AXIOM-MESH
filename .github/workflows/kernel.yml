@@ -531,7 +531,7 @@ jobs:
 
 
   monid-smoke:
-    if: github.event_name == 'workflow_dispatch' && inputs.monid_smoke
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.monid_smoke == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
