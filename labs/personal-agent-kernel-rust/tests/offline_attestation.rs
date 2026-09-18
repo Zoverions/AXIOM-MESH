@@ -1,8 +1,7 @@
 use axiom_personal_agent_kernel_rust_lab::{
-    assess_execution_placement, AttestationEvidence, AutonomyLevel, AutonomyState, Constitution,
-    EffectPort, EffectReceipt, ExecutionCandidate, Kernel, KernelIdentity, KernelResult,
-    OfflineEnvelopeInput, OfflineEnvelopeRegistry, PlacementConstraints, RuntimeSurface,
-    BudgetRequest,
+    AttestationEvidence, AutonomyLevel, AutonomyState, BudgetRequest, Constitution, EffectPort,
+    EffectReceipt, ExecutionCandidate, Kernel, KernelIdentity, KernelResult, OfflineEnvelopeInput,
+    OfflineEnvelopeRegistry, PlacementConstraints, RuntimeSurface, assess_execution_placement,
 };
 
 const NOW: u64 = 1_789_733_000;
@@ -88,10 +87,7 @@ fn offline_envelope_is_device_surface_epoch_budget_and_count_bound() {
     let kernel = kernel();
     let mut registry = OfflineEnvelopeRegistry::new();
     let mut ledger = registry
-        .import_from_trusted_mesh_adapter(envelope_input(
-            "offline-envelope:1",
-            NOW + 120,
-        ))
+        .import_from_trusted_mesh_adapter(envelope_input("offline-envelope:1", NOW + 120))
         .expect("trusted offline envelope");
     let mut port = OfflinePort::default();
     let request = [BudgetRequest {
@@ -128,16 +124,18 @@ fn offline_envelope_is_device_surface_epoch_budget_and_count_bound() {
     assert_eq!(second.sequence, 2);
     assert_eq!(ledger.remaining_effects(), 0);
 
-    assert!(kernel
-        .execute_offline_authorized(
-            &mut ledger,
-            "device:phone-1",
-            &surface(),
-            NOW + 2,
-            &request,
-            &mut port,
-        )
-        .is_err());
+    assert!(
+        kernel
+            .execute_offline_authorized(
+                &mut ledger,
+                "device:phone-1",
+                &surface(),
+                NOW + 2,
+                &request,
+                &mut port,
+            )
+            .is_err()
+    );
     assert_eq!(port.calls, 2);
 
     let partial = kernel
@@ -160,18 +158,14 @@ fn offline_envelope_replay_wrong_device_surface_and_expiry_fail_closed() {
     let kernel = kernel();
     let mut registry = OfflineEnvelopeRegistry::new();
     let mut ledger = registry
-        .import_from_trusted_mesh_adapter(envelope_input(
-            "offline-envelope:replay",
-            NOW + 120,
-        ))
+        .import_from_trusted_mesh_adapter(envelope_input("offline-envelope:replay", NOW + 120))
         .expect("first import");
 
-    assert!(registry
-        .import_from_trusted_mesh_adapter(envelope_input(
-            "offline-envelope:replay",
-            NOW + 120,
-        ))
-        .is_err());
+    assert!(
+        registry
+            .import_from_trusted_mesh_adapter(envelope_input("offline-envelope:replay", NOW + 120,))
+            .is_err()
+    );
 
     let request = [BudgetRequest {
         budget_id: "budget:offline-actions".into(),
@@ -180,48 +174,50 @@ fn offline_envelope_replay_wrong_device_surface_and_expiry_fail_closed() {
     }];
     let mut port = OfflinePort::default();
 
-    assert!(kernel
-        .execute_offline_authorized(
-            &mut ledger,
-            "device:desktop-1",
-            &surface(),
-            NOW,
-            &request,
-            &mut port,
-        )
-        .is_err());
+    assert!(
+        kernel
+            .execute_offline_authorized(
+                &mut ledger,
+                "device:desktop-1",
+                &surface(),
+                NOW,
+                &request,
+                &mut port,
+            )
+            .is_err()
+    );
 
-    let drifted =
-        RuntimeSurface::new(sha('0'), sha('b'), sha('c'), 9).expect("drifted surface");
-    assert!(kernel
-        .execute_offline_authorized(
-            &mut ledger,
-            "device:phone-1",
-            &drifted,
-            NOW,
-            &request,
-            &mut port,
-        )
-        .is_err());
+    let drifted = RuntimeSurface::new(sha('0'), sha('b'), sha('c'), 9).expect("drifted surface");
+    assert!(
+        kernel
+            .execute_offline_authorized(
+                &mut ledger,
+                "device:phone-1",
+                &drifted,
+                NOW,
+                &request,
+                &mut port,
+            )
+            .is_err()
+    );
     assert_eq!(ledger.effects_consumed(), 0);
 
     let mut expired_registry = OfflineEnvelopeRegistry::new();
     let mut expired = expired_registry
-        .import_from_trusted_mesh_adapter(envelope_input(
-            "offline-envelope:expired",
-            NOW,
-        ))
+        .import_from_trusted_mesh_adapter(envelope_input("offline-envelope:expired", NOW))
         .expect("shape-valid expired envelope");
-    assert!(kernel
-        .execute_offline_authorized(
-            &mut expired,
-            "device:phone-1",
-            &surface(),
-            NOW,
-            &request,
-            &mut port,
-        )
-        .is_err());
+    assert!(
+        kernel
+            .execute_offline_authorized(
+                &mut expired,
+                "device:phone-1",
+                &surface(),
+                NOW,
+                &request,
+                &mut port,
+            )
+            .is_err()
+    );
     assert_eq!(port.calls, 0);
 }
 
@@ -301,34 +297,42 @@ fn attestation_constrains_where_but_never_grants_authority() {
         .iter()
         .find(|candidate| candidate.node_ref == "node:stale")
         .expect("stale candidate");
-    assert!(stale
-        .blockers
-        .contains(&"attestation-epoch-stale".to_string()));
+    assert!(
+        stale
+            .blockers
+            .contains(&"attestation-epoch-stale".to_string())
+    );
 
     let unverified = assessment
         .candidates
         .iter()
         .find(|candidate| candidate.node_ref == "node:unverified")
         .expect("unverified candidate");
-    assert!(unverified
-        .blockers
-        .contains(&"attestation-unverified".to_string()));
+    assert!(
+        unverified
+            .blockers
+            .contains(&"attestation-unverified".to_string())
+    );
 
     let wrong_domain = assessment
         .candidates
         .iter()
         .find(|candidate| candidate.node_ref == "node:wrong-domain")
         .expect("wrong domain candidate");
-    assert!(wrong_domain
-        .blockers
-        .contains(&"trust-domain-not-allowed".to_string()));
+    assert!(
+        wrong_domain
+            .blockers
+            .contains(&"trust-domain-not-allowed".to_string())
+    );
 
     let drifted = assessment
         .candidates
         .iter()
         .find(|candidate| candidate.node_ref == "node:surface-drift")
         .expect("surface drift candidate");
-    assert!(drifted
-        .blockers
-        .contains(&"runtime-surface-mismatch".to_string()));
+    assert!(
+        drifted
+            .blockers
+            .contains(&"runtime-surface-mismatch".to_string())
+    );
 }
