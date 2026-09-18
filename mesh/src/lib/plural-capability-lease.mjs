@@ -2,7 +2,6 @@ import {
   ValidationError,
   assertPlainObject,
   assertString,
-  assertStringArray,
   digestObject
 } from './canonical.mjs';
 
@@ -17,17 +16,70 @@ const CURRENTNESS = new Set(['current', 'revoked', 'unknown']);
 
 function exact(raw, fields, label) {
   const value = assertPlainObject(raw, label);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new ValidationError(`${label} must be a plain record`);
+  }
+  if (Object.getOwnPropertySymbols(value).length !== 0) {
+    throw new ValidationError(`${label} cannot contain symbol-keyed state`);
+  }
+
+  const ownNames = Object.getOwnPropertyNames(value);
   const allowed = new Set(fields);
-  for (const key of Object.keys(value)) {
+  for (const key of ownNames) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new ValidationError(
+        `${label} property ${key} must be an enumerable data property`
+      );
+    }
     if (!allowed.has(key)) {
       throw new ValidationError(`${label} contains unsupported field ${key}`);
     }
   }
+
   for (const key of fields) {
     if (!Object.hasOwn(value, key)) {
       throw new ValidationError(`${label} is missing required field ${key}`);
     }
   }
+  return value;
+}
+
+function denseOrdinaryArray(value, label, { maxItems = 64 } = {}) {
+  if (!Array.isArray(value) || value.length > maxItems) {
+    throw new ValidationError(
+      `${label} must be an array with at most ${maxItems} entries`
+    );
+  }
+  if (Object.getPrototypeOf(value) !== Array.prototype) {
+    throw new ValidationError(`${label} must use the ordinary Array prototype`);
+  }
+  if (Object.getOwnPropertySymbols(value).length !== 0) {
+    throw new ValidationError(`${label} cannot contain symbol-keyed state`);
+  }
+
+  const allowedNames = new Set(['length']);
+  for (let index = 0; index < value.length; index += 1) {
+    const key = String(index);
+    allowedNames.add(key);
+    if (!Object.hasOwn(value, key)) {
+      throw new ValidationError(`${label} cannot contain sparse indexes`);
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new ValidationError(
+        `${label}[${index}] must be an enumerable data property`
+      );
+    }
+  }
+
+  for (const key of Object.getOwnPropertyNames(value)) {
+    if (!allowedNames.has(key)) {
+      throw new ValidationError(`${label} contains unsupported array property ${key}`);
+    }
+  }
+
   return value;
 }
 
@@ -57,17 +109,15 @@ function timestamp(value, label) {
   return milliseconds;
 }
 
-function uniqueSortedStrings(values, label, { maxItems = 64, itemMax = 192 } = {}) {
-  const parsed = assertStringArray(values, label, { maxItems, itemMax });
+function uniqueSortedIds(values, label, { maxItems = 64 } = {}) {
+  denseOrdinaryArray(values, label, { maxItems });
   const seen = new Set();
-  for (const [index, value] of parsed.entries()) {
-    if (!ID.test(value)) {
-      throw new ValidationError(`${label}[${index}] has an invalid format`);
-    }
-    if (seen.has(value)) {
+  for (const [index, value] of values.entries()) {
+    const parsed = id(value, `${label}[${index}]`);
+    if (seen.has(parsed)) {
       throw new ValidationError(`${label} must not contain duplicates`);
     }
-    seen.add(value);
+    seen.add(parsed);
   }
   return [...seen].sort();
 }
@@ -84,7 +134,7 @@ function normalizeScope(raw) {
     'max_cost_minor_units'
   ], 'scope');
 
-  const normalized = {
+  return Object.freeze({
     principal_ref: id(scope.principal_ref, 'scope.principal_ref'),
     capability_ref: id(scope.capability_ref, 'scope.capability_ref'),
     purpose: id(scope.purpose, 'scope.purpose'),
@@ -103,9 +153,7 @@ function normalizeScope(raw) {
         'scope.max_cost_minor_units',
         { min: 0, max: Number.MAX_SAFE_INTEGER }
       )
-  };
-
-  return Object.freeze(normalized);
+  });
 }
 
 function normalizePolicy(raw) {
@@ -113,13 +161,11 @@ function normalizePolicy(raw) {
     'threshold',
     'required_authority_classes',
     'min_distinct_authority_domains',
-    'max_duration_seconds',
-    'renewal_requires_fresh_approvals',
-    'lease_can_self_renew'
+    'max_duration_seconds'
   ], 'policy');
 
   const threshold = integer(policy.threshold, 'policy.threshold', { min: 1, max: 64 });
-  const requiredAuthorityClasses = uniqueSortedStrings(
+  const requiredAuthorityClasses = uniqueSortedIds(
     policy.required_authority_classes,
     'policy.required_authority_classes'
   );
@@ -140,24 +186,15 @@ function normalizePolicy(raw) {
     );
   }
 
-  if (policy.renewal_requires_fresh_approvals !== true) {
-    throw new ValidationError('plural capability lease renewal requires fresh approvals');
-  }
-  if (policy.lease_can_self_renew !== false) {
-    throw new ValidationError('plural capability lease cannot self-renew');
-  }
-
   return Object.freeze({
     threshold,
-    required_authority_classes: requiredAuthorityClasses,
+    required_authority_classes: Object.freeze(requiredAuthorityClasses),
     min_distinct_authority_domains: minDistinctAuthorityDomains,
     max_duration_seconds: integer(
       policy.max_duration_seconds,
       'policy.max_duration_seconds',
       { min: 1, max: 31_536_000 }
-    ),
-    renewal_requires_fresh_approvals: true,
-    lease_can_self_renew: false
+    )
   });
 }
 
@@ -205,7 +242,8 @@ function normalizeSafety(raw) {
     'authority_effect',
     'runtime_activation',
     'capability_registry_change',
-    'requires_effect_admission'
+    'requires_effect_admission',
+    'renewal_supported'
   ], 'safety');
 
   if (safety.authority_effect !== 'none') {
@@ -220,12 +258,16 @@ function normalizeSafety(raw) {
   if (safety.requires_effect_admission !== true) {
     throw new ValidationError('safety.requires_effect_admission must be true');
   }
+  if (safety.renewal_supported !== false) {
+    throw new ValidationError('P0 plural capability lease candidates do not support renewal');
+  }
 
   return Object.freeze({
     authority_effect: 'none',
     runtime_activation: false,
     capability_registry_change: false,
-    requires_effect_admission: true
+    requires_effect_admission: true,
+    renewal_supported: false
   });
 }
 
@@ -264,11 +306,9 @@ export function evaluatePluralCapabilityLeaseCandidate(raw) {
   const policy = normalizePolicy(value.policy);
   const safety = normalizeSafety(value.safety);
 
-  if (!Array.isArray(value.approvals) || value.approvals.length > 64) {
-    throw new ValidationError('approvals must be an array with at most 64 entries');
-  }
-
+  denseOrdinaryArray(value.approvals, 'approvals', { maxItems: 64 });
   const approvals = value.approvals.map(normalizeApproval);
+
   const approvalIds = new Set();
   const approverRefs = new Set();
   for (const approval of approvals) {
@@ -399,6 +439,7 @@ export function evaluatePluralCapabilityLeaseCandidate(raw) {
     authority_effect: 'none',
     runtime_activation: false,
     capability_registry_change: false,
-    requires_effect_admission: true
+    requires_effect_admission: true,
+    renewal_supported: false
   });
 }
