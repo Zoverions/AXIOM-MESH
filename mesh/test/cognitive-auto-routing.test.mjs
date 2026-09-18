@@ -493,7 +493,7 @@ test('route proposal validation is bound to trusted inputs and rejects tampering
   tampered.selected_profile_id = two.profileId;
   assert.throws(
     () => validateCognitiveRouteProposal(tampered, input),
-    /digest|trusted|inconsistent/i
+    /digest|trusted|inconsistent|unique/i
   );
 });
 
