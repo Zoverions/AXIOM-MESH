@@ -6,7 +6,7 @@
 
 **Created:** 2026-09-18
 
-**Issue:** [#1703](../../issues/1703)
+**Issue:** [#1703](https://github.com/Zoverions/AXIOM-MESH/issues/1703)
 
 **Depends on:** [Sovereign Vaults and Local Context Broker](SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [Vault Access Lease and Context Request Protocol](VAULT-LEASE-AND-CONTEXT-REQUEST.md)
 
