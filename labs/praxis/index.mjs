@@ -342,6 +342,20 @@ function validateCharterBody(body) {
       }
     }
   }
+  if (!Array.isArray(body.program_digests ?? [])) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_CHARTER_SIGNATURE',
+      'charter program_digests must be an array'
+    );
+  }
+  for (const digest of body.program_digests ?? []) {
+    if (typeof digest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(digest)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'charter contains an invalid program digest'
+      );
+    }
+  }
   for (const [name, entry] of Object.entries(body.verifiers ?? {})) {
     if (!entry?.def || entry.digest !== signatureBodyDigest(entry.def)) {
       throw new PraxisRuntimeError('PRAXIS_VERIFIER_UNPINNED', 'verifier ' + name + ' digest mismatch');
@@ -361,16 +375,24 @@ export function createSyntheticCharter({
   principals = {},
   agents = {},
   policies = {},
-  verifiers = {}
+  verifiers = {},
+  programDigests = []
 }, rootPrivateKey) {
   if (!rootPrivateKey) throw new TypeError('synthetic charter requires a root private key');
   const normalizedPrincipals = normalizePrincipalDefinitions(principals);
+  const normalizedProgramDigests = [...new Set(programDigests.map(digest => {
+    if (typeof digest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(digest)) {
+      throw new TypeError('charter programDigests must contain sha256:<hex> digests');
+    }
+    return digest;
+  }))].sort();
   const body = {
     schema: 'praxis-charter.v0',
     principals: normalizedPrincipals,
     agents: normalizeAgentBindings(agents, normalizedPrincipals),
     policies: pinnedDefinitions(policies, normalizePolicyDefinition),
-    verifiers: pinnedDefinitions(verifiers, normalizeVerifierDefinition)
+    verifiers: pinnedDefinitions(verifiers, normalizeVerifierDefinition),
+    program_digests: Object.freeze(normalizedProgramDigests)
   };
   validateCharterBody(body);
   const digest = signatureBodyDigest(body);
@@ -2038,6 +2060,16 @@ export async function run(source, {
   const charterContext = charter
     ? verifySyntheticCharter(charter, trustedCharterKeys)
     : null;
+  if (
+    charterContext
+    && (charterContext.body.program_digests?.length ?? 0) > 0
+    && !charterContext.body.program_digests.includes(ir.digest)
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_PROGRAM_UNPINNED',
+      'executed Praxis IR is not pinned by the signed charter'
+    );
+  }
 
   const bindValue = (name, value) => {
     if (typeof name !== 'string' || name.length === 0) {
