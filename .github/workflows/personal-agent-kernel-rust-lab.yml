@@ -1,0 +1,66 @@
+name: Personal Agent Kernel Rust Laboratory
+
+on:
+  push:
+    branches:
+      - "feat/personal-agent-kernel-rust-vnext-*"
+    paths:
+      - "labs/personal-agent-kernel-rust/**"
+      - ".github/workflows/personal-agent-kernel-rust-lab.yml"
+      - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
+  pull_request:
+    branches:
+      - "main"
+      - "feat/personal-agent-kernel-v0-20260918"
+    paths:
+      - "labs/personal-agent-kernel-rust/**"
+      - ".github/workflows/personal-agent-kernel-rust-lab.yml"
+      - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-personal-kernel-lab:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify toolchain
+        working-directory: labs/personal-agent-kernel-rust
+        run: |
+          rustc +1.98.1 --version
+          cargo +1.98.1 --version
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Verify end-to-end kernel tests
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --locked
+
+  production-boundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Prove laboratory is not imported by supported runtime
+        shell: bash
+        run: |
+          if git grep -n "personal-agent-kernel-rust" -- mesh/src mesh/config; then
+            echo "Rust personal-kernel laboratory must remain unreachable from supported runtime"
+            exit 1
+          fi
