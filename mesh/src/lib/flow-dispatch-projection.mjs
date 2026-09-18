@@ -446,12 +446,11 @@ function validateInputShape(input) {
 
   for (const claim of claims) {
     const binding = bindingByStep.get(claim.step_id);
-    if (binding.handoff_task_id === null) continue;
-    const handoff = handoffById.get(binding.handoff_task_id);
+    const step = planStepById.get(claim.step_id);
     const worker = workerByRef.get(claim.worker_ref);
-    if (worker.runtime_ref !== handoff.execution_target.integration_id) {
+    if (!workerSupportsStep(worker, step, binding, handoffById)) {
       throw new ValidationError(
-        `claim ${claim.claim_id} worker runtime does not match handoff target`
+        `claim ${claim.claim_id} worker is not compatible with claimed step`
       );
     }
   }
