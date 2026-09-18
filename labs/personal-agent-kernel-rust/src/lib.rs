@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod context_compiler;
 pub mod state_lanes;
 
 use std::collections::{BTreeMap, BTreeSet};
