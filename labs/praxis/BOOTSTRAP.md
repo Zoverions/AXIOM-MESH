@@ -37,6 +37,8 @@ The authority TCB includes, at minimum:
 - evidence signature/origin/freshness checks and signed approval verification;
 - the deterministic granting-premise evaluator over verified evidence, exact
   operation fields and constants;
+- host-owned operation/effect measurement, signed requester effect envelopes,
+  and terminal commit/finalize enforcement;
 - the mechanism that binds authority to an exact plan and durable preparation
   evidence.
 
@@ -90,6 +92,11 @@ Minimum corpus:
 - granting premises restricted to verified evidence, exact operation fields and
   constants, with verified evidence bound to the same operation artifact;
 - immutable evidence snapshots and ambiguous-evidence refusal;
+- host-measured effect/egress/finality contracts that source declarations cannot
+  widen;
+- signed requester effect envelopes as hard upper bounds;
+- explicit irreversible finalize semantics with terminal finality preserved in
+  receipts/completion evidence and replay;
 - linear authority consumption;
 - expiry/revocation semantics;
 - deny on absent/unknown/malformed policy results;
