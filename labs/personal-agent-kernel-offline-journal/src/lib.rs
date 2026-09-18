@@ -140,13 +140,13 @@ impl OfflineJournal {
             }
         };
 
-        if !journal_existed {
-            if let Err(error) = file.sync_all().and_then(|_| sync_parent_directory(&path)) {
-                drop(file);
-                drop(lease_file);
-                std::fs::remove_file(&lease_path).ok();
-                return Err(JournalError::Io(error));
-            }
+        if !journal_existed
+            && let Err(error) = file.sync_all().and_then(|_| sync_parent_directory(&path))
+        {
+            drop(file);
+            drop(lease_file);
+            std::fs::remove_file(&lease_path).ok();
+            return Err(JournalError::Io(error));
         }
 
         Ok(Self {
