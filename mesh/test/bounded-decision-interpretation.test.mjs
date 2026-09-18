@@ -236,10 +236,18 @@ function policy(q, overrides = {}) {
 
 const NOW = '2026-09-15T22:00:00.000Z';
 
-function interpret(observations, calibrationReports, itemPolicy) {
+function interpret(
+  observations,
+  calibrationReports,
+  itemPolicy,
+  providerProfiles,
+  questionSchemas
+) {
   return interpretBoundedDecisionEvidence({
     observations,
     calibrationReports,
+    providerProfiles,
+    questionSchemas,
     policy: itemPolicy,
     now: NOW
   });
@@ -252,7 +260,7 @@ test('accepts fresh calibrated evidence that satisfies explicit probability pred
   const q = binaryQuestion();
   const o = observation(p, q, 0.9);
   const c = calibration(p, [q]);
-  const result = interpret([o], [c], policy(q));
+  const result = interpret([o], [c], policy(q), [p], [q]);
 
   assert.equal(result.status, 'accepted-evidence');
   assert.deepEqual(result.observation_ids, [o.observation_id]);
@@ -273,7 +281,7 @@ test('marks required evidence stale without converting staleness into an authori
   const stale = observation(p, q, 0.9, {
     observed_at: '2026-09-15T20:00:00.000Z'
   });
-  const result = interpret([stale], [calibration(p, [q])], policy(q));
+  const result = interpret([stale], [calibration(p, [q])], policy(q), [p], [q]);
   assert.equal(result.status, 'stale-evidence');
   assert.ok(result.reason_codes.includes('observation-stale'));
   assert.equal(result.execution_effect, 'none');
@@ -284,7 +292,7 @@ test('preserves materially conflicting observations instead of averaging them aw
   const q = binaryQuestion();
   const high = observation(p, q, 0.9, { suffix: 'high' });
   const low = observation(p, q, 0.1, { suffix: 'low' });
-  const result = interpret([high, low], [calibration(p, [q])], policy(q));
+  const result = interpret([high, low], [calibration(p, [q])], policy(q), [p], [q]);
   assert.equal(result.status, 'conflicting-evidence');
   assert.ok(result.reason_codes.includes('predicate-disagreement'));
 });
@@ -294,14 +302,14 @@ test('requires calibration when policy requests it and accepts none when policy 
   const q = binaryQuestion();
   const o = observation(p, q, 0.9, { calibration_report_ref: null });
 
-  const missing = interpret([o], [], policy(q));
+  const missing = interpret([o], [], policy(q), [p], [q]);
   assert.equal(missing.status, 'insufficient-evidence');
   assert.ok(missing.reason_codes.includes('calibration-missing'));
 
   const noCalibration = interpret([o], [], policy(q, {
     minimum_calibration_state: 'none',
     minimum_sample_count: 0
-  }));
+  }), [p], [q]);
   assert.equal(noCalibration.status, 'accepted-evidence');
 });
 
@@ -313,13 +321,13 @@ test('invalid observation or calibration self-digests become invalid-evidence ra
 
   const badObservation = clone(o);
   badObservation.latency_ms += 1;
-  let result = interpret([badObservation], [c], policy(q));
+  let result = interpret([badObservation], [c], policy(q), [p], [q]);
   assert.equal(result.status, 'invalid-evidence');
   assert.ok(result.reason_codes.includes('observation-invalid'));
 
   const badCalibration = clone(c);
   badCalibration.sample_count += 1;
-  result = interpret([o], [badCalibration], policy(q));
+  result = interpret([o], [badCalibration], policy(q), [p], [q]);
   assert.equal(result.status, 'invalid-evidence');
   assert.ok(result.reason_codes.includes('calibration-invalid'));
 });
@@ -337,7 +345,7 @@ test('reviewed calibration fails sufficiency when expired rejected undersampled 
   ];
   for (const [c, reason] of cases) {
     c.report_digest = computeBoundedDecisionCalibrationReportDigest(c);
-    const result = interpret([o], [c], policy(q));
+    const result = interpret([o], [c], policy(q), [p], [q]);
     assert.equal(result.status, 'insufficient-evidence');
     assert.ok(result.reason_codes.includes(reason));
   }
@@ -345,16 +353,16 @@ test('reviewed calibration fails sufficiency when expired rejected undersampled 
   const wrongProfile = calibration(p, [q]);
   wrongProfile.provider_profile_digest = A;
   wrongProfile.report_digest = computeBoundedDecisionCalibrationReportDigest(wrongProfile);
-  let result = interpret([o], [wrongProfile], policy(q));
-  assert.equal(result.status, 'insufficient-evidence');
-  assert.ok(result.reason_codes.includes('calibration-profile-mismatch'));
+  let result = interpret([o], [wrongProfile], policy(q), [p], [q]);
+  assert.equal(result.status, 'invalid-evidence');
+  assert.ok(result.reason_codes.includes('calibration-invalid'));
 
   const wrongSchema = calibration(p, [q]);
   wrongSchema.question_schema_family_refs[0].question_schema_digest = A;
   wrongSchema.report_digest = computeBoundedDecisionCalibrationReportDigest(wrongSchema);
-  result = interpret([o], [wrongSchema], policy(q));
-  assert.equal(result.status, 'insufficient-evidence');
-  assert.ok(result.reason_codes.includes('calibration-schema-mismatch'));
+  result = interpret([o], [wrongSchema], policy(q), [p], [q]);
+  assert.equal(result.status, 'invalid-evidence');
+  assert.ok(result.reason_codes.includes('calibration-invalid'));
 });
 
 test('revision policy rejects mutable aliases when reproducible revision evidence is required', () => {
@@ -375,7 +383,7 @@ test('revision policy rejects mutable aliases when reproducible revision evidenc
   const result = interpret([o], [c], policy(q, {
     minimum_calibration_state: 'experimental',
     allowed_revision_evidence: ['provider-versioned', 'exact-artifact']
-  }));
+  }), [p], [q]);
   assert.equal(result.status, 'insufficient-evidence');
   assert.ok(result.reason_codes.includes('revision-evidence-ineligible'));
 });
@@ -417,7 +425,7 @@ test('supports choice and score predicates as deterministic evidence tests', () 
     fallback_route: 'human-review'
   };
 
-  const result = interpret([co, so], [c], itemPolicy);
+  const result = interpret([co, so], [c], itemPolicy, [p], [cq, sq]);
   assert.equal(result.status, 'accepted-evidence');
   assert.equal(result.fallback_route, 'human-review');
 });
