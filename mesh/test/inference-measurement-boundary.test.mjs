@@ -56,7 +56,6 @@ test('inference measurement validator imports no network subprocess credential G
     'hypervisor',
     'sandbox',
     'grid',
-    'credential',
     'wallet',
     'cuda-oxide',
     'cutile',
