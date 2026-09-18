@@ -600,6 +600,374 @@ impl VerifiedAuthority {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfflineEnvelopeInput {
+    pub envelope_ref: String,
+    pub parent_grant_ref: String,
+    pub owner_subject_ref: String,
+    pub target_device_ref: String,
+    pub plan_digest: String,
+    pub node_id: String,
+    pub capability_ref: String,
+    pub revocation_epoch: u64,
+    pub expires_at_unix_s: u64,
+    pub max_effects: u64,
+    pub budget_limits: Vec<BudgetRequest>,
+    pub runtime_surface: RuntimeSurface,
+    pub no_delegation: bool,
+}
+
+#[derive(Debug)]
+pub struct OfflineEnvelope {
+    envelope_ref: String,
+    parent_grant_ref: String,
+    owner_subject_ref: String,
+    target_device_ref: String,
+    plan_digest: String,
+    node_id: String,
+    capability_ref: String,
+    revocation_epoch: u64,
+    expires_at_unix_s: u64,
+    max_effects: u64,
+    budget_limits: BTreeMap<String, BudgetRequest>,
+    runtime_surface: RuntimeSurface,
+}
+
+#[derive(Debug, Default)]
+pub struct OfflineEnvelopeRegistry {
+    imported_refs: BTreeSet<String>,
+}
+
+impl OfflineEnvelopeRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn import_from_trusted_mesh_adapter(
+        &mut self,
+        input: OfflineEnvelopeInput,
+    ) -> KernelResult<OfflineEnvelopeLedger> {
+        require_id(&input.envelope_ref, "offline envelope ref")?;
+        require_id(&input.parent_grant_ref, "offline parent grant ref")?;
+        require_id(&input.owner_subject_ref, "offline owner subject ref")?;
+        require_id(&input.target_device_ref, "offline target device ref")?;
+        require_sha256(&input.plan_digest, "offline plan digest")?;
+        require_id(&input.node_id, "offline node id")?;
+        require_id(&input.capability_ref, "offline capability ref")?;
+
+        if !input.no_delegation {
+            return Err(KernelError::new(
+                "offline envelopes must be explicitly non-delegable",
+            ));
+        }
+        if input.max_effects == 0 {
+            return Err(KernelError::new(
+                "offline envelope must permit at least one bounded effect",
+            ));
+        }
+        if input.budget_limits.is_empty() {
+            return Err(KernelError::new(
+                "offline envelope requires at least one bounded budget",
+            ));
+        }
+        if !self.imported_refs.insert(input.envelope_ref.clone()) {
+            return Err(KernelError::new(
+                "offline envelope replay detected in local registry",
+            ));
+        }
+
+        let mut budget_limits = BTreeMap::<String, BudgetRequest>::new();
+        for request in input.budget_limits {
+            request.validate()?;
+            if budget_limits
+                .insert(request.budget_id.clone(), request)
+                .is_some()
+            {
+                return Err(KernelError::new(
+                    "offline envelope contains duplicate budget limits",
+                ));
+            }
+        }
+
+        Ok(OfflineEnvelopeLedger {
+            envelope: OfflineEnvelope {
+                envelope_ref: input.envelope_ref,
+                parent_grant_ref: input.parent_grant_ref,
+                owner_subject_ref: input.owner_subject_ref,
+                target_device_ref: input.target_device_ref,
+                plan_digest: input.plan_digest,
+                node_id: input.node_id,
+                capability_ref: input.capability_ref,
+                revocation_epoch: input.revocation_epoch,
+                expires_at_unix_s: input.expires_at_unix_s,
+                max_effects: input.max_effects,
+                budget_limits,
+                runtime_surface: input.runtime_surface,
+            },
+            effects_consumed: 0,
+            budget_consumed: BTreeMap::new(),
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct OfflineEnvelopeLedger {
+    envelope: OfflineEnvelope,
+    effects_consumed: u64,
+    budget_consumed: BTreeMap<String, u64>,
+}
+
+impl OfflineEnvelopeLedger {
+    pub fn envelope_ref(&self) -> &str {
+        &self.envelope.envelope_ref
+    }
+
+    pub fn effects_consumed(&self) -> u64 {
+        self.effects_consumed
+    }
+
+    pub fn requires_reconciliation(&self) -> bool {
+        self.effects_consumed > 0
+    }
+
+    pub fn remaining_effects(&self) -> u64 {
+        self.envelope.max_effects - self.effects_consumed
+    }
+
+    fn consume(
+        &mut self,
+        owner_subject_ref: &str,
+        current_revocation_epoch: u64,
+        target_device_ref: &str,
+        current_surface: &RuntimeSurface,
+        now_unix_s: u64,
+        budget_requests: &[BudgetRequest],
+    ) -> KernelResult<OfflineAuthorizedEffect> {
+        if owner_subject_ref != self.envelope.owner_subject_ref {
+            return Err(KernelError::new("offline envelope owner mismatch"));
+        }
+        if current_revocation_epoch != self.envelope.revocation_epoch {
+            return Err(KernelError::new("offline envelope revocation epoch is stale"));
+        }
+        if target_device_ref != self.envelope.target_device_ref {
+            return Err(KernelError::new("offline envelope target device mismatch"));
+        }
+        if current_surface != &self.envelope.runtime_surface {
+            return Err(KernelError::new("offline envelope runtime surface drift"));
+        }
+        if now_unix_s >= self.envelope.expires_at_unix_s {
+            return Err(KernelError::new("offline envelope is expired"));
+        }
+        if self.effects_consumed >= self.envelope.max_effects {
+            return Err(KernelError::new("offline envelope effect count exhausted"));
+        }
+        if budget_requests.is_empty() {
+            return Err(KernelError::new(
+                "offline effect must consume at least one bounded budget",
+            ));
+        }
+
+        let mut local = BTreeMap::<String, u64>::new();
+        for request in budget_requests {
+            request.validate()?;
+            let Some(limit) = self.envelope.budget_limits.get(&request.budget_id) else {
+                return Err(KernelError::new(format!(
+                    "offline budget {} is outside envelope",
+                    request.budget_id
+                )));
+            };
+            if limit.currency != request.currency {
+                return Err(KernelError::new(format!(
+                    "offline budget {} currency mismatch",
+                    request.budget_id
+                )));
+            }
+            let entry = local.entry(request.budget_id.clone()).or_default();
+            *entry = entry
+                .checked_add(request.amount)
+                .ok_or_else(|| KernelError::new("offline budget request overflow"))?;
+        }
+
+        for (budget_id, requested) in &local {
+            let limit = self
+                .envelope
+                .budget_limits
+                .get(budget_id)
+                .ok_or_else(|| KernelError::new("missing offline budget limit"))?;
+            let consumed = self.budget_consumed.get(budget_id).copied().unwrap_or(0);
+            let next = consumed
+                .checked_add(*requested)
+                .ok_or_else(|| KernelError::new("offline budget consumption overflow"))?;
+            if next > limit.amount {
+                return Err(KernelError::new(format!(
+                    "offline budget exhausted:{budget_id}"
+                )));
+            }
+        }
+
+        for (budget_id, requested) in local {
+            *self.budget_consumed.entry(budget_id).or_default() += requested;
+        }
+        self.effects_consumed += 1;
+
+        Ok(OfflineAuthorizedEffect {
+            envelope_ref: self.envelope.envelope_ref.clone(),
+            sequence: self.effects_consumed,
+            parent_grant_ref: self.envelope.parent_grant_ref.clone(),
+            owner_subject_ref: self.envelope.owner_subject_ref.clone(),
+            plan_digest: self.envelope.plan_digest.clone(),
+            node_id: self.envelope.node_id.clone(),
+            capability_ref: self.envelope.capability_ref.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfflineAuthorizedEffect {
+    envelope_ref: String,
+    sequence: u64,
+    parent_grant_ref: String,
+    owner_subject_ref: String,
+    plan_digest: String,
+    node_id: String,
+    capability_ref: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfflineEffectReceipt {
+    pub envelope_ref: String,
+    pub sequence: u64,
+    pub receipt: EffectReceipt,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfflineReconciliationReport {
+    pub envelope_ref: String,
+    pub consumed_effects: u64,
+    pub observed_receipts: u64,
+    pub missing_sequences: Vec<u64>,
+    pub complete: bool,
+}
+
+impl OfflineReconciliationReport {
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AttestationEvidence {
+    pub evidence_ref: String,
+    pub verified: bool,
+    pub trust_domain_ref: String,
+    pub attestation_epoch: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecutionCandidate {
+    pub node_ref: String,
+    pub runtime_surface: RuntimeSurface,
+    pub attestation: AttestationEvidence,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlacementConstraints {
+    pub required_surface: RuntimeSurface,
+    pub require_verified_attestation: bool,
+    pub minimum_attestation_epoch: u64,
+    pub allowed_trust_domains: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CandidatePlacementAssessment {
+    pub node_ref: String,
+    pub eligible: bool,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlacementAssessment {
+    pub candidates: Vec<CandidatePlacementAssessment>,
+}
+
+impl PlacementAssessment {
+    pub fn eligible_node_refs(&self) -> Vec<&str> {
+        self.candidates
+            .iter()
+            .filter(|candidate| candidate.eligible)
+            .map(|candidate| candidate.node_ref.as_str())
+            .collect()
+    }
+
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+pub fn assess_execution_placement(
+    candidates: &[ExecutionCandidate],
+    constraints: &PlacementConstraints,
+) -> KernelResult<PlacementAssessment> {
+    if candidates.is_empty() {
+        return Err(KernelError::new(
+            "execution placement requires at least one candidate",
+        ));
+    }
+
+    let mut allowed_domains = BTreeSet::<String>::new();
+    for domain in &constraints.allowed_trust_domains {
+        require_id(domain, "allowed trust domain ref")?;
+        if !allowed_domains.insert(domain.clone()) {
+            return Err(KernelError::new("duplicate allowed trust domain"));
+        }
+    }
+
+    let mut seen_nodes = BTreeSet::<String>::new();
+    let mut assessments = Vec::with_capacity(candidates.len());
+
+    for candidate in candidates {
+        require_id(&candidate.node_ref, "execution candidate node ref")?;
+        require_id(
+            &candidate.attestation.evidence_ref,
+            "attestation evidence ref",
+        )?;
+        require_id(
+            &candidate.attestation.trust_domain_ref,
+            "attestation trust domain ref",
+        )?;
+        if !seen_nodes.insert(candidate.node_ref.clone()) {
+            return Err(KernelError::new("duplicate execution candidate node"));
+        }
+
+        let mut blockers = BTreeSet::<String>::new();
+        if candidate.runtime_surface != constraints.required_surface {
+            blockers.insert("runtime-surface-mismatch".to_string());
+        }
+        if constraints.require_verified_attestation && !candidate.attestation.verified {
+            blockers.insert("attestation-unverified".to_string());
+        }
+        if candidate.attestation.attestation_epoch < constraints.minimum_attestation_epoch {
+            blockers.insert("attestation-epoch-stale".to_string());
+        }
+        if !allowed_domains.is_empty()
+            && !allowed_domains.contains(&candidate.attestation.trust_domain_ref)
+        {
+            blockers.insert("trust-domain-not-allowed".to_string());
+        }
+
+        let blockers: Vec<String> = blockers.into_iter().collect();
+        assessments.push(CandidatePlacementAssessment {
+            node_ref: candidate.node_ref.clone(),
+            eligible: blockers.is_empty(),
+            blockers,
+        });
+    }
+
+    Ok(PlacementAssessment {
+        candidates: assessments,
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthorizedEffect {
     grant_ref: String,
     owner_subject_ref: String,
@@ -1349,6 +1717,93 @@ impl Kernel {
             capability_ref: authority.capability_ref.clone(),
         };
         port.execute(&effect)
+    }
+
+    pub fn execute_offline_authorized(
+        &self,
+        ledger: &mut OfflineEnvelopeLedger,
+        target_device_ref: &str,
+        current_surface: &RuntimeSurface,
+        now_unix_s: u64,
+        budget_requests: &[BudgetRequest],
+        port: &mut impl EffectPort,
+    ) -> KernelResult<OfflineEffectReceipt> {
+        let offline = ledger.consume(
+            &self.identity.owner_subject_ref,
+            self.revocation_epoch,
+            target_device_ref,
+            current_surface,
+            now_unix_s,
+            budget_requests,
+        )?;
+
+        let effect = AuthorizedEffect {
+            grant_ref: offline.parent_grant_ref,
+            owner_subject_ref: offline.owner_subject_ref,
+            plan_digest: offline.plan_digest,
+            node_id: offline.node_id,
+            capability_ref: offline.capability_ref,
+        };
+        let receipt = port.execute(&effect)?;
+
+        if receipt.grant_ref != effect.grant_ref
+            || receipt.plan_digest != effect.plan_digest
+            || receipt.node_id != effect.node_id
+            || receipt.capability_ref != effect.capability_ref
+        {
+            return Err(KernelError::new(
+                "offline effect receipt does not bind to envelope authority",
+            ));
+        }
+
+        Ok(OfflineEffectReceipt {
+            envelope_ref: offline.envelope_ref,
+            sequence: offline.sequence,
+            receipt,
+        })
+    }
+
+    pub fn reconcile_offline_receipts(
+        &self,
+        ledger: &OfflineEnvelopeLedger,
+        receipts: &[OfflineEffectReceipt],
+    ) -> KernelResult<OfflineReconciliationReport> {
+        let consumed = ledger.effects_consumed();
+        let mut sequences = BTreeSet::<u64>::new();
+
+        for item in receipts {
+            if item.envelope_ref != ledger.envelope.envelope_ref {
+                return Err(KernelError::new(
+                    "offline receipt belongs to another envelope",
+                ));
+            }
+            if item.sequence == 0 || item.sequence > consumed {
+                return Err(KernelError::new("offline receipt sequence is invalid"));
+            }
+            if !sequences.insert(item.sequence) {
+                return Err(KernelError::new("duplicate offline receipt sequence"));
+            }
+            if item.receipt.grant_ref != ledger.envelope.parent_grant_ref
+                || item.receipt.plan_digest != ledger.envelope.plan_digest
+                || item.receipt.node_id != ledger.envelope.node_id
+                || item.receipt.capability_ref != ledger.envelope.capability_ref
+            {
+                return Err(KernelError::new(
+                    "offline receipt binding differs from envelope",
+                ));
+            }
+        }
+
+        let missing_sequences: Vec<u64> = (1..=consumed)
+            .filter(|sequence| !sequences.contains(sequence))
+            .collect();
+        Ok(OfflineReconciliationReport {
+            envelope_ref: ledger.envelope.envelope_ref.clone(),
+            consumed_effects: consumed,
+            observed_receipts: receipts.len() as u64,
+            complete: missing_sequences.is_empty(),
+            missing_sequences,
+        })
     }
 
     pub fn admit_receipt(
