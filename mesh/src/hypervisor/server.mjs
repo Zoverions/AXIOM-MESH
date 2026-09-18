@@ -31,10 +31,13 @@ import {
 import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
-  evaluateMachineIntent,
   machinePrincipalAuthorityFacts,
   normalizeMachinePrincipalDefinition
 } from '../lib/machine-principal.mjs';
+import { normalizeAgentAssuranceEvidence } from '../lib/agent-assurance-evidence.mjs';
+import {
+  evaluateMachineIntentWithAssurance
+} from '../lib/agent-assurance-authority-binding.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import {
   buildNativeInvocationEnvelope,
@@ -182,11 +185,14 @@ export async function createHypervisorService(config = meshConfig()) {
       ? machinePrincipalAuthorityFacts(intent.principal)
       : null;
     let effectDestination;
+    let machineAssurance;
     if (machineAuthority) {
-      const machineDecision = evaluateMachineIntent(intent.principal, {
+      const machineDecision = evaluateMachineIntentWithAssurance(intent.principal, {
         action: intent.action,
-        purpose: intent.purpose
+        purpose: intent.purpose,
+        assurance_evidence: intent.assurance_evidence
       });
+      machineAssurance = machineDecision.assurance ?? null;
       if (!machineDecision.allow) {
         decision = {
           ...decision,
@@ -253,7 +259,8 @@ export async function createHypervisorService(config = meshConfig()) {
         policy_digest: decision.policy_digest,
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
-        ...(machineAuthority ? { machine_authority: machineAuthority } : {})
+        ...(machineAuthority ? { machine_authority: machineAuthority } : {}),
+        ...(machineAssurance ? { machine_assurance: machineAssurance } : {})
       }
     }]);
     if (!decision.allow) {
@@ -623,6 +630,12 @@ function normalizeIntent(raw) {
   };
   if (Number.isNaN(new Date(normalized.submitted_at).valueOf())) {
     throw new ValidationError('intent.submitted_at must be an ISO timestamp');
+  }
+  if (value.assurance_evidence !== undefined) {
+    if (normalizedPrincipal.schema !== 'axiom-machine-principal.v1') {
+      throw new ValidationError('Agent assurance evidence requires a constrained machine principal');
+    }
+    normalized.assurance_evidence = normalizeAgentAssuranceEvidence(value.assurance_evidence);
   }
   return normalized;
 }
