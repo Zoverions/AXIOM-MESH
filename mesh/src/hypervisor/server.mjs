@@ -185,12 +185,14 @@ export async function createHypervisorService(config = meshConfig()) {
       ? machinePrincipalAuthorityFacts(intent.principal)
       : null;
     let effectDestination;
+    let machineAssurance;
     if (machineAuthority) {
       const machineDecision = evaluateMachineIntentWithAssurance(intent.principal, {
         action: intent.action,
         purpose: intent.purpose,
         assurance_evidence: intent.assurance_evidence
       });
+      machineAssurance = machineDecision.assurance ?? null;
       if (!machineDecision.allow) {
         decision = {
           ...decision,
@@ -257,7 +259,8 @@ export async function createHypervisorService(config = meshConfig()) {
         policy_digest: decision.policy_digest,
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
-        ...(machineAuthority ? { machine_authority: machineAuthority } : {})
+        ...(machineAuthority ? { machine_authority: machineAuthority } : {}),
+        ...(machineAssurance ? { machine_assurance: machineAssurance } : {})
       }
     }]);
     if (!decision.allow) {
