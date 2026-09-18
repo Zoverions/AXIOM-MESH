@@ -268,6 +268,8 @@ decision.
 - [Research Knowledge Projection v0](architecture/contracts/research-knowledge-projection.v0.schema.json)
 - [Research Operation Candidate v0](architecture/contracts/research-operation-candidate.v0.schema.json)
 - [Research Reproduction Evidence v0](architecture/contracts/research-reproduction-evidence.v0.schema.json)
+- [Research Contribution v0](architecture/contracts/research-contribution.v0.schema.json)
+- [Research Relation v0](architecture/contracts/research-relation.v0.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
@@ -275,7 +277,14 @@ other drafts or promote any capability or external compatibility claim. Research
 Capsule v0 additionally has a zero-dependency semantic verifier and synthetic
 conformance tests, but it still adds no Gateway route, capability-registry entry,
 remote MCP connection, provider call, credential path, or scientific-truth
-claim. The two Runtime & Connector Fabric v1 schema files are now raw-byte
+claim. Research Composition Graph v0 adds immutable contribution/relation
+contracts plus a rebuildable local lineage/frontier diagnostic; its roots,
+frontier, concentration, disagreement, and attention views remain derived
+navigation evidence only and create no truth, reputation, execution, merge,
+or deployment authority. Future semantic-diversity judgments may add evidence to
+this graph, but do not become truth or authority. Lineage relations remain
+acyclic; support and contradiction may remain cyclic as visible disagreement.
+The two Runtime & Connector Fabric v1 schema files are now raw-byte
 pinned by the zero-dependency frozen-contract verifier and protected test surface
 at:
 
