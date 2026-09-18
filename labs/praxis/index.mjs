@@ -125,6 +125,29 @@ function operationDigest(value) {
   return `sha256:${digestPraxis(value)}`;
 }
 
+export function operationDigestPraxis({
+  action,
+  scope,
+  args = [],
+  secretReferences = []
+}) {
+  return operationDigest({
+    schema: 'praxis-operation.v0',
+    action: String(action),
+    scope: String(scope),
+    args,
+    secret_references: secretReferences
+  });
+}
+
+export function irDigestPraxis(ir) {
+  if (!ir || typeof ir !== 'object') {
+    throw new TypeError('Praxis IR digest requires an object');
+  }
+  const { digest: ignoredDigest, ...body } = ir;
+  return `sha256:${digestPraxis(body)}`;
+}
+
 export function lex(source) {
   if (typeof source !== 'string') throw new TypeError('Praxis source must be a string');
 
@@ -840,7 +863,7 @@ export function analyze(ast) {
     }
   }
 
-  return Object.freeze({
+  const moduleBody = {
     schema: 'praxis-ir.v0',
     required_permits: Object.freeze(requiredPermits.map(item => Object.freeze({ ...item }))),
     required_secrets: Object.freeze(requiredSecrets.map(item => Object.freeze({ ...item }))),
@@ -849,6 +872,11 @@ export function analyze(ast) {
     bindings: Object.freeze(
       Object.fromEntries([...env.entries()].map(([name, type]) => [name, Object.freeze({ ...type })]))
     )
+  };
+
+  return Object.freeze({
+    ...moduleBody,
+    digest: irDigestPraxis(moduleBody)
   });
 }
 
@@ -856,18 +884,26 @@ export function compile(source) {
   return analyze(parse(source));
 }
 
-export function createHostPermit({ action, scope, id }) {
+function normalizeOperationDigest(value, label = 'operationDigest') {
+  if (typeof value !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(value)) {
+    throw new TypeError(`${label} must be a sha256:<hex> digest`);
+  }
+  return value;
+}
+
+export function createHostPermit({ action, scope, id, operationDigest: planDigest }) {
   if (!action || !scope || !id) throw new TypeError('host permit requires action, scope, and id');
   return Object.freeze({
     [HOST_AUTHORITY]: 'Permit',
     schema: 'praxis-host-permit.v0',
     id: String(id),
     action: String(action),
-    scope: String(scope)
+    scope: String(scope),
+    operation_digest: normalizeOperationDigest(planDigest)
   });
 }
 
-export function createHostLease({ action, scope, id, expiresAt }) {
+export function createHostLease({ action, scope, id, expiresAt, operationDigest: planDigest }) {
   if (!action || !scope || !id || expiresAt === undefined || expiresAt === null) {
     throw new TypeError('host lease requires action, scope, id, and expiresAt');
   }
@@ -881,11 +917,20 @@ export function createHostLease({ action, scope, id, expiresAt }) {
     id: String(id),
     action: String(action),
     scope: String(scope),
+    operation_digest: normalizeOperationDigest(planDigest),
     expires_at_ms: expiresAtMs
   });
 }
 
-export function createHostQuorum({ id, action, scope, members, approvedBy }) {
+export function createHostQuorum({
+  id,
+  action,
+  scope,
+  members,
+  approvedBy,
+  threshold,
+  operationDigest: planDigest
+}) {
   if (!id || !action || !scope) {
     throw new TypeError('host quorum requires id, action, and scope');
   }
@@ -894,6 +939,9 @@ export function createHostQuorum({ id, action, scope, members, approvedBy }) {
   }
   if (!Array.isArray(approvedBy)) {
     throw new TypeError('host quorum approvedBy must be an array');
+  }
+  if (!Number.isSafeInteger(threshold) || threshold < 1 || threshold > members.length) {
+    throw new TypeError('host quorum threshold must be an integer within the member set');
   }
   const normalizedMembers = members.map(String);
   const normalizedApprovals = approvedBy.map(String);
@@ -913,6 +961,8 @@ export function createHostQuorum({ id, action, scope, members, approvedBy }) {
     id: String(id),
     action: String(action),
     scope: String(scope),
+    operation_digest: normalizeOperationDigest(planDigest),
+    threshold,
     members: Object.freeze([...normalizedMembers].sort()),
     approved_by: Object.freeze([...normalizedApprovals].sort())
   });
@@ -958,6 +1008,7 @@ export function createHostPreparedRef({
     !authority
     || authority.action !== action
     || authority.scope !== scope
+    || authority.operation_digest !== suppliedDigest
     || typeof authority.authority_id !== 'string'
   ) {
     throw new TypeError('host prepared reference authority binding is invalid');
@@ -993,7 +1044,8 @@ function resolveValue(arg, values) {
 
 function validateAuthorityToken(token, requirement, {
   nowMs,
-  revokedAuthorityIds
+  revokedAuthorityIds,
+  operationDigest: expectedOperationDigest = null
 }) {
   const expectedKind = requirement.authority_kind ?? 'Permit';
   if (!token || token[HOST_AUTHORITY] !== expectedKind) {
@@ -1026,6 +1078,12 @@ function validateAuthorityToken(token, requirement, {
         `host quorum ${token.id} does not match the declared member set`
       );
     }
+    if (token.threshold !== requirement.threshold) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_QUORUM_MISMATCH',
+        `host quorum ${token.id} threshold ${token.threshold} does not match declared threshold ${requirement.threshold}`
+      );
+    }
     if (!Array.isArray(token.approved_by) || token.approved_by.length < requirement.threshold) {
       throw new PraxisRuntimeError(
         'PRAXIS_HOST_QUORUM_INSUFFICIENT',
@@ -1044,6 +1102,93 @@ function validateAuthorityToken(token, requirement, {
       'PRAXIS_HOST_AUTHORITY_MISMATCH',
       `host authority ${token.id} grants ${token.action}@${token.scope}, expected ${requirement.action}@${requirement.scope}`
     );
+  }
+  if (expectedOperationDigest !== null && token.operation_digest !== expectedOperationDigest) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_AUTHORITY_PLAN_MISMATCH',
+      `host authority ${token.id} is not bound to operation ${expectedOperationDigest}`
+    );
+  }
+}
+
+function runtimeKnowledgeKind(kind) {
+  return kind === 'Observed' || kind === 'Verified' || kind === 'Assessment' || kind === 'Receipt';
+}
+
+function assertRuntimeOrdinaryValue(value, path = 'value', seen = new Set()) {
+  if (value === null || typeof value !== 'object') return;
+
+  if (seen.has(value)) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_IR_MALFORMED',
+      `runtime value at ${path} contains a cycle`
+    );
+  }
+  seen.add(value);
+
+  if (value.kind === 'SecretRef') {
+    throw new PraxisRuntimeError(
+      'PRAXIS_SECRET_EXFILTRATION',
+      `SecretRef cannot cross the ordinary value channel at ${path}`
+    );
+  }
+  if (
+    value.kind === 'Permit'
+    || value.kind === 'Lease'
+    || value.kind === 'Quorum'
+    || value.kind === 'AuthorizedOperation'
+    || value.kind === 'PreparedOperation'
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_AUTHORITY_EXFILTRATION',
+      `${value.kind} cannot cross the ordinary value channel at ${path}`
+    );
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertRuntimeOrdinaryValue(item, `${path}[${index}]`, seen));
+  } else {
+    for (const [key, item] of Object.entries(value)) {
+      assertRuntimeOrdinaryValue(item, `${path}.${key}`, seen);
+    }
+  }
+  seen.delete(value);
+}
+
+function validateRuntimeIr(ir) {
+  if (!ir || ir.schema !== 'praxis-ir.v0') {
+    throw new PraxisRuntimeError('PRAXIS_IR_MALFORMED', 'run expects praxis-ir.v0');
+  }
+  if (ir.digest !== irDigestPraxis(ir)) {
+    throw new PraxisRuntimeError('PRAXIS_IR_TAMPERED', 'Praxis IR digest mismatch');
+  }
+  if (
+    !Array.isArray(ir.required_permits)
+    || !Array.isArray(ir.required_secrets)
+    || !Array.isArray(ir.required_prepared)
+    || !Array.isArray(ir.instructions)
+  ) {
+    throw new PraxisRuntimeError('PRAXIS_IR_MALFORMED', 'Praxis IR tables must be arrays');
+  }
+  const allowed = new Set([
+    'REQUIRE_PERMIT',
+    'REQUIRE_LEASE',
+    'REQUIRE_QUORUM',
+    'REQUIRE_SECRET',
+    'REQUIRE_PREPARED',
+    'OBSERVE',
+    'VERIFY',
+    'ASSESS',
+    'PLAN',
+    'AUTHORIZE',
+    'PREPARE',
+    'CANCEL',
+    'COMMIT'
+  ]);
+  for (const instruction of ir.instructions) {
+    if (!instruction || typeof instruction !== 'object' || !allowed.has(instruction.op)) {
+      throw new PraxisRuntimeError('PRAXIS_IR_MALFORMED', 'Praxis IR contains an unknown instruction');
+    }
   }
 }
 
@@ -1075,9 +1220,7 @@ export async function run(source, {
   revokedAuthorityIds = []
 } = {}) {
   const ir = typeof source === 'string' ? compile(source) : source;
-  if (!ir || ir.schema !== 'praxis-ir.v0') {
-    throw new TypeError('run expects Praxis source or praxis-ir.v0');
-  }
+  validateRuntimeIr(ir);
 
   const values = new Map();
   const requirements = new Map(ir.required_permits.map(item => [item.name, item]));
@@ -1086,8 +1229,22 @@ export async function run(source, {
   const authorityTokens = new Map();
   const secretRefs = new Map();
   const preparedRefs = new Map();
+  const terminalPreparedValues = new WeakSet();
   const nowMs = normalizeRuntimeTime(now);
   const revoked = normalizeRevocations(revokedAuthorityIds);
+
+  const bindValue = (name, value) => {
+    if (typeof name !== 'string' || name.length === 0) {
+      throw new PraxisRuntimeError('PRAXIS_IR_MALFORMED', 'Praxis IR binding name is invalid');
+    }
+    if (values.has(name)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_IR_DUPLICATE_BINDING',
+        `Praxis IR attempts to redefine binding ${name}`
+      );
+    }
+    values.set(name, value);
+  };
 
   for (const requirement of ir.required_permits) {
     const token = authorities[requirement.name];
@@ -1096,7 +1253,7 @@ export async function run(source, {
       revokedAuthorityIds: revoked
     });
     authorityTokens.set(requirement.name, token);
-    values.set(requirement.name, {
+    bindValue(requirement.name, {
       kind: requirement.authority_kind ?? 'Permit',
       authority_id: token.id,
       action: token.action,
@@ -1123,7 +1280,7 @@ export async function run(source, {
       );
     }
     secretRefs.set(requirement.name, ref);
-    values.set(requirement.name, Object.freeze({
+    bindValue(requirement.name, Object.freeze({
       kind: 'SecretRef',
       secret_ref_id: ref.id,
       secret_kind: ref.kind
@@ -1151,7 +1308,7 @@ export async function run(source, {
       );
     }
     preparedRefs.set(requirement.name, ref);
-    values.set(requirement.name, Object.freeze({
+    bindValue(requirement.name, Object.freeze({
       kind: 'PreparedOperation',
       operation: ref.operation,
       authority: ref.authority,
@@ -1170,16 +1327,25 @@ export async function run(source, {
       case 'REQUIRE_PREPARED':
         break;
 
-      case 'OBSERVE':
-        values.set(instruction.name, {
+      case 'OBSERVE': {
+        const observedValue = resolveValue(instruction.value, values);
+        assertRuntimeOrdinaryValue(observedValue, `observe ${instruction.name}`);
+        bindValue(instruction.name, {
           kind: 'Observed',
-          value: resolveValue(instruction.value, values),
+          value: observedValue,
           provenance: instruction.provenance
         });
         break;
+      }
 
       case 'VERIFY': {
         const input = values.get(instruction.input);
+        if (!input || (input.kind !== 'Observed' && input.kind !== 'Verified')) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_VERIFY_REQUIRES_EVIDENCE',
+            `verify requires Observed or Verified input, received ${input?.kind ?? 'missing'}`
+          );
+        }
         const verifier = verifiers[instruction.policy];
         if (typeof verifier !== 'function') {
           throw new PraxisRuntimeError(
@@ -1194,7 +1360,7 @@ export async function run(source, {
             `verifier ${instruction.policy} did not return explicit ok:true`
           );
         }
-        values.set(instruction.name, {
+        bindValue(instruction.name, {
           kind: 'Verified',
           value: input.value,
           provenance: input.provenance,
@@ -1206,6 +1372,12 @@ export async function run(source, {
 
       case 'ASSESS': {
         const input = values.get(instruction.input);
+        if (!input || !runtimeKnowledgeKind(input.kind) || input.kind === 'Receipt') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_ASSESS_REQUIRES_KNOWLEDGE',
+            `assess requires knowledge input, received ${input?.kind ?? 'missing'}`
+          );
+        }
         const assessor = assessors[instruction.policy];
         if (typeof assessor !== 'function') {
           throw new PraxisRuntimeError(
@@ -1220,7 +1392,7 @@ export async function run(source, {
             `assessor ${instruction.policy} did not return explicit ok:true with value`
           );
         }
-        values.set(instruction.name, {
+        bindValue(instruction.name, {
           kind: 'Assessment',
           value: result.value,
           policy: instruction.policy,
@@ -1230,7 +1402,14 @@ export async function run(source, {
       }
 
       case 'PLAN': {
-        const args = instruction.args.map(arg => resolveValue(arg, values));
+        if (!Array.isArray(instruction.args) || !Array.isArray(instruction.secrets ?? [])) {
+          throw new PraxisRuntimeError('PRAXIS_IR_MALFORMED', 'PLAN args/secrets must be arrays');
+        }
+        const args = instruction.args.map((arg, index) => {
+          const value = resolveValue(arg, values);
+          assertRuntimeOrdinaryValue(value, `PLAN ${instruction.name} arg ${index}`);
+          return value;
+        });
         const secretReferences = (instruction.secrets ?? []).map(name => {
           const requirement = secretRequirements.get(name);
           const ref = secretRefs.get(name);
@@ -1253,7 +1432,7 @@ export async function run(source, {
           args,
           secret_references: Object.freeze(secretReferences)
         });
-        values.set(instruction.name, Object.freeze({
+        bindValue(instruction.name, Object.freeze({
           kind: 'Operation',
           ...operation,
           operation_digest: operationDigest(operation)
@@ -1263,20 +1442,41 @@ export async function run(source, {
 
       case 'AUTHORIZE': {
         const operation = values.get(instruction.operation);
+        if (!operation || operation.kind !== 'Operation') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_AUTHORIZE_REQUIRES_OPERATION',
+            `authorize requires Operation, received ${operation?.kind ?? 'missing'}`
+          );
+        }
         const requirement = requirements.get(instruction.permit);
         const token = authorityTokens.get(instruction.permit);
+        const authorityValue = values.get(instruction.permit);
+        if (!requirement || !token || !authorityValue) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_HOST_AUTHORITY_REQUIRED',
+            `authority binding ${instruction.permit} is unavailable`
+          );
+        }
+        if (!['Permit', 'Lease', 'Quorum'].includes(authorityValue.kind)) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_AUTHORIZE_REQUIRES_PERMIT',
+            `authorize requires Permit, Lease, or Quorum, received ${authorityValue.kind}`
+          );
+        }
         validateAuthorityToken(token, requirement, {
           nowMs,
-          revokedAuthorityIds: revoked
+          revokedAuthorityIds: revoked,
+          operationDigest: operation.operation_digest
         });
-        values.set(instruction.name, Object.freeze({
+        bindValue(instruction.name, Object.freeze({
           kind: 'AuthorizedOperation',
           operation,
           permit_name: instruction.permit,
           authority: Object.freeze({
             authority_id: token.id,
             action: token.action,
-            scope: token.scope
+            scope: token.scope,
+            operation_digest: token.operation_digest
           })
         }));
         break;
@@ -1291,11 +1491,18 @@ export async function run(source, {
         }
 
         const authorized = values.get(instruction.operation);
+        if (!authorized || authorized.kind !== 'AuthorizedOperation' || authorized.operation?.kind !== 'Operation') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_PREPARE_REQUIRES_AUTHORITY',
+            `prepare requires AuthorizedOperation, received ${authorized?.kind ?? 'missing'}`
+          );
+        }
         const requirement = requirements.get(authorized.permit_name);
         const token = authorityTokens.get(authorized.permit_name);
         validateAuthorityToken(token, requirement, {
           nowMs,
-          revokedAuthorityIds: revoked
+          revokedAuthorityIds: revoked,
+          operationDigest: authorized.operation.operation_digest
         });
 
         const request = Object.freeze({
@@ -1338,7 +1545,7 @@ export async function run(source, {
         }
 
         consumedAuthorityTokens.add(token);
-        values.set(instruction.name, Object.freeze({
+        bindValue(instruction.name, Object.freeze({
           kind: 'PreparedOperation',
           operation: authorized.operation,
           authority: authorized.authority,
@@ -1356,6 +1563,18 @@ export async function run(source, {
         }
 
         const preparedValue = values.get(instruction.operation);
+        if (!preparedValue || preparedValue.kind !== 'PreparedOperation') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_CANCEL_REQUIRES_PREPARATION',
+            `cancel requires PreparedOperation, received ${preparedValue?.kind ?? 'missing'}`
+          );
+        }
+        if (terminalPreparedValues.has(preparedValue)) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_LINEAR_OPERATION_REUSE',
+            'prepared operation already has a terminal transition'
+          );
+        }
         const cancellationRequest = Object.freeze({
           schema: 'praxis-cancellation-request.v0',
           operation_digest: preparedValue.operation.operation_digest,
@@ -1396,10 +1615,11 @@ export async function run(source, {
           );
         }
 
+        terminalPreparedValues.add(preparedValue);
         const importedRef = preparedRefs.get(instruction.operation);
         if (importedRef) consumedPreparedRefs.add(importedRef);
 
-        values.set(instruction.name, Object.freeze({
+        bindValue(instruction.name, Object.freeze({
           kind: 'CancellationReceipt',
           schema: 'praxis-cancellation-receipt.v0',
           operation_digest: cancellationRequest.operation_digest,
@@ -1424,6 +1644,18 @@ export async function run(source, {
         }
 
         const prepared = values.get(instruction.operation);
+        if (!prepared || prepared.kind !== 'PreparedOperation') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_COMMIT_REQUIRES_PREPARATION',
+            `commit requires PreparedOperation, received ${prepared?.kind ?? 'missing'}`
+          );
+        }
+        if (terminalPreparedValues.has(prepared)) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_LINEAR_OPERATION_REUSE',
+            'prepared operation already has a terminal transition'
+          );
+        }
         const expectedDigest = prepared.operation.operation_digest;
         const preparationDigest = prepared.preparation.preparation_digest;
         const request = Object.freeze({
@@ -1523,10 +1755,11 @@ export async function run(source, {
           );
         }
 
+        terminalPreparedValues.add(prepared);
         const importedRef = preparedRefs.get(instruction.operation);
         if (importedRef) consumedPreparedRefs.add(importedRef);
 
-        values.set(instruction.name, Object.freeze({
+        bindValue(instruction.name, Object.freeze({
           kind: 'Receipt',
           schema: 'praxis-receipt.v0',
           operation_digest: expectedDigest,
