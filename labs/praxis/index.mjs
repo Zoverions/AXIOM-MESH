@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 const HOST_AUTHORITY = Symbol('praxis.host-authority');
+const HOST_SECRET_REF = Symbol('praxis.host-secret-ref');
 const consumedAuthorityTokens = new WeakSet();
 
 export class PraxisSyntaxError extends Error {
@@ -21,10 +22,11 @@ export class PraxisTypeError extends Error {
 }
 
 export class PraxisRuntimeError extends Error {
-  constructor(code, message) {
+  constructor(code, message, details = undefined) {
     super(message);
     this.name = 'PraxisRuntimeError';
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -262,7 +264,7 @@ class Parser {
 
     switch (token.value) {
       case 'requires':
-        return this.requiresAuthority();
+        return this.requiresResource();
       case 'observe':
         return this.observe();
       case 'verify':
@@ -273,6 +275,8 @@ class Parser {
         return this.operation();
       case 'authorize':
         return this.authorize();
+      case 'prepare':
+        return this.prepare();
       case 'commit':
         return this.commit();
       default:
@@ -280,23 +284,35 @@ class Parser {
     }
   }
 
-  requiresAuthority() {
+  requiresResource() {
     this.word('requires');
-    const authorityType = this.identifier();
-    if (authorityType !== 'permit' && authorityType !== 'lease') {
-      throw new PraxisSyntaxError(
-        'requires must declare permit or lease',
-        this.tokens[this.index - 1]
-      );
-    }
+    const resourceType = this.identifier();
     const name = this.identifier();
     this.take(':');
+
+    if (resourceType === 'secret') {
+      const secretKind = this.identifier();
+      this.take(';');
+      return {
+        kind: 'RequireSecret',
+        name,
+        secretKind
+      };
+    }
+
+    if (resourceType !== 'permit' && resourceType !== 'lease') {
+      throw new PraxisSyntaxError(
+        'requires must declare permit, lease, or secret',
+        this.tokens[this.index - 2]
+      );
+    }
+
     const action = this.identifier();
     this.take('@');
     const scope = this.identifier();
     this.take(';');
     return {
-      kind: authorityType === 'permit' ? 'RequirePermit' : 'RequireLease',
+      kind: resourceType === 'permit' ? 'RequirePermit' : 'RequireLease',
       name,
       action,
       scope
@@ -353,8 +369,18 @@ class Parser {
     this.take(')');
     this.take('@');
     const scope = this.identifier();
+    const secrets = [];
+    if (this.current().type === 'word' && this.current().value === 'using') {
+      this.word('using');
+      this.word('secrets');
+      secrets.push(this.identifier());
+      while (this.current().type === ',') {
+        this.take(',');
+        secrets.push(this.identifier());
+      }
+    }
     this.take(';');
-    return { kind: 'Operation', name, action, scope, args };
+    return { kind: 'Operation', name, action, scope, args, secrets };
   }
 
   authorize() {
@@ -366,6 +392,15 @@ class Parser {
     const name = this.identifier();
     this.take(';');
     return { kind: 'Authorize', name, operation, permit };
+  }
+
+  prepare() {
+    this.word('prepare');
+    const operation = this.identifier();
+    this.word('as');
+    const name = this.identifier();
+    this.take(';');
+    return { kind: 'Prepare', name, operation };
   }
 
   commit() {
@@ -414,7 +449,9 @@ export function analyze(ast) {
   const env = new Map();
   const ir = [];
   const requiredPermits = [];
+  const requiredSecrets = [];
   const usedPermits = new Set();
+  const preparedOperations = new Set();
   const committedOperations = new Set();
 
   for (const node of ast.body) {
@@ -442,6 +479,23 @@ export function analyze(ast) {
           name: node.name,
           action: node.action,
           scope: node.scope
+        });
+        break;
+      }
+
+      case 'RequireSecret': {
+        env.set(node.name, {
+          kind: 'SecretRef',
+          secret_kind: node.secretKind
+        });
+        requiredSecrets.push({
+          name: node.name,
+          secret_kind: node.secretKind
+        });
+        ir.push({
+          op: 'REQUIRE_SECRET',
+          name: node.name,
+          secret_kind: node.secretKind
         });
         break;
       }
@@ -491,20 +545,53 @@ export function analyze(ast) {
         for (const arg of node.args) {
           if (arg.kind !== 'reference') continue;
           const input = requireBinding(env, arg.name);
-          if (input.kind === 'Permit' || input.kind === 'Lease' || input.kind === 'AuthorizedOperation') {
+          if (
+            input.kind === 'Permit'
+            || input.kind === 'Lease'
+            || input.kind === 'SecretRef'
+            || input.kind === 'AuthorizedOperation'
+            || input.kind === 'PreparedOperation'
+          ) {
             throw new PraxisTypeError(
-              'PRAXIS_AUTHORITY_EXFILTRATION',
-              `authority binding ${arg.name} cannot be embedded in an operation`
+              input.kind === 'SecretRef'
+                ? 'PRAXIS_SECRET_EXFILTRATION'
+                : 'PRAXIS_AUTHORITY_EXFILTRATION',
+              `${input.kind} binding ${arg.name} cannot be embedded as an ordinary operation argument`
             );
           }
         }
-        env.set(node.name, { kind: 'Operation', action: node.action, scope: node.scope });
+
+        const seenSecrets = new Set();
+        for (const secretName of node.secrets) {
+          if (seenSecrets.has(secretName)) {
+            throw new PraxisTypeError(
+              'PRAXIS_DUPLICATE_SECRET_BINDING',
+              `secret binding ${secretName} is listed more than once`
+            );
+          }
+          seenSecrets.add(secretName);
+          const secret = requireBinding(env, secretName);
+          if (secret.kind !== 'SecretRef') {
+            throw new PraxisTypeError(
+              'PRAXIS_SECRET_REFERENCE_REQUIRED',
+              `operation secret binding ${secretName} must be SecretRef, received ${secret.kind}`
+            );
+          }
+        }
+
+        env.set(node.name, {
+          kind: 'Operation',
+          action: node.action,
+          scope: node.scope,
+          secrets: [...node.secrets]
+        });
         ir.push({
           op: 'PLAN',
           name: node.name,
           action: node.action,
           scope: node.scope,
-          args: node.args
+          args: node.args,
+          secrets: node.secrets
         });
         break;
       }
@@ -555,18 +642,49 @@ export function analyze(ast) {
         break;
       }
 
-      case 'Commit': {
+      case 'Prepare': {
         const operation = requireBinding(env, node.operation);
         if (operation.kind !== 'AuthorizedOperation') {
           throw new PraxisTypeError(
-            'PRAXIS_COMMIT_REQUIRES_AUTHORITY',
-            `commit requires AuthorizedOperation, received ${operation.kind}`
+            'PRAXIS_PREPARE_REQUIRES_AUTHORITY',
+            `prepare requires AuthorizedOperation, received ${operation.kind}`
+          );
+        }
+        if (preparedOperations.has(node.operation)) {
+          throw new PraxisTypeError(
+            'PRAXIS_LINEAR_OPERATION_REUSE',
+            `authorized operation ${node.operation} was already prepared`
+          );
+        }
+        preparedOperations.add(node.operation);
+        env.set(node.name, {
+          kind: 'PreparedOperation',
+          action: operation.action,
+          scope: operation.scope,
+          operation: operation.operation,
+          permit: operation.permit,
+          linear: true
+        });
+        ir.push({
+          op: 'PREPARE',
+          name: node.name,
+          operation: node.operation
+        });
+        break;
+      }
+
+      case 'Commit': {
+        const operation = requireBinding(env, node.operation);
+        if (operation.kind !== 'PreparedOperation') {
+          throw new PraxisTypeError(
+            'PRAXIS_COMMIT_REQUIRES_PREPARATION',
+            `commit requires PreparedOperation, received ${operation.kind}`
           );
         }
         if (committedOperations.has(node.operation)) {
           throw new PraxisTypeError(
             'PRAXIS_LINEAR_OPERATION_REUSE',
-            `authorized operation ${node.operation} was already committed`
+            `prepared operation ${node.operation} was already committed`
           );
         }
         committedOperations.add(node.operation);
@@ -583,6 +701,7 @@ export function analyze(ast) {
   return Object.freeze({
     schema: 'praxis-ir.v0',
     required_permits: Object.freeze(requiredPermits.map(item => Object.freeze({ ...item }))),
+    required_secrets: Object.freeze(requiredSecrets.map(item => Object.freeze({ ...item }))),
     instructions: Object.freeze(ir.map(item => Object.freeze({ ...item }))),
     bindings: Object.freeze(
       Object.fromEntries([...env.entries()].map(([name, type]) => [name, Object.freeze({ ...type })]))
@@ -620,6 +739,16 @@ export function createHostLease({ action, scope, id, expiresAt }) {
     action: String(action),
     scope: String(scope),
     expires_at_ms: expiresAtMs
+  });
+}
+
+export function createHostSecretRef({ id, kind }) {
+  if (!id || !kind) throw new TypeError('host secret reference requires id and kind');
+  return Object.freeze({
+    [HOST_SECRET_REF]: true,
+    schema: 'praxis-host-secret-ref.v0',
+    id: String(id),
+    kind: String(kind)
   });
 }
 
@@ -684,7 +813,10 @@ function normalizeRevocations(value) {
 
 export async function run(source, {
   authorities = {},
+  secrets = {},
+  preparer = null,
   executor = null,
+  completer = null,
   verifiers = {},
   assessors = {},
   now = Date.now(),
@@ -697,7 +829,9 @@ export async function run(source, {
 
   const values = new Map();
   const requirements = new Map(ir.required_permits.map(item => [item.name, item]));
+  const secretRequirements = new Map((ir.required_secrets ?? []).map(item => [item.name, item]));
   const authorityTokens = new Map();
+  const secretRefs = new Map();
   const nowMs = normalizeRuntimeTime(now);
   const revoked = normalizeRevocations(revokedAuthorityIds);
 
@@ -717,10 +851,33 @@ export async function run(source, {
     });
   }
 
+  for (const requirement of ir.required_secrets ?? []) {
+    const ref = secrets[requirement.name];
+    if (!ref || ref[HOST_SECRET_REF] !== true) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_SECRET_REQUIRED',
+        `host did not provide an opaque secret reference for ${requirement.name}`
+      );
+    }
+    if (ref.kind !== requirement.secret_kind) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_SECRET_KIND_MISMATCH',
+        `host secret reference ${ref.id} has kind ${ref.kind}, expected ${requirement.secret_kind}`
+      );
+    }
+    secretRefs.set(requirement.name, ref);
+    values.set(requirement.name, Object.freeze({
+      kind: 'SecretRef',
+      secret_ref_id: ref.id,
+      secret_kind: ref.kind
+    }));
+  }
+
   for (const instruction of ir.instructions) {
     switch (instruction.op) {
       case 'REQUIRE_PERMIT':
       case 'REQUIRE_LEASE':
+      case 'REQUIRE_SECRET':
         break;
 
       case 'OBSERVE':
@@ -784,11 +941,27 @@ export async function run(source, {
 
       case 'PLAN': {
         const args = instruction.args.map(arg => resolveValue(arg, values));
+        const secretReferences = (instruction.secrets ?? []).map(name => {
+          const requirement = secretRequirements.get(name);
+          const ref = secretRefs.get(name);
+          if (!requirement || !ref) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_HOST_SECRET_REQUIRED',
+              `secret reference ${name} is unavailable`
+            );
+          }
+          return Object.freeze({
+            binding: name,
+            secret_ref_id: ref.id,
+            secret_kind: ref.kind
+          });
+        });
         const operation = Object.freeze({
           schema: 'praxis-operation.v0',
           action: instruction.action,
           scope: instruction.scope,
-          args
+          args,
+          secret_references: Object.freeze(secretReferences)
         });
         values.set(instruction.name, Object.freeze({
           kind: 'Operation',
@@ -806,15 +979,80 @@ export async function run(source, {
           nowMs,
           revokedAuthorityIds: revoked
         });
-        consumedAuthorityTokens.add(token);
         values.set(instruction.name, Object.freeze({
           kind: 'AuthorizedOperation',
           operation,
+          permit_name: instruction.permit,
           authority: Object.freeze({
             authority_id: token.id,
             action: token.action,
             scope: token.scope
           })
+        }));
+        break;
+      }
+
+      case 'PREPARE': {
+        if (typeof preparer !== 'function') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_PREPARER_REQUIRED',
+            'prepare is fail-closed: a host durable preparer must be explicitly injected'
+          );
+        }
+
+        const authorized = values.get(instruction.operation);
+        const requirement = requirements.get(authorized.permit_name);
+        const token = authorityTokens.get(authorized.permit_name);
+        validateAuthorityToken(token, requirement, {
+          nowMs,
+          revokedAuthorityIds: revoked
+        });
+
+        const request = Object.freeze({
+          schema: 'praxis-prepare-request.v0',
+          operation: authorized.operation,
+          authority: authorized.authority
+        });
+
+        let preparedResult;
+        try {
+          preparedResult = await preparer(request);
+        } catch {
+          throw new PraxisRuntimeError(
+            'PRAXIS_PREPARATION_UNCOMMITTED',
+            'effect was not made executable because durable preparation failed',
+            {
+              operation_digest: authorized.operation.operation_digest,
+              executor_invoked: false
+            }
+          );
+        }
+
+        const evidence = preparedResult?.evidence;
+        if (
+          preparedResult?.ok !== true
+          || !evidence
+          || evidence.durable !== true
+          || evidence.operation_digest !== authorized.operation.operation_digest
+          || typeof evidence.preparation_digest !== 'string'
+          || !/^sha256:[a-f0-9]{64}$/.test(evidence.preparation_digest)
+        ) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_PREPARATION_EVIDENCE_INVALID',
+            'preparer did not return durable evidence bound to the exact operation digest',
+            {
+              operation_digest: authorized.operation.operation_digest,
+              executor_invoked: false
+            }
+          );
+        }
+
+        consumedAuthorityTokens.add(token);
+        values.set(instruction.name, Object.freeze({
+          kind: 'PreparedOperation',
+          operation: authorized.operation,
+          authority: authorized.authority,
+          preparation: Object.freeze({ ...evidence })
         }));
         break;
       }
@@ -826,25 +1064,109 @@ export async function run(source, {
             'commit is fail-closed: a host executor must be explicitly injected'
           );
         }
+        if (typeof completer !== 'function') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_COMPLETER_REQUIRED',
+            'commit is fail-closed: a host durable completion recorder must be explicitly injected'
+          );
+        }
 
-        const authorized = values.get(instruction.operation);
+        const prepared = values.get(instruction.operation);
+        const expectedDigest = prepared.operation.operation_digest;
+        const preparationDigest = prepared.preparation.preparation_digest;
         const request = Object.freeze({
           schema: 'praxis-commit-request.v0',
-          operation: authorized.operation,
-          authority: authorized.authority
+          operation: prepared.operation,
+          authority: prepared.authority,
+          preparation: prepared.preparation
         });
-        const expectedDigest = authorized.operation.operation_digest;
-        const result = await executor(request);
+
+        let result;
+        try {
+          result = await executor(request);
+        } catch {
+          throw new PraxisRuntimeError(
+            'PRAXIS_EXTERNAL_OUTCOME_UNCERTAIN',
+            'external outcome is unresolved; effect remains prepared',
+            {
+              state: 'prepared',
+              operation_digest: expectedDigest,
+              preparation_digest: preparationDigest,
+              completion_committed: false
+            }
+          );
+        }
+
+        if (result?.status === 'uncertain') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_EXTERNAL_OUTCOME_UNCERTAIN',
+            'external outcome is unresolved; effect remains prepared',
+            {
+              state: 'prepared',
+              operation_digest: expectedDigest,
+              preparation_digest: preparationDigest,
+              completion_committed: false
+            }
+          );
+        }
 
         if (
-          !result
-          || result.ok !== true
+          result?.status !== 'completed'
           || !result.receipt
           || result.receipt.operation_digest !== expectedDigest
+          || result.receipt.preparation_digest !== preparationDigest
         ) {
           throw new PraxisRuntimeError(
-            'PRAXIS_EXECUTOR_RECEIPT_INVALID',
-            'executor did not return an explicit receipt bound to the exact operation digest'
+            'PRAXIS_EXTERNAL_RECEIPT_UNVERIFIED',
+            'external receipt is not verified; effect remains prepared',
+            {
+              state: 'prepared',
+              operation_digest: expectedDigest,
+              preparation_digest: preparationDigest,
+              completion_committed: false
+            }
+          );
+        }
+
+        const completionRequest = Object.freeze({
+          schema: 'praxis-completion-request.v0',
+          operation_digest: expectedDigest,
+          preparation_digest: preparationDigest,
+          receipt: Object.freeze({ ...result.receipt })
+        });
+
+        let completion;
+        try {
+          completion = await completer(completionRequest);
+        } catch {
+          throw new PraxisRuntimeError(
+            'PRAXIS_COMPLETION_UNCOMMITTED',
+            'receipt verified but durable completion failed; replay must use the same prepared effect',
+            {
+              state: 'prepared',
+              operation_digest: expectedDigest,
+              preparation_digest: preparationDigest,
+              completion_committed: false
+            }
+          );
+        }
+
+        if (
+          completion?.ok !== true
+          || !completion.evidence
+          || completion.evidence.durable !== true
+          || completion.evidence.operation_digest !== expectedDigest
+          || completion.evidence.preparation_digest !== preparationDigest
+        ) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_COMPLETION_EVIDENCE_INVALID',
+            'completion recorder did not return durable evidence bound to the prepared effect',
+            {
+              state: 'prepared',
+              operation_digest: expectedDigest,
+              preparation_digest: preparationDigest,
+              completion_committed: false
+            }
           );
         }
 
@@ -852,8 +1174,10 @@ export async function run(source, {
           kind: 'Receipt',
           schema: 'praxis-receipt.v0',
           operation_digest: expectedDigest,
-          authority_id: authorized.authority.authority_id,
-          executor_receipt: Object.freeze({ ...result.receipt })
+          preparation_digest: preparationDigest,
+          authority_id: prepared.authority.authority_id,
+          executor_receipt: Object.freeze({ ...result.receipt }),
+          completion_evidence: Object.freeze({ ...completion.evidence })
         }));
         break;
       }
