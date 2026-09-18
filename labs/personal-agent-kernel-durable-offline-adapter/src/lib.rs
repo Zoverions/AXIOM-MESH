@@ -147,28 +147,37 @@ pub fn persist_prepared_intent(
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct DurableOfflineExecution<'a> {
+    pub target_device_ref: &'a str,
+    pub current_surface: &'a RuntimeSurface,
+    pub now_unix_s: u64,
+    pub budget_requests: &'a [BudgetRequest],
+}
+
 pub fn execute_durable_offline(
     kernel: &Kernel,
     ledger: &mut OfflineEnvelopeLedger,
     journal: &mut OfflineJournal,
-    target_device_ref: &str,
-    current_surface: &RuntimeSurface,
-    now_unix_s: u64,
-    budget_requests: &[BudgetRequest],
+    execution: DurableOfflineExecution<'_>,
     port: &mut impl EffectPort,
 ) -> Result<OfflineEffectReceipt, DurableOfflineError> {
     let intent = kernel.prepare_offline_consumption(
         ledger,
-        target_device_ref,
-        current_surface,
-        now_unix_s,
-        budget_requests,
+        execution.target_device_ref,
+        execution.current_surface,
+        execution.now_unix_s,
+        execution.budget_requests,
     )?;
 
     persist_prepared_intent(journal, &intent)?;
 
-    let committed =
-        kernel.commit_offline_consumption(ledger, &intent, current_surface, now_unix_s)?;
+    let committed = kernel.commit_offline_consumption(
+        ledger,
+        &intent,
+        execution.current_surface,
+        execution.now_unix_s,
+    )?;
 
     Ok(kernel.execute_committed_offline(&committed, port)?)
 }
