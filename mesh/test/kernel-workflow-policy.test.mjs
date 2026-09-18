@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('load-bearing Clean Kernel workflow pins actions, runner, and source paths', async () => {
+test('load-bearing Clean Kernel workflow pins actions and runner and filters no change', async () => {
   const source = await readFile(new URL('../../.github/workflows/kernel.yml', import.meta.url), 'utf8');
   assert.equal(source.includes('ubuntu-latest'), false);
   assert.equal(source.includes('actions/checkout@v7'), false);
@@ -25,6 +25,5 @@ test('load-bearing Clean Kernel workflow pins actions, runner, and source paths'
   assert.ok(source.includes('mesh/test/runtime-provider-catalog-negative.test.mjs'));
   assert.ok(source.includes('--require-commit-bound'));
   assert.ok(source.includes('axiom-runtime-adapter-reference-conformance-evidence-${{ github.sha }}'));
-  assert.equal((source.match(/- "apps\/\*\*"/g) ?? []).length, 2);
-  assert.equal((source.match(/- "packages\/\*\*"/g) ?? []).length, 2);
+  assert.doesNotMatch(source, /^\s+paths(?:-ignore)?:/m);
 });

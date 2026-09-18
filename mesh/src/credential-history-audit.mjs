@@ -24,6 +24,8 @@ const MAX_BLOB_BYTES = 64 * 1024 * 1024;
 const MAX_BATCH_BYTES = 8 * 1024 * 1024;
 const MAX_BATCH_OBJECTS = 128;
 const OBJECT_ID = /^[a-f0-9]{40,64}$/;
+export const GIT_MINIMUM_VERSION = '2.34.0';
+const MAX_GIT_DIAGNOSTIC_CHARACTERS = 240;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CREDENTIAL_ID = /^hmac-sha256:[a-f0-9]{64}$/;
 const HIGH_RISK_PATH = /(?:^|\/)(?:\.env(?:\..*)?|[^/]*(?:secret|credential|keystore|wallet)[^/]*\.(?:conf|env|ini|json|pem|toml|txt|ya?ml)|[^/]*\.(?:key|p12|pfx|jks|keystore)|private(?:[-_.][^/]*)?\.pem)$/i;
@@ -121,6 +123,52 @@ export function findCredentialCandidates(content, path, auditKey) {
     .sort(compareCredentialRecords);
 }
 
+export function parseGitVersion(output) {
+  const match = /^git version (\d+)\.(\d+)\.(\d+)/.exec(String(output).trim());
+  if (!match) throw new ValidationError('Git version output is unrecognized');
+  return match.slice(1, 4).join('.');
+}
+
+export function detectGitVersion({
+  gitExecutable = process.env.AXIOM_GIT_EXECUTABLE || 'git'
+} = {}) {
+  let version;
+  try {
+    version = parseGitVersion(execFileSync(gitExecutable, ['--version'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    }));
+  } catch {
+    return {
+      available: false,
+      version: null,
+      supported: false,
+      minimum_version: GIT_MINIMUM_VERSION
+    };
+  }
+  return {
+    available: true,
+    version,
+    supported: compareVersions(version, GIT_MINIMUM_VERSION) >= 0,
+    minimum_version: GIT_MINIMUM_VERSION
+  };
+}
+
+export function assertSupportedGit(state = detectGitVersion()) {
+  if (!state.available) {
+    throw new ValidationError(
+      `Credential history audit requires Git >=${GIT_MINIMUM_VERSION}; no Git executable was found`
+    );
+  }
+  if (!state.supported) {
+    throw new ValidationError(
+      `Credential history audit requires Git >=${GIT_MINIMUM_VERSION} (you have ${state.version})`
+    );
+  }
+  return state;
+}
+
 export function scanGitHistory({
   repositoryRoot = REPOSITORY_ROOT,
   ref,
@@ -136,14 +184,11 @@ export function scanGitHistory({
   const root = resolve(repositoryRoot);
   const tip = gitText(gitExecutable, ['rev-parse', '--verify', `${ref}^{commit}`], root);
   if (!OBJECT_ID.test(tip)) throw new ValidationError(`Git ref did not resolve to a commit: ${ref}`);
-  const listed = scope === 'history'
-    ? gitText(gitExecutable, ['rev-list', '--objects', ref], root)
-    : gitText(
-      gitExecutable,
-      ['ls-tree', '-r', '--full-tree', '--format=%(objectname) %(path)', ref],
-      root
+  const objects = scope === 'history'
+    ? parseObjectList(gitText(gitExecutable, ['rev-list', '--objects', ref], root))
+    : parseTreeObjectList(
+      gitBuffer(gitExecutable, ['ls-tree', '-r', '-z', '--full-tree', ref], root)
     );
-  const objects = parseObjectList(listed);
   const metadata = inspectObjects(gitExecutable, root, objects);
   const oversizedHighRiskPaths = metadata
     .filter(item => item.type === 'blob' && item.size > MAX_BLOB_BYTES && HIGH_RISK_PATH.test(item.path))
@@ -467,6 +512,7 @@ export async function runCredentialHistoryAudit({
   gitExecutable = process.env.AXIOM_GIT_EXECUTABLE || 'git',
   generatedAt
 } = {}) {
+  assertSupportedGit(detectGitVersion({ gitExecutable }));
   const legacyInventory = scanGitHistory({
     repositoryRoot,
     ref: deprecatedRef,
@@ -710,6 +756,33 @@ function parseObjectList(output) {
   return objects;
 }
 
+function parseTreeObjectList(buffer) {
+  const seen = new Set();
+  const objects = [];
+  let offset = 0;
+  while (offset < buffer.length) {
+    const end = buffer.indexOf(0, offset);
+    if (end < 0) throw new ValidationError('Credential audit Git tree listing is not NUL terminated');
+    if (end === offset) {
+      offset = end + 1;
+      continue;
+    }
+    const record = buffer.subarray(offset, end);
+    offset = end + 1;
+    const tab = record.indexOf(9);
+    if (tab <= 0) throw new ValidationError('Credential audit Git tree record is malformed');
+    const metadata = record.subarray(0, tab).toString('ascii').split(' ');
+    if (metadata.length !== 3) {
+      throw new ValidationError('Credential audit Git tree metadata is malformed');
+    }
+    const [, , id] = metadata;
+    if (!OBJECT_ID.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    objects.push({ id, path: normalizePath(record.subarray(tab + 1).toString('utf8')) });
+  }
+  return objects;
+}
+
 function gitText(executable, args, cwd) {
   return gitBuffer(executable, args, cwd).toString('utf8').trim();
 }
@@ -724,9 +797,43 @@ function gitBuffer(executable, args, cwd, input) {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true
     });
-  } catch {
-    throw new ValidationError(`Credential history audit Git operation failed: ${args[0]}`);
+  } catch (error) {
+    throw new ValidationError(
+      `Credential history audit Git operation failed: ${args[0]} (${gitFailureDetail(error)})`
+    );
   }
+}
+
+function gitFailureDetail(error) {
+  const parts = [];
+  if (error?.code) parts.push(`code ${error.code}`);
+  if (Number.isInteger(error?.status)) parts.push(`exit ${error.status}`);
+  if (error?.signal) parts.push(`signal ${error.signal}`);
+  const stderr = boundedDiagnostic(error?.stderr);
+  if (stderr) parts.push(`stderr: ${stderr}`);
+  return parts.length ? parts.join('; ') : 'no diagnostic available';
+}
+
+function boundedDiagnostic(stderr) {
+  if (!stderr) return '';
+  const text = (Buffer.isBuffer(stderr) ? stderr.toString('utf8') : String(stderr))
+    .replaceAll(/[\p{Cc}\p{Cf}]+/gu, ' ')
+    .trim()
+    .replaceAll(/\s+/g, ' ');
+  return text.length > MAX_GIT_DIAGNOSTIC_CHARACTERS
+    ? `${text.slice(0, MAX_GIT_DIAGNOSTIC_CHARACTERS)}...`
+    : text;
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split('.').map(Number);
+  const rightParts = right.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (leftParts[index] !== rightParts[index]) {
+      return leftParts[index] > rightParts[index] ? 1 : -1;
+    }
+  }
+  return 0;
 }
 
 function normalizePath(path) {

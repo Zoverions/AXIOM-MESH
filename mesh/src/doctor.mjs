@@ -3,6 +3,7 @@
 import { createServer } from 'node:net';
 import { pathToFileURL } from 'node:url';
 import { meshConfig } from './lib/config.mjs';
+import { detectGitVersion } from './credential-history-audit.mjs';
 import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { verifyRepositorySetup } from './setup.mjs';
 
@@ -79,9 +80,11 @@ export async function runDoctor({
   config = meshConfig(),
   verifySetup = verifyRepositorySetup,
   checkPort = checkPortAvailable,
-  checkGridLock = checkGridRuntimeLock
+  checkGridLock = checkGridRuntimeLock,
+  detectGit = detectGitVersion
 } = {}) {
   const setup = await verifySetup();
+  const versionControl = detectGit();
   const gridRuntimeLock = await checkGridLock({ dataDir: config.dataDir });
   const ports = await Promise.all(SERVICES.map(async service => {
     const host = config.hosts[service];
@@ -104,6 +107,7 @@ export async function runDoctor({
     ),
     setup,
     grid_runtime_lock: gridRuntimeLock,
+    version_control: versionControl,
     ports,
     production_credentials_created: false
   };
@@ -121,7 +125,8 @@ export function formatDoctorResult(result, { json = false } = {}) {
     'AXIOM-MESH doctor',
     `Toolchain: ${result.setup.valid ? 'ready' : 'blocked'} (Node ${result.setup.runtime.node}, npm ${result.setup.runtime.npm})`,
     `Locks: verified (${result.setup.dependency_packages} dependency packages)`,
-    `Grid runtime lock: ${lockDescription}`
+    `Grid runtime lock: ${lockDescription}`,
+    `Git: ${versionControlDescription(result.version_control)}`
   ];
   for (const item of result.ports) {
     lines.push(
@@ -132,6 +137,15 @@ export function formatDoctorResult(result, { json = false } = {}) {
     ? 'Ready. Next: npm run dev'
     : 'Not ready. Resolve the blocked checks, then rerun: npm run doctor');
   return `${lines.join('\n')}\n`;
+}
+
+function versionControlDescription(versionControl) {
+  if (!versionControl.available) {
+    return `not found (Git >=${versionControl.minimum_version} is required by the credential-history audit)`;
+  }
+  return versionControl.supported
+    ? `${versionControl.version}`
+    : `${versionControl.version} is below the required ${versionControl.minimum_version}; the credential-history audit will fail`;
 }
 
 export function doctorFailureMessage(error) {

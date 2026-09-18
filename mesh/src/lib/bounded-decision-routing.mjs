@@ -168,7 +168,8 @@ function validateCandidates(candidates) {
         provider_mode: validatedProfile.provider_mode,
         supported_question_kinds: [...validatedProfile.supported_question_kinds],
         max_choice_cardinality: candidate.profile.max_choice_cardinality,
-        max_score_levels: candidate.profile.max_score_levels
+        max_score_levels: candidate.profile.max_score_levels,
+        probability_support: candidate.profile.probability_support
       }),
       available: candidate.available,
       policy_eligible: candidate.policy_eligible,
@@ -249,6 +250,18 @@ function candidateEligibility(candidate, request, userPolicy) {
   }
   if (!profile.supported_question_kinds.includes(request.question_kind)) {
     reasons.push('question-kind-unsupported');
+  }
+  if (
+    ['choice', 'score'].includes(request.question_kind)
+    && profile.probability_support !== 'full-distribution'
+  ) {
+    reasons.push('probability-support-unsupported');
+  }
+  if (
+    request.question_kind === 'binary-probability'
+    && !['full-distribution', 'binary-probability-only'].includes(profile.probability_support)
+  ) {
+    reasons.push('probability-support-unsupported');
   }
   if (
     request.question_kind === 'choice'

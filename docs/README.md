@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-09-13
+**Updated:** 2026-09-16
 
 **Active build:** `0.12.0-dev.3`
 
@@ -66,6 +66,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
 | How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), their `rebuild/` specifications, and the subordinate [Runtime & Connector Fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md) | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
 | How are external/local security observations converted into bounded evidence? | [`superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md`](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [`superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md`](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), and [`MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md`](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md) | Inert threat evidence, offline normalization/applicability, later separately gated reproduction/monitoring/feed/containment stages | Live-feed, automatic-containment, vulnerability, or production-security claims |
+| How can research sources become agent-native without inheriting authority? | [`superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md`](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [`superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md`](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md) | Exact research-source provenance, source-bounded knowledge, inert operation candidates, and scoped reproduction evidence | Live paper fetching, remote MCP execution, scientific-truth guarantees, or runtime authority |
 | How are future path observations attributed without becoming routing authority? | [`rebuild/PATH-OBSERVATION-EVIDENCE.md`](rebuild/PATH-OBSERVATION-EVIDENCE.md) | External signer roles, exact portfolio binding, freshness, source provenance, replay bounds, attribution-vs-truth semantics | Claims of live telemetry, regulatory truth, route authority, or production path selection |
 | How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
 | How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
@@ -86,9 +87,12 @@ Connector Fabric queue -> candidate survey/pin**. Use **Personal Compute Fabric
 -> Sovereign Vaults -> Vault Lease and Context Request -> Personal Agent Pack
 v2** for private-companion, compartmentalized-memory, selective-disclosure, or
 continuity design. Use **Continuous Threat Intelligence Stage 5B -> A/B plan ->
-threat model -> gated master TODO** for adaptive defensive-learning work. Use
-**migration -> dated audit or review** when the question is provenance or why a
-boundary exists.
+threat model -> gated master TODO** for adaptive defensive-learning work. For
+agent-native research work, use **Research Capsule v0 design -> implementation
+plan -> exact source/knowledge/operation/reproduction contracts** and keep any
+future retrieval or execution behind separate authority gates. Use **migration
+-> dated audit or review** when the question is provenance or why a boundary
+exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -130,6 +134,10 @@ Current documentation must preserve these distinctions:
   projections, and threat-adaptation receipts are evidence only; Slices A-B add
   no live feed, credential access, autonomous containment, or production
   vulnerability/safety claim;
+- Research Source Manifests, Research Knowledge Projections, Research Operation
+  Candidates, and Research Reproduction Evidence are provenance/evidence
+  artifacts only: knowledge is not authority, operation is not authority, and
+  reproduction is not scientific truth;
 - Sovereign Vault, Context Request, Vault Access Lease, Context Capsule,
   Personal Agent Pack v2, and personal-model adaptation schemas are
   documentation-only draft contracts and do not create runtime vault isolation,
@@ -228,6 +236,13 @@ decision.
 - [Continuous Threat Intelligence A/B implementation plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md)
   — inert contracts, offline normalization/applicability, and authority-boundary
   evidence only.
+- [Agent-Native Research Artifacts v0](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md)
+  — provenance-first Research Capsules that separate source-bounded knowledge,
+  inert operations, reproduction evidence, and later separately governed
+  authority/execution.
+- [Agent-Native Research Artifacts v0 implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md)
+  — zero-authority schemas, verifier, synthetic fixtures, and falsification
+  tests; no live paper fetching or MCP execution.
 
 #### Draft architecture contracts
 
@@ -249,12 +264,20 @@ decision.
 - [Threat Reproduction Case v0](architecture/contracts/reproduction-case.v0.schema.json)
 - [Threat Regression Candidate v0](architecture/contracts/regression-candidate.v0.schema.json)
 - [Threat Adaptation Receipt v0](architecture/contracts/threat-adaptation-receipt.v0.schema.json)
+- [Research Source Manifest v0](architecture/contracts/research-source-manifest.v0.schema.json)
+- [Research Knowledge Projection v0](architecture/contracts/research-knowledge-projection.v0.schema.json)
+- [Research Operation Candidate v0](architecture/contracts/research-operation-candidate.v0.schema.json)
+- [Research Reproduction Evidence v0](architecture/contracts/research-reproduction-evidence.v0.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other drafts or promote any capability or external compatibility claim. The two
-Runtime & Connector Fabric v1 schema files are now raw-byte pinned by the
-zero-dependency frozen-contract verifier and protected test surface at:
+other drafts or promote any capability or external compatibility claim. Research
+Capsule v0 additionally has a zero-dependency semantic verifier and synthetic
+conformance tests, but it still adds no Gateway route, capability-registry entry,
+remote MCP connection, provider call, credential path, or scientific-truth
+claim. The two Runtime & Connector Fabric v1 schema files are now raw-byte
+pinned by the zero-dependency frozen-contract verifier and protected test surface
+at:
 
 - catalog entry: `0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46`;
 - task/artifact handoff: `7a8cf7f7496d1794d74f70545e032fc3790d5eecc227f27040370023abf28e50`.
@@ -333,10 +356,12 @@ mutual-TLS, deny-egress, and promotion requirements remain unchanged.
 fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
-The Runtime & Connector Fabric, Path Observation Evidence, and Continuous Threat
-Intelligence A/B work must be explicitly admitted to that allowlist, and their
-zero-authority/non-truth invariants must remain executable checks before a draft
-becomes merge-ready.
+The Runtime & Connector Fabric, Path Observation Evidence, Continuous Threat
+Intelligence A/B, and Research Capsule v0 work must be explicitly admitted to
+that allowlist, and their zero-authority/non-truth invariants must remain
+executable checks before a draft becomes merge-ready. Project-local installed
+skills under `.agents/` are deliberately outside the canonical Markdown corpus
+and are governed by their own skill/integrity surfaces.
 
 A dedicated current-state documentation regression suite additionally locks the
 machine-principal, Grid continuity, repository-effect production-reachability,
@@ -370,4 +395,4 @@ For future resilient-network work, add the agent-interoperability roadmap and
 [Path Observation Evidence](rebuild/PATH-OBSERVATION-EVIDENCE.md); neither is a
 current routing capability. For future agent-runtime work, continue through the
 agent-interoperability roadmap/specification and then the [Runtime & Connector
-Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For continuous defensive-learning work, add the [Continuous Threat Intelligence Stage 5B design](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [A/B plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), [A/B threat model](security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md), and [gated execution queue](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md). For plural-governance work, add the corresponding roadmap extension only after the current-state material above.
+Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For continuous defensive-learning work, add the [Continuous Threat Intelligence Stage 5B design](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [A/B plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), [A/B threat model](security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md), and [gated execution queue](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md). For agent-native research work, add the [Research Capsule v0 design](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md). For plural-governance work, add the corresponding roadmap extension only after the current-state material above.
