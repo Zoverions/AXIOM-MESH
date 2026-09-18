@@ -7,6 +7,7 @@ on:
     paths:
       - "labs/personal-agent-kernel-rust/**"
       - "labs/personal-agent-kernel-rust-crypto/**"
+      - "labs/personal-agent-kernel-wasmtime-host/**"
       - ".github/workflows/personal-agent-kernel-rust-lab.yml"
       - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
   pull_request:
@@ -16,6 +17,7 @@ on:
     paths:
       - "labs/personal-agent-kernel-rust/**"
       - "labs/personal-agent-kernel-rust-crypto/**"
+      - "labs/personal-agent-kernel-wasmtime-host/**"
       - ".github/workflows/personal-agent-kernel-rust-lab.yml"
       - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
   workflow_dispatch:
@@ -83,6 +85,25 @@ jobs:
       - name: Emit dependency lockfile for review
         shell: bash
         run: cat labs/personal-agent-kernel-rust-crypto/Cargo.lock
+
+  wasmtime-component-host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --all-targets -- -D warnings
+      - name: Verify real Component Model host denial
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml
+      - name: Emit dependency lockfile for review
+        shell: bash
+        run: cat labs/personal-agent-kernel-wasmtime-host/Cargo.lock
 
   production-boundary:
     runs-on: ubuntu-24.04
