@@ -20,7 +20,6 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'CONTRIBUTING.md',
   'AGENTS.md',
   'AGENT-ENTRY.md',
-  '.agents/skills/typesafe-ai/SKILL.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
@@ -201,11 +200,6 @@ const REQUIRED_CONTENT = Object.freeze({
     'agent-readiness/CONTRIBUTION-RESULT.schema.json',
     'Zero-cost participation'
   ],
-  '.agents/skills/typesafe-ai/SKILL.md': [
-    'name: typesafe-ai',
-    'The live TypeSafe docs are the source of truth',
-    'Code owns the workflow'
-  ],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
@@ -369,6 +363,16 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json': [
     'axiom-research-reproduction-evidence.v0',
     'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/research-contribution.v0.schema.json': [
+    'axiom-research-contribution.v0',
+    'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/research-relation.v0.schema.json': [
+    'axiom-research-relation.v0',
+    'independence_state',
     'authority_effect'
   ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
@@ -927,7 +931,7 @@ async function verifySupportedDocumentationBoundary(repositoryRoot) {
 
 export async function repositoryMarkdownFiles(directory, prefix = '') {
   const files = [];
-  const excludedDirectories = new Set(['.git', '.data', 'node_modules']);
+  const excludedDirectories = new Set(['.git', '.data', '.agents', 'node_modules']);
   const entries = await readdir(directory, { withFileTypes: true });
   if (prefix && entries.some(entry => entry.name === '.git')) return files;
   for (const entry of entries) {
