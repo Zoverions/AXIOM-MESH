@@ -28,7 +28,6 @@ export const AMN_TRUST_SIGNATURE_PROFILE = 'axiom-json-ed25519-v1';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
-const KEY_ID = /^[a-f0-9]{64}$/;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 const REASON = /^[a-z][a-z0-9._-]{0,63}$/;
 
@@ -248,8 +247,7 @@ function normalizeWorkloadBinding(raw) {
     model_digests: digestArray(value.model_digests, 'AMN workload binding model_digests'),
     identity_method: oneOf(value.identity_method, 'AMN workload binding identity_method', new Set([
       'software-runtime',
-      'workload-svid',
-      'hardware-attested'
+      'workload-svid'
     ]))
   });
 }
@@ -613,6 +611,11 @@ export function verifyAmnTrustStatement(raw, {
 }
 
 export function amnTrustStatementDigest(value) {
+  const statement = exactKeys(value, ENVELOPE_KEYS, 'AMN trust statement');
+  return digest(statement.statement_digest, 'AMN trust statement_digest');
+}
+
+export function amnTrustEvidenceDigest(value) {
   const statement = exactKeys(value, ENVELOPE_KEYS, 'AMN trust statement');
   return digest(statement.evidence_digest, 'AMN trust evidence_digest');
 }
