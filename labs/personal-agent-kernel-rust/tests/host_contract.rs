@@ -148,6 +148,12 @@ fn mesh_adapter_request_is_exact_inert_and_stale_epoch_denied() {
     assert_eq!(adapter.node_id, request.node_id);
     assert_eq!(adapter.capability_ref, request.capability_ref);
     assert_eq!(adapter.revocation_epoch, 3);
+    assert_eq!(adapter.gateway_route_id(), "intents.submit");
+    assert_eq!(adapter.gateway_method(), "POST");
+    assert_eq!(adapter.gateway_relative_path(), "/v1/intents");
+    assert_eq!(adapter.gateway_request_schema(), "axiom-intent-request.v1");
+    assert!(adapter.gateway_idempotency_required());
+    assert!(!adapter.direct_internal_service_access_allowed());
     assert!(adapter.requires_existing_mesh_verification());
     assert!(!adapter.grants_authority());
 
