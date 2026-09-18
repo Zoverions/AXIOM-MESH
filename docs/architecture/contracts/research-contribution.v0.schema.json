@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/research-contribution.v0.schema.json",
+  "title": "AXIOM Research Contribution v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contribution_id",
+    "contribution_kind",
+    "created_at",
+    "contributor_ref",
+    "artifact_refs",
+    "evidence_refs",
+    "summary",
+    "truth_established",
+    "authority_effect",
+    "contribution_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-research-contribution.v0" },
+    "contribution_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+      "maxLength": 512
+    },
+    "contribution_kind": {
+      "enum": [
+        "hypothesis",
+        "experiment",
+        "result",
+        "verification",
+        "negative_result",
+        "synthesis"
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "contributor_ref": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "artifact_refs": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "truth_established": { "const": false },
+    "authority_effect": { "const": "none" },
+    "contribution_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -77,6 +77,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/research-knowledge-projection.v0.schema.json',
   'docs/architecture/contracts/research-operation-candidate.v0.schema.json',
   'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json',
+  'docs/architecture/contracts/research-contribution.v0.schema.json',
+  'docs/architecture/contracts/research-relation.v0.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -361,6 +363,16 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json': [
     'axiom-research-reproduction-evidence.v0',
     'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/research-contribution.v0.schema.json': [
+    'axiom-research-contribution.v0',
+    'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/research-relation.v0.schema.json': [
+    'axiom-research-relation.v0',
+    'independence_state',
     'authority_effect'
   ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
