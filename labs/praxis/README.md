@@ -83,6 +83,18 @@ commit armed_release as release_receipt;
 The source code does not mint `deploy_prod`. It declares an authority
 requirement. A host must provide a matching authority token.
 
+Time-bounded authority is expressed as a lease:
+
+```prax
+requires lease deploy_window: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_window as armed_release;
+```
+
+The embedding host must provide a matching `createHostLease(...)` token. The
+runtime denies it when expired, explicitly revoked, mismatched, or previously
+consumed.
+
 ## v0 grammar
 
 ```text
@@ -104,7 +116,7 @@ The compiler rejects:
 - committing an ordinary operation without authority;
 - authorizing with an assessment, receipt, or other non-permit value;
 - action/scope mismatches between an operation and permit;
-- reuse of a linear permit in one program;
+- reuse of a linear permit or lease in one program;
 - repeated commit of the same authorized operation;
 - embedding a permit or authorized operation as an operation argument;
 - verification of non-evidence values;
@@ -112,7 +124,7 @@ The compiler rejects:
 
 The runtime additionally rejects:
 
-- absent, forged, mismatched, or already consumed host authority tokens;
+- absent, forged, mismatched, expired, revoked, or already consumed host authority tokens;
 - missing verifier or assessor implementations;
 - verification/assessment results without explicit `ok: true`;
 - `commit` when no executor was injected;
