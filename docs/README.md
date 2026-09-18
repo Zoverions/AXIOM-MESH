@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-09-16
+**Updated:** 2026-09-18
 
 **Active build:** `0.12.0-dev.3`
 
@@ -45,7 +45,7 @@ AXIOM-MESH is simultaneously:
    provenance-bound path observations.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
-establishes what is currently runnable. The registry tracks 49 capabilities,
+establishes what is currently runnable. The registry tracks 50 capabilities,
 of which 31 are marked implemented.
 
 The lifecycle is explicit: **built -> enabled -> exposed -> production-promoted
@@ -105,6 +105,27 @@ When two documents appear to disagree, resolve the conflict in this order:
 The lower item may explain or challenge the higher item, but it must not silently
 override it. A change to the current build must update the owning document and
 then its navigation links; it does not require rewriting historical reviews.
+
+## Documentation maintenance invariant
+
+Documentation is part of the supported build, not a cleanup step after code lands.
+Every protected Clean Kernel run verifies the canonical documentation boundary,
+current generated status, governing capability-registry markers, required
+content, and local links. Its dedicated `documentation-maintenance` job also
+runs the approved deterministic status generator and requires the repository to
+remain byte-clean afterwards.
+
+Machine-derived documentation may be rebuilt only from its canonical
+machine-readable source. Narrative documentation must be updated from current
+code, policy, evidence, and capability truth; automation must fail closed rather
+than inventing a capability, promotion state, security property, deployment
+state, or authority claim. Historical audits and dated reviews remain historical
+evidence and are not rewritten to look current.
+
+A documentation change is incomplete until both the rebuild proof and
+`docs:check` are green. A code, schema, policy, product, compatibility,
+security, operations, or release change is incomplete when an affected owning
+document is stale, even if the executable tests pass.
 
 ## Current evidence/authority semantics
 

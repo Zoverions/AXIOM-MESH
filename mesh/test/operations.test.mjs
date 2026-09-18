@@ -440,6 +440,27 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
   }), /invalid or weakened/);
 });
 
+test('Clean Kernel keeps canonical documentation checked and rebuildable', async () => {
+  const workflow = await readFile(
+    new URL('../../.github/workflows/kernel.yml', import.meta.url),
+    'utf8'
+  );
+  for (const required of [
+    'documentation-maintenance:',
+    'permissions:\n  contents: read',
+    'persist-credentials: false',
+    'node-version: "24.18.0"',
+    'npm ci --ignore-scripts',
+    'npm --prefix mesh ci --ignore-scripts',
+    'npm --prefix mesh run status:check',
+    'npm --prefix mesh run docs:check',
+    'npm --prefix mesh run status:generate',
+    'git diff --exit-code'
+  ]) {
+    assert.ok(workflow.includes(required), `missing documentation-maintenance invariant: ${required}`);
+  }
+});
+
 test('Windows compatibility workflow is immutable and release-governed', async () => {
   const workflow = await readFile(
     new URL('../../.github/workflows/windows.yml', import.meta.url),

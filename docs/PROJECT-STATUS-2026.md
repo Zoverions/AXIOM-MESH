@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-23
+**Status date:** 2026-09-18
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -20,7 +20,7 @@ promotion. The last immutable published production-candidate release is
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 31 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 31 implemented, 4
 experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 Built source does not become a runnable capability merely because tests exist:
 production policy, registries, runtime wiring, and applicable promotion evidence
