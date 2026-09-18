@@ -25,6 +25,8 @@ test('CUDA Rust A0 pins exact upstream candidates without adding authority or ex
   assert.equal(manifest.upstream.revision, 'd92c160949f58328ba6e96d81005e7110ba6f2b3');
   assert.match(manifest.upstream.revision, /^[a-f0-9]{40}$/);
   assert.equal(manifest.upstream.license, 'Apache-2.0');
+  assert.equal(manifest.upstream.requirements_source_path, 'README.md');
+  assert.equal(manifest.upstream.license_source_path, 'LICENSE');
   assert.equal(manifest.toolchain_constraints.rust.channel, 'stable');
   assert.equal(manifest.toolchain_constraints.rust.minimum_version, '1.89.0');
   assert.equal(manifest.toolchain_constraints.cuda.recommended_toolkit, '13.3');
@@ -35,6 +37,8 @@ test('CUDA Rust A0 pins exact upstream candidates without adding authority or ex
   assert.match(manifest.deferred_candidate.revision, /^[a-f0-9]{40}$/);
   assert.equal(manifest.deferred_candidate.rust_toolchain, 'nightly-2026-08-28');
   assert.equal(manifest.deferred_candidate.minimum_llvm_major, 21);
+  assert.equal(manifest.deferred_candidate.requirements_source_path, 'README.md');
+  assert.equal(manifest.deferred_candidate.license_source_path, 'LICENSE');
 
   assert.equal(manifest.execution.hardware_execution_status, 'NOT_RUN');
   assert.equal(manifest.execution.benchmark_evidence, null);
