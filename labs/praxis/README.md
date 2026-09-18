@@ -145,7 +145,10 @@ advisor changes the pin and is refused.
 Authority-grade observations are separately signed. A charter-pinned verifier
 checks the observation signer, exact origin and freshness before producing a
 runtime-branded `Verified` value. That verified evidence may satisfy a pinned
-authority premise; an `Assessment` cannot. Evidence freshness is checked when
+authority premise; an `Assessment` cannot. Legacy `observe` plus a generic
+host verifier may still create an ordinary `Verified` value for P0
+compatibility, but it is not runtime-branded authority evidence and cannot
+satisfy a chartered authority premise. Evidence freshness is checked when
 chartered authority is issued and again immediately before `commit` invokes
 the synthetic executor.
 
@@ -160,6 +163,13 @@ P0 embedding/conformance surface. They are **not** the authority-grade path.
 A chartered token carries its charter/policy/evidence bindings and the runtime
 refuses to use it unless the same signed charter is supplied under a trusted
 root.
+
+A charter may also pin one or more exact `praxis-ir.v0` module digests.
+When program pins are present, the runtime refuses any source or re-sealed IR
+whose module digest is absent from the signed charter. This is separate from
+the IR's self-digest: self-sealing detects accidental mutation, while the
+charter pin says which reviewed program the operator actually approved.
+Runtime invariant re-checks remain mandatory even for pinned IR.
 
 Secrets are represented separately from values:
 
