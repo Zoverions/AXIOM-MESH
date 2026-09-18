@@ -64,7 +64,11 @@ fn assessment(disposition: MemoryDisposition) -> MemoryAssessment {
     }
 }
 
-fn promotion(source_kind: MemorySourceKind) -> MemoryPromotionInput {
+fn promotion(
+    source_kind: MemorySourceKind,
+    assessment_disposition: MemoryDisposition,
+) -> MemoryPromotionInput {
+    let bound_assessment = assessment(assessment_disposition);
     MemoryPromotionInput {
         promotion_id: "promotion:1".to_string(),
         owner_subject_ref: "human:owner".to_string(),
@@ -72,7 +76,8 @@ fn promotion(source_kind: MemorySourceKind) -> MemoryPromotionInput {
         candidate_content_sha256: "d".repeat(64),
         source_kind,
         assessment_ref: "assessment:1".to_string(),
-        assessment_sha256: "e".repeat(64),
+        assessment_sha256: MemoryPromotionGate::assessment_sha256(&bound_assessment, &TestDigest)
+            .unwrap(),
         context_bundle_sha256: "f".repeat(64),
         provenance_refs: vec!["provenance:1".to_string()],
         evidence_refs: Vec::new(),
@@ -251,7 +256,10 @@ fn owner_direct_memory_can_become_write_eligible_but_is_not_written() {
     let decision = MemoryPromotionGate::assess(
         "human:owner",
         &assessment(MemoryDisposition::AdmitDurable),
-        &promotion(MemorySourceKind::OwnerDirect),
+        &promotion(
+            MemorySourceKind::OwnerDirect,
+            MemoryDisposition::AdmitDurable,
+        ),
         &TestDigest,
     )
     .unwrap();
@@ -261,6 +269,14 @@ fn owner_direct_memory_can_become_write_eligible_but_is_not_written() {
         MemoryPromotionDisposition::EligibleForDurableWrite
     );
     assert!(decision.reasons.is_empty());
+    assert_eq!(
+        decision.assessment_sha256,
+        MemoryPromotionGate::assessment_sha256(
+            &assessment(MemoryDisposition::AdmitDurable),
+            &TestDigest,
+        )
+        .unwrap()
+    );
     assert!(decision.requires_separate_storage_effect());
     assert!(!decision.storage_performed());
     assert!(!decision.truth_certified());
@@ -272,7 +288,10 @@ fn inferred_memory_requires_two_evidence_refs_and_a_causal_receipt() {
     let decision = MemoryPromotionGate::assess(
         "human:owner",
         &assessment(MemoryDisposition::AdmitDurable),
-        &promotion(MemorySourceKind::AgentInference),
+        &promotion(
+        MemorySourceKind::AgentInference,
+        MemoryDisposition::AdmitDurable,
+    ),
         &TestDigest,
     )
     .unwrap();
@@ -292,7 +311,10 @@ fn inferred_memory_requires_two_evidence_refs_and_a_causal_receipt() {
 
 #[test]
 fn inferred_memory_promotes_only_after_evidence_and_receipt_binding() {
-    let mut candidate = promotion(MemorySourceKind::AgentInference);
+    let mut candidate = promotion(
+        MemorySourceKind::AgentInference,
+        MemoryDisposition::AdmitDurable,
+    );
     candidate.evidence_refs = vec!["evidence:1".to_string(), "evidence:2".to_string()];
     candidate.causal_receipt_refs = vec!["receipt:1".to_string()];
 
@@ -313,7 +335,10 @@ fn inferred_memory_promotes_only_after_evidence_and_receipt_binding() {
 
 #[test]
 fn promotion_gate_preserves_quarantine_and_contradictions() {
-    let mut candidate = promotion(MemorySourceKind::OwnerDirect);
+    let mut candidate = promotion(
+        MemorySourceKind::OwnerDirect,
+        MemoryDisposition::Quarantine,
+    );
     candidate.contradicts_memory_refs = vec!["memory:existing:1".to_string()];
 
     let decision = MemoryPromotionGate::assess(
@@ -339,7 +364,10 @@ fn promotion_gate_preserves_quarantine_and_contradictions() {
 
 #[test]
 fn critical_secret_memory_is_routed_away_from_ordinary_promotion() {
-    let mut candidate = promotion(MemorySourceKind::OwnerDirect);
+    let mut candidate = promotion(
+            MemorySourceKind::OwnerDirect,
+            MemoryDisposition::AdmitDurable,
+        );
     candidate.sensitivity = ContextSensitivity::CriticalSecret;
     candidate.secret_material_embedded = true;
 
@@ -360,11 +388,32 @@ fn critical_secret_memory_is_routed_away_from_ordinary_promotion() {
 }
 
 #[test]
+fn promotion_rejects_assessment_digest_mismatch() {
+    let assessed = assessment(MemoryDisposition::AdmitDurable);
+    let mut candidate = promotion(
+        MemorySourceKind::OwnerDirect,
+        MemoryDisposition::AdmitDurable,
+    );
+    candidate.assessment_sha256 = "0".repeat(64);
+
+    let error =
+        MemoryPromotionGate::assess("human:owner", &assessed, &candidate, &TestDigest).unwrap_err();
+
+    assert_eq!(
+        error.message(),
+        "memory assessment digest does not match assessed content"
+    );
+}
+
+#[test]
 fn promotion_owner_or_candidate_mismatch_is_an_error() {
     let owner_error = MemoryPromotionGate::assess(
         "human:other",
         &assessment(MemoryDisposition::AdmitDurable),
-        &promotion(MemorySourceKind::OwnerDirect),
+        &promotion(
+            MemorySourceKind::OwnerDirect,
+            MemoryDisposition::AdmitDurable,
+        ),
         &TestDigest,
     )
     .unwrap_err();
@@ -375,7 +424,10 @@ fn promotion_owner_or_candidate_mismatch_is_an_error() {
     let candidate_error = MemoryPromotionGate::assess(
         "human:owner",
         &wrong,
-        &promotion(MemorySourceKind::OwnerDirect),
+        &promotion(
+            MemorySourceKind::OwnerDirect,
+            MemoryDisposition::AdmitDurable,
+        ),
         &TestDigest,
     )
     .unwrap_err();
