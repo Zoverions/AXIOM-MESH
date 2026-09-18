@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 
 const HOST_AUTHORITY = Symbol('praxis.host-authority');
 const HOST_SECRET_REF = Symbol('praxis.host-secret-ref');
+const HOST_PREPARED_REF = Symbol('praxis.host-prepared-ref');
 const consumedAuthorityTokens = new WeakSet();
+const consumedPreparedRefs = new WeakSet();
 
 export class PraxisSyntaxError extends Error {
   constructor(message, token) {
@@ -277,6 +279,8 @@ class Parser {
         return this.authorize();
       case 'prepare':
         return this.prepare();
+      case 'cancel':
+        return this.cancel();
       case 'commit':
         return this.commit();
       default:
@@ -300,9 +304,22 @@ class Parser {
       };
     }
 
+    if (resourceType === 'prepared') {
+      const action = this.identifier();
+      this.take('@');
+      const scope = this.identifier();
+      this.take(';');
+      return {
+        kind: 'RequirePrepared',
+        name,
+        action,
+        scope
+      };
+    }
+
     if (resourceType !== 'permit' && resourceType !== 'lease') {
       throw new PraxisSyntaxError(
-        'requires must declare permit, lease, or secret',
+        'requires must declare permit, lease, secret, or prepared',
         this.tokens[this.index - 2]
       );
     }
@@ -403,6 +420,15 @@ class Parser {
     return { kind: 'Prepare', name, operation };
   }
 
+  cancel() {
+    this.word('cancel');
+    const operation = this.identifier();
+    this.word('as');
+    const name = this.identifier();
+    this.take(';');
+    return { kind: 'Cancel', name, operation };
+  }
+
   commit() {
     this.word('commit');
     const operation = this.identifier();
@@ -450,9 +476,10 @@ export function analyze(ast) {
   const ir = [];
   const requiredPermits = [];
   const requiredSecrets = [];
+  const requiredPrepared = [];
   const usedPermits = new Set();
   const preparedOperations = new Set();
-  const committedOperations = new Set();
+  const terminalOperations = new Set();
 
   for (const node of ast.body) {
     assertFreshName(env, node.name);
@@ -496,6 +523,28 @@ export function analyze(ast) {
           op: 'REQUIRE_SECRET',
           name: node.name,
           secret_kind: node.secretKind
+        });
+        break;
+      }
+
+      case 'RequirePrepared': {
+        env.set(node.name, {
+          kind: 'PreparedOperation',
+          action: node.action,
+          scope: node.scope,
+          imported: true,
+          linear: true
+        });
+        requiredPrepared.push({
+          name: node.name,
+          action: node.action,
+          scope: node.scope
+        });
+        ir.push({
+          op: 'REQUIRE_PREPARED',
+          name: node.name,
+          action: node.action,
+          scope: node.scope
         });
         break;
       }
@@ -673,6 +722,30 @@ export function analyze(ast) {
         break;
       }
 
+      case 'Cancel': {
+        const operation = requireBinding(env, node.operation);
+        if (operation.kind !== 'PreparedOperation') {
+          throw new PraxisTypeError(
+            'PRAXIS_CANCEL_REQUIRES_PREPARATION',
+            `cancel requires PreparedOperation, received ${operation.kind}`
+          );
+        }
+        if (terminalOperations.has(node.operation)) {
+          throw new PraxisTypeError(
+            'PRAXIS_LINEAR_OPERATION_REUSE',
+            `prepared operation ${node.operation} already has a terminal transition`
+          );
+        }
+        terminalOperations.add(node.operation);
+        env.set(node.name, {
+          kind: 'CancellationReceipt',
+          action: operation.action,
+          scope: operation.scope
+        });
+        ir.push({ op: 'CANCEL', name: node.name, operation: node.operation });
+        break;
+      }
+
       case 'Commit': {
         const operation = requireBinding(env, node.operation);
         if (operation.kind !== 'PreparedOperation') {
@@ -681,13 +754,13 @@ export function analyze(ast) {
             `commit requires PreparedOperation, received ${operation.kind}`
           );
         }
-        if (committedOperations.has(node.operation)) {
+        if (terminalOperations.has(node.operation)) {
           throw new PraxisTypeError(
             'PRAXIS_LINEAR_OPERATION_REUSE',
-            `prepared operation ${node.operation} was already committed`
+            `prepared operation ${node.operation} already has a terminal transition`
           );
         }
-        committedOperations.add(node.operation);
+        terminalOperations.add(node.operation);
         env.set(node.name, { kind: 'Receipt', action: operation.action, scope: operation.scope });
         ir.push({ op: 'COMMIT', name: node.name, operation: node.operation });
         break;
@@ -702,6 +775,7 @@ export function analyze(ast) {
     schema: 'praxis-ir.v0',
     required_permits: Object.freeze(requiredPermits.map(item => Object.freeze({ ...item }))),
     required_secrets: Object.freeze(requiredSecrets.map(item => Object.freeze({ ...item }))),
+    required_prepared: Object.freeze(requiredPrepared.map(item => Object.freeze({ ...item }))),
     instructions: Object.freeze(ir.map(item => Object.freeze({ ...item }))),
     bindings: Object.freeze(
       Object.fromEntries([...env.entries()].map(([name, type]) => [name, Object.freeze({ ...type })]))
@@ -749,6 +823,61 @@ export function createHostSecretRef({ id, kind }) {
     schema: 'praxis-host-secret-ref.v0',
     id: String(id),
     kind: String(kind)
+  });
+}
+
+export function createHostPreparedRef({
+  id,
+  action,
+  scope,
+  operation,
+  authority,
+  preparation
+}) {
+  if (!id || !action || !scope) {
+    throw new TypeError('host prepared reference requires id, action, and scope');
+  }
+  if (!operation || operation.kind !== 'Operation' || operation.schema !== 'praxis-operation.v0') {
+    throw new TypeError('host prepared reference requires a Praxis Operation');
+  }
+  const {
+    kind: ignoredKind,
+    operation_digest: suppliedDigest,
+    ...operationBody
+  } = operation;
+  const expectedDigest = operationDigest(operationBody);
+  if (suppliedDigest !== expectedDigest) {
+    throw new TypeError('host prepared reference operation digest is invalid');
+  }
+  if (operation.action !== action || operation.scope !== scope) {
+    throw new TypeError('host prepared reference action/scope does not match operation');
+  }
+  if (
+    !authority
+    || authority.action !== action
+    || authority.scope !== scope
+    || typeof authority.authority_id !== 'string'
+  ) {
+    throw new TypeError('host prepared reference authority binding is invalid');
+  }
+  if (
+    !preparation
+    || preparation.durable !== true
+    || preparation.operation_digest !== suppliedDigest
+    || typeof preparation.preparation_digest !== 'string'
+    || !/^sha256:[a-f0-9]{64}$/.test(preparation.preparation_digest)
+  ) {
+    throw new TypeError('host prepared reference preparation evidence is invalid');
+  }
+  return Object.freeze({
+    [HOST_PREPARED_REF]: true,
+    schema: 'praxis-host-prepared-ref.v0',
+    id: String(id),
+    action: String(action),
+    scope: String(scope),
+    operation: Object.freeze({ ...operation }),
+    authority: Object.freeze({ ...authority }),
+    preparation: Object.freeze({ ...preparation })
   });
 }
 
@@ -814,9 +943,11 @@ function normalizeRevocations(value) {
 export async function run(source, {
   authorities = {},
   secrets = {},
+  prepared = {},
   preparer = null,
   executor = null,
   completer = null,
+  canceler = null,
   verifiers = {},
   assessors = {},
   now = Date.now(),
@@ -830,8 +961,10 @@ export async function run(source, {
   const values = new Map();
   const requirements = new Map(ir.required_permits.map(item => [item.name, item]));
   const secretRequirements = new Map((ir.required_secrets ?? []).map(item => [item.name, item]));
+  const preparedRequirements = new Map((ir.required_prepared ?? []).map(item => [item.name, item]));
   const authorityTokens = new Map();
   const secretRefs = new Map();
+  const preparedRefs = new Map();
   const nowMs = normalizeRuntimeTime(now);
   const revoked = normalizeRevocations(revokedAuthorityIds);
 
@@ -873,11 +1006,43 @@ export async function run(source, {
     }));
   }
 
+  for (const requirement of ir.required_prepared ?? []) {
+    const ref = prepared[requirement.name];
+    if (!ref || ref[HOST_PREPARED_REF] !== true) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_PREPARED_REQUIRED',
+        `host did not provide a prepared-effect reference for ${requirement.name}`
+      );
+    }
+    if (consumedPreparedRefs.has(ref)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_PREPARED_CONSUMED',
+        `prepared-effect reference ${ref.id} already has a terminal transition`
+      );
+    }
+    if (ref.action !== requirement.action || ref.scope !== requirement.scope) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_HOST_PREPARED_MISMATCH',
+        `prepared-effect reference ${ref.id} does not match ${requirement.action}@${requirement.scope}`
+      );
+    }
+    preparedRefs.set(requirement.name, ref);
+    values.set(requirement.name, Object.freeze({
+      kind: 'PreparedOperation',
+      operation: ref.operation,
+      authority: ref.authority,
+      preparation: ref.preparation,
+      prepared_ref_id: ref.id,
+      imported: true
+    }));
+  }
+
   for (const instruction of ir.instructions) {
     switch (instruction.op) {
       case 'REQUIRE_PERMIT':
       case 'REQUIRE_LEASE':
       case 'REQUIRE_SECRET':
+      case 'REQUIRE_PREPARED':
         break;
 
       case 'OBSERVE':
@@ -1057,6 +1222,68 @@ export async function run(source, {
         break;
       }
 
+      case 'CANCEL': {
+        if (typeof canceler !== 'function') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_CANCELER_REQUIRED',
+            'cancel is fail-closed: a host durable cancellation recorder must be explicitly injected'
+          );
+        }
+
+        const preparedValue = values.get(instruction.operation);
+        const cancellationRequest = Object.freeze({
+          schema: 'praxis-cancellation-request.v0',
+          operation_digest: preparedValue.operation.operation_digest,
+          preparation_digest: preparedValue.preparation.preparation_digest,
+          idempotency_key: preparedValue.preparation.preparation_digest
+        });
+
+        let cancellation;
+        try {
+          cancellation = await canceler(cancellationRequest);
+        } catch {
+          throw new PraxisRuntimeError(
+            'PRAXIS_CANCELLATION_UNCOMMITTED',
+            'cancellation was not durable; effect remains prepared',
+            {
+              state: 'prepared',
+              operation_digest: cancellationRequest.operation_digest,
+              preparation_digest: cancellationRequest.preparation_digest
+            }
+          );
+        }
+
+        if (
+          cancellation?.ok !== true
+          || !cancellation.evidence
+          || cancellation.evidence.durable !== true
+          || cancellation.evidence.operation_digest !== cancellationRequest.operation_digest
+          || cancellation.evidence.preparation_digest !== cancellationRequest.preparation_digest
+        ) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_CANCELLATION_EVIDENCE_INVALID',
+            'cancellation evidence is not bound to the prepared effect',
+            {
+              state: 'prepared',
+              operation_digest: cancellationRequest.operation_digest,
+              preparation_digest: cancellationRequest.preparation_digest
+            }
+          );
+        }
+
+        const importedRef = preparedRefs.get(instruction.operation);
+        if (importedRef) consumedPreparedRefs.add(importedRef);
+
+        values.set(instruction.name, Object.freeze({
+          kind: 'CancellationReceipt',
+          schema: 'praxis-cancellation-receipt.v0',
+          operation_digest: cancellationRequest.operation_digest,
+          preparation_digest: cancellationRequest.preparation_digest,
+          cancellation_evidence: Object.freeze({ ...cancellation.evidence })
+        }));
+        break;
+      }
+
       case 'COMMIT': {
         if (typeof executor !== 'function') {
           throw new PraxisRuntimeError(
@@ -1078,7 +1305,8 @@ export async function run(source, {
           schema: 'praxis-commit-request.v0',
           operation: prepared.operation,
           authority: prepared.authority,
-          preparation: prepared.preparation
+          preparation: prepared.preparation,
+          idempotency_key: preparationDigest
         });
 
         let result;
@@ -1169,6 +1397,9 @@ export async function run(source, {
             }
           );
         }
+
+        const importedRef = preparedRefs.get(instruction.operation);
+        if (importedRef) consumedPreparedRefs.add(importedRef);
 
         values.set(instruction.name, Object.freeze({
           kind: 'Receipt',
