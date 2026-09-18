@@ -350,6 +350,7 @@ Run the focused tests through the existing Mesh test harness:
 ```bash
 node --test mesh/test/praxis-language-v0.test.mjs
 node --test mesh/test/praxis-conformance-v0.test.mjs
+node --test mesh/test/praxis-adversarial-ir-v0.test.mjs
 ```
 
 The semantic corpus is stored at
