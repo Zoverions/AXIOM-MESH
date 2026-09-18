@@ -1,4 +1,4 @@
-const CACHE_NAME = 'axiom-one-shell-v5';
+const CACHE_NAME = 'axiom-one-shell-v6';
 const SHELL_ASSETS = Object.freeze([
   '/',
   '/index.html',
@@ -6,6 +6,8 @@ const SHELL_ASSETS = Object.freeze([
   '/app.mjs',
   '/presentation.mjs',
   '/local-organize.mjs',
+  '/shared/axiom-one-social-feed-preview.mjs',
+  '/shared/social-feed-ranking-core.mjs',
   '/human-contract.json',
   '/manifest.webmanifest',
   '/icon.svg',
