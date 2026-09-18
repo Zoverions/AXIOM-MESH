@@ -281,7 +281,8 @@ claim. Research Composition Graph v0 adds immutable contribution/relation
 contracts plus a rebuildable local lineage/frontier diagnostic; its roots,
 frontier, concentration, disagreement, and attention views remain derived
 navigation evidence only and create no truth, reputation, execution, merge,
-or deployment authority. The two Runtime & Connector Fabric v1 schema files are now raw-byte
+or deployment authority. Future semantic-diversity judgments may add evidence to
+this graph, but do not become truth or authority. The two Runtime & Connector Fabric v1 schema files are now raw-byte
 pinned by the zero-dependency frozen-contract verifier and protected test surface
 at:
 
