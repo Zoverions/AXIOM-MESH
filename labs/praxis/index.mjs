@@ -252,11 +252,17 @@ function validateOperationDescriptorPraxis(operation) {
 export function createHostOperationRegistry(definitions = {}) {
   const operations = {};
   for (const [name, definition] of Object.entries(definitions)) {
-    if (['__proto__', 'constructor', 'prototype'].includes(name)) {
-      throw new TypeError('host operation name is forbidden: ' + name);
+    if (!name || ['__proto__', 'constructor', 'prototype'].includes(name)) {
+      throw new TypeError('host operation name is invalid or forbidden: ' + name);
     }
     if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
       throw new TypeError('host operation ' + name + ' definition must be an object');
+    }
+    const allowedFields = new Set(['action', 'scope', 'effect', 'irreversible', 'egress']);
+    for (const field of Object.keys(definition)) {
+      if (!allowedFields.has(field)) {
+        throw new TypeError('host operation ' + name + ' contains unknown field ' + field);
+      }
     }
     const action = String(definition.action ?? name);
     const scope = String(definition.scope ?? '');
