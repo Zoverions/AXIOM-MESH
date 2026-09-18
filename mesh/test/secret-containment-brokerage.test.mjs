@@ -60,6 +60,17 @@ test('secret use receipt is digest-only evidence and creates no authority', asyn
   assert.equal(Object.hasOwn(schema.properties, 'provider_credential'), false);
 });
 
+test('ordinary vault lease cannot become secret reveal or use authority', async () => {
+  const leaseArchitecture = await readFile(
+    resolve(REPOSITORY_ROOT, 'docs/architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md'),
+    'utf8'
+  );
+
+  assert.match(leaseArchitecture, /Vault Access Lease is not sufficient authority to reveal/i);
+  assert.match(leaseArchitecture, /separate secret-use authorization exists/i);
+  assert.match(leaseArchitecture, /Secret reveal\/export\/delegation are not created by this lease contract/i);
+});
+
 test('architecture keeps custody use reveal export delegation and effect authority separate', async () => {
   const architecture = await readFile(
     resolve(REPOSITORY_ROOT, 'docs/architecture/SECRET-CONTAINMENT-AND-BROKERAGE.md'),
