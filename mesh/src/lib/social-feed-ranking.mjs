@@ -4,6 +4,13 @@ import {
   assertString,
   digestObject
 } from './canonical.mjs';
+import {
+  SOCIAL_FEED_SCORE_DIMENSIONS,
+  normalizeSocialFeedWeights,
+  rankSocialFeedCore
+} from './social-feed-ranking-core.mjs';
+
+export { SOCIAL_FEED_SCORE_DIMENSIONS } from './social-feed-ranking-core.mjs';
 
 export const SOCIAL_FEED_OBJECTIVE_PROFILE_SCHEMA = 'axiom-social-feed-objective-profile.v0';
 export const SOCIAL_FEED_CANDIDATE_SCHEMA = 'axiom-social-feed-candidate.v0';
@@ -18,11 +25,6 @@ const SOURCE_KINDS = new Set(['local-publication', 'admitted-remote-observation'
 const SOURCE_REASONS = new Set([
   'followed-source', 'circle-curated', 'topic-match', 'user-requested-discovery',
   'underrepresented-source', 'chronological', 'local-corpus', 'admitted-remote-observation'
-]);
-
-export const SOCIAL_FEED_SCORE_DIMENSIONS = Object.freeze([
-  'relevance', 'relationship', 'recency', 'novelty', 'source_diversity',
-  'perspective_expansion', 'learning_value'
 ]);
 
 const PROFILE_FIELDS = [
@@ -79,10 +81,6 @@ function limit(value) {
   return value;
 }
 
-function round(value) {
-  return Number(value.toFixed(12));
-}
-
 function freeze(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
     for (const child of Object.values(value)) freeze(child);
@@ -106,18 +104,11 @@ function dimensionRecord(input, name, evidence = false) {
 
 function normalizeWeights(input, mode) {
   const weights = dimensionRecord(input, 'social feed objective weights');
-  const total = SOCIAL_FEED_SCORE_DIMENSIONS.reduce((sum, dimension) => sum + weights[dimension], 0);
-  if (mode === 'chronological') {
-    if (total !== 0) throw new ValidationError('chronological feed objective weights must all be zero');
-    return weights;
+  try {
+    return normalizeSocialFeedWeights(weights, mode);
+  } catch (error) {
+    throw new ValidationError(error.message);
   }
-  if (total <= 0) throw new ValidationError('weighted feed objective must assign positive weight');
-  const out = {};
-  for (const dimension of SOCIAL_FEED_SCORE_DIMENSIONS) out[dimension] = round(weights[dimension] / total);
-  const normalizedTotal = SOCIAL_FEED_SCORE_DIMENSIONS.reduce((sum, dimension) => sum + out[dimension], 0);
-  const first = SOCIAL_FEED_SCORE_DIMENSIONS.find(dimension => out[dimension] > 0);
-  out[first] = round(out[first] + round(1 - normalizedTotal));
-  return Object.freeze(out);
 }
 
 function stringList(input, name, allowed = null) {
@@ -236,23 +227,6 @@ export function createSocialFeedCandidate(input) {
   return freeze(document);
 }
 
-function score(candidate, profile) {
-  return round(SOCIAL_FEED_SCORE_DIMENSIONS.reduce(
-    (sum, dimension) => sum + profile.weights[dimension] * candidate.signals[dimension], 0
-  ));
-}
-
-function contributors(candidate, profile) {
-  return SOCIAL_FEED_SCORE_DIMENSIONS.map(dimension => ({
-    dimension,
-    weight: profile.weights[dimension],
-    signal: candidate.signals[dimension],
-    contribution: round(profile.weights[dimension] * candidate.signals[dimension]),
-    evidence_ref: candidate.signal_evidence[dimension]
-  })).filter(item => item.weight > 0 && item.contribution > 0)
-    .sort((left, right) => right.contribution - left.contribution || left.dimension.localeCompare(right.dimension));
-}
-
 function candidateSetDigest(candidates) {
   return digestObject([...candidates].sort((left, right) => left.candidate_id.localeCompare(right.candidate_id)));
 }
@@ -272,23 +246,21 @@ export function rankSocialFeed(input) {
   if (new Set(candidateIds).size !== candidateIds.length) throw new ValidationError('social feed candidates contain duplicate candidate_id');
   if (new Set(publicationIds).size !== publicationIds.length) throw new ValidationError('social feed candidates contain duplicate publication_id');
 
-  const eligible = candidates.filter(candidate => candidate.eligibility.status === 'eligible');
-  const excluded = candidates.filter(candidate => candidate.eligibility.status === 'excluded')
-    .sort((left, right) => left.candidate_id.localeCompare(right.candidate_id))
-    .map(candidate => ({
-      candidate_id: candidate.candidate_id,
-      publication_id: candidate.publication_id,
-      reason_codes: candidate.eligibility.reason_codes,
-      policy_digest: candidate.eligibility.policy_digest
-    }));
-
-  if (value.profile.mode === 'chronological') {
-    eligible.sort((left, right) => right.published_at.localeCompare(left.published_at) || left.candidate_id.localeCompare(right.candidate_id));
-  } else {
-    eligible.sort((left, right) => score(right, value.profile) - score(left, value.profile) || left.candidate_id.localeCompare(right.candidate_id));
+  let core;
+  try {
+    core = rankSocialFeedCore({ profile: value.profile, candidates });
+  } catch (error) {
+    throw new ValidationError(error.message);
   }
+  const excluded = core.excluded.map(candidate => ({
+    candidate_id: candidate.candidate_id,
+    publication_id: candidate.publication_id,
+    reason_codes: candidate.eligibility.reason_codes,
+    policy_digest: candidate.eligibility.policy_digest
+  }));
 
-  const items = eligible.slice(0, max).map((candidate, index) => {
+  const items = core.items.slice(0, max).map((item, index) => {
+    const candidate = item.candidate;
     const reasons = [...candidate.source_reasons];
     if (value.profile.mode === 'chronological' && !reasons.includes('chronological')) reasons.push('chronological');
     return {
@@ -296,10 +268,10 @@ export function rankSocialFeed(input) {
       publication_id: candidate.publication_id,
       published_at: candidate.published_at,
       rank: index + 1,
-      score: value.profile.mode === 'chronological' ? null : score(candidate, value.profile),
+      score: item.score,
       why: {
         source_reasons: reasons,
-        contributors: value.profile.mode === 'chronological' ? [] : contributors(candidate, value.profile)
+        contributors: item.contributors
       }
     };
   });
@@ -314,7 +286,7 @@ export function rankSocialFeed(input) {
     ordering_mode: value.profile.mode,
     items,
     excluded,
-    truncated: eligible.length > max,
+    truncated: core.items.length > max,
     recommendation_effect: 'local-display-order-only',
     authority_effect: 'none',
     network_effect: 'none',
