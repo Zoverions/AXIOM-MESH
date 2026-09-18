@@ -178,4 +178,4 @@ test('S2A browser helper remains effect-inert and free of network, browser stora
   ]) {
     assert.equal(source.includes(forbidden), false, `helper must not contain ${forbidden}`);
   }
-}
+});
