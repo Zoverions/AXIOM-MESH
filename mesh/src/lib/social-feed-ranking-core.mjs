@@ -9,6 +9,8 @@ export const SOCIAL_FEED_SCORE_DIMENSIONS = Object.freeze([
 ]);
 
 const MODES = new Set(['weighted', 'chronological']);
+const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const UTC = /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/;
 
 function fail(message) {
   throw new TypeError(message);
