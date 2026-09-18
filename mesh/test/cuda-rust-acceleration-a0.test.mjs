@@ -80,8 +80,21 @@ test('CUDA Rust A0 CPU reference vector is deterministic and contains no GPU res
   assert.equal(vector.absolute_tolerance, 0);
   assert.equal(vector.authority_effect, 'none');
 
-  const actual = vector.x.map((value, index) => Math.fround(Math.fround(value) + Math.fround(vector.y[index])));
-  assert.deepEqual(actual, vector.expected.map(Math.fround));
+  const evaluate = expected => {
+    const actual = vector.x.map(
+      (value, index) => Math.fround(Math.fround(value) + Math.fround(vector.y[index]))
+    );
+    return actual.every(
+      (value, index) => Math.abs(value - Math.fround(expected[index])) <= vector.absolute_tolerance
+    );
+  };
+
+  assert.equal(evaluate(vector.expected), true);
+
+  const intentionalMismatch = [...vector.expected];
+  intentionalMismatch[0] = intentionalMismatch[0] + 1;
+  assert.equal(evaluate(intentionalMismatch), false, 'intentional mismatch negative control must fail');
+
   assert.match(vector.purpose, /CPU reference/i);
   assert.doesNotMatch(vector.purpose, /GPU result (was|is) measured/i);
 });
