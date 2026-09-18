@@ -47,6 +47,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/AGENT-COMMONS.md',
   'docs/architecture/AGENT-ASSURANCE-EVIDENCE-V0.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
+  'docs/architecture/INTERROGATION-PLANE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
   'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
@@ -293,6 +294,13 @@ const REQUIRED_CONTENT = Object.freeze({
     'public_disclosure_safe',
     'contains_weaponized_exploit_detail',
     'authority_requested'
+  ],
+  'docs/architecture/INTERROGATION-PLANE.md': [
+    '## Purpose and boundary',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'Semantic judgment is not authority',
+    'npm run interrogation:report',
+    '## Promotion boundary and non-claims'
   ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
