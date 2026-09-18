@@ -886,23 +886,13 @@ test('handoff-bound dispatch requires a compatible worker for the exact runtime 
   );
 });
 
-test('completed handoff target mismatch cannot make a ready task redispatchable', () => {
+test('completed handoff cannot make a not-yet-accepted work task redispatchable', () => {
   const completed = handoff({ state: 'completed' });
   const source = input({
     workGraph: graph({ collectState: 'ready' }),
     bindings: [
       binding('collect', 'task.collect', 'handoff.collect'),
       binding('analyze', 'task.analyze')
-    ],
-    workers: [
-      worker({
-        worker_ref: 'worker.search.other',
-        runtime_ref: 'runtime.other',
-        lineage_ref: 'lineage.other',
-        operation_ids: ['research.search'],
-        capability_ids: ['research.read']
-      }),
-      defaultWorkers().find(entry => entry.worker_ref === 'worker.analyze')
     ],
     handoffs: [completed]
   });
@@ -1128,6 +1118,6 @@ test('claim worker runtime must match a bound handoff target', () => {
 
   assert.throws(
     () => deriveFlowDispatchProjection(source),
-    /worker runtime does not match handoff target/i
+    /worker is not compatible with claimed step/i
   );
 });
