@@ -39,6 +39,10 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   const app = await readFile(new URL('../../apps/axiom-one/app.mjs', import.meta.url), 'utf8');
   assert.match(app, /state\.client\.call\('social\.get'/);
   assert.match(app, /response\.network_effect === 'none'/);
+  assert.match(app, /buildAxiomOneSocialFeedPreview/);
+  assert.match(app, /Why am I seeing this\?/);
+  assert.match(app, /type:\s*'range'/);
+  assert.match(app, /state\.feed\.mode = 'chronological'/);
   assert.doesNotMatch(app, /action:\s*'social\./);
   assert.doesNotMatch(app, /localStorage|sessionStorage|indexedDB|document\.cookie|innerHTML/);
   assert.match(app, /action:\s*'ai\.local-organize'/);
@@ -135,6 +139,15 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   assert.equal(shell.headers.get('x-frame-options'), 'DENY');
   assert.equal(shell.headers.get('cross-origin-opener-policy'), 'same-origin');
   assert.match(await shell.text(), /AXIOM One/);
+
+  const feedModule = await fetch(`${preview.url}/shared/axiom-one-social-feed-preview.mjs`);
+  assert.equal(feedModule.status, 200);
+  assert.match(feedModule.headers.get('content-type'), /^text\/javascript/);
+  assert.match(await feedModule.text(), /buildAxiomOneSocialFeedPreview/);
+  const rankingCore = await fetch(`${preview.url}/shared/social-feed-ranking-core.mjs`);
+  assert.equal(rankingCore.status, 200);
+  assert.match(await rankingCore.text(), /rankSocialFeedCore/);
+  assert.equal(observed.length, 0);
 
   const rejectedHost = await rawRequest(preview.port, '/', {
     host: 'attacker.example'
