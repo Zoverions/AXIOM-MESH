@@ -141,6 +141,8 @@ The promotion gate consumes:
 
 ### Required semantics
 
+Before evaluating promotion semantics, the gate canonicalizes the `MemoryAssessment` object it actually received, recomputes its digest through `Sha256Port`, and requires that digest to match the promotion input. A caller therefore cannot bind a promotion decision to audit metadata for a different assessment.
+
 The gate preserves the existing receipt-gated memory rules:
 
 - owner-direct and signed-local material may proceed without causal receipts;
@@ -185,7 +187,8 @@ v0 must preserve all of the following:
 10. Candidate ordering cannot change the compiled bundle.
 11. Durable promotion requires explicit lineage.
 12. Promotion eligibility performs no persistence.
-13. No Gateway route, Grid table, credential path, provider call, capability registration, or production runtime path is added.
+13. Promotion decisions are bound to the exact canonical memory assessment consumed by the gate.
+14. No Gateway route, Grid table, credential path, provider call, capability registration, or production runtime path is added.
 
 ## Relationship to other current lanes
 
