@@ -60,6 +60,18 @@ Machine discovery may expose only a principal-specific requestable intersection
 of active policy and machine constraints; discovery, listing, installation, or
 connection never creates permission. Machine constraints may reduce but never
 enlarge policy authority.
+
+Scriptability is an interface property, not an authority class. A macro, hook,
+CLI command, API client, plugin, capsule, runtime adapter, or agent invocation
+is only another client of the same authority system. Equivalent privileged or
+externally visible effects must map to the same canonical AXIOM action and pass
+the same identity, policy, consent, approval, grant, destination, budget,
+revocation, bounded-execution, evidence, and receipt boundaries. Client-local
+checks, plugin installation, event subscription, orchestration wrappers, or
+automation state may not create an alternate authority path. Observing an event
+does not authorize acting on it; a resulting effect requires a valid applicable
+authorization and normal execution-time re-evaluation.
+
 Permitted high-risk effects require explicit approval from an independent
 authenticated principal.
 
