@@ -303,6 +303,42 @@ test('host action/scope/effect/egress contract mismatch fails at link time', asy
   );
 });
 
+test('signed effect envelope cannot downgrade to digest-only or unmeasured authority', async () => {
+  const unmeasured = createOperationDescriptorPraxis({
+    action: 'Deploy',
+    scope: 'Production',
+    args: ['artifact']
+  });
+
+  await assert.rejects(
+    () => createCharteredHostPermit({
+      id: 'permit:unmeasured-downgrade',
+      charter,
+      trustedRootKeys: trustedRoots,
+      policyName: 'DeployPolicy',
+      operation: unmeasured,
+      requester: 'ReleaseAgent',
+      now: 1_000
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EFFECT_REQUIRED'
+  );
+
+  await assert.rejects(
+    () => createCharteredHostPermit({
+      id: 'permit:digest-only-downgrade',
+      charter,
+      trustedRootKeys: trustedRoots,
+      policyName: 'DeployPolicy',
+      operationDigest: unmeasured.operation_digest,
+      requester: 'ReleaseAgent',
+      now: 1_000
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EFFECT_REQUIRED'
+  );
+});
+
 test('charter effect envelope is a hard upper bound even when source declares the real effect', async () => {
   const operation = measuredOperation({
     action: 'Destroy',
