@@ -560,7 +560,7 @@ export function verifyProductionDeployment({
   validateResilienceDrillPolicy(resilienceDrillPolicy);
   const serviceNetwork = validateServiceNetworkPolicy(ACTIVE_SERVICE_NETWORK_POLICY);
   const pinnedBase = dockerfile.match(
-    /^FROM (node:24\.19\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
+    /^FROM (node:24\.21\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
   if (!pinnedBase) {
     throw new ValidationError('Production Dockerfile must use the approved digest-pinned Node.js base');
