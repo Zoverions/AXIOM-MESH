@@ -67,10 +67,7 @@ fn torn_trailing_record_fails_closed_on_reopen() {
             .expect("register");
     }
     {
-        let mut file = OpenOptions::new()
-            .append(true)
-            .open(&path)
-            .expect("append");
+        let mut file = OpenOptions::new().append(true).open(&path).expect("append");
         file.write_all(b"v1\t2\tconsume\toffline-envelope:torn")
             .expect("write torn tail");
         file.sync_data().expect("sync torn tail");
