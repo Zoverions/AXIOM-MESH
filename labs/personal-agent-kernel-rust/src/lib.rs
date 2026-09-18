@@ -1895,30 +1895,71 @@ impl Kernel {
         port.execute(&effect)
     }
 
-    pub fn execute_offline_authorized(
+    pub fn prepare_offline_consumption(
         &self,
-        ledger: &mut OfflineEnvelopeLedger,
+        ledger: &OfflineEnvelopeLedger,
         target_device_ref: &str,
         current_surface: &RuntimeSurface,
         now_unix_s: u64,
         budget_requests: &[BudgetRequest],
-        port: &mut impl EffectPort,
-    ) -> KernelResult<OfflineEffectReceipt> {
-        let offline = ledger.consume(
+    ) -> KernelResult<OfflineConsumptionIntent> {
+        ledger.prepare_consumption(
             &self.identity.owner_subject_ref,
             self.revocation_epoch,
             target_device_ref,
             current_surface,
             now_unix_s,
             budget_requests,
-        )?;
+        )
+    }
+
+    pub fn commit_offline_consumption(
+        &self,
+        ledger: &mut OfflineEnvelopeLedger,
+        intent: &OfflineConsumptionIntent,
+        current_surface: &RuntimeSurface,
+        now_unix_s: u64,
+    ) -> KernelResult<OfflineAuthorizedEffect> {
+        if intent.owner_subject_ref != self.identity.owner_subject_ref
+            || intent.revocation_epoch != self.revocation_epoch
+        {
+            return Err(KernelError::new(
+                "offline consumption intent no longer matches kernel authority epoch",
+            ));
+        }
+        ledger.commit_consumption(intent, current_surface, now_unix_s)
+    }
+
+    pub fn replay_offline_consumption(
+        &self,
+        ledger: &mut OfflineEnvelopeLedger,
+        intent: &OfflineConsumptionIntent,
+    ) -> KernelResult<()> {
+        if intent.owner_subject_ref != self.identity.owner_subject_ref
+            || intent.revocation_epoch != self.revocation_epoch
+        {
+            return Err(KernelError::new(
+                "historical offline consumption does not match kernel authority epoch",
+            ));
+        }
+        ledger.replay_historical_consumption(intent)
+    }
+
+    pub fn execute_committed_offline(
+        &self,
+        offline: &OfflineAuthorizedEffect,
+        port: &mut impl EffectPort,
+    ) -> KernelResult<OfflineEffectReceipt> {
+        if offline.owner_subject_ref != self.identity.owner_subject_ref {
+            return Err(KernelError::new("committed offline effect owner drift"));
+        }
 
         let effect = AuthorizedEffect {
-            grant_ref: offline.parent_grant_ref,
-            owner_subject_ref: offline.owner_subject_ref,
-            plan_digest: offline.plan_digest,
-            node_id: offline.node_id,
-            capability_ref: offline.capability_ref,
+            grant_ref: offline.parent_grant_ref.clone(),
+            owner_subject_ref: offline.owner_subject_ref.clone(),
+            plan_digest: offline.plan_digest.clone(),
+            node_id: offline.node_id.clone(),
+            capability_ref: offline.capability_ref.clone(),
         };
         let receipt = port.execute(&effect)?;
 
@@ -1933,10 +1974,35 @@ impl Kernel {
         }
 
         Ok(OfflineEffectReceipt {
-            envelope_ref: offline.envelope_ref,
+            envelope_ref: offline.envelope_ref.clone(),
             sequence: offline.sequence,
             receipt,
         })
+    }
+
+    pub fn execute_offline_authorized(
+        &self,
+        ledger: &mut OfflineEnvelopeLedger,
+        target_device_ref: &str,
+        current_surface: &RuntimeSurface,
+        now_unix_s: u64,
+        budget_requests: &[BudgetRequest],
+        port: &mut impl EffectPort,
+    ) -> KernelResult<OfflineEffectReceipt> {
+        let intent = self.prepare_offline_consumption(
+            ledger,
+            target_device_ref,
+            current_surface,
+            now_unix_s,
+            budget_requests,
+        )?;
+        let offline = self.commit_offline_consumption(
+            ledger,
+            &intent,
+            current_surface,
+            now_unix_s,
+        )?;
+        self.execute_committed_offline(&offline, port)
     }
 
     pub fn reconcile_offline_receipts(
