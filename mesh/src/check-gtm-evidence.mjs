@@ -278,7 +278,7 @@ export function evaluateGtmAccount(input, { evaluationTime = new Date() } = {}) 
       account_id: accountId,
       created_at: createdAt,
       evaluated_on: evaluatedOn,
-      signals
+      signals: [...signals].sort((left, right) => left.id.localeCompare(right.id))
     })
   });
 }
