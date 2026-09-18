@@ -166,6 +166,50 @@
     {
       "invariant": "prepared-replay-preserves-predicate-digests",
       "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "source-effects-do-not-define-host-effects",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "host-operation-contract-is-authoritative",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "ambiguous-host-operation-mapping-denied",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "signed-requester-effect-envelope-is-hard-upper-bound",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "effect-envelope-downgrade-to-unmeasured-denied",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "hostile-ir-effect-relabeling-denied",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "secret-egress-contract-must-match-host-measurement",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "irreversible-effect-requires-finalize",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "reversible-or-unmeasured-effect-cannot-finalize",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "terminal-finality-binds-executor-and-completion-evidence",
+      "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "prepared-replay-relinks-measured-effect-contract",
+      "status": "covered-measured-effect-tests"
     }
   ],
   "compile_cases": [
