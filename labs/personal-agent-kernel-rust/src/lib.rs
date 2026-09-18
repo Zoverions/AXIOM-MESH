@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
-pub mod context_compiler;\npub mod state_lanes;
+pub mod context_compiler;
+pub mod state_lanes;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
