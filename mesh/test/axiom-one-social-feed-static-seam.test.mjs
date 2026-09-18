@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import test from 'node:test';
 import { startAxiomOnePreview } from '../../apps/axiom-one/server.mjs';
 
@@ -21,13 +22,12 @@ test('AXIOM One serves the reviewed social feed modules byte-for-byte from the l
   t.after(async () => preview.stop());
 
   for (const module of STATIC_MODULES) {
-    const response = await fetch(`${preview.url}${module.path}`);
+    const response = await directLoopbackGet(preview.port, module.path);
     assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-type') ?? '', /^text\/javascript/);
-    const served = await response.text();
+    assert.match(response.contentType, /^text\/javascript/);
     const source = await readFile(module.source, 'utf8');
-    assert.equal(served, source);
-    assert.match(served, new RegExp(module.marker));
+    assert.equal(response.body, source);
+    assert.match(response.body, new RegExp(module.marker));
   }
 });
 
@@ -49,3 +49,25 @@ test('the feed-module seam is a static shell asset only and adds no Gateway rout
   }
   assert.doesNotMatch(serviceWorkerSource, /localStorage|sessionStorage|indexedDB|document\.cookie/);
 });
+
+function directLoopbackGet(port, path) {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest({
+      host: '127.0.0.1',
+      port,
+      path,
+      method: 'GET',
+      headers: { host: `127.0.0.1:${port}` }
+    }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.once('end', () => resolve({
+        status: response.statusCode,
+        contentType: response.headers['content-type'] ?? '',
+        body: Buffer.concat(chunks).toString('utf8')
+      }));
+    });
+    request.once('error', reject);
+    request.end();
+  });
+}
