@@ -25,8 +25,6 @@ const VALUE_TYPES = new Set([
   'boolean',
   'number',
   'integer',
-  'object',
-  'array',
   'null'
 ]);
 
@@ -65,10 +63,6 @@ function switchType(value, expectedType) {
       return typeof value === 'number' && Number.isFinite(value);
     case 'integer':
       return Number.isInteger(value);
-    case 'object':
-      return value !== null && typeof value === 'object' && !Array.isArray(value);
-    case 'array':
-      return Array.isArray(value);
     case 'null':
       return value === null;
     default:
