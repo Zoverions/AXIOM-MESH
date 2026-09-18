@@ -4,11 +4,13 @@ import { generateKeyPairSync } from 'node:crypto';
 
 import {
   PraxisRuntimeError,
+  compile,
   createApprovalRequest,
   createCharteredHostPermit,
   createCharteredHostQuorum,
   createHostObservation,
   createSyntheticCharter,
+  irDigestPraxis,
   operationDigestPraxis,
   run,
   signApprovalRequest,
@@ -204,6 +206,38 @@ const RELEASE_SOURCE = [
   'prepare armed as prepared;',
   'commit prepared as receipt;'
 ].join('\n');
+
+test('signed charter can pin the exact reviewed IR while hostile resealed IR is refused', async () => {
+  const source = [
+    'op release = Deploy("artifact") @ Production;'
+  ].join('\n');
+  const reviewed = compile(source);
+  const pinnedCharter = createSyntheticCharter({
+    principals,
+    programDigests: [reviewed.digest]
+  }, root.privateKey);
+
+  const accepted = await run(source, {
+    charter: pinnedCharter,
+    trustedCharterKeys: trustedRoots
+  });
+  assert.equal(accepted.values.release.kind, 'Operation');
+
+  const edited = structuredClone(reviewed);
+  edited.instructions.find(instruction => instruction.op === 'PLAN').args = [
+    { kind: 'literal', value: 'artifact:unreviewed' }
+  ];
+  edited.digest = irDigestPraxis(edited);
+
+  await assert.rejects(
+    () => run(edited, {
+      charter: pinnedCharter,
+      trustedCharterKeys: trustedRoots
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_PROGRAM_UNPINNED'
+  );
+});
 
 test('signed synthetic charter verifies against its trusted root', () => {
   const result = verifySyntheticCharter(charter, trustedRoots);
