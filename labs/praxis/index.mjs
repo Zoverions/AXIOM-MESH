@@ -28,16 +28,97 @@ export class PraxisRuntimeError extends Error {
   }
 }
 
-function canonical(value) {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+export function canonicalizePraxis(value) {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
+    return value;
   }
-  return JSON.stringify(value);
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new TypeError('Praxis canonical JSON does not allow non-finite numbers');
+    }
+    return Object.is(value, -0) ? 0 : value;
+  }
+
+  if (Array.isArray(value)) {
+    if (Object.getPrototypeOf(value) !== Array.prototype) {
+      throw new TypeError('Praxis canonical arrays must use the ordinary Array prototype');
+    }
+    if (Object.getOwnPropertySymbols(value).length !== 0) {
+      throw new TypeError('Praxis canonical arrays cannot contain symbol-keyed state');
+    }
+
+    const allowedNames = new Set(['length']);
+    const output = [];
+    for (let index = 0; index < value.length; index += 1) {
+      const key = String(index);
+      allowedNames.add(key);
+      if (!Object.hasOwn(value, key)) {
+        throw new TypeError(`Praxis canonical arrays cannot contain a sparse index at ${index}`);
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+        throw new TypeError(`Praxis canonical array index ${index} must be an enumerable data property`);
+      }
+      output.push(canonicalizePraxis(descriptor.value));
+    }
+
+    for (const name of Object.getOwnPropertyNames(value)) {
+      if (!allowedNames.has(name)) {
+        throw new TypeError(`Praxis canonical arrays cannot contain custom property ${name}`);
+      }
+    }
+    return output;
+  }
+
+  if (typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError('Praxis canonical objects must be plain records');
+    }
+    if (Object.getOwnPropertySymbols(value).length !== 0) {
+      throw new TypeError('Praxis canonical objects cannot contain symbol-keyed state');
+    }
+
+    const ownNames = Object.getOwnPropertyNames(value);
+    const enumerableKeys = Object.keys(value);
+    if (ownNames.length !== enumerableKeys.length) {
+      throw new TypeError('Praxis canonical objects cannot contain non-enumerable state');
+    }
+
+    const output = {};
+    for (const key of enumerableKeys.sort()) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+        throw new TypeError(`Praxis canonical property ${key} must be an enumerable data property`);
+      }
+      const item = descriptor.value;
+      if (item === undefined || typeof item === 'function' || typeof item === 'symbol') {
+        throw new TypeError(`Praxis canonical JSON cannot encode property ${key}`);
+      }
+      Object.defineProperty(output, key, {
+        value: canonicalizePraxis(item),
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    }
+    return output;
+  }
+
+  throw new TypeError(`Praxis canonical JSON cannot encode ${typeof value}`);
 }
 
-function digest(value) {
-  return `sha256:${createHash('sha256').update(canonical(value)).digest('hex')}`;
+export function canonicalJsonPraxis(value) {
+  return JSON.stringify(canonicalizePraxis(value));
+}
+
+export function digestPraxis(value) {
+  return createHash('sha256').update(canonicalJsonPraxis(value), 'utf8').digest('hex');
+}
+
+function operationDigest(value) {
+  return `sha256:${digestPraxis(value)}`;
 }
 
 export function lex(source) {
@@ -627,7 +708,7 @@ export async function run(source, {
         values.set(instruction.name, Object.freeze({
           kind: 'Operation',
           ...operation,
-          operation_digest: digest(operation)
+          operation_digest: operationDigest(operation)
         }));
         break;
       }
