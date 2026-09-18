@@ -4,8 +4,8 @@ use std::fs;
 use std::path::PathBuf;
 
 fn parse_tsv() -> Vec<BTreeMap<String, String>> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("fixtures/mesh-proof-signature-v0.tsv");
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/mesh-proof-signature-v0.tsv");
     let text = fs::read_to_string(path).expect("read crypto fixture");
     let mut lines = text.trim().lines();
     let header: Vec<String> = lines
@@ -40,9 +40,8 @@ fn rust_strict_ed25519_verifier_matches_fixed_axiom_vectors() {
 
         match row["expected"].as_str() {
             "allow" => {
-                let verified = result.unwrap_or_else(|error| {
-                    panic!("{} should verify: {error}", row["case_id"])
-                });
+                let verified = result
+                    .unwrap_or_else(|error| panic!("{} should verify: {error}", row["case_id"]));
                 assert_eq!(verified.digest_hex, row["digest_hex"]);
                 assert_eq!(verified.public_key_raw_hex, row["public_key_raw_hex"]);
                 assert!(!verified.grants_authority());
