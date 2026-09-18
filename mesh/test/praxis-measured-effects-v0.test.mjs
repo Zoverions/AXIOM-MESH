@@ -282,6 +282,34 @@ test('host registry missing an effectful operation fails closed', async () => {
   );
 });
 
+test('ambiguous host operation mapping fails closed', async () => {
+  const ambiguous = createHostOperationRegistry({
+    DeployPrimary: {
+      action: 'Deploy',
+      scope: 'Production',
+      effect: 'deploy_release',
+      irreversible: false,
+      egress: 'provider:prod'
+    },
+    DeploySecondary: {
+      action: 'Deploy',
+      scope: 'Production',
+      effect: 'deploy_release_backup',
+      irreversible: false,
+      egress: 'provider:backup'
+    }
+  });
+
+  await assert.rejects(
+    () => run(
+      'op release = Deploy("artifact") @ Production effect deploy_release egress "provider:prod";',
+      { hostOperations: ambiguous }
+    ),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_OPERATION_AMBIGUOUS'
+  );
+});
+
 test('host action/scope/effect/egress contract mismatch fails at link time', async () => {
   const wrong = createHostOperationRegistry({
     Deploy: {
