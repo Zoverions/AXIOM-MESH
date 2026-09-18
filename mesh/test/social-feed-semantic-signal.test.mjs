@@ -243,6 +243,21 @@ test('provider confidence does not change the normalized feed score', () => {
   assert.equal(Object.hasOwn(lowSignal, 'achieved_assurance'), false);
 });
 
+test('semantic signal validation fails when trusted candidate state changes', () => {
+  const fixture = createFixture();
+  const signal = createSocialFeedSemanticSignal(fixture.input);
+
+  assert.throws(
+    () => validateSocialFeedSemanticSignal(signal, {
+      stateDigest: C,
+      observation: fixture.observation,
+      providerProfile: fixture.profile,
+      questionSchema: fixture.question
+    }),
+    /state digest does not match observation/i
+  );
+});
+
 test('candidate and publication binding are part of semantic signal identity', () => {
   const fixture = createFixture();
   const first = createSocialFeedSemanticSignal(fixture.input);
