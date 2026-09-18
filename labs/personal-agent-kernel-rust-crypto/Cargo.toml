@@ -10,6 +10,9 @@ license = "Apache-2.0"
 path = "src/lib.rs"
 
 [dependencies]
+axiom-personal-agent-kernel-rust-lab = { path = "../personal-agent-kernel-rust" }
 base64 = "=0.23.1"
 ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["fast"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
 sha2 = "=0.11.0"
