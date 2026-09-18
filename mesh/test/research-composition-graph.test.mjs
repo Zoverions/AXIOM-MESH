@@ -181,6 +181,15 @@ test('Research Composition Graph v0 preserves lineage, disagreement, and zero-au
   const { contributions, relations, byId } = fixture();
 
   assert.equal(
+    graphApi.RESEARCH_CONTRIBUTION_SCHEMA,
+    'axiom-research-contribution.v0'
+  );
+  assert.equal(
+    graphApi.RESEARCH_RELATION_SCHEMA,
+    'axiom-research-relation.v0'
+  );
+
+  assert.equal(
     graphApi.verifyResearchContribution(contributions[0]).authority_effect,
     'none'
   );
