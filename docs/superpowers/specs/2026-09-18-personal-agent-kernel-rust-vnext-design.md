@@ -99,6 +99,42 @@ A future production adapter maps the Rust `AuthorityRequest` into the existing M
 
 Every imported proof is bound to owner subject, plan digest, node id, capability, revocation epoch, expiry, and delegation-hop ceiling. Mismatch is deny.
 
+## Mesh-native differentiators
+
+### Single-spend authority mobility
+
+A persistent personal agent must be able to follow the owner from phone to desktop to home node to remote confidential-compute node without copying live authority.
+
+The executable lab therefore models authority movement as a **handoff proposal**, never as grant cloning. A handoff names the source and target Mesh node and proposes the next revocation epoch. The current grant remains the only grant until Mesh atomically revokes/reissues under the newer epoch.
+
+The Rust kernel cannot commit the handoff by itself.
+
+### Witnessed effect receipts
+
+High-consequence effects can be observed by multiple independent Mesh nodes. Witnesses bind to the exact receipt reference and effect digest, must be fresh, and are deduplicated by witness node.
+
+A witness quorum strengthens causal evidence for memory, audit, insurance, dispute resolution, and later autonomy review. It never creates action authority.
+
+This gives the personal agent a distributed answer to a subtle problem: the executor should not be the sole source of truth about what the executor claims it did.
+
+### Partition-safe offline envelopes
+
+A future Mesh adapter may issue a short-lived offline effect envelope for disconnected operation. Such an envelope must be pre-authorized by Mesh and bind exact capability, effect count, resource budgets, expiry, target device, runtime surface, and a no-delegation rule.
+
+Offline consumption is monotonic and cannot replenish itself. Reconnection must reconcile receipts before another envelope is issued. Conflicts fail closed rather than merging authority.
+
+### Attestation-aware execution placement
+
+The Mesh scheduler may select among eligible local, peer, cloud, or confidential-compute nodes using current attestation, resource availability, latency, privacy class, energy, and cost.
+
+Placement is deliberately downstream of policy eligibility and upstream of a final exact Mesh grant. A scheduler may choose **where** an authorized operation could run; it cannot decide **whether** the operation is authorized.
+
+### Recovery quorum without authority inheritance
+
+Recovery material can be distributed across owner-controlled Mesh nodes and optional trustees. A recovery quorum may reconstruct continuity material, but restoration still starts with zero live effect authority.
+
+Recovery therefore restores the personal entity without silently turning backup holders into operators.
+
 ## Standards-backed adapter seams
 
 These are adapter targets, not new authority roots.
