@@ -52,39 +52,17 @@ function exactDomainList(values) {
   return normalized;
 }
 
-function validateCredentialBindings(bindings, allowedDomains) {
+function rejectCredentialBindings(bindings) {
   if (!Array.isArray(bindings)) {
     throw new ValidationError('Google managed-agent credentialBindings must be an array');
   }
-  const allowed = new Set(allowedDomains);
-  const byDomain = new Map();
-  for (const binding of bindings) {
-    if (
-      !binding
-      || typeof binding !== 'object'
-      || Array.isArray(binding)
-      || Object.keys(binding).sort().join(',') !== 'credential_id,domain'
-    ) {
-      throw new ValidationError(
-        'Google managed-agent credential bindings permit only domain and credential_id'
-      );
-    }
-    const domain = normalizeDomain(binding.domain);
-    requireId(binding.credential_id, 'Google managed-agent credential_id');
-    if (!allowed.has(domain)) {
-      throw new ValidationError(
-        'Google managed-agent credential binding requires an explicitly allowed domain'
-      );
-    }
-    if (byDomain.has(domain)) {
-      throw new ValidationError(
-        'Google managed-agent credential binding contains a duplicate domain'
-      );
-    }
-    byDomain.set(domain, binding.credential_id);
+  if (bindings.length > 0) {
+    throw new ValidationError(
+      'Google managed-agent provider credential brokerage is disabled until credential handles are bound to a verified AXIOM runtime-adapter grant'
+    );
   }
-  return byDomain;
 }
+
 
 function validateAuthorizedHandoff(handoff, allowedDomains) {
   validateTaskArtifactHandoff(handoff);
@@ -164,7 +142,7 @@ export function buildGoogleManagedAgentInteraction({
 
   const domains = exactDomainList(allowedDomains);
   validateAuthorizedHandoff(handoff, domains);
-  const credentials = validateCredentialBindings(credentialBindings, domains);
+  rejectCredentialBindings(credentialBindings);
   const pinnedEnvironmentId = optionalProviderLocator(
     environmentId,
     'Google managed-agent environmentId'
@@ -177,10 +155,7 @@ export function buildGoogleManagedAgentInteraction({
   const network = domains.length === 0
     ? 'disabled'
     : {
-      allowlist: domains.map((domain) => {
-        const credential = credentials.get(domain);
-        return credential ? { domain, credential } : { domain };
-      })
+      allowlist: domains.map((domain) => ({ domain }))
     };
 
   const environment = {
