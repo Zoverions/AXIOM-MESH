@@ -976,13 +976,38 @@ function validateApprovalRequest({
   }
 }
 
+function normalizeAuthoritySubject(operation, suppliedDigest) {
+  if (operation !== null && operation !== undefined) {
+    const validated = validateOperationDescriptorPraxis(operation);
+    if (suppliedDigest !== null && suppliedDigest !== undefined) {
+      normalizeOperationDigest(suppliedDigest);
+      if (suppliedDigest !== validated.operation_digest) {
+        throw new PraxisRuntimeError(
+          'PRAXIS_POLICY_SUBJECT_INVALID',
+          'supplied operation digest does not match the exact operation descriptor'
+        );
+      }
+    }
+    return Object.freeze({
+      operation: validated,
+      operation_digest: validated.operation_digest
+    });
+  }
+  normalizeOperationDigest(suppliedDigest);
+  return Object.freeze({
+    operation: null,
+    operation_digest: suppliedDigest
+  });
+}
+
 async function createCharteredHostAuthority({
   id,
   authorityKind,
   charter,
   trustedRootKeys,
   policyName,
-  operationDigest,
+  operation = null,
+  operationDigest = null,
   evidence = [],
   requester,
   request = null,
@@ -993,7 +1018,8 @@ async function createCharteredHostAuthority({
   if (!id || !policyName || !requester) {
     throw new TypeError('chartered authority requires id, policyName, and requester');
   }
-  normalizeOperationDigest(operationDigest);
+  const subject = normalizeAuthoritySubject(operation, operationDigest);
+  const subjectDigest = subject.operation_digest;
   const nowMs = typeof now === 'number' ? now : Date.parse(String(now));
   if (!Number.isFinite(nowMs)) throw new TypeError('authority time is invalid');
   const charterContext = verifySyntheticCharter(charter, trustedRootKeys);
@@ -1008,12 +1034,29 @@ async function createCharteredHostAuthority({
       'policy ' + policyName + ' grants ' + policy.authority_kind + ', not ' + authorityKind
     );
   }
+  if (
+    subject.operation
+    && (subject.operation.action !== policy.action || subject.operation.scope !== policy.scope)
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_SUBJECT_INVALID',
+      'operation descriptor action/scope does not match the pinned policy'
+    );
+  }
   const requesterPrincipal = resolveRequesterPrincipal(charterContext, requester);
-  const evidenceMetadata = requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowMs);
+  const evidenceContext = requireVerifiedAuthorityEvidence(
+    evidence,
+    policy,
+    charterContext,
+    nowMs
+  );
+  const premises = evaluatePolicyRequirements(policy, evidenceContext, subject.operation);
+  const evidenceMetadata = evidenceContext.metadata;
   const advice = await runPinnedAdvisor(policy, advisors, {
     policy_name: policyName,
-    operation_digest: operationDigest,
+    operation_digest: subjectDigest,
     evidence_digests: evidenceMetadata.map(item => item.evidence_digest),
+    premise_digests: premises.map(item => item.predicate_digest),
     requester: requesterPrincipal
   });
 
@@ -1027,7 +1070,7 @@ async function createCharteredHostAuthority({
       charterContext,
       policyName,
       policyEntry,
-      operationDigest,
+      operationDigest: subjectDigest,
       evidenceMetadata,
       requester,
       nowMs
@@ -1084,7 +1127,7 @@ async function createCharteredHostAuthority({
     id: String(id),
     action: policy.action,
     scope: policy.scope,
-    operation_digest: operationDigest,
+    operation_digest: subjectDigest,
     expires_at_ms: expiry,
     threshold: authorityKind === 'Quorum' ? policy.threshold : null,
     members: authorityKind === 'Quorum' ? policy.members : null,
@@ -1096,6 +1139,7 @@ async function createCharteredHostAuthority({
     requester: requesterPrincipal,
     request_digest: requestDigest,
     evidence: evidenceMetadata,
+    premises,
     advice
   });
 }
