@@ -82,7 +82,7 @@ impl JournalSnapshot {
 pub struct OfflineJournal {
     path: PathBuf,
     lease_path: PathBuf,
-    lease_file: File,
+    lease_file: Option<File>,
     file: File,
     global_sequence: u64,
     tail_hash: String,
@@ -142,7 +142,7 @@ impl OfflineJournal {
         Ok(Self {
             path,
             lease_path,
-            lease_file,
+            lease_file: Some(lease_file),
             file,
             global_sequence: state.global_sequence,
             tail_hash: state.tail_hash,
@@ -288,7 +288,10 @@ impl OfflineJournal {
 
 impl Drop for OfflineJournal {
     fn drop(&mut self) {
-        self.lease_file.sync_all().ok();
+        if let Some(file) = self.lease_file.take() {
+            file.sync_all().ok();
+            drop(file);
+        }
         std::fs::remove_file(&self.lease_path).ok();
     }
 }
