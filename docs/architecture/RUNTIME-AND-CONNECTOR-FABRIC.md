@@ -94,7 +94,7 @@ The first concrete candidate is Google's September 2026 Antigravity managed-agen
 
 The initial implementation is deliberately a pure request-construction and conformance slice. It performs no Google API call, creates no credential, promotes no capability, and changes no Gateway/Sandbox/Grid authority path.
 
-The candidate is **announcement-pinned** to `antigravity-preview-09-2026`. Because some current public developer-document examples still show `antigravity-preview-05-2026`, an unavailable or rejected `09-2026` identifier is a compatibility failure, not permission to fall back silently. Any later harness identifier requires an explicit catalog/profile update and review.
+The candidate is pinned to `antigravity-preview-09-2026`, released by Google on September 17, 2026 as the replacement for `antigravity-preview-05-2026`. An unavailable or rejected pinned identifier is a compatibility failure, not permission to fall back silently. Any later harness identifier requires an explicit catalog/profile update and review.
 
 ### Model providers
 
