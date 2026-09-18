@@ -14,15 +14,19 @@ import {
 
 const D = (hex = 'a') => `sha256:${hex.repeat(64)}`;
 
-function dep({
-  dependency_kind = 'formal_library',
-  dependency_ref = 'dep:base',
-  dependency_digest = D('7'),
-  disposition = 'freshly_checked',
-  verification_evidence_ref = 'evidence:verify:base',
-  child_closure_ref,
-  child_closure_digest
-} = {}) {
+function dep(options = {}) {
+  const {
+    dependency_kind = 'formal_library',
+    dependency_ref = 'dep:base',
+    dependency_digest = D('7'),
+    disposition = 'freshly_checked',
+    child_closure_ref,
+    child_closure_digest
+  } = options;
+  const verification_evidence_ref = Object.hasOwn(options, 'verification_evidence_ref')
+    ? options.verification_evidence_ref
+    : 'evidence:verify:base';
+
   return {
     dependency_kind,
     dependency_ref,
@@ -247,7 +251,10 @@ test('separate_context_replay requires bound prior context and separation eviden
       separation_evidence_refs: []
     }
   });
-  assert.throws(() => finalizeReproducibilityClosure(input), /separation_evidence_refs/i);
+  assert.throws(
+    () => finalizeReproducibilityClosure(input),
+    /separation[_ ]evidence/i
+  );
 });
 
 test('same_context_replay rejects changed actor or environment', () => {
