@@ -280,14 +280,43 @@ test('Vendor A and Vendor B are admitted independently under current active stat
   for (const result of [a, b]) {
     assert.equal(result.schema, AMN_DOMAIN_ADMISSION_SCHEMA);
     assert.equal(result.result, 'admitted');
-    assert.equal(result.reason_code, 'verified_current');
+    assert.equal(result.reason_code, 'verified_supplied_current');
     assert.equal(result.status_state, 'active');
+    assert.equal(result.status_evidence_scope, 'supplied-issuer-evidence-only');
+    assert.equal(result.global_currentness_claimed, false);
     assert.equal(result.authority_effect, 'none');
     assert.equal(result.delegation_effect, 'none');
     assert.equal(result.pooled_authority_effect, 'none');
     assert.equal(result.federation_authority_effect, 'none');
     assert.match(result.admission_digest, /^[a-f0-9]{64}$/);
   }
+});
+
+test('Vendor A cannot claim Vendor B trust-domain label inside Vendor A namespace', () => {
+  const f = fixture();
+  const publicKey = canonicalPem(f.nodeA.publicKey);
+  const mislabeled = createAmnTrustStatement({
+    schema: AMN_TRUST_SCHEMAS.node_identity,
+    issuerId: 'issuer.vendor-a',
+    issuerPrivateKey: f.vendorA.privateKey,
+    issuedAt: '2026-09-18T16:01:00.000Z',
+    claims: {
+      node_id: 'node.vendor-a.mislabeled',
+      trust_domain: 'spiffe://vendor-b.example',
+      platform_vendor: 'vendor-a',
+      platform_family: 'vendor-a-reference',
+      identity_method: 'software-key',
+      subject_key_id: amnTrustKeyId(f.nodeA.publicKey),
+      subject_public_key: publicKey
+    }
+  });
+
+  const result = admission({ f, statement: mislabeled, statuses: [] });
+
+  assert.equal(result.result, 'rejected');
+  assert.equal(result.reason_code, 'trust_domain_mismatch');
+  assert.equal(result.issuer_trust_domain, 'spiffe://vendor-a.example');
+  assert.equal(result.authority_effect, 'none');
 });
 
 test('Vendor A cannot mint a trusted identity inside Vendor B subject namespace', () => {
@@ -423,7 +452,7 @@ test('Vendor A revocation rejects A while Vendor B remains admitted', () => {
   assert.equal(a.result, 'rejected');
   assert.equal(a.reason_code, 'status_revoked');
   assert.equal(b.result, 'admitted');
-  assert.equal(b.reason_code, 'verified_current');
+  assert.equal(b.reason_code, 'verified_supplied_current');
 });
 
 test('stale or missing status quarantines rather than silently promoting trust', () => {
@@ -646,7 +675,30 @@ test('domain snapshot aggregates evidence without creating pooled or federation 
   assert.equal(snapshot.delegation_effect, 'none');
   assert.equal(snapshot.pooled_authority_effect, 'none');
   assert.equal(snapshot.federation_authority_effect, 'none');
+  assert.equal(snapshot.global_currentness_claimed, false);
   assert.match(snapshot.snapshot_digest, /^[a-f0-9]{64}$/);
+});
+
+test('domain snapshot refuses duplicate admissions so counts cannot be inflated', () => {
+  const f = fixture();
+  const statementA = nodeIdentity({
+    issuer: f.vendorA,
+    issuerId: 'issuer.vendor-a',
+    subject: f.nodeA,
+    nodeId: 'node.vendor-a.001',
+    vendor: 'vendor-a'
+  });
+  const activeA = status({
+    issuer: f.vendorA,
+    issuerId: 'issuer.vendor-a',
+    subjectId: 'node.vendor-a.001'
+  });
+  const a = admission({ f, statement: statementA, statuses: [activeA] });
+
+  assert.throws(
+    () => createAmnDomainSnapshot([a, a]),
+    /cannot count duplicate admissions/
+  );
 });
 
 test('domain snapshot refuses to pool admissions from different customer trust bundles', () => {
