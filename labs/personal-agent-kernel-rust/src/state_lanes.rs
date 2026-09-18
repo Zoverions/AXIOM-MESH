@@ -298,18 +298,12 @@ pub struct ValidationEvidenceInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ValidatedValue {
-    pub state_key: String,
-    pub value_digest: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidationReceipt {
     validation_id: String,
     validator_tool_ref: String,
     merge_id: String,
     inputs: Vec<MergeInput>,
-    values: Vec<ValidatedValue>,
+    values: Vec<MergedValue>,
     disposition: ValidationDisposition,
     result_digest: String,
     evidence_refs: Vec<String>,
@@ -332,7 +326,7 @@ impl ValidationReceipt {
         &self.inputs
     }
 
-    pub fn values(&self) -> &[ValidatedValue] {
+    pub fn values(&self) -> &[MergedValue] {
         &self.values
     }
 
@@ -575,21 +569,12 @@ impl StateLaneRegistry {
             return Err(StateLaneError::new("duplicate validation id"));
         }
 
-        let values = view
-            .values
-            .iter()
-            .map(|value| ValidatedValue {
-                state_key: value.state_key.clone(),
-                value_digest: value.value_digest.clone(),
-            })
-            .collect();
-
         let receipt = ValidationReceipt {
             validation_id: evidence.validation_id.clone(),
             validator_tool_ref: evidence.validator_tool_ref,
             merge_id: evidence.merge_id,
             inputs: view.inputs.clone(),
-            values,
+            values: view.values.clone(),
             disposition: evidence.disposition,
             result_digest: evidence.result_digest,
             evidence_refs: refs.into_iter().collect(),

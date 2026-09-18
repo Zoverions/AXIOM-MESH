@@ -315,7 +315,7 @@ State-lane isolation prevents tools from silently overwriting each other, but va
 The laboratory therefore treats a validation result as a sealed receipt over one exact conflict-free merge snapshot:
 
 - the merge consumer and validator identity must match;
-- the receipt binds the exact merge ID, source lane revisions, and merged state-key/value digests;
+- the receipt binds the exact merge ID, source lane revisions, merged state-key/value digests, and the complete lane/provenance origins carried by the merge;
 - the validator supplies an external result digest plus bounded supporting evidence references;
 - unresolved merge conflicts cannot be laundered into a validation receipt;
 - duplicate validation IDs fail closed;
