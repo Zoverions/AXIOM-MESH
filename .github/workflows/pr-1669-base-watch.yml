@@ -1,0 +1,181 @@
+name: PR 1669 base watch
+
+on:
+  pull_request:
+    types: [closed]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  notify-stacked-pr:
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.number == 1669 &&
+       github.event.pull_request.merged == true) ||
+      (github.event_name == 'pull_request_review' &&
+       github.event.pull_request.number == 1669) ||
+      (github.event_name == 'pull_request_review_comment' &&
+       github.event.pull_request.number == 1669)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      WATCH_PR: "1669"
+      STACKED_PR: "1671"
+    steps:
+      - name: Post bounded watch update to stacked PR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          event="$GITHUB_EVENT_NAME"
+
+          sanitize_body() {
+            tr '\r\n\t' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-1000
+          }
+
+          if [[ "$event" == "pull_request_review" ]]; then
+            actor="$(jq -r '.review.user.login // .sender.login // "unknown"' "$GITHUB_EVENT_PATH")"
+            state="$(jq -r '.review.state // "submitted"' "$GITHUB_EVENT_PATH")"
+            url="$(jq -r '.review.html_url // .pull_request.html_url' "$GITHUB_EVENT_PATH")"
+            summary="$(jq -r '.review.body // ""' "$GITHUB_EVENT_PATH" | sanitize_body)"
+            if [[ -z "$summary" ]]; then
+              summary="No review body was supplied; inspect the linked review for the state change."
+            fi
+
+            body="$(cat <<EOF
+### Base watch: PR #$WATCH_PR review feedback
+
+- Event: review submitted
+- Reviewer: @$actor
+- State: `$state`
+- Review: $url
+- Meaningful change: $summary
+
+PR #$STACKED_PR remains stacked and draft. No merge, rebase, retarget, push, or authority-changing action was performed by this workflow.
+EOF
+)"
+            gh pr comment "$STACKED_PR" --repo "$GH_REPO" --body "$body"
+            exit 0
+          fi
+
+          if [[ "$event" == "pull_request_review_comment" ]]; then
+            actor="$(jq -r '.comment.user.login // .sender.login // "unknown"' "$GITHUB_EVENT_PATH")"
+            url="$(jq -r '.comment.html_url // .pull_request.html_url' "$GITHUB_EVENT_PATH")"
+            path="$(jq -r '.comment.path // "(general)"' "$GITHUB_EVENT_PATH")"
+            line="$(jq -r '(.comment.line // .comment.original_line // "") | tostring' "$GITHUB_EVENT_PATH")"
+            summary="$(jq -r '.comment.body // ""' "$GITHUB_EVENT_PATH" | sanitize_body)"
+            if [[ -z "$summary" ]]; then
+              summary="Review comment created without a text body; inspect the linked thread."
+            fi
+
+            location="$path"
+            if [[ -n "$line" ]]; then
+              location="$location:$line"
+            fi
+
+            body="$(cat <<EOF
+### Base watch: PR #$WATCH_PR review comment
+
+- Event: new inline review feedback
+- Reviewer: @$actor
+- Location: `$location`
+- Comment: $url
+- Meaningful change: $summary
+
+PR #$STACKED_PR remains stacked and draft. No merge, rebase, retarget, push, or authority-changing action was performed by this workflow.
+EOF
+)"
+            gh pr comment "$STACKED_PR" --repo "$GH_REPO" --body "$body"
+            exit 0
+          fi
+
+          merged_head="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          merge_commit="$(jq -r '.pull_request.merge_commit_sha // ""' "$GITHUB_EVENT_PATH")"
+          merged_url="$(jq -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")"
+
+          repo_json="$(gh api "repos/$GH_REPO")"
+          default_branch="$(jq -r '.default_branch' <<<"$repo_json")"
+
+          stacked_json="$(gh api "repos/$GH_REPO/pulls/$STACKED_PR")"
+          stacked_head="$(jq -r '.head.sha' <<<"$stacked_json")"
+          stacked_head_ref="$(jq -r '.head.ref' <<<"$stacked_json")"
+          stacked_base_ref="$(jq -r '.base.ref' <<<"$stacked_json")"
+          stacked_draft="$(jq -r '.draft' <<<"$stacked_json")"
+
+          base_compare="$(gh api "repos/$GH_REPO/compare/${merged_head}...${default_branch}")"
+          base_status="$(jq -r '.status' <<<"$base_compare")"
+
+          stack_compare="$(gh api "repos/$GH_REPO/compare/${merged_head}...${stacked_head}")"
+          stack_status="$(jq -r '.status' <<<"$stack_compare")"
+
+          if [[ "$base_status" == "ahead" || "$base_status" == "identical" ]]; then
+            plan="$(cat <<EOF
+**Prepared path: retarget-only.** GitHub reports the merged #$WATCH_PR head `$merged_head` is an ancestor of `$default_branch`, so #$STACKED_PR can be retargeted without rewriting its current head.
+
+```bash
+EXPECTED_HEAD="$stacked_head"
+gh pr edit $STACKED_PR --repo "$GH_REPO" --base "$default_branch"
+ACTUAL_HEAD="$(gh api "repos/$GH_REPO/pulls/$STACKED_PR" --jq '.head.sha')"
+test "$ACTUAL_HEAD" = "$EXPECTED_HEAD"
+gh api "repos/$GH_REPO/commits/$EXPECTED_HEAD/check-runs?per_page=100" \
+  --jq '.check_runs[] | [.name, .status, (.conclusion // "pending")] | @tsv'
+```
+
+Exact-head invariant: verification belongs to `$stacked_head`; retargeting must not change that SHA.
+EOF
+)"
+          elif [[ "$stack_status" == "ahead" ]]; then
+            plan="$(cat <<EOF
+**Prepared path: rebase then retarget.** The merged #$WATCH_PR head is not an ancestor of `$default_branch` (consistent with squash/rebase-style integration), while #$STACKED_PR still descends from exact base head `$merged_head`.
+
+```bash
+git fetch origin "$default_branch" "$stacked_head_ref"
+git switch "$stacked_head_ref"
+git merge-base --is-ancestor "$merged_head" HEAD
+git rebase --onto "origin/$default_branch" "$merged_head" "$stacked_head_ref"
+NEW_HEAD="$(git rev-parse HEAD)"
+git push --force-with-lease origin "$stacked_head_ref"
+gh pr edit $STACKED_PR --repo "$GH_REPO" --base "$default_branch"
+ACTUAL_HEAD="$(gh api "repos/$GH_REPO/pulls/$STACKED_PR" --jq '.head.sha')"
+test "$ACTUAL_HEAD" = "$NEW_HEAD"
+gh api "repos/$GH_REPO/commits/$NEW_HEAD/check-runs?per_page=100" \
+  --jq '.check_runs[] | [.name, .status, (.conclusion // "pending")] | @tsv'
+```
+
+Exact-head invariant: treat `$NEW_HEAD` as the only valid verification target after the history rewrite.
+EOF
+)"
+          else
+            plan="$(cat <<EOF
+**Prepared path: fail closed for ancestry inspection.** #$STACKED_PR no longer cleanly descends from merged base head `$merged_head` (compare status: `$stack_status`). Do not retarget or rewrite history until the stack ancestry is inspected. Re-read #$STACKED_PR's current commits against `$default_branch`, then choose a minimal rebase/cherry-pick that preserves only the Rust-lab delta.
+
+Current #$STACKED_PR exact head remains `$stacked_head`; any later verification must bind to the post-repair head, not this pre-repair SHA.
+EOF
+)"
+          fi
+
+          body="$(cat <<EOF
+### Base watch: PR #$WATCH_PR merged
+
+- Base PR: $merged_url
+- Merged source head: `$merged_head`
+- Merge commit reported by GitHub: `${merge_commit:-unknown}`
+- Default branch: `$default_branch`
+- #$STACKED_PR current base: `$stacked_base_ref`
+- #$STACKED_PR current head: `$stacked_head`
+- #$STACKED_PR draft: `$stacked_draft`
+
+$plan
+
+This workflow only prepared and reported the next work. It did **not** rebase, retarget, push, mark ready, or merge #$STACKED_PR.
+EOF
+)"
+          gh pr comment "$STACKED_PR" --repo "$GH_REPO" --body "$body"
