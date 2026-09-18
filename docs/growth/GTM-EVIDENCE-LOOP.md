@@ -139,7 +139,7 @@ That digest is the handoff point for the outcome layer.
 `axiom-gtm-outcome-receipt.v0` now binds a recorded result to:
 
 - receipt and campaign IDs;
-- the exact account ID and account-evidence digest;
+- the exact account ID, original evaluation date, and account-evidence digest;
 - an opaque `operation_ref` that attributes, but does not authorize, the action;
 - a bounded outcome class;
 - an outcome date no earlier than the account evaluation;
@@ -147,9 +147,11 @@ That digest is the handoff point for the outcome layer.
 - optional ISO-currency revenue in minor units only for `paid_pilot` or
   `revenue_confirmed` outcomes.
 
-The receipt validator requires the actual account-evaluation result and rejects a
-mismatched account or evidence digest. This creates the training loop without
-rewriting history. New evidence produces a new digest; later outcomes remain
+The receipt validator recomputes the account evaluation from the underlying
+account-evidence package, the recorded evaluation date, and trusted provenance,
+then rejects a mismatched account or evidence digest. A caller-supplied result
+object is not accepted as proof of the original evaluation. This creates the
+training loop without rewriting history. New evidence produces a new digest; later outcomes remain
 attributable to the exact state that motivated the separately authorized action.
 
 An outcome receipt is evidence of what AXIOM recorded, not independent proof that
