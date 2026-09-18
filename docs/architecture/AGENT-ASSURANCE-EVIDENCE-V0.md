@@ -108,16 +108,58 @@ Both sealed and verified outputs explicitly carry:
 - `authority_effect: none`; and
 - `authorizes_execution: false` (on the assessment/verification result).
 
+
+## Machine-authority binding and deny-only consumption
+
+The follow-on binding layer remains inside the existing machine-authority path.
+
+`bindAgentAssuranceToMachinePrincipal` re-normalizes the current
+`axiom-machine-principal.v1` record and compares both the principal identifier
+and the recomputed `authority_digest` with the assurance evidence. A mismatch
+produces a deny-only binding signal; it never rebinds the evidence or updates
+the principal.
+
+`evaluateMachineIntentWithAssurance` first calls the existing
+`evaluateMachineIntent`. Assurance is consulted only after that canonical
+machine decision is already allow. Therefore assurance can preserve an existing
+allow or reduce it to deny, but it cannot turn an existing deny into allow.
+
+Current hard environment findings are deny-only:
+
+- observed egress broader than declared egress;
+- undeclared observed network destinations;
+- undeclared writable paths;
+- undeclared secret references; or
+- undeclared tools.
+
+Incomplete monitor coverage remains visible evidence but is not currently an
+execution deny by itself. A low block rate or complete-looking monitor report
+also never creates authority.
+
+Public `POST /v1/intents` rejects caller-supplied `assurance_evidence`.
+The internal Gateway-to-Hypervisor intent shape may carry normalized assurance
+evidence, but no public producer is wired in this slice. This prevents an agent
+from self-reporting a safe environment to obtain a more favorable decision.
+
+When internal assurance evidence is present, its normalized digest is added to
+existing plan decision provenance as `agent-assurance:<digest>`. The sandbox
+handoff re-evaluates the deny-only signal and requires that exact digest-bound
+rule. Swapped or missing assurance evidence therefore fails closed before
+execution.
+
+The accepted intent event records only the bounded assurance decision/binding
+summary, not a new authority grant. No capability-registry status, delegation,
+policy source, public route, or execution capability is added.
+
 ## Next bounded integrations
 
 After this contract survives repository review and full CI, follow-on work can
 remain incremental:
 
-1. bind a real machine-principal authority digest and runtime observation into
-   the envelope at run start/end;
-2. emit the oversight counters from the existing observability path;
-3. feed environment non-conformance into the existing policy/approval path as
-   a deny-only signal;
+1. add a trusted internal producer for runtime observation and signed evidence;
+2. emit oversight counters from the existing observability path;
+3. bind those observations to the current run/runtime identity before the
+   Gateway attaches them to an internal intent;
 4. add an isolated evaluator-bundle runner without network or authority; and
 5. attach mission-graph provenance to existing receipts without enabling
    machine delegation.
