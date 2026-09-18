@@ -616,7 +616,8 @@
         "Catalog presence does not authorize Gemini API access, remote sandbox creation, provider credential use, tool use, or external effects.",
         "Google-managed environments currently default to unrestricted outbound network access; any AXIOM adapter must explicitly disable networking or supply an exact finite allowlist and must reject wildcard egress.",
         "Google credential references may prevent the sandbox from receiving raw secrets, but provider-side credential brokerage does not become AXIOM authority and does not replace purpose, destination, grant, budget, retention, or receipt checks.",
-        "This candidate records no live provider invocation, runtime conformance result, production promotion, or security certification."
+        "This candidate records no live provider invocation, runtime conformance result, production promotion, or security certification.",
+        "The September 17, 2026 Google announcement names antigravity-preview-09-2026, while some public developer-document examples still show antigravity-preview-05-2026; this candidate is announcement-pinned and must fail closed rather than silently fall back to a different harness identifier."
       ]
     },
     {
