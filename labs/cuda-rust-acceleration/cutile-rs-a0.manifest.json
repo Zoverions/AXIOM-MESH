@@ -12,7 +12,9 @@
     "repository": "https://github.com/NVlabs/cutile-rs",
     "revision": "d92c160949f58328ba6e96d81005e7110ba6f2b3",
     "license": "Apache-2.0",
-    "project_status": "early-stage-active-development"
+    "project_status": "early-stage-active-development",
+    "requirements_source_path": "README.md",
+    "license_source_path": "LICENSE"
   },
   "toolchain_constraints": {
     "rust": {
@@ -64,7 +66,9 @@
     "minimum_driver_family": "R580",
     "minimum_llvm_major": 21,
     "minimum_clang_major": 21,
-    "tested_distribution": "Ubuntu 24.04"
+    "tested_distribution": "Ubuntu 24.04",
+    "requirements_source_path": "README.md",
+    "license_source_path": "LICENSE"
   },
   "boundaries": {
     "authority_effect": "none",
