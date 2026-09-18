@@ -317,9 +317,11 @@ fn mesh_native_handoff_and_witness_quorum_preserve_single_spend_semantics() {
         effect_digest: sha('0'),
         witnessed_at_unix_s: NOW,
     };
-    assert!(kernel
-        .assess_receipt_witnesses(&receipt, &[bad], 1, NOW, 30)
-        .is_err());
+    assert!(
+        kernel
+            .assess_receipt_witnesses(&receipt, &[bad], 1, NOW, 30)
+            .is_err()
+    );
 }
 
 #[test]
