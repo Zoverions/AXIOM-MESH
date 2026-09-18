@@ -22,6 +22,23 @@ function signal(id, dimension, level, overrides = {}) {
   };
 }
 
+function trustedProvenance(signals) {
+  return new Map(signals.map(item => [
+    item.id,
+    Object.freeze({
+      source_url: item.source_url,
+      source_kind: item.source_kind
+    })
+  ]));
+}
+
+function evaluateTrusted(input) {
+  return evaluateGtmAccount(input, {
+    evaluationTime: EVALUATION_TIME,
+    trustedProvenance: trustedProvenance(input.signals)
+  });
+}
+
 function account(signals, declaredLane, overrides = {}) {
   return {
     schema: 'axiom-gtm-account-evidence.v0',
@@ -35,11 +52,11 @@ function account(signals, declaredLane, overrides = {}) {
 }
 
 test('routes strong fit, recent timing, and observed intent to HIGH_SIGNAL', () => {
-  const result = evaluateGtmAccount(account([
+  const result = evaluateTrusted(account([
     signal('fit-1', 'fit', 3),
     signal('timing-1', 'timing', 3),
     signal('intent-1', 'intent', 2)
-  ], 'HIGH_SIGNAL'), { evaluationTime: EVALUATION_TIME });
+  ], 'HIGH_SIGNAL'));
 
   assert.equal(result.lane, 'HIGH_SIGNAL');
   assert.deepEqual(result.vector, { fit: 3, timing: 3, intent: 2, confidence: 2 });
@@ -49,14 +66,14 @@ test('routes strong fit, recent timing, and observed intent to HIGH_SIGNAL', () 
 });
 
 test('expired timing evidence cannot keep an account HIGH_SIGNAL', () => {
-  const result = evaluateGtmAccount(account([
+  const result = evaluateTrusted(account([
     signal('fit-1', 'fit', 3),
     signal('timing-old', 'timing', 3, {
       observed_at: '2026-08-18',
       valid_until: '2026-09-17'
     }),
     signal('intent-1', 'intent', 2)
-  ], 'WATCH'), { evaluationTime: EVALUATION_TIME });
+  ], 'WATCH'));
 
   assert.equal(result.lane, 'WATCH');
   assert.deepEqual(result.vector, { fit: 3, timing: 0, intent: 2, confidence: 0 });
@@ -64,11 +81,11 @@ test('expired timing evidence cannot keep an account HIGH_SIGNAL', () => {
 });
 
 test('secondary evidence caps confidence and routes otherwise strong evidence to RESEARCH', () => {
-  const result = evaluateGtmAccount(account([
+  const result = evaluateTrusted(account([
     signal('fit-1', 'fit', 3),
     signal('timing-1', 'timing', 3, { source_kind: 'public_secondary' }),
     signal('intent-1', 'intent', 2)
-  ], 'RESEARCH'), { evaluationTime: EVALUATION_TIME });
+  ], 'RESEARCH'));
 
   assert.equal(result.lane, 'RESEARCH');
   assert.equal(result.vector.confidence, 1);
@@ -76,7 +93,7 @@ test('secondary evidence caps confidence and routes otherwise strong evidence to
 
 test('rejects one source URL split across multiple independence groups', () => {
   assert.throws(
-    () => evaluateGtmAccount(account([
+    () => evaluateTrusted(account([
       signal('fit-1', 'fit', 3, {
         source_url: 'https://example.com/shared',
         independence_group: 'a'
@@ -85,18 +102,18 @@ test('rejects one source URL split across multiple independence groups', () => {
         source_url: 'https://example.com/shared',
         independence_group: 'b'
       })
-    ], 'RESEARCH'), { evaluationTime: EVALUATION_TIME }),
+    ], 'RESEARCH')),
     /maps to multiple independence groups/
   );
 });
 
 test('fails closed when declared lane overstates the computed lane', () => {
   assert.throws(
-    () => evaluateGtmAccount(account([
+    () => evaluateTrusted(account([
       signal('fit-1', 'fit', 3),
       signal('timing-1', 'timing', 1),
       signal('intent-1', 'intent', 2)
-    ], 'HIGH_SIGNAL'), { evaluationTime: EVALUATION_TIME }),
+    ], 'HIGH_SIGNAL')),
     error => error instanceof GtmEvidenceError
       && /declared lane HIGH_SIGNAL does not match computed lane WATCH/.test(error.message)
   );
@@ -111,8 +128,8 @@ test('digest changes when supporting evidence changes', () => {
   const changed = structuredClone(base);
   changed.signals[2].level = 3;
 
-  const left = evaluateGtmAccount(base, { evaluationTime: EVALUATION_TIME });
-  const right = evaluateGtmAccount(changed, { evaluationTime: EVALUATION_TIME });
+  const left = evaluateTrusted(base);
+  const right = evaluateTrusted(changed);
   assert.notEqual(left.evidence_digest, right.evidence_digest);
 });
 
@@ -125,11 +142,20 @@ test('digest is stable when the same evidence is reordered', () => {
   ];
   const reordered = [signals[2], signals[0], signals[1]];
 
-  const left = evaluateGtmAccount(account(signals, 'HIGH_SIGNAL'), {
-    evaluationTime: EVALUATION_TIME
-  });
-  const right = evaluateGtmAccount(account(reordered, 'HIGH_SIGNAL'), {
-    evaluationTime: EVALUATION_TIME
-  });
+  const left = evaluateTrusted(account(signals, 'HIGH_SIGNAL'));
+  const right = evaluateTrusted(account(reordered, 'HIGH_SIGNAL'));
   assert.equal(left.evidence_digest, right.evidence_digest);
+});
+
+
+test('self-asserted source kinds cannot raise confidence without trusted provenance', () => {
+  const input = account([
+    signal('fit-1', 'fit', 3, { source_kind: 'owned_first_party' }),
+    signal('timing-1', 'timing', 3, { source_kind: 'owned_first_party' }),
+    signal('intent-1', 'intent', 2, { source_kind: 'owned_first_party' })
+  ], 'RESEARCH');
+
+  const result = evaluateGtmAccount(input, { evaluationTime: EVALUATION_TIME });
+  assert.equal(result.lane, 'RESEARCH');
+  assert.equal(result.vector.confidence, 0);
 });
