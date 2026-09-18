@@ -20,7 +20,7 @@ The policy binds source setup to:
 - shared-host/source-compatibility Node.js `>=22.23.2 <23`;
 - Node.js **22.23.2** in the separate hosted-runtime/security CI job;
 - Node.js **24.18.0** in protected CI and `.node-version`;
-- Node.js **24.19.0** in the candidate production image;
+- Node.js **24.21.0** in the candidate production image;
 - npm `>=11.0.0 <12` on the primary profile;
 - bundled npm `>=10.9.8 <11` or npm 11 on the Node.js 22 compatibility profile;
 - npm lockfile version 3;
@@ -133,12 +133,12 @@ The exact current pins are:
 supported engine:             >=22.23.2 <23 || >=24.14.0 <25
 hosted production/security CI: 22.23.2 exactly
 protected CI/.node-version:   24.18.0
-candidate production image:   24.19.0
+candidate production image:   24.21.0
 primary npm:                  >=11.0.0 <12
 Node 22 compatibility npm:    >=10.9.8 <11, or >=11.0.0 <12
 ```
 
-The candidate Dockerfile is therefore expected to use Node.js 24.19.0 while the
+The candidate Dockerfile is therefore expected to use Node.js 24.21.0 while the
 protected CI workflow and `.node-version` remain at 24.18.0. Changing either
 value without its matching setup-policy update fails verification.
 
