@@ -70,6 +70,22 @@
     {
       "invariant": "secret-reference-separation",
       "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "compiled-ir-is-untrusted",
+      "status": "covered-adversarial-runtime-tests"
+    },
+    {
+      "invariant": "authority-binds-exact-plan",
+      "status": "covered-runtime-tests"
+    },
+    {
+      "invariant": "quorum-threshold-is-host-bound",
+      "status": "covered-adversarial-runtime-tests"
+    },
+    {
+      "invariant": "prepared-terminal-is-runtime-linear",
+      "status": "covered-adversarial-runtime-tests"
     }
   ],
   "compile_cases": [
