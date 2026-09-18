@@ -8,7 +8,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const VERSION: &str = "v1";
+const VERSION: &str = "v2";
+const MAX_PAYLOAD_BYTES: usize = 16 * 1024;
 const GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 #[derive(Debug)]
@@ -65,6 +66,12 @@ pub struct JournalSnapshot {
     pub envelopes: BTreeMap<String, u64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JournalConsumption {
+    pub sequence: u64,
+    pub payload: Vec<u8>,
+}
+
 impl JournalSnapshot {
     pub fn grants_authority(&self) -> bool {
         false
@@ -80,6 +87,7 @@ pub struct OfflineJournal {
     global_sequence: u64,
     tail_hash: String,
     envelopes: BTreeMap<String, u64>,
+    consumptions: BTreeMap<String, Vec<JournalConsumption>>,
 }
 
 impl OfflineJournal {
@@ -138,6 +146,7 @@ impl OfflineJournal {
             global_sequence: state.global_sequence,
             tail_hash: state.tail_hash,
             envelopes: state.envelopes,
+            consumptions: state.consumptions,
         })
     }
 
@@ -157,6 +166,17 @@ impl OfflineJournal {
         self.envelopes.get(envelope_ref).copied()
     }
 
+    pub fn consumptions_for(
+        &self,
+        envelope_ref: &str,
+    ) -> Result<Vec<JournalConsumption>, JournalError> {
+        validate_id(envelope_ref)?;
+        self.consumptions
+            .get(envelope_ref)
+            .cloned()
+            .ok_or(JournalError::UnknownEnvelope)
+    }
+
     pub fn register_envelope(&mut self, envelope_ref: &str) -> Result<(), JournalError> {
         validate_id(envelope_ref)?;
         if self.envelopes.contains_key(envelope_ref) {
@@ -167,12 +187,21 @@ impl OfflineJournal {
             .global_sequence
             .checked_add(1)
             .ok_or(JournalError::SequenceMismatch)?;
-        let record = build_record(next_global, "register", envelope_ref, 0, &self.tail_hash);
+        let record = build_record(
+            next_global,
+            "register",
+            envelope_ref,
+            0,
+            "-",
+            &self.tail_hash,
+        );
         self.append_durable(&record)?;
 
         self.global_sequence = next_global;
         self.tail_hash = record.entry_hash;
         self.envelopes.insert(envelope_ref.to_string(), 0);
+        self.consumptions
+            .insert(envelope_ref.to_string(), Vec::new());
         Ok(())
     }
 
@@ -180,6 +209,7 @@ impl OfflineJournal {
         &mut self,
         envelope_ref: &str,
         expected_sequence: u64,
+        payload: &[u8],
     ) -> Result<(), JournalError> {
         validate_id(envelope_ref)?;
         let current = self
@@ -194,15 +224,21 @@ impl OfflineJournal {
             return Err(JournalError::ConsumptionSequenceMismatch);
         }
 
+        if payload.is_empty() || payload.len() > MAX_PAYLOAD_BYTES {
+            return Err(JournalError::InvalidRecord);
+        }
+
         let next_global = self
             .global_sequence
             .checked_add(1)
             .ok_or(JournalError::SequenceMismatch)?;
+        let payload_hex = encode_hex(payload);
         let record = build_record(
             next_global,
             "consume",
             envelope_ref,
             expected_sequence,
+            &payload_hex,
             &self.tail_hash,
         );
         self.append_durable(&record)?;
@@ -211,6 +247,13 @@ impl OfflineJournal {
         self.tail_hash = record.entry_hash;
         self.envelopes
             .insert(envelope_ref.to_string(), expected_sequence);
+        self.consumptions
+            .get_mut(envelope_ref)
+            .ok_or(JournalError::UnknownEnvelope)?
+            .push(JournalConsumption {
+                sequence: expected_sequence,
+                payload: payload.to_vec(),
+            });
         Ok(())
     }
 
@@ -263,6 +306,7 @@ struct Record {
     kind: &'static str,
     envelope_ref: String,
     effect_sequence: u64,
+    payload_hex: String,
     predecessor_hash: String,
     entry_hash: String,
 }
@@ -270,11 +314,12 @@ struct Record {
 impl Record {
     fn line_without_hash(&self) -> String {
         format!(
-            "{VERSION}\t{}\t{}\t{}\t{}\t{}",
+            "{VERSION}\t{}\t{}\t{}\t{}\t{}\t{}",
             self.global_sequence,
             self.kind,
             self.envelope_ref,
             self.effect_sequence,
+            self.payload_hex,
             self.predecessor_hash
         )
     }
@@ -289,6 +334,7 @@ fn build_record(
     kind: &'static str,
     envelope_ref: &str,
     effect_sequence: u64,
+    payload_hex: &str,
     predecessor_hash: &str,
 ) -> Record {
     let mut record = Record {
@@ -296,6 +342,7 @@ fn build_record(
         kind,
         envelope_ref: envelope_ref.to_string(),
         effect_sequence,
+        payload_hex: payload_hex.to_string(),
         predecessor_hash: predecessor_hash.to_string(),
         entry_hash: String::new(),
     };
@@ -308,6 +355,7 @@ struct RecoveredState {
     global_sequence: u64,
     tail_hash: String,
     envelopes: BTreeMap<String, u64>,
+    consumptions: BTreeMap<String, Vec<JournalConsumption>>,
 }
 
 impl Default for RecoveredState {
@@ -316,6 +364,7 @@ impl Default for RecoveredState {
             global_sequence: 0,
             tail_hash: GENESIS_HASH.to_string(),
             envelopes: BTreeMap::new(),
+            consumptions: BTreeMap::new(),
         }
     }
 }
@@ -323,7 +372,7 @@ impl Default for RecoveredState {
 impl RecoveredState {
     fn apply_line(&mut self, line: &str) -> Result<(), JournalError> {
         let fields: Vec<&str> = line.split('\t').collect();
-        if fields.len() != 7 || fields[0] != VERSION {
+        if fields.len() != 8 || fields[0] != VERSION {
             return Err(JournalError::InvalidRecord);
         }
 
@@ -331,8 +380,9 @@ impl RecoveredState {
         let kind = fields[2];
         let envelope_ref = fields[3];
         let effect_sequence: u64 = fields[4].parse().map_err(|_| JournalError::InvalidRecord)?;
-        let predecessor_hash = fields[5];
-        let entry_hash = fields[6];
+        let payload_hex = fields[5];
+        let predecessor_hash = fields[6];
+        let entry_hash = fields[7];
 
         validate_id(envelope_ref)?;
         validate_hash(predecessor_hash)?;
@@ -350,7 +400,7 @@ impl RecoveredState {
         }
 
         let material = format!(
-            "{VERSION}\t{global_sequence}\t{kind}\t{envelope_ref}\t{effect_sequence}\t{predecessor_hash}"
+            "{VERSION}\t{global_sequence}\t{kind}\t{envelope_ref}\t{effect_sequence}\t{payload_hex}\t{predecessor_hash}"
         );
         if sha256_hex(material.as_bytes()) != entry_hash {
             return Err(JournalError::DigestMismatch);
@@ -358,12 +408,14 @@ impl RecoveredState {
 
         match kind {
             "register" => {
-                if effect_sequence != 0 {
+                if effect_sequence != 0 || payload_hex != "-" {
                     return Err(JournalError::InvalidRecord);
                 }
                 if self.envelopes.insert(envelope_ref.to_string(), 0).is_some() {
                     return Err(JournalError::DuplicateEnvelope);
                 }
+                self.consumptions
+                    .insert(envelope_ref.to_string(), Vec::new());
             }
             "consume" => {
                 let current = self
@@ -377,8 +429,19 @@ impl RecoveredState {
                 if effect_sequence != expected_effect {
                     return Err(JournalError::ConsumptionSequenceMismatch);
                 }
+                let payload = decode_hex(payload_hex)?;
+                if payload.is_empty() || payload.len() > MAX_PAYLOAD_BYTES {
+                    return Err(JournalError::InvalidRecord);
+                }
                 self.envelopes
                     .insert(envelope_ref.to_string(), effect_sequence);
+                self.consumptions
+                    .get_mut(envelope_ref)
+                    .ok_or(JournalError::UnknownEnvelope)?
+                    .push(JournalConsumption {
+                        sequence: effect_sequence,
+                        payload,
+                    });
             }
             _ => return Err(JournalError::InvalidRecord),
         }
@@ -410,6 +473,38 @@ fn validate_hash(value: &str) -> Result<(), JournalError> {
         return Err(JournalError::InvalidRecord);
     }
     Ok(())
+}
+
+fn decode_hex(input: &str) -> Result<Vec<u8>, JournalError> {
+    if input.is_empty() || !input.len().is_multiple_of(2) {
+        return Err(JournalError::InvalidRecord);
+    }
+    let bytes = input.as_bytes();
+    let mut output = Vec::with_capacity(bytes.len() / 2);
+    for index in (0..bytes.len()).step_by(2) {
+        let high = decode_nibble(bytes[index]).ok_or(JournalError::InvalidRecord)?;
+        let low = decode_nibble(bytes[index + 1]).ok_or(JournalError::InvalidRecord)?;
+        output.push((high << 4) | low);
+    }
+    Ok(output)
+}
+
+fn decode_nibble(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        _ => None,
+    }
+}
+
+fn encode_hex(input: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(input.len() * 2);
+    for byte in input {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
 }
 
 fn sha256_hex(input: &[u8]) -> String {
