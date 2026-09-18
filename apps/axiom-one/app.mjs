@@ -4,6 +4,16 @@ import {
 } from '/vendor/axiom-client.mjs';
 import { createHumanPresenter } from '/presentation.mjs';
 import { buildBrowserOrganizeDraft } from '/local-organize.mjs';
+import {
+  normalizeSocialFeedWeights,
+  rankSocialFeedCore
+} from '/vendor/social-feed-ranking-core.mjs';
+import {
+  LOCAL_FEED_SIGNAL_AVAILABILITY,
+  buildOwnerLocalFeedCandidates,
+  chronologicalOwnerLocalPublications,
+  cloneDefaultLocalFeedWeights
+} from '/social-feed-preview.mjs';
 
 const ROUTES = new Set([
   'overview',
@@ -27,7 +37,8 @@ const state = {
     last: null,
     organizePending: null,
     organizeDraft: null
-  }
+  },
+  socialFeed: createInitialSocialFeedState()
 };
 
 const view = document.querySelector('#view');
@@ -73,6 +84,7 @@ disconnectButton.addEventListener('click', () => {
   state.pendingIntent = null;
   state.vault.pending = null;
   state.vault.last = null;
+  state.socialFeed = createInitialSocialFeedState();
   announce('Disconnected and cleared the in-memory token');
   renderRoute();
   tokenInput.focus();
@@ -347,6 +359,114 @@ async function renderSocial() {
     : [];
   const localOnly = response.network_effect === 'none';
 
+  const chronological = chronologicalOwnerLocalPublications(publications);
+  let feedItems = chronological.map(record => ({
+    record,
+    score: null,
+    why: {
+      source_reasons: ['local-corpus', 'chronological'],
+      contributors: []
+    }
+  }));
+  let rankingFailure = null;
+
+  if (state.socialFeed.mode === 'ranked') {
+    try {
+      const candidates = buildOwnerLocalFeedCandidates(publications);
+      const weights = normalizeSocialFeedWeights(state.socialFeed.weights, 'weighted');
+      const ranked = rankSocialFeedCore({
+        profile: { mode: 'weighted', weights },
+        candidates
+      });
+      feedItems = ranked.items.map(item => ({
+        record: item.candidate.source_record,
+        score: item.score,
+        why: {
+          source_reasons: item.candidate.source_reasons,
+          contributors: item.contributors
+        }
+      }));
+    } catch (error) {
+      rankingFailure = error;
+      feedItems = chronological.map(record => ({
+        record,
+        score: null,
+        why: {
+          source_reasons: ['local-corpus', 'chronological-fallback'],
+          contributors: []
+        }
+      }));
+    }
+  }
+
+  const mode = element('select', {
+    attrs: {
+      id: 'social-feed-mode',
+      name: 'social-feed-mode',
+      'aria-describedby': 'social-feed-mode-help'
+    }
+  }, [
+    element('option', {
+      text: 'Chronological',
+      attrs: { value: 'chronological', ...(state.socialFeed.mode === 'chronological' ? { selected: '' } : {}) }
+    }),
+    element('option', {
+      text: 'Ranked preview',
+      attrs: { value: 'ranked', ...(state.socialFeed.mode === 'ranked' ? { selected: '' } : {}) }
+    })
+  ]);
+  mode.addEventListener('change', () => {
+    state.socialFeed.mode = mode.value === 'ranked' ? 'ranked' : 'chronological';
+    announce(`Social feed mode changed to ${state.socialFeed.mode}`);
+    renderSocial();
+  });
+
+  const relationship = feedWeightInput('Relationship', 'relationship');
+  const recency = feedWeightInput('Recency', 'recency');
+  const unavailable = Object.entries(LOCAL_FEED_SIGNAL_AVAILABILITY)
+    .filter(([, availability]) => availability.startsWith('unavailable'))
+    .map(([dimension]) => card(
+      feedDimensionLabel(dimension),
+      '0% in this local preview. A bound semantic signal is required before AXIOM may use this dimension.',
+      { badge: ['Awaiting evidence', 'pending'] }
+    ));
+
+  const feedCards = feedItems.length
+    ? element('div', { className: 'stack' }, feedItems.map((item, index) => {
+      const publication = item.record;
+      const projection = publication.publication ?? {};
+      const status = publication.status ?? 'unknown';
+      const text = typeof projection.content?.text === 'string'
+        ? projection.content.text
+        : 'No text projection is available.';
+      const reason = item.why.contributors.length
+        ? item.why.contributors
+          .map(contributor => `${feedDimensionLabel(contributor.dimension)} ${Math.round(contributor.contribution * 100)}%`)
+          .join(' · ')
+        : item.why.source_reasons.includes('chronological-fallback')
+          ? 'Chronological fallback because ranked preview evidence was invalid or unavailable.'
+          : 'Chronological owner-local publication.';
+      return element('article', { className: 'card full' }, [
+        element('div', { className: 'actions' }, [
+          element('span', {
+            className: `badge ${status === 'active' ? 'good' : 'pending'}`,
+            text: status
+          }),
+          element('span', {
+            className: 'badge',
+            text: item.score === null ? `#${index + 1} chronological` : `#${index + 1} ranked`
+          })
+        ]),
+        element('h2', { text }),
+        element('p', {
+          text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
+        }),
+        element('p', { text: `Why am I seeing this? ${reason}` }),
+        rawDetails('Inspect exact publication projection', publication)
+      ]);
+    }))
+    : empty('No active owner-local publications are available for this feed.');
+
   const actorCards = actors.length
     ? element('div', { className: 'stack' }, actors.map(actor => element('article', {
       className: 'card full'
@@ -382,7 +502,7 @@ async function renderSocial() {
           className: `badge ${status === 'active' ? 'good' : 'pending'}`,
           text: status
         }),
-        element('h2', { text: text }),
+        element('h2', { text }),
         element('p', {
           text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
         }),
@@ -395,29 +515,55 @@ async function renderSocial() {
     : empty('No local publications are visible to this authenticated principal.');
 
   view.replaceChildren(
-    header('Owner-local Social corpus',
-      'Inspect the social identity, persona, and append-only publication history already held by this node. This read surface derives the owner only from the authenticated principal.'),
+    header('Social Feed / Discovery',
+      'A daily-use local feed over social state this node already owns. Chronological always remains available; ranked preview changes display order only and grants no authority.'),
     grid([
-      metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
-      metricCard('Personas', String(personas.length), 'Publication personas'),
+      metricCard('Active feed items', String(feedItems.length), 'Owner-local active publications'),
+      metricCard('Mode', rankingFailure ? 'Chronological fallback' : state.socialFeed.mode === 'ranked' ? 'Ranked preview' : 'Chronological', 'Session-only preference'),
       metricCard('Publications', String(publications.length), 'Bounded corpus entries'),
       card('Network effect', localOnly ? 'None. No federation or remote distribution occurs.' : 'Unexpected network-effect value returned; inspect the raw response.', {
         wide: true,
         badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
       })
     ]),
-    notice('This tranche is read-only in AXIOM One. Local actor/persona/publication mutation already exists in the kernel, but browser write controls remain disabled until their human explanation and reviewed-request flows are separately bound and tested.'),
-    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
-      element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
-      actorCards
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-feed-controls-heading' } }, [
+      element('h2', { text: 'Feed controls', attrs: { id: 'social-feed-controls-heading' } }),
+      field('Feed mode', mode, 'social-feed-mode'),
+      element('p', {
+        attrs: { id: 'social-feed-mode-help' },
+        text: 'These choices live only in this open page. Disconnecting or refreshing resets them.'
+      }),
+      state.socialFeed.mode === 'ranked'
+        ? element('div', { className: 'stack' }, [
+          notice('This first ranked preview uses only deterministic owner-local relationship and relative recency. It does not invent semantic scores.'),
+          relationship,
+          recency,
+          grid(unavailable)
+        ])
+        : notice('Chronological mode ignores all semantic ranking scores and orders active publications by their canonical publication time.'),
+      rankingFailure
+        ? notice('Ranked preview failed closed. AXIOM is showing the chronological fallback instead; no malformed ranking output was trusted.')
+        : notice('Recommendation changes local display order only. It does not change visibility, moderation, authorship, truth, or authority.')
     ]),
-    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-personas-heading' } }, [
-      element('h2', { text: 'Publication personas', attrs: { id: 'social-personas-heading' } }),
-      personaCards
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-feed-heading' } }, [
+      element('h2', { text: 'Your feed', attrs: { id: 'social-feed-heading' } }),
+      feedCards
     ]),
-    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-corpus-heading' } }, [
-      element('h2', { text: 'Append-only publication corpus', attrs: { id: 'social-corpus-heading' } }),
-      publicationCards
+    notice('This tranche remains read-only in AXIOM One. Local actor/persona/publication mutation exists in the kernel, but browser Social write controls remain disabled.'),
+    element('details', { className: 'stack' }, [
+      element('summary', { text: 'Inspect owner-local social identity and publication history' }),
+      element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
+        element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
+        actorCards
+      ]),
+      element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-personas-heading' } }, [
+        element('h2', { text: 'Publication personas', attrs: { id: 'social-personas-heading' } }),
+        personaCards
+      ]),
+      element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-corpus-heading' } }, [
+        element('h2', { text: 'Append-only publication corpus', attrs: { id: 'social-corpus-heading' } }),
+        publicationCards
+      ])
     ]),
     grid([
       metricCard('Retraction records', String(transitions.length), 'Visible transitions for selected corpus entries'),
@@ -425,6 +571,48 @@ async function renderSocial() {
     ]),
     rawDetails('Raw owner-local Social snapshot', response)
   );
+}
+
+function createInitialSocialFeedState() {
+  return {
+    mode: 'chronological',
+    weights: cloneDefaultLocalFeedWeights()
+  };
+}
+
+function feedWeightInput(label, dimension) {
+  const percent = Math.round((state.socialFeed.weights[dimension] ?? 0) * 100);
+  const input = element('input', {
+    attrs: {
+      id: `social-feed-weight-${dimension}`,
+      name: `social-feed-weight-${dimension}`,
+      type: 'range',
+      min: '0',
+      max: '100',
+      step: '5',
+      value: String(percent),
+      'aria-describedby': `social-feed-weight-${dimension}-help`
+    }
+  });
+  input.addEventListener('change', () => {
+    state.socialFeed.weights[dimension] = Number(input.value) / 100;
+    announce(`${label} feed weight changed to ${input.value} percent`);
+    renderSocial();
+  });
+  return element('div', { className: 'stack' }, [
+    field(`${label} weight: ${percent}%`, input, input.id),
+    element('p', {
+      attrs: { id: `social-feed-weight-${dimension}-help` },
+      text: `${feedDimensionLabel(dimension)} is ${LOCAL_FEED_SIGNAL_AVAILABILITY[dimension].replaceAll('-', ' ')} in this preview.`
+    })
+  ]);
+}
+
+function feedDimensionLabel(dimension) {
+  return String(dimension)
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 async function renderApprovals() {
