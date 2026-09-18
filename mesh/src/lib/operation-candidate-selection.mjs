@@ -129,6 +129,33 @@ const MODE_SEMANTICS = Object.freeze({
   })
 });
 
+const WITHHELD_REASONS_BY_MODE = Object.freeze({
+  'deterministic-exact': Object.freeze([
+    'deterministic-ineligible',
+    'not-exact-match'
+  ]),
+  'semantic-single': Object.freeze([
+    'deterministic-ineligible',
+    'below-minimum-support',
+    'outside-single-selection'
+  ]),
+  'semantic-top-k': Object.freeze([
+    'deterministic-ineligible',
+    'below-minimum-support',
+    'outside-top-k'
+  ]),
+  'fallback-retain-eligible': Object.freeze([
+    'deterministic-ineligible'
+  ]),
+  'fallback-escalate': Object.freeze([
+    'deterministic-ineligible',
+    'fallback-escalation'
+  ]),
+  'no-eligible-candidates': Object.freeze([
+    'deterministic-ineligible'
+  ])
+});
+
 function exact(value, fields, name) {
   const object = assertPlainObject(value, name);
   const allowed = new Set(fields);
@@ -807,12 +834,18 @@ export function validateOperationCandidateSelectionProposal(document) {
     selectedIds.add(item.operation_id);
   }
   const withheldIds = new Set();
+  const allowedWithheldReasons = WITHHELD_REASONS_BY_MODE[value.selection_mode];
   for (const item of value.withheld) {
     if (withheldIds.has(item.operation_id)) {
       throw new ValidationError('operation candidate selection.withheld contains duplicate operation_id');
     }
     if (selectedIds.has(item.operation_id)) {
       throw new ValidationError('operation candidate cannot be both selected and withheld');
+    }
+    if (!allowedWithheldReasons.includes(item.reason)) {
+      throw new ValidationError(
+        'operation candidate selection withheld reason is inconsistent with mode'
+      );
     }
     withheldIds.add(item.operation_id);
   }
