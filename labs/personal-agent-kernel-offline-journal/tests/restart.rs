@@ -21,7 +21,7 @@ fn registration_and_consumption_survive_restart_without_replay() {
     {
         let mut journal = OfflineJournal::open(&path).expect("open journal");
         journal
-            .register_envelope("offline-envelope:1")
+            .register_envelope("offline-envelope:1", b"binding-one")
             .expect("register envelope");
         journal
             .consume_effect("offline-envelope:1", 1, b"intent-one")
@@ -36,6 +36,12 @@ fn registration_and_consumption_survive_restart_without_replay() {
     {
         let mut reopened = OfflineJournal::open(&path).expect("reopen journal");
         assert_eq!(reopened.consumed_sequence("offline-envelope:1"), Some(2));
+        assert_eq!(
+            reopened
+                .registration_payload("offline-envelope:1")
+                .expect("registration binding"),
+            b"binding-one"
+        );
         let recovered = reopened
             .consumptions_for("offline-envelope:1")
             .expect("recovered consumption payloads");
@@ -45,7 +51,7 @@ fn registration_and_consumption_survive_restart_without_replay() {
         assert_eq!(recovered[1].sequence, 2);
         assert_eq!(recovered[1].payload, b"intent-two");
         assert!(matches!(
-            reopened.register_envelope("offline-envelope:1"),
+            reopened.register_envelope("offline-envelope:1", b"binding-one"),
             Err(JournalError::DuplicateEnvelope)
         ));
         assert!(matches!(
@@ -112,12 +118,12 @@ fn torn_trailing_record_fails_closed_on_reopen() {
     {
         let mut journal = OfflineJournal::open(&path).expect("open journal");
         journal
-            .register_envelope("offline-envelope:torn")
+            .register_envelope("offline-envelope:torn", b"binding-torn")
             .expect("register");
     }
     {
         let mut file = OpenOptions::new().append(true).open(&path).expect("append");
-        file.write_all(b"v2\t2\tconsume\toffline-envelope:torn")
+        file.write_all(b"v3\t2\tconsume\toffline-envelope:torn")
             .expect("write torn tail");
         file.sync_data().expect("sync torn tail");
     }
@@ -135,7 +141,7 @@ fn tampered_historical_record_fails_chain_verification() {
     {
         let mut journal = OfflineJournal::open(&path).expect("open journal");
         journal
-            .register_envelope("offline-envelope:tamper")
+            .register_envelope("offline-envelope:tamper", b"binding-tamper")
             .expect("register");
         journal
             .consume_effect("offline-envelope:tamper", 1, b"tamper-intent")
@@ -169,7 +175,7 @@ fn unknown_envelope_and_sequence_gaps_do_not_append_records() {
         Err(JournalError::UnknownEnvelope)
     ));
     journal
-        .register_envelope("offline-envelope:valid")
+        .register_envelope("offline-envelope:valid", b"binding-valid")
         .expect("register");
     let before = read(&path).expect("read before invalid sequence");
     assert!(matches!(
