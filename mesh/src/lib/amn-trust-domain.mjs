@@ -92,6 +92,8 @@ const ADMISSION_KEYS = new Set([
   'status_evidence_digest',
   'status_state',
   'status_age_seconds',
+  'status_evidence_scope',
+  'global_currentness_claimed',
   'authority_effect',
   'delegation_effect',
   'pooled_authority_effect',
@@ -575,6 +577,12 @@ function finalizeAdmission(core) {
     status_age_seconds: core.status_age_seconds === null
       ? null
       : nonNegativeInteger(core.status_age_seconds, 'AMN domain admission status_age_seconds'),
+    status_evidence_scope: core.status_evidence_scope === 'supplied-issuer-evidence-only'
+      ? 'supplied-issuer-evidence-only'
+      : (() => { throw new ValidationError('AMN domain admission status_evidence_scope is unsupported'); })(),
+    global_currentness_claimed: core.global_currentness_claimed === false
+      ? false
+      : (() => { throw new ValidationError('AMN domain admission global_currentness_claimed must be false'); })(),
     authority_effect: core.authority_effect === 'none'
       ? 'none'
       : (() => { throw new ValidationError('AMN domain admission authority_effect must be none'); })(),
@@ -612,6 +620,8 @@ function admissionFrom(bundle, metadata, overrides = {}) {
     status_evidence_digest: null,
     status_state: null,
     status_age_seconds: null,
+    status_evidence_scope: 'supplied-issuer-evidence-only',
+    global_currentness_claimed: false,
     authority_effect: 'none',
     delegation_effect: 'none',
     pooled_authority_effect: 'none',
@@ -738,7 +748,7 @@ function evaluateStatus({
   if (state === 'active') {
     return Object.freeze({
       result: 'admitted',
-      reason_code: 'verified_current',
+      reason_code: 'verified_supplied_current',
       status_evidence_digest: amnTrustEvidenceDigest(current),
       status_state: 'active',
       status_age_seconds: ageSeconds
@@ -912,7 +922,8 @@ export function createAmnDomainSnapshot(admissions) {
     authority_effect: 'none',
     delegation_effect: 'none',
     pooled_authority_effect: 'none',
-    federation_authority_effect: 'none'
+    federation_authority_effect: 'none',
+    global_currentness_claimed: false
   });
   return Object.freeze({
     ...core,
