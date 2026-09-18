@@ -104,6 +104,21 @@ The embedding host must provide a matching `createHostLease(...)` token. The
 runtime denies it when expired, explicitly revoked, mismatched, or previously
 consumed.
 
+Collective authority is explicit rather than emergent:
+
+```prax
+requires quorum release_gate: Deploy @ Production
+    threshold 2 of Operator, Security, Provider;
+
+op release = Deploy("artifact") @ Production;
+authorize release using release_gate as armed_release;
+```
+
+A host `createHostQuorum(...)` envelope must match the exact member set and
+satisfy the declared threshold. Ordinary permits are not pooled, votes are not
+authority by themselves, and a quorum for one action/scope cannot authorize
+another.
+
 `createHostPermit(...)` and `createHostLease(...)` are laboratory embedding
 APIs. They are not a secure production issuer and must never be exposed to
 untrusted Praxis source, agents, plugins, or remote callers. A future AXIOM
@@ -152,6 +167,7 @@ conformance gap rather than pretending every effect can be reversed uniformly.
 ```text
 requires permit <name>: <Action> @ <Scope>;
 requires lease <name>: <Action> @ <Scope>;
+requires quorum <name>: <Action> @ <Scope> threshold <N> of <member>, ...;
 requires secret <name>: <SecretKind>;
 requires prepared <name>: <Action> @ <Scope>;
 observe <name> = <literal-or-reference> from "<provenance>";
@@ -173,7 +189,8 @@ The compiler rejects:
 - committing before durable preparation;
 - preparing an operation without authority;
 - authorizing with an assessment, receipt, or other non-authority value;
-- action/scope mismatches between an operation and permit/lease;
+- action/scope mismatches between an operation and permit/lease/quorum;
+- invalid quorum thresholds or duplicate member declarations;
 - reuse of a linear permit or lease in one program;
 - repeated preparation or multiple terminal transitions of a linear operation;
 - embedding a permit, lease, prepared operation, or secret reference as an ordinary operation argument;
@@ -184,6 +201,7 @@ The compiler rejects:
 The runtime additionally rejects:
 
 - absent, forged, mismatched, expired, revoked, or already consumed host authority tokens;
+- quorum envelopes with the wrong membership or insufficient approvals;
 - absent, forged, or wrong-kind opaque host secret references;
 - missing verifier or assessor implementations;
 - verification/assessment results without explicit `ok: true`;
@@ -202,6 +220,7 @@ small:
 ```text
 REQUIRE_PERMIT
 REQUIRE_LEASE
+REQUIRE_QUORUM
 REQUIRE_SECRET
 OBSERVE
 VERIFY
