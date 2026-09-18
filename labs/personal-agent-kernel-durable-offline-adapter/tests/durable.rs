@@ -3,7 +3,8 @@ use axiom_personal_agent_kernel_rust_lab::{
     OfflineEnvelopeInput, OfflineEnvelopeRegistry, RuntimeSurface,
 };
 use axiom_personal_kernel_durable_offline_adapter_lab::{
-    DurableOfflineError, execute_durable_offline, persist_prepared_intent, recover_or_register,
+    DurableOfflineError, DurableOfflineExecution, execute_durable_offline, persist_prepared_intent,
+    recover_or_register,
 };
 use axiom_personal_kernel_offline_journal_lab::OfflineJournal;
 use std::path::PathBuf;
@@ -117,14 +118,18 @@ fn durable_offline_state_rehydrates_effect_and_budget_consumption_after_restart(
         );
 
         let mut port = Port::default();
+        let current_surface = surface();
+        let budget_requests = request();
         let receipt = execute_durable_offline(
             &kernel,
             &mut ledger,
             &mut journal,
-            "device:phone-1",
-            &surface(),
-            NOW,
-            &request(),
+            DurableOfflineExecution {
+                target_device_ref: "device:phone-1",
+                current_surface: &current_surface,
+                now_unix_s: NOW,
+                budget_requests: &budget_requests,
+            },
             &mut port,
         )
         .expect("first durable effect");
@@ -149,14 +154,18 @@ fn durable_offline_state_rehydrates_effect_and_budget_consumption_after_restart(
         assert_eq!(ledger.remaining_effects(), 2);
 
         let mut port = Port::default();
+        let current_surface = surface();
+        let budget_requests = request();
         let receipt = execute_durable_offline(
             &kernel,
             &mut ledger,
             &mut journal,
-            "device:phone-1",
-            &surface(),
-            NOW + 1,
-            &request(),
+            DurableOfflineExecution {
+                target_device_ref: "device:phone-1",
+                current_surface: &current_surface,
+                now_unix_s: NOW + 1,
+                budget_requests: &budget_requests,
+            },
             &mut port,
         )
         .expect("second durable effect");
@@ -171,10 +180,12 @@ fn durable_offline_state_rehydrates_effect_and_budget_consumption_after_restart(
                 &kernel,
                 &mut ledger,
                 &mut journal,
-                "device:phone-1",
-                &surface(),
-                NOW + 2,
-                &request(),
+                DurableOfflineExecution {
+                    target_device_ref: "device:phone-1",
+                    current_surface: &surface(),
+                    now_unix_s: NOW + 2,
+                    budget_requests: &request(),
+                },
                 &mut port,
             )
             .is_err(),
@@ -224,14 +235,18 @@ fn crash_after_durable_reservation_but_before_effect_does_not_reuse_sequence() {
         assert_eq!(ledger.effects_consumed(), 1);
 
         let mut port = Port::default();
+        let current_surface = surface();
+        let budget_requests = request();
         let next = execute_durable_offline(
             &kernel,
             &mut ledger,
             &mut journal,
-            "device:phone-1",
-            &surface(),
-            NOW + 1,
-            &request(),
+            DurableOfflineExecution {
+                target_device_ref: "device:phone-1",
+                current_surface: &current_surface,
+                now_unix_s: NOW + 1,
+                budget_requests: &budget_requests,
+            },
             &mut port,
         )
         .expect("next effect must advance rather than reuse sequence 1");
