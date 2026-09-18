@@ -2339,7 +2339,8 @@ function runtimeTime(now) {
 
 function validatePreparedAuthorityState(prepared, {
   nowMs,
-  revokedAuthorityIds
+  revokedAuthorityIds,
+  charterContext = null
 }) {
   const authority = prepared?.authority;
   const operation = prepared?.operation;
@@ -2370,7 +2371,89 @@ function validatePreparedAuthorityState(prepared, {
       `host authority token ${authority.authority_id} expired before commit`
     );
   }
+  if (authority.charter_digest) {
+    if (!charterContext) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_REQUIRED',
+        'chartered prepared authority requires the signed charter at replay/commit'
+      );
+    }
+    if (authority.charter_digest !== charterContext.digest) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'prepared authority charter digest does not match the runtime charter'
+      );
+    }
+    const policyEntry = charterContext.body.policies?.[authority.policy_name];
+    if (!policyEntry || policyEntry.digest !== authority.policy_digest) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'prepared authority policy is not pinned by the runtime charter'
+      );
+    }
+    const policy = policyEntry.def;
+    if (
+      policy.authority_kind !== authority.authority_kind
+      || policy.action !== authority.action
+      || policy.scope !== authority.scope
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_UNPINNED',
+        'prepared authority does not match the pinned policy'
+      );
+    }
+    if (authority.authority_kind === 'Quorum') {
+      const expectedMembers = [...(policy.members ?? [])].sort();
+      const actualMembers = [...(authority.members ?? [])].sort();
+      if (
+        policy.threshold !== authority.threshold
+        || expectedMembers.length !== actualMembers.length
+        || expectedMembers.some((member, index) => member !== actualMembers[index])
+        || (policy.humans ?? 0) !== (authority.human_minimum ?? 0)
+      ) {
+        throw new PraxisRuntimeError(
+          'PRAXIS_POLICY_UNPINNED',
+          'prepared quorum was weakened relative to the pinned policy'
+        );
+      }
+    }
+    const expectedPremises = policy.require ?? [];
+    const actualPremises = authority.premises ?? [];
+    if (
+      expectedPremises.length !== actualPremises.length
+      || expectedPremises.some((predicate, index) =>
+        actualPremises[index]?.result !== true
+        || actualPremises[index]?.predicate_digest !== signatureBodyDigest(predicate)
+      )
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_REQUIRE',
+        'prepared authority does not preserve its pinned premise results'
+      );
+    }
+    if (policy.advisor) {
+      if (
+        !authority.advice
+        || authority.advice.advisor !== policy.advisor
+        || authority.advice.deny !== false
+      ) {
+        throw new PraxisRuntimeError(
+          'PRAXIS_ADVISOR_REQUIRED',
+          'prepared authority is missing the pinned advisor result'
+        );
+      }
+    }
+  }
   for (const evidence of authority.evidence ?? []) {
+    if (authority.charter_digest) {
+      const verifier = charterContext?.body.verifiers?.[evidence.verifier_name];
+      if (!verifier || verifier.digest !== evidence.verifier_digest) {
+        throw new PraxisRuntimeError(
+          'PRAXIS_VERIFIER_UNPINNED',
+          'prepared authority evidence uses an unpinned verifier'
+        );
+      }
+    }
     if (nowMs >= evidence.valid_until_ms) {
       throw new PraxisRuntimeError(
         'PRAXIS_EVIDENCE_STALE',
@@ -2452,6 +2535,7 @@ export async function run(source, {
       threshold: token.threshold ?? null,
       members: token.members ?? null,
       approved_by: token.approved_by ?? null,
+      human_minimum: token.human_minimum ?? 0,
       operation_digest: token.operation_digest,
       charter_digest: token.charter_digest ?? null,
       policy_name: token.policy_name ?? null,
@@ -2459,6 +2543,7 @@ export async function run(source, {
       requester: token.requester ?? null,
       request_digest: token.request_digest ?? null,
       evidence: token.evidence ?? null,
+      premises: token.premises ?? null,
       advice: token.advice ?? null
     });
   }
@@ -2736,12 +2821,14 @@ export async function run(source, {
             threshold: token.threshold ?? null,
             members: token.members ?? null,
             approved_by: token.approved_by ?? null,
+            human_minimum: token.human_minimum ?? 0,
             charter_digest: token.charter_digest ?? null,
             policy_name: token.policy_name ?? null,
             policy_digest: token.policy_digest ?? null,
             requester: token.requester ?? null,
             request_digest: token.request_digest ?? null,
             evidence: token.evidence ?? null,
+            premises: token.premises ?? null,
             advice: token.advice ?? null
           })
         }));
@@ -2925,7 +3012,8 @@ export async function run(source, {
         }
         validatePreparedAuthorityState(prepared, {
           nowMs: runtimeTime(now),
-          revokedAuthorityIds: revoked
+          revokedAuthorityIds: revoked,
+          charterContext
         });
 
         const expectedDigest = prepared.operation.operation_digest;
