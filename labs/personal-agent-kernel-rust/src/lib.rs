@@ -499,6 +499,30 @@ pub struct MeshAdapterRequest {
 }
 
 impl MeshAdapterRequest {
+    pub fn gateway_route_id(&self) -> &'static str {
+        "intents.submit"
+    }
+
+    pub fn gateway_method(&self) -> &'static str {
+        "POST"
+    }
+
+    pub fn gateway_relative_path(&self) -> &'static str {
+        "/v1/intents"
+    }
+
+    pub fn gateway_request_schema(&self) -> &'static str {
+        "axiom-intent-request.v1"
+    }
+
+    pub fn gateway_idempotency_required(&self) -> bool {
+        true
+    }
+
+    pub fn direct_internal_service_access_allowed(&self) -> bool {
+        false
+    }
+
     pub fn requires_existing_mesh_verification(&self) -> bool {
         true
     }
