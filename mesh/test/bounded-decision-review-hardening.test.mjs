@@ -178,11 +178,13 @@ test('interpretation rejects calibration whose declared domain disagrees with th
   const result = interpretBoundedDecisionEvidence({
     observations: [o],
     calibrationReports: [c],
+    providerProfiles: [p],
+    questionSchemas: [q],
     policy: policy(p, q),
     now: NOW
   });
-  assert.equal(result.status, 'insufficient-evidence');
-  assert.ok(result.reason_codes.includes('calibration-domain-mismatch'));
+  assert.equal(result.status, 'invalid-evidence');
+  assert.ok(result.reason_codes.includes('calibration-invalid'));
 });
 
 test('calibration resolution rejects outcome evidence that aliases provider identity or profile digest', () => {
