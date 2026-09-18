@@ -716,7 +716,7 @@ function validateSemanticSummary(item, index) {
   );
 }
 
-export function validateOperationCandidateSelectionProposal(document) {
+function validateOperationCandidateSelectionProposalShape(document) {
   const value = exact(
     document,
     DOCUMENT_FIELDS,
@@ -947,24 +947,11 @@ export function createOperationCandidateSelectionProposal(input) {
   const semanticEnvelopes = value.semanticEvidence.map((entry, index) =>
     normalizeSemanticEnvelope(entry, index, candidateById)
   );
-  const semanticEvidenceInputDigest = digestObject(
-    semanticEnvelopes
-      .map(entry => ({
-        operation_id: entry.operationId,
-        manifest_digest: entry.manifestDigest,
-        observation_input_digest: digestObject(entry.observation),
-        provider_profile_input_digest: digestObject(entry.providerProfile),
-        question_schema_input_digest: digestObject(entry.questionSchema)
-      }))
-      .sort((left, right) =>
-        compareCodeUnits(left.operation_id, right.operation_id)
-        || compareCodeUnits(left.manifest_digest, right.manifest_digest)
-      )
-  );
   const policyDigest = digestObject(policy);
   const seenEvidenceIds = new Set();
   const evidenceById = new Map();
   const invalidEvidenceIds = new Set();
+  const semanticEvidenceDigestEntries = [];
 
   for (const entry of semanticEnvelopes) {
     if (seenEvidenceIds.has(entry.operationId)) {
@@ -975,15 +962,44 @@ export function createOperationCandidateSelectionProposal(input) {
     seenEvidenceIds.add(entry.operationId);
 
     const candidate = candidateById.get(entry.operationId);
-    if (!candidate.eligible) continue;
+    if (!candidate.eligible) {
+      semanticEvidenceDigestEntries.push({
+        operation_id: entry.operationId,
+        manifest_digest: entry.manifestDigest,
+        evidence_status: 'deterministically-ineligible'
+      });
+      continue;
+    }
 
     const result = validateSemanticEvidence(entry, candidate, taskPurposeDigest);
     if (!result.valid) {
       invalidEvidenceIds.add(candidate.operation_id);
+      semanticEvidenceDigestEntries.push({
+        operation_id: entry.operationId,
+        manifest_digest: entry.manifestDigest,
+        evidence_status: 'invalid'
+      });
       continue;
     }
+
     evidenceById.set(candidate.operation_id, result.evidence);
+    semanticEvidenceDigestEntries.push({
+      operation_id: entry.operationId,
+      manifest_digest: entry.manifestDigest,
+      evidence_status: 'valid',
+      observation_digest: result.evidence.observation_digest,
+      provider_profile_digest: result.evidence.provider_profile_digest,
+      question_schema_digest: result.evidence.question_schema_digest,
+      state_digest: result.evidence.state_digest
+    });
   }
+
+  const semanticEvidenceInputDigest = digestObject(
+    semanticEvidenceDigestEntries.sort((left, right) =>
+      compareCodeUnits(left.operation_id, right.operation_id)
+      || compareCodeUnits(left.manifest_digest, right.manifest_digest)
+    )
+  );
 
   const selection = selectCandidates({
     candidates,
@@ -1028,21 +1044,32 @@ export function createOperationCandidateSelectionProposal(input) {
   };
 
   document.proposal_digest = digestObject(proposalDigestPayload(document));
-  validateOperationCandidateSelectionProposal(document);
+  validateOperationCandidateSelectionProposalShape(document);
   return deepFreeze(document);
 }
 
-export function verifyOperationCandidateSelectionProposal(document, trustedInput) {
-  const validated = validateOperationCandidateSelectionProposal(document);
+export function validateOperationCandidateSelectionProposal(document, trustedInput) {
+  if (trustedInput === undefined) {
+    throw new ValidationError(
+      'trusted inputs are required to validate an operation candidate selection proposal'
+    );
+  }
+
+  const validated = validateOperationCandidateSelectionProposalShape(document);
   const expected = createOperationCandidateSelectionProposal(trustedInput);
   if (validated.proposal_digest !== expected.proposal_digest) {
     throw new ValidationError(
       'operation candidate selection proposal does not match trusted inputs'
     );
   }
+
   return Object.freeze({
     valid: true,
     proposal_digest: validated.proposal_digest,
     trusted_input_match: true
   });
+}
+
+export function verifyOperationCandidateSelectionProposal(document, trustedInput) {
+  return validateOperationCandidateSelectionProposal(document, trustedInput);
 }
