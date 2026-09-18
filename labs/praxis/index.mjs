@@ -777,12 +777,6 @@ async function createCharteredHostAuthority({
     }
   }
 
-  expiry = Math.min(
-    expiry,
-    ...evidenceMetadata.map(item => item.valid_until_ms),
-    Number.POSITIVE_INFINITY
-  );
-
   return Object.freeze({
     [HOST_AUTHORITY]: authorityKind,
     schema: authorityKind === 'Quorum'
