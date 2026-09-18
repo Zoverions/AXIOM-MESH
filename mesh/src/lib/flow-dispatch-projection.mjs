@@ -549,13 +549,35 @@ function workerSupportsStep(worker, step, binding, handoffById) {
   return step.required_capability_ids.every(capabilityId => capabilities.has(capabilityId));
 }
 
+function hasAcceptedAncestry(context, node, memo = new Map()) {
+  if (memo.has(node.node_id)) return memo.get(node.node_id);
+  for (const dependency of node.dependencies) {
+    const dependencyNode = context.graphById.get(dependency);
+    if (
+      !dependencyNode
+      || dependencyNode.state !== 'accepted'
+      || !hasAcceptedAncestry(context, dependencyNode, memo)
+    ) {
+      memo.set(node.node_id, false);
+      return false;
+    }
+  }
+  memo.set(node.node_id, true);
+  return true;
+}
+
 function workDependencyBlocker(context, dependency) {
   const dependencyNode = context.graphById.get(dependency);
   if (!dependencyNode) return `work-dependency-missing:${dependency}`;
-  if (dependencyNode.state === 'accepted') return null;
   if (dependencyNode.state === 'rejected') return `work-dependency-rejected:${dependency}`;
   if (dependencyNode.state === 'blocked') return `work-dependency-blocked:${dependency}`;
-  return `work-dependency-not-accepted:${dependency}`;
+  if (dependencyNode.state !== 'accepted') {
+    return `work-dependency-not-accepted:${dependency}`;
+  }
+  if (!hasAcceptedAncestry(context, dependencyNode)) {
+    return `work-dependency-ancestry-not-accepted:${dependency}`;
+  }
+  return null;
 }
 
 function handoffBlocker(binding, handoffById, workNode) {
@@ -735,6 +757,7 @@ function deriveVerificationProposals(context, capacity) {
       || verification.state !== 'accepted'
       || verification.verification_result !== 'pass'
       || verification.lineage_ref === null
+      || !hasAcceptedAncestry(context, verification)
     ) {
       continue;
     }
@@ -764,7 +787,9 @@ function deriveVerificationProposals(context, capacity) {
     let selectedVerifierRef = null;
     let selectionReason;
 
-    if (artifact.lineage_ref === null) {
+    if (!hasAcceptedAncestry(context, artifact)) {
+      selectionReason = 'artifact-dependency-ancestry-not-accepted';
+    } else if (artifact.lineage_ref === null) {
       selectionReason = 'producer-lineage-unknown';
     } else {
       const independentWorkers = context.workers
