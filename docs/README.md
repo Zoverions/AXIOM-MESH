@@ -135,9 +135,10 @@ Current documentation must preserve these distinctions:
   no live feed, credential access, autonomous containment, or production
   vulnerability/safety claim;
 - Research Source Manifests, Research Knowledge Projections, Research Operation
-  Candidates, and Research Reproduction Evidence are provenance/evidence
-  artifacts only: knowledge is not authority, operation is not authority, and
-  reproduction is not scientific truth;
+  Candidates, Research Reproduction Evidence, and Formal Verification Evidence
+  are provenance/evidence artifacts only: knowledge is not authority, operation
+  is not authority, reproduction is not scientific truth, and formal proof is
+  not runtime authority;
 - Sovereign Vault, Context Request, Vault Access Lease, Context Capsule,
   Personal Agent Pack v2, and personal-model adaptation schemas are
   documentation-only draft contracts and do not create runtime vault isolation,
@@ -268,6 +269,7 @@ decision.
 - [Research Knowledge Projection v0](architecture/contracts/research-knowledge-projection.v0.schema.json)
 - [Research Operation Candidate v0](architecture/contracts/research-operation-candidate.v0.schema.json)
 - [Research Reproduction Evidence v0](architecture/contracts/research-reproduction-evidence.v0.schema.json)
+- [Formal Verification Evidence v0](architecture/contracts/formal-verification-evidence.v0.schema.json)
 - [Research Contribution v0](architecture/contracts/research-contribution.v0.schema.json)
 - [Research Relation v0](architecture/contracts/research-relation.v0.schema.json)
 
@@ -277,7 +279,10 @@ other drafts or promote any capability or external compatibility claim. Research
 Capsule v0 additionally has a zero-dependency semantic verifier and synthetic
 conformance tests, but it still adds no Gateway route, capability-registry entry,
 remote MCP connection, provider call, credential path, or scientific-truth
-claim. Research Composition Graph v0 adds immutable contribution/relation
+claim. Formal Verification Evidence v0 records checker-bound proof state,
+closure strength, assumptions, dependency status, diagnostics, source alignment,
+and verifier independence without converting proof success into scientific truth
+or authority. Research Composition Graph v0 adds immutable contribution/relation
 contracts plus a rebuildable local lineage/frontier diagnostic; its roots,
 frontier, concentration, disagreement, and attention views remain derived
 navigation evidence only and create no truth, reputation, execution, merge,
