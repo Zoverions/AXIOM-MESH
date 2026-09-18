@@ -289,9 +289,9 @@ fn inferred_memory_requires_two_evidence_refs_and_a_causal_receipt() {
         "human:owner",
         &assessment(MemoryDisposition::AdmitDurable),
         &promotion(
-        MemorySourceKind::AgentInference,
-        MemoryDisposition::AdmitDurable,
-    ),
+            MemorySourceKind::AgentInference,
+            MemoryDisposition::AdmitDurable,
+        ),
         &TestDigest,
     )
     .unwrap();
@@ -365,9 +365,9 @@ fn promotion_gate_preserves_quarantine_and_contradictions() {
 #[test]
 fn critical_secret_memory_is_routed_away_from_ordinary_promotion() {
     let mut candidate = promotion(
-            MemorySourceKind::OwnerDirect,
-            MemoryDisposition::AdmitDurable,
-        );
+        MemorySourceKind::OwnerDirect,
+        MemoryDisposition::AdmitDurable,
+    );
     candidate.sensitivity = ContextSensitivity::CriticalSecret;
     candidate.secret_material_embedded = true;
 
