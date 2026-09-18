@@ -1,0 +1,390 @@
+{
+  "schema": "axiom-inference-benchmark-fixtures.v0",
+  "vectors": [
+    {
+      "schema": "axiom-inference-benchmark-evidence.v0",
+      "version": 0,
+      "benchmark_id": "benchmark.synthetic.local-single-device",
+      "evidence_class": "measured",
+      "measured_at": "2026-09-18T03:05:00.000Z",
+      "workload": {
+        "profile_id": "inference.w0.interactive-agent",
+        "profile_version": "0.1.0",
+        "profile_digest": "d59572bf8946c544b0ebec1f08eacbcf7648dc3b99b137c8ae00409fe47769d6",
+        "fixture_digest": "b635558a25f985cf0850fa199b751b0aef5172f5bf2b925709b8f105502fdd7b"
+      },
+      "subject": {
+        "repository_revision": "c00bdeb982b567cdf6cb6ec0489453ff7e458816",
+        "model_or_provider_id": "fixture.synthetic.model",
+        "model_revision_or_digest": "synthetic-revision-v0",
+        "engine_id": "fixture.synthetic.engine",
+        "engine_version": "0.1.0",
+        "engine_implementation_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "runtime_id": "fixture.synthetic.runtime",
+        "runtime_version": "0.1.0",
+        "tokenizer_id": "fixture.synthetic.tokenizer",
+        "tokenizer_revision": "0.1.0",
+        "numeric_format": "fp16",
+        "sampling_config_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "prompt_policy_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "tool_memory_policy_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "benchmark_harness_id": "axiom.synthetic.inference-harness",
+        "benchmark_harness_version": "0.1.0",
+        "benchmark_harness_digest": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "environment": {
+        "os": "synthetic-linux",
+        "arch": "x64",
+        "cpu": "synthetic-cpu",
+        "host_ram_bytes": 34359738368,
+        "accelerator_kind": "gpu",
+        "accelerator_models": [
+          "Synthetic GPU 1"
+        ],
+        "accelerator_count": 1,
+        "accelerator_memory_bytes": 25769803776,
+        "driver_version": "synthetic-driver",
+        "firmware_version": null,
+        "accelerator_runtime_version": "synthetic-cuda",
+        "topology_digest": null,
+        "source_ids": [
+          "fixture.local.synthetic"
+        ]
+      },
+      "protocol": {
+        "warmup_requests": 10,
+        "measured_requests": 100,
+        "concurrency": 4,
+        "batch_size": 1,
+        "streaming": true,
+        "cache_mode": "disabled",
+        "failure_policy": "retain-all-failures",
+        "percentile_method": "nearest-rank-v1"
+      },
+      "observations": {
+        "latency": {
+          "ttft_ms": {
+            "p50": 120,
+            "p95": 180,
+            "p99": 240
+          },
+          "itl_ms": {
+            "p50": 25,
+            "p95": 40,
+            "p99": 60
+          },
+          "e2e_ms": {
+            "p50": 3200,
+            "p95": 4500,
+            "p99": 6000
+          }
+        },
+        "throughput": {
+          "prefill_tokens_s": 8000,
+          "decode_tokens_s": 1200,
+          "aggregate_tokens_s": 2200,
+          "requests_s": 8.5,
+          "queue_wait_ms_p95": 20
+        },
+        "counts": {
+          "request_count": 100,
+          "success_count": 96,
+          "error_count": 2,
+          "rejected_count": 1,
+          "oom_count": 1
+        },
+        "resources": {
+          "peak_accelerator_memory_bytes": 20615843020.800003,
+          "steady_accelerator_memory_bytes": 15461882265.599998,
+          "kv_cache_bytes": 2147483648,
+          "host_rss_bytes": 4294967296,
+          "cpu_utilization_pct": 55,
+          "accelerator_utilization_pct": 80,
+          "memory_bandwidth_utilization_pct": 65,
+          "network_bytes": null,
+          "power_watts": 220,
+          "energy_joules": 44000,
+          "thermal_throttling": false
+        },
+        "economic": {
+          "direct_cost_microcents": null,
+          "hardware_amortization_microcents": null,
+          "electricity_microcents": null,
+          "retry_failure_microcents": null,
+          "verification_microcents": null,
+          "denominator_kind": "none",
+          "denominator_value": null
+        }
+      },
+      "quality": {
+        "state": "not-established",
+        "artifact_ref": null,
+        "artifact_digest": null
+      },
+      "reproducer_ref": null,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-benchmark-evidence.v0",
+      "version": 0,
+      "benchmark_id": "benchmark.synthetic.provider-remote",
+      "evidence_class": "provider-reported",
+      "measured_at": "2026-09-18T03:05:00.000Z",
+      "workload": {
+        "profile_id": "inference.w0.interactive-agent",
+        "profile_version": "0.1.0",
+        "profile_digest": "d59572bf8946c544b0ebec1f08eacbcf7648dc3b99b137c8ae00409fe47769d6",
+        "fixture_digest": "b635558a25f985cf0850fa199b751b0aef5172f5bf2b925709b8f105502fdd7b"
+      },
+      "subject": {
+        "repository_revision": "c00bdeb982b567cdf6cb6ec0489453ff7e458816",
+        "model_or_provider_id": "fixture.synthetic.model",
+        "model_revision_or_digest": "synthetic-revision-v0",
+        "engine_id": "fixture.synthetic.engine",
+        "engine_version": "0.1.0",
+        "engine_implementation_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "runtime_id": "fixture.synthetic.runtime",
+        "runtime_version": "0.1.0",
+        "tokenizer_id": "fixture.synthetic.tokenizer",
+        "tokenizer_revision": "0.1.0",
+        "numeric_format": "fp16",
+        "sampling_config_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "prompt_policy_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "tool_memory_policy_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "benchmark_harness_id": "axiom.synthetic.inference-harness",
+        "benchmark_harness_version": "0.1.0",
+        "benchmark_harness_digest": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "environment": {
+        "os": "synthetic-linux",
+        "arch": "x64",
+        "cpu": "synthetic-cpu",
+        "host_ram_bytes": 34359738368,
+        "accelerator_kind": "gpu",
+        "accelerator_models": [
+          "Provider-reported GPU"
+        ],
+        "accelerator_count": 1,
+        "accelerator_memory_bytes": 85899345920,
+        "driver_version": null,
+        "firmware_version": null,
+        "accelerator_runtime_version": null,
+        "topology_digest": null,
+        "source_ids": [
+          "fixture.provider-report.synthetic"
+        ]
+      },
+      "protocol": {
+        "warmup_requests": 10,
+        "measured_requests": 100,
+        "concurrency": 4,
+        "batch_size": 1,
+        "streaming": true,
+        "cache_mode": "disabled",
+        "failure_policy": "retain-all-failures",
+        "percentile_method": "nearest-rank-v1"
+      },
+      "observations": {
+        "latency": {
+          "ttft_ms": {
+            "p50": 120,
+            "p95": 180,
+            "p99": 240
+          },
+          "itl_ms": {
+            "p50": 25,
+            "p95": 40,
+            "p99": 60
+          },
+          "e2e_ms": {
+            "p50": 3200,
+            "p95": 4500,
+            "p99": 6000
+          }
+        },
+        "throughput": {
+          "prefill_tokens_s": 8000,
+          "decode_tokens_s": 1200,
+          "aggregate_tokens_s": 2200,
+          "requests_s": 8.5,
+          "queue_wait_ms_p95": 20
+        },
+        "counts": {
+          "request_count": 100,
+          "success_count": 96,
+          "error_count": 2,
+          "rejected_count": 1,
+          "oom_count": 1
+        },
+        "resources": {
+          "peak_accelerator_memory_bytes": 68719476736,
+          "steady_accelerator_memory_bytes": 51539607552,
+          "kv_cache_bytes": 2147483648,
+          "host_rss_bytes": 4294967296,
+          "cpu_utilization_pct": 55,
+          "accelerator_utilization_pct": 80,
+          "memory_bandwidth_utilization_pct": 65,
+          "network_bytes": null,
+          "power_watts": 220,
+          "energy_joules": 44000,
+          "thermal_throttling": false
+        },
+        "economic": {
+          "direct_cost_microcents": null,
+          "hardware_amortization_microcents": null,
+          "electricity_microcents": null,
+          "retry_failure_microcents": null,
+          "verification_microcents": null,
+          "denominator_kind": "none",
+          "denominator_value": null
+        }
+      },
+      "quality": {
+        "state": "not-established",
+        "artifact_ref": null,
+        "artifact_digest": null
+      },
+      "reproducer_ref": null,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-benchmark-evidence.v0",
+      "version": 0,
+      "benchmark_id": "benchmark.synthetic.multi-device",
+      "evidence_class": "simulated",
+      "measured_at": "2026-09-18T03:05:00.000Z",
+      "workload": {
+        "profile_id": "inference.w0.interactive-agent",
+        "profile_version": "0.1.0",
+        "profile_digest": "d59572bf8946c544b0ebec1f08eacbcf7648dc3b99b137c8ae00409fe47769d6",
+        "fixture_digest": "b635558a25f985cf0850fa199b751b0aef5172f5bf2b925709b8f105502fdd7b"
+      },
+      "subject": {
+        "repository_revision": "c00bdeb982b567cdf6cb6ec0489453ff7e458816",
+        "model_or_provider_id": "fixture.synthetic.model",
+        "model_revision_or_digest": "synthetic-revision-v0",
+        "engine_id": "fixture.synthetic.engine",
+        "engine_version": "0.1.0",
+        "engine_implementation_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "runtime_id": "fixture.synthetic.runtime",
+        "runtime_version": "0.1.0",
+        "tokenizer_id": "fixture.synthetic.tokenizer",
+        "tokenizer_revision": "0.1.0",
+        "numeric_format": "fp16",
+        "sampling_config_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "prompt_policy_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "tool_memory_policy_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "benchmark_harness_id": "axiom.synthetic.inference-harness",
+        "benchmark_harness_version": "0.1.0",
+        "benchmark_harness_digest": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "environment": {
+        "os": "synthetic-linux",
+        "arch": "x64",
+        "cpu": "synthetic-cpu",
+        "host_ram_bytes": 34359738368,
+        "accelerator_kind": "gpu",
+        "accelerator_models": [
+          "Synthetic GPU A",
+          "Synthetic GPU B"
+        ],
+        "accelerator_count": 2,
+        "accelerator_memory_bytes": 51539607552,
+        "driver_version": "synthetic-driver",
+        "firmware_version": null,
+        "accelerator_runtime_version": "synthetic-cuda",
+        "topology_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+        "source_ids": [
+          "fixture.simulation.synthetic"
+        ]
+      },
+      "protocol": {
+        "warmup_requests": 10,
+        "measured_requests": 100,
+        "concurrency": 4,
+        "batch_size": 1,
+        "streaming": true,
+        "cache_mode": "disabled",
+        "failure_policy": "retain-all-failures",
+        "percentile_method": "nearest-rank-v1"
+      },
+      "observations": {
+        "latency": {
+          "ttft_ms": {
+            "p50": 120,
+            "p95": 180,
+            "p99": 240
+          },
+          "itl_ms": {
+            "p50": 25,
+            "p95": 40,
+            "p99": 60
+          },
+          "e2e_ms": {
+            "p50": 3200,
+            "p95": 4500,
+            "p99": 6000
+          }
+        },
+        "throughput": {
+          "prefill_tokens_s": 8000,
+          "decode_tokens_s": 1200,
+          "aggregate_tokens_s": 2200,
+          "requests_s": 8.5,
+          "queue_wait_ms_p95": 20
+        },
+        "counts": {
+          "request_count": 100,
+          "success_count": 96,
+          "error_count": 2,
+          "rejected_count": 1,
+          "oom_count": 1
+        },
+        "resources": {
+          "peak_accelerator_memory_bytes": 41231686041.600006,
+          "steady_accelerator_memory_bytes": 30923764531.199997,
+          "kv_cache_bytes": 2147483648,
+          "host_rss_bytes": 4294967296,
+          "cpu_utilization_pct": 55,
+          "accelerator_utilization_pct": 80,
+          "memory_bandwidth_utilization_pct": 65,
+          "network_bytes": null,
+          "power_watts": 220,
+          "energy_joules": 44000,
+          "thermal_throttling": false
+        },
+        "economic": {
+          "direct_cost_microcents": null,
+          "hardware_amortization_microcents": null,
+          "electricity_microcents": null,
+          "retry_failure_microcents": null,
+          "verification_microcents": null,
+          "denominator_kind": "none",
+          "denominator_value": null
+        }
+      },
+      "quality": {
+        "state": "not-established",
+        "artifact_ref": null,
+        "artifact_digest": null
+      },
+      "reproducer_ref": null,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    }
+  ]
+}
