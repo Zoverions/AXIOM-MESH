@@ -2135,10 +2135,24 @@ export async function run(source, {
       case 'OBSERVE': {
         const observedValue = resolveValue(instruction.value, values);
         assertRuntimeOrdinaryValue(observedValue, `observe ${instruction.name}`);
+        const signedObservation = observations[instruction.provenance] ?? null;
+        if (signedObservation) {
+          if (
+            signedObservation.schema !== 'praxis-signed-observation.v0'
+            || signedObservation.body?.source !== instruction.provenance
+            || canonicalJsonPraxis(signedObservation.body?.value) !== canonicalJsonPraxis(observedValue)
+          ) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_OBSERVATION_MISMATCH',
+              'signed observation does not match the requested source/value'
+            );
+          }
+        }
         bindValue(instruction.name, {
           kind: 'Observed',
-          value: observedValue,
-          provenance: instruction.provenance
+          value: signedObservation ? signedObservation.body.value : observedValue,
+          provenance: instruction.provenance,
+          host_observation: signedObservation
         });
         break;
       }
@@ -2151,6 +2165,41 @@ export async function run(source, {
             `verify requires Observed or Verified input, received ${input?.kind ?? 'missing'}`
           );
         }
+
+        if (input.host_observation) {
+          if (!charterContext) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_CHARTER_REQUIRED',
+              'signed observations require a trusted charter'
+            );
+          }
+          const verified = verifyHostObservation({
+            observation: input.host_observation,
+            verifierName: instruction.policy,
+            charter,
+            trustedRootKeys: trustedCharterKeys,
+            now: runtimeTime(now)
+          });
+          const supplementalVerifier = verifiers[instruction.policy];
+          if (supplementalVerifier !== undefined) {
+            if (typeof supplementalVerifier !== 'function') {
+              throw new PraxisRuntimeError(
+                'PRAXIS_VERIFIER_REQUIRED',
+                `verifier ${instruction.policy} is not callable`
+              );
+            }
+            const supplementalResult = await supplementalVerifier(verified);
+            if (!supplementalResult || supplementalResult.ok !== true) {
+              throw new PraxisRuntimeError(
+                'PRAXIS_VERIFICATION_DENIED',
+                `verifier ${instruction.policy} supplemental check denied`
+              );
+            }
+          }
+          bindValue(instruction.name, verified);
+          break;
+        }
+
         const verifier = verifiers[instruction.policy];
         if (typeof verifier !== 'function') {
           throw new PraxisRuntimeError(
