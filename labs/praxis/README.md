@@ -95,6 +95,12 @@ The embedding host must provide a matching `createHostLease(...)` token. The
 runtime denies it when expired, explicitly revoked, mismatched, or previously
 consumed.
 
+`createHostPermit(...)` and `createHostLease(...)` are laboratory embedding
+APIs. They are not a secure production issuer and must never be exposed to
+untrusted Praxis source, agents, plugins, or remote callers. A future AXIOM
+adapter must derive these runtime objects only from already-authorized AXIOM
+evidence; the factory functions themselves do not create AXIOM authority.
+
 ## v0 grammar
 
 ```text
