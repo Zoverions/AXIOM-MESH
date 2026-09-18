@@ -1474,6 +1474,8 @@ class Parser {
         return this.cancel();
       case 'commit':
         return this.commit();
+      case 'finalize':
+        return this.finalize();
       default:
         throw new PraxisSyntaxError(`unknown statement ${JSON.stringify(token.value)}`, token);
     }
@@ -1601,17 +1603,76 @@ class Parser {
     this.take('@');
     const scope = this.identifier();
     const secrets = [];
-    if (this.current().type === 'word' && this.current().value === 'using') {
-      this.word('using');
-      this.word('secrets');
-      secrets.push(this.identifier());
-      while (this.current().type === ',') {
-        this.take(',');
-        secrets.push(this.identifier());
+    let declaredEffect = null;
+    let declaredIrreversible = false;
+    let declaredEgress = null;
+    let sawIrreversible = false;
+    let sawEgress = false;
+    let sawSecrets = false;
+
+    while (this.current().type === 'word') {
+      if (this.current().value === 'effect') {
+        if (declaredEffect !== null) {
+          throw new PraxisSyntaxError('operation effect may be declared only once', this.current());
+        }
+        this.word('effect');
+        declaredEffect = this.identifier();
+        continue;
       }
+      if (this.current().value === 'irreversible') {
+        if (sawIrreversible) {
+          throw new PraxisSyntaxError('operation irreversible may be declared only once', this.current());
+        }
+        this.word('irreversible');
+        declaredIrreversible = true;
+        sawIrreversible = true;
+        continue;
+      }
+      if (this.current().value === 'egress') {
+        if (sawEgress) {
+          throw new PraxisSyntaxError('operation egress may be declared only once', this.current());
+        }
+        this.word('egress');
+        declaredEgress = this.take('string').value;
+        sawEgress = true;
+        continue;
+      }
+      if (this.current().value === 'using') {
+        if (sawSecrets) {
+          throw new PraxisSyntaxError('operation secrets may be declared only once', this.current());
+        }
+        this.word('using');
+        this.word('secrets');
+        secrets.push(this.identifier());
+        while (this.current().type === ',') {
+          this.take(',');
+          secrets.push(this.identifier());
+        }
+        sawSecrets = true;
+        continue;
+      }
+      break;
     }
+
+    if ((declaredIrreversible || declaredEgress !== null) && declaredEffect === null) {
+      throw new PraxisSyntaxError(
+        'operation irreversible/egress metadata requires an effect declaration',
+        this.current()
+      );
+    }
+
     this.take(';');
-    return { kind: 'Operation', name, action, scope, args, secrets };
+    return {
+      kind: 'Operation',
+      name,
+      action,
+      scope,
+      args,
+      secrets,
+      declaredEffect,
+      declaredIrreversible,
+      declaredEgress
+    };
   }
 
   authorize() {
@@ -1650,6 +1711,15 @@ class Parser {
     const name = this.identifier();
     this.take(';');
     return { kind: 'Commit', name, operation };
+  }
+
+  finalize() {
+    this.word('finalize');
+    const operation = this.identifier();
+    this.word('as');
+    const name = this.identifier();
+    this.take(';');
+    return { kind: 'Finalize', name, operation };
   }
 
   program() {
