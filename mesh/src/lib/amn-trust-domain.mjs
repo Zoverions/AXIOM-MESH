@@ -810,6 +810,22 @@ export function evaluateAmnTrustDomainAdmission({
   }
 
   const subjectId = verified.subject_id;
+  if (
+    verified.schema === AMN_TRUST_SCHEMAS.node_identity
+    && verified.claims.trust_domain !== issuer.trust_domain
+  ) {
+    return admissionFrom(verifiedBundle, metadata, {
+      issuer_id: issuer.issuer_id,
+      issuer_trust_domain: issuer.trust_domain,
+      subject_id: subjectId,
+      statement_schema: verified.schema,
+      statement_digest: amnTrustStatementDigest(verified),
+      evidence_digest: amnTrustEvidenceDigest(verified),
+      result: 'rejected',
+      reason_code: 'trust_domain_mismatch'
+    });
+  }
+
   if (!issuer.allowed_subject_prefixes.some(prefix => subjectId.startsWith(prefix))) {
     return admissionFrom(verifiedBundle, metadata, {
       issuer_id: issuer.issuer_id,
@@ -866,6 +882,10 @@ export function createAmnDomainSnapshot(admissions) {
       const rightKey = `${right.issuer_id ?? ''}:${right.subject_id ?? ''}:${right.admission_digest}`;
       return leftKey.localeCompare(rightKey);
     });
+
+  if (new Set(normalized.map(item => item.admission_digest)).size !== normalized.length) {
+    throw new ValidationError('AMN domain snapshot cannot count duplicate admissions');
+  }
 
   const bundleDigests = new Set(normalized.map(item => item.bundle_digest));
   if (bundleDigests.size !== 1) {
