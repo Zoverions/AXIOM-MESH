@@ -179,6 +179,7 @@ Current tests pin these boundaries:
 - one source cannot masquerade as several independent groups;
 - stored lane declarations fail closed when they overstate the computed lane;
 - the evidence digest changes when the supporting evidence changes.
+- the evidence digest is stable when the same signal set is reordered.
 
 ## Next bounded increment
 
