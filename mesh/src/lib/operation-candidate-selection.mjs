@@ -767,12 +767,24 @@ export function createOperationCandidateSelectionProposal(input) {
 
   const policy = normalizePolicy(value.policy);
   const candidateSetDigest = digestObject(candidates);
-  const semanticEvidenceInputDigest = digestObject(value.semanticEvidence);
-  const policyDigest = digestObject(policy);
-
   const semanticEnvelopes = value.semanticEvidence.map((entry, index) =>
     normalizeSemanticEnvelope(entry, index, candidateById)
   );
+  const semanticEvidenceInputDigest = digestObject(
+    semanticEnvelopes
+      .map(entry => ({
+        operation_id: entry.operationId,
+        manifest_digest: entry.manifestDigest,
+        observation_input_digest: digestObject(entry.observation),
+        provider_profile_input_digest: digestObject(entry.providerProfile),
+        question_schema_input_digest: digestObject(entry.questionSchema)
+      }))
+      .sort((left, right) =>
+        left.operation_id.localeCompare(right.operation_id)
+        || left.manifest_digest.localeCompare(right.manifest_digest)
+      )
+  );
+  const policyDigest = digestObject(policy);
   const seenEvidenceIds = new Set();
   const evidenceById = new Map();
   const invalidEvidenceIds = new Set();
