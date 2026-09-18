@@ -9,6 +9,7 @@ import {
   createCharteredHostPermit,
   createCharteredHostQuorum,
   createHostObservation,
+  createHostPreparedRef,
   createSyntheticCharter,
   irDigestPraxis,
   operationDigestPraxis,
@@ -638,6 +639,81 @@ test('chartered authority cannot be used without its trusted charter', async () 
     error => error instanceof PraxisRuntimeError
       && error.code === 'PRAXIS_CHARTER_REQUIRED'
   );
+});
+
+test('chartered prepared replay requires and re-validates the signed charter', async () => {
+  const evidence = [verifiedBuild()];
+  const request = releaseRequest({ evidence, nonce: 'prepared-replay-charter' });
+  const gate = await createCharteredHostQuorum({
+    id: 'quorum:prepared-replay',
+    charter,
+    trustedRootKeys: trustedRoots,
+    policyName: 'ProductionRelease',
+    operationDigest: DEPLOY_DIGEST,
+    evidence,
+    requester: 'ReleaseAgent',
+    request,
+    approvals: [
+      approval(request, 'Operator', operator.privateKey),
+      approval(request, 'Security', security.privateKey)
+    ],
+    advisors: allowAdvisor(),
+    now: BASE + 1_000
+  });
+
+  const prepareOnly = [
+    'requires quorum gate: Deploy @ Production threshold 2 of Operator, Security, Provider;',
+    'op release = Deploy("artifact") @ Production;',
+    'authorize release using gate as armed;',
+    'prepare armed as prepared;'
+  ].join('\n');
+
+  const preparedRun = await run(prepareOnly, {
+    authorities: { gate },
+    charter,
+    trustedCharterKeys: trustedRoots,
+    now: BASE + 2_000,
+    preparer: durablePreparer()
+  });
+  const preparedValue = preparedRun.values.prepared;
+  const ref = createHostPreparedRef({
+    id: 'prepared:chartered-replay',
+    action: 'Deploy',
+    scope: 'Production',
+    operation: preparedValue.operation,
+    authority: preparedValue.authority,
+    preparation: preparedValue.preparation
+  });
+  const replay = [
+    'requires prepared prior: Deploy @ Production;',
+    'commit prior as receipt;'
+  ].join('\n');
+
+  let executorCalls = 0;
+  await assert.rejects(
+    () => run(replay, {
+      prepared: { prior: ref },
+      now: BASE + 2_000,
+      executor: async requestBody => {
+        executorCalls += 1;
+        return completedExecutor(requestBody);
+      },
+      completer: durableCompleter
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_CHARTER_REQUIRED'
+  );
+  assert.equal(executorCalls, 0);
+
+  const completed = await run(replay, {
+    prepared: { prior: ref },
+    charter,
+    trustedCharterKeys: trustedRoots,
+    now: BASE + 2_000,
+    executor: completedExecutor,
+    completer: durableCompleter
+  });
+  assert.equal(completed.values.receipt.kind, 'Receipt');
 });
 
 test('evidence freshness is re-checked immediately before synthetic execution', async () => {
