@@ -746,7 +746,9 @@ impl OfflineEnvelopeLedger {
             return Err(KernelError::new("offline envelope owner mismatch"));
         }
         if current_revocation_epoch != self.envelope.revocation_epoch {
-            return Err(KernelError::new("offline envelope revocation epoch is stale"));
+            return Err(KernelError::new(
+                "offline envelope revocation epoch is stale",
+            ));
         }
         if target_device_ref != self.envelope.target_device_ref {
             return Err(KernelError::new("offline envelope target device mismatch"));
