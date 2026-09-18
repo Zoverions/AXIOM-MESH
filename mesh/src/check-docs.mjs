@@ -77,6 +77,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/research-knowledge-projection.v0.schema.json',
   'docs/architecture/contracts/research-operation-candidate.v0.schema.json',
   'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json',
+  'docs/architecture/contracts/formal-verification-evidence.v0.schema.json',
   'docs/architecture/contracts/research-contribution.v0.schema.json',
   'docs/architecture/contracts/research-relation.v0.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
@@ -365,6 +366,14 @@ const REQUIRED_CONTENT = Object.freeze({
   ],
   'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json': [
     'axiom-research-reproduction-evidence.v0',
+    'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/formal-verification-evidence.v0.schema.json': [
+    'axiom-formal-verification-evidence.v0',
+    'proof_check_state',
+    'closure_state',
+    'source_alignment_state',
     'truth_established',
     'authority_effect'
   ],
