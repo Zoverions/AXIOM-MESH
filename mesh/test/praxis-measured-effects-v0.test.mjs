@@ -534,7 +534,10 @@ test('hostile resealed IR cannot switch irreversible finalize to commit', async 
 });
 
 test('hostile resealed IR cannot relabel measured effect or finality metadata', async () => {
-  const ir = craft(DESTROY_SOURCE, module => {
+  const source = [
+    'op erase = Destroy("artifact") @ Production effect destructive_delete irreversible egress "provider:prod";'
+  ].join('\n');
+  const ir = craft(source, module => {
     const plan = module.instructions.find(instruction => instruction.op === 'PLAN');
     plan.declared_effect = 'deploy_release';
     plan.declared_irreversible = false;
