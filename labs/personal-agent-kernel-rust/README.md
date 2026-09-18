@@ -36,9 +36,10 @@ The source forbids unsafe Rust and has no third-party dependencies.
 The semantic core remains standard-library-only. Cryptography and component execution are isolated in sibling laboratories:
 
 - `../personal-agent-kernel-rust-crypto` — strict AXIOM-compatible Ed25519 verification and typed proof conversion;
-- `../personal-agent-kernel-wasmtime-host` — real Wasmtime Component Model import denial and explicit host linking.
+- `../personal-agent-kernel-wasmtime-host` — real Wasmtime Component Model import denial and explicit host linking;
+- `../personal-agent-kernel-offline-journal` — hash-chained, durable, single-writer local consumption state for restart-safe offline envelopes.
 
-Neither sibling laboratory is imported by the supported Mesh runtime.
+None of the sibling laboratories is imported by the supported Mesh runtime. The offline journal establishes local single-writer restart safety only; it does not claim cross-device global single-spend.
 
 ## Current evidence
 
