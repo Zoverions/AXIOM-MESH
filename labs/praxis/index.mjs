@@ -158,7 +158,8 @@ export function irDigestPraxis(ir) {
 
 function keyToPublicDerBase64(key) {
   if (typeof key === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(key)) return key;
-  return createPublicKey(key).export({ type: 'spki', format: 'der' }).toString('base64');
+  const publicKey = key?.type === 'public' ? key : createPublicKey(key);
+  return publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
 }
 
 function publicKeyFromDerBase64(value) {
