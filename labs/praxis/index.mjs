@@ -277,6 +277,98 @@ function normalizeAgentBindings(agents, principals) {
   return output;
 }
 
+
+const POLICY_COMPARATORS = new Set(['eq', 'neq', 'lt', 'lte', 'gt', 'gte']);
+const FORBIDDEN_POLICY_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function policyPremiseError(message) {
+  return new PraxisRuntimeError('PRAXIS_POLICY_PREMISE', message);
+}
+
+function normalizePolicyPath(path, label) {
+  if (path === undefined || path === null) return Object.freeze([]);
+  if (!Array.isArray(path)) {
+    throw policyPremiseError(label + ' path must be an array');
+  }
+  const normalized = path.map(segment => {
+    if (
+      !(typeof segment === 'string' || (Number.isSafeInteger(segment) && segment >= 0))
+    ) {
+      throw policyPremiseError(label + ' path contains an invalid segment');
+    }
+    if (typeof segment === 'string' && FORBIDDEN_POLICY_PATH_SEGMENTS.has(segment)) {
+      throw policyPremiseError(label + ' path contains a forbidden host-runtime name');
+    }
+    return segment;
+  });
+  return Object.freeze(normalized);
+}
+
+function normalizePolicyOperand(operand, label) {
+  if (!operand || typeof operand !== 'object' || Array.isArray(operand)) {
+    throw policyPremiseError(label + ' must be a policy operand object');
+  }
+  if (operand.source === 'const') {
+    if (!Object.hasOwn(operand, 'value')) {
+      throw policyPremiseError(label + ' constant is missing value');
+    }
+    return Object.freeze({
+      source: 'const',
+      value: immutablePraxisSnapshot(operand.value)
+    });
+  }
+  if (operand.source === 'evidence') {
+    if (typeof operand.verifier !== 'string' || operand.verifier.length === 0) {
+      throw policyPremiseError(label + ' evidence operand requires verifier');
+    }
+    return Object.freeze({
+      source: 'evidence',
+      verifier: operand.verifier,
+      path: normalizePolicyPath(operand.path, label)
+    });
+  }
+  if (operand.source === 'operation') {
+    const path = normalizePolicyPath(operand.path, label);
+    if (path.length === 0) {
+      throw policyPremiseError(label + ' operation operand requires a path');
+    }
+    if (!['action', 'scope', 'args', 'operation_digest'].includes(path[0])) {
+      throw policyPremiseError(label + ' operation path may read only action, scope, args, or operation_digest');
+    }
+    return Object.freeze({
+      source: 'operation',
+      path
+    });
+  }
+  throw policyPremiseError(
+    label + ' may use only verified evidence, exact operation fields, or constants'
+  );
+}
+
+function normalizePolicyPredicate(predicate, index, requiredVerifiers) {
+  if (!predicate || typeof predicate !== 'object' || Array.isArray(predicate)) {
+    throw policyPremiseError('require[' + index + '] must be an object');
+  }
+  if (!POLICY_COMPARATORS.has(predicate.op)) {
+    throw policyPremiseError('require[' + index + '] uses unsupported comparator ' + predicate.op);
+  }
+  const left = normalizePolicyOperand(predicate.left, 'require[' + index + '].left');
+  const right = normalizePolicyOperand(predicate.right, 'require[' + index + '].right');
+  for (const operand of [left, right]) {
+    if (operand.source === 'evidence' && !requiredVerifiers.has(operand.verifier)) {
+      throw policyPremiseError(
+        'require[' + index + '] references evidence verifier ' + operand.verifier
+        + ' without declaring it in requires_evidence'
+      );
+    }
+  }
+  return Object.freeze({
+    op: predicate.op,
+    left,
+    right
+  });
+}
+
 function normalizePolicyDefinition(name, definition) {
   if (!definition || !['Permit', 'Quorum'].includes(definition.authority_kind)) {
     throw new TypeError('policy ' + name + ' must declare authority_kind Permit or Quorum');
@@ -287,13 +379,23 @@ function normalizePolicyDefinition(name, definition) {
   if (!Number.isSafeInteger(definition.expires_ms) || definition.expires_ms <= 0) {
     throw new TypeError('policy ' + name + ' requires positive expires_ms');
   }
+  if (definition.require !== undefined && !Array.isArray(definition.require)) {
+    throw policyPremiseError('policy ' + name + ' require must be an array');
+  }
+  const requiresEvidence = Object.freeze(
+    [...new Set((definition.requires_evidence ?? []).map(String))].sort()
+  );
+  const requiredVerifierSet = new Set(requiresEvidence);
   const normalized = {
     authority_kind: definition.authority_kind,
     action: String(definition.action),
     scope: String(definition.scope),
     expires_ms: definition.expires_ms,
-    requires_evidence: Object.freeze(
-      [...new Set((definition.requires_evidence ?? []).map(String))].sort()
+    requires_evidence: requiresEvidence,
+    require: Object.freeze(
+      (definition.require ?? []).map((predicate, index) =>
+        normalizePolicyPredicate(predicate, index, requiredVerifierSet)
+      )
     ),
     advisor: definition.advisor ? String(definition.advisor) : null
   };
