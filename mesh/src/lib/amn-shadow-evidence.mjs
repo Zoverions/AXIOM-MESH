@@ -556,7 +556,7 @@ export class AmnShadowEvidenceQueue {
     if (this.#records.length >= this.#maxEntries) {
       throw new ValidationError('AMN shadow queue is full');
     }
-    const record = createAmnShadowRecord(verified, {
+    const record = createAmnShadowRecord(verification, {
       sequence: this.#records.length + 1,
       enqueuedAt: at
     });
