@@ -51,7 +51,7 @@ test('Praxis semantic conformance corpus pins current authority invariants and g
     .sort();
 
   assert.deepEqual(pending, [
-    'cancellation-idempotency-replay-rollback'
+    'rollback'
   ]);
 });
 
