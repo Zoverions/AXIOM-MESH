@@ -611,11 +611,11 @@ export function verifyAmnTrustStatement(raw, {
 }
 
 export function amnTrustStatementDigest(value) {
-  const statement = exactKeys(value, ENVELOPE_KEYS, 'AMN trust statement');
+  const statement = assertPlainObject(value, 'AMN trust statement');
   return digest(statement.statement_digest, 'AMN trust statement_digest');
 }
 
 export function amnTrustEvidenceDigest(value) {
-  const statement = exactKeys(value, ENVELOPE_KEYS, 'AMN trust statement');
+  const statement = assertPlainObject(value, 'AMN trust statement');
   return digest(statement.evidence_digest, 'AMN trust evidence_digest');
 }
