@@ -282,6 +282,22 @@ test('host registry missing an effectful operation fails closed', async () => {
   );
 });
 
+test('host operation registry rejects hidden or unknown contract fields', () => {
+  assert.throws(
+    () => createHostOperationRegistry({
+      Deploy: {
+        action: 'Deploy',
+        scope: 'Production',
+        effect: 'deploy_release',
+        irreversible: false,
+        egress: 'provider:prod',
+        hidden_authority: true
+      }
+    }),
+    TypeError
+  );
+});
+
 test('ambiguous host operation mapping fails closed', async () => {
   const ambiguous = createHostOperationRegistry({
     DeployPrimary: {
