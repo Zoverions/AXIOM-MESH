@@ -188,16 +188,22 @@ export function createOperationDescriptorPraxis({
     if (typeof effect !== 'string' || effect.length === 0) {
       throw new TypeError('Praxis measured operation effect must be a non-empty string');
     }
-    if (irreversible !== undefined && typeof irreversible !== 'boolean') {
-      throw new TypeError('Praxis measured operation irreversible must be boolean');
+    if (typeof irreversible !== 'boolean') {
+      throw new TypeError('Praxis measured operation requires explicit boolean irreversible');
     }
-    if (egress !== undefined && egress !== null && (typeof egress !== 'string' || egress.length === 0)) {
-      throw new TypeError('Praxis measured operation egress must be null or a non-empty string');
+    if (
+      egress === undefined
+      || (
+        egress !== null
+        && (typeof egress !== 'string' || egress.length === 0)
+      )
+    ) {
+      throw new TypeError('Praxis measured operation requires explicit egress: null or non-empty string');
     }
     bodyInput.host_operation = String(hostOperation ?? action);
     bodyInput.effect = effect;
-    bodyInput.irreversible = irreversible === true;
-    bodyInput.egress = egress ?? null;
+    bodyInput.irreversible = irreversible;
+    bodyInput.egress = egress;
   }
   const body = immutablePraxisSnapshot(bodyInput);
   return Object.freeze({
@@ -264,15 +270,20 @@ export function createHostOperationRegistry(definitions = {}) {
         throw new TypeError('host operation ' + name + ' contains unknown field ' + field);
       }
     }
-    const action = String(definition.action ?? name);
-    const scope = String(definition.scope ?? '');
-    const effect = String(definition.effect ?? '');
-    const irreversible = definition.irreversible === true;
-    const egress = definition.egress ?? null;
-    if (!action || !scope || !effect) {
-      throw new TypeError('host operation ' + name + ' requires action, scope, and effect');
+    for (const requiredField of ['action', 'scope', 'effect', 'irreversible', 'egress']) {
+      if (!Object.hasOwn(definition, requiredField)) {
+        throw new TypeError('host operation ' + name + ' requires explicit ' + requiredField);
+      }
     }
-    if (definition.irreversible !== undefined && typeof definition.irreversible !== 'boolean') {
+    const action = String(definition.action);
+    const scope = String(definition.scope);
+    const effect = String(definition.effect);
+    const irreversible = definition.irreversible;
+    const egress = definition.egress;
+    if (!action || !scope || !effect) {
+      throw new TypeError('host operation ' + name + ' requires non-empty action, scope, and effect');
+    }
+    if (typeof irreversible !== 'boolean') {
       throw new TypeError('host operation ' + name + ' irreversible must be boolean');
     }
     if (egress !== null && (typeof egress !== 'string' || egress.length === 0)) {
