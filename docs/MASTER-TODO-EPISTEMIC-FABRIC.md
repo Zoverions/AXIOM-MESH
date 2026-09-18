@@ -1,6 +1,6 @@
 # AXIOM-MESH Master TODO — Epistemic Fabric
 
-**Status:** subordinate Stage 5B queue; E0/E1 gate and schema-composition amendment A owner-approved; implementation awaits approval-record verification/merge
+**Status:** subordinate Stage 5B queue; E0/E1 merged; E2-RC reproducibility-closure candidate is separately gated and remains inert evidence only
 
 **Date:** 2026-09-08
 
@@ -106,6 +106,35 @@ Before `feat/epistemic-fabric-e0-e1` is created:
 - [ ] PR #1562 must merge to `main`.
 
 No earlier Stage 5A approval substitutes for this gate, and no part of this work grants E2+ authority.
+
+## Amendment B implementation track — E2-RC reproducibility closure
+
+E2-RC is an inert evidence candidate only. It records exact target/verifier/environment/dependency/replay scope and remains proposal-only.
+
+Fresh implementation gate: issue #1644 against exact base `e3def4421495306a3f1b0516d95c84389c4b2d14`.
+
+Implemented candidate surfaces:
+
+- `axiom-epistemic-reproducibility-closure.v0` schema;
+- deterministic self-excluding content digest;
+- domain-separated direct dependency-closure digest;
+- explicit fresh/reused/unavailable dependency dispositions;
+- coverage claims bounded by the actual declared dependency state;
+- replay context classified as original/same/separate/unknown without asserting epistemic independence;
+- zero-authority and zero-network semantics.
+
+Non-claims:
+
+- no E3 canonical admission;
+- no E4 evidence-state vector or failure-provenance implementation;
+- no E6 continuous ingestion;
+- no E7 continuation packet or frontier engine;
+- no Lean/Coq/Isabelle/prover invocation;
+- no FORMAL-001 runtime dependency;
+- no independent-reproduction truth claim;
+- no capability, policy, network, repository, spending, deployment, or experiment authority.
+
+Candidate readiness requires protected checks on the exact implementation head. This section does not itself promote the candidate.
 
 ## Priority 6 — Later work remains parked
 
