@@ -1,0 +1,100 @@
+{
+  "schema": "praxis-semantic-conformance.v0",
+  "version": 0,
+  "status": "inert-laboratory-corpus",
+  "coverage": [
+    { "invariant": "knowledge-cannot-become-authority", "status": "covered" },
+    { "invariant": "identity-cannot-become-authority", "status": "covered-as-epistemic-value" },
+    { "invariant": "discovery-cannot-become-authority", "status": "covered-as-epistemic-value" },
+    { "invariant": "planning-cannot-become-authority", "status": "covered" },
+    { "invariant": "collective-agreement-cannot-amplify-authority", "status": "partial-assessment-only" },
+    { "invariant": "permit-action-scope-binding", "status": "covered" },
+    { "invariant": "linear-authority-consumption", "status": "covered" },
+    { "invariant": "expiry-revocation", "status": "pending" },
+    { "invariant": "deny-on-absent-or-malformed-policy-result", "status": "covered-runtime-tests" },
+    { "invariant": "durable-preparation-before-external-io", "status": "pending-host-abi" },
+    { "invariant": "uncertain-external-outcome-remains-uncertain", "status": "pending-host-abi" },
+    { "invariant": "completion-receipt-binds-exact-operation", "status": "covered-runtime-tests" },
+    { "invariant": "cancellation-idempotency-replay-rollback", "status": "pending" },
+    { "invariant": "secret-reference-separation", "status": "pending" }
+  ],
+  "compile_cases": [
+    {
+      "name": "valid-authorized-commit",
+      "source": "requires permit p: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;\ncommit armed as receipt;",
+      "expect": { "ok": true, "instruction_ops": ["REQUIRE_PERMIT", "PLAN", "AUTHORIZE", "COMMIT"] }
+    },
+    {
+      "name": "knowledge-cannot-authorize",
+      "source": "observe fact = \"safe\" from \"fixture\";\nop release = Deploy(fact) @ Production;\nauthorize release using fact as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT" }
+    },
+    {
+      "name": "identity-value-cannot-authorize",
+      "source": "observe identity = \"agent:alice\" from \"identity-directory\";\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using identity as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT" }
+    },
+    {
+      "name": "discovery-value-cannot-authorize",
+      "source": "observe discovered = \"service:deploy\" from \"discovery\";\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using discovered as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT" }
+    },
+    {
+      "name": "assessment-cannot-authorize",
+      "source": "observe evidence = \"safe\" from \"fixture\";\nassess consensus = evidence with CollectiveReview;\nop release = Deploy(evidence) @ Production;\nauthorize release using consensus as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT" }
+    },
+    {
+      "name": "planned-operation-cannot-authorize-another-operation",
+      "source": "op plan = Plan(\"x\") @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using plan as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT" }
+    },
+    {
+      "name": "commit-requires-authorized-operation",
+      "source": "op release = Deploy(\"artifact\") @ Production;\ncommit release as receipt;",
+      "expect": { "ok": false, "code": "PRAXIS_COMMIT_REQUIRES_AUTHORITY" }
+    },
+    {
+      "name": "action-substitution-denied",
+      "source": "requires permit p: Restart @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORITY_MISMATCH" }
+    },
+    {
+      "name": "scope-substitution-denied",
+      "source": "requires permit p: Deploy @ Staging;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORITY_MISMATCH" }
+    },
+    {
+      "name": "linear-permit-reuse-denied",
+      "source": "requires permit p: Deploy @ Production;\nop first = Deploy(\"a\") @ Production;\nop second = Deploy(\"b\") @ Production;\nauthorize first using p as first_armed;\nauthorize second using p as second_armed;",
+      "expect": { "ok": false, "code": "PRAXIS_LINEAR_AUTHORITY_REUSE" }
+    },
+    {
+      "name": "authority-smuggling-denied",
+      "source": "requires permit p: Deploy @ Production;\nop leak = Log(p) @ Audit;",
+      "expect": { "ok": false, "code": "PRAXIS_AUTHORITY_EXFILTRATION" }
+    },
+    {
+      "name": "permit-cannot-be-reobserved-as-knowledge",
+      "source": "requires permit p: Deploy @ Production;\nobserve leaked = p from \"self\";",
+      "expect": { "ok": false, "code": "PRAXIS_INFORMATION_FLOW_VIOLATION" }
+    },
+    {
+      "name": "verify-requires-evidence",
+      "source": "op plan = Plan(\"x\") @ Local;\nverify proof = plan with Policy;",
+      "expect": { "ok": false, "code": "PRAXIS_VERIFY_REQUIRES_EVIDENCE" }
+    },
+    {
+      "name": "duplicate-binding-denied",
+      "source": "observe x = 1 from \"a\";\nobserve x = 2 from \"b\";",
+      "expect": { "ok": false, "code": "PRAXIS_DUPLICATE_BINDING" }
+    }
+  ],
+  "canonical_fixtures": [
+    { "name": "primitive-null", "value": null },
+    { "name": "primitive-negative-zero-normalizes", "value": 0 },
+    { "name": "nested-record-key-order", "value": { "z": 1, "a": { "d": 4, "b": 2 }, "m": [3, 2, 1] } },
+    { "name": "unicode-and-empty", "value": { "empty": "", "text": "Praxis Ω" } },
+    { "name": "boolean-number-array", "value": [true, false, 0, -12.5, 42] }
+  ]
+}
