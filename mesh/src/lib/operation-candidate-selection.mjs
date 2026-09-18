@@ -76,6 +76,59 @@ const UNCERTAINTY_REASONS = Object.freeze([
   'no-eligible-candidates'
 ]);
 
+const SELECTED_REASONS = Object.freeze([
+  'deterministic-exact-match',
+  'semantic-high-support',
+  'semantic-top-k',
+  'fallback-visible'
+]);
+
+const WITHHELD_REASONS = Object.freeze([
+  'deterministic-ineligible',
+  'not-exact-match',
+  'below-minimum-support',
+  'outside-single-selection',
+  'outside-top-k',
+  'fallback-escalation'
+]);
+
+const MODE_SEMANTICS = Object.freeze({
+  'deterministic-exact': Object.freeze({
+    action: 'continue-with-bounded-context',
+    unresolved: false,
+    selectedReason: 'deterministic-exact-match',
+    selectedCount: 1
+  }),
+  'semantic-single': Object.freeze({
+    action: 'continue-with-bounded-context',
+    unresolved: false,
+    selectedReason: 'semantic-high-support',
+    selectedCount: 1
+  }),
+  'semantic-top-k': Object.freeze({
+    action: 'continue-with-bounded-context',
+    unresolved: false,
+    selectedReason: 'semantic-top-k',
+    minimumSelectedCount: 1
+  }),
+  'fallback-retain-eligible': Object.freeze({
+    action: 'deliberate-with-retained-context',
+    unresolved: true,
+    selectedReason: 'fallback-visible',
+    minimumSelectedCount: 1
+  }),
+  'fallback-escalate': Object.freeze({
+    action: 'escalate',
+    unresolved: true,
+    selectedCount: 0
+  }),
+  'no-eligible-candidates': Object.freeze({
+    action: 'escalate',
+    unresolved: true,
+    selectedCount: 0
+  })
+});
+
 function exact(value, fields, name) {
   const object = assertPlainObject(value, name);
   const allowed = new Set(fields);
@@ -560,9 +613,18 @@ function validateSelectedEntry(item, index) {
   );
   identifier(value.operation_id, 'operation candidate selection.selected[' + index + '].operation_id');
   digest(value.manifest_digest, 'operation candidate selection.selected[' + index + '].manifest_digest');
-  identifier(value.reason, 'operation candidate selection.selected[' + index + '].reason');
-  if (value.support !== null) unit(value.support, 'operation candidate selection.selected[' + index + '].support');
-  if (value.observation_digest !== null) {
+  enumValue(
+    value.reason,
+    SELECTED_REASONS,
+    'operation candidate selection.selected[' + index + '].reason'
+  );
+  if ((value.support === null) !== (value.observation_digest === null)) {
+    throw new ValidationError(
+      'operation candidate selection selected support and observation_digest must both be present or both be null'
+    );
+  }
+  if (value.support !== null) {
+    unit(value.support, 'operation candidate selection.selected[' + index + '].support');
     digest(
       value.observation_digest,
       'operation candidate selection.selected[' + index + '].observation_digest'
@@ -578,7 +640,11 @@ function validateWithheldEntry(item, index) {
   );
   identifier(value.operation_id, 'operation candidate selection.withheld[' + index + '].operation_id');
   digest(value.manifest_digest, 'operation candidate selection.withheld[' + index + '].manifest_digest');
-  identifier(value.reason, 'operation candidate selection.withheld[' + index + '].reason');
+  enumValue(
+    value.reason,
+    WITHHELD_REASONS,
+    'operation candidate selection.withheld[' + index + '].reason'
+  );
 }
 
 function validateSemanticSummary(item, index) {
@@ -679,6 +745,54 @@ export function validateOperationCandidateSelectionProposal(document) {
     );
   }
 
+  const modeSemantics = MODE_SEMANTICS[value.selection_mode];
+  if (
+    value.recommended_action !== modeSemantics.action
+    || value.unresolved !== modeSemantics.unresolved
+  ) {
+    throw new ValidationError('operation candidate selection mode semantics are inconsistent');
+  }
+  if (
+    Object.hasOwn(modeSemantics, 'selectedCount')
+    && value.selected.length !== modeSemantics.selectedCount
+  ) {
+    throw new ValidationError('operation candidate selection selected count is inconsistent with mode');
+  }
+  if (
+    Object.hasOwn(modeSemantics, 'minimumSelectedCount')
+    && value.selected.length < modeSemantics.minimumSelectedCount
+  ) {
+    throw new ValidationError('operation candidate selection selected count is inconsistent with mode');
+  }
+  if (
+    !value.unresolved && value.uncertainty_reasons.length !== 0
+  ) {
+    throw new ValidationError('resolved operation candidate selection cannot contain uncertainty reasons');
+  }
+  if (
+    value.unresolved && value.uncertainty_reasons.length === 0
+  ) {
+    throw new ValidationError('unresolved operation candidate selection requires an uncertainty reason');
+  }
+  if (
+    modeSemantics.selectedReason
+    && value.selected.some(item => item.reason !== modeSemantics.selectedReason)
+  ) {
+    throw new ValidationError('operation candidate selection selected reason is inconsistent with mode');
+  }
+  if (
+    value.selection_mode === 'deterministic-exact'
+    && value.selected.some(item => item.support !== null || item.observation_digest !== null)
+  ) {
+    throw new ValidationError('deterministic exact selection cannot claim semantic evidence');
+  }
+  if (
+    (value.selection_mode === 'semantic-single' || value.selection_mode === 'semantic-top-k')
+    && value.selected.some(item => item.support === null || item.observation_digest === null)
+  ) {
+    throw new ValidationError('semantic selection requires semantic evidence');
+  }
+
   const selectedIds = new Set();
   for (const item of value.selected) {
     if (selectedIds.has(item.operation_id)) {
@@ -695,6 +809,30 @@ export function validateOperationCandidateSelectionProposal(document) {
       throw new ValidationError('operation candidate cannot be both selected and withheld');
     }
     withheldIds.add(item.operation_id);
+  }
+
+  const semanticEvidenceById = new Map();
+  for (const evidence of value.validated_semantic_evidence) {
+    if (semanticEvidenceById.has(evidence.operation_id)) {
+      throw new ValidationError(
+        'operation candidate selection.validated_semantic_evidence contains duplicate operation_id'
+      );
+    }
+    semanticEvidenceById.set(evidence.operation_id, evidence);
+  }
+  for (const item of value.selected) {
+    if (item.observation_digest === null) continue;
+    const evidence = semanticEvidenceById.get(item.operation_id);
+    if (
+      !evidence
+      || evidence.manifest_digest !== item.manifest_digest
+      || evidence.observation_digest !== item.observation_digest
+      || evidence.support !== item.support
+    ) {
+      throw new ValidationError(
+        'operation candidate selection selected semantic evidence is not provenance-bound'
+      );
+    }
   }
 
   if (
@@ -853,4 +991,19 @@ export function createOperationCandidateSelectionProposal(input) {
   document.proposal_digest = digestObject(proposalDigestPayload(document));
   validateOperationCandidateSelectionProposal(document);
   return deepFreeze(document);
+}
+
+export function verifyOperationCandidateSelectionProposal(document, trustedInput) {
+  const validated = validateOperationCandidateSelectionProposal(document);
+  const expected = createOperationCandidateSelectionProposal(trustedInput);
+  if (validated.proposal_digest !== expected.proposal_digest) {
+    throw new ValidationError(
+      'operation candidate selection proposal does not match trusted inputs'
+    );
+  }
+  return Object.freeze({
+    valid: true,
+    proposal_digest: validated.proposal_digest,
+    trusted_input_match: true
+  });
 }
