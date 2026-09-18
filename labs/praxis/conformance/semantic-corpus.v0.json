@@ -41,23 +41,35 @@
     },
     {
       "invariant": "durable-preparation-before-external-io",
-      "status": "covered-runtime-tests"
+      "status": "covered-synthetic-host-contract"
     },
     {
       "invariant": "uncertain-external-outcome-remains-uncertain",
-      "status": "covered-runtime-tests"
+      "status": "covered-synthetic-host-contract"
     },
     {
       "invariant": "completion-receipt-binds-exact-operation",
       "status": "covered-runtime-tests"
     },
     {
-      "invariant": "cancellation-idempotency-replay-rollback",
-      "status": "pending"
+      "invariant": "cancellation",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "idempotency",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "replay",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "rollback",
+      "status": "pending-operation-specific-semantics"
     },
     {
       "invariant": "secret-reference-separation",
-      "status": "covered-runtime-tests"
+      "status": "covered-synthetic-host-contract"
     }
   ],
   "compile_cases": [
@@ -208,6 +220,36 @@
           "REQUIRE_SECRET",
           "PLAN"
         ]
+      }
+    },
+    {
+      "name": "valid-imported-prepared-commit",
+      "source": "requires prepared prior: Deploy @ Production;\ncommit prior as receipt;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_PREPARED",
+          "COMMIT"
+        ]
+      }
+    },
+    {
+      "name": "valid-prepared-cancellation",
+      "source": "requires prepared prior: Deploy @ Production;\ncancel prior as canceled;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_PREPARED",
+          "CANCEL"
+        ]
+      }
+    },
+    {
+      "name": "prepared-terminal-transition-is-linear",
+      "source": "requires prepared prior: Deploy @ Production;\ncancel prior as canceled;\ncommit prior as receipt;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_LINEAR_OPERATION_REUSE"
       }
     }
   ],
