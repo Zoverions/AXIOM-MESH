@@ -59,7 +59,7 @@ runtime.
 
 The governing rule is:
 
-> **Intelligence is not authority. Connectivity is not authority. Installation is not authority. Evidence must state exactly what it proves.**
+> **Intelligence is not authority. Connectivity is not authority. Installation is not authority. Scriptability is not authority. Evidence must state exactly what it proves.**
 
 ## 1. Problem and motivation
 
@@ -87,10 +87,13 @@ AXIOM-MESH treats these questions as the product boundary. A model output is
 data until an authenticated principal, valid authority profile, compatible
 policy, explicit plan, bounded grant/effect path, and durable evidence agree.
 
-This posture rejects two common shortcuts. A friendly user interface may
-simplify terminology, but it may not hide consequential authority. And green
-synthetic tests or source presence may not be marketed as production merely
-because code exists.
+This posture rejects common shortcuts. A friendly user interface may simplify
+terminology, but it may not hide consequential authority. A CLI, API, hook,
+macro, plugin, capsule, or agent surface may make a capability composable, but
+equivalent governed effects must still re-enter the same canonical AXIOM action
+and authority path; scriptability never inherits permission from discovery,
+installation, subscription, or composition. Green synthetic tests or source
+presence may not be marketed as production merely because code exists.
 
 ## 2. Governing development posture
 
