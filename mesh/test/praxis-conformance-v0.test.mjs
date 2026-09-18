@@ -53,7 +53,6 @@ test('Praxis semantic conformance corpus pins current authority invariants and g
   assert.deepEqual(pending, [
     'cancellation-idempotency-replay-rollback',
     'durable-preparation-before-external-io',
-    'expiry-revocation',
     'secret-reference-separation',
     'uncertain-external-outcome-remains-uncertain'
   ]);
