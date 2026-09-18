@@ -161,7 +161,7 @@ function normalizeProvenance(value) {
     if (seen.has(key)) throw new ValidationError('Agent assurance provenance contains a duplicate entry');
     seen.add(key);
     return { kind: input.kind, ref, digest: itemDigest };
-  }).sort((a, b) => canonicalJson(a).localeCompare(canonicalJson(b)));
+  }).sort((a, b) => compareText(canonicalJson(a), canonicalJson(b)));
 }
 
 function normalizeEnvironmentEvidence(value) {
@@ -253,7 +253,7 @@ function normalizeEvaluatorBundle(value) {
       network: 'none',
       authority: 'none'
     };
-  }).sort((a, b) => a.evaluator_id.localeCompare(b.evaluator_id));
+  }).sort((a, b) => compareText(a.evaluator_id, b.evaluator_id));
   return {
     bundle_id: identifier(input.bundle_id, 'evaluator bundle_id'),
     bundle_digest: digest(input.bundle_digest, 'evaluator bundle_digest'),
@@ -296,7 +296,7 @@ function normalizeMissionGraph(value) {
     graph_id: identifier(input.graph_id, 'mission graph_id'),
     delegation_mode: 'observational-only',
     authority_effect: 'none',
-    nodes: [...nodes].sort((a, b) => a.task_id.localeCompare(b.task_id))
+    nodes: [...nodes].sort((a, b) => compareText(a.task_id, b.task_id))
   };
 }
 
@@ -360,6 +360,12 @@ function validateAttestationShape(value) {
   if (typeof input.signature !== 'string' || input.signature.length < 16 || input.signature.length > 1024) {
     throw new ValidationError('Agent assurance attestation signature is invalid');
   }
+}
+
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 function record(value, name) {
