@@ -3051,18 +3051,63 @@ export async function run(source, {
             secret_kind: ref.kind
           });
         });
-        const operation = Object.freeze({
-          schema: 'praxis-operation.v0',
-          action: instruction.action,
-          scope: instruction.scope,
-          args,
-          secret_references: Object.freeze(secretReferences)
-        });
-        bindValue(instruction.name, Object.freeze({
-          kind: 'Operation',
-          ...operation,
-          operation_digest: operationDigest(operation)
-        }));
+
+        let operation;
+        if (hostOperationRegistry) {
+          const measured = hostOperationRegistry.operations[instruction.action];
+          if (!measured) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_HOST_OPERATION_REQUIRED',
+              `host operation ${instruction.action} is not registered`
+            );
+          }
+          if (instruction.declared_effect === null || instruction.declared_effect === undefined) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_EFFECT_UNDECLARED',
+              `operation ${instruction.name} must declare its measured effect`
+            );
+          }
+          if (
+            measured.action !== instruction.action
+            || measured.scope !== instruction.scope
+            || measured.effect !== instruction.declared_effect
+            || measured.irreversible !== (instruction.declared_irreversible === true)
+            || measured.egress !== (instruction.declared_egress ?? null)
+          ) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_LINK_MISMATCH',
+              `operation ${instruction.name} declaration does not match the host-measured contract`
+            );
+          }
+          operation = createOperationDescriptorPraxis({
+            action: measured.action,
+            scope: measured.scope,
+            args,
+            secretReferences,
+            hostOperation: measured.name,
+            effect: measured.effect,
+            irreversible: measured.irreversible,
+            egress: measured.egress
+          });
+        } else {
+          if (
+            instruction.declared_effect !== null
+            && instruction.declared_effect !== undefined
+          ) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_HOST_OPERATION_REQUIRED',
+              `operation ${instruction.name} declares an effect but no host registry is present`
+            );
+          }
+          operation = createOperationDescriptorPraxis({
+            action: instruction.action,
+            scope: instruction.scope,
+            args,
+            secretReferences
+          });
+        }
+
+        bindValue(instruction.name, operation);
         break;
       }
 
