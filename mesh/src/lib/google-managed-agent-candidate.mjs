@@ -132,9 +132,9 @@ function validateAuthorizedHandoff(handoff, allowedDomains) {
   }
 }
 
-function optionalId(value, label) {
+function optionalProviderLocator(value, label) {
   if (value === undefined || value === null) return null;
-  requireId(value, label);
+  requireString(value, label, 1024);
   return value;
 }
 
@@ -165,11 +165,11 @@ export function buildGoogleManagedAgentInteraction({
   const domains = exactDomainList(allowedDomains);
   validateAuthorizedHandoff(handoff, domains);
   const credentials = validateCredentialBindings(credentialBindings, domains);
-  const pinnedEnvironmentId = optionalId(
+  const pinnedEnvironmentId = optionalProviderLocator(
     environmentId,
     'Google managed-agent environmentId'
   );
-  const pinnedPreviousInteractionId = optionalId(
+  const pinnedPreviousInteractionId = optionalProviderLocator(
     previousInteractionId,
     'Google managed-agent previousInteractionId'
   );
