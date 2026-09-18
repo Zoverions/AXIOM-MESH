@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { evaluateGtmAccount } from './check-gtm-evidence.mjs';
 
 export const GTM_OUTCOME_RECEIPT_SCHEMA = 'axiom-gtm-outcome-receipt.v0';
 
@@ -7,6 +8,7 @@ const RECEIPT_FIELDS = Object.freeze([
   'receipt_id',
   'campaign_id',
   'account_id',
+  'evaluated_on',
   'evidence_digest',
   'operation_ref',
   'outcome_class',
@@ -134,25 +136,10 @@ function normalizeRevenue(value, outcomeClass) {
   return Object.freeze({ currency, amount_minor: revenue.amount_minor });
 }
 
-function assertAccountEvaluation(value) {
-  const evaluation = assertObject(value, 'accountEvaluation');
-  if (evaluation.valid !== true) {
-    throw new GtmOutcomeReceiptError('accountEvaluation.valid must be true');
-  }
-  string(evaluation.account_id, 'accountEvaluation.account_id', {
-    pattern: IDENTIFIER,
-    max: 128
-  });
-  string(evaluation.evidence_digest, 'accountEvaluation.evidence_digest', {
-    pattern: DIGEST,
-    max: 64
-  });
-  date(evaluation.evaluated_on, 'accountEvaluation.evaluated_on');
-  return evaluation;
-}
-
-export function evaluateGtmOutcomeReceipt(input, { accountEvaluation } = {}) {
-  const evaluation = assertAccountEvaluation(accountEvaluation);
+export function evaluateGtmOutcomeReceipt(
+  input,
+  { accountEvidence, trustedProvenance } = {}
+) {
   const value = exactFields(input, RECEIPT_FIELDS, 'gtm outcome receipt');
 
   if (value.schema !== GTM_OUTCOME_RECEIPT_SCHEMA) {
@@ -173,6 +160,7 @@ export function evaluateGtmOutcomeReceipt(input, { accountEvaluation } = {}) {
     pattern: IDENTIFIER,
     max: 128
   });
+  const evaluatedOn = date(value.evaluated_on, 'gtm outcome receipt.evaluated_on');
   const evidenceDigest = string(value.evidence_digest, 'gtm outcome receipt.evidence_digest', {
     pattern: DIGEST,
     max: 64
@@ -197,6 +185,14 @@ export function evaluateGtmOutcomeReceipt(input, { accountEvaluation } = {}) {
     max: 800
   });
 
+  const evaluation = evaluateGtmAccount(accountEvidence, {
+    evaluationTime: new Date(`${evaluatedOn}T23:59:59.999Z`),
+    trustedProvenance
+  });
+  if (evaluation.evaluated_on !== evaluatedOn) {
+    throw new GtmOutcomeReceiptError('evaluated_on does not match account evaluation');
+  }
+
   if (accountId !== evaluation.account_id) {
     throw new GtmOutcomeReceiptError('account_id does not match account evaluation');
   }
@@ -217,6 +213,7 @@ export function evaluateGtmOutcomeReceipt(input, { accountEvaluation } = {}) {
     receipt_id: receiptId,
     campaign_id: campaignId,
     account_id: accountId,
+    evaluated_on: evaluatedOn,
     evidence_digest: evidenceDigest,
     operation_ref: operationRef,
     outcome_class: outcomeClass,
@@ -231,6 +228,7 @@ export function evaluateGtmOutcomeReceipt(input, { accountEvaluation } = {}) {
     receipt_id: receiptId,
     campaign_id: campaignId,
     account_id: accountId,
+    evaluated_on: evaluatedOn,
     evidence_digest: evidenceDigest,
     outcome_class: outcomeClass,
     occurred_at: occurredAt,
