@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/inference-workload-profile-v0.schema.json",
+  "title": "AXIOM Inference Workload Profile v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "profile_id",
+    "profile_version",
+    "task_family",
+    "purpose",
+    "fixture_digest",
+    "created_at",
+    "token_shape",
+    "objectives",
+    "authority_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect",
+    "capability_promotion"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-inference-workload-profile.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "profile_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "profile_version": {
+      "$ref": "#/$defs/version"
+    },
+    "task_family": {
+      "$ref": "#/$defs/identifier"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "fixture_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "token_shape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_min",
+        "input_nominal",
+        "input_max",
+        "output_min",
+        "output_nominal",
+        "output_max",
+        "context_tiers",
+        "concurrency_values",
+        "arrival_rate_rps",
+        "batch_sizes",
+        "streaming",
+        "repeated_prefix_tokens",
+        "expected_request_count"
+      ],
+      "properties": {
+        "input_min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_nominal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_nominal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "context_tiers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000
+          }
+        },
+        "concurrency_values": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "arrival_rate_rps": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "batch_sizes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "repeated_prefix_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "expected_request_count": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000000000
+            }
+          ]
+        }
+      }
+    },
+    "objectives": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ttft_ms_p95",
+        "itl_ms_p95",
+        "e2e_ms_p95",
+        "throughput_tokens_s",
+        "locality",
+        "quality_evidence_required",
+        "measure_power",
+        "measure_cost"
+      ],
+      "properties": {
+        "ttft_ms_p95": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "itl_ms_p95": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "e2e_ms_p95": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "throughput_tokens_s": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "locality": {
+          "enum": [
+            "owner-local",
+            "owner-remote",
+            "provider-remote"
+          ]
+        },
+        "quality_evidence_required": {
+          "type": "boolean"
+        },
+        "measure_power": {
+          "type": "boolean"
+        },
+        "measure_cost": {
+          "type": "boolean"
+        }
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "selection_effect": {
+      "const": "none"
+    },
+    "capability_promotion": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/inference-measurement-contracts.mjs",
+  "x-axiom-non-claims": [
+    "provider-invocation",
+    "gpu-allocation",
+    "routing",
+    "authority-grant",
+    "capability-promotion"
+  ]
+}
