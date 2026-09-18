@@ -597,7 +597,7 @@ function socialFeedCard(item, effectiveMode) {
           detail: `weight ${feedNumber(contributor.weight)} · signal ${feedNumber(contributor.signal)} · contribution ${feedNumber(contributor.contribution)}`
         }))
       : element('p', {
-          text: effectiveMode === 'chronological'
+          text: effectiveMode !== 'weighted'
             ? 'Chronological mode has no weighted contributors.'
             : 'No positive weighted contributor changed this item score.'
         })
