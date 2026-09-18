@@ -509,15 +509,21 @@ export function createAmnShadowReceipt(record, {
 }
 
 export class AmnShadowEvidenceQueue {
+  #maxEntries;
+  #records;
+  #receipts;
+  #sequenceByEvidenceDigest;
+  #acknowledgedSequence;
+
   constructor({ maxEntries = 1024 } = {}) {
     if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 100_000) {
       throw new ValidationError('AMN shadow queue maxEntries must be 1-100000');
     }
-    this.maxEntries = maxEntries;
-    this.records = [];
-    this.receipts = [];
-    this.sequenceByEvidenceDigest = new Map();
-    this.acknowledgedSequence = 0;
+    this.#maxEntries = maxEntries;
+    this.#records = [];
+    this.#receipts = [];
+    this.#sequenceByEvidenceDigest = new Map();
+    this.#acknowledgedSequence = 0;
   }
 
   enqueue(verification, { at } = {}) {
@@ -528,9 +534,9 @@ export class AmnShadowEvidenceQueue {
         reasonCode: 'verification_rejected'
       });
     }
-    const existing = this.sequenceByEvidenceDigest.get(verified.evidence_digest);
+    const existing = this.#sequenceByEvidenceDigest.get(verified.evidence_digest);
     if (existing !== undefined) {
-      const record = this.records[existing - 1];
+      const record = this.#records[existing - 1];
       return shadowResult({
         status: 'duplicate',
         reasonCode: 'evidence_already_queued',
@@ -538,15 +544,15 @@ export class AmnShadowEvidenceQueue {
         sequence: record.sequence
       });
     }
-    if (this.records.length >= this.maxEntries) {
+    if (this.#records.length >= this.#maxEntries) {
       throw new ValidationError('AMN shadow queue is full');
     }
     const record = createAmnShadowRecord(verified, {
-      sequence: this.records.length + 1,
+      sequence: this.#records.length + 1,
       enqueuedAt: at
     });
-    this.records.push(record);
-    this.sequenceByEvidenceDigest.set(record.source_evidence_digest, record.sequence);
+    this.#records.push(record);
+    this.#sequenceByEvidenceDigest.set(record.source_evidence_digest, record.sequence);
     return shadowResult({
       status: 'queued',
       reasonCode: 'shadow_record_queued',
@@ -556,7 +562,7 @@ export class AmnShadowEvidenceQueue {
   }
 
   history() {
-    return Object.freeze(this.records.map(record => normalizeShadowRecord(record)));
+    return Object.freeze(this.#records.map(record => normalizeShadowRecord(record)));
   }
 
   pending({ limit = 64 } = {}) {
@@ -564,8 +570,8 @@ export class AmnShadowEvidenceQueue {
       throw new ValidationError('AMN shadow pending limit must be 1-1024');
     }
     return Object.freeze(
-      this.records
-        .filter(record => record.sequence > this.acknowledgedSequence)
+      this.#records
+        .filter(record => record.sequence > this.#acknowledgedSequence)
         .slice(0, limit)
         .map(record => normalizeShadowRecord(record))
     );
@@ -573,14 +579,14 @@ export class AmnShadowEvidenceQueue {
 
   acknowledge(rawReceipt) {
     const receipt = normalizeShadowReceipt(rawReceipt);
-    const expectedSequence = this.acknowledgedSequence + 1;
+    const expectedSequence = this.#acknowledgedSequence + 1;
 
-    if (receipt.sequence <= this.acknowledgedSequence) {
-      const existing = this.receipts[receipt.sequence - 1];
+    if (receipt.sequence <= this.#acknowledgedSequence) {
+      const existing = this.#receipts[receipt.sequence - 1];
       if (existing?.receipt_digest === receipt.receipt_digest) {
         return Object.freeze({
           status: 'duplicate',
-          acknowledged_sequence: this.acknowledgedSequence,
+          acknowledged_sequence: this.#acknowledgedSequence,
           receipt_digest: receipt.receipt_digest
         });
       }
@@ -591,7 +597,7 @@ export class AmnShadowEvidenceQueue {
       throw new ValidationError('AMN shadow receipt is out of order');
     }
 
-    const record = this.records[receipt.sequence - 1];
+    const record = this.#records[receipt.sequence - 1];
     if (!record) throw new ValidationError('AMN shadow receipt references unknown sequence');
     if (receipt.shadow_record_digest !== record.shadow_record_digest) {
       throw new ValidationError('AMN shadow receipt record digest mismatch');
@@ -600,12 +606,12 @@ export class AmnShadowEvidenceQueue {
       throw new ValidationError('AMN shadow receipt source evidence digest mismatch');
     }
 
-    this.receipts.push(receipt);
-    this.acknowledgedSequence = receipt.sequence;
+    this.#receipts.push(receipt);
+    this.#acknowledgedSequence = receipt.sequence;
 
     return Object.freeze({
       status: 'acknowledged',
-      acknowledged_sequence: this.acknowledgedSequence,
+      acknowledged_sequence: this.#acknowledgedSequence,
       receipt_digest: receipt.receipt_digest
     });
   }
@@ -613,14 +619,18 @@ export class AmnShadowEvidenceQueue {
   snapshot() {
     const core = Object.freeze({
       schema: AMN_SHADOW_QUEUE_SNAPSHOT_SCHEMA,
-      max_entries: this.maxEntries,
-      next_sequence: this.records.length + 1,
-      acknowledged_sequence: this.acknowledgedSequence,
-      history_record_digests: Object.freeze(this.records.map(record => record.shadow_record_digest)),
-      receipt_digests: Object.freeze(this.receipts.map(receipt => receipt.receipt_digest)),
+      max_entries: this.#maxEntries,
+      next_sequence: this.#records.length + 1,
+      acknowledged_sequence: this.#acknowledgedSequence,
+      history_record_digests: Object.freeze(
+        this.#records.map(record => record.shadow_record_digest)
+      ),
+      receipt_digests: Object.freeze(
+        this.#receipts.map(receipt => receipt.receipt_digest)
+      ),
       pending_record_digests: Object.freeze(
-        this.records
-          .filter(record => record.sequence > this.acknowledgedSequence)
+        this.#records
+          .filter(record => record.sequence > this.#acknowledgedSequence)
           .map(record => record.shadow_record_digest)
       ),
       authority_effect: 'none',
