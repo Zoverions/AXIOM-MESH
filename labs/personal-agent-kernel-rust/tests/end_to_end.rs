@@ -1,8 +1,8 @@
 use axiom_personal_agent_kernel_rust_lab::{
-    AuthorityBudget, AutonomyLevel, AutonomyState, BudgetDimension, BudgetRequest,
-    Constitution, DelegationLedger, EffectClass, EffectPort, EffectReceipt, Kernel,
-    KernelIdentity, KernelResult, MemoryCandidate, MemoryDisposition, MemorySourceKind,
-    MeshProof, MeshProofInput, Plan, PlanNode, Reversibility, RuntimeSurface,
+    AuthorityBudget, AutonomyLevel, AutonomyState, BudgetDimension, BudgetRequest, Constitution,
+    DelegationLedger, EffectClass, EffectPort, EffectReceipt, Kernel, KernelIdentity, KernelResult,
+    MemoryCandidate, MemoryDisposition, MemorySourceKind, MeshProof, MeshProofInput, Plan,
+    PlanNode, Reversibility, RuntimeSurface,
 };
 use std::collections::BTreeSet;
 
@@ -105,9 +105,7 @@ fn plan(reversibility: Reversibility, owner_confirmation_ref: Option<String>) ->
     }
 }
 
-fn exact_proof(
-    request: &axiom_personal_agent_kernel_rust_lab::AuthorityRequest,
-) -> MeshProof {
+fn exact_proof(request: &axiom_personal_agent_kernel_rust_lab::AuthorityRequest) -> MeshProof {
     MeshProof::from_trusted_mesh_adapter(MeshProofInput {
         grant_ref: "grant:purchase-1".into(),
         owner_subject_ref: request.owner_subject_ref.clone(),
@@ -186,8 +184,7 @@ fn end_to_end_lifecycle_requires_mesh_proof_and_strips_authority_on_restore() {
     assert!(receipt_evidence.success);
     assert!(!receipt_evidence.grants_authority());
 
-    let observed_receipts =
-        BTreeSet::from([receipt_evidence.receipt_ref.clone()]);
+    let observed_receipts = BTreeSet::from([receipt_evidence.receipt_ref.clone()]);
     let memory = MemoryCandidate {
         candidate_id: "memory-candidate:purchase-preference".into(),
         owner_subject_ref: "subject:owner-1".into(),
@@ -262,16 +259,16 @@ fn end_to_end_lifecycle_requires_mesh_proof_and_strips_authority_on_restore() {
 #[test]
 fn runtime_surface_drift_collapses_earned_autonomy_to_observe() {
     let kernel = kernel();
-    let drifted = RuntimeSurface::new(sha('9'), sha('b'), sha('c'), 4)
-        .expect("valid drifted surface");
+    let drifted =
+        RuntimeSurface::new(sha('9'), sha('b'), sha('c'), 4).expect("valid drifted surface");
 
-    let result = kernel.compile_plan(
-        plan(Reversibility::Compensatable, None),
-        NOW,
-        &drifted,
-    );
+    let result = kernel.compile_plan(plan(Reversibility::Compensatable, None), NOW, &drifted);
     let error = result.expect_err("surface drift must deny prior autonomy");
-    assert!(error.message().contains("autonomy exceeds effective ceiling"));
+    assert!(
+        error
+            .message()
+            .contains("autonomy exceeds effective ceiling")
+    );
 }
 
 #[test]
@@ -342,9 +339,7 @@ fn stale_or_mismatched_mesh_evidence_cannot_cross_the_authority_membrane() {
         max_delegation_hops: 0,
     })
     .expect("proof shape");
-    assert!(kernel
-        .verify_mesh_proof(&request, wrong_plan, NOW)
-        .is_err());
+    assert!(kernel.verify_mesh_proof(&request, wrong_plan, NOW).is_err());
 }
 
 #[test]
@@ -366,12 +361,16 @@ fn derived_memory_cannot_self_launder_without_receipts_and_independent_evidence(
         .assess_memory(&candidate, &empty)
         .expect("memory assessment");
     assert_eq!(assessment.disposition, MemoryDisposition::Quarantine);
-    assert!(assessment
-        .reasons
-        .contains(&"two-independent-evidence-refs-required".to_string()));
-    assert!(assessment
-        .reasons
-        .contains(&"receipt-link-not-observed".to_string()));
+    assert!(
+        assessment
+            .reasons
+            .contains(&"two-independent-evidence-refs-required".to_string())
+    );
+    assert!(
+        assessment
+            .reasons
+            .contains(&"receipt-link-not-observed".to_string())
+    );
     assert!(!assessment.truth_certified());
 }
 
@@ -397,5 +396,9 @@ fn plan_wide_budget_aggregation_blocks_split_node_overcommit() {
 
     let result = kernel.compile_plan(overcommitted, NOW, &surface());
     let error = result.expect_err("split nodes must not bypass aggregate ceiling");
-    assert!(error.message().contains("plan-wide authority budget exceeded"));
+    assert!(
+        error
+            .message()
+            .contains("plan-wide authority budget exceeded")
+    );
 }
