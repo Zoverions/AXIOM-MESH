@@ -20,6 +20,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'CONTRIBUTING.md',
   'AGENTS.md',
   'AGENT-ENTRY.md',
+  'registry/axiom-ui/INTERFACE-BOUNDARY.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
