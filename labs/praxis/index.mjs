@@ -1221,16 +1221,14 @@ async function createCharteredHostAuthority({
     );
   }
   const requesterPrincipal = resolveRequesterPrincipal(charterContext, requester);
-  if (subject.operation?.effect !== undefined) {
-    validateEffectEnvelope(
-      {
-        charter_digest: charterContext.digest,
-        requester: requesterPrincipal
-      },
-      subject.operation,
-      charterContext
-    );
-  }
+  validateEffectEnvelope(
+    {
+      charter_digest: charterContext.digest,
+      requester: requesterPrincipal
+    },
+    subject.operation,
+    charterContext
+  );
   const evidenceContext = requireVerifiedAuthorityEvidence(
     evidence,
     policy,
