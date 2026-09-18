@@ -28,9 +28,11 @@ The CLI supports only parsing, static checking, and IR inspection. It has no
 `run` command.
 
 The embedding API contains a `run()` function solely for conformance testing
-and future host integration. A `commit` statement fails closed unless the host
-explicitly injects both a matching authority token and an executor. The
-language runtime itself contains no network, filesystem-write, subprocess,
+and future host integration. A consequential operation must cross both
+`authorize` and `prepare` before `commit`. Preparation fails closed unless
+the host returns durable evidence bound to the exact operation digest. Commit
+then requires an injected executor plus a separate durable completion recorder.
+The language runtime itself contains no network, filesystem-write, subprocess,
 provider, credential, or Grid executor.
 
 ## Why this exists
@@ -56,6 +58,9 @@ Operation ---------------+
 AuthorizedOperation
     |
     v
+PreparedOperation
+    |
+    v
 Commit
     |
     v
@@ -63,8 +68,10 @@ Receipt
 ```
 
 An assessment is never a permit. An operation is inert until explicitly
-authorized. Authority is linear. Execution requires an injected host boundary
-and a receipt bound to the exact operation digest.
+authorized, and authorization alone is still not executable. Durable
+preparation must succeed first. Authority is linear. Uncertain execution or an
+unverified receipt leaves the effect in the prepared state rather than
+fabricating completion.
 
 ## Small example
 
@@ -77,7 +84,8 @@ assess release_candidate = verified_source with ReleasePolicy;
 
 op release = Deploy(verified_source) @ Production;
 authorize release using deploy_prod as armed_release;
-commit armed_release as release_receipt;
+prepare armed_release as prepared_release;
+commit prepared_release as release_receipt;
 ```
 
 The source code does not mint `deploy_prod`. It declares an authority
@@ -89,6 +97,7 @@ Time-bounded authority is expressed as a lease:
 requires lease deploy_window: Deploy @ Production;
 op release = Deploy("artifact") @ Production;
 authorize release using deploy_window as armed_release;
+prepare armed_release as prepared_release;
 ```
 
 The embedding host must provide a matching `createHostLease(...)` token. The
@@ -101,16 +110,32 @@ untrusted Praxis source, agents, plugins, or remote callers. A future AXIOM
 adapter must derive these runtime objects only from already-authorized AXIOM
 evidence; the factory functions themselves do not create AXIOM authority.
 
+Secrets are represented separately from values:
+
+```prax
+requires secret signing_key: SigningCredential;
+op sign = Sign("sha256:...") @ Local using secrets signing_key;
+```
+
+The host supplies an opaque `createHostSecretRef(...)` surrogate. Praxis source
+cannot read secret bytes, observe the secret as knowledge, or pass the secret
+reference as an ordinary operation argument. The operation carries only the
+opaque reference identifier and declared secret kind. The factory is a
+laboratory reference constructor, not a secret manager or credential resolver.
+
 ## v0 grammar
 
 ```text
 requires permit <name>: <Action> @ <Scope>;
+requires lease <name>: <Action> @ <Scope>;
+requires secret <name>: <SecretKind>;
 observe <name> = <literal-or-reference> from "<provenance>";
 verify <name> = <knowledge> with <Policy>;
 assess <name> = <knowledge> with <Policy>;
-op <name> = <Action>(<args...>) @ <Scope>;
-authorize <operation> using <permit> as <name>;
-commit <authorized-operation> as <receipt>;
+op <name> = <Action>(<args...>) @ <Scope> [using secrets <name>, ...];
+authorize <operation> using <permit-or-lease> as <name>;
+prepare <authorized-operation> as <name>;
+commit <prepared-operation> as <receipt>;
 ```
 
 Comments begin with `//` or `#`.
@@ -119,22 +144,28 @@ Comments begin with `//` or `#`.
 
 The compiler rejects:
 
-- committing an ordinary operation without authority;
-- authorizing with an assessment, receipt, or other non-permit value;
-- action/scope mismatches between an operation and permit;
+- committing before durable preparation;
+- preparing an operation without authority;
+- authorizing with an assessment, receipt, or other non-authority value;
+- action/scope mismatches between an operation and permit/lease;
 - reuse of a linear permit or lease in one program;
-- repeated commit of the same authorized operation;
-- embedding a permit or authorized operation as an operation argument;
+- repeated preparation or commit of a linear operation;
+- embedding a permit, lease, prepared operation, or secret reference as an ordinary operation argument;
+- binding a non-secret value through the secret-reference channel;
 - verification of non-evidence values;
 - undeclared bindings and duplicate bindings.
 
 The runtime additionally rejects:
 
 - absent, forged, mismatched, expired, revoked, or already consumed host authority tokens;
+- absent, forged, or wrong-kind opaque host secret references;
 - missing verifier or assessor implementations;
 - verification/assessment results without explicit `ok: true`;
-- `commit` when no executor was injected;
-- executor success without a receipt bound to the exact operation digest.
+- preparation without a host durable preparer;
+- preparation evidence not bound to the exact operation;
+- `commit` without both an executor and durable completion recorder;
+- uncertain executor outcomes or unverified receipts as completed effects;
+- completion evidence not bound to the same operation and preparation.
 
 ## IR
 
@@ -143,11 +174,14 @@ small:
 
 ```text
 REQUIRE_PERMIT
+REQUIRE_LEASE
+REQUIRE_SECRET
 OBSERVE
 VERIFY
 ASSESS
 PLAN
 AUTHORIZE
+PREPARE
 COMMIT
 ```
 
@@ -187,7 +221,11 @@ It specifically defends against:
 - authority reuse;
 - action/scope substitution;
 - authority smuggling inside operation arguments;
-- synthetic success from a missing or malformed executor receipt.
+- secret-reference smuggling into ordinary value channels;
+- external I/O before durable preparation;
+- uncertain operator outcomes being promoted to success;
+- synthetic success from a missing or malformed executor receipt;
+- completion being claimed without durable completion evidence.
 
 This slice does not claim protection from a malicious embedding host, compiler
 subversion, compromised Node.js runtime, hardware compromise, or an executor
@@ -226,11 +264,14 @@ would fail this experiment.
 
 The experiment fails if any tested program can:
 
-- commit without a host-supplied matching permit;
+- commit without a host-supplied matching permit/lease and durable preparation;
 - convert knowledge or assessment directly into authority;
 - use one linear authority token more than once;
+- expose an opaque secret reference as an ordinary value;
+- invoke the synthetic executor before preparation is durably evidenced;
+- convert an uncertain outcome into completion;
 - cause the built-in CLI/runtime to perform an undeclared external effect;
-- accept an executor result that is not bound to the exact planned operation.
+- accept a receipt or completion record not bound to the exact prepared operation.
 
 Any such result should halt promotion and be treated as a language/runtime
 security defect.
