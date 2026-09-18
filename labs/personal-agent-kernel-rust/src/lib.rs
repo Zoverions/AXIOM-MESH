@@ -56,7 +56,9 @@ fn require_sha256(value: &str, label: &str) -> KernelResult<()> {
 
 fn require_currency(value: &str) -> KernelResult<()> {
     if value.len() != 3 || !value.bytes().all(|byte| byte.is_ascii_uppercase()) {
-        return Err(KernelError::new("currency must be three uppercase ASCII letters"));
+        return Err(KernelError::new(
+            "currency must be three uppercase ASCII letters",
+        ));
     }
     Ok(())
 }
@@ -128,7 +130,10 @@ impl RuntimeSurface {
         };
         require_sha256(&value.model_digest, "model digest")?;
         require_sha256(&value.runtime_digest, "runtime digest")?;
-        require_sha256(&value.capability_surface_digest, "capability surface digest")?;
+        require_sha256(
+            &value.capability_surface_digest,
+            "capability surface digest",
+        )?;
         Ok(value)
     }
 }
@@ -658,7 +663,9 @@ impl DelegationLedger {
                     request.budget_id
                 )));
             }
-            let entry = local_reservations.entry(request.budget_id.clone()).or_default();
+            let entry = local_reservations
+                .entry(request.budget_id.clone())
+                .or_default();
             *entry = entry
                 .checked_add(request.amount)
                 .ok_or_else(|| KernelError::new("delegation budget overflow"))?;
@@ -752,7 +759,10 @@ impl Kernel {
         let mut budget_map = BTreeMap::new();
         for budget in budgets {
             budget.validate()?;
-            if budget_map.insert(budget.budget_id.clone(), budget).is_some() {
+            if budget_map
+                .insert(budget.budget_id.clone(), budget)
+                .is_some()
+            {
                 return Err(KernelError::new("duplicate authority budget id"));
             }
         }
@@ -799,7 +809,9 @@ impl Kernel {
             return Err(KernelError::new("plan owner does not match kernel owner"));
         }
         if plan.nodes.is_empty() || plan.nodes.len() > 128 {
-            return Err(KernelError::new("plan must contain between 1 and 128 nodes"));
+            return Err(KernelError::new(
+                "plan must contain between 1 and 128 nodes",
+            ));
         }
 
         let mut seen_nodes = BTreeSet::<String>::new();
@@ -911,10 +923,9 @@ impl Kernel {
             effect_nodes += 1;
             if node.reversibility == Reversibility::Irreversible {
                 irreversible_nodes += 1;
-                let confirmed = node
-                    .owner_confirmation_ref
-                    .as_deref()
-                    .is_some_and(|value| !value.is_empty() && require_id(value, "confirmation ref").is_ok());
+                let confirmed = node.owner_confirmation_ref.as_deref().is_some_and(|value| {
+                    !value.is_empty() && require_id(value, "confirmation ref").is_ok()
+                });
                 if !confirmed {
                     complete = false;
                 }
@@ -1157,7 +1168,9 @@ impl Kernel {
             || capsule.personal_agent_pack_ref != self.identity.personal_agent_pack_ref
             || capsule.personal_agent_pack_sha256 != self.identity.personal_agent_pack_sha256
         {
-            return Err(KernelError::new("continuity capsule identity binding mismatch"));
+            return Err(KernelError::new(
+                "continuity capsule identity binding mismatch",
+            ));
         }
         if capsule.authority_carried || capsule.active_grants != 0 {
             return Err(KernelError::new(
