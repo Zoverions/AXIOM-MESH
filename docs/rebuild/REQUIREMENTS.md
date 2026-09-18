@@ -3,7 +3,7 @@
 
 **Current build:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-23
+**Updated:** 2026-09-18
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
@@ -82,6 +82,11 @@ state.
 | CAP-08 | Provider results MUST remain data until a later authorized effect explicitly consumes them. | Model-to-effect separation tests. |
 | CAP-09 | An external agent-runtime adapter MUST pin its exact contract, source, artifact, SBOM, Gateway compatibility, grant-verification key, operation mappings, scopes, destinations, opaque credential handles, bounds, and evidence obligations. It MUST reject unsigned, replayed, future, expired, revoked, unmapped, widened, or changed requests; reauthorize immediately before an effect; and preserve `uncertain` outcomes until reconciliation. | Byte-pinned v1 contract verifier, synthetic signed-grant negative suite, commit-bound protected-CI artifact, and separate conformance against each pinned external runtime before exposure. |
 | CAP-10 | Arbitrary-code execution MUST remain disabled until an independently reviewed isolation profile and adversarial escape suite are tied to the exact runtime. | Promotion gate. |
+| CAP-11 | Supported scriptable surfaces—including CLI, API/SDK, hooks, macros/workflows, plugins, capsules, and agent/runtime adapters—MUST map an equivalent privileged or externally visible effect to the same canonical AXIOM action and the same Gateway → Hypervisor → Sandbox → Grid authority path as an interactive client. | Cross-surface conformance tests prove identical allow/deny semantics and reject client-specific bypasses. |
+| CAP-12 | Discovery, catalog presence, installation, import, event subscription, loading, or workflow registration MUST NOT create execution authority. Requested actions, purposes, data scopes, destinations, credentials, network needs, resources, budgets, and expiry MUST remain explicit and reviewable before activation. | Install/import/subscribe-without-grant denial plus permission-diff fixtures. |
+| CAP-13 | Hooks and event streams MUST be observation-only by default. A reaction that would create a governed effect MUST submit a new authenticated intent or use an already-valid grant that explicitly covers that exact effect and MUST undergo normal execution-time re-evaluation. | Event-replay, forged-event, callback, revoked-grant, and self-triggering-loop negative tests. |
+| CAP-14 | Security-critical authorization, consent, destination, budget, revocation, and evidence checks MUST live behind shared authority boundaries rather than only in a GUI, CLI, SDK, plugin host, or workflow engine. Removing or replacing one client MUST NOT bypass a denial enforced for another. | GUI/CLI/API/plugin parity and client-removal bypass tests. |
+| CAP-15 | Bounded macros and workflows MUST bind an authenticated principal, finite action set, purposes, data scopes, destinations, resource/cost/time ceilings, cancellation/revocation behavior, and per-effect evidence. Composition MUST NOT create wildcard authority or widen any constituent grant. | Workflow manifest validation, exhaustion, revoke/cancel, idempotency, and no-self-expansion property tests. |
 
 ## Personal AI and bounded orchestration
 
