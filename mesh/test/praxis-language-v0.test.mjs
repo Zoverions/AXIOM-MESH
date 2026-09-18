@@ -7,6 +7,7 @@ import {
   compile,
   createHostLease,
   createHostPermit,
+  createHostPreparedRef,
   createHostSecretRef,
   run
 } from '../../labs/praxis/index.mjs';
@@ -566,5 +567,160 @@ assess candidate = verified with ReleasePolicy;
     }),
     error => error instanceof PraxisRuntimeError
       && error.code === 'PRAXIS_ASSESSOR_REQUIRED'
+  );
+});
+
+
+async function makePreparedReference(id = 'prepared:replay') {
+  const permit = createHostPermit({
+    id: `permit:${id}`,
+    action: 'Deploy',
+    scope: 'Production'
+  });
+  const source = `
+requires permit p: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using p as armed;
+prepare armed as prepared;
+`;
+  const result = await run(source, {
+    authorities: { p: permit },
+    preparer: durablePreparer()
+  });
+  const preparedValue = result.values.prepared;
+  return createHostPreparedRef({
+    id,
+    action: 'Deploy',
+    scope: 'Production',
+    operation: preparedValue.operation,
+    authority: preparedValue.authority,
+    preparation: preparedValue.preparation
+  });
+}
+
+test('Praxis can require an already-durable prepared effect for replay', () => {
+  const ir = compile(`
+requires prepared prior: Deploy @ Production;
+commit prior as receipt;
+`);
+
+  assert.deepEqual(ir.required_prepared, [{
+    name: 'prior',
+    action: 'Deploy',
+    scope: 'Production'
+  }]);
+  assert.deepEqual(
+    ir.instructions.map(instruction => instruction.op),
+    ['REQUIRE_PREPARED', 'COMMIT']
+  );
+  assert.equal(ir.bindings.prior.kind, 'PreparedOperation');
+});
+
+test('Praxis replay uses the preparation digest as the idempotency key', async () => {
+  const ref = await makePreparedReference('prepared:idempotent');
+  let observedKey = null;
+
+  const result = await run(`
+requires prepared prior: Deploy @ Production;
+commit prior as receipt;
+`, {
+    prepared: { prior: ref },
+    executor: async request => {
+      observedKey = request.idempotency_key;
+      return {
+        status: 'completed',
+        receipt: {
+          operation_digest: request.operation.operation_digest,
+          preparation_digest: request.preparation.preparation_digest
+        }
+      };
+    },
+    completer: durableCompleter()
+  });
+
+  assert.equal(observedKey, PREPARATION_DIGEST);
+  assert.equal(result.values.receipt.kind, 'Receipt');
+
+  await assert.rejects(
+    () => run(`
+requires prepared prior: Deploy @ Production;
+commit prior as receipt;
+`, {
+      prepared: { prior: ref },
+      executor: completedExecutor(),
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_PREPARED_CONSUMED'
+  );
+});
+
+test('Praxis uncertain replay preserves the prepared reference for another attempt', async () => {
+  const ref = await makePreparedReference('prepared:uncertain-replay');
+  const source = `
+requires prepared prior: Deploy @ Production;
+commit prior as receipt;
+`;
+
+  await assert.rejects(
+    () => run(source, {
+      prepared: { prior: ref },
+      executor: async () => ({ status: 'uncertain' }),
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EXTERNAL_OUTCOME_UNCERTAIN'
+  );
+
+  const result = await run(source, {
+    prepared: { prior: ref },
+    executor: completedExecutor(),
+    completer: durableCompleter()
+  });
+  assert.equal(result.values.receipt.kind, 'Receipt');
+});
+
+test('Praxis cancellation is a durable terminal transition for prepared effects', async () => {
+  const ref = await makePreparedReference('prepared:cancel');
+  const source = `
+requires prepared prior: Deploy @ Production;
+cancel prior as canceled;
+`;
+
+  const result = await run(source, {
+    prepared: { prior: ref },
+    canceler: async request => ({
+      ok: true,
+      evidence: {
+        durable: true,
+        operation_digest: request.operation_digest,
+        preparation_digest: request.preparation_digest,
+        cancellation_ref: 'synthetic:cancel'
+      }
+    })
+  });
+
+  assert.equal(result.values.canceled.kind, 'CancellationReceipt');
+  assert.equal(result.values.canceled.preparation_digest, PREPARATION_DIGEST);
+
+  await assert.rejects(
+    () => run(source, {
+      prepared: { prior: ref },
+      canceler: async () => ({ ok: true, evidence: {} })
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_PREPARED_CONSUMED'
+  );
+});
+
+test('Praxis statically prevents both cancellation and commit of one prepared binding', () => {
+  assert.throws(
+    () => compile(`
+requires prepared prior: Deploy @ Production;
+cancel prior as canceled;
+commit prior as receipt;
+`),
+    error => error instanceof PraxisTypeError
+      && error.code === 'PRAXIS_LINEAR_OPERATION_REUSE'
   );
 });
