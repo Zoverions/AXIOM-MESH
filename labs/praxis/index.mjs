@@ -355,6 +355,29 @@ function normalizeAgentBindings(agents, principals) {
 }
 
 
+function normalizeEffectEnvelopes(effectEnvelopes, principals) {
+  const output = {};
+  for (const [principal, effects] of Object.entries(effectEnvelopes ?? {})) {
+    if (!Object.hasOwn(principals, principal)) {
+      throw new TypeError('effect envelope references unknown principal ' + principal);
+    }
+    if (!Array.isArray(effects)) {
+      throw new TypeError('effect envelope for ' + principal + ' must be an array');
+    }
+    const normalized = effects.map(effect => {
+      if (typeof effect !== 'string' || effect.length === 0) {
+        throw new TypeError('effect envelope entries must be non-empty strings');
+      }
+      return effect;
+    });
+    if (new Set(normalized).size !== normalized.length) {
+      throw new TypeError('effect envelope for ' + principal + ' contains duplicate effects');
+    }
+    output[principal] = Object.freeze([...normalized].sort());
+  }
+  return Object.freeze(output);
+}
+
 const POLICY_COMPARATORS = new Set(['eq', 'neq', 'lt', 'lte', 'gt', 'gte']);
 const FORBIDDEN_POLICY_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
 
@@ -589,6 +612,31 @@ function validateCharterBody(body) {
       }
     }
   }
+  for (const [principal, effects] of Object.entries(body.effect_envelopes ?? {})) {
+    if (!Object.hasOwn(body.principals ?? {}, principal)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'effect envelope references unknown principal ' + principal
+      );
+    }
+    if (
+      !Array.isArray(effects)
+      || effects.some(effect => typeof effect !== 'string' || effect.length === 0)
+      || new Set(effects).size !== effects.length
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'effect envelope for ' + principal + ' is invalid'
+      );
+    }
+    const sorted = [...effects].sort();
+    if (sorted.some((effect, index) => effect !== effects[index])) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'effect envelope for ' + principal + ' is not canonical'
+      );
+    }
+  }
   if (!Array.isArray(body.program_digests ?? [])) {
     throw new PraxisRuntimeError(
       'PRAXIS_CHARTER_SIGNATURE',
@@ -638,7 +686,8 @@ export function createSyntheticCharter({
   agents = {},
   policies = {},
   verifiers = {},
-  programDigests = []
+  programDigests = [],
+  effectEnvelopes = {}
 }, rootPrivateKey) {
   if (!rootPrivateKey) throw new TypeError('synthetic charter requires a root private key');
   const normalizedPrincipals = normalizePrincipalDefinitions(principals);
@@ -654,6 +703,7 @@ export function createSyntheticCharter({
     agents: normalizeAgentBindings(agents, normalizedPrincipals),
     policies: pinnedDefinitions(policies, normalizePolicyDefinition),
     verifiers: pinnedDefinitions(verifiers, normalizeVerifierDefinition),
+    effect_envelopes: normalizeEffectEnvelopes(effectEnvelopes, normalizedPrincipals),
     program_digests: Object.freeze(normalizedProgramDigests)
   };
   validateCharterBody(body);
