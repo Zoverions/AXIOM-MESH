@@ -200,7 +200,11 @@ function safeEnvelopeMetadata(raw) {
   return {
     issuer_id: typeof raw.issuer_id === 'string' && ID.test(raw.issuer_id) ? raw.issuer_id : null,
     subject_id: typeof raw.subject_id === 'string' && ID.test(raw.subject_id) ? raw.subject_id : null,
-    statement_schema: typeof raw.schema === 'string' && raw.schema.length <= 96 ? raw.schema : null,
+    statement_schema: typeof raw.schema === 'string'
+      && raw.schema.length >= 1
+      && raw.schema.length <= 96
+      ? raw.schema
+      : null,
     statement_digest: typeof raw.statement_digest === 'string' && DIGEST.test(raw.statement_digest)
       ? raw.statement_digest
       : null,
@@ -314,12 +318,27 @@ function shadowResult({ status, reasonCode, recordDigest = null, sequence = null
   });
 }
 
+function normalizeShadowResult(raw) {
+  const value = exactKeys(raw, SHADOW_RESULT_KEYS, 'AMN shadow provider result');
+  for (const key of SHADOW_RESULT_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      throw new ValidationError(`AMN shadow provider result is missing required field ${key}`);
+    }
+  }
+  return shadowResult({
+    status: value.status,
+    reasonCode: value.reason_code,
+    recordDigest: value.record_digest,
+    sequence: value.sequence
+  });
+}
+
 function providerResult(providerKind, verification, shadow) {
   return Object.freeze({
     schema: AMN_TRUST_PROVIDER_RESULT_SCHEMA,
     provider_kind: oneOf(providerKind, 'AMN trust provider kind', PROVIDER_KINDS),
     verification: normalizeAmnVerificationResult(verification),
-    shadow: exactKeys(shadow, SHADOW_RESULT_KEYS, 'AMN shadow provider result')
+    shadow: normalizeShadowResult(shadow)
   });
 }
 
