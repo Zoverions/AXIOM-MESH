@@ -1,6 +1,6 @@
 # Contributing to AXIOM-MESH
 
-**Updated:** 2026-08-20
+**Updated:** 2026-09-18
 
 AXIOM-MESH accepts changes to:
 
@@ -68,6 +68,22 @@ Before opening a pull request:
 npm run check
 npm run release:verify
 ```
+
+Documentation is a continuous gate. Before a change is considered complete,
+the deterministic documentation rebuild must produce no diff and the canonical
+documentation verifier must pass:
+
+```bash
+npm --prefix mesh run status:generate
+git diff --exit-code
+npm --prefix mesh run docs:check
+```
+
+Scheduled protected CI repeats this maintenance proof so generated status and
+governing claim markers cannot quietly age behind the implementation. Narrative
+documents remain source-grounded and fail closed when they cannot be derived
+safely; the maintenance path does not grant capability, promotion, merge,
+deployment, credential, or runtime authority.
 
 Container-impacting changes must also pass the digest-pinned image, readiness,
 deny-egress, and service-isolation checks.
