@@ -86,6 +86,50 @@
     {
       "invariant": "prepared-terminal-is-runtime-linear",
       "status": "covered-adversarial-runtime-tests"
+    },
+    {
+      "invariant": "charter-pins-policies-and-verifiers",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "one-key-one-principal-seat",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "signed-evidence-origin-authenticity-freshness",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "assessment-cannot-satisfy-authority-premise",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "pinned-advisor-veto-only-fail-closed",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "approval-request-binds-plan-evidence-requester-nonce-expiry",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "approval-replay-denied",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "requester-self-approval-excluded",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "human-minimum-quorum",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "chartered-authority-requires-runtime-charter",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "evidence-freshness-rechecked-at-commit",
+      "status": "covered-synthetic-charter-tests"
     }
   ],
   "compile_cases": [
