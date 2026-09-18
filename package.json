@@ -62,6 +62,7 @@
     "start:production": "npm --prefix mesh run start:production",
     "test": "npm --prefix mesh test",
     "check": "npm --prefix mesh run check",
+    "interrogation:report": "npm --prefix mesh run interrogation:report",
     "status": "npm --prefix mesh run status:check",
     "release:verify": "npm --prefix mesh run release:verify",
     "release:evidence": "npm --prefix mesh run release:evidence"
