@@ -30,7 +30,7 @@ The machine-readable setup policy intentionally uses separate exact pins:
 
 - approved hosted production: Node.js **22.23.2** exactly;
 - protected CI and `.node-version`: Node.js **24.18.0**;
-- candidate production Dockerfile/image: Node.js **24.19.0**.
+- candidate production Dockerfile/image: Node.js **24.21.0**.
 
 The container and protected CI remain inside the `>=24.14.0 <25` primary
 range. Only the exact hosted-production Node.js 22 pin is additionally
@@ -86,7 +86,7 @@ a coordinated trust update makes signed internal traffic fail closed.
 
 ## 2. Build and start
 
-The image uses the digest-pinned official Node.js **`24.19.0-alpine3.23`** base.
+The image uses the digest-pinned official Node.js **`24.21.0-alpine3.23`** base.
 Set absolute host paths explicitly:
 
 ```bash

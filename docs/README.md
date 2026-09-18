@@ -363,10 +363,11 @@ fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
 The Runtime & Connector Fabric, Path Observation Evidence, Continuous Threat
-Intelligence A/B, project-local TypeSafe skill, and Research Capsule v0 work
-must be explicitly admitted to that allowlist, and their zero-authority/non-
-truth invariants must remain executable checks before a draft becomes
-merge-ready.
+Intelligence A/B, and Research Capsule v0 work must be explicitly admitted to
+that allowlist, and their zero-authority/non-truth invariants must remain
+executable checks before a draft becomes merge-ready. Project-local installed
+skills under `.agents/` are deliberately outside the canonical Markdown corpus
+and are governed by their own skill/integrity surfaces.
 
 A dedicated current-state documentation regression suite additionally locks the
 machine-principal, Grid continuity, repository-effect production-reachability,
