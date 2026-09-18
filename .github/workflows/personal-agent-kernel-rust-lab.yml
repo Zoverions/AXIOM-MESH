@@ -6,6 +6,7 @@ on:
       - "feat/personal-agent-kernel-rust-vnext-*"
     paths:
       - "labs/personal-agent-kernel-rust/**"
+      - "labs/personal-agent-kernel-rust-crypto/**"
       - ".github/workflows/personal-agent-kernel-rust-lab.yml"
       - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
   pull_request:
@@ -14,6 +15,7 @@ on:
       - "feat/personal-agent-kernel-v0-20260918"
     paths:
       - "labs/personal-agent-kernel-rust/**"
+      - "labs/personal-agent-kernel-rust-crypto/**"
       - ".github/workflows/personal-agent-kernel-rust-lab.yml"
       - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
   workflow_dispatch:
@@ -62,6 +64,25 @@ jobs:
         run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --all-targets --locked -- -D warnings
       - name: Verify end-to-end kernel tests
         run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --locked
+
+  rust-crypto-adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-rust-crypto/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-rust-crypto/Cargo.toml --all-targets -- -D warnings
+      - name: Verify cryptographic vectors
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-rust-crypto/Cargo.toml
+      - name: Emit dependency lockfile for review
+        shell: bash
+        run: cat labs/personal-agent-kernel-rust-crypto/Cargo.lock
 
   production-boundary:
     runs-on: ubuntu-24.04
