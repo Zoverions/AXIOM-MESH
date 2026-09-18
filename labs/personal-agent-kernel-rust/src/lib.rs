@@ -779,12 +779,7 @@ impl OfflineEnvelopeLedger {
             revocation_epoch: self.envelope.revocation_epoch,
             expires_at_unix_s: self.envelope.expires_at_unix_s,
             max_effects: self.envelope.max_effects,
-            budget_limits: self
-                .envelope
-                .budget_limits
-                .values()
-                .cloned()
-                .collect(),
+            budget_limits: self.envelope.budget_limits.values().cloned().collect(),
             runtime_surface: self.envelope.runtime_surface.clone(),
         }
     }
