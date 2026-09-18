@@ -335,10 +335,7 @@ fn inferred_memory_promotes_only_after_evidence_and_receipt_binding() {
 
 #[test]
 fn promotion_gate_preserves_quarantine_and_contradictions() {
-    let mut candidate = promotion(
-        MemorySourceKind::OwnerDirect,
-        MemoryDisposition::Quarantine,
-    );
+    let mut candidate = promotion(MemorySourceKind::OwnerDirect, MemoryDisposition::Quarantine);
     candidate.contradicts_memory_refs = vec!["memory:existing:1".to_string()];
 
     let decision = MemoryPromotionGate::assess(
