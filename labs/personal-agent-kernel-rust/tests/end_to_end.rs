@@ -1,8 +1,8 @@
 use axiom_personal_agent_kernel_rust_lab::{
     AuthorityBudget, AutonomyLevel, AutonomyState, BudgetDimension, BudgetRequest, Constitution,
     DelegationLedger, EffectClass, EffectPort, EffectReceipt, Kernel, KernelIdentity, KernelResult,
-    MemoryCandidate, MemoryDisposition, MemorySourceKind, MeshProof, MeshProofInput, Plan,
-    PlanNode, Reversibility, RuntimeSurface,
+    MemoryCandidate, MemoryDisposition, MemorySourceKind, MeshProof, MeshProofInput, MeshWitness,
+    Plan, PlanNode, Reversibility, RuntimeSurface,
 };
 use std::collections::BTreeSet;
 
@@ -254,6 +254,72 @@ fn end_to_end_lifecycle_requires_mesh_proof_and_strips_authority_on_restore() {
         .expect("authority-free restore");
     assert!(!restored.authority_restored());
     assert_eq!(restored.memory_refs, vec!["memory:purchase-preference"]);
+}
+
+#[test]
+fn mesh_native_handoff_and_witness_quorum_preserve_single_spend_semantics() {
+    let kernel = kernel();
+    let compiled = kernel
+        .compile_plan(plan(Reversibility::Compensatable, None), NOW, &surface())
+        .expect("compile");
+    let shadow = kernel.shadow(&compiled).expect("shadow");
+    let request = kernel
+        .authority_requests(&compiled, &shadow)
+        .expect("requests")
+        .remove(0);
+    let verified = kernel
+        .verify_mesh_proof(&request, exact_proof(&request), NOW)
+        .expect("verified mesh authority");
+
+    let handoff = kernel
+        .propose_authority_handoff(&verified, "node:phone", "node:desktop")
+        .expect("bounded handoff proposal");
+    assert_eq!(handoff.current_revocation_epoch, 7);
+    assert_eq!(handoff.proposed_revocation_epoch, 8);
+    assert!(handoff.requires_mesh_reauthorization());
+    assert!(!handoff.grants_authority());
+
+    let mut port = RecordingPort::default();
+    let receipt = kernel
+        .execute_authorized(&verified, &mut port)
+        .expect("authorized effect");
+    let witnesses = vec![
+        MeshWitness {
+            witness_node_ref: "node:witness-a".into(),
+            receipt_ref: receipt.receipt_ref.clone(),
+            effect_digest: receipt.effect_digest.clone(),
+            witnessed_at_unix_s: NOW,
+        },
+        MeshWitness {
+            witness_node_ref: "node:witness-b".into(),
+            receipt_ref: receipt.receipt_ref.clone(),
+            effect_digest: receipt.effect_digest.clone(),
+            witnessed_at_unix_s: NOW - 1,
+        },
+    ];
+    let assessment = kernel
+        .assess_receipt_witnesses(&receipt, &witnesses, 2, NOW, 30)
+        .expect("fresh exact witness set");
+    assert_eq!(assessment.unique_witnesses, 2);
+    assert!(assessment.quorum_met);
+    assert!(!assessment.grants_authority());
+
+    let duplicate_node = vec![witnesses[0].clone(), witnesses[0].clone()];
+    let duplicate_assessment = kernel
+        .assess_receipt_witnesses(&receipt, &duplicate_node, 2, NOW, 30)
+        .expect("duplicate witnesses are counted once");
+    assert_eq!(duplicate_assessment.unique_witnesses, 1);
+    assert!(!duplicate_assessment.quorum_met);
+
+    let bad = MeshWitness {
+        witness_node_ref: "node:witness-c".into(),
+        receipt_ref: receipt.receipt_ref.clone(),
+        effect_digest: sha('0'),
+        witnessed_at_unix_s: NOW,
+    };
+    assert!(kernel
+        .assess_receipt_witnesses(&receipt, &[bad], 1, NOW, 30)
+        .is_err());
 }
 
 #[test]
