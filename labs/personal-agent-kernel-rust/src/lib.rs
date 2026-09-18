@@ -757,15 +757,15 @@ impl OfflineEnvelopeLedger {
         self.envelope.max_effects - self.effects_consumed
     }
 
-    fn consume(
-        &mut self,
+    pub fn prepare_consumption(
+        &self,
         owner_subject_ref: &str,
         current_revocation_epoch: u64,
         target_device_ref: &str,
         current_surface: &RuntimeSurface,
         now_unix_s: u64,
         budget_requests: &[BudgetRequest],
-    ) -> KernelResult<OfflineAuthorizedEffect> {
+    ) -> KernelResult<OfflineConsumptionIntent> {
         if owner_subject_ref != self.envelope.owner_subject_ref {
             return Err(KernelError::new("offline envelope owner mismatch"));
         }
@@ -786,13 +786,142 @@ impl OfflineEnvelopeLedger {
         if self.effects_consumed >= self.envelope.max_effects {
             return Err(KernelError::new("offline envelope effect count exhausted"));
         }
+
+        let normalized = self.normalize_budget_requests(budget_requests)?;
+        self.validate_budget_fit(&normalized)?;
+
+        let sequence = self
+            .effects_consumed
+            .checked_add(1)
+            .ok_or_else(|| KernelError::new("offline effect sequence overflow"))?;
+
+        Ok(OfflineConsumptionIntent {
+            envelope_ref: self.envelope.envelope_ref.clone(),
+            sequence,
+            owner_subject_ref: self.envelope.owner_subject_ref.clone(),
+            target_device_ref: self.envelope.target_device_ref.clone(),
+            plan_digest: self.envelope.plan_digest.clone(),
+            node_id: self.envelope.node_id.clone(),
+            capability_ref: self.envelope.capability_ref.clone(),
+            revocation_epoch: self.envelope.revocation_epoch,
+            budget_requests: normalized,
+        })
+    }
+
+    pub fn commit_consumption(
+        &mut self,
+        intent: &OfflineConsumptionIntent,
+        current_surface: &RuntimeSurface,
+        now_unix_s: u64,
+    ) -> KernelResult<OfflineAuthorizedEffect> {
+        if current_surface != &self.envelope.runtime_surface {
+            return Err(KernelError::new(
+                "offline envelope runtime surface drift before commit",
+            ));
+        }
+        if now_unix_s >= self.envelope.expires_at_unix_s {
+            return Err(KernelError::new(
+                "offline envelope expired before durable commit",
+            ));
+        }
+        self.apply_consumption_intent(intent)
+    }
+
+    pub fn replay_historical_consumption(
+        &mut self,
+        intent: &OfflineConsumptionIntent,
+    ) -> KernelResult<()> {
+        self.apply_consumption_intent(intent)?;
+        Ok(())
+    }
+
+    fn consume(
+        &mut self,
+        owner_subject_ref: &str,
+        current_revocation_epoch: u64,
+        target_device_ref: &str,
+        current_surface: &RuntimeSurface,
+        now_unix_s: u64,
+        budget_requests: &[BudgetRequest],
+    ) -> KernelResult<OfflineAuthorizedEffect> {
+        let intent = self.prepare_consumption(
+            owner_subject_ref,
+            current_revocation_epoch,
+            target_device_ref,
+            current_surface,
+            now_unix_s,
+            budget_requests,
+        )?;
+        self.commit_consumption(&intent, current_surface, now_unix_s)
+    }
+
+    fn apply_consumption_intent(
+        &mut self,
+        intent: &OfflineConsumptionIntent,
+    ) -> KernelResult<OfflineAuthorizedEffect> {
+        if intent.envelope_ref != self.envelope.envelope_ref
+            || intent.owner_subject_ref != self.envelope.owner_subject_ref
+            || intent.target_device_ref != self.envelope.target_device_ref
+            || intent.plan_digest != self.envelope.plan_digest
+            || intent.node_id != self.envelope.node_id
+            || intent.capability_ref != self.envelope.capability_ref
+            || intent.revocation_epoch != self.envelope.revocation_epoch
+        {
+            return Err(KernelError::new(
+                "offline consumption intent binding mismatch",
+            ));
+        }
+
+        let expected_sequence = self
+            .effects_consumed
+            .checked_add(1)
+            .ok_or_else(|| KernelError::new("offline effect sequence overflow"))?;
+        if intent.sequence != expected_sequence
+            || intent.sequence > self.envelope.max_effects
+        {
+            return Err(KernelError::new(
+                "offline consumption intent sequence mismatch",
+            ));
+        }
+
+        let normalized = self.normalize_budget_requests(&intent.budget_requests)?;
+        if normalized != intent.budget_requests {
+            return Err(KernelError::new(
+                "offline consumption intent budgets are not canonical",
+            ));
+        }
+        self.validate_budget_fit(&normalized)?;
+
+        for request in &normalized {
+            *self
+                .budget_consumed
+                .entry(request.budget_id.clone())
+                .or_default() += request.amount;
+        }
+        self.effects_consumed = intent.sequence;
+
+        Ok(OfflineAuthorizedEffect {
+            envelope_ref: self.envelope.envelope_ref.clone(),
+            sequence: intent.sequence,
+            parent_grant_ref: self.envelope.parent_grant_ref.clone(),
+            owner_subject_ref: self.envelope.owner_subject_ref.clone(),
+            plan_digest: self.envelope.plan_digest.clone(),
+            node_id: self.envelope.node_id.clone(),
+            capability_ref: self.envelope.capability_ref.clone(),
+        })
+    }
+
+    fn normalize_budget_requests(
+        &self,
+        budget_requests: &[BudgetRequest],
+    ) -> KernelResult<Vec<BudgetRequest>> {
         if budget_requests.is_empty() {
             return Err(KernelError::new(
                 "offline effect must consume at least one bounded budget",
             ));
         }
 
-        let mut local = BTreeMap::<String, u64>::new();
+        let mut local = BTreeMap::<String, BudgetRequest>::new();
         for request in budget_requests {
             request.validate()?;
             let Some(limit) = self.envelope.budget_limits.get(&request.budget_id) else {
@@ -807,43 +936,64 @@ impl OfflineEnvelopeLedger {
                     request.budget_id
                 )));
             }
-            let entry = local.entry(request.budget_id.clone()).or_default();
-            *entry = entry
-                .checked_add(request.amount)
-                .ok_or_else(|| KernelError::new("offline budget request overflow"))?;
-        }
 
-        for (budget_id, requested) in &local {
+            if let Some(existing) = local.get_mut(&request.budget_id) {
+                existing.amount = existing
+                    .amount
+                    .checked_add(request.amount)
+                    .ok_or_else(|| KernelError::new("offline budget request overflow"))?;
+            } else {
+                local.insert(request.budget_id.clone(), request.clone());
+            }
+        }
+        Ok(local.into_values().collect())
+    }
+
+    fn validate_budget_fit(
+        &self,
+        normalized: &[BudgetRequest],
+    ) -> KernelResult<()> {
+        for request in normalized {
             let limit = self
                 .envelope
                 .budget_limits
-                .get(budget_id)
+                .get(&request.budget_id)
                 .ok_or_else(|| KernelError::new("missing offline budget limit"))?;
-            let consumed = self.budget_consumed.get(budget_id).copied().unwrap_or(0);
+            let consumed = self
+                .budget_consumed
+                .get(&request.budget_id)
+                .copied()
+                .unwrap_or(0);
             let next = consumed
-                .checked_add(*requested)
+                .checked_add(request.amount)
                 .ok_or_else(|| KernelError::new("offline budget consumption overflow"))?;
             if next > limit.amount {
                 return Err(KernelError::new(format!(
-                    "offline budget exhausted:{budget_id}"
+                    "offline budget exhausted:{}",
+                    request.budget_id
                 )));
             }
         }
+        Ok(())
+    }
+}
 
-        for (budget_id, requested) in local {
-            *self.budget_consumed.entry(budget_id).or_default() += requested;
-        }
-        self.effects_consumed += 1;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfflineConsumptionIntent {
+    pub envelope_ref: String,
+    pub sequence: u64,
+    pub owner_subject_ref: String,
+    pub target_device_ref: String,
+    pub plan_digest: String,
+    pub node_id: String,
+    pub capability_ref: String,
+    pub revocation_epoch: u64,
+    pub budget_requests: Vec<BudgetRequest>,
+}
 
-        Ok(OfflineAuthorizedEffect {
-            envelope_ref: self.envelope.envelope_ref.clone(),
-            sequence: self.effects_consumed,
-            parent_grant_ref: self.envelope.parent_grant_ref.clone(),
-            owner_subject_ref: self.envelope.owner_subject_ref.clone(),
-            plan_digest: self.envelope.plan_digest.clone(),
-            node_id: self.envelope.node_id.clone(),
-            capability_ref: self.envelope.capability_ref.clone(),
-        })
+impl OfflineConsumptionIntent {
+    pub fn grants_authority(&self) -> bool {
+        false
     }
 }
 
