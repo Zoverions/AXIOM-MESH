@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -451,4 +452,41 @@ test('fixture adapter never accepts raw state or provider credentials as observa
     }, profile, question),
     /unknown|state|api|credential|field/i
   );
+});
+
+
+test('fixture adapter source remains network credential SDK and effect free', async () => {
+  const source = await readFile(
+    new URL('../src/lib/bounded-decision-typesafe-system-one-adapter.mjs', import.meta.url),
+    'utf8'
+  );
+  const imports = source
+    .split('\n')
+    .filter(line => /^\s*import\b/.test(line))
+    .join('\n');
+
+  for (const marker of [
+    'node:http',
+    'node:https',
+    'node:net',
+    'node:tls',
+    'node:child_process',
+    'node:worker_threads',
+    '@typesafe-ai/sdk'
+  ]) {
+    assert.equal(imports.includes(marker), false, `adapter imports must not contain ${marker}`);
+  }
+
+  for (const marker of [
+    'fetch(',
+    'process.env',
+    'TYPESAFE_API_KEY',
+    'https://api.typesafe.ai',
+    'createConnection(',
+    'request(',
+    'spawn(',
+    'exec('
+  ]) {
+    assert.equal(source.includes(marker), false, `adapter must not contain effect or credential primitive ${marker}`);
+  }
 });
