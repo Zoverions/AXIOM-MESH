@@ -6,6 +6,7 @@ import {
   digestObject
 } from './canonical.mjs';
 import { ASSURANCE_TIER_IDS, getAssuranceTier } from './assurance-tiers.mjs';
+import { normalizeAgentAssuranceEvidence } from './agent-assurance-evidence.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -30,6 +31,12 @@ function normalizeAssurance(value, label) {
 export function buildPlan(intent, decision, { approval } = {}) {
   const machineAuthorityDigest = intent.principal?.schema === 'axiom-machine-principal.v1'
     ? intent.principal.authority_digest
+    : null;
+  const agentAssuranceDigest = (
+    machineAuthorityDigest
+    && intent.assurance_evidence !== undefined
+  )
+    ? digestObject(normalizeAgentAssuranceEvidence(intent.assurance_evidence))
     : null;
   const requiredAssurance = normalizeAssurance(
     decision.required_assurance ?? DEFAULT_ASSURANCE_BY_RISK[decision.risk],
@@ -95,6 +102,10 @@ export function buildPlan(intent, decision, { approval } = {}) {
       'principal.authority_digest'
     );
     rules.push(`machine-authority:${machineAuthorityDigest}`);
+    if (agentAssuranceDigest) {
+      observableInputs.push('intent.assurance_evidence');
+      rules.push(`agent-assurance:${agentAssuranceDigest}`);
+    }
   }
   const plan = {
     version: 'axiom-plan.v1',
