@@ -97,7 +97,6 @@ impl ContextItemState {
             Self::Superseded => Some("candidate-superseded"),
         }
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -427,7 +426,8 @@ impl MemoryPromotionGate {
 
         let mut reasons = BTreeSet::<String>::new();
 
-        if assessment.disposition != MemoryDisposition::AdmitDurable || !assessment.reasons.is_empty()
+        if assessment.disposition != MemoryDisposition::AdmitDurable
+            || !assessment.reasons.is_empty()
         {
             reasons.insert("memory-assessment-not-admit-durable".to_string());
         }
@@ -461,8 +461,7 @@ impl MemoryPromotionGate {
             }
         }
 
-        if input.secret_material_embedded
-            || input.sensitivity == ContextSensitivity::CriticalSecret
+        if input.secret_material_embedded || input.sensitivity == ContextSensitivity::CriticalSecret
         {
             reasons.insert("secret-material-requires-separate-vault-path".to_string());
         }
@@ -497,15 +496,14 @@ fn validate_task(task: &ContextTask) -> ContextResult<()> {
     require_id(&task.capability_ref, "context capability ref")?;
     require_sha256(&task.instruction_set_sha256, "instruction set sha256")?;
     require_sha256(&task.runtime_surface_sha256, "runtime surface sha256")?;
-    require_sha256(
-        &task.capability_surface_sha256,
-        "capability surface sha256",
-    )
+    require_sha256(&task.capability_surface_sha256, "capability surface sha256")
 }
 
 fn validate_limits(limits: &ContextLimits) -> ContextResult<()> {
     if limits.max_items == 0 {
-        return Err(ContextError::new("context max_items must be greater than zero"));
+        return Err(ContextError::new(
+            "context max_items must be greater than zero",
+        ));
     }
     if limits.max_estimated_tokens == 0 {
         return Err(ContextError::new(
@@ -522,7 +520,10 @@ fn validate_limits(limits: &ContextLimits) -> ContextResult<()> {
 
 fn validate_candidate_shape(candidate: &ContextItemInput) -> ContextResult<()> {
     require_id(&candidate.item_ref, "context item ref")?;
-    require_id(&candidate.owner_subject_ref, "context item owner subject ref")?;
+    require_id(
+        &candidate.owner_subject_ref,
+        "context item owner subject ref",
+    )?;
     require_sha256(&candidate.content_sha256, "context item content sha256")?;
     require_unique_ids(&candidate.provenance_refs, "context provenance ref")?;
     if candidate.estimated_tokens == 0 {
@@ -536,7 +537,10 @@ fn validate_candidate_shape(candidate: &ContextItemInput) -> ContextResult<()> {
 
 fn validate_promotion_input(input: &MemoryPromotionInput) -> ContextResult<()> {
     require_id(&input.promotion_id, "memory promotion id")?;
-    require_id(&input.owner_subject_ref, "memory promotion owner subject ref")?;
+    require_id(
+        &input.owner_subject_ref,
+        "memory promotion owner subject ref",
+    )?;
     require_id(&input.candidate_id, "memory promotion candidate id")?;
     require_id(&input.assessment_ref, "memory assessment ref")?;
     require_sha256(
@@ -606,7 +610,11 @@ fn canonical_context_preimage(bundle: &ContextBundle) -> String {
     let mut out = String::new();
     push_field(&mut out, "schema", "axiom-personal-context-bundle.v0");
     push_field(&mut out, "task_id", &bundle.task.task_id);
-    push_field(&mut out, "owner_subject_ref", &bundle.task.owner_subject_ref);
+    push_field(
+        &mut out,
+        "owner_subject_ref",
+        &bundle.task.owner_subject_ref,
+    );
     push_field(&mut out, "purpose_ref", &bundle.task.purpose_ref);
     push_field(&mut out, "capability_ref", &bundle.task.capability_ref);
     push_field(
@@ -647,26 +655,10 @@ fn canonical_context_preimage(bundle: &ContextBundle) -> String {
 
     for item in &bundle.selected {
         push_field(&mut out, "selected.item_ref", &item.item_ref);
-        push_field(
-            &mut out,
-            "selected.source_kind",
-            item.source_kind.as_str(),
-        );
-        push_field(
-            &mut out,
-            "selected.content_sha256",
-            &item.content_sha256,
-        );
-        push_u64(
-            &mut out,
-            "selected.estimated_tokens",
-            item.estimated_tokens,
-        );
-        push_field(
-            &mut out,
-            "selected.sensitivity",
-            item.sensitivity.as_str(),
-        );
+        push_field(&mut out, "selected.source_kind", item.source_kind.as_str());
+        push_field(&mut out, "selected.content_sha256", &item.content_sha256);
+        push_u64(&mut out, "selected.estimated_tokens", item.estimated_tokens);
+        push_field(&mut out, "selected.sensitivity", item.sensitivity.as_str());
         push_u64(&mut out, "selected.priority", u64::from(item.priority));
         push_field(
             &mut out,
@@ -718,11 +710,7 @@ fn canonical_promotion_preimage(
         memory_source_kind_str(input.source_kind),
     );
     push_field(&mut out, "assessment_ref", &input.assessment_ref);
-    push_field(
-        &mut out,
-        "assessment_sha256",
-        &input.assessment_sha256,
-    );
+    push_field(&mut out, "assessment_sha256", &input.assessment_sha256);
     push_field(
         &mut out,
         "context_bundle_sha256",
