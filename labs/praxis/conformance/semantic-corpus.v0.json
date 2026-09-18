@@ -41,11 +41,11 @@
     },
     {
       "invariant": "durable-preparation-before-external-io",
-      "status": "pending-host-abi"
+      "status": "covered-runtime-tests"
     },
     {
       "invariant": "uncertain-external-outcome-remains-uncertain",
-      "status": "pending-host-abi"
+      "status": "covered-runtime-tests"
     },
     {
       "invariant": "completion-receipt-binds-exact-operation",
@@ -57,19 +57,20 @@
     },
     {
       "invariant": "secret-reference-separation",
-      "status": "pending"
+      "status": "covered-runtime-tests"
     }
   ],
   "compile_cases": [
     {
       "name": "valid-authorized-commit",
-      "source": "requires permit p: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;\ncommit armed as receipt;",
+      "source": "requires permit p: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;\nprepare armed as prepared;\ncommit prepared as receipt;",
       "expect": {
         "ok": true,
         "instruction_ops": [
           "REQUIRE_PERMIT",
           "PLAN",
           "AUTHORIZE",
+          "PREPARE",
           "COMMIT"
         ]
       }
@@ -127,11 +128,11 @@
       }
     },
     {
-      "name": "commit-requires-authorized-operation",
-      "source": "op release = Deploy(\"artifact\") @ Production;\ncommit release as receipt;",
+      "name": "commit-requires-durable-preparation",
+      "source": "requires permit p: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;\ncommit armed as receipt;",
       "expect": {
         "ok": false,
-        "code": "PRAXIS_COMMIT_REQUIRES_AUTHORITY"
+        "code": "PRAXIS_COMMIT_REQUIRES_PREPARATION"
       }
     },
     {
@@ -188,6 +189,25 @@
       "expect": {
         "ok": false,
         "code": "PRAXIS_DUPLICATE_BINDING"
+      }
+    },
+    {
+      "name": "secret-reference-cannot-be-ordinary-argument",
+      "source": "requires secret key: SigningCredential;\nop leak = Log(key) @ Audit;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_SECRET_EXFILTRATION"
+      }
+    },
+    {
+      "name": "valid-opaque-secret-binding",
+      "source": "requires secret key: SigningCredential;\nop sign = Sign(\"digest\") @ Local using secrets key;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_SECRET",
+          "PLAN"
+        ]
       }
     }
   ],
