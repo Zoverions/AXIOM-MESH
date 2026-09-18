@@ -195,6 +195,45 @@ exact negative test. The protected test suite also exercises peer authority-like
 language, distributed action/purpose pooling attempts, receipt/discovery laundering,
 and unsupported delegation/sub-agent claims without enabling those capabilities.
 
+## Cross-substrate physical-defense boundary
+
+Axiom Defense / ANX design work is tracked in #1699. The current build does **not**
+expose production physical actuation, a deployed ANX controller, autonomous
+targeting, generalized remote actuator control, or physical-defense capability
+promotion.
+
+Physical-device observations, sensor classifications, model outputs, peer
+corroboration, governance results, embodiment discovery, and ANX capability
+descriptions are non-authorizing evidence. None is an alternate authority root.
+Any future supported physical effect must still bind an exact current local
+authority chain for the actual executor, action/effect class, purpose, protected
+scope, destination/device, consequence ceiling, currentness, required approval,
+and expiry.
+
+The Mesh may evaluate policy, evidence, currentness, revocation, quarantine, and
+bounded effect requests. It must not become a generic remote physical-actuation
+interface. ANX must independently enforce local physical safety interlocks,
+effect ceilings, termination conditions, and fail-safe behavior below the
+AI/Mesh policy layer. A model, UI, peer node, Circle, or governance outcome
+cannot bypass those controls.
+
+Connectivity, provider, model, or higher-level coordination loss may reduce
+available defensive capability but may not widen physical authority. Degraded
+mode must preserve local stop, revocation, quarantine, and safety controls.
+Missing or unresolved currentness fails closed for new physical effects.
+Restart/recovery must not silently resume stale queued physical actions; fresh
+authority is required before any future effect can continue.
+
+The governing cross-substrate invariant is:
+
+> **Knowledge may propagate across the defense fabric. Authority does not.**
+
+The companion design and plan are
+`docs/superpowers/specs/2026-09-18-axiom-defense-anx-v0-design.md` and
+`docs/superpowers/plans/2026-09-18-axiom-defense-anx-v0.md`. They are
+architecture/conformance inputs only and do not establish that any physical
+effect path exists on the supported build.
+
 ## Assets and security objectives
 
 The primary assets are:
