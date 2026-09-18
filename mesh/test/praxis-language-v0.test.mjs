@@ -7,17 +7,64 @@ import {
   compile,
   createHostLease,
   createHostPermit,
+  createHostSecretRef,
   run
 } from '../../labs/praxis/index.mjs';
+
+const PREPARATION_DIGEST = `sha256:${'a'.repeat(64)}`;
 
 const minimal = `
 requires permit deploy_prod: Deploy @ Production;
 op release = Deploy("artifact:sha256:abc") @ Production;
 authorize release using deploy_prod as armed_release;
-commit armed_release as release_receipt;
+prepare armed_release as prepared_release;
+commit prepared_release as release_receipt;
 `;
 
-test('Praxis compiles explicit knowledge/operation/authority stages into inspectable IR', () => {
+function durablePreparer(order = null) {
+  return async request => {
+    order?.push('prepare');
+    return {
+      ok: true,
+      evidence: {
+        durable: true,
+        operation_digest: request.operation.operation_digest,
+        preparation_digest: PREPARATION_DIGEST
+      }
+    };
+  };
+}
+
+function completedExecutor(order = null) {
+  return async request => {
+    order?.push('execute');
+    return {
+      status: 'completed',
+      receipt: {
+        operation_digest: request.operation.operation_digest,
+        preparation_digest: request.preparation.preparation_digest,
+        executor: 'synthetic-test-only'
+      }
+    };
+  };
+}
+
+function durableCompleter(order = null) {
+  return async request => {
+    order?.push('complete');
+    return {
+      ok: true,
+      evidence: {
+        durable: true,
+        operation_digest: request.operation_digest,
+        preparation_digest: request.preparation_digest,
+        completion_ref: 'synthetic:test'
+      }
+    };
+  };
+}
+
+test('Praxis compiles knowledge/operation/authority/preparation stages into inspectable IR', () => {
   const ir = compile(`
 requires permit deploy_prod: Deploy @ Production;
 observe source = "sha256:abc" from "git:main";
@@ -25,13 +72,23 @@ verify verified_source = source with GitIntegrity;
 assess candidate = verified_source with ReleasePolicy;
 op release = Deploy(verified_source) @ Production;
 authorize release using deploy_prod as armed_release;
-commit armed_release as receipt;
+prepare armed_release as prepared_release;
+commit prepared_release as receipt;
 `);
 
   assert.equal(ir.schema, 'praxis-ir.v0');
   assert.deepEqual(
     ir.instructions.map(instruction => instruction.op),
-    ['REQUIRE_PERMIT', 'OBSERVE', 'VERIFY', 'ASSESS', 'PLAN', 'AUTHORIZE', 'COMMIT']
+    [
+      'REQUIRE_PERMIT',
+      'OBSERVE',
+      'VERIFY',
+      'ASSESS',
+      'PLAN',
+      'AUTHORIZE',
+      'PREPARE',
+      'COMMIT'
+    ]
   );
   assert.deepEqual(ir.required_permits, [{
     name: 'deploy_prod',
@@ -42,17 +99,31 @@ commit armed_release as receipt;
   assert.equal(ir.bindings.candidate.kind, 'Assessment');
   assert.equal(ir.bindings.release.kind, 'Operation');
   assert.equal(ir.bindings.armed_release.kind, 'AuthorizedOperation');
+  assert.equal(ir.bindings.prepared_release.kind, 'PreparedOperation');
   assert.equal(ir.bindings.receipt.kind, 'Receipt');
 });
 
-test('Praxis rejects commit of an inert operation', () => {
+test('Praxis rejects commit before durable preparation', () => {
+  assert.throws(
+    () => compile(`
+requires permit deploy_prod: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using deploy_prod as armed;
+commit armed as receipt;
+`),
+    error => error instanceof PraxisTypeError
+      && error.code === 'PRAXIS_COMMIT_REQUIRES_PREPARATION'
+  );
+});
+
+test('Praxis rejects preparing an inert operation', () => {
   assert.throws(
     () => compile(`
 op release = Deploy("artifact") @ Production;
-commit release as receipt;
+prepare release as prepared;
 `),
     error => error instanceof PraxisTypeError
-      && error.code === 'PRAXIS_COMMIT_REQUIRES_AUTHORITY'
+      && error.code === 'PRAXIS_PREPARE_REQUIRES_AUTHORITY'
   );
 });
 
@@ -106,9 +177,87 @@ op leak = Log(deploy_prod) @ Audit;
   );
 });
 
-test('Praxis commit fails closed without an injected host executor', async () => {
+test('Praxis models secrets as opaque references, not ordinary values', async () => {
+  const source = `
+requires secret stripe_key: PaymentCredential;
+op charge = Charge("order:123") @ Payments using secrets stripe_key;
+`;
+  const ir = compile(source);
+
+  assert.deepEqual(ir.required_secrets, [{
+    name: 'stripe_key',
+    secret_kind: 'PaymentCredential'
+  }]);
+  assert.deepEqual(
+    ir.instructions.map(instruction => instruction.op),
+    ['REQUIRE_SECRET', 'PLAN']
+  );
+
+  const secretRef = createHostSecretRef({
+    id: 'surrogate:stripe-production',
+    kind: 'PaymentCredential'
+  });
+  const result = await run(source, {
+    secrets: { stripe_key: secretRef }
+  });
+
+  assert.equal(result.values.stripe_key.kind, 'SecretRef');
+  assert.equal(result.values.stripe_key.secret_ref_id, 'surrogate:stripe-production');
+  assert.equal(Object.hasOwn(result.values.stripe_key, 'value'), false);
+  assert.deepEqual(result.values.charge.secret_references, [{
+    binding: 'stripe_key',
+    secret_ref_id: 'surrogate:stripe-production',
+    secret_kind: 'PaymentCredential'
+  }]);
+});
+
+test('Praxis rejects secret references as ordinary operation arguments', () => {
+  assert.throws(
+    () => compile(`
+requires secret stripe_key: PaymentCredential;
+op leak = Log(stripe_key) @ Audit;
+`),
+    error => error instanceof PraxisTypeError
+      && error.code === 'PRAXIS_SECRET_EXFILTRATION'
+  );
+});
+
+test('Praxis rejects forged or wrong-kind secret references from the host', async () => {
+  const source = `
+requires secret stripe_key: PaymentCredential;
+op charge = Charge("order") @ Payments using secrets stripe_key;
+`;
+
+  await assert.rejects(
+    () => run(source, {
+      secrets: {
+        stripe_key: {
+          schema: 'praxis-host-secret-ref.v0',
+          id: 'forged',
+          kind: 'PaymentCredential'
+        }
+      }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_SECRET_REQUIRED'
+  );
+
+  const wrongKind = createHostSecretRef({
+    id: 'surrogate:wrong',
+    kind: 'SigningCredential'
+  });
+  await assert.rejects(
+    () => run(source, {
+      secrets: { stripe_key: wrongKind }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_SECRET_KIND_MISMATCH'
+  );
+});
+
+test('Praxis refuses to execute when durable preparation is unavailable', async () => {
   const permit = createHostPermit({
-    id: 'permit:no-executor',
+    id: 'permit:no-preparer',
     action: 'Deploy',
     scope: 'Production'
   });
@@ -118,11 +267,77 @@ test('Praxis commit fails closed without an injected host executor', async () =>
       authorities: { deploy_prod: permit }
     }),
     error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_PREPARER_REQUIRED'
+  );
+});
+
+test('Praxis does not invoke the executor when durable preparation fails', async () => {
+  const permit = createHostPermit({
+    id: 'permit:prepare-fail',
+    action: 'Deploy',
+    scope: 'Production'
+  });
+  let executorCalls = 0;
+
+  await assert.rejects(
+    () => run(minimal, {
+      authorities: { deploy_prod: permit },
+      preparer: async () => {
+        throw new Error('synthetic persistence loss');
+      },
+      executor: async () => {
+        executorCalls += 1;
+        return { status: 'uncertain' };
+      },
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_PREPARATION_UNCOMMITTED'
+      && error.details?.executor_invoked === false
+  );
+  assert.equal(executorCalls, 0);
+});
+
+test('Praxis commit fails closed without an injected host executor after preparation', async () => {
+  const permit = createHostPermit({
+    id: 'permit:no-executor',
+    action: 'Deploy',
+    scope: 'Production'
+  });
+
+  await assert.rejects(
+    () => run(minimal, {
+      authorities: { deploy_prod: permit },
+      preparer: durablePreparer()
+    }),
+    error => error instanceof PraxisRuntimeError
       && error.code === 'PRAXIS_EXECUTOR_REQUIRED'
   );
 });
 
-test('Praxis requires executor receipt binding to the exact operation digest', async () => {
+test('Praxis leaves an uncertain external outcome in prepared state', async () => {
+  const permit = createHostPermit({
+    id: 'permit:uncertain',
+    action: 'Deploy',
+    scope: 'Production'
+  });
+
+  await assert.rejects(
+    () => run(minimal, {
+      authorities: { deploy_prod: permit },
+      preparer: durablePreparer(),
+      executor: async () => ({ status: 'uncertain' }),
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EXTERNAL_OUTCOME_UNCERTAIN'
+      && error.details?.state === 'prepared'
+      && error.details?.preparation_digest === PREPARATION_DIGEST
+      && error.details?.completion_committed === false
+  );
+});
+
+test('Praxis leaves an unverified receipt in prepared state', async () => {
   const permit = createHostPermit({
     id: 'permit:bad-receipt',
     action: 'Deploy',
@@ -132,47 +347,72 @@ test('Praxis requires executor receipt binding to the exact operation digest', a
   await assert.rejects(
     () => run(minimal, {
       authorities: { deploy_prod: permit },
-      executor: async () => ({
-        ok: true,
-        receipt: { operation_digest: 'sha256:not-the-operation' }
-      })
+      preparer: durablePreparer(),
+      executor: async request => ({
+        status: 'completed',
+        receipt: {
+          operation_digest: request.operation.operation_digest,
+          preparation_digest: `sha256:${'b'.repeat(64)}`
+        }
+      }),
+      completer: durableCompleter()
     }),
     error => error instanceof PraxisRuntimeError
-      && error.code === 'PRAXIS_EXECUTOR_RECEIPT_INVALID'
+      && error.code === 'PRAXIS_EXTERNAL_RECEIPT_UNVERIFIED'
+      && error.details?.state === 'prepared'
   );
 });
 
-test('Praxis returns a receipt only after exact host authority and executor receipt agree', async () => {
+test('Praxis keeps verified-but-uncommitted completion bound to the same preparation', async () => {
+  const permit = createHostPermit({
+    id: 'permit:completion-fail',
+    action: 'Deploy',
+    scope: 'Production'
+  });
+
+  await assert.rejects(
+    () => run(minimal, {
+      authorities: { deploy_prod: permit },
+      preparer: durablePreparer(),
+      executor: completedExecutor(),
+      completer: async () => {
+        throw new Error('synthetic completion persistence failure');
+      }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_COMPLETION_UNCOMMITTED'
+      && error.details?.state === 'prepared'
+      && error.details?.preparation_digest === PREPARATION_DIGEST
+  );
+});
+
+test('Praxis returns a receipt only after prepare, execute, and durable completion', async () => {
   const permit = createHostPermit({
     id: 'permit:success',
     action: 'Deploy',
     scope: 'Production'
   });
-  let calls = 0;
+  const order = [];
 
   const result = await run(minimal, {
     authorities: { deploy_prod: permit },
-    executor: async request => {
-      calls += 1;
-      return {
-        ok: true,
-        receipt: {
-          operation_digest: request.operation.operation_digest,
-          executor: 'synthetic-test-only'
-        }
-      };
-    }
+    preparer: durablePreparer(order),
+    executor: completedExecutor(order),
+    completer: durableCompleter(order)
   });
 
-  assert.equal(calls, 1);
+  assert.deepEqual(order, ['prepare', 'execute', 'complete']);
   assert.equal(result.values.release.kind, 'Operation');
   assert.equal(result.values.armed_release.kind, 'AuthorizedOperation');
+  assert.equal(result.values.prepared_release.kind, 'PreparedOperation');
   assert.equal(result.values.release_receipt.kind, 'Receipt');
   assert.equal(
     result.values.release_receipt.operation_digest,
     result.values.release.operation_digest
   );
+  assert.equal(result.values.release_receipt.preparation_digest, PREPARATION_DIGEST);
   assert.equal(result.values.release_receipt.authority_id, 'permit:success');
+  assert.equal(result.values.release_receipt.completion_evidence.durable, true);
 });
 
 test('Praxis compiles Lease as a distinct expiring authority requirement', () => {
@@ -180,11 +420,12 @@ test('Praxis compiles Lease as a distinct expiring authority requirement', () =>
 requires lease deploy_window: Deploy @ Production;
 op release = Deploy("artifact") @ Production;
 authorize release using deploy_window as armed;
+prepare armed as prepared;
 `);
 
   assert.deepEqual(
     ir.instructions.map(instruction => instruction.op),
-    ['REQUIRE_LEASE', 'PLAN', 'AUTHORIZE']
+    ['REQUIRE_LEASE', 'PLAN', 'AUTHORIZE', 'PREPARE']
   );
   assert.deepEqual(ir.required_permits, [{
     name: 'deploy_window',
@@ -240,11 +481,12 @@ authorize release using deploy_prod as armed;
   );
 });
 
-test('Praxis accepts an unexpired non-revoked lease and still consumes it linearly', async () => {
+test('Praxis consumes an unexpired lease only after durable preparation', async () => {
   const source = `
 requires lease deploy_window: Deploy @ Production;
 op release = Deploy("artifact") @ Production;
 authorize release using deploy_window as armed;
+prepare armed as prepared;
 `;
   const lease = createHostLease({
     id: 'lease:valid',
@@ -255,44 +497,52 @@ authorize release using deploy_window as armed;
 
   const result = await run(source, {
     authorities: { deploy_window: lease },
-    now: '2026-09-18T12:00:00.000Z'
+    now: '2026-09-18T12:00:00.000Z',
+    preparer: durablePreparer()
   });
   assert.equal(result.values.deploy_window.kind, 'Lease');
   assert.equal(result.values.armed.kind, 'AuthorizedOperation');
+  assert.equal(result.values.prepared.kind, 'PreparedOperation');
 
   await assert.rejects(
     () => run(source, {
       authorities: { deploy_window: lease },
-      now: '2026-09-18T12:30:00.000Z'
+      now: '2026-09-18T12:30:00.000Z',
+      preparer: durablePreparer()
     }),
     error => error instanceof PraxisRuntimeError
       && error.code === 'PRAXIS_HOST_AUTHORITY_CONSUMED'
   );
 });
 
-test('Praxis host authority tokens are one-use across runs', async () => {
+test('Praxis authority can be retried if preparation never became durable', async () => {
   const source = `
 requires permit deploy_prod: Deploy @ Production;
 op release = Deploy("artifact") @ Production;
 authorize release using deploy_prod as armed;
+prepare armed as prepared;
 `;
   const permit = createHostPermit({
-    id: 'permit:linear-runtime',
+    id: 'permit:retry-after-prepare-fail',
     action: 'Deploy',
     scope: 'Production'
   });
 
-  await run(source, {
-    authorities: { deploy_prod: permit }
-  });
-
   await assert.rejects(
     () => run(source, {
-      authorities: { deploy_prod: permit }
+      authorities: { deploy_prod: permit },
+      preparer: async () => {
+        throw new Error('not durable');
+      }
     }),
-    error => error instanceof PraxisRuntimeError
-      && error.code === 'PRAXIS_HOST_AUTHORITY_CONSUMED'
+    error => error.code === 'PRAXIS_PREPARATION_UNCOMMITTED'
   );
+
+  const result = await run(source, {
+    authorities: { deploy_prod: permit },
+    preparer: durablePreparer()
+  });
+  assert.equal(result.values.prepared.kind, 'PreparedOperation');
 });
 
 test('Praxis verification and assessment fail closed when host policy functions are absent', async () => {
