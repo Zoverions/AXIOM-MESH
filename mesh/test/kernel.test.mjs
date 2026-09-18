@@ -124,7 +124,7 @@ test('CLI validates input and preserves structured Gateway failure semantics', a
   assert.equal(new URL(requests[0].url).pathname, '/v1/intents');
   assert.equal(requests[0].init.method, 'POST');
   assert.equal(requests[0].init.headers.authorization, 'Bearer test-token');
-  assert.equal(requests[0].init.headers['idempotency-key'], 'cli-1700000000000-00000-4000-8000-000000000000');
+  assert.equal(requests[0].init.headers['idempotency-key'], 'cli-1700000000000-00000000-0000-4000-8000-000000000000');
   assert.deepEqual(JSON.parse(requests[0].init.body), { action: 'system.echo', input: {} });
   await assert.rejects(() => runCli(['unknown'], options), /Unknown command/);
   assert.equal(requests.length, 1, 'unknown CLI command must not issue another Gateway request');
