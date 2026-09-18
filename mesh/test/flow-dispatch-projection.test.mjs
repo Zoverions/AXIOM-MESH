@@ -844,7 +844,7 @@ test('rejected and blocked work dependencies preserve their terminal blocker sta
   }
 });
 
-test('handoff-bound dispatch requires a compatible worker for the exact runtime target', () => {
+test('historical handoff remains replayable without its runtime but cannot be redispatched', () => {
   const queued = handoff({ state: 'queued' });
   const wrongRuntime = worker({
     worker_ref: 'worker.search.wrong-runtime',
@@ -853,7 +853,7 @@ test('handoff-bound dispatch requires a compatible worker for the exact runtime 
     operation_ids: ['research.search'],
     capability_ids: ['research.read']
   });
-  const incompatible = input({
+  const source = input({
     bindings: [
       binding('collect', 'task.collect', 'handoff.collect'),
       binding('analyze', 'task.analyze')
@@ -865,20 +865,12 @@ test('handoff-bound dispatch requires a compatible worker for the exact runtime 
     handoffs: [queued]
   });
 
-  assert.throws(
-    () => deriveFlowDispatchProjection(incompatible),
-    /handoff target has no compatible worker runtime/i
-  );
-
-  const compatible = input({
-    bindings: [
-      binding('collect', 'task.collect', 'handoff.collect'),
-      binding('analyze', 'task.analyze')
-    ],
-    handoffs: [queued]
-  });
-  const projection = deriveFlowDispatchProjection(compatible);
+  const projection = deriveFlowDispatchProjection(source);
   assert.deepEqual(projection.ready_step_ids, []);
+  assert.equal(
+    projection.dispatch_proposals.some(entry => entry.step_id === 'collect'),
+    false
+  );
   assert.ok(
     projection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
       'handoff-active:queued'
