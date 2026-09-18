@@ -90,6 +90,45 @@ Repository: https://github.com/Zoverions/AXIOM-MESH
 
 Do not include secrets, private credentials, personal data, or production access tokens.
 
-## Why this experiment exists
+## Focused follow-up: MCP metadata boundary
 
-Current agent-builder discussions are converging on the same practical controls: sandboxing, scoped permissions, short-lived access, checkpoints, rollback, tool-call observability, and post-run verification. This experiment tests whether AXIOM's authority/evidence substrate is understandable and useful to those builders without weakening the project's security or promotion boundaries.
+Campaign: `ua-2026-09-18-mcp-metadata-boundary`
+
+The first broad trust drill produced no measurable activation at its initial checkpoint, so this follow-up narrows the persona and removes setup steps. It targets MCP/security, self-hosted, and local-agent developers already concerned with tool poisoning, schema/config drift, routing ambiguity, and over-privileged tool surfaces.
+
+AXIOM-MESH already has a bounded place to test one part of that problem: the Agent Commons MCP read-only laboratory. It is an offline protocol projection over public AXIOM state. It has no network listener, no session state, no write-capable tools, no private Grid access, no machine-authority mapping, and no production MCP compatibility claim.
+
+The property to falsify is deliberately narrow:
+
+> MCP discovery, client metadata, protocol metadata, or a changed tool mapping must not silently become authority.
+
+### Two-minute MCP check
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git
+cd AXIOM-MESH
+npm run agent-commons:mcp-readonly:check
+node --test mesh/test/agent-commons-mcp-readonly.test.mjs
+```
+
+The current laboratory checks that:
+
+- transport, private-state, consequential-tool, machine-authority, compatibility, and protocol elevation are rejected;
+- the MCP tool map is exact rather than inferred from arbitrary remote metadata;
+- `tools/list` exposes only fixed zero-argument read tools;
+- self-reported client identity, claimed capabilities, reputation-like values, and prompt-like text cannot alter a tool result;
+- protocol downgrade and routing-header disagreement fail closed;
+- unknown tools and non-empty arguments are rejected before C0 dispatch;
+- every accepted MCP read maps back to its corresponding direct C0 read-only method.
+
+Relevant public artifacts are `agent-commons/mcp-readonly-lab.json`, `mesh/src/lib/agent-commons-mcp-readonly.mjs`, and `mesh/test/agent-commons-mcp-readonly.test.mjs`.
+
+Useful counterexamples include any reproducible case where hostile or misleading metadata changes an accepted result, a changed tool mapping reaches a different C0 method without rejection, a protocol/routing mismatch is accepted ambiguously, a supposedly read-only path reaches a consequential action, client-supplied capabilities become permission, or discovery output can be mistaken for a production compatibility or authority claim.
+
+For this focused experiment, a useful report contains the exact commit SHA, exact command or request frame, expected boundary, observed result, reproducibility, and the smallest safe evidence needed to demonstrate it. Do not include credentials, private data, production tokens, or secrets.
+
+Success is not raw reach. It is a reproducible boundary report, an external test result, a useful issue or pull request, a new contributor exercising the laboratory, or star/fork movement accompanied by technical interaction.
+
+## Why these experiments exist
+
+Agent-builder discussions are converging on practical controls such as sandboxing, scoped permissions, short-lived access, checkpoints, rollback, tool-call observability, metadata integrity, and post-run verification. These experiments test whether AXIOM's authority/evidence substrate is understandable and useful to those builders without weakening the project's security or promotion boundaries.
