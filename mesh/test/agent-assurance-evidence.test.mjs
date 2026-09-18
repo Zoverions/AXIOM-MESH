@@ -233,3 +233,46 @@ test('unknown fields are rejected rather than silently ignored', () => {
     /unsupported field: capabilities/
   );
 });
+
+
+test('agent assurance normalization uses deterministic code-unit ordering', () => {
+  const value = fixture({
+    evaluator_bundle: {
+      ...fixture().evaluator_bundle,
+      evaluators: [
+        {
+          evaluator_id: 'eval:a', artifact_digest: D('e'),
+          execution_mode: 'isolated-readonly', network: 'none', authority: 'none'
+        },
+        {
+          evaluator_id: 'eval:Z', artifact_digest: D('f'),
+          execution_mode: 'isolated-readonly', network: 'none', authority: 'none'
+        }
+      ]
+    },
+    mission_graph: {
+      ...fixture().mission_graph,
+      nodes: [
+        {
+          task_id: 'task:root', parent_task_id: null,
+          actor_ref: 'agent.identity.researcher', objective_digest: D('1'), status: 'running'
+        },
+        {
+          task_id: 'task:a', parent_task_id: 'task:root',
+          actor_ref: 'agent.identity.researcher', objective_digest: D('2'), status: 'planned'
+        },
+        {
+          task_id: 'task:Z', parent_task_id: 'task:root',
+          actor_ref: 'agent.identity.researcher', objective_digest: D('3'), status: 'planned'
+        }
+      ]
+    }
+  });
+  const normalized = normalizeAgentAssuranceEvidence(value);
+  assert.deepEqual(normalized.evaluator_bundle.evaluators.map(item => item.evaluator_id), [
+    'eval:Z', 'eval:a'
+  ]);
+  assert.deepEqual(normalized.mission_graph.nodes.map(item => item.task_id), [
+    'task:Z', 'task:a', 'task:root'
+  ]);
+});
