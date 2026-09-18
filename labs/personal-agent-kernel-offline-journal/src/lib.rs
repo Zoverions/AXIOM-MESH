@@ -103,9 +103,7 @@ impl OfflineJournal {
             }
             Err(error) => return Err(JournalError::Io(error)),
         };
-        lease_file.write_all(
-            format!("pid={}\n", std::process::id()).as_bytes()
-        )?;
+        lease_file.write_all(format!("pid={}\n", std::process::id()).as_bytes())?;
         lease_file.sync_all()?;
 
         let recovered = recover_state(&path);
