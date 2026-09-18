@@ -133,12 +133,8 @@ pub fn execute_durable_offline(
 
     persist_prepared_intent(journal, &intent)?;
 
-    let committed = kernel.commit_offline_consumption(
-        ledger,
-        &intent,
-        current_surface,
-        now_unix_s,
-    )?;
+    let committed =
+        kernel.commit_offline_consumption(ledger, &intent, current_surface, now_unix_s)?;
 
     Ok(kernel.execute_committed_offline(&committed, port)?)
 }
@@ -170,8 +166,7 @@ fn encode_intent(intent: &OfflineConsumptionIntent) -> Result<Vec<u8>, DurableOf
 fn decode_intent(payload: &[u8]) -> Result<OfflineConsumptionIntent, DurableOfflineError> {
     let stored: StoredIntent =
         serde_json::from_slice(payload).map_err(|_| DurableOfflineError::InvalidPayload)?;
-    let canonical =
-        serde_json::to_vec(&stored).map_err(|_| DurableOfflineError::InvalidPayload)?;
+    let canonical = serde_json::to_vec(&stored).map_err(|_| DurableOfflineError::InvalidPayload)?;
     if canonical != payload {
         return Err(DurableOfflineError::InvalidPayload);
     }
