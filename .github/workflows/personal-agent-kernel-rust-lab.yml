@@ -22,6 +22,19 @@ permissions:
   contents: read
 
 jobs:
+  semantic-differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+      - name: Verify Node v0 policy oracle against shared corpus
+        run: node --test labs/personal-agent-kernel-rust/node/policy_oracle.test.mjs
+
   rust-personal-kernel-lab:
     strategy:
       fail-fast: false
