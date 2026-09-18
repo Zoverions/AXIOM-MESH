@@ -81,7 +81,7 @@ authority for runnable capability status. Roadmap entries, demonstrations,
 laboratories, synthetic conformance, and built-but-production-unreachable source
 do not promote a capability beyond that registry.
 
-The current registry tracks 49 capabilities, of which 31 are marked
+The current registry tracks 50 capabilities, of which 31 are marked
 `implemented`.
 
 ### Implemented production-candidate kernel surface
