@@ -640,6 +640,28 @@ pub struct OfflineEnvelopeInput {
     pub no_delegation: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfflineEnvelopeBinding {
+    pub envelope_ref: String,
+    pub parent_grant_ref: String,
+    pub owner_subject_ref: String,
+    pub target_device_ref: String,
+    pub plan_digest: String,
+    pub node_id: String,
+    pub capability_ref: String,
+    pub revocation_epoch: u64,
+    pub expires_at_unix_s: u64,
+    pub max_effects: u64,
+    pub budget_limits: Vec<BudgetRequest>,
+    pub runtime_surface: RuntimeSurface,
+}
+
+impl OfflineEnvelopeBinding {
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
 #[derive(Debug)]
 pub struct OfflineEnvelope {
     envelope_ref: String,
@@ -743,6 +765,28 @@ pub struct OfflineEnvelopeLedger {
 impl OfflineEnvelopeLedger {
     pub fn envelope_ref(&self) -> &str {
         &self.envelope.envelope_ref
+    }
+
+    pub fn binding(&self) -> OfflineEnvelopeBinding {
+        OfflineEnvelopeBinding {
+            envelope_ref: self.envelope.envelope_ref.clone(),
+            parent_grant_ref: self.envelope.parent_grant_ref.clone(),
+            owner_subject_ref: self.envelope.owner_subject_ref.clone(),
+            target_device_ref: self.envelope.target_device_ref.clone(),
+            plan_digest: self.envelope.plan_digest.clone(),
+            node_id: self.envelope.node_id.clone(),
+            capability_ref: self.envelope.capability_ref.clone(),
+            revocation_epoch: self.envelope.revocation_epoch,
+            expires_at_unix_s: self.envelope.expires_at_unix_s,
+            max_effects: self.envelope.max_effects,
+            budget_limits: self
+                .envelope
+                .budget_limits
+                .values()
+                .cloned()
+                .collect(),
+            runtime_surface: self.envelope.runtime_surface.clone(),
+        }
     }
 
     pub fn effects_consumed(&self) -> u64 {
