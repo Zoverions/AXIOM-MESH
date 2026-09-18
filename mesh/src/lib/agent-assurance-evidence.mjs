@@ -11,6 +11,7 @@ const PROVENANCE_KINDS = new Set(['source', 'tool', 'artifact', 'decision']);
 const TASK_STATUSES = new Set(['planned', 'running', 'blocked', 'completed', 'cancelled']);
 
 export function normalizeAgentAssuranceEvidence(value) {
+  assertCanonicalData(value, 'Agent assurance evidence');
   const input = record(value, 'agent assurance evidence');
   exactKeys(input, [
     'schema', 'agent', 'provenance', 'environment', 'oversight', 'evaluator_bundle', 'mission_graph'
@@ -88,6 +89,7 @@ export function sealAgentAssuranceEvidence(value, identity) {
 }
 
 export function verifySealedAgentAssuranceEvidence(recordValue, { verifySignature } = {}) {
+  assertCanonicalData(recordValue, 'Sealed agent assurance evidence');
   const envelope = record(recordValue, 'sealed agent assurance evidence');
   exactKeys(envelope, ['statement', 'attestation'], 'sealed agent assurance evidence');
   const statement = record(envelope.statement, 'agent assurance statement');
@@ -359,6 +361,14 @@ function validateAttestationShape(value) {
   digest(input.digest, 'agent assurance attestation digest');
   if (typeof input.signature !== 'string' || input.signature.length < 16 || input.signature.length > 1024) {
     throw new ValidationError('Agent assurance attestation signature is invalid');
+  }
+}
+
+function assertCanonicalData(value, name) {
+  try {
+    canonicalJson(value);
+  } catch {
+    throw new ValidationError(`${name} must use canonical JSON-compatible plain data`);
   }
 }
 
