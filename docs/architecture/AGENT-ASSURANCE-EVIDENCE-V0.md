@@ -33,15 +33,17 @@ principal, policy, consent, grant, approval, execution, and evidence path.
 
 - `agent_id` is a persistent participation/continuity reference.
 - `principal_id` identifies the current authority-bearing machine principal.
-- `authority_digest` binds the evidence to that principal's current normalized
-  authority profile.
+- `authority_digest` records the claimed normalized authority-profile digest.
+  v0 does not resolve that claim against the live principal registry.
 - `model_id` records the model implementation used for the run.
 - `run_id` identifies one execution/run instance.
 
 `agent_id`, `model_id`, and `run_id` must not collapse into one identifier. A
 stable agent identity does not cause a replacement model or run to inherit
 permissions. Likewise, an agent identity or reputation record does not mint an
-AXIOM principal or capability.
+AXIOM principal or capability. A supplied `authority_digest` is evidence data,
+not proof of a current authority binding until a later integration verifies it
+against the existing principal path.
 
 ## Declared versus observed environment
 
