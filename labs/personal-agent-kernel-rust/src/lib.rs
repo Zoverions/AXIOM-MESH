@@ -669,12 +669,6 @@ impl OfflineEnvelopeRegistry {
                 "offline envelope requires at least one bounded budget",
             ));
         }
-        if !self.imported_refs.insert(input.envelope_ref.clone()) {
-            return Err(KernelError::new(
-                "offline envelope replay detected in local registry",
-            ));
-        }
-
         let mut budget_limits = BTreeMap::<String, BudgetRequest>::new();
         for request in input.budget_limits {
             request.validate()?;
@@ -686,6 +680,12 @@ impl OfflineEnvelopeRegistry {
                     "offline envelope contains duplicate budget limits",
                 ));
             }
+        }
+
+        if !self.imported_refs.insert(input.envelope_ref.clone()) {
+            return Err(KernelError::new(
+                "offline envelope replay detected in local registry",
+            ));
         }
 
         Ok(OfflineEnvelopeLedger {
