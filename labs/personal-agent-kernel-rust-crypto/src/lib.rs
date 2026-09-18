@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
-use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use axiom_personal_agent_kernel_rust_lab::MeshProofInput;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use ed25519_dalek::{Signature, VerifyingKey};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -107,8 +107,7 @@ pub fn verify_and_build_mesh_proof_input(
 
     let value: serde_json::Value =
         serde_json::from_slice(canonical_body).map_err(|_| VerifyError::InvalidProofBody)?;
-    let canonical =
-        serde_json::to_vec(&value).map_err(|_| VerifyError::InvalidProofBody)?;
+    let canonical = serde_json::to_vec(&value).map_err(|_| VerifyError::InvalidProofBody)?;
     if canonical != canonical_body {
         return Err(VerifyError::NonCanonicalBody);
     }
