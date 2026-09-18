@@ -58,6 +58,47 @@ fn registration_and_consumption_survive_restart_without_replay() {
 }
 
 #[test]
+fn writer_lease_prevents_concurrent_local_consumers() {
+    let path = temp_path("writer-lease");
+    let first = OfflineJournal::open(&path).expect("first writer");
+    assert!(matches!(
+        OfflineJournal::open(&path),
+        Err(JournalError::WriterLeaseUnavailable)
+    ));
+
+    drop(first);
+    let reopened = OfflineJournal::open(&path).expect("lease released after clean drop");
+    drop(reopened);
+    std::fs::remove_file(path).ok();
+}
+
+#[test]
+fn stale_crash_lease_blocks_automatic_reopen_until_explicit_recovery() {
+    let path = temp_path("stale-lease");
+    {
+        let journal = OfflineJournal::open(&path).expect("initial writer");
+        let lease_path = {
+            let mut value = journal.path().as_os_str().to_os_string();
+            value.push(".writer-lock");
+            PathBuf::from(value)
+        };
+        drop(journal);
+
+        write(&lease_path, b"pid=999999\n").expect("simulate uncleared crash lease");
+        assert!(matches!(
+            OfflineJournal::open(&path),
+            Err(JournalError::WriterLeaseUnavailable)
+        ));
+
+        std::fs::remove_file(&lease_path).expect("explicit recovery clears stale lease");
+    }
+
+    let reopened = OfflineJournal::open(&path).expect("reopen only after explicit recovery");
+    drop(reopened);
+    std::fs::remove_file(path).ok();
+}
+
+#[test]
 fn torn_trailing_record_fails_closed_on_reopen() {
     let path = temp_path("torn");
     {
