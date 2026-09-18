@@ -2416,6 +2416,31 @@ function validateCharteredAuthorityToken(token, requirement, charterContext, now
   }
 }
 
+function validateEffectEnvelope(authority, operation, charterContext) {
+  if (!operation || operation.effect === undefined) return;
+  if (!authority?.charter_digest) return;
+  if (!charterContext) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_CHARTER_REQUIRED',
+      'chartered measured effect requires the signed charter'
+    );
+  }
+  if (authority.charter_digest !== charterContext.digest) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_CHARTER_SIGNATURE',
+      'measured effect authority charter digest mismatch'
+    );
+  }
+  const requester = authority.requester;
+  const allowed = charterContext.body.effect_envelopes?.[requester] ?? [];
+  if (!allowed.includes(operation.effect)) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_EFFECT_ENVELOPE',
+      'measured effect ' + operation.effect + ' is outside the requester effect envelope'
+    );
+  }
+}
+
 function validateAuthorityToken(token, requirement, {
   nowMs,
   revokedAuthorityIds,
@@ -2563,7 +2588,8 @@ function validateRuntimeIr(ir) {
     'AUTHORIZE',
     'PREPARE',
     'CANCEL',
-    'COMMIT'
+    'COMMIT',
+    'FINALIZE'
   ]);
   for (const instruction of ir.instructions) {
     if (!instruction || typeof instruction !== 'object' || !allowed.has(instruction.op)) {
@@ -2736,6 +2762,7 @@ export async function run(source, {
   observations = {},
   charter = null,
   trustedCharterKeys = [],
+  hostOperations = null,
   preparer = null,
   executor = null,
   completer = null,
@@ -2760,6 +2787,7 @@ export async function run(source, {
   const charterContext = charter
     ? verifySyntheticCharter(charter, trustedCharterKeys)
     : null;
+  const hostOperationRegistry = normalizeHostOperationRegistry(hostOperations);
   if (
     charterContext
     && (charterContext.body.program_digests?.length ?? 0) > 0
