@@ -131,6 +131,12 @@ function validateChoice(document) {
   ) {
     throw new ValidationError('required other_option_policy requires an explicit other or none fallback option');
   }
+  if (
+    document.other_option_policy === 'forbidden'
+    && (ids.has('other') || ids.has('none'))
+  ) {
+    throw new ValidationError('forbidden other_option_policy cannot include an explicit other or none fallback option');
+  }
 }
 
 function validateScore(document) {
