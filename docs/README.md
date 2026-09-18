@@ -71,6 +71,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How are future path observations attributed without becoming routing authority? | [`rebuild/PATH-OBSERVATION-EVIDENCE.md`](rebuild/PATH-OBSERVATION-EVIDENCE.md) | External signer roles, exact portfolio binding, freshness, source provenance, replay bounds, attribution-vs-truth semantics | Claims of live telemetry, regulatory truth, route authority, or production path selection |
 | How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
 | How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
+| How are passwords, tokens, keys, and recovery secrets contained without handing them to agents? | [`architecture/SECRET-CONTAINMENT-AND-BROKERAGE.md`](architecture/SECRET-CONTAINMENT-AND-BROKERAGE.md) | AXIOM-native/external/hardware custody, opaque secret references, one-use destination-bound use grants, no-reveal/no-export semantics, digest-only receipts | Claims of an implemented broker, provider integration, secret-reveal route, hardware protection, or production activation |
 | How does the private companion remain portable across models/providers? | [`architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md`](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md) | Pack v2 vault manifests, companion components, optional personalized model artifacts, adaptation authorization, selective recovery and migration | Claims of implemented Pack v2 import/export, training, model unlearning, or identity equivalence |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
 
@@ -85,8 +86,8 @@ Path Observation Evidence** while keeping both layers as future laboratories,
 not current capability claims. For runtime/connector work, continue from the
 agent-interoperability materials into **Runtime & Connector Fabric -> Runtime &
 Connector Fabric queue -> candidate survey/pin**. Use **Personal Compute Fabric
--> Sovereign Vaults -> Vault Lease and Context Request -> Personal Agent Pack
-v2** for private-companion, compartmentalized-memory, selective-disclosure, or
+-> Sovereign Vaults -> Vault Lease and Context Request -> Secret Containment and Credential Brokerage -> Personal Agent Pack
+v2** for private-companion, compartmentalized-memory, selective-disclosure, secret-custody, or
 continuity design. Use **Continuous Threat Intelligence Stage 5B -> A/B plan ->
 threat model -> gated master TODO** for adaptive defensive-learning work. For
 agent-native research work, use **Research Capsule v0 design -> implementation
