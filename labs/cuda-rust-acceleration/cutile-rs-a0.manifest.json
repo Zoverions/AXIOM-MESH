@@ -1,0 +1,87 @@
+{
+  "schema": "axiom-cuda-rust-acceleration-candidate.v0",
+  "version": 0,
+  "candidate_id": "cuda-rust.cutile-rs.a0",
+  "status": "laboratory-only",
+  "issue": 1637,
+  "parent_programmes": [
+    1468,
+    1607
+  ],
+  "upstream": {
+    "repository": "https://github.com/NVlabs/cutile-rs",
+    "revision": "d92c160949f58328ba6e96d81005e7110ba6f2b3",
+    "license": "Apache-2.0",
+    "project_status": "early-stage-active-development"
+  },
+  "toolchain_constraints": {
+    "rust": {
+      "channel": "stable",
+      "minimum_version": "1.89.0"
+    },
+    "os": {
+      "tested_distribution": "Ubuntu 24.04"
+    },
+    "cuda": {
+      "recommended_toolkit": "13.3",
+      "minimum_compute_capability": "sm_80",
+      "minimum_toolkit_by_family": {
+        "sm_8x": "13.2",
+        "sm_90": "13.3",
+        "sm_100_plus": "13.2"
+      }
+    }
+  },
+  "workload_binding": {
+    "schema": "axiom-inference-workload-profile.v0",
+    "profile_id": "inference.w0.interactive-agent",
+    "profile_version": "0.1.0",
+    "profile_digest": "d59572bf8946c544b0ebec1f08eacbcf7648dc3b99b137c8ae00409fe47769d6",
+    "fixture_digest": "b635558a25f985cf0850fa199b751b0aef5172f5bf2b925709b8f105502fdd7b"
+  },
+  "reference_fixture": "labs/cuda-rust-acceleration/vector-add-a0.reference.json",
+  "execution": {
+    "hardware_execution_status": "NOT_RUN",
+    "reason_code": "no-suitable-nvidia-gpu-ci-runner-configured",
+    "benchmark_evidence": null,
+    "performance_claims": []
+  },
+  "supply_chain_review": {
+    "dependency_closure": "pending",
+    "license_review": "source-license-observed",
+    "vendor_runtime_boundary_review": "pending",
+    "vendored_source": false,
+    "production_dependency": false
+  },
+  "deferred_candidate": {
+    "candidate_id": "cuda-rust.cuda-oxide.a1",
+    "repository": "https://github.com/NVlabs/cuda-oxide",
+    "revision": "b631e5d7a13b9d1524f4b56a355a32376e4075ac",
+    "license": "Apache-2.0",
+    "reason": "profiling-has-not-yet-justified-lower-level-simt-control",
+    "rust_toolchain": "nightly-2026-08-28",
+    "minimum_cuda_toolkit": "13.0",
+    "minimum_driver_family": "R580",
+    "minimum_llvm_major": 21,
+    "minimum_clang_major": 21,
+    "tested_distribution": "Ubuntu 24.04"
+  },
+  "boundaries": {
+    "authority_effect": "none",
+    "network_effect": "none",
+    "credential_visibility": "none",
+    "runtime_activation": false,
+    "capability_promotion": false,
+    "grid_mutation": false,
+    "gateway_route_added": false
+  },
+  "non_claims": [
+    "gpu-execution",
+    "benchmark-result",
+    "performance-improvement",
+    "quality-equivalence",
+    "production-readiness",
+    "production-dependency",
+    "authority-from-gpu-output"
+  ]
+}
