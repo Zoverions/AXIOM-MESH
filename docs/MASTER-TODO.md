@@ -163,6 +163,9 @@ production activation decision.
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | STUDIO-001 | Pending | AXIOM Studio | Manifest/schema/SBOM/permission/threat/fixtures/compatibility/conformance/signing/revocation/rollback generation |
+| SCRIPT-001 | Specified | Cross-surface scriptability conformance | GUI/CLI/API/hook/macro/plugin/capsule/runtime paths map equivalent governed effects to exact AXIOM actions and shared authority evaluation; install/discovery/subscription remain inert; client-bypass negatives; receipts identify the requesting surface without changing authority outcome |
+| SCRIPT-002 | Pending | Versioned event/hook substrate | Authenticated bounded subscriptions, versioned schemas, replay/backpressure/cancellation controls, observation-only default, callback effects re-enter intent/grant evaluation, no ambient credential/network/filesystem authority |
+| SCRIPT-003 | Pending | Bounded macro/workflow runner | Immutable workflow manifest; explicit principal/actions/purposes/data/destinations/budgets/lifetime; per-effect authorization/evidence; revocation/cancellation/idempotency; no wildcard or self-expanding authority |
 | ADAPTER-001 | Pending | One bounded messaging adapter | Account scope, recipient confirmation, impersonation/abuse controls, retention/deletion, retries/cancel/receipts/uninstall |
 | ADAPTER-002 | Specified | ActivityPub/email/webhook publishing bridges | Separate identities, exact destinations, previews/moderation/deletion limits/inbound trust/rate controls |
 | ID-001 | Specified | Named VC/selective-disclosure profile | Schemas, issuer/verifier trust, revocation, holder consent, correlation analysis, vectors, review |

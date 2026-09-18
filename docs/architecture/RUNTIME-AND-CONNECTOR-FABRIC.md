@@ -44,6 +44,93 @@ The product stack is separated into six responsibilities:
 
 The Runtime & Connector Fabric is therefore an orchestration plane, not an authorization plane.
 
+## Scriptability without inherited authority
+
+AXIOM should deliberately make useful capabilities available through multiple
+interaction surfaces:
+
+- AXIOM One and other human interfaces;
+- the existing CLI;
+- versioned APIs and SDKs;
+- bounded event and hook subscriptions;
+- declarative macros and workflows;
+- Capsules/plugins;
+- agent, MCP, A2A, and runtime adapters.
+
+These are interchangeable **interaction planes**, not separate trust domains.
+The same governed effect must resolve to the same canonical AXIOM action
+regardless of which surface requested it. A client may add usability checks or
+ask for additional confirmation, but it may not remove a denial, mint a grant,
+change the destination, widen a budget, suppress consent, or bypass the normal
+Gateway → Hypervisor → Sandbox → Grid path.
+
+A scriptable request therefore needs the same authority-relevant information as
+an interactive request where applicable: authenticated principal, exact action,
+purpose, data scope, destination, provider/tool mapping, budgets, lifetime,
+idempotency/cancellation semantics, and evidence obligations.
+
+### Hooks and events are observations
+
+Subscribing to an event is not permission to react with an effect. Event
+delivery should be bounded, schema-versioned, replay-aware, cancellable, and
+free of ambient credential or host authority. A callback that wants to publish,
+write, spend, disclose, message, mutate, or otherwise create a governed effect
+must re-enter the ordinary intent/grant path or present an existing still-valid
+grant that explicitly covers that effect. Execution-time policy and revocation
+checks still apply.
+
+This prevents a common automation failure mode:
+
+```text
+read permission
+  -> event subscription
+  -> callback
+  -> accidental write authority
+```
+
+AXIOM instead requires:
+
+```text
+read permission
+  -> bounded event observation
+  -> callback proposes exact effect
+  -> ordinary AXIOM authorization
+  -> bounded execution
+  -> receipt
+```
+
+### Macros and workflows are bounded compositions
+
+A macro or workflow may compose several already-described operations, but the
+composition does not create a wildcard capability. A workflow definition must
+be immutable/versioned for an execution, bind a finite principal/action/purpose/
+data/destination/resource/time envelope, and preserve per-effect evidence.
+Revocation or cancellation must stop future governed effects even if earlier
+steps completed successfully.
+
+### Cross-surface conformance
+
+For an equivalent effect, AXIOM should test at least one interactive path and
+the relevant machine surfaces against the same fixtures. The expected property
+is not byte-identical client output; it is authority equivalence:
+
+- the same action mapping;
+- the same policy/consent/approval obligations;
+- the same destination and budget ceilings;
+- the same revocation behavior;
+- the same fail-closed dependency behavior; and
+- independently inspectable receipts that identify the requesting surface
+  without changing the authority result.
+
+Security-critical checks therefore belong behind the client boundary. A GUI
+button, CLI guard, SDK helper, plugin host, or workflow runner may improve
+safety and usability, but none may be the only place that enforces an AXIOM
+authority invariant.
+
+This gives the platform a deliberate extensibility rule:
+
+> **Everything useful may become composable; nothing becomes authoritative merely because it is composable.**
+
 ## What AXIOM orchestrates
 
 AXIOM should understand the **coordination graph** even when it does not understand or control each runtime's internal reasoning.

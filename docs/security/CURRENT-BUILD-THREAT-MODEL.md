@@ -259,6 +259,11 @@ The model considers:
   exhaustion across identities;
 - a malicious or compromised capsule, node, provider process, telemetry
   receiver, or causal-exchange peer;
+- a malicious or compromised script, macro, hook subscriber, CLI/API client,
+  plugin, capsule host, or workflow engine attempting to turn discovery,
+  installation, subscription, read access, event delivery, or client-local
+  state into inherited write/effect authority, bypass a denial through another
+  surface, replay a trigger, or widen a bounded grant through composition;
 - a malicious or compromised remote-social exporter Grid, pinned transport
   source, or future host-side social relay attempting provenance substitution,
   replay, amplification, social-engineering, or confused-deputy escalation;
@@ -479,8 +484,12 @@ Independent review should treat these as invariants, not best-effort goals:
     reverified before review intake; lesser accepted risk needs a named owner,
     separate approval, containment, and a bounded unexpired exception.
 13. Discovery, listing, installation, connection, protocol advertisement, schema
-    presence, or method presence never creates execution authority; every effect
-    still requires normal intent evaluation.
+    presence, method presence, event subscription, hook registration, macro or
+    workflow registration, plugin loading, or access through a CLI/API never
+    creates execution authority. Equivalent governed effects across human and
+    machine surfaces must map to the same canonical AXIOM action and shared
+    authority evaluation; event observation alone never authorizes a callback
+    effect.
 14. Local Grid chain/checkpoint verification is not deletion evidence. Any claim
     of truncation detection requires a signed continuity anchor retained outside
     `AXIOM_DATA_DIR`, verified against the exact source/build context with full

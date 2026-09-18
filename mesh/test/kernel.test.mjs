@@ -91,16 +91,22 @@ test('governing claim documents are bound to the registry schema, version, and d
 });
 
 test('CLI validates input and preserves structured Gateway failure semantics', async () => {
+  const requests = [];
   const options = {
     config: meshConfig({ dataDir: '/unused', gatewayPort: 23456 }),
     env: { AXIOM_API_TOKEN: 'test-token' },
-    fetchImpl: async () => ({
-      ok: false,
-      status: 403,
-      async json() {
-        return { error: { code: 'policy_denied', message: 'Denied by policy' } };
-      }
-    })
+    now: () => 1_700_000_000_000,
+    randomUuid: () => '00000000-0000-4000-8000-000000000000',
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      return {
+        ok: false,
+        status: 403,
+        async json() {
+          return { error: { code: 'policy_denied', message: 'Denied by policy' } };
+        }
+      };
+    }
   };
   await assert.rejects(
     () => runCli(['intent', 'system.echo', '[]'], options),
@@ -114,7 +120,14 @@ test('CLI validates input and preserves structured Gateway failure semantics', a
     () => runCli(['intent', 'system.echo', '{}'], options),
     error => error.code === 'policy_denied' && error.status === 403
   );
+  assert.equal(requests.length, 1, 'denied CLI intent must issue exactly one Gateway request');
+  assert.equal(new URL(requests[0].url).pathname, '/v1/intents');
+  assert.equal(requests[0].init.method, 'POST');
+  assert.equal(requests[0].init.headers.authorization, 'Bearer test-token');
+  assert.equal(requests[0].init.headers['idempotency-key'], 'cli-1700000000000-00000000-0000-4000-8000-000000000000');
+  assert.deepEqual(JSON.parse(requests[0].init.body), { action: 'system.echo', input: {} });
   await assert.rejects(() => runCli(['unknown'], options), /Unknown command/);
+  assert.equal(requests.length, 1, 'unknown CLI command must not issue another Gateway request');
 });
 
 test('IAM-04 deterministic property cases never weaken higher policy authority', () => {
