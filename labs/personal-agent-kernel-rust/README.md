@@ -31,6 +31,19 @@ The Rust kernel models one complete bounded lifecycle:
 
 The source forbids unsafe Rust and has no third-party dependencies.
 
+## Current evidence
+
+The lab now includes:
+
+- a shared Node/Rust policy-conformance corpus with exact blocker matching;
+- a strict component-host assessment that denies ambient WASI capabilities by default;
+- an inert exact Mesh-adapter request contract;
+- Mesh-witnessed receipts and single-spend handoff proposals;
+- pre-issued offline envelopes with monotonic local consumption and reconciliation;
+- attestation-aware placement filtering that never grants effect authority.
+
+Offline-envelope replay protection is process-local in this stage. Crash-safe or cross-device single-spend remains a named production-promotion gate.
+
 ## Run
 
 ```bash
