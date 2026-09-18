@@ -171,6 +171,45 @@ the IR's self-digest: self-sealing detects accidental mutation, while the
 charter pin says which reviewed program the operator actually approved.
 Runtime invariant re-checks remain mandatory even for pinned IR.
 
+### P0.3 deterministic policy premises
+
+P0.2 proves where authority-grade evidence came from. P0.3 additionally proves
+that the evidence satisfies the rule for the **same exact operation**.
+
+A signed charter policy may contain a conjunction of deterministic `require`
+predicates. Granting operands are restricted to:
+
+- a runtime-branded `Verified` evidence value from a verifier already declared
+  in the policy's `requires_evidence`;
+- fields of an exact canonical Praxis operation descriptor;
+- canonical constants.
+
+The initial comparison set is `eq`, `neq`, `lt`, `lte`, `gt`, and `gte`.
+Missing paths, ambiguous duplicate evidence, mixed-type ordered comparisons,
+malformed predicates, or any false predicate deny issuance.
+
+For example, a host-side signed policy definition can require both:
+
+```text
+BuildVerified.status == "green"
+BuildVerified.artifact == op.args[0]
+```
+
+The normalized predicate AST is itself covered by the charter-pinned policy
+digest. A governed program therefore cannot remove the artifact match, swap a
+verifier, or replace a verified premise with an Assessment without invalidating
+the signed policy.
+
+Authority-grade observation values are canonical immutable snapshots. Mutating
+the caller's original object after signing cannot change the evidence, and
+verified nested values are frozen. If a premise reads operation fields, the
+issuer requires an exact `createOperationDescriptorPraxis(...)` subject and
+recomputes its digest before evaluation; a digest string alone is insufficient.
+
+Successful authority records only the digests of predicates that evaluated
+`true`. Prepared replay preserves and re-validates those predicate digests
+against the currently pinned policy. Model/advisor output remains veto-only.
+
 Secrets are represented separately from values:
 
 ```prax
@@ -397,6 +436,7 @@ node --test mesh/test/praxis-language-v0.test.mjs
 node --test mesh/test/praxis-conformance-v0.test.mjs
 node --test mesh/test/praxis-adversarial-ir-v0.test.mjs
 node --test mesh/test/praxis-charter-evidence-v0.test.mjs
+node --test mesh/test/praxis-policy-premises-v0.test.mjs
 ```
 
 The semantic corpus is stored at
