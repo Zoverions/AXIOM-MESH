@@ -434,13 +434,6 @@ function validateInputShape(input) {
       if (handoff.request.runtime_operation !== step.operation_id) {
         throw new ValidationError(`binding ${binding.step_id} handoff operation does not match flow step`);
       }
-      if (!workers.some(worker =>
-        workerSupportsStep(worker, step, binding, handoffById)
-      )) {
-        throw new ValidationError(
-          `binding ${binding.step_id} handoff target has no compatible worker runtime`
-        );
-      }
     }
   }
 
