@@ -1,0 +1,13 @@
+[package]
+name = "axiom-personal-kernel-wasmtime-host-lab"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+wasmtime = { version = "=48.0.2", default-features = false, features = ["anyhow", "component-model", "cranelift", "runtime", "std", "wat"] }

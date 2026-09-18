@@ -1,0 +1,11 @@
+case_id	kernel_autonomy	requested_autonomy	effect_requested	quarantined	include_actions	action_amount	include_cad	cad_amount	cad_currency	extra_budget	expired	expected_status	expected_blockers
+allow_prepare	prepare	prepare	0	0	1	1	1	2500	CAD	0	0	allow	-
+allow_effect	request-effect	request-effect	1	0	1	1	1	2500	CAD	0	0	allow	-
+deny_autonomy	prepare	request-effect	1	0	1	1	1	2500	CAD	0	0	deny	requested-autonomy-exceeds-earned-ceiling
+deny_effect_level	request-effect	prepare	1	0	1	1	1	2500	CAD	0	0	deny	effect-request-requires-request-effect-level
+deny_quarantine	prepare	prepare	0	1	1	1	1	2500	CAD	0	0	deny	quarantined-memory-cannot-support-proposal
+deny_missing_cad	prepare	prepare	0	0	1	1	0	0	CAD	0	0	deny	missing-applicable-budget:budget:purchase-cad
+deny_unbound	prepare	prepare	0	0	1	1	1	2500	CAD	1	0	deny	unbound-budget-request:budget:extra
+deny_expired	prepare	prepare	0	0	1	1	1	2500	CAD	0	1	deny	budget-not-current:budget:purchase-actions,budget-not-current:budget:purchase-cad
+deny_currency	prepare	prepare	0	0	1	1	1	2500	USD	0	0	deny	budget-currency-mismatch:budget:purchase-cad
+deny_exceeded	prepare	prepare	0	0	1	1	1	16000	CAD	0	0	deny	budget-exceeded:budget:purchase-cad

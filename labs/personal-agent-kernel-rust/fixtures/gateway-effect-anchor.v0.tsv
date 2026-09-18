@@ -1,0 +1,2 @@
+route_id	method	path	request_schema	idempotency	direct_internal_service_access
+intents.submit	POST	/v1/intents	axiom-intent-request.v1	required	false

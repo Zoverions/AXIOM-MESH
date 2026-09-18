@@ -1,0 +1,67 @@
+package axiom:personal-kernel@0.1.0;
+
+interface contracts {
+  record budget-request {
+    budget-id: string,
+    amount: u64,
+    currency: option<string>,
+  }
+
+  record authority-request {
+    owner-subject-ref: string,
+    plan-digest: string,
+    node-id: string,
+    capability-ref: string,
+    revocation-epoch: u64,
+    budget-requests: list<budget-request>,
+  }
+
+  record mesh-proof {
+    grant-ref: string,
+    owner-subject-ref: string,
+    plan-digest: string,
+    node-id: string,
+    capability-ref: string,
+    revocation-epoch: u64,
+    expires-at-unix-s: u64,
+    max-delegation-hops: u8,
+  }
+
+  record effect-receipt {
+    receipt-ref: string,
+    grant-ref: string,
+    plan-digest: string,
+    node-id: string,
+    capability-ref: string,
+    effect-digest: string,
+    success: bool,
+  }
+
+  record receipt-witness {
+    witness-node-ref: string,
+    receipt-ref: string,
+    effect-digest: string,
+    witnessed-at-unix-s: u64,
+  }
+}
+
+interface mesh-authority {
+  use contracts.{authority-request, mesh-proof};
+  verify: async func(request: authority-request) -> result<mesh-proof, string>;
+}
+
+interface effect-host {
+  use contracts.{mesh-proof, effect-receipt};
+  execute: async func(proof: mesh-proof) -> result<effect-receipt, string>;
+}
+
+interface mesh-observer {
+  use contracts.{effect-receipt, receipt-witness};
+  witness: async func(receipt: effect-receipt) -> result<receipt-witness, string>;
+}
+
+world personal-kernel-runtime {
+  import mesh-authority;
+  import effect-host;
+  import mesh-observer;
+}

@@ -1,0 +1,16 @@
+[package]
+name = "axiom-personal-kernel-durable-offline-adapter-lab"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+axiom-personal-agent-kernel-rust-lab = { path = "../personal-agent-kernel-rust" }
+axiom-personal-kernel-offline-journal-lab = { path = "../personal-agent-kernel-offline-journal" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"

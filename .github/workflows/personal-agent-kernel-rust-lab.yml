@@ -1,0 +1,173 @@
+name: Personal Agent Kernel Rust Laboratory
+
+on:
+  push:
+    branches:
+      - "feat/personal-agent-kernel-rust-vnext-*"
+    paths:
+      - "labs/personal-agent-kernel-rust/**"
+      - "labs/personal-agent-kernel-rust-crypto/**"
+      - "labs/personal-agent-kernel-wasmtime-host/**"
+      - "labs/personal-agent-kernel-offline-journal/**"
+      - "labs/personal-agent-kernel-durable-offline-adapter/**"
+      - ".github/workflows/personal-agent-kernel-rust-lab.yml"
+      - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
+  pull_request:
+    branches:
+      - "main"
+      - "feat/personal-agent-kernel-v0-20260918"
+    paths:
+      - "labs/personal-agent-kernel-rust/**"
+      - "labs/personal-agent-kernel-rust-crypto/**"
+      - "labs/personal-agent-kernel-wasmtime-host/**"
+      - "labs/personal-agent-kernel-offline-journal/**"
+      - "labs/personal-agent-kernel-durable-offline-adapter/**"
+      - ".github/workflows/personal-agent-kernel-rust-lab.yml"
+      - "docs/superpowers/specs/2026-09-18-personal-agent-kernel-rust-vnext-design.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personal-agent-kernel-rust-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  semantic-differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+      - name: Verify Node v0 and Gateway anchors against shared corpora
+        run: node --test labs/personal-agent-kernel-rust/node/*.test.mjs
+
+  rust-personal-kernel-lab:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify toolchain
+        working-directory: labs/personal-agent-kernel-rust
+        run: |
+          rustc +1.98.1 --version
+          cargo +1.98.1 --version
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Verify end-to-end kernel tests
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-rust/Cargo.toml --locked
+
+  rust-crypto-adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-rust-crypto/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-rust-crypto/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Verify cryptographic vectors
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-rust-crypto/Cargo.toml --locked
+
+  wasmtime-component-host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Verify real Component Model host denial
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --locked
+
+  offline-single-spend-journal:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-offline-journal/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-offline-journal/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Verify restart-safe offline journal
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-offline-journal/Cargo.toml --locked
+
+  durable-offline-adapter:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Verify formatting
+        run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-durable-offline-adapter/Cargo.toml --all -- --check
+      - name: Verify Clippy
+        run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-durable-offline-adapter/Cargo.toml --all-targets -- -D warnings
+      - name: Verify durable offline end-to-end adapter
+        run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-durable-offline-adapter/Cargo.toml
+      - name: Emit dependency lockfile for review
+        if: matrix.os == 'ubuntu-24.04'
+        shell: bash
+        run: cat labs/personal-agent-kernel-durable-offline-adapter/Cargo.lock
+
+  production-boundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Prove Personal Kernel laboratories are not imported by supported runtime
+        shell: bash
+        run: |
+          if git grep -n -E "labs/personal-agent-kernel-(rust|rust-crypto|wasmtime-host|offline-journal|durable-offline-adapter)|personal-agent-kernel-(rust-crypto|wasmtime-host|offline-journal|durable-offline-adapter)" -- mesh/src mesh/config packages/axiom-client; then
+            echo "Personal Kernel laboratories must remain unreachable from supported runtime"
+            exit 1
+          fi

@@ -1,0 +1,11 @@
+case_id	status	blockers
+allow_prepare	allow	-
+allow_effect	allow	-
+deny_autonomy	deny	requested-autonomy-exceeds-earned-ceiling
+deny_effect_level	deny	effect-request-requires-request-effect-level
+deny_quarantine	deny	quarantined-memory-cannot-support-proposal
+deny_missing_cad	deny	missing-applicable-budget:budget:purchase-cad
+deny_unbound	deny	unbound-budget-request:budget:extra
+deny_expired	deny	budget-not-current:budget:purchase-actions,budget-not-current:budget:purchase-cad
+deny_currency	deny	budget-currency-mismatch:budget:purchase-cad
+deny_exceeded	deny	budget-exceeded:budget:purchase-cad
