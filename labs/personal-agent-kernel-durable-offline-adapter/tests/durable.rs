@@ -50,7 +50,7 @@ fn envelope() -> OfflineEnvelopeInput {
         max_effects: 3,
         budget_limits: vec![BudgetRequest {
             budget_id: "budget:offline-actions".into(),
-            amount: 3,
+            amount: 2,
             currency: None,
         }],
         runtime_surface: surface(),
@@ -164,6 +164,24 @@ fn durable_offline_state_rehydrates_effect_and_budget_consumption_after_restart(
         assert_eq!(ledger.effects_consumed(), 2);
         assert_eq!(journal.consumed_sequence(ledger.envelope_ref()), Some(2));
         assert_eq!(port.calls, 1);
+        assert_eq!(ledger.remaining_effects(), 1);
+
+        assert!(
+            execute_durable_offline(
+                &kernel,
+                &mut ledger,
+                &mut journal,
+                "device:phone-1",
+                &surface(),
+                NOW + 2,
+                &request(),
+                &mut port,
+            )
+            .is_err(),
+            "rehydrated budget consumption must block a third effect"
+        );
+        assert_eq!(port.calls, 1);
+        assert_eq!(journal.consumed_sequence(ledger.envelope_ref()), Some(2));
     }
 
     std::fs::remove_file(path).ok();
@@ -219,6 +237,41 @@ fn crash_after_durable_reservation_but_before_effect_does_not_reuse_sequence() {
         .expect("next effect must advance rather than reuse sequence 1");
         assert_eq!(next.sequence, 2);
         assert_eq!(port.calls, 1);
+    }
+
+    std::fs::remove_file(path).ok();
+}
+
+#[test]
+fn journal_registration_refuses_same_reference_with_different_envelope_binding() {
+    let path = temp_path("binding-mismatch");
+    let kernel = kernel();
+
+    {
+        let mut registry = OfflineEnvelopeRegistry::new();
+        let mut ledger = registry
+            .import_from_trusted_mesh_adapter(envelope())
+            .expect("import envelope");
+        let mut journal = OfflineJournal::open(&path).expect("open journal");
+        recover_or_register(&kernel, &mut ledger, &mut journal)
+            .expect("register original envelope binding");
+    }
+
+    {
+        let mut changed = envelope();
+        changed.max_effects = 2;
+
+        let mut registry = OfflineEnvelopeRegistry::new();
+        let mut ledger = registry
+            .import_from_trusted_mesh_adapter(changed)
+            .expect("shape-valid changed envelope");
+        let mut journal = OfflineJournal::open(&path).expect("reopen journal");
+
+        assert!(matches!(
+            recover_or_register(&kernel, &mut ledger, &mut journal),
+            Err(DurableOfflineError::EnvelopeBindingMismatch)
+        ));
+        assert_eq!(ledger.effects_consumed(), 0);
     }
 
     std::fs::remove_file(path).ok();
