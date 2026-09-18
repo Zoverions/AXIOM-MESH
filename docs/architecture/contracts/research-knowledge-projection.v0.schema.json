@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/research-knowledge-projection.v0.schema.json",
+  "title": "AXIOM Research Knowledge Projection v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "projection_id", "source_manifest_digest", "entries", "projection_digest"],
+  "properties": {
+    "schema": { "const": "axiom-research-knowledge-projection.v0" },
+    "projection_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "source_manifest_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "projection_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_id",
+        "entry_kind",
+        "source_ref",
+        "content_digest",
+        "summary",
+        "confidence_state",
+        "instruction_authority"
+      ],
+      "properties": {
+        "entry_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+        "entry_kind": {
+          "enum": ["source_statement", "extracted_structure", "model_inference", "unresolved_ambiguity"]
+        },
+        "source_ref": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "content_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "confidence_state": { "enum": ["source_bound", "extracted", "inferred", "unresolved"] },
+        "instruction_authority": { "const": "none" }
+      }
+    }
+  }
+}
