@@ -2140,6 +2140,20 @@ function validateCharteredAuthorityToken(token, requirement, charterContext, now
       throw new PraxisRuntimeError('PRAXIS_EVIDENCE_STALE', 'authority evidence is stale');
     }
   }
+  const expectedPremises = policy.require ?? [];
+  const actualPremises = token.premises ?? [];
+  if (
+    expectedPremises.length !== actualPremises.length
+    || expectedPremises.some((predicate, index) =>
+      actualPremises[index]?.result !== true
+      || actualPremises[index]?.predicate_digest !== signatureBodyDigest(predicate)
+    )
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_REQUIRE',
+      'chartered authority does not preserve its pinned premise results'
+    );
+  }
   if (policy.advisor) {
     if (!token.advice || token.advice.advisor !== policy.advisor || token.advice.deny !== false) {
       throw new PraxisRuntimeError(
