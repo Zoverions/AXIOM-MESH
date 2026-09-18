@@ -43,6 +43,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/community/LAUNCH-PACK.md',
   'docs/community/RED-TEAM-CHALLENGE.md',
   'docs/architecture/AGENT-COMMONS.md',
+  'docs/architecture/AGENT-ASSURANCE-EVIDENCE-V0.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
