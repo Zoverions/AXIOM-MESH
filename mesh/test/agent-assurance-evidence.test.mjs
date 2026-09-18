@@ -276,3 +276,23 @@ test('agent assurance normalization uses deterministic code-unit ordering', () =
     'task:Z', 'task:a', 'task:root'
   ]);
 });
+
+
+test('agent assurance rejects hidden non-canonical input state', () => {
+  const hidden = fixture();
+  Object.defineProperty(hidden.agent, 'capabilities', {
+    value: ['*'],
+    enumerable: false
+  });
+  assert.throws(
+    () => normalizeAgentAssuranceEvidence(hidden),
+    /canonical JSON-compatible plain data/
+  );
+
+  const symbolic = fixture();
+  symbolic.agent[Symbol('authority')] = 'grant';
+  assert.throws(
+    () => normalizeAgentAssuranceEvidence(symbolic),
+    /canonical JSON-compatible plain data/
+  );
+});
