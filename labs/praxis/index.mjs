@@ -2008,6 +2008,9 @@ export async function run(source, {
   authorities = {},
   secrets = {},
   prepared = {},
+  observations = {},
+  charter = null,
+  trustedCharterKeys = [],
   preparer = null,
   executor = null,
   completer = null,
@@ -2029,6 +2032,9 @@ export async function run(source, {
   const preparedRefs = new Map();
   const terminalPreparedValues = new WeakSet();
   const revoked = normalizeRevocations(revokedAuthorityIds);
+  const charterContext = charter
+    ? verifySyntheticCharter(charter, trustedCharterKeys)
+    : null;
 
   const bindValue = (name, value) => {
     if (typeof name !== 'string' || name.length === 0) {
@@ -2047,7 +2053,8 @@ export async function run(source, {
     const token = authorities[requirement.name];
     validateAuthorityToken(token, requirement, {
       nowMs: runtimeTime(now),
-      revokedAuthorityIds: revoked
+      revokedAuthorityIds: revoked,
+      charterContext
     });
     authorityTokens.set(requirement.name, token);
     bindValue(requirement.name, {
