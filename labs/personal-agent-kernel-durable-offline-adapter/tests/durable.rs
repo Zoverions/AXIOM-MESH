@@ -183,13 +183,7 @@ fn crash_after_durable_reservation_but_before_effect_does_not_reuse_sequence() {
         recover_or_register(&kernel, &mut ledger, &mut journal).expect("register");
 
         let intent = kernel
-            .prepare_offline_consumption(
-                &ledger,
-                "device:phone-1",
-                &surface(),
-                NOW,
-                &request(),
-            )
+            .prepare_offline_consumption(&ledger, "device:phone-1", &surface(), NOW, &request())
             .expect("prepare first intent");
         assert_eq!(intent.sequence, 1);
         assert!(!intent.grants_authority());
@@ -255,8 +249,7 @@ fn journal_payload_without_valid_core_intent_never_becomes_authority() {
         let mut journal = OfflineJournal::open(&path).expect("reopen journal");
         assert!(matches!(
             recover_or_register(&kernel, &mut ledger, &mut journal),
-            Err(DurableOfflineError::InvalidPayload)
-                | Err(DurableOfflineError::SchemaMismatch)
+            Err(DurableOfflineError::InvalidPayload) | Err(DurableOfflineError::SchemaMismatch)
         ));
         assert_eq!(ledger.effects_consumed(), 0);
     }
