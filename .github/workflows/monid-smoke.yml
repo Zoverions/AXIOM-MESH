@@ -1,0 +1,63 @@
+name: Monid Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-monid:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      NO_COLOR: "1"
+      MONID_API_KEY: ${{ secrets.MONID_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+
+      - name: Verify Monid skill and secret boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^version: 0.1.7$' .agents/skills/monid/SKILL.md
+          if [ -z "${MONID_API_KEY:-}" ]; then
+            echo "::error::MONID_API_KEY repository secret is not configured."
+            exit 1
+          fi
+
+      - name: Install pinned Monid CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global --ignore-scripts @monid-ai/cli@0.1.7
+          monid --version | grep -F '0.1.7'
+
+      - name: Configure ephemeral Monid authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          monid setup --client axiom-mesh-github-actions
+          monid keys add -k "$MONID_API_KEY" -l github-actions
+
+      - name: Verify authenticated catalog access without paid execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          monid discover -q "github repository metadata" -l 1 -j > "$RUNNER_TEMP/monid-discover.json"
+          test -s "$RUNNER_TEMP/monid-discover.json"
+
+      - name: Remove ephemeral Monid key
+        if: always()
+        shell: bash
+        run: |
+          if command -v monid >/dev/null 2>&1; then
+            monid keys remove -l github-actions -f >/dev/null 2>&1 || true
+          fi
