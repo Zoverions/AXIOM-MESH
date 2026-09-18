@@ -52,16 +52,16 @@ pub fn verify_axiom_ed25519_attestation(
         return Err(VerifyError::InvalidDigest);
     }
 
-    let public_key_bytes = decode_fixed_hex::<32>(public_key_raw_hex)
-        .ok_or(VerifyError::InvalidPublicKey)?;
+    let public_key_bytes =
+        decode_fixed_hex::<32>(public_key_raw_hex).ok_or(VerifyError::InvalidPublicKey)?;
     let verifying_key =
         VerifyingKey::from_bytes(&public_key_bytes).map_err(|_| VerifyError::InvalidPublicKey)?;
 
     let signature_bytes = URL_SAFE_NO_PAD
         .decode(signature_b64url.as_bytes())
         .map_err(|_| VerifyError::InvalidSignatureEncoding)?;
-    let signature =
-        Signature::try_from(signature_bytes.as_slice()).map_err(|_| VerifyError::InvalidSignatureEncoding)?;
+    let signature = Signature::try_from(signature_bytes.as_slice())
+        .map_err(|_| VerifyError::InvalidSignatureEncoding)?;
 
     verifying_key
         .verify_strict(canonical_body, &signature)
