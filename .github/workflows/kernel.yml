@@ -17,6 +17,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  documentation-maintenance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact lockfiles without lifecycle scripts
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix mesh ci --ignore-scripts
+      - name: Verify canonical documentation
+        run: |
+          npm --prefix mesh run status:check
+          npm --prefix mesh run docs:check
+      - name: Prove machine-derived documentation rebuild is clean
+        run: |
+          npm --prefix mesh run status:generate
+          git diff --exit-code
+          npm --prefix mesh run docs:check
+
   compatibility-node-22:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
