@@ -16,6 +16,10 @@ const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const ISO_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const ZERO_DIGEST = '0'.repeat(64);
 
+function compareCodeUnits(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 const INPUT_FIELDS = Object.freeze([
   'schema',
   'version',
@@ -316,9 +320,13 @@ function validateInputShape(input) {
   if (input.status !== INPUT_STATUS) throw new ValidationError('Flow dispatch input status is invalid');
   requireBoundary(input, 'Flow dispatch input');
   requireTimestamp(input.evaluation_at, 'evaluation_at');
+  const evaluationMs = Date.parse(input.evaluation_at);
 
   validateFlowPlan(input.plan);
   const graph = validateVerifiedWorkGraph(input.work_graph);
+  if (Date.parse(graph.created_at) > evaluationMs) {
+    throw new ValidationError('work graph was created after evaluation_at');
+  }
 
   if (!Array.isArray(input.bindings) || input.bindings.length < 1 || input.bindings.length > 4096) {
     throw new ValidationError('bindings must contain 1-4096 items');
@@ -326,6 +334,7 @@ function validateInputShape(input) {
   const bindings = input.bindings.map(validateBinding);
   const bindingByStep = new Map();
   const boundNodes = new Set();
+  const boundHandoffs = new Set();
   for (const binding of bindings) {
     if (bindingByStep.has(binding.step_id)) {
       throw new ValidationError(`bindings contains duplicate step_id ${binding.step_id}`);
@@ -333,8 +342,17 @@ function validateInputShape(input) {
     if (boundNodes.has(binding.work_node_id)) {
       throw new ValidationError(`bindings contains duplicate work_node_id ${binding.work_node_id}`);
     }
+    if (
+      binding.handoff_task_id !== null
+      && boundHandoffs.has(binding.handoff_task_id)
+    ) {
+      throw new ValidationError(
+        `bindings contains duplicate handoff_task_id ${binding.handoff_task_id}`
+      );
+    }
     bindingByStep.set(binding.step_id, binding);
     boundNodes.add(binding.work_node_id);
+    if (binding.handoff_task_id !== null) boundHandoffs.add(binding.handoff_task_id);
   }
 
   const planStepById = new Map(input.plan.steps.map(step => [step.step_id, step]));
@@ -396,6 +414,16 @@ function validateInputShape(input) {
   }
 
   const handoffById = validateHandoffs(input.handoffs);
+  for (const handoff of handoffById.values()) {
+    if (
+      Date.parse(handoff.lifecycle.created_at) > evaluationMs
+      || Date.parse(handoff.lifecycle.updated_at) > evaluationMs
+    ) {
+      throw new ValidationError(
+        `handoff ${handoff.task_id} contains lifecycle evidence after evaluation_at`
+      );
+    }
+  }
   for (const binding of bindings) {
     if (binding.handoff_task_id !== null && !handoffById.has(binding.handoff_task_id)) {
       throw new ValidationError(`binding ${binding.step_id} references missing handoff task`);
@@ -421,7 +449,7 @@ function validateInputShape(input) {
     claims,
     handoffById,
     policy,
-    evaluationMs: Date.parse(input.evaluation_at)
+    evaluationMs
   };
 }
 
@@ -434,17 +462,17 @@ function normalizeInput(input, context) {
     plan_digest: input.plan.plan_digest,
     work_graph_digest: verifiedWorkGraphDigest(input.work_graph),
     bindings: [...context.bindings]
-      .sort((left, right) => left.step_id.localeCompare(right.step_id))
+      .sort((left, right) => compareCodeUnits(left.step_id, right.step_id))
       .map(binding => ({ ...binding })),
     workers: [...context.workers]
-      .sort((left, right) => left.worker_ref.localeCompare(right.worker_ref))
+      .sort((left, right) => compareCodeUnits(left.worker_ref, right.worker_ref))
       .map(worker => ({
         ...worker,
         operation_ids: [...worker.operation_ids],
         capability_ids: [...worker.capability_ids]
       })),
     claims: [...context.claims]
-      .sort((left, right) => left.claim_id.localeCompare(right.claim_id))
+      .sort((left, right) => compareCodeUnits(left.claim_id, right.claim_id))
       .map(claim => ({ ...claim })),
     handoff_refs: [...context.handoffById.values()]
       .map(handoff => ({
@@ -455,7 +483,7 @@ function normalizeInput(input, context) {
         terminal_receipt_id: handoff.lifecycle.terminal_receipt_id ?? null,
         uncertainty_record_id: handoff.lifecycle.uncertainty_record_id ?? null
       }))
-      .sort((left, right) => left.task_id.localeCompare(right.task_id)),
+      .sort((left, right) => compareCodeUnits(left.task_id, right.task_id)),
     policy: { ...context.policy },
     evaluation_at: input.evaluation_at,
     authority_effect: 'none',
@@ -500,10 +528,23 @@ function activeClaimState(context) {
   return { activeByStep, activeCountByWorker, expired };
 }
 
-function workerSupportsStep(worker, step) {
+function workerSupportsStep(worker, step, binding, handoffById) {
   if (!worker.operation_ids.includes(step.operation_id)) return false;
+  if (binding.handoff_task_id !== null) {
+    const handoff = handoffById.get(binding.handoff_task_id);
+    if (worker.runtime_ref !== handoff.execution_target.integration_id) return false;
+  }
   const capabilities = new Set(worker.capability_ids);
   return step.required_capability_ids.every(capabilityId => capabilities.has(capabilityId));
+}
+
+function workDependencyBlocker(context, dependency) {
+  const dependencyNode = context.graphById.get(dependency);
+  if (!dependencyNode) return `work-dependency-missing:${dependency}`;
+  if (dependencyNode.state === 'accepted') return null;
+  if (dependencyNode.state === 'rejected') return `work-dependency-rejected:${dependency}`;
+  if (dependencyNode.state === 'blocked') return `work-dependency-blocked:${dependency}`;
+  return `work-dependency-not-accepted:${dependency}`;
 }
 
 function handoffBlocker(binding, handoffById, workNode) {
@@ -538,10 +579,20 @@ function classifySteps(input, context, claimState) {
     const reasons = [];
 
     if (workNode.state === 'accepted') {
+      for (const dependency of step.depends_on) {
+        if (!completedSet.has(dependency)) {
+          reasons.push(`dependency-not-accepted:${dependency}`);
+        }
+      }
+      for (const dependency of workNode.dependencies) {
+        const blocker = workDependencyBlocker(context, dependency);
+        if (blocker) reasons.push(blocker);
+      }
       const handoffReason = handoffBlocker(binding, context.handoffById, workNode);
       if (handoffReason && handoffReason !== 'handoff-completed') {
         reasons.push(handoffReason);
-      } else {
+      }
+      if (reasons.length === 0) {
         completed.push(step.step_id);
         completedSet.add(step.step_id);
         continue;
@@ -563,10 +614,8 @@ function classifySteps(input, context, claimState) {
         }
       }
       for (const dependency of workNode.dependencies) {
-        const dependencyNode = context.graphById.get(dependency);
-        if (!dependencyNode || dependencyNode.state !== 'accepted') {
-          reasons.push(`work-dependency-not-accepted:${dependency}`);
-        }
+        const blocker = workDependencyBlocker(context, dependency);
+        if (blocker) reasons.push(blocker);
       }
 
       const handoffReason = handoffBlocker(binding, context.handoffById, workNode);
@@ -580,7 +629,9 @@ function classifySteps(input, context, claimState) {
     }
 
     if (reasons.length === 0) {
-      const candidates = context.workers.filter(worker => workerSupportsStep(worker, step));
+      const candidates = context.workers.filter(worker =>
+        workerSupportsStep(worker, step, binding, context.handoffById)
+      );
       if (candidates.length === 0) reasons.push('no-worker-candidate');
     }
 
@@ -589,16 +640,16 @@ function classifySteps(input, context, claimState) {
     } else {
       blocked.push({
         step_id: step.step_id,
-        reasons: [...new Set(reasons)].sort()
+        reasons: [...new Set(reasons)].sort(compareCodeUnits)
       });
     }
   }
 
   return {
-    completed: completed.sort(),
-    claimed: claimed.sort(),
-    ready: ready.sort(),
-    blocked: blocked.sort((left, right) => left.step_id.localeCompare(right.step_id))
+    completed: completed.sort(compareCodeUnits),
+    claimed: claimed.sort(compareCodeUnits),
+    ready: ready.sort(compareCodeUnits),
+    blocked: blocked.sort((left, right) => compareCodeUnits(left.step_id, right.step_id))
   };
 }
 
@@ -610,13 +661,14 @@ function deriveDispatchProposals(input, context, claimState, classified) {
 
   for (const stepId of classified.ready) {
     const step = stepById.get(stepId);
+    const binding = context.bindingByStep.get(stepId);
     const candidates = context.workers
       .filter(worker =>
-        workerSupportsStep(worker, step)
+        workerSupportsStep(worker, step, binding, context.handoffById)
         && (projectedCountByWorker.get(worker.worker_ref) ?? 0) < worker.max_concurrency
       )
       .map(worker => worker.worker_ref)
-      .sort();
+      .sort(compareCodeUnits);
 
     let selectedWorkerRef = null;
     let selectionReason;
@@ -644,7 +696,13 @@ function deriveDispatchProposals(input, context, claimState, classified) {
     });
   }
 
-  return proposals;
+  return {
+    proposals,
+    capacity: {
+      projectedCountByWorker,
+      remainingCampaignSlots
+    }
+  };
 }
 
 function deriveReclaimProposals(claimState) {
@@ -655,18 +713,29 @@ function deriveReclaimProposals(claimState) {
       worker_ref: claim.worker_ref,
       expired_at: claim.expires_at
     }))
-    .sort((left, right) => left.claim_id.localeCompare(right.claim_id));
+    .sort((left, right) => compareCodeUnits(left.claim_id, right.claim_id));
 }
 
-function deriveVerificationProposals(context) {
-  const acceptedPassByArtifact = new Set();
-  for (const node of context.graph.nodes) {
+function deriveVerificationProposals(context, capacity) {
+  const independentlyVerifiedArtifacts = new Set();
+  for (const verification of context.graph.nodes) {
     if (
-      node.kind === 'verification'
-      && node.state === 'accepted'
-      && node.verification_result === 'pass'
+      verification.kind !== 'verification'
+      || verification.state !== 'accepted'
+      || verification.verification_result !== 'pass'
+      || verification.lineage_ref === null
     ) {
-      for (const dependency of node.dependencies) acceptedPassByArtifact.add(dependency);
+      continue;
+    }
+    for (const dependency of verification.dependencies) {
+      const artifact = context.graphById.get(dependency);
+      if (
+        artifact?.kind === 'artifact'
+        && artifact.lineage_ref !== null
+        && verification.lineage_ref !== artifact.lineage_ref
+      ) {
+        independentlyVerifiedArtifacts.add(artifact.node_id);
+      }
     }
   }
 
@@ -675,7 +744,7 @@ function deriveVerificationProposals(context) {
     if (
       artifact.kind !== 'artifact'
       || artifact.state !== 'accepted'
-      || acceptedPassByArtifact.has(artifact.node_id)
+      || independentlyVerifiedArtifacts.has(artifact.node_id)
     ) {
       continue;
     }
@@ -687,18 +756,31 @@ function deriveVerificationProposals(context) {
     if (artifact.lineage_ref === null) {
       selectionReason = 'producer-lineage-unknown';
     } else {
-      candidateRefs = context.workers
-        .filter(worker => worker.can_verify && worker.lineage_ref !== artifact.lineage_ref)
+      const independentWorkers = context.workers
+        .filter(worker => worker.can_verify && worker.lineage_ref !== artifact.lineage_ref);
+      candidateRefs = independentWorkers
+        .filter(worker =>
+          (capacity.projectedCountByWorker.get(worker.worker_ref) ?? 0) < worker.max_concurrency
+        )
         .map(worker => worker.worker_ref)
-        .sort();
+        .sort(compareCodeUnits);
 
-      if (candidateRefs.length === 0) {
+      if (capacity.remainingCampaignSlots <= 0) {
+        selectionReason = 'campaign-concurrency-exhausted';
+      } else if (independentWorkers.length === 0) {
         selectionReason = 'no-independent-verifier';
+      } else if (candidateRefs.length === 0) {
+        selectionReason = 'verifier-capacity-exhausted';
       } else if (candidateRefs.length > 1) {
         selectionReason = 'ambiguous-independent-verifiers';
       } else {
         selectedVerifierRef = candidateRefs[0];
         selectionReason = 'single-independent-verifier';
+        capacity.projectedCountByWorker.set(
+          selectedVerifierRef,
+          (capacity.projectedCountByWorker.get(selectedVerifierRef) ?? 0) + 1
+        );
+        capacity.remainingCampaignSlots -= 1;
       }
     }
 
@@ -711,7 +793,9 @@ function deriveVerificationProposals(context) {
     });
   }
 
-  return proposals.sort((left, right) => left.artifact_node_id.localeCompare(right.artifact_node_id));
+  return proposals.sort((left, right) =>
+    compareCodeUnits(left.artifact_node_id, right.artifact_node_id)
+  );
 }
 
 function projectionDigestPayload(projection) {
@@ -845,9 +929,10 @@ export function deriveFlowDispatchProjection(input) {
   const context = validateInputShape(input);
   const claimState = activeClaimState(context);
   const classified = classifySteps(input, context, claimState);
-  const dispatchProposals = deriveDispatchProposals(input, context, claimState, classified);
+  const dispatch = deriveDispatchProposals(input, context, claimState, classified);
+  const dispatchProposals = dispatch.proposals;
   const reclaimProposals = deriveReclaimProposals(claimState);
-  const verificationProposals = deriveVerificationProposals(context);
+  const verificationProposals = deriveVerificationProposals(context, dispatch.capacity);
   const selectedDispatches = dispatchProposals.filter(proposal => proposal.selected_worker_ref !== null);
   const selectedVerifiers = verificationProposals.filter(
     proposal => proposal.selected_verifier_ref !== null
