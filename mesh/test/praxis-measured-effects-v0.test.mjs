@@ -9,6 +9,7 @@ import {
   createCharteredHostPermit,
   createHostOperationRegistry,
   createHostPreparedRef,
+  createHostSecretRef,
   createOperationDescriptorPraxis,
   createSyntheticCharter,
   irDigestPraxis,
@@ -320,12 +321,12 @@ test('charter effect envelope is a hard upper bound even when source declares th
   );
 });
 
-test('tampering a signed charter to widen its effect envelope is refused', () => {
+test('tampering a signed charter to widen its effect envelope is refused', async () => {
   const tampered = structuredClone(restrictedCharter);
   tampered.body.effect_envelopes.Deployer.push('destructive_delete');
   tampered.body.effect_envelopes.Deployer.sort();
 
-  assert.throws(
+  await assert.rejects(
     () => createCharteredHostPermit({
       id: 'permit:tampered-envelope',
       charter: tampered,
@@ -428,17 +429,14 @@ test('secret egress declaration cannot disagree with host measurement', async ()
     () => run(source, {
       hostOperations: registry,
       secrets: {
-        key: {
-          // Deliberately not a valid host SecretRef: link mismatch must be reached
-          // only after source/registry metadata is structurally available.
-        }
+        key: createHostSecretRef({
+          id: 'secret:signing',
+          kind: 'SigningCredential'
+        })
       }
     }),
     error => error instanceof PraxisRuntimeError
-      && (
-        error.code === 'PRAXIS_HOST_SECRET_REQUIRED'
-        || error.code === 'PRAXIS_LINK_MISMATCH'
-      )
+      && error.code === 'PRAXIS_LINK_MISMATCH'
   );
 });
 
