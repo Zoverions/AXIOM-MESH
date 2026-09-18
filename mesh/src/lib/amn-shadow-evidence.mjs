@@ -320,6 +320,11 @@ function shadowResult({ status, reasonCode, recordDigest = null, sequence = null
 
 function normalizeShadowResult(raw) {
   const value = exactKeys(raw, SHADOW_RESULT_KEYS, 'AMN shadow provider result');
+  for (const key of SHADOW_RESULT_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      throw new ValidationError(`AMN shadow provider result is missing required field ${key}`);
+    }
+  }
   return shadowResult({
     status: value.status,
     reasonCode: value.reason_code,
