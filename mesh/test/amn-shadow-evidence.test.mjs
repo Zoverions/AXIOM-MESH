@@ -114,6 +114,32 @@ test('unknown issuer is rejected locally and never enters the shadow queue', () 
   assert.equal(provider.queue.history().length, 0);
 });
 
+test('serialized or caller-fabricated verification results cannot be laundered into shadow history', () => {
+  const issuer = keys();
+  const subject = keys();
+  const statement = nodeStatement({ issuer, subject });
+  const local = createLocalAmnTrustProvider({ trustedIssuers: trusted(issuer) });
+  const queue = new AmnShadowEvidenceQueue();
+  const result = local.verify(statement);
+
+  assert.equal(result.verification.trust_state, 'verified');
+  assert.throws(
+    () => queue.enqueue(result.verification, { at: SHADOW_AT }),
+    /requires provider-produced verification/
+  );
+
+  const fabricated = structuredClone(result.verification);
+  fabricated.provider_kind = 'axiom-shadow';
+  const { verification_result_digest: _old, ...core } = fabricated;
+  fabricated.verification_result_digest = digestObject(core);
+
+  assert.throws(
+    () => queue.enqueue(fabricated, { at: SHADOW_AT }),
+    /requires provider-produced verification/
+  );
+  assert.equal(queue.history().length, 0);
+});
+
 test('shadow-path failure cannot change a verified local trust result', () => {
   const issuer = keys();
   const subject = keys();
