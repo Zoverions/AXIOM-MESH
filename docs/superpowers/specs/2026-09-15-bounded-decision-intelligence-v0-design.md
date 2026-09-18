@@ -585,7 +585,7 @@ No policy may encode `confidence >= X => achieved_assurance = Y`.
 
 The model answers atomic questions. AXIOM code composes them.
 
-An interpretation helper may consume validated observations plus an explicit caller policy such as:
+An interpretation helper consumes observations and calibration reports together with the trusted provider profiles and question schemas they claim to bind, then re-validates and re-resolves that evidence before applying an explicit caller policy. A self-consistent digest is not a trusted binding. The caller policy may include:
 
 ```text
 required_schema_digests[]
