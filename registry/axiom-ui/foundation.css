@@ -1,0 +1,94 @@
+/*
+ * AXIOM Human Interface Foundation v0
+ *
+ * Source-registry design tokens only. This file grants no authority, performs
+ * no network I/O, and is not consumed by the current AXIOM One preview.
+ *
+ * The base variable names intentionally align with shadcn-compatible theme
+ * conventions so future human clients can adopt reviewed primitives without
+ * coupling authority semantics to a UI library.
+ */
+
+:root {
+  color-scheme: light;
+
+  --background: oklch(0.982 0.006 220);
+  --foreground: oklch(0.205 0.025 232);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.49 0.11 171);
+  --primary-foreground: oklch(0.985 0.004 170);
+  --secondary: oklch(0.94 0.015 220);
+  --secondary-foreground: oklch(0.26 0.03 230);
+  --muted: oklch(0.94 0.012 220);
+  --muted-foreground: oklch(0.48 0.025 225);
+  --accent: oklch(0.92 0.035 86);
+  --accent-foreground: oklch(0.33 0.05 74);
+  --destructive: oklch(0.56 0.18 25);
+  --destructive-foreground: oklch(0.985 0.004 25);
+  --border: oklch(0.86 0.018 220);
+  --input: var(--border);
+  --ring: oklch(0.56 0.1 171);
+  --radius: 0.75rem;
+
+  --axiom-state-ready: oklch(0.49 0.11 171);
+  --axiom-state-pending: oklch(0.63 0.11 82);
+  --axiom-state-denied: oklch(0.54 0.18 25);
+  --axiom-state-unknown: oklch(0.55 0.03 240);
+  --axiom-state-evidence: oklch(0.52 0.09 252);
+  --axiom-focus: oklch(0.57 0.12 85);
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: oklch(0.16 0.025 240);
+  --foreground: oklch(0.94 0.012 210);
+  --card: oklch(0.2 0.025 238);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.19 0.025 238);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.76 0.11 167);
+  --primary-foreground: oklch(0.18 0.025 238);
+  --secondary: oklch(0.25 0.025 235);
+  --secondary-foreground: oklch(0.92 0.012 210);
+  --muted: oklch(0.24 0.02 238);
+  --muted-foreground: oklch(0.72 0.022 220);
+  --accent: oklch(0.75 0.1 87);
+  --accent-foreground: oklch(0.2 0.035 73);
+  --destructive: oklch(0.68 0.17 24);
+  --destructive-foreground: oklch(0.98 0.006 24);
+  --border: oklch(0.34 0.026 235);
+  --input: var(--border);
+  --ring: oklch(0.72 0.1 167);
+
+  --axiom-state-ready: oklch(0.76 0.11 167);
+  --axiom-state-pending: oklch(0.78 0.1 87);
+  --axiom-state-denied: oklch(0.72 0.16 24);
+  --axiom-state-unknown: oklch(0.68 0.035 240);
+  --axiom-state-evidence: oklch(0.7 0.09 250);
+  --axiom-focus: oklch(0.79 0.12 86);
+}
+
+[data-axiom-state="ready"] {
+  --axiom-state-current: var(--axiom-state-ready);
+}
+
+[data-axiom-state="pending"] {
+  --axiom-state-current: var(--axiom-state-pending);
+}
+
+[data-axiom-state="denied"] {
+  --axiom-state-current: var(--axiom-state-denied);
+}
+
+[data-axiom-state="unknown"] {
+  --axiom-state-current: var(--axiom-state-unknown);
+}
+
+[data-axiom-state="evidence"] {
+  --axiom-state-current: var(--axiom-state-evidence);
+}
