@@ -1,7 +1,7 @@
 use axiom_personal_agent_kernel_rust_lab::{
-    assess_strict_component_host, AmbientCapability, AuthorityBudget, AutonomyLevel, AutonomyState,
-    BudgetDimension, BudgetRequest, ComponentManifest, Constitution, EffectClass, Kernel,
-    KernelIdentity, Plan, PlanNode, Reversibility, RuntimeSurface,
+    AmbientCapability, AuthorityBudget, AutonomyLevel, AutonomyState, BudgetDimension,
+    BudgetRequest, ComponentManifest, Constitution, EffectClass, Kernel, KernelIdentity, Plan,
+    PlanNode, Reversibility, RuntimeSurface, assess_strict_component_host,
 };
 
 const NOW: u64 = 1_789_733_000;
@@ -76,18 +76,26 @@ fn strict_component_host_has_no_ambient_authority() {
     .expect("assessment");
 
     assert!(!denied.allowed);
-    assert!(denied
-        .blockers
-        .contains(&"ambient-capability-denied:network".to_string()));
-    assert!(denied
-        .blockers
-        .contains(&"ambient-capability-denied:environment".to_string()));
-    assert!(denied
-        .blockers
-        .contains(&"ambient-capability-denied:credential-store".to_string()));
-    assert!(denied
-        .blockers
-        .contains(&"unapproved-component-import:wasi:sockets/tcp".to_string()));
+    assert!(
+        denied
+            .blockers
+            .contains(&"ambient-capability-denied:network".to_string())
+    );
+    assert!(
+        denied
+            .blockers
+            .contains(&"ambient-capability-denied:environment".to_string())
+    );
+    assert!(
+        denied
+            .blockers
+            .contains(&"ambient-capability-denied:credential-store".to_string())
+    );
+    assert!(
+        denied
+            .blockers
+            .contains(&"unapproved-component-import:wasi:sockets/tcp".to_string())
+    );
     assert!(!denied.grants_authority());
 }
 
