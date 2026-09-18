@@ -94,6 +94,7 @@ pub struct OfflineJournal {
 impl OfflineJournal {
     pub fn open(path: impl AsRef<Path>) -> Result<Self, JournalError> {
         let path = path.as_ref().to_path_buf();
+        let journal_existed = path.exists();
         if let Some(parent) = path.parent()
             && !parent.as_os_str().is_empty()
         {
@@ -138,6 +139,15 @@ impl OfflineJournal {
                 return Err(JournalError::Io(error));
             }
         };
+
+        if !journal_existed {
+            if let Err(error) = file.sync_all().and_then(|_| sync_parent_directory(&path)) {
+                drop(file);
+                drop(lease_file);
+                std::fs::remove_file(&lease_path).ok();
+                return Err(JournalError::Io(error));
+            }
+        }
 
         Ok(Self {
             path,
@@ -315,6 +325,21 @@ fn recover_state(path: &Path) -> Result<RecoveredState, JournalError> {
         state.apply_line(line)?;
     }
     Ok(state)
+}
+
+#[cfg(unix)]
+fn sync_parent_directory(path: &Path) -> std::io::Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        File::open(parent)?.sync_all()?;
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn sync_parent_directory(_path: &Path) -> std::io::Result<()> {
+    Ok(())
 }
 
 fn lease_path_for(path: &Path) -> PathBuf {
