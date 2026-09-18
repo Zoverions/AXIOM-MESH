@@ -199,6 +199,32 @@ TEE evidence constrains where an operation may run; it is never a reason to gran
 14. Continuity export strips all live authority.
 15. Restore starts effect-authority-empty.
 
+## Implemented laboratory evidence
+
+The current stacked laboratory now contains executable evidence for:
+
+- exact Node v0 versus Rust blocker semantics over a shared policy corpus;
+- deny-by-default component-host assessment with no ambient network, filesystem, environment, process, clock, or credential authority;
+- exact inert Mesh adapter requests bound to kernel, principal, owner, plan, node, capability, budgets, and revocation epoch;
+- partition-safe offline envelopes imported only through a trusted Mesh-adapter seam;
+- in-process replay rejection for duplicate offline-envelope references;
+- device, runtime-surface, revocation-epoch, expiry, effect-count, currency, and budget binding for offline effects;
+- monotonic offline consumption before host execution, so crash/receipt failure cannot restore spent allowance;
+- reconciliation reports that expose missing offline receipts without issuing replacement authority;
+- attestation-aware placement filters that constrain **where** an operation may run while explicitly granting no execution authority.
+
+### Remaining offline-envelope limitation
+
+The replay registry is intentionally in-memory in this laboratory. It prevents duplicate import within one live kernel process but does not claim crash-safe or cross-device anti-replay.
+
+Production promotion therefore requires one of:
+
+- Mesh-side single-use issuance state;
+- a hardware-backed monotonic counter;
+- or a separately reviewed durable local monotonic journal.
+
+The kernel must not claim partition-safe single-spend across restart until one of those mechanisms is implemented and tested.
+
 ## Promotion gates
 
 This laboratory may move toward production only after all of the following are true:
