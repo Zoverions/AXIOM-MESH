@@ -68,6 +68,24 @@ are intentionally separate axes.
 
 No production authority.
 
+The P0.4 measured-effect tranche remains within this stage. Governed source may
+declare the effect contract it expects, but the authoritative measurement comes
+from a synthetic host registry outside governed source and binds action, scope,
+effect label, reversible/irreversible classification, and any egress
+class/destination. The program declaration must match that measurement exactly,
+and the program digest must already be pinned by the signed Praxis charter.
+
+A charter-root-signed effect envelope is a hard upper bound over measured
+effects, egress classes, and destinations for one chartered principal. It is not
+a grant. Positive authority still comes only through the existing chartered
+P0.3 permit/quorum path with exact-operation policy premises and verified
+evidence. Reversible measured effects require `commit`; irreversible measured
+effects require a distinct `finalize` disposition; replay cannot switch modes.
+The P0.4 helper is checked-only and performs no external effect. It adds no
+provider/network adapter, credential resolver, production runtime route, Grid
+mutation, or second authority engine. Wiring `finalize` into `.prax` grammar or
+the core interpreter remains a separate reviewable experiment.
+
 ### P1 — semantic corpus
 
 Encode AXIOM invariants as language-level conformance fixtures.
