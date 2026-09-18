@@ -21,18 +21,29 @@ No source language gets that status automatically.
 ## Bootstrap problem
 
 A language designed to protect authority eventually places trust in more than
-its source semantics. The trusted computing base would include, at minimum:
+its source semantics. The important split is between the **authority TCB** and
+the **usability TCB**.
 
-- the Praxis language specification;
-- parser and type/effect/authority checker;
-- canonical IR;
-- compiler or interpreter;
-- runtime representation of linear authority;
+The authority TCB includes, at minimum:
+
+- the Praxis authority semantics;
+- canonical IR envelope verification;
+- the runtime/interpreter checks that consume authority;
+- runtime representation of linear authority and prepared effects;
 - host/executor ABI;
 - cryptographic canonicalization and digest rules;
-- build/release toolchain;
-- the mechanism that binds Praxis authority to AXIOM identity, policy, and
-  durable preparation evidence.
+- the mechanism that binds authority to an exact plan and durable preparation
+  evidence.
+
+The usability TCB includes the lexer, parser, static checker, lowering/compiler,
+CLI, and review conveniences. Bugs there may reject a valid program or emit bad
+IR, but they must not be sufficient to grant an effect. The runtime therefore
+treats compiled IR as hostile input and re-checks the authority invariants it
+relies on. The adversarial corpus includes hand-edited, re-sealed IR for this
+reason.
+
+The build/release toolchain remains part of the supply-chain trust problem, and
+a malicious embedding host remains outside the protection of the P0 lab.
 
 A future self-hosted compiler does not eliminate this problem. It changes where
 the trust must be established.
@@ -58,12 +69,14 @@ Encode AXIOM invariants as language-level conformance fixtures.
 
 Minimum corpus:
 
+- compiled IR is untrusted and cannot bypass runtime authority checks;
 - knowledge cannot become authority;
 - identity cannot become authority;
 - discovery cannot become authority;
 - planning cannot become authority;
 - collective agreement cannot amplify authority;
-- permit action/scope binding;
+- permit action/scope/exact-plan binding;
+- quorum membership and threshold binding outside governed IR;
 - linear authority consumption;
 - expiry/revocation semantics;
 - deny on absent/unknown/malformed policy results;
@@ -88,7 +101,8 @@ Candidates should be deterministic functions such as:
 - evidence normalization.
 
 Run old and Praxis implementations over the same positive, negative, malformed,
-boundary, and adversarial corpus.
+boundary, and adversarial corpus, including re-sealed hand-edited IR wherever
+the component participates in an authority decision.
 
 A mismatch is a blocker, not an invitation to choose whichever result is more
 convenient.
