@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const HOST_PERMIT = Symbol('praxis.host-permit');
+const HOST_AUTHORITY = Symbol('praxis.host-authority');
 const consumedAuthorityTokens = new WeakSet();
 
 export class PraxisSyntaxError extends Error {
@@ -262,7 +262,7 @@ class Parser {
 
     switch (token.value) {
       case 'requires':
-        return this.requiresPermit();
+        return this.requiresAuthority();
       case 'observe':
         return this.observe();
       case 'verify':
@@ -280,16 +280,27 @@ class Parser {
     }
   }
 
-  requiresPermit() {
+  requiresAuthority() {
     this.word('requires');
-    this.word('permit');
+    const authorityType = this.identifier();
+    if (authorityType !== 'permit' && authorityType !== 'lease') {
+      throw new PraxisSyntaxError(
+        'requires must declare permit or lease',
+        this.tokens[this.index - 1]
+      );
+    }
     const name = this.identifier();
     this.take(':');
     const action = this.identifier();
     this.take('@');
     const scope = this.identifier();
     this.take(';');
-    return { kind: 'RequirePermit', name, action, scope };
+    return {
+      kind: authorityType === 'permit' ? 'RequirePermit' : 'RequireLease',
+      name,
+      action,
+      scope
+    };
   }
 
   observe() {
@@ -410,11 +421,28 @@ export function analyze(ast) {
     assertFreshName(env, node.name);
 
     switch (node.kind) {
-      case 'RequirePermit': {
-        const type = { kind: 'Permit', action: node.action, scope: node.scope, linear: true };
+      case 'RequirePermit':
+      case 'RequireLease': {
+        const authorityKind = node.kind === 'RequireLease' ? 'Lease' : 'Permit';
+        const type = {
+          kind: authorityKind,
+          action: node.action,
+          scope: node.scope,
+          linear: true
+        };
         env.set(node.name, type);
-        requiredPermits.push({ name: node.name, action: node.action, scope: node.scope });
-        ir.push({ op: 'REQUIRE_PERMIT', name: node.name, action: node.action, scope: node.scope });
+        requiredPermits.push({
+          name: node.name,
+          authority_kind: authorityKind,
+          action: node.action,
+          scope: node.scope
+        });
+        ir.push({
+          op: authorityKind === 'Lease' ? 'REQUIRE_LEASE' : 'REQUIRE_PERMIT',
+          name: node.name,
+          action: node.action,
+          scope: node.scope
+        });
         break;
       }
 
@@ -463,7 +491,7 @@ export function analyze(ast) {
         for (const arg of node.args) {
           if (arg.kind !== 'reference') continue;
           const input = requireBinding(env, arg.name);
-          if (input.kind === 'Permit' || input.kind === 'AuthorizedOperation') {
+          if (input.kind === 'Permit' || input.kind === 'Lease' || input.kind === 'AuthorizedOperation') {
             throw new PraxisTypeError(
               'PRAXIS_AUTHORITY_EXFILTRATION',
               `authority binding ${arg.name} cannot be embedded in an operation`
@@ -491,10 +519,10 @@ export function analyze(ast) {
             `authorize requires Operation, received ${operation.kind}`
           );
         }
-        if (permit.kind !== 'Permit') {
+        if (permit.kind !== 'Permit' && permit.kind !== 'Lease') {
           throw new PraxisTypeError(
             'PRAXIS_AUTHORIZE_REQUIRES_PERMIT',
-            `authorize requires Permit, received ${permit.kind}`
+            `authorize requires Permit or Lease, received ${permit.kind}`
           );
         }
         if (permit.action !== operation.action || permit.scope !== operation.scope) {
@@ -569,11 +597,29 @@ export function compile(source) {
 export function createHostPermit({ action, scope, id }) {
   if (!action || !scope || !id) throw new TypeError('host permit requires action, scope, and id');
   return Object.freeze({
-    [HOST_PERMIT]: true,
+    [HOST_AUTHORITY]: 'Permit',
     schema: 'praxis-host-permit.v0',
     id: String(id),
     action: String(action),
     scope: String(scope)
+  });
+}
+
+export function createHostLease({ action, scope, id, expiresAt }) {
+  if (!action || !scope || !id || expiresAt === undefined || expiresAt === null) {
+    throw new TypeError('host lease requires action, scope, id, and expiresAt');
+  }
+  const expiresAtMs = typeof expiresAt === 'number' ? expiresAt : Date.parse(String(expiresAt));
+  if (!Number.isFinite(expiresAtMs)) {
+    throw new TypeError('host lease expiresAt must be a finite timestamp or parseable date');
+  }
+  return Object.freeze({
+    [HOST_AUTHORITY]: 'Lease',
+    schema: 'praxis-host-lease.v0',
+    id: String(id),
+    action: String(action),
+    scope: String(scope),
+    expires_at_ms: expiresAtMs
   });
 }
 
@@ -585,11 +631,27 @@ function resolveValue(arg, values) {
   return values.get(arg.name);
 }
 
-function validateAuthorityToken(token, requirement) {
-  if (!token || token[HOST_PERMIT] !== true) {
+function validateAuthorityToken(token, requirement, {
+  nowMs,
+  revokedAuthorityIds
+}) {
+  const expectedKind = requirement.authority_kind ?? 'Permit';
+  if (!token || token[HOST_AUTHORITY] !== expectedKind) {
     throw new PraxisRuntimeError(
       'PRAXIS_HOST_AUTHORITY_REQUIRED',
-      `host did not provide a Praxis authority token for ${requirement.name}`
+      `host did not provide a matching Praxis ${expectedKind} for ${requirement.name}`
+    );
+  }
+  if (revokedAuthorityIds.has(token.id)) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_AUTHORITY_REVOKED',
+      `host authority token ${token.id} is revoked`
+    );
+  }
+  if (expectedKind === 'Lease' && nowMs >= token.expires_at_ms) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_AUTHORITY_EXPIRED',
+      `host authority lease ${token.id} expired`
     );
   }
   if (consumedAuthorityTokens.has(token)) {
@@ -606,11 +668,27 @@ function validateAuthorityToken(token, requirement) {
   }
 }
 
+function normalizeRuntimeTime(now) {
+  const nowMs = typeof now === 'number' ? now : Date.parse(String(now));
+  if (!Number.isFinite(nowMs)) {
+    throw new TypeError('run now must be a finite timestamp or parseable date');
+  }
+  return nowMs;
+}
+
+function normalizeRevocations(value) {
+  if (value instanceof Set) return new Set([...value].map(String));
+  if (Array.isArray(value)) return new Set(value.map(String));
+  throw new TypeError('revokedAuthorityIds must be an array or Set');
+}
+
 export async function run(source, {
   authorities = {},
   executor = null,
   verifiers = {},
-  assessors = {}
+  assessors = {},
+  now = Date.now(),
+  revokedAuthorityIds = []
 } = {}) {
   const ir = typeof source === 'string' ? compile(source) : source;
   if (!ir || ir.schema !== 'praxis-ir.v0') {
@@ -620,22 +698,29 @@ export async function run(source, {
   const values = new Map();
   const requirements = new Map(ir.required_permits.map(item => [item.name, item]));
   const authorityTokens = new Map();
+  const nowMs = normalizeRuntimeTime(now);
+  const revoked = normalizeRevocations(revokedAuthorityIds);
 
   for (const requirement of ir.required_permits) {
     const token = authorities[requirement.name];
-    validateAuthorityToken(token, requirement);
+    validateAuthorityToken(token, requirement, {
+      nowMs,
+      revokedAuthorityIds: revoked
+    });
     authorityTokens.set(requirement.name, token);
     values.set(requirement.name, {
-      kind: 'Permit',
+      kind: requirement.authority_kind ?? 'Permit',
       authority_id: token.id,
       action: token.action,
-      scope: token.scope
+      scope: token.scope,
+      expires_at_ms: token.expires_at_ms ?? null
     });
   }
 
   for (const instruction of ir.instructions) {
     switch (instruction.op) {
       case 'REQUIRE_PERMIT':
+      case 'REQUIRE_LEASE':
         break;
 
       case 'OBSERVE':
@@ -717,7 +802,10 @@ export async function run(source, {
         const operation = values.get(instruction.operation);
         const requirement = requirements.get(instruction.permit);
         const token = authorityTokens.get(instruction.permit);
-        validateAuthorityToken(token, requirement);
+        validateAuthorityToken(token, requirement, {
+          nowMs,
+          revokedAuthorityIds: revoked
+        });
         consumedAuthorityTokens.add(token);
         values.set(instruction.name, Object.freeze({
           kind: 'AuthorizedOperation',
