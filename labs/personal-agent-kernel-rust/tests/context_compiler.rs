@@ -3,9 +3,7 @@ use axiom_personal_agent_kernel_rust_lab::context_compiler::{
     ContextResult, ContextSensitivity, ContextSourceKind, ContextTask, MemoryPromotionDisposition,
     MemoryPromotionGate, MemoryPromotionInput, Sha256Port,
 };
-use axiom_personal_agent_kernel_rust_lab::{
-    MemoryAssessment, MemoryDisposition, MemorySourceKind,
-};
+use axiom_personal_agent_kernel_rust_lab::{MemoryAssessment, MemoryDisposition, MemorySourceKind};
 
 struct TestDigest;
 
@@ -94,9 +92,13 @@ fn compile_is_deterministic_across_candidate_order() {
     let mut second = item("memory:a", 'e');
     second.priority = 5;
 
-    let forward =
-        ContextCompiler::compile(&task(), &limits(), &[first.clone(), second.clone()], &TestDigest)
-            .unwrap();
+    let forward = ContextCompiler::compile(
+        &task(),
+        &limits(),
+        &[first.clone(), second.clone()],
+        &TestDigest,
+    )
+    .unwrap();
     let reverse =
         ContextCompiler::compile(&task(), &limits(), &[second, first], &TestDigest).unwrap();
 
@@ -111,21 +113,13 @@ fn compile_is_deterministic_across_candidate_order() {
 
 #[test]
 fn selected_content_change_changes_bundle_digest() {
-    let original = ContextCompiler::compile(
-        &task(),
-        &limits(),
-        &[item("memory:a", 'd')],
-        &TestDigest,
-    )
-    .unwrap();
+    let original =
+        ContextCompiler::compile(&task(), &limits(), &[item("memory:a", 'd')], &TestDigest)
+            .unwrap();
 
-    let changed = ContextCompiler::compile(
-        &task(),
-        &limits(),
-        &[item("memory:a", 'e')],
-        &TestDigest,
-    )
-    .unwrap();
+    let changed =
+        ContextCompiler::compile(&task(), &limits(), &[item("memory:a", 'e')], &TestDigest)
+            .unwrap();
 
     assert_ne!(original.bundle_sha256, changed.bundle_sha256);
 }
@@ -139,7 +133,11 @@ fn required_blocked_context_fails_closed() {
     let error =
         ContextCompiler::compile(&task(), &limits(), &[quarantined], &TestDigest).unwrap_err();
 
-    assert!(error.message().contains("required context item memory:q blocked"));
+    assert!(
+        error
+            .message()
+            .contains("required context item memory:q blocked")
+    );
     assert!(error.message().contains("candidate-quarantined"));
 }
 
@@ -149,14 +147,15 @@ fn secret_context_never_enters_bundle() {
     secret.sensitivity = ContextSensitivity::CriticalSecret;
     secret.secret_material_embedded = true;
 
-    let bundle =
-        ContextCompiler::compile(&task(), &limits(), &[secret], &TestDigest).unwrap();
+    let bundle = ContextCompiler::compile(&task(), &limits(), &[secret], &TestDigest).unwrap();
 
     assert!(bundle.selected.is_empty());
     assert_eq!(bundle.omissions.len(), 1);
-    assert!(bundle.omissions[0]
-        .reasons
-        .contains(&"secret-material-not-context".to_string()));
+    assert!(
+        bundle.omissions[0]
+            .reasons
+            .contains(&"secret-material-not-context".to_string())
+    );
     assert!(!bundle.contains_secret_material());
 }
 
@@ -205,8 +204,7 @@ fn missing_provenance_is_omitted_or_fails_when_required() {
     let mut optional = item("memory:optional", 'd');
     optional.provenance_refs.clear();
 
-    let bundle =
-        ContextCompiler::compile(&task(), &limits(), &[optional], &TestDigest).unwrap();
+    let bundle = ContextCompiler::compile(&task(), &limits(), &[optional], &TestDigest).unwrap();
     assert!(bundle.selected.is_empty());
     assert_eq!(
         bundle.omissions[0].reasons,
@@ -217,8 +215,7 @@ fn missing_provenance_is_omitted_or_fails_when_required() {
     required.required = true;
     required.provenance_refs.clear();
 
-    let error =
-        ContextCompiler::compile(&task(), &limits(), &[required], &TestDigest).unwrap_err();
+    let error = ContextCompiler::compile(&task(), &limits(), &[required], &TestDigest).unwrap_err();
     assert!(error.message().contains("provenance-required"));
 }
 
@@ -281,12 +278,16 @@ fn inferred_memory_requires_two_evidence_refs_and_a_causal_receipt() {
     .unwrap();
 
     assert_eq!(decision.disposition, MemoryPromotionDisposition::Quarantine);
-    assert!(decision
-        .reasons
-        .contains(&"two-independent-evidence-refs-required".to_string()));
-    assert!(decision
-        .reasons
-        .contains(&"causal-receipt-required".to_string()));
+    assert!(
+        decision
+            .reasons
+            .contains(&"two-independent-evidence-refs-required".to_string())
+    );
+    assert!(
+        decision
+            .reasons
+            .contains(&"causal-receipt-required".to_string())
+    );
 }
 
 #[test]
@@ -324,12 +325,16 @@ fn promotion_gate_preserves_quarantine_and_contradictions() {
     .unwrap();
 
     assert_eq!(decision.disposition, MemoryPromotionDisposition::Quarantine);
-    assert!(decision
-        .reasons
-        .contains(&"memory-assessment-not-admit-durable".to_string()));
-    assert!(decision
-        .reasons
-        .contains(&"contradiction-requires-review".to_string()));
+    assert!(
+        decision
+            .reasons
+            .contains(&"memory-assessment-not-admit-durable".to_string())
+    );
+    assert!(
+        decision
+            .reasons
+            .contains(&"contradiction-requires-review".to_string())
+    );
 }
 
 #[test]
@@ -347,9 +352,11 @@ fn critical_secret_memory_is_routed_away_from_ordinary_promotion() {
     .unwrap();
 
     assert_eq!(decision.disposition, MemoryPromotionDisposition::Quarantine);
-    assert!(decision
-        .reasons
-        .contains(&"secret-material-requires-separate-vault-path".to_string()));
+    assert!(
+        decision
+            .reasons
+            .contains(&"secret-material-requires-separate-vault-path".to_string())
+    );
 }
 
 #[test]
@@ -387,13 +394,9 @@ fn invalid_digest_port_result_fails_closed() {
         }
     }
 
-    let error = ContextCompiler::compile(
-        &task(),
-        &limits(),
-        &[item("memory:a", 'd')],
-        &BrokenDigest,
-    )
-    .unwrap_err();
+    let error =
+        ContextCompiler::compile(&task(), &limits(), &[item("memory:a", 'd')], &BrokenDigest)
+            .unwrap_err();
 
     assert_eq!(error.message(), "invalid context bundle sha256");
 }
