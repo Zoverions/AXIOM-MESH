@@ -453,6 +453,17 @@ test('proposal validation rejects boundary widening and digest tampering', () =>
     () => validateOperationCandidateSelectionProposal(tampered),
     /proposal digest/i
   );
+
+  const withOther = proposal({
+    candidates: [primary, candidate('operation.other', C)],
+    semanticEvidence: []
+  });
+  const wrongWithheldReason = structuredClone(withOther);
+  wrongWithheldReason.withheld[0].reason = 'fallback-escalation';
+  assert.throws(
+    () => validateOperationCandidateSelectionProposal(wrongWithheldReason),
+    /withheld reason is inconsistent with mode/i
+  );
 });
 
 test('task and candidate instruction text cannot self-mark eligibility or privilege', () => {
@@ -612,7 +623,8 @@ test('production selector remains pure and has no live provider or authority sur
     'fetch(',
     'process.env',
     'TYPESAFE_API_KEY',
-    'api.typesafe'
+    'api.typesafe',
+    'localeCompare'
   ]) {
     assert.equal(
       source.toLowerCase().includes(forbidden.toLowerCase()),
