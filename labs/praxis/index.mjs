@@ -689,6 +689,7 @@ export function verifyHostObservation({
 
 function requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowMs) {
   const items = Array.isArray(evidence) ? evidence : [];
+  const byVerifier = Object.create(null);
   for (const item of items) {
     if (!item || item[VERIFIED_EVIDENCE] !== true || item.kind !== 'Verified') {
       throw new PraxisRuntimeError(
@@ -709,16 +710,23 @@ function requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowM
     if (nowMs >= item.valid_until_ms) {
       throw new PraxisRuntimeError('PRAXIS_EVIDENCE_STALE', 'authority evidence is stale');
     }
+    if (Object.hasOwn(byVerifier, item.verifier_name)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EVIDENCE_AMBIGUOUS',
+        'multiple authority evidence values were supplied for verifier ' + item.verifier_name
+      );
+    }
+    byVerifier[item.verifier_name] = item;
   }
   for (const required of policy.requires_evidence ?? []) {
-    if (!items.some(item => item.verifier_name === required)) {
+    if (!Object.hasOwn(byVerifier, required)) {
       throw new PraxisRuntimeError(
         'PRAXIS_EVIDENCE_REQUIRED',
         'policy requires verified evidence from ' + required
       );
     }
   }
-  return Object.freeze(items.map(item => Object.freeze({
+  const metadata = Object.freeze(items.map(item => Object.freeze({
     verifier_name: item.verifier_name,
     verifier_digest: item.verifier_digest,
     evidence_digest: item.evidence_digest,
@@ -726,6 +734,120 @@ function requireVerifiedAuthorityEvidence(evidence, policy, charterContext, nowM
     source: item.provenance,
     signer: item.signer
   })));
+  return Object.freeze({
+    items: Object.freeze([...items]),
+    by_verifier: Object.freeze(byVerifier),
+    metadata
+  });
+}
+
+function readPolicyPath(root, path, label) {
+  let current = root;
+  for (const segment of path) {
+    if (
+      current === null
+      || current === undefined
+      || (typeof current !== 'object' && typeof current !== 'string')
+      || !Object.hasOwn(Object(current), segment)
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_ERROR',
+        label + ' path does not exist'
+      );
+    }
+    current = current[segment];
+  }
+  return current;
+}
+
+function resolvePolicyOperand(operand, evidenceByVerifier, operation) {
+  if (operand.source === 'const') return operand.value;
+  if (operand.source === 'evidence') {
+    const evidence = evidenceByVerifier[operand.verifier];
+    if (!evidence) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EVIDENCE_REQUIRED',
+        'policy premise evidence ' + operand.verifier + ' is unavailable'
+      );
+    }
+    return readPolicyPath(
+      evidence.value,
+      operand.path,
+      'evidence ' + operand.verifier
+    );
+  }
+  if (operand.source === 'operation') {
+    if (!operation) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_SUBJECT_REQUIRED',
+        'policy premise references the operation but no exact descriptor was supplied'
+      );
+    }
+    return readPolicyPath(operation, operand.path, 'operation');
+  }
+  throw new PraxisRuntimeError('PRAXIS_POLICY_ERROR', 'unknown policy operand source');
+}
+
+function policyValuesEqual(left, right) {
+  try {
+    return canonicalJsonPraxis(left) === canonicalJsonPraxis(right);
+  } catch {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_ERROR',
+      'policy equality comparison received a non-canonical value'
+    );
+  }
+}
+
+function comparePolicyValues(op, left, right) {
+  if (op === 'eq') return policyValuesEqual(left, right);
+  if (op === 'neq') return !policyValuesEqual(left, right);
+  const leftType = typeof left;
+  const rightType = typeof right;
+  if (
+    leftType !== rightType
+    || !['number', 'string'].includes(leftType)
+    || (leftType === 'number' && (!Number.isFinite(left) || !Number.isFinite(right)))
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_ERROR',
+      'ordered policy comparison requires two finite numbers or two strings'
+    );
+  }
+  if (op === 'lt') return left < right;
+  if (op === 'lte') return left <= right;
+  if (op === 'gt') return left > right;
+  if (op === 'gte') return left >= right;
+  throw new PraxisRuntimeError('PRAXIS_POLICY_ERROR', 'unknown policy comparator ' + op);
+}
+
+function evaluatePolicyRequirements(policy, evidenceContext, operation) {
+  const results = [];
+  for (const [index, predicate] of (policy.require ?? []).entries()) {
+    const left = resolvePolicyOperand(predicate.left, evidenceContext.by_verifier, operation);
+    const right = resolvePolicyOperand(predicate.right, evidenceContext.by_verifier, operation);
+    let satisfied;
+    try {
+      satisfied = comparePolicyValues(predicate.op, left, right);
+    } catch (error) {
+      if (error instanceof PraxisRuntimeError) throw error;
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_ERROR',
+        'policy require[' + index + '] evaluation failed closed'
+      );
+    }
+    if (satisfied !== true) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_REQUIRE',
+        'policy require[' + index + '] was not satisfied'
+      );
+    }
+    results.push(Object.freeze({
+      predicate_digest: signatureBodyDigest(predicate),
+      result: true
+    }));
+  }
+  return Object.freeze(results);
 }
 
 function resolveRequesterPrincipal(charterContext, requester) {
