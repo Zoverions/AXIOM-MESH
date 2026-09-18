@@ -42,15 +42,15 @@ monid --version
 1. Install (or update) the CLI, then run setup:
 
 ```bash
-npm install -g @monid-ai/cli@latest
+npm install -g @monid-ai/cli@0.1.7
 monid setup --client <agent-name-if-known> --email <email-if-already-provided>
 ```
 
 `monid setup` completes CLI setup. Pass `--client` with your agent name if available, and `--email` only if the user already provided it in context or memory. Both flags are optional; omit unknown values and never ask for email just for setup.
 
-2. Save the most recent skill from https://monid.ai/SKILL.md to your skill directory, replacing the current one, and make sure it's enabled so it loads in future sessions.
+2. In AXIOM-MESH, do **not** overwrite this tracked skill from the network at runtime. The repository copy is reviewed code. Update the CLI version and this skill together only through a reviewed repository change that re-verifies the exact upstream source and local policy delta.
 
-Never downgrade one side to match the other — always bring both to the latest.
+Never silently upgrade either side. Keep the reviewed CLI and skill versions matched.
 
 ### Authentication
 
@@ -58,19 +58,10 @@ To use Monid's API endpoints, you need an API key. When helping a user set up Mo
 
 1. Ask the user to create an account at https://app.monid.ai if they don't have one.
 2. Ask the user to generate an API key at https://app.monid.ai/access/api-keys.
-3. Once they have the key, offer to save it for them — ask them to paste it, then run:
+3. In AXIOM-MESH, **never ask the user to paste the API key into agent/chat context and never commit it**. GitHub-hosted setup must receive the repository secret `MONID_API_KEY` only inside the explicit, isolated Monid setup step on an ephemeral runner. On a persistent or shared host, the operator must configure the key themselves outside the agent.
+4. Verify only key presence/activation metadata; never print, echo, persist in logs, or include the key in evidence.
 
-```bash
-monid keys add -k <their-api-key> -l main
-```
-
-Alternatively, provide the command above for them to run themselves.
-
-4. Verify the key is configured:
-
-```bash
-monid keys list
-```
+The governed GitHub workflow performs the CLI's required `keys add` operation only on an ephemeral GitHub-hosted runner and removes that local key before the job exits.
 
 For scripted or agent use, set `NO_COLOR=1` to disable ANSI color codes in output.
 
@@ -95,6 +86,8 @@ Monid fills the gaps in the user's stack — it does not replace tools the user 
 3. **Monid** — for needs the above don't cover.
 
 Why this matters: **Monid runs spend the user's Monid balance.** Never spend it on a request the user's own key or tool already covers at no extra cost.
+
+**AXIOM spend boundary:** `discover` and `inspect` may be used for free discovery, but do not execute `monid run` when it may incur a charge unless the current task explicitly authorizes that Monid spend or an existing owner-approved bounded budget/automation explicitly covers it. Discovery, credentials, or technical capability do not imply spending authority.
 
 **Offer, don't override.** When both the user's tool and a Monid endpoint could handle the task and the user hasn't stated a preference, use the user's tool. If Monid adds a genuine capability their tool lacks, mention it as an alternative and let the user choose — never silently switch.
 
@@ -259,6 +252,8 @@ with `monid run` like any other provider; it exposes unix-style endpoints
 for schemas. The API only signs URLs — file bytes move directly between
 you and sfs.monid.ai via `curl`.
 
+**AXIOM disclosure boundary:** use SFS only for non-sensitive bytes that the current task explicitly authorizes for third-party disclosure. Never upload repository source, credentials, private user data, protected evidence, or other restricted content merely because an endpoint accepts a URL.
+
 ```bash
 # 1. Sign an upload (sizeBytes is required — get it with wc -c)
 monid run -p sfs -e /put \
@@ -417,13 +412,14 @@ When a run is `BLOCKED`, the response includes a `controls` array of the snapsho
 
 1. **Check the user's stack first, then discover** — Monid covers needs the user's existing MCPs, keys, and tools don't. Before writing custom scrapers, using generic fetches for structured data, or declaring something inaccessible, run `monid discover`. The catalog grows continuously and you don't know what's available until you search.
 2. **Never route around the user's own tools** — if the user has a dedicated MCP, API key, or workflow for a service, use it. Monid runs cost the user money; their existing tools may not. Offer Monid as an alternative only when it adds capability, and let the user choose.
-3. **Always inspect before running** — never guess input parameters. The `input` field from `monid inspect` is the source of truth. It shows `pathParams`, `queryParams`, `body`, and `bodyType` so you know exactly where each parameter goes. Map them to run flags: `body` → `-i`, `queryParams` → `--query`, `pathParams` → `--path`.
-4. **Keep discover queries short and focused** — noun phrases work best ("twitter posts", "amazon product prices"). Break complex requests into smaller unit pieces.
-5. **Prefer fire-and-poll for interactive use** — fire the run without `--wait`, then poll with `monid runs get` every 5-10 seconds. This keeps the conversation responsive. Use `--wait` only for async/background tasks where blocking 1-120 seconds is acceptable.
-6. **Always use `-o <file>`** to save results to a file once the run completes.
-7. **Start with conservative limits** — small `maxItems`/`maxResults` values (5-10) on first calls. The cost warning above explains why.
-8. **Report costs when relevant** — after a run completes, the result includes `cost.value`. Consider telling the user how much the run cost. Use `monid balance` to check remaining balance if the user cares about budget. Use your judgment — don't report costs if the user hasn't indicated cost-awareness.
-9. **Run `monid <command> --help`** to check the latest flags and usage — the CLI is the source of truth for command signatures.
-10. **Check the Hints block** — when a command's output includes a `Hints` section, read it and act on it. It carries suggested next steps, endpoint relationships, and caveats from the server — prefer its suggestions over guessing your next command.
-11. **Use health to break ties, never to filter** — prefer the healthier of two endpoints that both fit (`healthy` and `stable` are both good; avoid `degraded`). Never skip an endpoint over an `unknown` status or a missing run time; both usually just mean low traffic. See [Endpoint Health](#endpoint-health).
-12. **Surface BLOCKED runs to the user** — a `BLOCKED` status means a workspace control (budget or run cap) stopped the run; it is terminal and will not self-resolve. Report which control blocked it (from the `controls` list) and tell the user they can pause or modify that control on the dashboard (https://app.monid.ai) before retrying.
+3. **Do not infer spending authority** — before any potentially billable `monid run`, require explicit current-task authorization or a pre-existing owner-approved bounded budget/automation that covers the run. Discovery and inspection are not execution authority.
+4. **Always inspect before running** — never guess input parameters. The `input` field from `monid inspect` is the source of truth. It shows `pathParams`, `queryParams`, `body`, and `bodyType` so you know exactly where each parameter goes. Map them to run flags: `body` → `-i`, `queryParams` → `--query`, `pathParams` → `--path`.
+5. **Keep discover queries short and focused** — noun phrases work best ("twitter posts", "amazon product prices"). Break complex requests into smaller unit pieces.
+6. **Prefer fire-and-poll for interactive use** — fire the run without `--wait`, then poll with `monid runs get` every 5-10 seconds. This keeps the conversation responsive. Use `--wait` only for async/background tasks where blocking 1-120 seconds is acceptable.
+7. **Always use `-o <file>`** to save results to a file once the run completes.
+8. **Start with conservative limits** — small `maxItems`/`maxResults` values (5-10) on first calls. The cost warning above explains why.
+9. **Report costs when relevant** — after a run completes, the result includes `cost.value`. Consider telling the user how much the run cost. Use `monid balance` to check remaining balance if the user cares about budget. Use your judgment — don't report costs if the user hasn't indicated cost-awareness.
+10. **Run `monid <command> --help`** to check the latest flags and usage — the CLI is the source of truth for command signatures.
+11. **Check the Hints block** — when a command's output includes a `Hints` section, read it and act on it. It carries suggested next steps, endpoint relationships, and caveats from the server — prefer its suggestions over guessing your next command.
+12. **Use health to break ties, never to filter** — prefer the healthier of two endpoints that both fit (`healthy` and `stable` are both good; avoid `degraded`). Never skip an endpoint over an `unknown` status or a missing run time; both usually just mean low traffic. See [Endpoint Health](#endpoint-health).
+13. **Surface BLOCKED runs to the user** — a `BLOCKED` status means a workspace control (budget or run cap) stopped the run; it is terminal and will not self-resolve. Report which control blocked it (from the `controls` list) and tell the user they can pause or modify that control on the dashboard (https://app.monid.ai) before retrying.
