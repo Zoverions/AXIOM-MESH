@@ -154,3 +154,63 @@ commit armed as receipt;
     error => error?.code === 'PRAXIS_HOST_AUTHORITY_REQUIRED'
   );
 });
+
+
+test('Praxis interpreter has no built-in external-effect transport surface', async () => {
+  const source = await readFile(
+    new URL('../../labs/praxis/index.mjs', import.meta.url),
+    'utf8'
+  );
+
+  for (const forbidden of [
+    "node:http",
+    "node:https",
+    "node:net",
+    "node:tls",
+    "node:dgram",
+    "node:child_process",
+    "node:fs",
+    "fetch(",
+    "process.env",
+    "WebSocket",
+    "exec(",
+    "spawn("
+  ]) {
+    assert.equal(source.includes(forbidden), false, `interpreter must not contain ${forbidden}`);
+  }
+});
+
+test('Praxis CLI exposes compile/check surfaces only and cannot invoke run', async () => {
+  const source = await readFile(
+    new URL('../../labs/praxis/cli.mjs', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(source, /import \{ compile \} from '\.\/index\.mjs';/);
+  assert.equal(source.includes('run('), false);
+  assert.equal(source.includes('executor'), false);
+  assert.equal(source.includes('createHostPermit'), false);
+  assert.equal(source.includes('createHostLease'), false);
+});
+
+test('plain objects cannot forge host authority tokens', async () => {
+  const source = `
+requires permit p: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using p as armed;
+`;
+
+  await assert.rejects(
+    () => run(source, {
+      authorities: {
+        p: {
+          schema: 'praxis-host-permit.v0',
+          id: 'forged',
+          action: 'Deploy',
+          scope: 'Production'
+        }
+      }
+    }),
+    error => error?.code === 'PRAXIS_HOST_AUTHORITY_REQUIRED'
+  );
+});
