@@ -344,6 +344,7 @@ test('derives deterministic inert dispatch for the first ready step', () => {
   const projection = deriveFlowDispatchProjection(source);
 
   assert.equal(projection.schema, FLOW_DISPATCH_PROJECTION_SCHEMA);
+  assert.equal(projection.plan_digest, source.plan.plan_digest);
   assert.equal(validateFlowDispatchInput(source).valid, true);
   assert.equal(validateFlowDispatchProjection(projection).valid, true);
   assert.equal(verifyFlowDispatchProjection(source, projection), true);
