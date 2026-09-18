@@ -1113,3 +1113,82 @@ test('claim worker runtime must match a bound handoff target', () => {
     /worker is not compatible with claimed step/i
   );
 });
+
+
+test('accepted work dependency with broken ancestry cannot wake downstream work', () => {
+  const inconsistent = graph({
+    collectState: 'accepted',
+    analyzeState: 'ready',
+    extraNodes: [
+      node({
+        node_id: 'task.root-blocked',
+        kind: 'task',
+        state: 'rejected',
+        dependencies: ['goal'],
+        lineage_ref: 'lineage.blocked'
+      })
+    ]
+  });
+  inconsistent.nodes.find(entry => entry.node_id === 'task.collect').dependencies = [
+    'task.root-blocked'
+  ];
+
+  const projection = deriveFlowDispatchProjection(input({ workGraph: inconsistent }));
+  assert.equal(projection.completed_step_ids.includes('collect'), false);
+  assert.ok(
+    projection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
+      'work-dependency-rejected:task.root-blocked'
+    )
+  );
+  assert.ok(
+    projection.blocked_steps.find(entry => entry.step_id === 'analyze').reasons.includes(
+      'dependency-not-accepted:collect'
+    )
+  );
+});
+
+test('accepted artifact and pass verification do not launder broken dependency ancestry', () => {
+  const artifact = node({
+    node_id: 'artifact.collect',
+    kind: 'artifact',
+    state: 'accepted',
+    dependencies: ['task.collect'],
+    artifact_digest: sha256('artifact.broken-ancestry'),
+    lineage_ref: 'lineage.search'
+  });
+  const verification = node({
+    node_id: 'verification.independent',
+    kind: 'verification',
+    state: 'accepted',
+    dependencies: ['artifact.collect'],
+    verification_result: 'pass',
+    verifier_ref: 'worker.verify',
+    verification_evidence_digest: sha256('verification.broken-ancestry'),
+    lineage_ref: 'lineage.verify'
+  });
+  const workGraph = graph({
+    collectState: 'rejected',
+    analyzeState: 'proposed',
+    extraNodes: [artifact, verification]
+  });
+  const verifier = worker({
+    worker_ref: 'worker.verify',
+    runtime_ref: 'runtime.verify',
+    lineage_ref: 'lineage.verify',
+    operation_ids: [],
+    can_verify: true
+  });
+
+  const projection = deriveFlowDispatchProjection(input({
+    workGraph,
+    workers: [...defaultWorkers(), verifier]
+  }));
+  assert.equal(projection.verification_proposals.length, 1);
+  assert.deepEqual(projection.verification_proposals[0], {
+    artifact_node_id: 'artifact.collect',
+    producer_lineage_ref: 'lineage.search',
+    candidate_verifier_refs: [],
+    selected_verifier_ref: null,
+    selection_reason: 'artifact-dependency-ancestry-not-accepted'
+  });
+});
