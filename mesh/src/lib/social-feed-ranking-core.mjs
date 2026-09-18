@@ -10,7 +10,7 @@ export const SOCIAL_FEED_SCORE_DIMENSIONS = Object.freeze([
 
 const MODES = new Set(['weighted', 'chronological']);
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
-const UTC = /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/;
+const UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 function fail(message) {
   throw new TypeError(message);
@@ -62,10 +62,17 @@ function validatedCandidate(candidate, index) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
     fail(`social feed candidate[${index}] must be an object`);
   }
-  if (typeof candidate.candidate_id !== 'string' || candidate.candidate_id.length === 0) {
+  if (
+    typeof candidate.candidate_id !== 'string'
+    || !IDENTIFIER.test(candidate.candidate_id)
+  ) {
     fail(`social feed candidate[${index}].candidate_id is invalid`);
   }
-  if (typeof candidate.published_at !== 'string' || candidate.published_at.length === 0) {
+  if (typeof candidate.published_at !== 'string' || !UTC.test(candidate.published_at)) {
+    fail(`social feed candidate[${index}].published_at is invalid`);
+  }
+  const parsedTime = new Date(candidate.published_at);
+  if (!Number.isFinite(parsedTime.getTime()) || parsedTime.toISOString() !== candidate.published_at) {
     fail(`social feed candidate[${index}].published_at is invalid`);
   }
   if (
