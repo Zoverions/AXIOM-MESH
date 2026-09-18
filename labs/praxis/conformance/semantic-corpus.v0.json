@@ -138,6 +138,34 @@
     {
       "invariant": "legacy-asserted-observation-cannot-satisfy-chartered-authority",
       "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "authority-premises-verified-op-constants-only",
+      "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "verified-evidence-binds-same-operation-artifact",
+      "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "verified-evidence-is-immutable-snapshot",
+      "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "duplicate-verifier-evidence-denied-as-ambiguous",
+      "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "missing-or-malformed-premise-denies",
+      "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "operation-referencing-premise-requires-exact-descriptor",
+      "status": "covered-synthetic-policy-premise-tests"
+    },
+    {
+      "invariant": "prepared-replay-preserves-predicate-digests",
+      "status": "covered-synthetic-policy-premise-tests"
     }
   ],
   "compile_cases": [
