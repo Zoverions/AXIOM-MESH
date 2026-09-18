@@ -219,6 +219,25 @@ function validateOperationDescriptorPraxis(operation) {
     operation_digest: claimedDigest,
     ...body
   } = operation;
+  if (operation.effect !== undefined) {
+    if (
+      typeof operation.host_operation !== 'string'
+      || operation.host_operation.length === 0
+      || typeof operation.effect !== 'string'
+      || operation.effect.length === 0
+      || typeof operation.irreversible !== 'boolean'
+      || !Object.hasOwn(operation, 'egress')
+      || (
+        operation.egress !== null
+        && (typeof operation.egress !== 'string' || operation.egress.length === 0)
+      )
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_SUBJECT_INVALID',
+        'measured operation descriptor metadata is malformed'
+      );
+    }
+  }
   const expected = operationDigest(body);
   if (claimedDigest !== expected) {
     throw new PraxisRuntimeError(
@@ -1202,6 +1221,16 @@ async function createCharteredHostAuthority({
     );
   }
   const requesterPrincipal = resolveRequesterPrincipal(charterContext, requester);
+  if (subject.operation?.effect !== undefined) {
+    validateEffectEnvelope(
+      {
+        charter_digest: charterContext.digest,
+        requester: requesterPrincipal
+      },
+      subject.operation,
+      charterContext
+    );
+  }
   const evidenceContext = requireVerifiedAuthorityEvidence(
     evidence,
     policy,
