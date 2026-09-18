@@ -9,6 +9,7 @@ import {
 const HOST_AUTHORITY = Symbol('praxis.host-authority');
 const HOST_SECRET_REF = Symbol('praxis.host-secret-ref');
 const HOST_PREPARED_REF = Symbol('praxis.host-prepared-ref');
+const HOST_OPERATION_REGISTRY = Symbol('praxis.host-operation-registry');
 const VERIFIED_EVIDENCE = Symbol('praxis.verified-evidence');
 const consumedAuthorityTokens = new WeakSet();
 const consumedPreparedRefs = new WeakSet();
@@ -169,16 +170,36 @@ export function createOperationDescriptorPraxis({
   action,
   scope,
   args = [],
-  secretReferences = []
+  secretReferences = [],
+  effect = undefined,
+  irreversible = undefined,
+  egress = undefined,
+  hostOperation = undefined
 }) {
   if (!action || !scope) throw new TypeError('Praxis operation descriptor requires action and scope');
-  const body = immutablePraxisSnapshot({
+  const bodyInput = {
     schema: 'praxis-operation.v0',
     action: String(action),
     scope: String(scope),
     args,
     secret_references: secretReferences
-  });
+  };
+  if (effect !== undefined) {
+    if (typeof effect !== 'string' || effect.length === 0) {
+      throw new TypeError('Praxis measured operation effect must be a non-empty string');
+    }
+    if (irreversible !== undefined && typeof irreversible !== 'boolean') {
+      throw new TypeError('Praxis measured operation irreversible must be boolean');
+    }
+    if (egress !== undefined && egress !== null && (typeof egress !== 'string' || egress.length === 0)) {
+      throw new TypeError('Praxis measured operation egress must be null or a non-empty string');
+    }
+    bodyInput.host_operation = String(hostOperation ?? action);
+    bodyInput.effect = effect;
+    bodyInput.irreversible = irreversible === true;
+    bodyInput.egress = egress ?? null;
+  }
+  const body = immutablePraxisSnapshot(bodyInput);
   return Object.freeze({
     kind: 'Operation',
     ...body,
@@ -206,6 +227,62 @@ function validateOperationDescriptorPraxis(operation) {
     );
   }
   return operation;
+}
+
+
+export function createHostOperationRegistry(definitions = {}) {
+  const operations = {};
+  for (const [name, definition] of Object.entries(definitions)) {
+    if (['__proto__', 'constructor', 'prototype'].includes(name)) {
+      throw new TypeError('host operation name is forbidden: ' + name);
+    }
+    if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
+      throw new TypeError('host operation ' + name + ' definition must be an object');
+    }
+    const action = String(definition.action ?? name);
+    const scope = String(definition.scope ?? '');
+    const effect = String(definition.effect ?? '');
+    const irreversible = definition.irreversible === true;
+    const egress = definition.egress ?? null;
+    if (!action || !scope || !effect) {
+      throw new TypeError('host operation ' + name + ' requires action, scope, and effect');
+    }
+    if (definition.irreversible !== undefined && typeof definition.irreversible !== 'boolean') {
+      throw new TypeError('host operation ' + name + ' irreversible must be boolean');
+    }
+    if (egress !== null && (typeof egress !== 'string' || egress.length === 0)) {
+      throw new TypeError('host operation ' + name + ' egress must be null or a non-empty string');
+    }
+    operations[name] = Object.freeze({
+      name,
+      action,
+      scope,
+      effect,
+      irreversible,
+      egress
+    });
+  }
+  return Object.freeze({
+    [HOST_OPERATION_REGISTRY]: true,
+    schema: 'praxis-host-operation-registry.v0',
+    operations: Object.freeze(operations)
+  });
+}
+
+function normalizeHostOperationRegistry(registry) {
+  if (registry === null || registry === undefined) return null;
+  if (
+    !registry
+    || registry[HOST_OPERATION_REGISTRY] !== true
+    || registry.schema !== 'praxis-host-operation-registry.v0'
+    || !registry.operations
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REGISTRY',
+      'run hostOperations must be a Praxis host operation registry'
+    );
+  }
+  return registry;
 }
 
 function keyToPublicDerBase64(key) {
