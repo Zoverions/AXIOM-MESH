@@ -155,6 +155,58 @@ export function irDigestPraxis(ir) {
   return `sha256:${digestPraxis(body)}`;
 }
 
+function deepFreezePraxis(value) {
+  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const item of Object.values(value)) deepFreezePraxis(item);
+  return Object.freeze(value);
+}
+
+function immutablePraxisSnapshot(value) {
+  return deepFreezePraxis(canonicalizePraxis(value));
+}
+
+export function createOperationDescriptorPraxis({
+  action,
+  scope,
+  args = [],
+  secretReferences = []
+}) {
+  if (!action || !scope) throw new TypeError('Praxis operation descriptor requires action and scope');
+  const body = immutablePraxisSnapshot({
+    schema: 'praxis-operation.v0',
+    action: String(action),
+    scope: String(scope),
+    args,
+    secret_references: secretReferences
+  });
+  return Object.freeze({
+    kind: 'Operation',
+    ...body,
+    operation_digest: operationDigest(body)
+  });
+}
+
+function validateOperationDescriptorPraxis(operation) {
+  if (!operation || operation.kind !== 'Operation' || operation.schema !== 'praxis-operation.v0') {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_SUBJECT_REQUIRED',
+      'policy evaluation requires a Praxis Operation descriptor'
+    );
+  }
+  const {
+    kind: ignoredKind,
+    operation_digest: claimedDigest,
+    ...body
+  } = operation;
+  const expected = operationDigest(body);
+  if (claimedDigest !== expected) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_POLICY_SUBJECT_INVALID',
+      'operation descriptor digest does not match its content'
+    );
+  }
+  return operation;
+}
 
 function keyToPublicDerBase64(key) {
   if (typeof key === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(key)) return key;
@@ -453,7 +505,7 @@ export function createHostObservation({
   const body = Object.freeze({
     schema: 'praxis-observation.v0',
     source: String(source),
-    value,
+    value: immutablePraxisSnapshot(value),
     issued_at_ms: issuedAtMs,
     principal: String(principal),
     nonce: String(nonce)
