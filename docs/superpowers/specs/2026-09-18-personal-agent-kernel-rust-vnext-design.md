@@ -222,7 +222,16 @@ The Rust programme is intentionally split into three independently reviewable la
    - only explicit AXIOM host imports are admissible;
    - no WASI context is added, so ambient filesystem/network/environment authority is absent rather than filtered after exposure.
 
-Dependency-bearing sidecars may constrain or verify inputs to the semantic core. They may not mutate the core constitution, create a parallel Gateway, mint capability grants, or turn a runtime import into execution authority.
+4. **Offline single-spend journal** — `labs/personal-agent-kernel-offline-journal`
+   - append-only hash-chained consumption records;
+   - durable flush before a consumption is exposed to the caller;
+   - exact monotonic global and per-envelope sequences;
+   - fail-closed torn-tail and historical-tamper detection;
+   - atomic create-only single-writer lease preventing concurrent local consumers;
+   - uncleared crash leases require explicit recovery rather than automatic takeover;
+   - stores only consumption/control metadata and never executes an effect or mints authority.
+
+Dependency-bearing sidecars may constrain or verify inputs to the semantic core. They may not mutate the core constitution, create a parallel Gateway, mint capability grants, or turn a runtime import or journal record into execution authority.
 
 ## Implemented laboratory evidence
 
@@ -238,17 +247,18 @@ The current stacked laboratory now contains executable evidence for:
 - reconciliation reports that expose missing offline receipts without issuing replacement authority;
 - attestation-aware placement filters that constrain **where** an operation may run while explicitly granting no execution authority.
 
-### Remaining offline-envelope limitation
+### Offline-envelope persistence boundary
 
-The replay registry is intentionally in-memory in this laboratory. It prevents duplicate import within one live kernel process but does not claim crash-safe or cross-device anti-replay.
+The semantic-core replay registry remains intentionally in-memory. Restart-safe local consumption is instead delegated to the separate durable offline-journal laboratory.
 
-Production promotion therefore requires one of:
+That journal now targets **single-local-writer restart safety**:
+- clean reopen recovers exact envelope consumption sequence;
+- duplicate registration or sequence reuse/gaps fail closed;
+- torn tails and historical hash-chain corruption block reopen;
+- a live writer lease prevents two local processes from consuming the same journal concurrently;
+- an uncleared crash lease blocks automatic takeover and requires explicit recovery.
 
-- Mesh-side single-use issuance state;
-- a hardware-backed monotonic counter;
-- or a separately reviewed durable local monotonic journal.
-
-The kernel must not claim partition-safe single-spend across restart until one of those mechanisms is implemented and tested.
+This still does **not** claim cross-device global single-spend. Production-grade authority uniqueness across phone, desktop, home node, and remote node requires Mesh-side issuance/consumption coordination or an independently reviewed distributed monotonic mechanism. Local journal state must never be merged as if conflicting consumptions were ordinary sync data.
 
 ## Promotion gates
 
