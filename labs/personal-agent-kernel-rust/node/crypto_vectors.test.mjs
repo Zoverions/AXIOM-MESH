@@ -44,3 +44,22 @@ test('existing AXIOM verifier matches the Rust Mesh-proof signature corpus', () 
     );
   }
 });
+
+test('AXIOM Node verifier rejects a valid signature over noncanonical JSON bytes', () => {
+  const body = '{"grant_ref":"grant:crypto-vector-1","capability_ref":"capability:purchase","expires_at_unix_s":1789733300,"max_delegation_hops":1,"node_id":"node:purchase","owner_subject_ref":"subject:owner-1","plan_digest":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","revocation_epoch":7}';
+  const statement = JSON.parse(body);
+
+  assert.equal(
+    verifyObjectSignature(
+      statement,
+      {
+        algorithm: 'Ed25519',
+        key_id: 'grid:fixed-vector',
+        digest: 'dc156dfc8def9600f83de1b4a0968e042c5d9555b31ba94c6767f4e85344a8ec',
+        signature: '5LbrblkK04lXSQRZGa-mGA3aTigl_dKHU3dBxVKhHv_W192zi0aMxrWDiRPLKsWc7jB6-A27r6hXpHXIoJLbAg'
+      },
+      PUBLIC_KEY_PEM
+    ),
+    false
+  );
+});
