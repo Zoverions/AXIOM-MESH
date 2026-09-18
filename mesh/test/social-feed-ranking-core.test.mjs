@@ -181,6 +181,27 @@ test('core fails closed on malformed dimensions and out-of-range values', () => 
   );
 });
 
+test('core rejects malformed candidate identity and non-canonical timestamps', () => {
+  const profile = {
+    mode: 'chronological',
+    weights: normalizeSocialFeedWeights(dimensions(), 'chronological')
+  };
+
+  const badId = candidate('candidate with spaces');
+  assert.throws(
+    () => rankSocialFeedCore({ profile, candidates: [badId] }),
+    /candidate_id is invalid/i
+  );
+
+  const badTime = candidate('candidate:bad-time', {
+    publishedAt: '2026-09-18T06:00:00Z'
+  });
+  assert.throws(
+    () => rankSocialFeedCore({ profile, candidates: [badTime] }),
+    /published_at is invalid/i
+  );
+});
+
 test('shared ranking core has no Node, canonical, crypto, network, or persistence import', async () => {
   const source = await readFile(
     new URL('../src/lib/social-feed-ranking-core.mjs', import.meta.url),
