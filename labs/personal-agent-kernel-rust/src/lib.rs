@@ -874,26 +874,6 @@ impl OfflineEnvelopeLedger {
         Ok(())
     }
 
-    fn consume(
-        &mut self,
-        owner_subject_ref: &str,
-        current_revocation_epoch: u64,
-        target_device_ref: &str,
-        current_surface: &RuntimeSurface,
-        now_unix_s: u64,
-        budget_requests: &[BudgetRequest],
-    ) -> KernelResult<OfflineAuthorizedEffect> {
-        let intent = self.prepare_consumption(
-            owner_subject_ref,
-            current_revocation_epoch,
-            target_device_ref,
-            current_surface,
-            now_unix_s,
-            budget_requests,
-        )?;
-        self.commit_consumption(&intent, current_surface, now_unix_s)
-    }
-
     fn apply_consumption_intent(
         &mut self,
         intent: &OfflineConsumptionIntent,
