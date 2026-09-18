@@ -32,8 +32,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24.18.0"
-      - name: Verify Node v0 policy oracle against shared corpus
-        run: node --test labs/personal-agent-kernel-rust/node/policy_oracle.test.mjs
+      - name: Verify Node v0 and Gateway anchors against shared corpora
+        run: node --test labs/personal-agent-kernel-rust/node/*.test.mjs
 
   rust-personal-kernel-lab:
     strategy:
