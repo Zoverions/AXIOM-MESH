@@ -245,3 +245,150 @@ authorize release using p as armed;
       && error.code === 'PRAXIS_AUTHORIZE_REQUIRES_OPERATION'
   );
 });
+
+
+test('compiler-bypass: a consumed permit cannot be reused by appended IR', async () => {
+  const source = `
+requires permit p: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using p as armed;
+prepare armed as prepared;
+`;
+
+  const ir = craft(source, module => {
+    const authorize = module.instructions.find(instruction => instruction.op === 'AUTHORIZE');
+    const prepare = module.instructions.find(instruction => instruction.op === 'PREPARE');
+    module.instructions.push(
+      { ...authorize, name: 'armed_again' },
+      { ...prepare, name: 'prepared_again', operation: 'armed_again' }
+    );
+  });
+
+  const permit = createHostPermit({
+    id: 'permit:reuse',
+    action: 'Deploy',
+    scope: 'Production',
+    operationDigest: planDigest('Deploy', 'Production', ['artifact'])
+  });
+  let prepareCalls = 0;
+
+  await assert.rejects(
+    () => run(ir, {
+      authorities: { p: permit },
+      preparer: async request => {
+        prepareCalls += 1;
+        return durablePreparer()(request);
+      }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_HOST_AUTHORITY_CONSUMED'
+  );
+
+  assert.equal(prepareCalls, 1);
+});
+
+test('compiler-bypass: an Assessment cannot be substituted for authority', async () => {
+  const source = `
+requires permit p: Deploy @ Production;
+observe evidence = "safe" from "fixture";
+assess risk = evidence with Risk;
+op release = Deploy("artifact") @ Production;
+authorize release using p as armed;
+`;
+
+  const ir = craft(source, module => {
+    module.instructions.find(instruction => instruction.op === 'AUTHORIZE').permit = 'risk';
+  });
+
+  const permit = createHostPermit({
+    id: 'permit:assessment-substitution',
+    action: 'Deploy',
+    scope: 'Production',
+    operationDigest: planDigest('Deploy', 'Production', ['artifact'])
+  });
+
+  await assert.rejects(
+    () => run(ir, {
+      authorities: { p: permit },
+      assessors: {
+        Risk: async () => ({ ok: true, value: 'low' })
+      }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_AUTHORIZE_REQUIRES_PERMIT'
+  );
+});
+
+test('compiler-bypass: COMMIT cannot target an inert Operation', async () => {
+  const source = `
+requires permit p: Deploy @ Production;
+op release = Deploy("artifact") @ Production;
+authorize release using p as armed;
+prepare armed as prepared;
+commit prepared as receipt;
+`;
+
+  const ir = craft(source, module => {
+    module.instructions.find(instruction => instruction.op === 'COMMIT').operation = 'release';
+  });
+
+  const permit = createHostPermit({
+    id: 'permit:unprepared-commit',
+    action: 'Deploy',
+    scope: 'Production',
+    operationDigest: planDigest('Deploy', 'Production', ['artifact'])
+  });
+  let executorCalls = 0;
+
+  await assert.rejects(
+    () => run(ir, {
+      authorities: { p: permit },
+      preparer: durablePreparer(),
+      executor: async request => {
+        executorCalls += 1;
+        return completedExecutor()(request);
+      },
+      completer: durableCompleter()
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_COMMIT_REQUIRES_PREPARATION'
+  );
+
+  assert.equal(executorCalls, 0);
+});
+
+test('compiler-bypass: crafted IR cannot redefine an existing binding', async () => {
+  const source = `
+op first = Plan("a") @ Local;
+op second = Plan("b") @ Local;
+`;
+
+  const ir = craft(source, module => {
+    const plans = module.instructions.filter(instruction => instruction.op === 'PLAN');
+    plans[1].name = plans[0].name;
+  });
+
+  await assert.rejects(
+    () => run(ir),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_IR_DUPLICATE_BINDING'
+  );
+});
+
+test('compiler-bypass: unknown instructions fail closed even when IR is resealed', async () => {
+  const source = 'op release = Deploy("artifact") @ Production;';
+
+  const ir = craft(source, module => {
+    module.instructions.push({
+      op: 'SYSCALL',
+      name: 'escape',
+      command: 'synthetic-only'
+    });
+  });
+
+  await assert.rejects(
+    () => run(ir),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_IR_MALFORMED'
+  );
+});
