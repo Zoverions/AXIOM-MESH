@@ -1,3 +1,13 @@
+2026-09-18 — Google managed-agent preview candidate
+
+- Added a service-endpoint-pinned agent-runtime profile for `antigravity-preview-09-2026` through the Gemini Interactions API.
+- Kept catalog inclusion at zero AXIOM actions/capabilities and recorded remote execution as a requested property rather than authority.
+- Added a pure, zero-I/O request builder that pins the Antigravity harness and Gemini 3.8 Flash model, requires an explicit AXIOM grant, and always emits an explicit network policy.
+- Default network posture is stricter than Google's provider default: disabled with no destinations, or an exact finite hostname allowlist; wildcard egress is rejected.
+- Provider credentials are represented only by credential references in the candidate builder; arbitrary inline headers, tokens, and environment objects are not accepted.
+- Added negative tests for missing grants, wildcard egress, destination drift, credential-domain drift, arbitrary credential/header shapes, wrong catalog targets, and environment reuse without policy reassertion.
+- No live Google API call, capability promotion, production activation, credential creation, or external effect is performed by this slice.
+
 2026-08-25 — pinned local-inference research profiles
 
 - Added four source-commit-pinned compute-backend research profiles: Ollama (MIT), vLLM (Apache-2.0), llama.cpp (MIT), and SGLang (Apache-2.0).
