@@ -703,6 +703,50 @@ impl DelegationLedger {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthorityHandoffProposal {
+    pub grant_ref: String,
+    pub from_node_ref: String,
+    pub target_node_ref: String,
+    pub plan_digest: String,
+    pub node_id: String,
+    pub capability_ref: String,
+    pub current_revocation_epoch: u64,
+    pub proposed_revocation_epoch: u64,
+}
+
+impl AuthorityHandoffProposal {
+    pub fn requires_mesh_reauthorization(&self) -> bool {
+        true
+    }
+
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MeshWitness {
+    pub witness_node_ref: String,
+    pub receipt_ref: String,
+    pub effect_digest: String,
+    pub witnessed_at_unix_s: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReceiptWitnessAssessment {
+    pub receipt_ref: String,
+    pub unique_witnesses: usize,
+    pub required_witnesses: usize,
+    pub quorum_met: bool,
+}
+
+impl ReceiptWitnessAssessment {
+    pub fn grants_authority(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContinuityCapsule {
     pub kernel_id: String,
     pub owner_subject_ref: String,
@@ -1136,6 +1180,93 @@ impl Kernel {
             candidate_id: candidate.candidate_id.clone(),
             disposition,
             reasons: reasons.into_iter().collect(),
+        })
+    }
+
+    pub fn propose_authority_handoff(
+        &self,
+        authority: &VerifiedAuthority,
+        from_node_ref: &str,
+        target_node_ref: &str,
+    ) -> KernelResult<AuthorityHandoffProposal> {
+        require_id(from_node_ref, "handoff source node ref")?;
+        require_id(target_node_ref, "handoff target node ref")?;
+        if from_node_ref == target_node_ref {
+            return Err(KernelError::new(
+                "authority handoff source and target must differ",
+            ));
+        }
+        if authority.owner_subject_ref != self.identity.owner_subject_ref
+            || authority.revocation_epoch != self.revocation_epoch
+        {
+            return Err(KernelError::new(
+                "authority handoff requires current verified authority",
+            ));
+        }
+        let proposed_revocation_epoch = self
+            .revocation_epoch
+            .checked_add(1)
+            .ok_or_else(|| KernelError::new("revocation epoch overflow"))?;
+
+        Ok(AuthorityHandoffProposal {
+            grant_ref: authority.grant_ref.clone(),
+            from_node_ref: from_node_ref.to_string(),
+            target_node_ref: target_node_ref.to_string(),
+            plan_digest: authority.plan_digest.clone(),
+            node_id: authority.node_id.clone(),
+            capability_ref: authority.capability_ref.clone(),
+            current_revocation_epoch: self.revocation_epoch,
+            proposed_revocation_epoch,
+        })
+    }
+
+    pub fn assess_receipt_witnesses(
+        &self,
+        receipt: &EffectReceipt,
+        witnesses: &[MeshWitness],
+        required_unique_witnesses: usize,
+        now_unix_s: u64,
+        max_witness_age_s: u64,
+    ) -> KernelResult<ReceiptWitnessAssessment> {
+        if required_unique_witnesses == 0 {
+            return Err(KernelError::new(
+                "receipt witness quorum must require at least one witness",
+            ));
+        }
+        if max_witness_age_s == 0 {
+            return Err(KernelError::new(
+                "receipt witness freshness window must be positive",
+            ));
+        }
+        require_id(&receipt.receipt_ref, "witnessed receipt ref")?;
+        require_sha256(&receipt.effect_digest, "witnessed effect digest")?;
+
+        let mut unique = BTreeSet::<String>::new();
+        for witness in witnesses {
+            require_id(&witness.witness_node_ref, "mesh witness node ref")?;
+            require_id(&witness.receipt_ref, "mesh witness receipt ref")?;
+            require_sha256(&witness.effect_digest, "mesh witness effect digest")?;
+            if witness.receipt_ref != receipt.receipt_ref
+                || witness.effect_digest != receipt.effect_digest
+            {
+                return Err(KernelError::new(
+                    "mesh witness does not bind to the exact effect receipt",
+                ));
+            }
+            if witness.witnessed_at_unix_s > now_unix_s
+                || now_unix_s - witness.witnessed_at_unix_s > max_witness_age_s
+            {
+                return Err(KernelError::new("mesh witness is outside freshness window"));
+            }
+            unique.insert(witness.witness_node_ref.clone());
+        }
+
+        let unique_witnesses = unique.len();
+        Ok(ReceiptWitnessAssessment {
+            receipt_ref: receipt.receipt_ref.clone(),
+            unique_witnesses,
+            required_witnesses: required_unique_witnesses,
+            quorum_met: unique_witnesses >= required_unique_witnesses,
         })
     }
 
