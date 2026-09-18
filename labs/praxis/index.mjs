@@ -288,6 +288,25 @@ export function createHostOperationRegistry(definitions = {}) {
   });
 }
 
+function resolveHostOperationContract(registry, action, scope) {
+  const matches = Object.values(registry.operations).filter(
+    operation => operation.action === action && operation.scope === scope
+  );
+  if (matches.length === 0) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REQUIRED',
+      'no host operation is registered for ' + action + '@' + scope
+    );
+  }
+  if (matches.length > 1) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_AMBIGUOUS',
+      'multiple host operations match ' + action + '@' + scope
+    );
+  }
+  return matches[0];
+}
+
 function normalizeHostOperationRegistry(registry) {
   if (registry === null || registry === undefined) return null;
   if (
@@ -3121,13 +3140,11 @@ export async function run(source, {
 
         let operation;
         if (hostOperationRegistry) {
-          const measured = hostOperationRegistry.operations[instruction.action];
-          if (!measured) {
-            throw new PraxisRuntimeError(
-              'PRAXIS_HOST_OPERATION_REQUIRED',
-              `host operation ${instruction.action} is not registered`
-            );
-          }
+          const measured = resolveHostOperationContract(
+            hostOperationRegistry,
+            instruction.action,
+            instruction.scope
+          );
           if (instruction.declared_effect === null || instruction.declared_effect === undefined) {
             throw new PraxisRuntimeError(
               'PRAXIS_EFFECT_UNDECLARED',
