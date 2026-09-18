@@ -2475,7 +2475,6 @@ function validateMeasuredOperationAgainstRegistry(operation, registry) {
 }
 
 function validateEffectEnvelope(authority, operation, charterContext) {
-  if (!operation || operation.effect === undefined) return;
   if (!authority?.charter_digest) return;
   if (!charterContext) {
     throw new PraxisRuntimeError(
@@ -2490,7 +2489,18 @@ function validateEffectEnvelope(authority, operation, charterContext) {
     );
   }
   const requester = authority.requester;
-  const allowed = charterContext.body.effect_envelopes?.[requester] ?? [];
+  const hasEnvelope = Object.hasOwn(
+    charterContext.body.effect_envelopes ?? {},
+    requester
+  );
+  if (!hasEnvelope) return;
+  if (!operation || operation.effect === undefined) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_EFFECT_REQUIRED',
+      'requester has a signed effect envelope, so authority requires a host-measured operation'
+    );
+  }
+  const allowed = charterContext.body.effect_envelopes[requester];
   if (!allowed.includes(operation.effect)) {
     throw new PraxisRuntimeError(
       'PRAXIS_EFFECT_ENVELOPE',
