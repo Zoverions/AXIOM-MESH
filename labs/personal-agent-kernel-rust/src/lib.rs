@@ -876,9 +876,7 @@ impl OfflineEnvelopeLedger {
             .effects_consumed
             .checked_add(1)
             .ok_or_else(|| KernelError::new("offline effect sequence overflow"))?;
-        if intent.sequence != expected_sequence
-            || intent.sequence > self.envelope.max_effects
-        {
+        if intent.sequence != expected_sequence || intent.sequence > self.envelope.max_effects {
             return Err(KernelError::new(
                 "offline consumption intent sequence mismatch",
             ));
@@ -949,10 +947,7 @@ impl OfflineEnvelopeLedger {
         Ok(local.into_values().collect())
     }
 
-    fn validate_budget_fit(
-        &self,
-        normalized: &[BudgetRequest],
-    ) -> KernelResult<()> {
+    fn validate_budget_fit(&self, normalized: &[BudgetRequest]) -> KernelResult<()> {
         for request in normalized {
             let limit = self
                 .envelope
@@ -1996,12 +1991,8 @@ impl Kernel {
             now_unix_s,
             budget_requests,
         )?;
-        let offline = self.commit_offline_consumption(
-            ledger,
-            &intent,
-            current_surface,
-            now_unix_s,
-        )?;
+        let offline =
+            self.commit_offline_consumption(ledger, &intent, current_surface, now_unix_s)?;
         self.execute_committed_offline(&offline, port)
     }
 
