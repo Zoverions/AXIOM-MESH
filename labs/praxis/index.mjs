@@ -1862,7 +1862,9 @@ export function analyze(ast) {
           action: node.action,
           scope: node.scope,
           imported: true,
-          linear: true
+          linear: true,
+          irreversibility_known: false,
+          irreversible: null
         });
         requiredPrepared.push({
           name: node.name,
@@ -1962,7 +1964,11 @@ export function analyze(ast) {
           kind: 'Operation',
           action: node.action,
           scope: node.scope,
-          secrets: [...node.secrets]
+          secrets: [...node.secrets],
+          declared_effect: node.declaredEffect,
+          irreversibility_known: node.declaredEffect !== null,
+          irreversible: node.declaredEffect !== null ? node.declaredIrreversible : null,
+          declared_egress: node.declaredEgress
         });
         ir.push({
           op: 'PLAN',
@@ -1970,7 +1976,10 @@ export function analyze(ast) {
           action: node.action,
           scope: node.scope,
           args: node.args,
-          secrets: node.secrets
+          secrets: node.secrets,
+          declared_effect: node.declaredEffect,
+          declared_irreversible: node.declaredEffect !== null ? node.declaredIrreversible : null,
+          declared_egress: node.declaredEgress
         });
         break;
       }
@@ -2010,7 +2019,9 @@ export function analyze(ast) {
           scope: operation.scope,
           operation: node.operation,
           permit: node.permit,
-          linear: true
+          linear: true,
+          irreversibility_known: operation.irreversibility_known,
+          irreversible: operation.irreversible
         });
         ir.push({
           op: 'AUTHORIZE',
@@ -2042,7 +2053,9 @@ export function analyze(ast) {
           scope: operation.scope,
           operation: operation.operation,
           permit: operation.permit,
-          linear: true
+          linear: true,
+          irreversibility_known: operation.irreversibility_known,
+          irreversible: operation.irreversible
         });
         ir.push({
           op: 'PREPARE',
@@ -2084,6 +2097,12 @@ export function analyze(ast) {
             `commit requires PreparedOperation, received ${operation.kind}`
           );
         }
+        if (operation.irreversibility_known && operation.irreversible === true) {
+          throw new PraxisTypeError(
+            'PRAXIS_IRREVERSIBLE_REQUIRES_FINALIZE',
+            'statically irreversible prepared operation requires finalize'
+          );
+        }
         if (terminalOperations.has(node.operation)) {
           throw new PraxisTypeError(
             'PRAXIS_LINEAR_OPERATION_REUSE',
@@ -2091,8 +2110,44 @@ export function analyze(ast) {
           );
         }
         terminalOperations.add(node.operation);
-        env.set(node.name, { kind: 'Receipt', action: operation.action, scope: operation.scope });
+        env.set(node.name, {
+          kind: 'Receipt',
+          action: operation.action,
+          scope: operation.scope,
+          finality: 'commit'
+        });
         ir.push({ op: 'COMMIT', name: node.name, operation: node.operation });
+        break;
+      }
+
+      case 'Finalize': {
+        const operation = requireBinding(env, node.operation);
+        if (operation.kind !== 'PreparedOperation') {
+          throw new PraxisTypeError(
+            'PRAXIS_FINALIZE_REQUIRES_PREPARATION',
+            `finalize requires PreparedOperation, received ${operation.kind}`
+          );
+        }
+        if (operation.irreversibility_known && operation.irreversible !== true) {
+          throw new PraxisTypeError(
+            'PRAXIS_FINALIZE_REQUIRES_IRREVERSIBLE',
+            'finalize requires an irreversible prepared operation'
+          );
+        }
+        if (terminalOperations.has(node.operation)) {
+          throw new PraxisTypeError(
+            'PRAXIS_LINEAR_OPERATION_REUSE',
+            `prepared operation ${node.operation} already has a terminal transition`
+          );
+        }
+        terminalOperations.add(node.operation);
+        env.set(node.name, {
+          kind: 'Receipt',
+          action: operation.action,
+          scope: operation.scope,
+          finality: 'finalize'
+        });
+        ir.push({ op: 'FINALIZE', name: node.name, operation: node.operation });
         break;
       }
 
