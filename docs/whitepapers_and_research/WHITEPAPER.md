@@ -115,7 +115,7 @@ period while its activation path, custody, and external evidence are reviewed.
 
 The machine-readable capability registry classifies tracked capabilities as
 `implemented`, `experimental`, `specified`, `adapter_required`, or `disabled`.
-The current registry tracks **49 capabilities, including 31 implemented**.
+The current registry tracks **50 capabilities, including 31 implemented**.
 Only registry-backed `implemented` status is a current runnable capability
 claim.
 
@@ -209,7 +209,7 @@ internal network segments.
 Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
 identities, DNS and SPIFFE-style URI identity checks, exact active-leaf
 fingerprint pinning, and signed replay-protected application envelopes. A
-machine-readable default-deny policy authorizes only 40 exact current-build
+machine-readable default-deny policy authorizes only 42 exact current-build
 caller, destination, method, and route combinations and derives allowed mTLS
 peers from that graph.
 
