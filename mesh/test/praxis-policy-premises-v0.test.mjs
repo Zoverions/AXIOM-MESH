@@ -392,11 +392,11 @@ test('policy cannot consume evidence it did not explicitly declare as required',
   );
 });
 
-test('removing a signed require predicate invalidates the pinned policy', () => {
+test('removing a signed require predicate invalidates the pinned policy', async () => {
   const tampered = structuredClone(charter);
   tampered.body.policies.ArtifactBound.def.require = [greenPredicate];
 
-  assert.throws(
+  await assert.rejects(
     () => createCharteredHostPermit({
       id: 'permit:tampered-policy',
       charter: tampered,
