@@ -20,7 +20,6 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'CONTRIBUTING.md',
   'AGENTS.md',
   'AGENT-ENTRY.md',
-  '.agents/skills/typesafe-ai/SKILL.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
@@ -198,11 +197,6 @@ const REQUIRED_CONTENT = Object.freeze({
     'Gateway -> Hypervisor -> Sandbox -> Grid',
     'agent-readiness/CONTRIBUTION-RESULT.schema.json',
     'Zero-cost participation'
-  ],
-  '.agents/skills/typesafe-ai/SKILL.md': [
-    'name: typesafe-ai',
-    'The live TypeSafe docs are the source of truth',
-    'Code owns the workflow'
   ],
   'docs/README.md': [
     '## Canonical documents',
