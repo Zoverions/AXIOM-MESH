@@ -199,6 +199,31 @@ TEE evidence constrains where an operation may run; it is never a reason to gran
 14. Continuity export strips all live authority.
 15. Restore starts effect-authority-empty.
 
+## Trust-split implementation
+
+The Rust programme is intentionally split into three independently reviewable layers:
+
+1. **Semantic core** — `labs/personal-agent-kernel-rust`
+   - zero third-party dependencies;
+   - `#![forbid(unsafe_code)]`;
+   - plan, budget, autonomy, delegation, offline-envelope, witness, continuity, and exact proof-binding semantics;
+   - no cryptographic implementation and no component runtime.
+
+2. **Crypto adapter** — `labs/personal-agent-kernel-rust-crypto`
+   - fixed dependency lock;
+   - Ed25519 verification through `ed25519-dalek`;
+   - SHA-256 and base64url compatibility with the existing AXIOM verifier;
+   - verifies signed canonical bytes first, requires canonical JSON byte equality, denies unknown proof fields, and constructs the core `MeshProofInput` directly;
+   - verified cryptographic evidence still grants no effect authority.
+
+3. **Component host** — `labs/personal-agent-kernel-wasmtime-host`
+   - fixed dependency lock;
+   - real Wasmtime Component Model compilation, import introspection, linking, and instantiation;
+   - only explicit AXIOM host imports are admissible;
+   - no WASI context is added, so ambient filesystem/network/environment authority is absent rather than filtered after exposure.
+
+Dependency-bearing sidecars may constrain or verify inputs to the semantic core. They may not mutate the core constitution, create a parallel Gateway, mint capability grants, or turn a runtime import into execution authority.
+
 ## Implemented laboratory evidence
 
 The current stacked laboratory now contains executable evidence for:
