@@ -557,9 +557,7 @@ impl StateLaneRegistry {
                 "validation requires at least one merged state value",
             ));
         }
-        if evidence.evidence_refs.is_empty()
-            || evidence.evidence_refs.len() > MAX_PROVENANCE_REFS
-        {
+        if evidence.evidence_refs.is_empty() || evidence.evidence_refs.len() > MAX_PROVENANCE_REFS {
             return Err(StateLaneError::new(
                 "validation requires bounded supporting evidence",
             ));
@@ -569,9 +567,7 @@ impl StateLaneRegistry {
         for reference in &evidence.evidence_refs {
             require_id(reference, "validation evidence ref")?;
             if !refs.insert(reference.clone()) {
-                return Err(StateLaneError::new(
-                    "duplicate validation evidence ref",
-                ));
+                return Err(StateLaneError::new("duplicate validation evidence ref"));
             }
         }
 
@@ -603,10 +599,7 @@ impl StateLaneRegistry {
         Ok(receipt)
     }
 
-    pub fn require_validation_current(
-        &self,
-        receipt: &ValidationReceipt,
-    ) -> StateLaneResult<()> {
+    pub fn require_validation_current(&self, receipt: &ValidationReceipt) -> StateLaneResult<()> {
         if receipt.inputs.is_empty() || receipt.inputs.len() > MAX_LANES_PER_MERGE {
             return Err(StateLaneError::new(
                 "validation receipt has invalid lane bindings",
