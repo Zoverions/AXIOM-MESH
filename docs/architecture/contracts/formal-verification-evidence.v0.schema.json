@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/formal-verification-evidence.v0.schema.json",
+  "title": "AXIOM Formal Verification Evidence v0",
+  "description": "Evidence that an exact formal artifact was checked by an exact checker under an explicit dependency, assumption, import, and diagnostic closure. This evidence establishes neither source truth nor runtime authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "evidence_id",
+    "target_kind",
+    "target_digest",
+    "formal_statement_digest",
+    "formal_artifact_digest",
+    "checker_kind",
+    "checker_version",
+    "checker_profile_digest",
+    "environment_digest",
+    "dependency_closure_digest",
+    "dependency_statuses",
+    "assumptions",
+    "import_policy",
+    "diagnostics",
+    "proof_check_state",
+    "closure_state",
+    "source_alignment_state",
+    "independence_state",
+    "checked_at",
+    "truth_established",
+    "authority_effect",
+    "evidence_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-formal-verification-evidence.v0" },
+    "evidence_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "target_kind": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "target_digest": { "$ref": "#/$defs/digest" },
+    "formal_statement_digest": { "$ref": "#/$defs/digest" },
+    "formal_artifact_digest": { "$ref": "#/$defs/digest" },
+    "checker_kind": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "checker_version": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "checker_profile_digest": { "$ref": "#/$defs/digest" },
+    "environment_digest": { "$ref": "#/$defs/digest" },
+    "dependency_closure_digest": { "$ref": "#/$defs/digest" },
+    "dependency_statuses": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dependency_digest", "verification_state"],
+        "properties": {
+          "dependency_digest": { "$ref": "#/$defs/digest" },
+          "verification_state": {
+            "enum": ["freshly_checked", "reused", "externally_assumed", "unknown"]
+          }
+        }
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assumption_id", "statement_digest", "source_ref"],
+        "properties": {
+          "assumption_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+          "statement_digest": { "$ref": "#/$defs/digest" },
+          "source_ref": { "type": "string", "minLength": 1, "maxLength": 2048 }
+        }
+      }
+    },
+    "import_policy": { "enum": ["exact", "substituted", "defaulted", "unknown"] },
+    "diagnostics": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["diagnostic_kind", "severity", "message_digest"],
+        "properties": {
+          "diagnostic_kind": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+          "severity": { "enum": ["info", "warning", "blocking"] },
+          "message_digest": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "proof_check_state": {
+      "enum": ["passed", "failed", "checker_error", "resource_exhausted", "not_run"]
+    },
+    "closure_state": { "enum": ["strict", "conditional", "incomplete", "unknown"] },
+    "source_alignment_state": {
+      "enum": ["not_assessed", "aligned", "partial", "contested", "mismatch", "unknown"]
+    },
+    "independence_state": {
+      "enum": ["independent", "shared_provenance", "same_lineage", "unknown"]
+    },
+    "checked_at": { "type": "string", "minLength": 20, "maxLength": 64 },
+    "truth_established": { "const": false },
+    "authority_effect": { "const": "none" },
+    "evidence_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}
