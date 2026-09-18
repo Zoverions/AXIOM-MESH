@@ -2,11 +2,13 @@
 
 **Status:** subordinate execution queue; documentation/contract work only until existing capability, policy, runtime, test, and promotion gates are satisfied
 
-**Updated:** 2026-09-05
+**Updated:** 2026-09-18
 
 **Parent workstreams:** `ORCH-001`, `RUNTIME-001`, `RUNTIME-002`, `AI-001`, `ROUTE-001`, AXIOM Studio, MCP/A2A laboratories, multi-host dispatch, and Circle governance.
 
 This queue does not create an alternate authority system and does not promote any capability.
+
+**Google managed-agent candidate (2026-09-18):** the runtime/provider catalog now includes `runtime:google-antigravity-managed:preview-09-2026@0.1.0` as a remote-service agent-runtime candidate. A zero-I/O request builder pins the harness/model, requires an explicit AXIOM grant, forces disabled or exact finite egress, rejects wildcards and arbitrary inline secret/header shapes, and reasserts network policy on environment reuse. This does not invoke Google, create credentials, certify the service, or promote `capabilities.json`.
 
 ## P0 — preserve the authority boundary
 
