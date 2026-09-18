@@ -8,7 +8,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const VERSION: &str = "v2";
+const VERSION: &str = "v3";
 const MAX_PAYLOAD_BYTES: usize = 16 * 1024;
 const GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -87,6 +87,7 @@ pub struct OfflineJournal {
     global_sequence: u64,
     tail_hash: String,
     envelopes: BTreeMap<String, u64>,
+    registration_payloads: BTreeMap<String, Vec<u8>>,
     consumptions: BTreeMap<String, Vec<JournalConsumption>>,
 }
 
@@ -146,6 +147,7 @@ impl OfflineJournal {
             global_sequence: state.global_sequence,
             tail_hash: state.tail_hash,
             envelopes: state.envelopes,
+            registration_payloads: state.registration_payloads,
             consumptions: state.consumptions,
         })
     }
@@ -166,6 +168,18 @@ impl OfflineJournal {
         self.envelopes.get(envelope_ref).copied()
     }
 
+    pub fn registration_payload(
+        &self,
+        envelope_ref: &str,
+    ) -> Result<Vec<u8>, JournalError> {
+        validate_id(envelope_ref)?;
+        self.registration_payloads
+            .get(envelope_ref)
+            .cloned()
+            .ok_or(JournalError::UnknownEnvelope)
+    }
+
+
     pub fn consumptions_for(
         &self,
         envelope_ref: &str,
@@ -177,22 +191,30 @@ impl OfflineJournal {
             .ok_or(JournalError::UnknownEnvelope)
     }
 
-    pub fn register_envelope(&mut self, envelope_ref: &str) -> Result<(), JournalError> {
+    pub fn register_envelope(
+        &mut self,
+        envelope_ref: &str,
+        registration_payload: &[u8],
+    ) -> Result<(), JournalError> {
         validate_id(envelope_ref)?;
         if self.envelopes.contains_key(envelope_ref) {
             return Err(JournalError::DuplicateEnvelope);
+        }
+        if registration_payload.is_empty() || registration_payload.len() > MAX_PAYLOAD_BYTES {
+            return Err(JournalError::InvalidRecord);
         }
 
         let next_global = self
             .global_sequence
             .checked_add(1)
             .ok_or(JournalError::SequenceMismatch)?;
+        let payload_hex = encode_hex(registration_payload);
         let record = build_record(
             next_global,
             "register",
             envelope_ref,
             0,
-            "-",
+            &payload_hex,
             &self.tail_hash,
         );
         self.append_durable(&record)?;
@@ -200,6 +222,8 @@ impl OfflineJournal {
         self.global_sequence = next_global;
         self.tail_hash = record.entry_hash;
         self.envelopes.insert(envelope_ref.to_string(), 0);
+        self.registration_payloads
+            .insert(envelope_ref.to_string(), registration_payload.to_vec());
         self.consumptions
             .insert(envelope_ref.to_string(), Vec::new());
         Ok(())
@@ -355,6 +379,7 @@ struct RecoveredState {
     global_sequence: u64,
     tail_hash: String,
     envelopes: BTreeMap<String, u64>,
+    registration_payloads: BTreeMap<String, Vec<u8>>,
     consumptions: BTreeMap<String, Vec<JournalConsumption>>,
 }
 
@@ -364,6 +389,7 @@ impl Default for RecoveredState {
             global_sequence: 0,
             tail_hash: GENESIS_HASH.to_string(),
             envelopes: BTreeMap::new(),
+            registration_payloads: BTreeMap::new(),
             consumptions: BTreeMap::new(),
         }
     }
@@ -408,12 +434,18 @@ impl RecoveredState {
 
         match kind {
             "register" => {
-                if effect_sequence != 0 || payload_hex != "-" {
+                if effect_sequence != 0 {
+                    return Err(JournalError::InvalidRecord);
+                }
+                let payload = decode_hex(payload_hex)?;
+                if payload.is_empty() || payload.len() > MAX_PAYLOAD_BYTES {
                     return Err(JournalError::InvalidRecord);
                 }
                 if self.envelopes.insert(envelope_ref.to_string(), 0).is_some() {
                     return Err(JournalError::DuplicateEnvelope);
                 }
+                self.registration_payloads
+                    .insert(envelope_ref.to_string(), payload);
                 self.consumptions
                     .insert(envelope_ref.to_string(), Vec::new());
             }
