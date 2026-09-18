@@ -1500,10 +1500,8 @@ export async function run(source, {
             `authorize requires Operation, received ${operation?.kind ?? 'missing'}`
           );
         }
-        const requirement = requirements.get(instruction.permit);
-        const token = authorityTokens.get(instruction.permit);
         const authorityValue = values.get(instruction.permit);
-        if (!requirement || !token || !authorityValue) {
+        if (!authorityValue) {
           throw new PraxisRuntimeError(
             'PRAXIS_HOST_AUTHORITY_REQUIRED',
             `authority binding ${instruction.permit} is unavailable`
@@ -1513,6 +1511,14 @@ export async function run(source, {
           throw new PraxisRuntimeError(
             'PRAXIS_AUTHORIZE_REQUIRES_PERMIT',
             `authorize requires Permit, Lease, or Quorum, received ${authorityValue.kind}`
+          );
+        }
+        const requirement = requirements.get(instruction.permit);
+        const token = authorityTokens.get(instruction.permit);
+        if (!requirement || !token) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_HOST_AUTHORITY_REQUIRED',
+            `host authority token for ${instruction.permit} is unavailable`
           );
         }
         validateAuthorityToken(token, requirement, {
