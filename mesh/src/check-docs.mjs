@@ -127,6 +127,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
   'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md',
   'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
+  'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -528,6 +529,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'Knowledge is not authority',
     'Operation is not authority',
     'Reproduction is not truth'
+  ],
+  'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md': [
+    'Benchmark evidence is not capability authority',
+    '## 6. Validation and fail-closed behavior',
+    '## 9. First executable slice',
+    '## 10. Promotion boundary and non-claims'
   ],
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': [
     '## Gate 0 — exact candidate inventory',
