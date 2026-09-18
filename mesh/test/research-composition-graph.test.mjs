@@ -243,6 +243,36 @@ test('Research Composition Graph v0 fails closed on authority, truth, reference,
     /truth_established/
   );
 
+  const widenedRelationBase = {
+    ...relations[0],
+    authority_effect: 'execute'
+  };
+  widenedRelationBase.relation_digest = digest(
+    widenedRelationBase,
+    'relation_digest'
+  );
+  assert.throws(
+    () => graphApi.verifyResearchRelation(widenedRelationBase),
+    /authority_effect/
+  );
+
+  assert.throws(
+    () => graphApi.verifyResearchContribution({
+      ...contributions[0],
+      frontier: true
+    }),
+    /unsupported field/
+  );
+
+  assert.throws(
+    () => graphApi.buildResearchCompositionGraph({
+      contributions,
+      relations,
+      merge_authorized: true
+    }),
+    /unsupported field/
+  );
+
   assert.throws(
     () => graphApi.buildResearchCompositionGraph({
       contributions,
@@ -265,6 +295,22 @@ test('Research Composition Graph v0 fails closed on authority, truth, reference,
       relations
     }),
     /duplicate contribution/
+  );
+
+  assert.throws(
+    () => graphApi.buildResearchCompositionGraph({
+      contributions,
+      relations: [
+        ...relations,
+        relation({
+          id: 'relation:duplicate-edge',
+          subject: byId.e1.contribution_digest,
+          predicate: 'builds_on',
+          object: byId.h1.contribution_digest
+        })
+      ]
+    }),
+    /duplicate relation/
   );
 
   assert.throws(
