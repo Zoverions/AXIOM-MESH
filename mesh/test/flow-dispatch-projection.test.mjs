@@ -844,7 +844,7 @@ test('rejected and blocked work dependencies preserve their terminal blocker sta
   }
 });
 
-test('handoff-bound dispatch requires the worker runtime to match the execution target', () => {
+test('handoff-bound dispatch requires a compatible worker for the exact runtime target', () => {
   const queued = handoff({ state: 'queued' });
   const wrongRuntime = worker({
     worker_ref: 'worker.search.wrong-runtime',
@@ -853,7 +853,7 @@ test('handoff-bound dispatch requires the worker runtime to match the execution 
     operation_ids: ['research.search'],
     capability_ids: ['research.read']
   });
-  const source = input({
+  const incompatible = input({
     bindings: [
       binding('collect', 'task.collect', 'handoff.collect'),
       binding('analyze', 'task.analyze')
@@ -864,25 +864,25 @@ test('handoff-bound dispatch requires the worker runtime to match the execution 
     ],
     handoffs: [queued]
   });
-  const projection = deriveFlowDispatchProjection(source);
 
+  assert.throws(
+    () => deriveFlowDispatchProjection(incompatible),
+    /handoff target has no compatible worker runtime/i
+  );
+
+  const compatible = input({
+    bindings: [
+      binding('collect', 'task.collect', 'handoff.collect'),
+      binding('analyze', 'task.analyze')
+    ],
+    handoffs: [queued]
+  });
+  const projection = deriveFlowDispatchProjection(compatible);
   assert.deepEqual(projection.ready_step_ids, []);
   assert.ok(
     projection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
       'handoff-active:queued'
     )
-  );
-
-  const unboundReady = clone(source);
-  unboundReady.handoffs[0].lifecycle.state = 'failed';
-  unboundReady.handoffs[0].lifecycle.terminal_receipt_id = 'receipt.handoff.collect';
-  unboundReady.handoffs[0].lifecycle.state_reason = 'reason.failed';
-  const failedProjection = deriveFlowDispatchProjection(unboundReady);
-  assert.equal(
-    failedProjection.blocked_steps.find(entry => entry.step_id === 'collect').reasons.includes(
-      'handoff-terminal:failed'
-    ),
-    true
   );
 });
 
@@ -1054,12 +1054,20 @@ test('verifier selection respects worker and campaign capacity', () => {
   assert.equal(workerProposal.selected_verifier_ref, null);
   assert.equal(workerProposal.selection_reason, 'verifier-capacity-exhausted');
 
+  const campaignVerifier = {
+    ...verifier,
+    operation_ids: []
+  };
   const campaignLimited = deriveFlowDispatchProjection(input({
     workGraph,
-    workers: [...defaultWorkers(), verifier],
+    workers: [...defaultWorkers(), campaignVerifier],
     maxParallelTasks: 1
   }));
   const campaignProposal = campaignLimited.verification_proposals[0];
+  assert.equal(
+    campaignLimited.dispatch_proposals.find(entry => entry.step_id === 'analyze').selected_worker_ref,
+    'worker.analyze'
+  );
   assert.equal(campaignProposal.selected_verifier_ref, null);
   assert.equal(campaignProposal.selection_reason, 'campaign-concurrency-exhausted');
 });
@@ -1090,4 +1098,36 @@ test('canonical dispatch ordering uses code-unit order for punctuation-bearing i
 
   assert.deepEqual(collect.candidate_worker_refs, ['worker.search', 'worker:search']);
   assert.equal(collect.selection_reason, 'ambiguous-worker-candidates');
+});
+
+
+test('claim worker runtime must match a bound handoff target', () => {
+  const source = input({
+    bindings: [
+      binding('collect', 'task.collect', 'handoff.collect'),
+      binding('analyze', 'task.analyze')
+    ],
+    workers: [
+      ...defaultWorkers(),
+      worker({
+        worker_ref: 'worker.search.other',
+        runtime_ref: 'runtime.other',
+        lineage_ref: 'lineage.other',
+        operation_ids: ['research.search'],
+        capability_ids: ['research.read']
+      })
+    ],
+    claims: [
+      activeClaim({
+        claim_id: 'claim.collect.wrong-runtime',
+        worker_ref: 'worker.search.other'
+      })
+    ],
+    handoffs: [handoff({ state: 'running' })]
+  });
+
+  assert.throws(
+    () => deriveFlowDispatchProjection(source),
+    /worker runtime does not match handoff target/i
+  );
 });
