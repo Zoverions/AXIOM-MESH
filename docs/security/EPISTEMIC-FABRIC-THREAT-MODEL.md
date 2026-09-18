@@ -232,17 +232,23 @@ Amendment B introduces additional failure modes that future E2/E4/E7 work must a
 
 **Controls:** bind exact target, verifier/profile, environment, dependency-closure digest, freshly checked subset, reused subset, and replay status. Claims must not exceed the closure actually checked.
 
+**E2-RC candidate status:** the separately gated candidate now encodes exact target/verifier/environment/dependency/replay scope and coverage bounds as inert proposal evidence. It does not create a generic `verified=true` state.
+
 ### Dependency shadowing
 
 **Threat:** a verification record names dependencies abstractly while an attacker or accidental environment change substitutes different dependency bytes or versions.
 
 **Controls:** content-address dependency identity, exact version/profile binding, environment digest, deterministic reconstruction where claimed, and fail closed on unresolved required dependency identity.
 
+**E2-RC candidate status:** direct dependencies are content-addressed, uniquely referenced, canonically ordered, and bound into a domain-separated dependency-closure digest; checked/reused/unavailable dispositions remain explicit.
+
 ### Replay-depth spoofing
 
 **Threat:** an agent or node self-declares a verification as independently reproduced without evidence of a separate actor/run/environment or without actually re-executing the relevant closure.
 
 **Controls:** bind replay actor/run identity, inputs, environment, closure, outputs, and receipts/evidence where applicable; unknown independence remains unknown.
+
+**E2-RC candidate status:** replay is classified as original, same-context, separate-context, or unknown-context. Separate-context replay requires bound separation evidence, but the candidate deliberately exposes no epistemic-independence field or score.
 
 ### Failed-route erasure
 
@@ -314,4 +320,6 @@ These tests belong only to the separately gated future implementation slices; th
 
 ## Amendment B non-claims
 
-This threat delta does not claim implementation of evidence-state vectors, reproducibility closure, failure provenance, continuation packets, frontier computation, MAP/Lean ingestion, or autonomous mathematical/scientific research. It adds design constraints that future independently gated phases must satisfy.
+The separately gated E2-RC candidate records bounded closure/replay evidence only; it does not prove that a verifier is trustworthy, that dependencies are externally true, that a replay is epistemically independent, or that any external effect is permitted.
+
+This threat delta still does not claim implementation of E3 canonical admission, E4 evidence-state vectors or failure provenance, continuation packets, frontier computation, live MAP/Lean ingestion, or autonomous mathematical/scientific research. The E2-RC candidate remains proposal-only until exact-head protected verification and authorized merge.
