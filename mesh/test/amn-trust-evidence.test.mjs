@@ -6,7 +6,9 @@ import { digestObject } from '../src/lib/canonical.mjs';
 import {
   AMN_TRUST_SCHEMAS,
   AMN_TRUST_SIGNATURE_PROFILE,
+  amnTrustEvidenceDigest,
   amnTrustKeyId,
+  amnTrustStatementDigest,
   createAmnTrustStatement,
   verifyAmnTrustStatement
 } from '../src/lib/amn-trust-evidence.mjs';
@@ -145,6 +147,8 @@ test('all seven AMN trust statement classes sign and verify with zero authority 
     assert.equal(verified.verification.authority_effect, 'none');
     assert.match(verified.statement_digest, /^[a-f0-9]{64}$/);
     assert.match(verified.evidence_digest, /^[a-f0-9]{64}$/);
+    assert.equal(amnTrustStatementDigest(verified), verified.statement_digest);
+    assert.equal(amnTrustEvidenceDigest(verified), verified.evidence_digest);
   }
 });
 
@@ -349,4 +353,23 @@ test('hardware-backed identity method does not become a hardware-attestation cla
   assert.equal(verified.claims.identity_method, 'hardware-backed-key');
   assert.equal(verified.non_authority.hardware_attestation_claimed, false);
   assert.equal(verified.verification.hardware_attestation_claimed, false);
+});
+
+
+test('hardware-attested workload label is rejected until a separate attestation profile exists', () => {
+  const issuer = keys();
+  const subject = keys();
+  const claims = claimsFor(AMN_TRUST_SCHEMAS.workload_binding, subject.publicKey);
+  claims.identity_method = 'hardware-attested';
+
+  assert.throws(
+    () => createAmnTrustStatement({
+      schema: AMN_TRUST_SCHEMAS.workload_binding,
+      issuerId: 'issuer.customer.assurance',
+      issuerPrivateKey: issuer.privateKey,
+      issuedAt,
+      claims
+    }),
+    /identity_method is unsupported/
+  );
 });
