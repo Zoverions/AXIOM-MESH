@@ -56,6 +56,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/INTERROGATION-PLANE.md',
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
   'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
@@ -78,6 +79,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/capability-surfaces.v0.schema.json',
   'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
   'docs/architecture/contracts/external-operation-offer.v0.schema.json',
+  'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json',
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
@@ -319,6 +321,19 @@ const REQUIRED_CONTENT = Object.freeze({
     'Semantic judgment is not authority',
     'npm run interrogation:report',
     '## Promotion boundary and non-claims'
+  ],
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md': [
+    '## Purpose and boundary',
+    'axiom-semantic-operation-proposal.v0',
+    'Semantic judgment is not authority',
+    'Needle',
+    '## Non-claims',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json': [
+    'axiom-semantic-operation-proposal.v0',
+    'authority_effect',
+    'runtime_activation'
   ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
@@ -776,6 +791,8 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/architecture/contracts/agent-challenge.v1.schema.json': 4_000,
   'docs/architecture/contracts/agent-feedback.v1.schema.json': 5_000,
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md': 2_000,
+  'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json': 2_500,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,

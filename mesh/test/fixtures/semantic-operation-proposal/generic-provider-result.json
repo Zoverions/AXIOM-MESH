@@ -1,0 +1,20 @@
+{
+  "calls": [
+    {
+      "operation_id": "op.inert.list_tags",
+      "arguments": { "limit": 3 },
+      "confidence": 0.77
+    }
+  ],
+  "suppressed": [],
+  "confidence": 0.77,
+  "latency_ms": 11,
+  "usage_evidence": {
+    "input_units": 40,
+    "output_units": 2,
+    "compute_class": null,
+    "provider_report_ref": "usage.semantic-op.fixture.v1"
+  },
+  "explanation": null,
+  "trigger": { "forced": false }
+}

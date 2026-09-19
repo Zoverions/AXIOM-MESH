@@ -235,6 +235,11 @@ decision.
   — deterministic read-only supervision graph across capability/evidence,
   service-network, and documentation verification; conceptual authority is kept
   separate from physical topology and inspection grants no authority.
+- [Semantic Operation Proposal v0](architecture/SEMANTIC-OPERATION-PROPOSAL.md)
+  — provider-neutral inert operation-proposal contract; Needle-shaped confidence
+  stays on the Operation plane and is never forced into #1588 probability
+  observations; authority/assurance/currentness/execution remain none.
+- [`semantic-operation-proposal.v0` schema](architecture/contracts/semantic-operation-proposal.v0.schema.json)
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
