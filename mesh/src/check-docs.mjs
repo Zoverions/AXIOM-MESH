@@ -136,6 +136,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md',
   'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
   'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md',
+  'docs/superpowers/specs/2026-09-18-adversarial-release-swarm-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
