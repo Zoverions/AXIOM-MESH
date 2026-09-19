@@ -190,7 +190,6 @@ const CLAIM_ADJUDICATION_FIELDS = Object.freeze([
   'adjudication_digest'
 ]);
 
-
 export function researchContractDigest(value, digestField) {
   assertPlainObject(value, 'contract');
   assertString(digestField, 'digestField', { max: 128 });
@@ -367,11 +366,19 @@ export function verifyResearchClaimAdjudication(value) {
   return object;
 }
 
-export function verifyResearchClaimAdjudicationBinding(adjudicationValue, knowledgeProjectionValue) {
+export function verifyResearchClaimAdjudicationBinding(
+  adjudicationValue,
+  knowledgeProjectionValue,
+  sourceManifestValue
+) {
   const adjudication = verifyResearchClaimAdjudication(adjudicationValue);
   const knowledgeProjection = verifyResearchKnowledgeProjection(knowledgeProjectionValue);
+  const sourceManifest = verifyResearchSourceManifest(sourceManifestValue);
 
-  if (adjudication.source_manifest_digest !== knowledgeProjection.source_manifest_digest) {
+  if (knowledgeProjection.source_manifest_digest !== sourceManifest.manifest_digest) {
+    throw new ValidationError('ResearchKnowledgeProjection source manifest digest binding mismatch');
+  }
+  if (adjudication.source_manifest_digest !== sourceManifest.manifest_digest) {
     throw new ValidationError('ResearchClaimAdjudication source manifest digest binding mismatch');
   }
   if (adjudication.knowledge_projection_digest !== knowledgeProjection.projection_digest) {
