@@ -133,6 +133,44 @@ source, agents, plugins, or remote callers. A future AXIOM adapter must derive
 these runtime objects only from already-authorized AXIOM evidence; the factory
 functions themselves do not create AXIOM authority.
 
+### P0.2 chartered authority path
+
+The stronger synthetic authority path lives outside governed `.prax` source.
+`createSyntheticCharter(...)` produces an Ed25519-signed charter that pins
+principal kinds, optional agent→principal bindings, policy definitions and
+verifier definitions. Policy/verifier content digests are part of the signed
+charter, so changing a quorum, evidence requirement, verifier origin or
+advisor changes the pin and is refused.
+
+Authority-grade observations are separately signed. A charter-pinned verifier
+checks the observation signer, exact origin and freshness before producing a
+runtime-branded `Verified` value. That verified evidence may satisfy a pinned
+authority premise; an `Assessment` cannot. Legacy `observe` plus a generic
+host verifier may still create an ordinary `Verified` value for P0
+compatibility, but it is not runtime-branded authority evidence and cannot
+satisfy a chartered authority premise. Evidence freshness is checked when
+chartered authority is issued and again immediately before `commit` invokes
+the synthetic executor.
+
+For chartered quorum authority, approvers sign an exact request containing the
+charter/policy digest, operation digest, evidence digests, requester, nonce and
+expiry. The issuer verifies Ed25519 signatures, distinct principals, requester
+self-exclusion and any human minimum. A pinned advisor is run by the issuer and
+may veto only; missing, malformed or throwing advice fails closed.
+
+The older raw host-token constructors remain available solely to preserve the
+P0 embedding/conformance surface. They are **not** the authority-grade path.
+A chartered token carries its charter/policy/evidence bindings and the runtime
+refuses to use it unless the same signed charter is supplied under a trusted
+root.
+
+A charter may also pin one or more exact `praxis-ir.v0` module digests.
+When program pins are present, the runtime refuses any source or re-sealed IR
+whose module digest is absent from the signed charter. This is separate from
+the IR's self-digest: self-sealing detects accidental mutation, while the
+charter pin says which reviewed program the operator actually approved.
+Runtime invariant re-checks remain mandatory even for pinned IR.
+
 Secrets are represented separately from values:
 
 ```prax
@@ -212,6 +250,11 @@ The runtime additionally rejects:
 - hand-edited IR that attempts to bypass runtime kind, flow, or linearity checks;
 - absent, forged, mismatched, expired, revoked, already consumed, or wrong-plan host authority tokens;
 - quorum envelopes with the wrong membership, threshold, or insufficient approvals;
+- untrusted/tampered charters, policy/verifier pin drift, or one key occupying multiple charter seats;
+- forged, wrong-origin, stale, or wrong-signer authority-grade observations;
+- chartered authority built from non-Verified evidence or used without its trusted charter;
+- approval replay, requester self-approval, invalid signatures, or failure of a pinned human minimum;
+- missing/malformed pinned advisor results and explicit advisor vetoes;
 - absent, forged, or wrong-kind opaque host secret references;
 - missing verifier or assessor implementations;
 - verification/assessment results without explicit `ok: true`;
@@ -282,7 +325,9 @@ It specifically defends against:
 - external I/O before durable preparation;
 - uncertain operator outcomes being promoted to success;
 - synthetic success from a missing or malformed executor receipt;
-- completion being claimed without durable completion evidence.
+- completion being claimed without durable completion evidence;
+- governed source or re-sealed IR weakening a charter-pinned quorum;
+- evidence expiring between authorization/preparation and external execution.
 
 This slice does not claim protection from a malicious embedding host,
 compromised Node.js runtime, hardware compromise, or an executor that lies while
@@ -351,6 +396,7 @@ Run the focused tests through the existing Mesh test harness:
 node --test mesh/test/praxis-language-v0.test.mjs
 node --test mesh/test/praxis-conformance-v0.test.mjs
 node --test mesh/test/praxis-adversarial-ir-v0.test.mjs
+node --test mesh/test/praxis-charter-evidence-v0.test.mjs
 ```
 
 The semantic corpus is stored at

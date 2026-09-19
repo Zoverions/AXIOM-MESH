@@ -32,6 +32,9 @@ The authority TCB includes, at minimum:
 - runtime representation of linear authority and prepared effects;
 - host/executor ABI;
 - cryptographic canonicalization and digest rules;
+- signed charter verification and the trust root that pins reviewed program
+  digests, policies, verifiers, principal kinds and agent/principal bindings;
+- evidence signature/origin/freshness checks and signed approval verification;
 - the mechanism that binds authority to an exact plan and durable preparation
   evidence.
 
@@ -77,6 +80,11 @@ Minimum corpus:
 - collective agreement cannot amplify authority;
 - permit action/scope/exact-plan binding;
 - quorum membership and threshold binding outside governed IR;
+- signed charter pinning of reviewed program IR plus policy/verifier definitions;
+- signed evidence origin and freshness, including time-of-use re-checks;
+- exact approval-request binding with nonce/expiry and replay refusal;
+- requester self-approval exclusion, one-key-one-seat and human-minimum quorums;
+- assessment/advisor veto-only semantics;
 - linear authority consumption;
 - expiry/revocation semantics;
 - deny on absent/unknown/malformed policy results;

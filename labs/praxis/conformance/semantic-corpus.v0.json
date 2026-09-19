@@ -21,11 +21,11 @@
     },
     {
       "invariant": "collective-agreement-cannot-amplify-authority",
-      "status": "covered-synthetic-host-contract"
+      "status": "covered-host-bound-quorum-and-runtime-hostile-ir"
     },
     {
       "invariant": "permit-action-scope-binding",
-      "status": "covered"
+      "status": "covered-compile-time-and-runtime-hostile-ir"
     },
     {
       "invariant": "linear-authority-consumption",
@@ -33,7 +33,7 @@
     },
     {
       "invariant": "expiry-revocation",
-      "status": "covered-runtime-tests"
+      "status": "covered-runtime-time-of-use-and-replay"
     },
     {
       "invariant": "deny-on-absent-or-malformed-policy-result",
@@ -69,23 +69,75 @@
     },
     {
       "invariant": "secret-reference-separation",
-      "status": "covered-synthetic-host-contract"
+      "status": "covered-compile-time-and-runtime-hostile-ir"
     },
     {
       "invariant": "compiled-ir-is-untrusted",
-      "status": "covered-adversarial-runtime-tests"
+      "status": "covered-resealed-hostile-ir-runtime-tests"
     },
     {
       "invariant": "authority-binds-exact-plan",
-      "status": "covered-runtime-tests"
+      "status": "covered-runtime-and-hostile-ir"
     },
     {
       "invariant": "quorum-threshold-is-host-bound",
-      "status": "covered-adversarial-runtime-tests"
+      "status": "covered-runtime-and-hostile-ir"
     },
     {
       "invariant": "prepared-terminal-is-runtime-linear",
-      "status": "covered-adversarial-runtime-tests"
+      "status": "covered-runtime-and-hostile-ir"
+    },
+    {
+      "invariant": "charter-pins-policies-and-verifiers",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "one-key-one-principal-seat",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "signed-evidence-origin-authenticity-freshness",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "assessment-cannot-satisfy-authority-premise",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "pinned-advisor-veto-only-fail-closed",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "approval-request-binds-plan-evidence-requester-nonce-expiry",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "approval-replay-denied",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "requester-self-approval-excluded",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "human-minimum-quorum",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "chartered-authority-requires-runtime-charter",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "evidence-freshness-rechecked-at-commit",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "signed-charter-pins-reviewed-program-digest",
+      "status": "covered-resealed-hostile-ir-runtime-tests"
+    },
+    {
+      "invariant": "legacy-asserted-observation-cannot-satisfy-chartered-authority",
+      "status": "covered-synthetic-charter-tests"
     }
   ],
   "compile_cases": [
