@@ -35,6 +35,8 @@ The authority TCB includes, at minimum:
 - signed charter verification and the trust root that pins reviewed program
   digests, policies, verifiers, principal kinds and agent/principal bindings;
 - evidence signature/origin/freshness checks and signed approval verification;
+- the deterministic granting-premise evaluator over verified evidence, exact
+  operation fields and constants;
 - the mechanism that binds authority to an exact plan and durable preparation
   evidence.
 
@@ -85,6 +87,9 @@ Minimum corpus:
 - exact approval-request binding with nonce/expiry and replay refusal;
 - requester self-approval exclusion, one-key-one-seat and human-minimum quorums;
 - assessment/advisor veto-only semantics;
+- granting premises restricted to verified evidence, exact operation fields and
+  constants, with verified evidence bound to the same operation artifact;
+- immutable evidence snapshots and ambiguous-evidence refusal;
 - linear authority consumption;
 - expiry/revocation semantics;
 - deny on absent/unknown/malformed policy results;
