@@ -1,6 +1,6 @@
 {
   "catalog": "axiom-runtime-provider-catalog.v0",
-  "cataloged_at": "2026-08-25T12:11:00Z",
+  "cataloged_at": "2026-09-18T06:13:00Z",
   "base_contract": {
     "schema": "axiom-runtime-connector-catalog-entry.v1",
     "schema_sha256": "0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46"
@@ -541,6 +541,83 @@
         "Catalog presence does not authorize network egress, credential use, or model invocation.",
         "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
         "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "runtime:google-antigravity-managed:preview-09-2026",
+      "entry_version": "0.1.0",
+      "integration_class": "agent-runtime",
+      "subject": {
+        "subject_id": "runtime:google-antigravity-managed:preview-09-2026",
+        "display_name": "Google Antigravity Managed Agent (September 2026 preview)",
+        "description": "Remote managed-agent research profile for Google's Antigravity harness through the Gemini Interactions API; remote execution remains separately authorized and fail-closed."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://generativelanguage.googleapis.com",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "gemini-interactions-api",
+          "google-managed-agent-environment"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "managed-agent-execution"
+        ],
+        "destinations": [
+          "https://generativelanguage.googleapis.com"
+        ],
+        "data_classes": [
+          "task-input",
+          "task-output",
+          "workspace-artifact"
+        ],
+        "credential_classes": [
+          "api-key",
+          "opaque-credential-handle"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://generativelanguage.googleapis.com"
+        ]
+      },
+      "orchestration": {
+        "mode": "single-agent",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": true
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-09-18T06:13:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize Gemini API access, remote sandbox creation, provider credential use, tool use, or external effects.",
+        "Google-managed environments currently default to unrestricted outbound network access; any AXIOM adapter must explicitly disable networking or supply an exact finite allowlist and must reject wildcard egress.",
+        "This candidate records no live provider invocation, runtime conformance result, production promotion, or security certification.",
+        "The profile is pinned to antigravity-preview-09-2026, which Google released on September 17, 2026 as the replacement for antigravity-preview-05-2026; any later harness identifier requires explicit catalog/profile review rather than silent fallback.",
+        "The current candidate request builder refuses all provider credential bindings until an AXIOM runtime-adapter grant can cryptographically bind each authorized credential handle; Google Credentials API support is therefore cataloged but not enabled by this slice."
       ]
     },
     {

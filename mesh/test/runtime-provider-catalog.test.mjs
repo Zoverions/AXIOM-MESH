@@ -38,7 +38,7 @@ test('runtime/provider catalog v0 preserves discovery-without-authority invarian
   });
 
   assert.ok(Array.isArray(catalog.entries));
-  assert.equal(catalog.entries.length, 14);
+  assert.equal(catalog.entries.length, 15);
 
   const identities = new Set();
   const subjectIds = new Set();
@@ -64,12 +64,20 @@ test('runtime/provider catalog v0 preserves discovery-without-authority invarian
 
     if (entry.integration_class === 'agent-runtime') {
       runtimes += 1;
-      assert.equal(entry.requested_access.network_required, false);
-      assert.deepEqual(entry.requested_access.destinations, []);
-      assert.deepEqual(entry.requested_access.data_classes, []);
-      assert.deepEqual(entry.requested_access.credential_classes, []);
       assert.equal(entry.orchestration.independent_child_authority_requested, false);
-      assert.equal(entry.orchestration.remote_execution_requested, false);
+      if (entry.compatibility.deployment_forms.includes('remote-service')) {
+        assert.equal(entry.provenance.source_kind, 'service-endpoint');
+        assert.equal(entry.requested_access.network_required, true);
+        assert.deepEqual(entry.requested_access.network_destinations, [entry.provenance.service_origin]);
+        assert.deepEqual(entry.requested_access.destinations, [entry.provenance.service_origin]);
+        assert.equal(entry.orchestration.remote_execution_requested, true);
+      } else {
+        assert.equal(entry.requested_access.network_required, false);
+        assert.deepEqual(entry.requested_access.destinations, []);
+        assert.deepEqual(entry.requested_access.data_classes, []);
+        assert.deepEqual(entry.requested_access.credential_classes, []);
+        assert.equal(entry.orchestration.remote_execution_requested, false);
+      }
     } else if (entry.integration_class === 'model-provider') {
       providers += 1;
       assert.equal(entry.provenance.source_kind, 'service-endpoint');
@@ -104,7 +112,7 @@ test('runtime/provider catalog v0 preserves discovery-without-authority invarian
     }
   }
 
-  assert.equal(runtimes, 4);
+  assert.equal(runtimes, 5);
   assert.equal(providers, 6);
   assert.equal(computeBackends, 4);
 
@@ -123,6 +131,7 @@ test('catalog seed contains the intended runtime and provider subjects', () => {
     'runtime:openclaw:research',
     'runtime:codex-cli:research',
     'runtime:agent-zero:research',
+    'runtime:google-antigravity-managed:preview-09-2026',
     'provider:arcee-api',
     'provider:openai-api',
     'provider:anthropic-api',
@@ -159,4 +168,29 @@ test('local inference profiles pin reviewed source identities without admitting 
   for (const admitted of ['ollama', 'vllm', 'llama.cpp', 'sglang']) {
     assert.equal(catalog.backlog.includes(admitted), false, `admitted profile remains in backlog: ${admitted}`);
   }
+});
+
+test('Google managed-agent preview is remote execution without ambient authority', () => {
+  const catalog = loadCatalog();
+  const entry = catalog.entries.find(
+    (candidate) => candidate.entry_id === 'runtime:google-antigravity-managed:preview-09-2026'
+  );
+
+  assert.ok(entry);
+  assert.equal(entry.integration_class, 'agent-runtime');
+  assert.equal(entry.provenance.source_kind, 'service-endpoint');
+  assert.equal(
+    entry.provenance.service_origin,
+    'https://generativelanguage.googleapis.com'
+  );
+  assert.deepEqual(entry.requested_access.capabilities, []);
+  assert.deepEqual(entry.requested_access.actions, []);
+  assert.deepEqual(entry.requested_access.purposes, ['managed-agent-execution']);
+  assert.deepEqual(entry.requested_access.network_destinations, [
+    'https://generativelanguage.googleapis.com'
+  ]);
+  assert.equal(entry.orchestration.remote_execution_requested, true);
+  assert.equal(entry.orchestration.independent_child_authority_requested, false);
+  assert.ok(entry.non_claims.some((claim) => claim.includes('unrestricted outbound network access')));
+  assert.ok(entry.non_claims.some((claim) => claim.includes('no live provider invocation')));
 });
