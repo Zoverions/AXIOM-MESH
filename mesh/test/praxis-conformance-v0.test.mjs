@@ -155,14 +155,19 @@ commit prepared as receipt;
 });
 
 
-test('Praxis implementation modules have no built-in external-effect transport surface', async () => {
+test('Praxis interpreter modules have no built-in external-effect transport surface', async () => {
+  // Scan every interpreter module, not just the index.mjs facade.
+  // cli.mjs is intentionally excluded: it is the file-reading entry point by
+  // design (it must read .prax files from disk via node:fs/promises), while
+  // the invariant here covers the interpreter itself.
   const praxisDir = new URL('../../labs/praxis/', import.meta.url);
   const moduleNames = (await readdir(praxisDir))
-    .filter(name => name.endsWith('.mjs'))
+    .filter(name => name.endsWith('.mjs') && name !== 'cli.mjs')
     .sort();
 
   assert.ok(moduleNames.includes('index.mjs'));
   assert.ok(moduleNames.includes('host.mjs'));
+  assert.ok(moduleNames.length > 1);
 
   for (const moduleName of moduleNames) {
     const source = await readFile(new URL(moduleName, praxisDir), 'utf8');
