@@ -210,6 +210,10 @@
     {
       "invariant": "prepared-replay-relinks-measured-effect-contract",
       "status": "covered-measured-effect-tests"
+    },
+    {
+      "invariant": "measured-effects-require-chartered-authority",
+      "status": "covered-measured-effect-tests"
     }
   ],
   "compile_cases": [
