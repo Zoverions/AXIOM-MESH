@@ -20,6 +20,14 @@ const STATIC_ASSETS = new Map([
   ['/app.mjs', asset('app.mjs', 'text/javascript; charset=utf-8')],
   ['/presentation.mjs', asset('presentation.mjs', 'text/javascript; charset=utf-8')],
   ['/local-organize.mjs', asset('local-organize.mjs', 'text/javascript; charset=utf-8')],
+  ['/shared/axiom-one-social-feed-preview.mjs', {
+    path: join(REPOSITORY_ROOT, 'mesh', 'src', 'lib', 'axiom-one-social-feed-preview.mjs'),
+    contentType: 'text/javascript; charset=utf-8'
+  }],
+  ['/shared/social-feed-ranking-core.mjs', {
+    path: join(REPOSITORY_ROOT, 'mesh', 'src', 'lib', 'social-feed-ranking-core.mjs'),
+    contentType: 'text/javascript; charset=utf-8'
+  }],
   ['/human-contract.json', asset('human-contract.json', 'application/json; charset=utf-8')],
   ['/styles.css', asset('styles.css', 'text/css; charset=utf-8')],
   ['/manifest.webmanifest', asset('manifest.webmanifest', 'application/manifest+json')],
