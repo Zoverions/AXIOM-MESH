@@ -7,6 +7,7 @@ import {
   normalizeCuaS1FormsFixtureResult,
   validateCuaS1FormsQuestion
 } from '../src/lib/bounded-decision-cua-s1-forms-adapter.mjs';
+import { digestObject } from '../src/lib/canonical.mjs';
 import {
   computeBoundedDecisionQuestionSchemaDigest
 } from '../src/lib/bounded-decision-question-schema.mjs';
@@ -14,10 +15,118 @@ import {
   validateBoundedDecisionObservation
 } from '../src/lib/bounded-decision-observation.mjs';
 
-const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
 const C = 'c'.repeat(64);
 const ZERO = '0'.repeat(64);
+
+function localCatalogEntry() {
+  return {
+    schema: 'axiom-runtime-connector-catalog-entry.v1',
+    entry_id: 'provider:cua-s1-forms-local',
+    entry_version: '0.1.0',
+    integration_class: 'compute-backend',
+    subject: {
+      subject_id: 'provider:cua-s1-forms-local',
+      display_name: 'CUA-S1 Forms Local Fixture',
+      description: 'Test-only owner-local CUA-S1 forms specialist.'
+    },
+    provenance: {
+      source_kind: 'source-repository',
+      source_repository: 'https://github.com/trycua/cua',
+      source_commit: 'b'.repeat(40),
+      license_spdx: 'NOASSERTION',
+      mutable_ref_allowed: false
+    },
+    compatibility: {
+      platforms: ['linux'],
+      deployment_forms: ['process'],
+      adapter_contracts: []
+    },
+    requested_access: {
+      install_grants_authority: false,
+      capabilities: [],
+      actions: [],
+      purposes: [],
+      destinations: [],
+      data_classes: [],
+      credential_classes: [],
+      network_required: false
+    },
+    orchestration: {
+      mode: 'none',
+      may_spawn_workers: false,
+      independent_child_authority_requested: false,
+      remote_execution_requested: false
+    },
+    assurance: {
+      observations: [],
+      cataloged_at: '2026-09-18T22:00:00Z'
+    },
+    lifecycle: {
+      update_mode: 'manual-reviewed',
+      silent_permission_widening_allowed: false,
+      rollback_available: true,
+      quarantine_supported: true
+    },
+    non_claims: ['Test fixture does not authorize runtime activation.']
+  };
+}
+
+function remoteCatalogEntry() {
+  return {
+    schema: 'axiom-runtime-connector-catalog-entry.v1',
+    entry_id: 'provider:cua-s1-forms-remote',
+    entry_version: '0.1.0',
+    integration_class: 'model-provider',
+    subject: {
+      subject_id: 'provider:cua-s1-forms-remote',
+      display_name: 'CUA-S1 Forms Remote Fixture',
+      description: 'Test-only network-required CUA-S1 forms provider.'
+    },
+    provenance: {
+      source_kind: 'service-endpoint',
+      service_origin: 'https://api.example.com',
+      license_spdx: 'NOASSERTION',
+      mutable_ref_allowed: false
+    },
+    compatibility: {
+      platforms: ['other'],
+      deployment_forms: ['remote-service'],
+      adapter_contracts: [],
+      protocol_profiles: ['https-json-api']
+    },
+    requested_access: {
+      install_grants_authority: false,
+      capabilities: [],
+      actions: [],
+      purposes: ['model-inference'],
+      destinations: ['https://api.example.com'],
+      data_classes: ['model-input', 'model-output'],
+      credential_classes: ['api-key'],
+      network_required: true,
+      network_destinations: ['https://api.example.com']
+    },
+    orchestration: {
+      mode: 'none',
+      may_spawn_workers: false,
+      independent_child_authority_requested: false,
+      remote_execution_requested: false
+    },
+    assurance: {
+      observations: [],
+      cataloged_at: '2026-09-18T22:00:00Z'
+    },
+    lifecycle: {
+      update_mode: 'manual-reviewed',
+      silent_permission_widening_allowed: false,
+      rollback_available: false,
+      quarantine_supported: true
+    },
+    non_claims: ['Test fixture does not authorize provider access.']
+  };
+}
+
+const LOCAL_CATALOG_ENTRY = localCatalogEntry();
 
 function providerProfile(overrides = {}) {
   return {
@@ -25,9 +134,9 @@ function providerProfile(overrides = {}) {
     version: 0,
     status: 'inert-bounded-decision-metadata',
     profile_id: 'bounded.provider.cua.s1.forms.local.v1',
-    catalog_entry_id: 'provider:cua-s1-forms-local',
-    catalog_entry_version: '0.1.0',
-    catalog_entry_digest: A,
+    catalog_entry_id: LOCAL_CATALOG_ENTRY.entry_id,
+    catalog_entry_version: LOCAL_CATALOG_ENTRY.entry_version,
+    catalog_entry_digest: digestObject(LOCAL_CATALOG_ENTRY),
     offering_ref: 'cua.s1.forms',
     offering_version_or_revision: `cua-s1-form-v0@sha256:${C}`,
     offering_revision_evidence: 'exact-artifact',
@@ -113,6 +222,10 @@ function result(overrides = {}) {
   };
 }
 
+function normalizeFixture(envelope, profile = providerProfile(), schema = question(), catalogEntry = LOCAL_CATALOG_ENTRY) {
+  return normalizeCuaS1FormsFixtureResult(envelope, profile, schema, catalogEntry);
+}
+
 test('accepts only the canonical CUA-S1-FORMS action alphabet', () => {
   const validated = validateCuaS1FormsQuestion(question());
   assert.equal(validated.valid, true);
@@ -146,7 +259,7 @@ test('accepts only the canonical CUA-S1-FORMS action alphabet', () => {
 test('normalizes local CUA-S1 form choice into provider-neutral bounded evidence', () => {
   const profile = providerProfile();
   const schema = question();
-  const envelope = normalizeCuaS1FormsFixtureResult({
+  const envelope = normalizeFixture({
     result: result(),
     observation: observationInput()
   }, profile, schema);
@@ -175,10 +288,10 @@ test('normalizes local CUA-S1 form choice into provider-neutral bounded evidence
 });
 
 test('preserves exact snapshot and element identity as inert source binding', () => {
-  const envelope = normalizeCuaS1FormsFixtureResult({
+  const envelope = normalizeFixture({
     result: result(),
     observation: observationInput()
-  }, providerProfile(), question());
+  });
 
   assert.equal(envelope.target_binding.schema, CUA_S1_FORMS_TARGET_BINDING_SCHEMA);
   assert.equal(envelope.target_binding.snapshot_id, 'snapshot.forms.0001');
@@ -197,7 +310,7 @@ test('preserves exact snapshot and element identity as inert source binding', ()
 });
 
 test('maps CUA-S1 skip to explicit abstention without fabricating an action', () => {
-  const envelope = normalizeCuaS1FormsFixtureResult({
+  const envelope = normalizeFixture({
     result: result({
       selected_option_index: 4,
       probabilities: [0.03, 0.04, 0.05, 0.08, 0.8]
@@ -205,7 +318,7 @@ test('maps CUA-S1 skip to explicit abstention without fabricating an action', ()
     observation: observationInput({
       observation_id: 'bounded.observation.cua-s1.forms.skip.v1'
     })
-  }, providerProfile(), question());
+  });
 
   assert.equal(envelope.observation.answer.selected_option_id, 'skip');
   assert.equal(envelope.target_binding.selected_option_id, 'skip');
@@ -214,11 +327,26 @@ test('maps CUA-S1 skip to explicit abstention without fabricating an action', ()
   assert.equal(envelope.target_binding.submit_authorization, false);
 });
 
+test('fails closed when a tied distribution would canonicalize away the provider-selected skip', () => {
+  assert.throws(
+    () => normalizeFixture({
+      result: result({
+        selected_option_index: 4,
+        probabilities: [0.4, 0.1, 0.05, 0.05, 0.4]
+      }),
+      observation: observationInput({
+        observation_id: 'bounded.observation.cua-s1.forms.tied-skip.v1'
+      })
+    }),
+    /preserve|ambiguous|tied/i
+  );
+});
+
 test('requires owner-local exact-artifact provider binding', () => {
   const schema = question();
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result(),
       observation: observationInput()
     }, providerProfile({ offering_revision_evidence: 'mutable-alias' }), schema),
@@ -226,19 +354,36 @@ test('requires owner-local exact-artifact provider binding', () => {
   );
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result(),
       observation: observationInput()
     }, providerProfile({ provider_mode: 'provider-remote' }), schema),
-    /owner-local/i
+    /owner-local|network-required/i
   );
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result({ model: 'cua-s1-form-v0@sha256:' + 'd'.repeat(64) }),
       observation: observationInput()
     }, providerProfile(), schema),
     /model|offering|revision/i
+  );
+});
+
+test('requires catalog-resolved local posture instead of trusting the profile declaration', () => {
+  const remote = remoteCatalogEntry();
+  const profile = providerProfile({
+    catalog_entry_id: remote.entry_id,
+    catalog_entry_version: remote.entry_version,
+    catalog_entry_digest: digestObject(remote)
+  });
+
+  assert.throws(
+    () => normalizeFixture({
+      result: result(),
+      observation: observationInput()
+    }, profile, question(), remote),
+    /owner-local.*network-required|network-required.*owner-local/i
   );
 });
 
@@ -247,7 +392,7 @@ test('rejects stale state binding and malformed probability evidence', () => {
   const schema = question();
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result({ state_digest: 'd'.repeat(64) }),
       observation: observationInput()
     }, profile, schema),
@@ -255,7 +400,7 @@ test('rejects stale state binding and malformed probability evidence', () => {
   );
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result({ probabilities: [0.8, 0.1, 0.1] }),
       observation: observationInput()
     }, profile, schema),
@@ -263,7 +408,7 @@ test('rejects stale state binding and malformed probability evidence', () => {
   );
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result({
         selected_option_index: 3,
         probabilities: [0.72, 0.12, 0.05, 0.03, 0.08]
@@ -274,7 +419,7 @@ test('rejects stale state binding and malformed probability evidence', () => {
   );
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result({ probabilities: [0.8, 0.1, 0.05, 0.03, 0.03] }),
       observation: observationInput()
     }, profile, schema),
@@ -290,7 +435,7 @@ test('execution, submit, raw state and credential smuggling fields fail closed',
     const value = result();
     value[field] = field === 'execute' || field === 'submit' ? true : 'secret-or-state';
     assert.throws(
-      () => normalizeCuaS1FormsFixtureResult({
+      () => normalizeFixture({
         result: value,
         observation: observationInput()
       }, profile, schema),
@@ -299,7 +444,7 @@ test('execution, submit, raw state and credential smuggling fields fail closed',
   }
 
   assert.throws(
-    () => normalizeCuaS1FormsFixtureResult({
+    () => normalizeFixture({
       result: result(),
       observation: {
         ...observationInput(),
