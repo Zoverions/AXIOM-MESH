@@ -725,13 +725,25 @@ test('domain snapshot refuses to pool admissions from different customer trust b
     issuerId: 'issuer.vendor-a',
     subjectId: 'node.vendor-a.001'
   });
+  const statementB = nodeIdentity({
+    issuer: f.vendorB,
+    issuerId: 'issuer.vendor-b',
+    subject: f.nodeB,
+    nodeId: 'node.vendor-b.001',
+    vendor: 'vendor-b'
+  });
+  const activeB = status({
+    issuer: f.vendorB,
+    issuerId: 'issuer.vendor-b',
+    subjectId: 'node.vendor-b.001'
+  });
 
   const a1 = admission({ f, statement: statementA, statuses: [activeA] });
   const a2 = admission({
     f,
     bundle: version2,
-    statement: statementA,
-    statuses: [activeA]
+    statement: statementB,
+    statuses: [activeB]
   });
 
   assert.throws(
