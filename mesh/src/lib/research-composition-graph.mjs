@@ -4,7 +4,10 @@ import {
   canonicalJson,
   ValidationError
 } from './canonical.mjs';
-import { researchContractDigest } from './research-capsule-contracts.mjs';
+import {
+  researchContractDigest,
+  verifyResearchClaimAdjudication
+} from './research-capsule-contracts.mjs';
 
 export const RESEARCH_CONTRIBUTION_SCHEMA = 'axiom-research-contribution.v0';
 export const RESEARCH_RELATION_SCHEMA = 'axiom-research-relation.v0';
@@ -12,6 +15,7 @@ export const RESEARCH_RELATION_SCHEMA = 'axiom-research-relation.v0';
 const MAX_OBJECT_BYTES = 65_536;
 const MAX_CONTRIBUTIONS = 1_024;
 const MAX_RELATIONS = 4_096;
+const MAX_CLAIM_ADJUDICATIONS = 1_024;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
 
@@ -131,11 +135,17 @@ export function verifyResearchRelation(value) {
 
 export function buildResearchCompositionGraph(value) {
   assertPlainObject(value, 'ResearchCompositionGraph input');
-  assertExactFields(
-    value,
-    ['contributions', 'relations'],
-    'ResearchCompositionGraph input'
-  );
+  const allowedInputFields = new Set(['contributions', 'relations', 'claim_adjudications']);
+  for (const key of Object.keys(value)) {
+    if (!allowedInputFields.has(key)) {
+      throw new ValidationError(`ResearchCompositionGraph input contains unsupported field: ${key}`);
+    }
+  }
+  for (const key of ['contributions', 'relations']) {
+    if (!Object.hasOwn(value, key)) {
+      throw new ValidationError(`ResearchCompositionGraph input.${key} is required`);
+    }
+  }
 
   if (!Array.isArray(value.contributions)) {
     throw new ValidationError('ResearchCompositionGraph contributions must be an array');
@@ -314,6 +324,45 @@ export function buildResearchCompositionGraph(value) {
       && relation.independence_state === 'independent'
     ) {
       independentlyCovered.add(relation.object_contribution_digest);
+    }
+  }
+
+  // Adverse claim adjudications referenced from contribution artifact/evidence refs
+  // force-include those contributions in attention. supported / insufficient_evidence
+  // never grant truth, reputation, or coverage suppression.
+  const ADVERSE_ADJUDICATION_STATUSES = new Set([
+    'contested',
+    'unsupported',
+    'corrected'
+  ]);
+  const claimAdjudications = value.claim_adjudications ?? [];
+  if (!Array.isArray(claimAdjudications)) {
+    throw new ValidationError('ResearchCompositionGraph claim_adjudications must be an array');
+  }
+  if (claimAdjudications.length > MAX_CLAIM_ADJUDICATIONS) {
+    throw new ValidationError(
+      `ResearchCompositionGraph claim_adjudications must contain at most ${MAX_CLAIM_ADJUDICATIONS} items`
+    );
+  }
+
+  const adverseAdjudicationDigests = new Set();
+  for (const raw of claimAdjudications) {
+    const adjudication = verifyResearchClaimAdjudication(raw);
+    if (ADVERSE_ADJUDICATION_STATUSES.has(adjudication.status)) {
+      adverseAdjudicationDigests.add(adjudication.adjudication_digest);
+    }
+  }
+
+  if (adverseAdjudicationDigests.size > 0) {
+    for (const contribution of contributions) {
+      const hasAdverseReference = contribution.artifact_refs.some(
+        ref => adverseAdjudicationDigests.has(ref)
+      ) || contribution.evidence_refs.some(
+        ref => adverseAdjudicationDigests.has(ref)
+      );
+      if (hasAdverseReference) {
+        problemDigests.add(contribution.contribution_digest);
+      }
     }
   }
 
