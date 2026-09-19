@@ -68,6 +68,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), their `rebuild/` specifications, and the subordinate [Runtime & Connector Fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md) | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
 | How are external/local security observations converted into bounded evidence? | [`superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md`](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [`superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md`](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), and [`MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md`](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md) | Inert threat evidence, offline normalization/applicability, later separately gated reproduction/monitoring/feed/containment stages | Live-feed, automatic-containment, vulnerability, or production-security claims |
 | How can research sources become agent-native without inheriting authority? | [`superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md`](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [`superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md`](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md) | Exact research-source provenance, source-bounded knowledge, inert operation candidates, and scoped reproduction evidence | Live paper fetching, remote MCP execution, scientific-truth guarantees, or runtime authority |
+| How does Axiom Science represent causal inquiry and experiment proposals without inheriting authority? | [`superpowers/specs/2026-09-17-axiom-science-v0-design.md`](superpowers/specs/2026-09-17-axiom-science-v0-design.md) and [`superpowers/plans/2026-09-17-axiom-science-v0.md`](superpowers/plans/2026-09-17-axiom-science-v0.md) | Science Study and Experiment Proposal contracts over Research Capsule, Epistemic Fabric, and the Research Composition Graph | Experiment execution, autonomous truth, live model routing, instrument control, publication authority, or runtime capability |
 | How are future path observations attributed without becoming routing authority? | [`rebuild/PATH-OBSERVATION-EVIDENCE.md`](rebuild/PATH-OBSERVATION-EVIDENCE.md) | External signer roles, exact portfolio binding, freshness, source provenance, replay bounds, attribution-vs-truth semantics | Claims of live telemetry, regulatory truth, route authority, or production path selection |
 | How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
 | How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
@@ -91,7 +92,10 @@ continuity design. Use **Continuous Threat Intelligence Stage 5B -> A/B plan ->
 threat model -> gated master TODO** for adaptive defensive-learning work. For
 agent-native research work, use **Research Capsule v0 design -> implementation
 plan -> exact source/knowledge/operation/reproduction contracts** and keep any
-future retrieval or execution behind separate authority gates. Use **migration
+future retrieval or execution behind separate authority gates. For science-domain
+causal-inquiry work, continue through **Axiom Science v0 design -> S0 plan ->
+Science Study / Experiment Proposal**, while reusing Research Composition Graph
+v0 rather than creating a second research graph. Use **migration
 -> dated audit or review** when the question is provenance or why a boundary
 exists.
 
@@ -160,6 +164,10 @@ Current documentation must preserve these distinctions:
   Candidates, and Research Reproduction Evidence are provenance/evidence
   artifacts only: knowledge is not authority, operation is not authority, and
   reproduction is not scientific truth;
+- Axiom Science Study and Experiment Proposal objects are science-domain
+  organization/proposal artifacts only: causal reasoning may propose tests, but
+  these objects create no experiment, publication, spending, disclosure,
+  instrument, or runtime authority and do not establish scientific truth;
 - Sovereign Vault, Context Request, Vault Access Lease, Context Capsule,
   Personal Agent Pack v2, and personal-model adaptation schemas are
   documentation-only draft contracts and do not create runtime vault isolation,
@@ -265,6 +273,12 @@ decision.
 - [Agent-Native Research Artifacts v0 implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md)
   — zero-authority schemas, verifier, synthetic fixtures, and falsification
   tests; no live paper fetching or MCP execution.
+- [Axiom Science v0 design](superpowers/specs/2026-09-17-axiom-science-v0-design.md)
+  — thin science-domain semantics and a theory/causal-inquiry direction over
+  Research Capsule, Epistemic Fabric, and Research Composition Graph v0.
+- [Axiom Science v0 S0 implementation plan](superpowers/plans/2026-09-17-axiom-science-v0.md)
+  — inert Science Study and Experiment Proposal contracts, deterministic
+  validation, synthetic composition fixtures, and authority-boundary tests.
 
 #### Draft architecture contracts
 
@@ -292,6 +306,8 @@ decision.
 - [Research Reproduction Evidence v0](architecture/contracts/research-reproduction-evidence.v0.schema.json)
 - [Research Contribution v0](architecture/contracts/research-contribution.v0.schema.json)
 - [Research Relation v0](architecture/contracts/research-relation.v0.schema.json)
+- [Axiom Science Study v0](architecture/contracts/axiom-science-study.v0.schema.json)
+- [Axiom Science Experiment Proposal v0](architecture/contracts/axiom-science-experiment-proposal.v0.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
@@ -306,6 +322,11 @@ navigation evidence only and create no truth, reputation, execution, merge,
 or deployment authority. Future semantic-diversity judgments may add evidence to
 this graph, but do not become truth or authority. Lineage relations remain
 acyclic; support and contradiction may remain cyclic as visible disagreement.
+Axiom Science S0 adds only inert Science Study and Experiment Proposal contracts
+plus deterministic validation/composition tests. Its causal-inquiry direction
+may generate hypotheses and discriminating tests, but it adds no experiment
+execution, provider routing, instrument control, publication surface, capability,
+or scientific-truth primitive.
 The two Runtime & Connector Fabric v1 schema files are now raw-byte
 pinned by the zero-dependency frozen-contract verifier and protected test surface
 at:
@@ -388,8 +409,9 @@ fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
 The Runtime & Connector Fabric, Path Observation Evidence, Continuous Threat
-Intelligence A/B, and Research Capsule v0 work must be explicitly admitted to
-that allowlist, and their zero-authority/non-truth invariants must remain
+Intelligence A/B, Research Capsule v0, Research Composition Graph v0, and Axiom
+Science S0 work must be explicitly admitted to that allowlist, and their
+zero-authority/non-truth invariants must remain
 executable checks before a draft becomes merge-ready. Project-local installed
 skills under `.agents/` are deliberately outside the canonical Markdown corpus
 and are governed by their own skill/integrity surfaces.
@@ -426,4 +448,4 @@ For future resilient-network work, add the agent-interoperability roadmap and
 [Path Observation Evidence](rebuild/PATH-OBSERVATION-EVIDENCE.md); neither is a
 current routing capability. For future agent-runtime work, continue through the
 agent-interoperability roadmap/specification and then the [Runtime & Connector
-Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For continuous defensive-learning work, add the [Continuous Threat Intelligence Stage 5B design](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [A/B plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), [A/B threat model](security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md), and [gated execution queue](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md). For agent-native research work, add the [Research Capsule v0 design](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md). For plural-governance work, add the corresponding roadmap extension only after the current-state material above.
+Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For continuous defensive-learning work, add the [Continuous Threat Intelligence Stage 5B design](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [A/B plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), [A/B threat model](security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md), and [gated execution queue](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md). For agent-native research work, add the [Research Capsule v0 design](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md). For science-domain causal-inquiry work, add the [Axiom Science v0 design](superpowers/specs/2026-09-17-axiom-science-v0-design.md) and [S0 implementation plan](superpowers/plans/2026-09-17-axiom-science-v0.md); these objects remain proposal/evidence semantics and grant no experiment authority. For plural-governance work, add the corresponding roadmap extension only after the current-state material above.

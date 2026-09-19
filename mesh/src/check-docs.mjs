@@ -88,6 +88,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json',
   'docs/architecture/contracts/research-contribution.v0.schema.json',
   'docs/architecture/contracts/research-relation.v0.schema.json',
+  'docs/architecture/contracts/axiom-science-study.v0.schema.json',
+  'docs/architecture/contracts/axiom-science-experiment-proposal.v0.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -136,6 +138,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
   'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md',
   'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
+  'docs/superpowers/specs/2026-09-17-axiom-science-v0-design.md',
   'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
@@ -156,6 +159,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',
   'docs/superpowers/plans/2026-09-15-bounded-decision-intelligence-v0.md',
   'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md',
+  'docs/superpowers/plans/2026-09-17-axiom-science-v0.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -387,6 +391,15 @@ const REQUIRED_CONTENT = Object.freeze({
     'independence_state',
     'authority_effect'
   ],
+  'docs/architecture/contracts/axiom-science-study.v0.schema.json': [
+    'axiom-science-study.v0',
+    '"authority_effect": {"const": "none"}'
+  ],
+  'docs/architecture/contracts/axiom-science-experiment-proposal.v0.schema.json': [
+    'axiom-science-experiment-proposal.v0',
+    '"execution_authority": {"const": "none"}',
+    '"authority_effect": {"const": "none"}'
+  ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
     '## 3. Adaptive assurance profiles',
@@ -539,6 +552,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'Operation is not authority',
     'Reproduction is not truth'
   ],
+  'docs/superpowers/specs/2026-09-17-axiom-science-v0-design.md': [
+    'Scientific autonomy is not scientific authority',
+    'Theory and causal inquiry direction',
+    '## 19. Exact S0 implementation boundary',
+    '## 20. S0 acceptance requirements'
+  ],
   'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md': [
     'Benchmark evidence is not capability authority',
     '## 6. Validation and fail-closed behavior',
@@ -566,6 +585,11 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md': [
     '## Exact changed-file envelope',
     '### Task 1: RED contract and fixture surface',
+    '## Landing gate'
+  ],
+  'docs/superpowers/plans/2026-09-17-axiom-science-v0.md': [
+    '## Exact changed-file envelope',
+    '### Task 1: RED fixture and contract-test surface',
     '## Landing gate'
   ],
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
