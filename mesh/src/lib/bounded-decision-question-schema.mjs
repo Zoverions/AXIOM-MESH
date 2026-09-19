@@ -133,9 +133,9 @@ function validateChoice(document) {
   }
   if (
     document.other_option_policy === 'forbidden'
-    && (ids.has('other') || ids.has('none'))
+    && (ids.has('other') || ids.has('none') || ids.has('forbidden'))
   ) {
-    throw new ValidationError('forbidden other_option_policy cannot include an explicit other or none fallback option');
+    throw new ValidationError('forbidden other_option_policy cannot include an explicit other, none, or forbidden fallback option');
   }
 }
 
