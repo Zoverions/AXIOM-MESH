@@ -31,7 +31,12 @@
       "memory.link",
       "memory.tombstone",
       "export.create",
-      "ai.local-organize"
+      "ai.local-organize",
+      "social.actor.create",
+      "social.persona.create",
+      "social.publication.create",
+      "social.publication.supersede",
+      "social.publication.retract"
     ],
     "stable_gateway_errors": 20,
     "event_kinds": 37,
@@ -64,6 +69,16 @@
     "hard_delete": false,
     "restore": false,
     "sharing": false
+  },
+  "capability_parity": {
+    "status": "experimental-read-only-projection",
+    "capability_route": "capabilities.list",
+    "runnable_claim_statuses": [
+      "implemented"
+    ],
+    "principal_authority": "not-inferred-from-discovery",
+    "discovery_grants_authority": false,
+    "browser_mutation": false
   },
   "surfaces": [
     "overview",
