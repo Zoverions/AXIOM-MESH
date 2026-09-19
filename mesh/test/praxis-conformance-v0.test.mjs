@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 
 import {
   canonicalJson,
@@ -155,53 +155,46 @@ commit prepared as receipt;
 });
 
 
-test('Praxis interpreter modules have no built-in external-effect transport surface', async () => {
+test('Praxis interpreter has no built-in external-effect transport surface', async () => {
   // Scan every interpreter module, not just the index.mjs facade.
   // cli.mjs is intentionally excluded: it is the file-reading entry point by
   // design (it must read .prax files from disk via node:fs/promises), while
   // the invariant here covers the interpreter itself.
-  const praxisDir = new URL('../../labs/praxis/', import.meta.url);
-  const moduleNames = (await readdir(praxisDir))
-    .filter(name => name.endsWith('.mjs') && name !== 'cli.mjs')
+  const dir = new URL('../../labs/praxis/', import.meta.url);
+  const modules = (await readdir(dir))
+    .filter((name) => name.endsWith('.mjs') && name !== 'cli.mjs')
     .sort();
+  assert.ok(modules.length > 1, `expected split interpreter modules, found ${modules.join(', ')}`);
 
-  assert.ok(moduleNames.includes('index.mjs'));
-  assert.ok(moduleNames.includes('host.mjs'));
-  assert.ok(moduleNames.length > 1);
-
-  for (const moduleName of moduleNames) {
-    const source = await readFile(new URL(moduleName, praxisDir), 'utf8');
-
-    for (const forbidden of [
-      "node:http",
-      "node:https",
-      "node:net",
-      "node:tls",
-      "node:dgram",
-      "node:child_process",
-      "node:fs",
-      "fetch(",
-      "process.env",
-      "WebSocket",
-      "exec(",
-      "spawn("
-    ]) {
-      assert.equal(
-        source.includes(forbidden),
-        false,
-        `${moduleName} must not contain ${forbidden}`
-      );
+  for (const forbidden of [
+    "node:http",
+    "node:https",
+    "node:net",
+    "node:tls",
+    "node:dgram",
+    "node:child_process",
+    "node:fs",
+    "fetch(",
+    "process.env",
+    "WebSocket",
+    "exec(",
+    "spawn("
+  ]) {
+    for (const name of modules) {
+      const source = await readFile(new URL(name, dir), 'utf8');
+      assert.equal(source.includes(forbidden), false, `interpreter module ${name} must not contain ${forbidden}`);
     }
   }
 });
 
-test('Praxis CLI exposes compile/check surfaces only and cannot invoke run', async () => {
+test('Praxis CLI exposes compile/check/format surfaces only and cannot invoke run', async () => {
   const source = await readFile(
     new URL('../../labs/praxis/cli.mjs', import.meta.url),
     'utf8'
   );
 
   assert.match(source, /import \{ compile \} from '\.\/index\.mjs';/);
+  assert.match(source, /from '\.\/format\.mjs';/);
   assert.equal(source.includes('run('), false);
   assert.equal(source.includes('executor'), false);
   assert.equal(source.includes('createHostPermit'), false);
