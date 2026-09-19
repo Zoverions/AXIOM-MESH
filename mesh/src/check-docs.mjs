@@ -47,6 +47,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/community/RED-TEAM-CHALLENGE.md',
   'docs/growth/ACQUISITION-EXPERIMENTS.md',
   'docs/growth/DEMAND-EVIDENCE-GATE.md',
+  'docs/growth/GTM-EVIDENCE-LOOP.md',
   'docs/growth/evidence/majik-multi-ai-continuity-2026-09-18.json',
   'docs/growth/UNATTENDED-AGENT-TRUST-DRILL.md',
   'docs/architecture/AGENT-COMMONS.md',

@@ -65,6 +65,7 @@
     "status": "npm --prefix mesh run status:check",
     "release:verify": "npm --prefix mesh run release:verify",
     "release:evidence": "npm --prefix mesh run release:evidence",
-    "growth:demand:check": "npm --prefix mesh run growth:demand:check"
+    "growth:demand:check": "npm --prefix mesh run growth:demand:check",
+    "growth:gtm:check": "npm --prefix mesh run growth:gtm:check"
   }
 }
