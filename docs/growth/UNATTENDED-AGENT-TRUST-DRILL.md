@@ -132,11 +132,12 @@ The property to preserve is simple: **discovery and model intent must remain sep
 
 Campaign: `ua-2026-09-19-local-is-not-authority`
 
-Local execution is useful for privacy and latency, but it does not itself establish what an agent is authorized to do. This lower-friction follow-up combines two existing inert security surfaces into one source-level check:
+Local execution is useful for privacy and latency, but it does not itself establish what an agent is authorized to do. This lower-friction follow-up combines two existing inert security surfaces into one source-level check. The command is pinned to exact verified repository commit `a978c90a11b63e0e8b8441876378a26304aea46a` so a reported result is reproducible rather than silently following moving `main`:
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git && \
 cd AXIOM-MESH && \
+git checkout --detach a978c90a11b63e0e8b8441876378a26304aea46a && \
 node --test mesh/test/agent-commons-mcp-readonly.test.mjs mesh/test/plural-capability-lease.test.mjs
 ```
 
