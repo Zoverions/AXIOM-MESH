@@ -147,6 +147,34 @@ A passing run is only the baseline. The useful result is a reproducible countere
 
 Report the exact commit SHA, exact command or request frame, expected boundary, observed result, and the smallest safe evidence needed to reproduce it. This remains a source-level falsification exercise: no production MCP compatibility, live deployment, remote-attestation, smart-home integration, or external-effect authority is claimed.
 
+## Provider choice is not authority
+
+Campaign: `ua-2026-09-19-provider-choice-authority`
+
+Privacy-first AI products are increasingly making model choice and provider switching part of the user experience. That improves user control, but changing a model, provider, runtime, or transport must not silently create new authority or preserve authority that has expired or been revoked.
+
+Mozilla and Mistral's September 2026 Firefox Smart Window work is useful current context because it emphasizes privacy, user control, and provider choice. AXIOM-MESH does **not** claim Firefox or Mistral integration or compatibility. This experiment uses the provider-choice problem only as a falsification target for AXIOM's existing synthetic Agent Runtime Adapter contract.
+
+Run the existing exact-commit drill:
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git && \
+cd AXIOM-MESH && \
+git checkout --detach 8362fa96c651e8a4beaf93c94ccb0d1c74f0b64f && \
+npm run runtime-adapter:drill
+```
+
+The current synthetic conformance profile includes future-, expired-, and revoked-grant denial; mid-flight revocation and cancellation preemption; idempotent replay stability; conflicting-replay denial; fallback behavior; uncertainty handling; receipts; and rollback semantics. It loads no external runtime and grants no second authority path.
+
+Try to falsify one narrow invariant: **provider/runtime choice is replaceable; authority is not transferable by choice alone.** A useful counterexample is a reproducible case where a runtime/provider replacement, reconnect, fallback, or self-reported model identity becomes permission; an expired or revoked grant remains usable; cancellation fails to preempt; or replay under a different runtime identity is accepted as the same authority decision.
+
+Report the exact commit SHA, exact command or request frame, expected boundary, observed result, and the smallest safe evidence needed to reproduce it. Do not include credentials, private prompts, personal data, browser history, provider tokens, or production secrets.
+
+Current external problem context:
+
+- https://blog.mozilla.org/en/firefox/mozilla-mistral-partnership/
+- https://mistral.ai/news/mistral-x-mozilla/
+
 ## Contribution target
 
 The most useful contribution is a concrete counterexample: a reproducible case where the current harness allows more authority than intended, loses provenance, misrepresents uncertainty, or makes recovery unsafe.
