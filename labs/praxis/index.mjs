@@ -2509,7 +2509,16 @@ function validateMeasuredOperationAgainstRegistry(operation, registry) {
 }
 
 function validateEffectEnvelope(authority, operation, charterContext) {
-  if (!authority?.charter_digest) return;
+  const isMeasured = operation?.effect !== undefined;
+  if (!authority?.charter_digest) {
+    if (isMeasured) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EFFECT_AUTHORITY_REQUIRED',
+        'host-measured effects require chartered authority'
+      );
+    }
+    return;
+  }
   if (!charterContext) {
     throw new PraxisRuntimeError(
       'PRAXIS_CHARTER_REQUIRED',
@@ -2527,8 +2536,16 @@ function validateEffectEnvelope(authority, operation, charterContext) {
     charterContext.body.effect_envelopes ?? {},
     requester
   );
-  if (!hasEnvelope) return;
-  if (!operation || operation.effect === undefined) {
+  if (!hasEnvelope) {
+    if (isMeasured) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EFFECT_ENVELOPE_REQUIRED',
+        'host-measured effects require an explicit signed requester effect envelope'
+      );
+    }
+    return;
+  }
+  if (!isMeasured) {
     throw new PraxisRuntimeError(
       'PRAXIS_EFFECT_REQUIRED',
       'requester has a signed effect envelope, so authority requires a host-measured operation'
