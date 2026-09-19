@@ -1,0 +1,60 @@
+{
+  "schema": "axiom-runtime-connector-catalog-entry.v1",
+  "entry_id": "connector:synthetic-search",
+  "entry_version": "0.1.0",
+  "integration_class": "tool-service-connector",
+  "subject": {
+    "subject_id": "connector:synthetic-search",
+    "display_name": "Synthetic Search Connector"
+  },
+  "provenance": {
+    "source_kind": "source-repository",
+    "source_repository": "https://example.invalid/synthetic-search",
+    "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "license_spdx": "MIT",
+    "mutable_ref_allowed": false
+  },
+  "compatibility": {
+    "platforms": ["linux"],
+    "deployment_forms": ["remote-service"],
+    "adapter_contracts": []
+  },
+  "requested_access": {
+    "install_grants_authority": false,
+    "capabilities": [],
+    "actions": ["external.search.read"],
+    "purposes": ["research"],
+    "destinations": ["https://api.example.invalid"],
+    "data_classes": ["query.text", "search.results"],
+    "credential_classes": [],
+    "network_required": true,
+    "network_destinations": ["https://broker.example.invalid"],
+    "resource_bounds": {
+      "timeout_ms": 30000,
+      "cost_ceiling": {
+        "amount_minor_units": 0,
+        "currency": "USD"
+      }
+    }
+  },
+  "orchestration": {
+    "mode": "tool-host",
+    "may_spawn_workers": false,
+    "independent_child_authority_requested": false,
+    "remote_execution_requested": false
+  },
+  "assurance": {
+    "observations": [],
+    "cataloged_at": "2026-09-16T19:00:00Z",
+    "last_reviewed_at": "2026-09-16T19:00:00Z"
+  },
+  "lifecycle": {
+    "update_mode": "manual-reviewed",
+    "silent_permission_widening_allowed": false,
+    "rollback_available": true,
+    "quarantine_supported": true
+  },
+  "non_claims": [
+    "Synthetic catalog presence does not authorize execution."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schema": "axiom-runtime-connector-catalog-entry.v1",
+  "entry_id": "connector:monid-tool-broker-fixture",
+  "entry_version": "0.1.0",
+  "integration_class": "tool-service-connector",
+  "subject": {
+    "subject_id": "connector:monid-tool-broker-fixture",
+    "display_name": "Monid interoperability fixture (non-live)",
+    "description": "Test-only catalog anchor for Monid public source commit 9a8e82570d0ee109cb71f2357cc347ce6f23e3c6. Not a live broker registration."
+  },
+  "provenance": {
+    "source_kind": "source-repository",
+    "source_repository": "https://github.com/monid-ai/monid",
+    "source_commit": "9a8e82570d0ee109cb71f2357cc347ce6f23e3c6",
+    "license_spdx": "MIT",
+    "mutable_ref_allowed": false
+  },
+  "compatibility": {
+    "platforms": ["linux", "macos", "windows", "container"],
+    "deployment_forms": ["remote-service", "process"],
+    "adapter_contracts": []
+  },
+  "requested_access": {
+    "install_grants_authority": false,
+    "capabilities": [],
+    "actions": ["external.search.read"],
+    "purposes": ["research"],
+    "destinations": ["https://api.search.tinyfish.ai"],
+    "data_classes": ["query.text", "search.results"],
+    "credential_classes": [],
+    "network_required": true,
+    "network_destinations": ["https://monid.ai"],
+    "resource_bounds": {
+      "timeout_ms": 30000,
+      "cost_ceiling": {
+        "amount_minor_units": 0,
+        "currency": "USD"
+      }
+    }
+  },
+  "orchestration": {
+    "mode": "tool-host",
+    "may_spawn_workers": false,
+    "independent_child_authority_requested": false,
+    "remote_execution_requested": false
+  },
+  "assurance": {
+    "observations": [],
+    "cataloged_at": "2026-09-16T19:00:00Z",
+    "last_reviewed_at": "2026-09-16T19:00:00Z"
+  },
+  "lifecycle": {
+    "update_mode": "manual-reviewed",
+    "silent_permission_widening_allowed": false,
+    "rollback_available": true,
+    "quarantine_supported": true
+  },
+  "non_claims": [
+    "Monid fixture catalog presence does not authorize execution.",
+    "Pinned source commit does not imply live broker availability or AXIOM tool count claims."
+  ]
+}

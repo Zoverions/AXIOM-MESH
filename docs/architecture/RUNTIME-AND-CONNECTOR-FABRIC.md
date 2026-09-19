@@ -535,6 +535,29 @@ The first runtime is not selected by popularity alone. Evaluation should compare
 
 Hermes, OpenClaw, Agent Zero, Codex CLI, and other maintained runtimes are evaluation candidates. This document does not certify, select, or promote any named runtime.
 
+## Cognitive Federation and External Operation Offer v0
+
+External models, tools, APIs, runtimes, and brokers may serve as replaceable specialized cognitive modules around a persistent sovereign entity.
+
+Capability may compose; authority does not compose ambiently.
+
+Provider/module loss degrades capability, not identity, owned memory, policy, consent, or authority continuity.
+
+Each module receives only the context, destinations, credentials, data classes, and budgets separately authorized for its role.
+
+`axiom-external-operation-offer.v0` is an adjunct to the immutable runtime/connector catalog, not a replacement catalog or authority system. An offer binds volatile per-operation schema, effect, price, health, and currentness observations to an exact catalog `entry_id` / `entry_version` / `entry_digest`. Hosted brokers expose two distinct destination policy inputs—`broker_destination` and `provider_destination`—so an intermediary cannot hide the downstream provider. Offers always carry `grants_authority: false` and `execution_effect: none`. Local eligibility and aggregate spend-envelope helpers evaluate reservation proposals only; they never authorize execution, mint grants, or perform network I/O.
+
+Flow:
+
+```text
+persistent entity
+  -> Cognitive Federation (replaceable modules)
+  -> operation offer (adjunct, digest-bound)
+  -> local eligibility (policy-before-optimization)
+  -> AXIOM authority boundary
+  -> effect / evidence
+```
+
 ## Non-claims
 
 This specification does not claim current support for:
