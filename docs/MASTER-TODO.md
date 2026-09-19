@@ -191,6 +191,7 @@ production activation decision.
 | LAB-007 | Research | Embodied-system simulation/safety envelopes | Device identity, command grants, geofence/force limits/digital twin/degraded mode/emergency halt/operator takeover |
 | LAB-008 | Research | Arbitrary-code isolation evaluation | Rootless runtime, digest allowlist, syscall/fs/network/device/secret/resource/escape/teardown evidence |
 | LAB-009 | Research | Post-quantum migration plan | Inventory, algorithm agility, hybrid experiments, performance, downgrade resistance, backup/key-history compatibility |
+| LAB-010 | Research | Ephemeral external-GPU inference/onboarding laboratory | Disposable notebook; dynamic hardware detection; synthetic/public data only; inert provider-shaped observation; no secrets, Drive mount, listener, public endpoint, distributed worker, provider registration, compute-node admission, or remote-execution capability claim |
 
 Frontier completion creates options and reduces uncertainty. It is not a public
 production, settlement, autonomous-authority, or regulated-domain claim.
