@@ -35,7 +35,7 @@ const OUTCOME_CLASSES = Object.freeze([
 
 const PAID_OUTCOMES = new Set(['paid_pilot', 'revenue_confirmed']);
 const IDENTIFIER = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
-const DATE = /^\\d{4}-\\d{2}-\\d{2}$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CURRENCY = /^[A-Z]{3}$/;
 
