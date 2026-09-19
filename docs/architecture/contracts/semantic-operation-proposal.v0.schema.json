@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:semantic-operation-proposal:v0",
+  "title": "AXIOM Semantic Operation Proposal v0",
+  "description": "Closed wire schema for the inert Semantic Operation Proposal v0. Provider output is proposal evidence about likely operation intent. It never mints authority, assurance, currentness, execution rights, or runtime activation. Semantic validation, manifest membership, eligibility non-restoration, argument typing, Needle confidence non-normalization into #1588 distributions, and locality fail-closed rules are enforced by mesh/src/lib/semantic-operation-proposal.mjs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "proposal_id",
+    "provider",
+    "operation_manifest_digest",
+    "candidate_set_digest",
+    "request_digest",
+    "state_digest",
+    "state_classification",
+    "candidate_mode",
+    "proposed",
+    "withheld",
+    "suppressed",
+    "latency_ms",
+    "usage_evidence",
+    "calibration_report_ref",
+    "explanation",
+    "proposal_digest",
+    "authority_effect",
+    "assurance_effect",
+    "currentness_effect",
+    "execution_effect",
+    "runtime_activation",
+    "network_effect",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-semantic-operation-proposal.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-semantic-operation-proposal" },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_ref",
+        "profile_ref",
+        "artifact_ref",
+        "runtime_ref",
+        "revision_evidence",
+        "provider_mode"
+      ],
+      "properties": {
+        "provider_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+        },
+        "profile_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+        },
+        "artifact_ref": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+        },
+        "runtime_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+        },
+        "revision_evidence": {
+          "enum": ["content-addressed", "provider-versioned", "mutable-alias", "unpinned"]
+        },
+        "provider_mode": {
+          "enum": ["owner-local", "owner-remote", "provider-remote", "hybrid"]
+        }
+      }
+    },
+    "operation_manifest_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "candidate_set_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "request_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state_classification": {
+      "enum": ["public", "internal", "confidential", "restricted"]
+    },
+    "candidate_mode": {
+      "enum": ["eligible-only", "descriptive-discovery"]
+    },
+    "proposed": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["operation_id", "arguments", "confidence", "status", "order_index"],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 192,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": false,
+            "maxProperties": 32,
+            "patternProperties": {
+              "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$": {
+                "type": ["string", "number", "boolean", "object", "array", "null"]
+              }
+            }
+          },
+          "confidence": {
+            "description": "Optional scalar provider confidence in [0,1]. Not a #1588 probability distribution.",
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "status": {
+            "enum": ["proposed", "withheld", "rejected", "abstained"]
+          },
+          "order_index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32
+          }
+        }
+      }
+    },
+    "withheld": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["operation_id", "reason", "arguments", "confidence"],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 192,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+          },
+          "reason": {
+            "enum": [
+              "not-in-manifest",
+              "deterministic-ineligible",
+              "missing-required-argument",
+              "unknown-argument",
+              "wrong-argument-type",
+              "wrong-enum-value",
+              "schema-constraint-failed",
+              "provider-suppressed",
+              "malformed-call",
+              "stale-identity",
+              "locality-excluded",
+              "prompt-injection-rejected",
+              "provider-failure",
+              "empty-abstention"
+            ]
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": false,
+            "maxProperties": 32,
+            "patternProperties": {
+              "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$": {
+                "type": ["string", "number", "boolean", "object", "array", "null"]
+              }
+            }
+          },
+          "confidence": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "suppressed": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["operation_id", "reason", "arguments", "confidence"],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 192,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+          },
+          "reason": {
+            "enum": [
+              "not-in-manifest",
+              "deterministic-ineligible",
+              "missing-required-argument",
+              "unknown-argument",
+              "wrong-argument-type",
+              "wrong-enum-value",
+              "schema-constraint-failed",
+              "provider-suppressed",
+              "malformed-call",
+              "stale-identity",
+              "locality-excluded",
+              "prompt-injection-rejected",
+              "provider-failure",
+              "empty-abstention"
+            ]
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": false,
+            "maxProperties": 32,
+            "patternProperties": {
+              "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$": {
+                "type": ["string", "number", "boolean", "object", "array", "null"]
+              }
+            }
+          },
+          "confidence": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "latency_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 3600000
+    },
+    "usage_evidence": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["input_units", "output_units", "compute_class", "provider_report_ref"],
+      "properties": {
+        "input_units": { "type": ["integer", "null"], "minimum": 0 },
+        "output_units": { "type": ["integer", "null"], "minimum": 0 },
+        "compute_class": { "type": ["string", "null"], "minLength": 1, "maxLength": 64 },
+        "provider_report_ref": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+        }
+      }
+    },
+    "calibration_report_ref": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "explanation": {
+      "description": "Optional untrusted diagnostic text. Never required evidence.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "proposal_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "authority_effect": { "const": "none" },
+    "assurance_effect": { "const": "none" },
+    "currentness_effect": { "const": "none" },
+    "execution_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "network_effect": { "const": "none" },
+    "selection_effect": { "const": "proposal-only" }
+  }
+}
