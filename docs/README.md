@@ -328,6 +328,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
 - [Deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
 - [Incident response and tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
+- [Model Behavior Incident v0](architecture/MODEL-BEHAVIOR-INCIDENT-V0.md)
 
 ### Operations
 

@@ -1,0 +1,828 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/axiom-model-behavior-incident-v0.schema.json",
+  "title": "AXIOM Model Behavior Incident v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "incident_id",
+    "observed_range",
+    "discovery_at",
+    "subject",
+    "lifecycle_stage",
+    "environment",
+    "expected_boundary",
+    "observed_behavior",
+    "behavior_classes",
+    "consequential_effects",
+    "third_party_or_data_impact",
+    "detection",
+    "evidence_refs",
+    "reproduction",
+    "severity_triage",
+    "uncertainty",
+    "containment",
+    "mitigation",
+    "disclosure",
+    "affected_party_notification",
+    "lineage",
+    "sensitive_evidence_routing",
+    "created_at",
+    "incident_digest",
+    "authority_effect",
+    "assurance_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-model-behavior-incident.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-model-behavior-incident-evidence"
+    },
+    "incident_id": {
+      "$ref": "#/$defs/id"
+    },
+    "observed_range": {
+      "$ref": "#/$defs/observedRange"
+    },
+    "discovery_at": {
+      "$ref": "#/$defs/timestampOrUnknown"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "lifecycle_stage": {
+      "enum": [
+        "training",
+        "evaluation",
+        "testing",
+        "deployment",
+        "simulation",
+        "unknown",
+        "not-yet-established"
+      ]
+    },
+    "environment": {
+      "$ref": "#/$defs/environment"
+    },
+    "expected_boundary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "observed_behavior": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+    },
+    "behavior_classes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/behaviorClass"
+      }
+    },
+    "consequential_effects": {
+      "$ref": "#/$defs/consequentialEffects"
+    },
+    "third_party_or_data_impact": {
+      "$ref": "#/$defs/impactState"
+    },
+    "detection": {
+      "$ref": "#/$defs/detection"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/evidenceRef"
+      }
+    },
+    "reproduction": {
+      "$ref": "#/$defs/reproduction"
+    },
+    "severity_triage": {
+      "$ref": "#/$defs/severityTriage"
+    },
+    "uncertainty": {
+      "$ref": "#/$defs/uncertainty"
+    },
+    "containment": {
+      "$ref": "#/$defs/stateBlock"
+    },
+    "mitigation": {
+      "$ref": "#/$defs/stateBlock"
+    },
+    "disclosure": {
+      "$ref": "#/$defs/disclosure"
+    },
+    "affected_party_notification": {
+      "$ref": "#/$defs/notificationState"
+    },
+    "lineage": {
+      "$ref": "#/$defs/lineage"
+    },
+    "sensitive_evidence_routing": {
+      "$ref": "#/$defs/sensitiveEvidenceRouting"
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "incident_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "assurance_effect": {
+      "const": "evidence-only"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "selection_effect": {
+      "const": "evidence-only"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "unknownToken": {
+      "enum": [
+        "unknown",
+        "not-yet-established"
+      ]
+    },
+    "timestampOrUnknown": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/timestamp"
+        },
+        {
+          "$ref": "#/$defs/unknownToken"
+        }
+      ]
+    },
+    "optionalDigest": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/digest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "optionalId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observedRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to",
+        "state"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/timestampOrUnknown"
+        },
+        "to": {
+          "$ref": "#/$defs/timestampOrUnknown"
+        },
+        "state": {
+          "enum": [
+            "known",
+            "partial",
+            "unknown",
+            "not-yet-established"
+          ]
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_digest",
+        "runtime_id",
+        "runtime_digest",
+        "build_id",
+        "provider_id",
+        "binding_strength"
+      ],
+      "properties": {
+        "model_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "$ref": "#/$defs/unknownToken"
+            }
+          ]
+        },
+        "model_digest": {
+          "$ref": "#/$defs/optionalDigest"
+        },
+        "runtime_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "$ref": "#/$defs/unknownToken"
+            }
+          ]
+        },
+        "runtime_digest": {
+          "$ref": "#/$defs/optionalDigest"
+        },
+        "build_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "$ref": "#/$defs/unknownToken"
+            }
+          ]
+        },
+        "provider_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "$ref": "#/$defs/unknownToken"
+            }
+          ]
+        },
+        "binding_strength": {
+          "enum": [
+            "exact-artifact",
+            "provider-versioned",
+            "bounded-harness",
+            "mutable-alias",
+            "unknown",
+            "not-yet-established"
+          ]
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "isolation",
+        "notes"
+      ],
+      "properties": {
+        "task_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "$ref": "#/$defs/unknownToken"
+            }
+          ]
+        },
+        "isolation": {
+          "enum": [
+            "offline-fixture",
+            "isolated-lab",
+            "shared-lab",
+            "deployment-observed",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "behaviorClass": {
+      "enum": [
+        "self-authored-summary-instruction",
+        "concealment-reporting-integrity-failure",
+        "fabricated-unavailable-source-data",
+        "unauthorized-credential-use",
+        "public-upload-egress-workaround",
+        "shared-state-cross-agent-communication",
+        "broken-collaboration-channel-widening",
+        "monitoring-treated-as-authorization",
+        "other-reviewed",
+        "unknown",
+        "not-yet-established"
+      ]
+    },
+    "effectKind": {
+      "enum": [
+        "public-upload",
+        "credential-use",
+        "account-registration",
+        "egress-widening",
+        "cross-agent-communication",
+        "shared-state-mutation",
+        "fabricated-provenance",
+        "instruction-authority-widening",
+        "other-reviewed",
+        "unknown",
+        "not-yet-established"
+      ]
+    },
+    "consequentialEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempted",
+        "completed",
+        "uncertain"
+      ],
+      "properties": {
+        "attempted": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/effectKind"
+          }
+        },
+        "completed": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/effectKind"
+          }
+        },
+        "uncertain": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/effectKind"
+          }
+        }
+      }
+    },
+    "impactState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "summary"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "none-observed",
+            "suspected",
+            "confirmed",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanism",
+        "monitoring_coverage",
+        "notes"
+      ],
+      "properties": {
+        "mechanism": {
+          "enum": [
+            "deterministic-checker",
+            "human-review",
+            "monitor-verdict",
+            "external-report",
+            "self-report",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "monitoring_coverage": {
+          "enum": [
+            "covered",
+            "partial",
+            "uncovered",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_id",
+        "digest",
+        "kind",
+        "authority_effect"
+      ],
+      "properties": {
+        "ref_id": {
+          "$ref": "#/$defs/id"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "kind": {
+          "enum": [
+            "transcript",
+            "checker-output",
+            "monitor-verdict",
+            "artifact",
+            "derived-summary",
+            "other-reviewed"
+          ]
+        },
+        "authority_effect": {
+          "const": "none"
+        }
+      }
+    },
+    "reproduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "scoped_frequency"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "reproduced",
+            "not-reproduced",
+            "partial",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "scoped_frequency": {
+          "$ref": "#/$defs/scopedFrequency"
+        }
+      }
+    },
+    "scopedFrequency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "count",
+        "population_size",
+        "population_id",
+        "population_digest",
+        "refuses_universal_prevalence"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "measured",
+            "unknown",
+            "not-yet-established",
+            "not-applicable"
+          ]
+        },
+        "count": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "population_size": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "population_id": {
+          "$ref": "#/$defs/optionalId"
+        },
+        "population_digest": {
+          "$ref": "#/$defs/optionalDigest"
+        },
+        "refuses_universal_prevalence": {
+          "const": true
+        }
+      }
+    },
+    "severityTriage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declared_level",
+        "priority",
+        "basis",
+        "is_truth_claim"
+      ],
+      "properties": {
+        "declared_level": {
+          "enum": [
+            "SEV-1",
+            "SEV-2",
+            "SEV-3",
+            "SEV-4",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "priority": {
+          "enum": [
+            "p0",
+            "p1",
+            "p2",
+            "p3",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "basis": {
+          "const": "triage-evidence-only"
+        },
+        "is_truth_claim": {
+          "const": false
+        }
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "causal_explanation",
+        "open_questions"
+      ],
+      "properties": {
+        "causal_explanation": {
+          "enum": [
+            "established",
+            "partial",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "open_questions": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "stateBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "summary"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "none",
+            "planned",
+            "in-progress",
+            "complete",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "disclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "track",
+        "state",
+        "subordinate_to_security_md",
+        "subordinate_to_incident_response",
+        "automation"
+      ],
+      "properties": {
+        "track": {
+          "enum": [
+            "ready-for-disclosure",
+            "minor-investigation",
+            "coordinated-slow-investigation"
+          ]
+        },
+        "state": {
+          "enum": [
+            "internal-only",
+            "ready",
+            "deferred",
+            "disclosed",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "subordinate_to_security_md": {
+          "const": true
+        },
+        "subordinate_to_incident_response": {
+          "const": true
+        },
+        "automation": {
+          "const": "none"
+        }
+      }
+    },
+    "notificationState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "summary"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "not-applicable",
+            "pending",
+            "completed",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "lineageRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "incident_id",
+        "incident_digest"
+      ],
+      "properties": {
+        "incident_id": {
+          "$ref": "#/$defs/id"
+        },
+        "incident_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supersedes",
+        "updates",
+        "superseded_by"
+      ],
+      "properties": {
+        "supersedes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/lineageRef"
+          }
+        },
+        "updates": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/lineageRef"
+          }
+        },
+        "superseded_by": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/lineageRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "sensitiveEvidenceRouting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_artifact_contains_secrets",
+        "routing",
+        "private_evidence_ref"
+      ],
+      "properties": {
+        "public_artifact_contains_secrets": {
+          "const": false
+        },
+        "routing": {
+          "enum": [
+            "none",
+            "private-ir-channel",
+            "security-md-process",
+            "unknown",
+            "not-yet-established"
+          ]
+        },
+        "private_evidence_ref": {
+          "$ref": "#/$defs/optionalId"
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/model-behavior-incident.mjs",
+  "x-axiom-semantic-rules": [
+    "Incident evidence never authorizes effects; authority_effect is always none.",
+    "unknown and not-yet-established are first-class; validators must not force false certainty.",
+    "Severity and priority are triage evidence only (is_truth_claim false).",
+    "Scoped frequency must bind a searched population and refuses universal prevalence claims.",
+    "Sensitive evidence is routed by reference only; secrets must not be embedded.",
+    "Disclosure tracks are semantic only, subordinate to SECURITY.md and existing IR, with no automation.",
+    "The self digest binds the complete strict document with incident_digest zeroed for computation.",
+    "Derived/summary evidence refs remain non-authoritative (authority_effect none)."
+  ],
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "universal-prevalence",
+    "severity-certification",
+    "industry-standard",
+    "live-provider-access",
+    "disclosure-automation",
+    "production-policy-widening",
+    "openai-failure-equivalence"
+  ]
+}
