@@ -168,5 +168,17 @@
       "authority_effect": "recover",
       "owner_role": "operations_lead"
     }
+  },
+  "model_behavior_disclosure_tracks": {
+    "schema_ref": "axiom-model-behavior-incident.v0",
+    "authority_effect": "none",
+    "automation": "none",
+    "subordinate_to_security_md": true,
+    "tracks": [
+      "ready-for-disclosure",
+      "minor-investigation",
+      "coordinated-slow-investigation"
+    ],
+    "notes": "Semantic disclosure states only; extend existing IR. No SEV auto-escalation, public posting, or paging."
   }
 }

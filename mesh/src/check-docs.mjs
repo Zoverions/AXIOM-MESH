@@ -53,6 +53,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/growth/UNATTENDED-AGENT-TRUST-DRILL.md',
   'docs/architecture/AGENT-COMMONS.md',
   'docs/architecture/AGENT-ASSURANCE-EVIDENCE-V0.md',
+  'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
@@ -301,6 +302,13 @@ const REQUIRED_CONTENT = Object.freeze({
     'contains_weaponized_exploit_detail',
     'authority_requested'
   ],
+  'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md': [
+    '## Status',
+    '## Disclosure tracks (semantics only)',
+    '## Offline falsification subset (Phase-0)',
+    '## Non-claims',
+    'authority_effect'
+  ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
     '## Trust bootstrap and grants',
@@ -498,6 +506,7 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': [
     '## Severity and activation',
     '## Signed evidence and CI gate',
+    '## Model behavior disclosure tracks',
     '## Residual limitations and pilot repetition'
   ],
   'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md': [
