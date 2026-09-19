@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 import {
   canonicalJson,
@@ -155,27 +155,38 @@ commit prepared as receipt;
 });
 
 
-test('Praxis interpreter has no built-in external-effect transport surface', async () => {
-  const source = await readFile(
-    new URL('../../labs/praxis/index.mjs', import.meta.url),
-    'utf8'
-  );
+test('Praxis implementation modules have no built-in external-effect transport surface', async () => {
+  const praxisDir = new URL('../../labs/praxis/', import.meta.url);
+  const moduleNames = (await readdir(praxisDir))
+    .filter(name => name.endsWith('.mjs'))
+    .sort();
 
-  for (const forbidden of [
-    "node:http",
-    "node:https",
-    "node:net",
-    "node:tls",
-    "node:dgram",
-    "node:child_process",
-    "node:fs",
-    "fetch(",
-    "process.env",
-    "WebSocket",
-    "exec(",
-    "spawn("
-  ]) {
-    assert.equal(source.includes(forbidden), false, `interpreter must not contain ${forbidden}`);
+  assert.ok(moduleNames.includes('index.mjs'));
+  assert.ok(moduleNames.includes('host.mjs'));
+
+  for (const moduleName of moduleNames) {
+    const source = await readFile(new URL(moduleName, praxisDir), 'utf8');
+
+    for (const forbidden of [
+      "node:http",
+      "node:https",
+      "node:net",
+      "node:tls",
+      "node:dgram",
+      "node:child_process",
+      "node:fs",
+      "fetch(",
+      "process.env",
+      "WebSocket",
+      "exec(",
+      "spawn("
+    ]) {
+      assert.equal(
+        source.includes(forbidden),
+        false,
+        `${moduleName} must not contain ${forbidden}`
+      );
+    }
   }
 });
 
