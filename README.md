@@ -46,6 +46,10 @@ npm run setup
 npm run dev
 ```
 
+Plan for 10–15 minutes end to end: `npm run setup` runs the full
+verification suite (several minutes of tests); `npm run setup:install`
+installs from the committed locks without verification for a faster path.
+
 A successful start prints `"message": "AXIOM-MESH ready"` and the local Gateway
 endpoint. In a second terminal:
 
