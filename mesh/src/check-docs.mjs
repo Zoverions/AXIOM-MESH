@@ -365,6 +365,9 @@ const REQUIRED_CONTENT = Object.freeze({
   ],
   'docs/architecture/contracts/research-knowledge-projection.v0.schema.json': [
     'axiom-research-knowledge-projection.v0',
+    'axiom-research-claim-adjudication.v0',
+    'truth_established',
+    'authority_effect',
     'instruction_authority'
   ],
   'docs/architecture/contracts/research-operation-candidate.v0.schema.json': [

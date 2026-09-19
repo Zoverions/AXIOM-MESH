@@ -4,7 +4,10 @@ import {
   canonicalJson,
   ValidationError
 } from './canonical.mjs';
-import { researchContractDigest } from './research-capsule-contracts.mjs';
+import {
+  researchContractDigest,
+  verifyResearchClaimAdjudication
+} from './research-capsule-contracts.mjs';
 
 export const RESEARCH_CONTRIBUTION_SCHEMA = 'axiom-research-contribution.v0';
 export const RESEARCH_RELATION_SCHEMA = 'axiom-research-relation.v0';
@@ -131,11 +134,17 @@ export function verifyResearchRelation(value) {
 
 export function buildResearchCompositionGraph(value) {
   assertPlainObject(value, 'ResearchCompositionGraph input');
-  assertExactFields(
-    value,
-    ['contributions', 'relations'],
-    'ResearchCompositionGraph input'
-  );
+  const allowedInputFields = new Set(['contributions', 'relations', 'claim_adjudications']);
+  for (const key of Object.keys(value)) {
+    if (!allowedInputFields.has(key)) {
+      throw new ValidationError(`ResearchCompositionGraph input contains unsupported field: ${key}`);
+    }
+  }
+  for (const key of ['contributions', 'relations']) {
+    if (!Object.hasOwn(value, key)) {
+      throw new ValidationError(`ResearchCompositionGraph input.${key} is required`);
+    }
+  }
 
   if (!Array.isArray(value.contributions)) {
     throw new ValidationError('ResearchCompositionGraph contributions must be an array');
@@ -314,6 +323,35 @@ export function buildResearchCompositionGraph(value) {
       && relation.independence_state === 'independent'
     ) {
       independentlyCovered.add(relation.object_contribution_digest);
+    }
+  }
+
+
+  // Adverse claim adjudications referenced from contribution artifact/evidence refs
+  // force-include those contributions in attention. supported / insufficient_evidence
+  // never grant truth, reputation, or coverage suppression.
+  const ADVERSE_ADJUDICATION_STATUSES = new Set([
+    'contested',
+    'unsupported',
+    'corrected'
+  ]);
+  const claimAdjudications = value.claim_adjudications ?? [];
+  if (!Array.isArray(claimAdjudications)) {
+    throw new ValidationError('ResearchCompositionGraph claim_adjudications must be an array');
+  }
+  for (const raw of claimAdjudications) {
+    const adjudication = verifyResearchClaimAdjudication(raw);
+    if (!ADVERSE_ADJUDICATION_STATUSES.has(adjudication.status)) {
+      continue;
+    }
+    for (const contribution of contributions) {
+      const refs = [
+        ...contribution.artifact_refs,
+        ...contribution.evidence_refs
+      ];
+      if (refs.includes(adjudication.adjudication_digest)) {
+        problemDigests.add(contribution.contribution_digest);
+      }
     }
   }
 

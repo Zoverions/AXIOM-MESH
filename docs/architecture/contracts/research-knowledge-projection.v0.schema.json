@@ -41,6 +41,138 @@
         "confidence_state": { "enum": ["source_bound", "extracted", "inferred", "unresolved"] },
         "instruction_authority": { "const": "none" }
       }
+    },
+    "researchClaimAdjudication": {
+      "$id": "https://axiom.invalid/schemas/research-claim-adjudication.v0.schema.json",
+      "title": "AXIOM Research Claim Adjudication v0",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "adjudication_id",
+        "source_manifest_digest",
+        "knowledge_projection_digest",
+        "entry_id",
+        "entry_content_digest",
+        "assessed_at",
+        "adjudication_method",
+        "evidence_refs",
+        "evidence_digests",
+        "status",
+        "correction_summary",
+        "source_statement_mutation",
+        "truth_established",
+        "instruction_authority",
+        "authority_effect",
+        "adjudication_digest"
+      ],
+      "properties": {
+        "schema": { "const": "axiom-research-claim-adjudication.v0" },
+        "adjudication_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+          "maxLength": 512
+        },
+        "source_manifest_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "knowledge_projection_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "entry_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+          "maxLength": 512
+        },
+        "entry_content_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "assessed_at": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64
+        },
+        "adjudication_method": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_:-]*$",
+          "maxLength": 128
+        },
+        "evidence_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+        },
+        "evidence_digests": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "corrected",
+            "contested",
+            "unsupported",
+            "insufficient_evidence"
+          ]
+        },
+        "correction_summary": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "source_statement_mutation": { "const": "none" },
+        "truth_established": { "const": false },
+        "instruction_authority": { "const": "none" },
+        "authority_effect": { "const": "none" },
+        "adjudication_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "corrected" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "correction_summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8192
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "correction_summary": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": ["supported", "corrected", "contested", "unsupported"]
+              }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "evidence_refs": { "minItems": 1 },
+              "evidence_digests": { "minItems": 1 }
+            }
+          }
+        }
+      ]
     }
   }
 }

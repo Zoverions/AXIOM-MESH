@@ -1,0 +1,62 @@
+{
+  "schema": "axiom-research-claim-adjudication-test-vectors.v0",
+  "cases": [
+    {
+      "id": "benign-math-source-corrected",
+      "source_manifest": {
+        "schema": "axiom-research-source-manifest.v0",
+        "manifest_id": "research:math-roadmap:synthetic-benign-error",
+        "source_kind": "educational_article",
+        "canonical_identifier": "fixture:math-roadmap-benign-error",
+        "source_locator": "fixture:research-claim-adjudication:math-roadmap",
+        "title": "Synthetic mathematics roadmap with a benign error",
+        "published_at": "2026-09-17T00:00:00.000Z",
+        "retrieved_at": "2026-09-17T19:00:00.000Z",
+        "manuscript_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "source_version": "fixture-v0",
+        "supplement_refs": [],
+        "data_refs": [],
+        "code_refs": [],
+        "code_revision": null,
+        "license_refs": ["fixture:license:none"],
+        "authorship_refs": ["fixture:author:benign"],
+        "correction_refs": [],
+        "currentness_state": "current"
+      },
+      "knowledge_projection": {
+        "schema": "axiom-research-knowledge-projection.v0",
+        "projection_id": "projection:math-roadmap:benign-error",
+        "source_manifest_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "entries": [
+          {
+            "entry_id": "entry:math-roadmap:gradient-direction",
+            "entry_kind": "source_statement",
+            "source_ref": "fixture:section:calculus:optimization",
+            "content_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+            "summary": "Stepping in the direction opposite the gradient is an algorithm for maximizing the objective.",
+            "confidence_state": "source_bound",
+            "instruction_authority": "none"
+          }
+        ]
+      },
+      "adjudication": {
+        "schema": "axiom-research-claim-adjudication.v0",
+        "adjudication_id": "adjudication:math-roadmap:gradient-direction",
+        "source_manifest_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "knowledge_projection_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "entry_id": "entry:math-roadmap:gradient-direction",
+        "entry_content_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "assessed_at": "2026-09-17T19:05:00.000Z",
+        "adjudication_method": "synthetic_reference_check_v0",
+        "evidence_refs": ["reference:standard-gradient-descent-definition"],
+        "evidence_digests": ["sha256:5555555555555555555555555555555555555555555555555555555555555555"],
+        "status": "corrected",
+        "correction_summary": "Under the standard convention, a step in the negative-gradient direction is gradient descent and locally decreases the objective for a sufficiently small step; gradient ascent uses the positive-gradient direction.",
+        "source_statement_mutation": "none",
+        "truth_established": false,
+        "instruction_authority": "none",
+        "authority_effect": "none"
+      }
+    }
+  ]
+}
