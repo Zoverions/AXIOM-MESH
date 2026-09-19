@@ -128,6 +128,25 @@ Relevant public artifacts:
 
 The property to preserve is simple: **discovery and model intent must remain separate from authority to cause a physical effect.**
 
+## One-command local-agent authority check
+
+Campaign: `ua-2026-09-19-local-is-not-authority`
+
+Local execution is useful for privacy and latency, but it does not itself establish what an agent is authorized to do. This lower-friction follow-up combines two existing inert security surfaces into one source-level check. The command is pinned to exact verified repository commit `a978c90a11b63e0e8b8441876378a26304aea46a` so a reported result is reproducible rather than silently following moving `main`:
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git && \
+cd AXIOM-MESH && \
+git checkout --detach a978c90a11b63e0e8b8441876378a26304aea46a && \
+node --test mesh/test/agent-commons-mcp-readonly.test.mjs mesh/test/plural-capability-lease.test.mjs
+```
+
+The first surface tests that client/discovery metadata, claimed capabilities, routing ambiguity, protocol mismatch, unknown tools, and non-empty arguments cannot silently enlarge the fixed MCP read-only map or become permission. The second tests exact scope binding, threshold and distinct-domain requirements, expiry/currentness, duration ceilings, and attempts to smuggle runtime activation or authority effects into an inert plural-capability-lease candidate.
+
+A passing run is only the baseline. The useful result is a reproducible counterexample: metadata changes an accepted mapping/result, approval evidence is reusable against a different scope, duplicate/same-domain approvals satisfy independence, stale/revoked evidence is accepted, or an inert/read-only path reaches consequential authority.
+
+Report the exact commit SHA, exact command or request frame, expected boundary, observed result, and the smallest safe evidence needed to reproduce it. This remains a source-level falsification exercise: no production MCP compatibility, live deployment, remote-attestation, smart-home integration, or external-effect authority is claimed.
+
 ## Contribution target
 
 The most useful contribution is a concrete counterexample: a reproducible case where the current harness allows more authority than intended, loses provenance, misrepresents uncertainty, or makes recovery unsafe.
