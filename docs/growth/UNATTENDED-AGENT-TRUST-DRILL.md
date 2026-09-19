@@ -153,9 +153,9 @@ Campaign: `ua-2026-09-19-provider-choice-authority`
 
 Privacy-first AI products are increasingly making model choice and provider switching part of the user experience. That improves user control, but changing a model, provider, runtime, or transport must not silently create new authority or preserve authority that has expired or been revoked.
 
-Mozilla and Mistral's September 2026 Firefox Smart Window work is useful current context because it emphasizes privacy, user control, and provider choice. AXIOM-MESH does **not** claim Firefox or Mistral integration or compatibility. This experiment uses the provider-choice problem only as a falsification target for AXIOM's existing synthetic Agent Runtime Adapter contract.
+Mozilla and Mistral's September 2026 Firefox Smart Window work is useful current context because it emphasizes privacy, user control, and provider choice. AXIOM-MESH does **not** claim Firefox or Mistral integration or compatibility. This experiment uses that provider-choice problem as motivation for testing the existing authority boundary; the current synthetic drill itself does not exercise provider/model/runtime identity substitution.
 
-Run the existing exact-commit drill:
+Run the existing exact-commit baseline drill:
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git && \
@@ -164,9 +164,9 @@ git checkout --detach 8362fa96c651e8a4beaf93c94ccb0d1c74f0b64f && \
 npm run runtime-adapter:drill
 ```
 
-The current synthetic conformance profile includes future-, expired-, and revoked-grant denial; mid-flight revocation and cancellation preemption; idempotent replay stability; conflicting-replay denial; fallback behavior; uncertainty handling; receipts; and rollback semantics. It loads no external runtime and grants no second authority path.
+The current synthetic conformance profile includes future-, expired-, and revoked-grant denial; mid-flight revocation and cancellation preemption; idempotent replay stability; conflicting-replay denial; fallback behavior; uncertainty handling; and receipts. It loads no external runtime and grants no second authority path. It does **not** execute a provider/model/runtime identity swap, and advertised rollback support is not a rollback execution test.
 
-Try to falsify one narrow invariant: **provider/runtime choice is replaceable; authority is not transferable by choice alone.** A useful counterexample is a reproducible case where a runtime/provider replacement, reconnect, fallback, or self-reported model identity becomes permission; an expired or revoked grant remains usable; cancellation fails to preempt; or replay under a different runtime identity is accepted as the same authority decision.
+Use this command only to falsify the baseline authority-currentness behavior it actually covers: expired or revoked authority remaining usable, mid-flight revocation/cancellation failing to preempt, replay conflict or idempotency errors, or fallback/uncertainty behavior that widens authority. A provider/runtime identity-substitution claim requires a separate bounded synthetic swap fixture before it can be tested or advertised here; do not infer that property from this command.
 
 Report the exact commit SHA, exact command or request frame, expected boundary, observed result, and the smallest safe evidence needed to reproduce it. Do not include credentials, private prompts, personal data, browser history, provider tokens, or production secrets.
 
