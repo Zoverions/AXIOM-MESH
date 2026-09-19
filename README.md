@@ -20,6 +20,9 @@ AXIOM application and declared downstream Mesh consumer.
 The machine-readable project/application boundary is recorded in
 [`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
 
+Zoverions writes and builds in the open: [zoverions.com](https://zoverions.com) ·
+[@zoverions on X](https://x.com/zoverions) · [YouTube](https://www.youtube.com/@zoverions)
+
 ## First 5 Minutes
 
 Primary production requirements: Node.js `>=24.14.0 <25` and npm
@@ -45,10 +48,6 @@ npm run doctor
 npm run setup
 npm run dev
 ```
-
-Plan for 10–15 minutes end to end: `npm run setup` runs the full
-verification suite (several minutes of tests); `npm run setup:install`
-installs from the committed locks without verification for a faster path.
 
 A successful start prints `"message": "AXIOM-MESH ready"` and the local Gateway
 endpoint. In a second terminal:
