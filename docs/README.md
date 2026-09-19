@@ -231,6 +231,10 @@ decision.
 
 ### Architecture
 
+- [Interrogation Plane v0](architecture/INTERROGATION-PLANE.md)
+  — deterministic read-only supervision graph across capability/evidence,
+  service-network, and documentation verification; conceptual authority is kept
+  separate from physical topology and inspection grants no authority.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
