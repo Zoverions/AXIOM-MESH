@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import {
+  checkWorkingTreePermissions,
   installRepositorySetup,
   validateSourceSetupPolicy,
   validateSourceSetupState,
@@ -417,3 +418,56 @@ async function fixture() {
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
+
+test('working-tree permission scan flags group- or other-writable files', async () => {
+  // Build every mocked path with join() so the keys match what the
+  // implementation produces on any platform (Windows uses backslashes).
+  const root = join('/repo');
+  const listing = new Map([
+    [root, [
+      { name: 'clean.mjs', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
+      { name: 'wide.mjs', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
+      { name: 'node_modules', isDirectory: () => true, isFile: () => false, isSymbolicLink: () => false }
+    ]],
+    [join(root, 'node_modules'), [
+      { name: 'dep.mjs', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false }
+    ]]
+  ]);
+  const modes = new Map([
+    [join(root, 'clean.mjs'), 0o100644],
+    [join(root, 'wide.mjs'), 0o100664]
+  ]);
+  const result = await checkWorkingTreePermissions({
+    repositoryRoot: root,
+    platform: 'linux',
+    readdirImpl: async directory => listing.get(directory) ?? [],
+    statImpl: async path => ({ mode: modes.get(path) })
+  });
+  assert.equal(result.group_writable_files, 1);
+  assert.deepEqual(result.sample, ['wide.mjs']);
+  assert.match(result.warning, /umask 022/);
+});
+
+test('setup --verify names the failing check and how to re-run it', async () => {
+  const plans = [];
+  await assert.rejects(
+    () => installRepositorySetup({
+      repositoryRoot: REPOSITORY_ROOT,
+      verify: true,
+      npmVersion: '11.9.0',
+      npmCliPath: 'synthetic-npm-cli',
+      execute: plan => {
+        plans.push(plan);
+        if (plan.arguments[1] === 'check') {
+          throw new Error('synthetic check failure');
+        }
+      }
+    }),
+    /Setup verification failed at "check".*synthetic check failure.*Re-run it with: npm run check/
+  );
+  assert.deepEqual(plans.map(item => item.arguments), [
+    ['ci', '--ignore-scripts', '--no-audit', '--no-fund'],
+    ['ci', '--ignore-scripts', '--no-audit', '--no-fund'],
+    ['run', 'check']
+  ]);
+});

@@ -38,6 +38,10 @@ current-state document must say so explicitly.
 - A separate hosted-runtime/security CI job pins Node.js **22.23.2**.
 - The candidate production image pins Node.js **24.19.0**.
 - npm `>=11.0.0 <12`, or Node 22's bundled npm `>=10.9.8 <11`.
+- Check out and work with umask `022`: provider executables and artifacts
+  must not be group- or other-writable, and checkouts made with umask
+  `0007`/`0002` produce `660`/`664` files that fail provider verification
+  (doctor warns when working-tree files are group- or other-writable).
 - Docker with Compose only when changing container/service-unit packages.
 - Browser/product toolchains only inside separately reviewed application
   boundaries; they must not become kernel dependencies.
