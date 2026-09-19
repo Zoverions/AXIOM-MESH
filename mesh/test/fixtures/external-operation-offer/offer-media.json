@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-external-operation-offer.v0",
+  "offer_id": "offer:synthetic:media",
+  "observed_at": "2026-09-16T20:00:00.000Z",
+  "freshness": {
+    "state": "current",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "catalog_entry": {
+    "entry_id": "connector:synthetic-media",
+    "entry_version": "0.1.0",
+    "entry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "operation": {
+    "broker_operation_id": "synthetic#image",
+    "axiom_action": "external.media.generate",
+    "schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "provider_ref": "provider:synthetic-media",
+    "effect_class": "generate-media",
+    "input_data_classes": [
+      "prompt.text"
+    ],
+    "output_data_classes": [
+      "media.image"
+    ],
+    "network_required": true,
+    "description": "Generate media with unit-priced usage."
+  },
+  "topology": {
+    "broker_location": "hosted",
+    "broker_destination": "https://broker.example.invalid",
+    "downstream_location": "provider-remote",
+    "provider_destination": "https://media.example.invalid"
+  },
+  "quote": {
+    "kind": "bounded",
+    "currency": "USD",
+    "quoted_amount_minor_units": 40,
+    "max_amount_minor_units": 120,
+    "pricing_unit": "second",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "health": {
+    "state": "available",
+    "observed_at": "2026-09-16T20:00:00.000Z",
+    "p50_ms": 120,
+    "p95_ms": 350
+  },
+  "execution_semantics": {
+    "timeout_ms": 20000,
+    "cancellation": "best-effort",
+    "idempotency": "read-safe",
+    "reconciliation": "not-required"
+  },
+  "evidence": {
+    "source_refs": [
+      "fixture:synthetic"
+    ],
+    "external_claim_only": true
+  },
+  "grants_authority": false,
+  "execution_effect": "none"
+}

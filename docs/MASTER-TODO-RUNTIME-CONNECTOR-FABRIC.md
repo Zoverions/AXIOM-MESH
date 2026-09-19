@@ -173,6 +173,11 @@ No Runtime & Connector Fabric capability is production-promoted until its exact 
 - independent review proportional to consequence;
 - truthful current-status and public non-claims.
 
+
+## External Operation Offer v0 status
+
+- [x] External Operation Offer v0 — inert/offline contract + conformance only; no live broker/provider execution, credentials, wallet, egress, autonomous purchasing, or capability promotion.
+
 ## Explicit non-claims
 
 This queue does not claim current production support for Hermes, OpenClaw, Agent Zero, Codex CLI, MCP, A2A, third-party plugins, autonomous multi-agent workflows, machine delegation, external-provider credentials, remote execution, a runtime marketplace, universal reputation, trusted oracle truth, or Circle authority over individual nodes.

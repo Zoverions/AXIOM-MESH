@@ -76,6 +76,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/resource-observation.v0.schema.json',
   'docs/architecture/contracts/capability-surfaces.v0.schema.json',
   'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
+  'docs/architecture/contracts/external-operation-offer.v0.schema.json',
   'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
@@ -138,6 +139,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
   'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md',
   'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
+  'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md',
   'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
@@ -158,6 +160,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',
   'docs/superpowers/plans/2026-09-15-bounded-decision-intelligence-v0.md',
   'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md',
+  'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -547,6 +550,16 @@ const REQUIRED_CONTENT = Object.freeze({
     '## 22. Migration and compatibility contract',
     '## 26. Stage 5B approval state'
   ],
+  'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md': [
+    'axiom-external-operation-offer.v0',
+    'grants_authority = false',
+    'Cognitive Federation'
+  ],
+  'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md': [
+    '### Task 1: Add the closed-world External Operation Offer contract',
+    'grants_authority: false',
+    'execution_effect: none'
+  ],
   'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md': [
     'Knowledge is not authority',
     'Operation is not authority',
@@ -778,6 +791,8 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md': 4_000,
   'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md': 8_000,
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': 5_000,
+  'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md': 5_000,
+  'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md': 5_000,
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,

@@ -1,0 +1,64 @@
+{
+  "schema": "axiom-external-operation-offer.v0",
+  "offer_id": "offer:synthetic:write",
+  "observed_at": "2026-09-16T20:00:00.000Z",
+  "freshness": {
+    "state": "current",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "catalog_entry": {
+    "entry_id": "connector:synthetic-mutate",
+    "entry_version": "0.1.0",
+    "entry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "operation": {
+    "broker_operation_id": "synthetic#write",
+    "axiom_action": "external.record.write",
+    "schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "provider_ref": "provider:synthetic-mutate",
+    "effect_class": "write-external",
+    "input_data_classes": [
+      "record.patch"
+    ],
+    "output_data_classes": [
+      "record.ack"
+    ],
+    "network_required": true,
+    "description": "Mutate an external synthetic record."
+  },
+  "topology": {
+    "broker_location": "hosted",
+    "broker_destination": "https://broker.example.invalid",
+    "downstream_location": "provider-remote",
+    "provider_destination": "https://mutate.example.invalid"
+  },
+  "quote": {
+    "kind": "exact",
+    "currency": "USD",
+    "quoted_amount_minor_units": 5,
+    "max_amount_minor_units": 5,
+    "pricing_unit": "call",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "health": {
+    "state": "available",
+    "observed_at": "2026-09-16T20:00:00.000Z",
+    "p50_ms": 120,
+    "p95_ms": 350
+  },
+  "execution_semantics": {
+    "timeout_ms": 30000,
+    "cancellation": "unsupported",
+    "idempotency": "idempotent-key",
+    "reconciliation": "status-path",
+    "reconciliation_path": "status://synthetic/write"
+  },
+  "evidence": {
+    "source_refs": [
+      "fixture:synthetic"
+    ],
+    "external_claim_only": true
+  },
+  "grants_authority": false,
+  "execution_effect": "none"
+}
