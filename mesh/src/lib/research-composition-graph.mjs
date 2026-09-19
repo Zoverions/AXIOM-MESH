@@ -15,6 +15,7 @@ export const RESEARCH_RELATION_SCHEMA = 'axiom-research-relation.v0';
 const MAX_OBJECT_BYTES = 65_536;
 const MAX_CONTRIBUTIONS = 1_024;
 const MAX_RELATIONS = 4_096;
+const MAX_CLAIM_ADJUDICATIONS = 1_024;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
 
@@ -326,7 +327,6 @@ export function buildResearchCompositionGraph(value) {
     }
   }
 
-
   // Adverse claim adjudications referenced from contribution artifact/evidence refs
   // force-include those contributions in attention. supported / insufficient_evidence
   // never grant truth, reputation, or coverage suppression.
@@ -339,17 +339,28 @@ export function buildResearchCompositionGraph(value) {
   if (!Array.isArray(claimAdjudications)) {
     throw new ValidationError('ResearchCompositionGraph claim_adjudications must be an array');
   }
+  if (claimAdjudications.length > MAX_CLAIM_ADJUDICATIONS) {
+    throw new ValidationError(
+      `ResearchCompositionGraph claim_adjudications must contain at most ${MAX_CLAIM_ADJUDICATIONS} items`
+    );
+  }
+
+  const adverseAdjudicationDigests = new Set();
   for (const raw of claimAdjudications) {
     const adjudication = verifyResearchClaimAdjudication(raw);
-    if (!ADVERSE_ADJUDICATION_STATUSES.has(adjudication.status)) {
-      continue;
+    if (ADVERSE_ADJUDICATION_STATUSES.has(adjudication.status)) {
+      adverseAdjudicationDigests.add(adjudication.adjudication_digest);
     }
+  }
+
+  if (adverseAdjudicationDigests.size > 0) {
     for (const contribution of contributions) {
-      const refs = [
-        ...contribution.artifact_refs,
-        ...contribution.evidence_refs
-      ];
-      if (refs.includes(adjudication.adjudication_digest)) {
+      const hasAdverseReference = contribution.artifact_refs.some(
+        ref => adverseAdjudicationDigests.has(ref)
+      ) || contribution.evidence_refs.some(
+        ref => adverseAdjudicationDigests.has(ref)
+      );
+      if (hasAdverseReference) {
         problemDigests.add(contribution.contribution_digest);
       }
     }
