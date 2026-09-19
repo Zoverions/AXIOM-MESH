@@ -84,7 +84,8 @@ test('Research Claim Adjudication v0 preserves incorrect source statements while
 
   const bound = api.verifyResearchClaimAdjudicationBinding(
     fixture.adjudication,
-    fixture.knowledge_projection
+    fixture.knowledge_projection,
+    fixture.source_manifest
   );
   assert.equal(bound.adjudication_id, fixture.adjudication.adjudication_id);
   assert.equal(JSON.stringify(fixture.knowledge_projection), originalProjection);
@@ -94,13 +95,32 @@ test('Research Claim Adjudication v0 preserves incorrect source statements while
   );
   assert.equal(fixture.knowledge_projection.entries[0].summary, originalSummary);
 
+  const sourceManifestBase = {
+    ...fixture.source_manifest,
+    manifest_id: 'research:math-roadmap:substituted'
+  };
+  delete sourceManifestBase.manifest_digest;
+  const substitutedSourceManifest = {
+    ...sourceManifestBase,
+    manifest_digest: api.researchContractDigest(sourceManifestBase, 'manifest_digest')
+  };
+  assert.throws(
+    () => api.verifyResearchClaimAdjudicationBinding(
+      fixture.adjudication,
+      fixture.knowledge_projection,
+      substitutedSourceManifest
+    ),
+    /source manifest.*binding|manifest digest.*binding/i
+  );
+
   assert.throws(
     () => api.verifyResearchClaimAdjudicationBinding(
       redigest({
         ...fixture.adjudication,
         entry_content_digest: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
       }, api),
-      fixture.knowledge_projection
+      fixture.knowledge_projection,
+      fixture.source_manifest
     ),
     /entry.*content.*digest|content.*digest.*binding/i
   );
@@ -111,7 +131,8 @@ test('Research Claim Adjudication v0 preserves incorrect source statements while
         ...fixture.adjudication,
         knowledge_projection_digest: 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
       }, api),
-      fixture.knowledge_projection
+      fixture.knowledge_projection,
+      fixture.source_manifest
     ),
     /projection.*digest|digest.*binding/i
   );
@@ -119,7 +140,8 @@ test('Research Claim Adjudication v0 preserves incorrect source statements while
   assert.throws(
     () => api.verifyResearchClaimAdjudicationBinding(
       redigest({ ...fixture.adjudication, entry_id: 'entry:missing' }, api),
-      fixture.knowledge_projection
+      fixture.knowledge_projection,
+      fixture.source_manifest
     ),
     /entry.*not found|entry.*binding/i
   );
