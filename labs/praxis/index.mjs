@@ -9,6 +9,7 @@ import {
 const HOST_AUTHORITY = Symbol('praxis.host-authority');
 const HOST_SECRET_REF = Symbol('praxis.host-secret-ref');
 const HOST_PREPARED_REF = Symbol('praxis.host-prepared-ref');
+const HOST_OPERATION_REGISTRY = Symbol('praxis.host-operation-registry');
 const VERIFIED_EVIDENCE = Symbol('praxis.verified-evidence');
 const consumedAuthorityTokens = new WeakSet();
 const consumedPreparedRefs = new WeakSet();
@@ -169,16 +170,42 @@ export function createOperationDescriptorPraxis({
   action,
   scope,
   args = [],
-  secretReferences = []
+  secretReferences = [],
+  effect = undefined,
+  irreversible = undefined,
+  egress = undefined,
+  hostOperation = undefined
 }) {
   if (!action || !scope) throw new TypeError('Praxis operation descriptor requires action and scope');
-  const body = immutablePraxisSnapshot({
+  const bodyInput = {
     schema: 'praxis-operation.v0',
     action: String(action),
     scope: String(scope),
     args,
     secret_references: secretReferences
-  });
+  };
+  if (effect !== undefined) {
+    if (typeof effect !== 'string' || effect.length === 0) {
+      throw new TypeError('Praxis measured operation effect must be a non-empty string');
+    }
+    if (typeof irreversible !== 'boolean') {
+      throw new TypeError('Praxis measured operation requires explicit boolean irreversible');
+    }
+    if (
+      egress === undefined
+      || (
+        egress !== null
+        && (typeof egress !== 'string' || egress.length === 0)
+      )
+    ) {
+      throw new TypeError('Praxis measured operation requires explicit egress: null or non-empty string');
+    }
+    bodyInput.host_operation = String(hostOperation ?? action);
+    bodyInput.effect = effect;
+    bodyInput.irreversible = irreversible;
+    bodyInput.egress = egress;
+  }
+  const body = immutablePraxisSnapshot(bodyInput);
   return Object.freeze({
     kind: 'Operation',
     ...body,
@@ -198,6 +225,25 @@ function validateOperationDescriptorPraxis(operation) {
     operation_digest: claimedDigest,
     ...body
   } = operation;
+  if (operation.effect !== undefined) {
+    if (
+      typeof operation.host_operation !== 'string'
+      || operation.host_operation.length === 0
+      || typeof operation.effect !== 'string'
+      || operation.effect.length === 0
+      || typeof operation.irreversible !== 'boolean'
+      || !Object.hasOwn(operation, 'egress')
+      || (
+        operation.egress !== null
+        && (typeof operation.egress !== 'string' || operation.egress.length === 0)
+      )
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_POLICY_SUBJECT_INVALID',
+        'measured operation descriptor metadata is malformed'
+      );
+    }
+  }
   const expected = operationDigest(body);
   if (claimedDigest !== expected) {
     throw new PraxisRuntimeError(
@@ -206,6 +252,92 @@ function validateOperationDescriptorPraxis(operation) {
     );
   }
   return operation;
+}
+
+
+export function createHostOperationRegistry(definitions = {}) {
+  const operations = {};
+  for (const [name, definition] of Object.entries(definitions)) {
+    if (!name || ['__proto__', 'constructor', 'prototype'].includes(name)) {
+      throw new TypeError('host operation name is invalid or forbidden: ' + name);
+    }
+    if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
+      throw new TypeError('host operation ' + name + ' definition must be an object');
+    }
+    const allowedFields = new Set(['action', 'scope', 'effect', 'irreversible', 'egress']);
+    for (const field of Object.keys(definition)) {
+      if (!allowedFields.has(field)) {
+        throw new TypeError('host operation ' + name + ' contains unknown field ' + field);
+      }
+    }
+    for (const requiredField of ['action', 'scope', 'effect', 'irreversible', 'egress']) {
+      if (!Object.hasOwn(definition, requiredField)) {
+        throw new TypeError('host operation ' + name + ' requires explicit ' + requiredField);
+      }
+    }
+    const action = String(definition.action);
+    const scope = String(definition.scope);
+    const effect = String(definition.effect);
+    const irreversible = definition.irreversible;
+    const egress = definition.egress;
+    if (!action || !scope || !effect) {
+      throw new TypeError('host operation ' + name + ' requires non-empty action, scope, and effect');
+    }
+    if (typeof irreversible !== 'boolean') {
+      throw new TypeError('host operation ' + name + ' irreversible must be boolean');
+    }
+    if (egress !== null && (typeof egress !== 'string' || egress.length === 0)) {
+      throw new TypeError('host operation ' + name + ' egress must be null or a non-empty string');
+    }
+    operations[name] = Object.freeze({
+      name,
+      action,
+      scope,
+      effect,
+      irreversible,
+      egress
+    });
+  }
+  return Object.freeze({
+    [HOST_OPERATION_REGISTRY]: true,
+    schema: 'praxis-host-operation-registry.v0',
+    operations: Object.freeze(operations)
+  });
+}
+
+function resolveHostOperationContract(registry, action, scope) {
+  const matches = Object.values(registry.operations).filter(
+    operation => operation.action === action && operation.scope === scope
+  );
+  if (matches.length === 0) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REQUIRED',
+      'no host operation is registered for ' + action + '@' + scope
+    );
+  }
+  if (matches.length > 1) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_AMBIGUOUS',
+      'multiple host operations match ' + action + '@' + scope
+    );
+  }
+  return matches[0];
+}
+
+function normalizeHostOperationRegistry(registry) {
+  if (registry === null || registry === undefined) return null;
+  if (
+    !registry
+    || registry[HOST_OPERATION_REGISTRY] !== true
+    || registry.schema !== 'praxis-host-operation-registry.v0'
+    || !registry.operations
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REGISTRY',
+      'run hostOperations must be a Praxis host operation registry'
+    );
+  }
+  return registry;
 }
 
 function keyToPublicDerBase64(key) {
@@ -277,6 +409,29 @@ function normalizeAgentBindings(agents, principals) {
   return output;
 }
 
+
+function normalizeEffectEnvelopes(effectEnvelopes, principals) {
+  const output = {};
+  for (const [principal, effects] of Object.entries(effectEnvelopes ?? {})) {
+    if (!Object.hasOwn(principals, principal)) {
+      throw new TypeError('effect envelope references unknown principal ' + principal);
+    }
+    if (!Array.isArray(effects)) {
+      throw new TypeError('effect envelope for ' + principal + ' must be an array');
+    }
+    const normalized = effects.map(effect => {
+      if (typeof effect !== 'string' || effect.length === 0) {
+        throw new TypeError('effect envelope entries must be non-empty strings');
+      }
+      return effect;
+    });
+    if (new Set(normalized).size !== normalized.length) {
+      throw new TypeError('effect envelope for ' + principal + ' contains duplicate effects');
+    }
+    output[principal] = Object.freeze([...normalized].sort());
+  }
+  return Object.freeze(output);
+}
 
 const POLICY_COMPARATORS = new Set(['eq', 'neq', 'lt', 'lte', 'gt', 'gte']);
 const FORBIDDEN_POLICY_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -512,6 +667,31 @@ function validateCharterBody(body) {
       }
     }
   }
+  for (const [principal, effects] of Object.entries(body.effect_envelopes ?? {})) {
+    if (!Object.hasOwn(body.principals ?? {}, principal)) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'effect envelope references unknown principal ' + principal
+      );
+    }
+    if (
+      !Array.isArray(effects)
+      || effects.some(effect => typeof effect !== 'string' || effect.length === 0)
+      || new Set(effects).size !== effects.length
+    ) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'effect envelope for ' + principal + ' is invalid'
+      );
+    }
+    const sorted = [...effects].sort();
+    if (sorted.some((effect, index) => effect !== effects[index])) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_CHARTER_SIGNATURE',
+        'effect envelope for ' + principal + ' is not canonical'
+      );
+    }
+  }
   if (!Array.isArray(body.program_digests ?? [])) {
     throw new PraxisRuntimeError(
       'PRAXIS_CHARTER_SIGNATURE',
@@ -561,7 +741,8 @@ export function createSyntheticCharter({
   agents = {},
   policies = {},
   verifiers = {},
-  programDigests = []
+  programDigests = [],
+  effectEnvelopes = {}
 }, rootPrivateKey) {
   if (!rootPrivateKey) throw new TypeError('synthetic charter requires a root private key');
   const normalizedPrincipals = normalizePrincipalDefinitions(principals);
@@ -577,6 +758,7 @@ export function createSyntheticCharter({
     agents: normalizeAgentBindings(agents, normalizedPrincipals),
     policies: pinnedDefinitions(policies, normalizePolicyDefinition),
     verifiers: pinnedDefinitions(verifiers, normalizeVerifierDefinition),
+    effect_envelopes: normalizeEffectEnvelopes(effectEnvelopes, normalizedPrincipals),
     program_digests: Object.freeze(normalizedProgramDigests)
   };
   validateCharterBody(body);
@@ -1075,6 +1257,14 @@ async function createCharteredHostAuthority({
     );
   }
   const requesterPrincipal = resolveRequesterPrincipal(charterContext, requester);
+  validateEffectEnvelope(
+    {
+      charter_digest: charterContext.digest,
+      requester: requesterPrincipal
+    },
+    subject.operation,
+    charterContext
+  );
   const evidenceContext = requireVerifiedAuthorityEvidence(
     evidence,
     policy,
@@ -1347,6 +1537,8 @@ class Parser {
         return this.cancel();
       case 'commit':
         return this.commit();
+      case 'finalize':
+        return this.finalize();
       default:
         throw new PraxisSyntaxError(`unknown statement ${JSON.stringify(token.value)}`, token);
     }
@@ -1474,17 +1666,76 @@ class Parser {
     this.take('@');
     const scope = this.identifier();
     const secrets = [];
-    if (this.current().type === 'word' && this.current().value === 'using') {
-      this.word('using');
-      this.word('secrets');
-      secrets.push(this.identifier());
-      while (this.current().type === ',') {
-        this.take(',');
-        secrets.push(this.identifier());
+    let declaredEffect = null;
+    let declaredIrreversible = false;
+    let declaredEgress = null;
+    let sawIrreversible = false;
+    let sawEgress = false;
+    let sawSecrets = false;
+
+    while (this.current().type === 'word') {
+      if (this.current().value === 'effect') {
+        if (declaredEffect !== null) {
+          throw new PraxisSyntaxError('operation effect may be declared only once', this.current());
+        }
+        this.word('effect');
+        declaredEffect = this.identifier();
+        continue;
       }
+      if (this.current().value === 'irreversible') {
+        if (sawIrreversible) {
+          throw new PraxisSyntaxError('operation irreversible may be declared only once', this.current());
+        }
+        this.word('irreversible');
+        declaredIrreversible = true;
+        sawIrreversible = true;
+        continue;
+      }
+      if (this.current().value === 'egress') {
+        if (sawEgress) {
+          throw new PraxisSyntaxError('operation egress may be declared only once', this.current());
+        }
+        this.word('egress');
+        declaredEgress = this.take('string').value;
+        sawEgress = true;
+        continue;
+      }
+      if (this.current().value === 'using') {
+        if (sawSecrets) {
+          throw new PraxisSyntaxError('operation secrets may be declared only once', this.current());
+        }
+        this.word('using');
+        this.word('secrets');
+        secrets.push(this.identifier());
+        while (this.current().type === ',') {
+          this.take(',');
+          secrets.push(this.identifier());
+        }
+        sawSecrets = true;
+        continue;
+      }
+      break;
     }
+
+    if ((declaredIrreversible || declaredEgress !== null) && declaredEffect === null) {
+      throw new PraxisSyntaxError(
+        'operation irreversible/egress metadata requires an effect declaration',
+        this.current()
+      );
+    }
+
     this.take(';');
-    return { kind: 'Operation', name, action, scope, args, secrets };
+    return {
+      kind: 'Operation',
+      name,
+      action,
+      scope,
+      args,
+      secrets,
+      declaredEffect,
+      declaredIrreversible,
+      declaredEgress
+    };
   }
 
   authorize() {
@@ -1523,6 +1774,15 @@ class Parser {
     const name = this.identifier();
     this.take(';');
     return { kind: 'Commit', name, operation };
+  }
+
+  finalize() {
+    this.word('finalize');
+    const operation = this.identifier();
+    this.word('as');
+    const name = this.identifier();
+    this.take(';');
+    return { kind: 'Finalize', name, operation };
   }
 
   program() {
@@ -1665,7 +1925,9 @@ export function analyze(ast) {
           action: node.action,
           scope: node.scope,
           imported: true,
-          linear: true
+          linear: true,
+          irreversibility_known: false,
+          irreversible: null
         });
         requiredPrepared.push({
           name: node.name,
@@ -1765,7 +2027,11 @@ export function analyze(ast) {
           kind: 'Operation',
           action: node.action,
           scope: node.scope,
-          secrets: [...node.secrets]
+          secrets: [...node.secrets],
+          declared_effect: node.declaredEffect,
+          irreversibility_known: node.declaredEffect !== null,
+          irreversible: node.declaredEffect !== null ? node.declaredIrreversible : null,
+          declared_egress: node.declaredEgress
         });
         ir.push({
           op: 'PLAN',
@@ -1773,7 +2039,10 @@ export function analyze(ast) {
           action: node.action,
           scope: node.scope,
           args: node.args,
-          secrets: node.secrets
+          secrets: node.secrets,
+          declared_effect: node.declaredEffect,
+          declared_irreversible: node.declaredEffect !== null ? node.declaredIrreversible : null,
+          declared_egress: node.declaredEgress
         });
         break;
       }
@@ -1813,7 +2082,9 @@ export function analyze(ast) {
           scope: operation.scope,
           operation: node.operation,
           permit: node.permit,
-          linear: true
+          linear: true,
+          irreversibility_known: operation.irreversibility_known,
+          irreversible: operation.irreversible
         });
         ir.push({
           op: 'AUTHORIZE',
@@ -1845,7 +2116,9 @@ export function analyze(ast) {
           scope: operation.scope,
           operation: operation.operation,
           permit: operation.permit,
-          linear: true
+          linear: true,
+          irreversibility_known: operation.irreversibility_known,
+          irreversible: operation.irreversible
         });
         ir.push({
           op: 'PREPARE',
@@ -1887,6 +2160,12 @@ export function analyze(ast) {
             `commit requires PreparedOperation, received ${operation.kind}`
           );
         }
+        if (operation.irreversibility_known && operation.irreversible === true) {
+          throw new PraxisTypeError(
+            'PRAXIS_IRREVERSIBLE_REQUIRES_FINALIZE',
+            'statically irreversible prepared operation requires finalize'
+          );
+        }
         if (terminalOperations.has(node.operation)) {
           throw new PraxisTypeError(
             'PRAXIS_LINEAR_OPERATION_REUSE',
@@ -1894,8 +2173,44 @@ export function analyze(ast) {
           );
         }
         terminalOperations.add(node.operation);
-        env.set(node.name, { kind: 'Receipt', action: operation.action, scope: operation.scope });
+        env.set(node.name, {
+          kind: 'Receipt',
+          action: operation.action,
+          scope: operation.scope,
+          finality: 'commit'
+        });
         ir.push({ op: 'COMMIT', name: node.name, operation: node.operation });
+        break;
+      }
+
+      case 'Finalize': {
+        const operation = requireBinding(env, node.operation);
+        if (operation.kind !== 'PreparedOperation') {
+          throw new PraxisTypeError(
+            'PRAXIS_FINALIZE_REQUIRES_PREPARATION',
+            `finalize requires PreparedOperation, received ${operation.kind}`
+          );
+        }
+        if (operation.irreversibility_known && operation.irreversible !== true) {
+          throw new PraxisTypeError(
+            'PRAXIS_FINALIZE_REQUIRES_IRREVERSIBLE',
+            'finalize requires an irreversible prepared operation'
+          );
+        }
+        if (terminalOperations.has(node.operation)) {
+          throw new PraxisTypeError(
+            'PRAXIS_LINEAR_OPERATION_REUSE',
+            `prepared operation ${node.operation} already has a terminal transition`
+          );
+        }
+        terminalOperations.add(node.operation);
+        env.set(node.name, {
+          kind: 'Receipt',
+          action: operation.action,
+          scope: operation.scope,
+          finality: 'finalize'
+        });
+        ir.push({ op: 'FINALIZE', name: node.name, operation: node.operation });
         break;
       }
 
@@ -2164,6 +2479,87 @@ function validateCharteredAuthorityToken(token, requirement, charterContext, now
   }
 }
 
+function validateMeasuredOperationAgainstRegistry(operation, registry) {
+  if (!operation || operation.effect === undefined) return;
+  if (!registry) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REQUIRED',
+      'measured operation requires the host operation registry at terminal use'
+    );
+  }
+  const measured = registry.operations[operation.host_operation];
+  if (!measured) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_HOST_OPERATION_REQUIRED',
+      'measured host operation ' + operation.host_operation + ' is not registered'
+    );
+  }
+  if (
+    measured.action !== operation.action
+    || measured.scope !== operation.scope
+    || measured.effect !== operation.effect
+    || measured.irreversible !== operation.irreversible
+    || measured.egress !== operation.egress
+  ) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_LINK_MISMATCH',
+      'prepared operation no longer matches the host-measured contract'
+    );
+  }
+}
+
+function validateEffectEnvelope(authority, operation, charterContext) {
+  const isMeasured = operation?.effect !== undefined;
+  if (!authority?.charter_digest) {
+    if (isMeasured) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EFFECT_AUTHORITY_REQUIRED',
+        'host-measured effects require chartered authority'
+      );
+    }
+    return;
+  }
+  if (!charterContext) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_CHARTER_REQUIRED',
+      'chartered measured effect requires the signed charter'
+    );
+  }
+  if (authority.charter_digest !== charterContext.digest) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_CHARTER_SIGNATURE',
+      'measured effect authority charter digest mismatch'
+    );
+  }
+  const requester = authority.requester;
+  const hasEnvelope = Object.hasOwn(
+    charterContext.body.effect_envelopes ?? {},
+    requester
+  );
+  if (!hasEnvelope) {
+    if (isMeasured) {
+      throw new PraxisRuntimeError(
+        'PRAXIS_EFFECT_ENVELOPE_REQUIRED',
+        'host-measured effects require an explicit signed requester effect envelope'
+      );
+    }
+    return;
+  }
+  if (!isMeasured) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_EFFECT_REQUIRED',
+      'requester has a signed effect envelope, so authority requires a host-measured operation'
+    );
+  }
+  const allowed = charterContext.body.effect_envelopes[requester];
+  if (!allowed.includes(operation.effect)) {
+    throw new PraxisRuntimeError(
+      'PRAXIS_EFFECT_ENVELOPE',
+      'measured effect ' + operation.effect + ' is outside the requester effect envelope'
+    );
+  }
+}
+
 function validateAuthorityToken(token, requirement, {
   nowMs,
   revokedAuthorityIds,
@@ -2311,7 +2707,8 @@ function validateRuntimeIr(ir) {
     'AUTHORIZE',
     'PREPARE',
     'CANCEL',
-    'COMMIT'
+    'COMMIT',
+    'FINALIZE'
   ]);
   for (const instruction of ir.instructions) {
     if (!instruction || typeof instruction !== 'object' || !allowed.has(instruction.op)) {
@@ -2458,6 +2855,7 @@ function validatePreparedAuthorityState(prepared, {
       }
     }
   }
+  validateEffectEnvelope(authority, operation, charterContext);
   for (const evidence of authority.evidence ?? []) {
     if (authority.charter_digest) {
       const verifier = charterContext?.body.verifiers?.[evidence.verifier_name];
@@ -2484,6 +2882,7 @@ export async function run(source, {
   observations = {},
   charter = null,
   trustedCharterKeys = [],
+  hostOperations = null,
   preparer = null,
   executor = null,
   completer = null,
@@ -2508,6 +2907,7 @@ export async function run(source, {
   const charterContext = charter
     ? verifySyntheticCharter(charter, trustedCharterKeys)
     : null;
+  const hostOperationRegistry = normalizeHostOperationRegistry(hostOperations);
   if (
     charterContext
     && (charterContext.body.program_digests?.length ?? 0) > 0
@@ -2771,18 +3171,61 @@ export async function run(source, {
             secret_kind: ref.kind
           });
         });
-        const operation = Object.freeze({
-          schema: 'praxis-operation.v0',
-          action: instruction.action,
-          scope: instruction.scope,
-          args,
-          secret_references: Object.freeze(secretReferences)
-        });
-        bindValue(instruction.name, Object.freeze({
-          kind: 'Operation',
-          ...operation,
-          operation_digest: operationDigest(operation)
-        }));
+
+        let operation;
+        if (hostOperationRegistry) {
+          const measured = resolveHostOperationContract(
+            hostOperationRegistry,
+            instruction.action,
+            instruction.scope
+          );
+          if (instruction.declared_effect === null || instruction.declared_effect === undefined) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_EFFECT_UNDECLARED',
+              `operation ${instruction.name} must declare its measured effect`
+            );
+          }
+          if (
+            measured.action !== instruction.action
+            || measured.scope !== instruction.scope
+            || measured.effect !== instruction.declared_effect
+            || measured.irreversible !== (instruction.declared_irreversible === true)
+            || measured.egress !== (instruction.declared_egress ?? null)
+          ) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_LINK_MISMATCH',
+              `operation ${instruction.name} declaration does not match the host-measured contract`
+            );
+          }
+          operation = createOperationDescriptorPraxis({
+            action: measured.action,
+            scope: measured.scope,
+            args,
+            secretReferences,
+            hostOperation: measured.name,
+            effect: measured.effect,
+            irreversible: measured.irreversible,
+            egress: measured.egress
+          });
+        } else {
+          if (
+            instruction.declared_effect !== null
+            && instruction.declared_effect !== undefined
+          ) {
+            throw new PraxisRuntimeError(
+              'PRAXIS_HOST_OPERATION_REQUIRED',
+              `operation ${instruction.name} declares an effect but no host registry is present`
+            );
+          }
+          operation = createOperationDescriptorPraxis({
+            action: instruction.action,
+            scope: instruction.scope,
+            args,
+            secretReferences
+          });
+        }
+
+        bindValue(instruction.name, operation);
         break;
       }
 
@@ -2821,6 +3264,7 @@ export async function run(source, {
           operationDigest: operation.operation_digest,
           charterContext
         });
+        validateEffectEnvelope(token, operation, charterContext);
         bindValue(instruction.name, Object.freeze({
           kind: 'AuthorizedOperation',
           operation,
@@ -2872,6 +3316,7 @@ export async function run(source, {
           operationDigest: authorized.operation.operation_digest,
           charterContext
         });
+        validateEffectEnvelope(token, authorized.operation, charterContext);
 
         const request = Object.freeze({
           schema: 'praxis-prepare-request.v0',
@@ -2997,7 +3442,9 @@ export async function run(source, {
         break;
       }
 
-      case 'COMMIT': {
+      case 'COMMIT':
+      case 'FINALIZE': {
+        const finality = instruction.op === 'FINALIZE' ? 'finalize' : 'commit';
         if (typeof executor !== 'function') {
           throw new PraxisRuntimeError(
             'PRAXIS_EXECUTOR_REQUIRED',
@@ -3029,11 +3476,37 @@ export async function run(source, {
           revokedAuthorityIds: revoked,
           charterContext
         });
+        validateMeasuredOperationAgainstRegistry(prepared.operation, hostOperationRegistry);
+
+        if (
+          prepared.operation.effect !== undefined
+          && typeof prepared.operation.irreversible !== 'boolean'
+        ) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_IR_MALFORMED',
+            'measured prepared operation has invalid irreversibility metadata'
+          );
+        }
+        if (prepared.operation.irreversible === true && finality !== 'finalize') {
+          throw new PraxisRuntimeError(
+            'PRAXIS_IRREVERSIBLE_REQUIRES_FINALIZE',
+            'host-measured irreversible operation requires finalize'
+          );
+        }
+        if (finality === 'finalize' && prepared.operation.irreversible !== true) {
+          throw new PraxisRuntimeError(
+            'PRAXIS_FINALIZE_REQUIRES_IRREVERSIBLE',
+            'finalize requires a host-measured irreversible operation'
+          );
+        }
 
         const expectedDigest = prepared.operation.operation_digest;
         const preparationDigest = prepared.preparation.preparation_digest;
         const request = Object.freeze({
-          schema: 'praxis-commit-request.v0',
+          schema: finality === 'finalize'
+            ? 'praxis-finalize-request.v0'
+            : 'praxis-commit-request.v0',
+          finality,
           operation: prepared.operation,
           authority: prepared.authority,
           preparation: prepared.preparation,
@@ -3074,6 +3547,10 @@ export async function run(source, {
           || !result.receipt
           || result.receipt.operation_digest !== expectedDigest
           || result.receipt.preparation_digest !== preparationDigest
+          || (
+            prepared.operation.effect !== undefined
+            && result.receipt.finality !== finality
+          )
         ) {
           throw new PraxisRuntimeError(
             'PRAXIS_EXTERNAL_RECEIPT_UNVERIFIED',
@@ -3089,6 +3566,7 @@ export async function run(source, {
 
         const completionRequest = Object.freeze({
           schema: 'praxis-completion-request.v0',
+          finality,
           operation_digest: expectedDigest,
           preparation_digest: preparationDigest,
           receipt: Object.freeze({ ...result.receipt })
@@ -3116,6 +3594,10 @@ export async function run(source, {
           || completion.evidence.durable !== true
           || completion.evidence.operation_digest !== expectedDigest
           || completion.evidence.preparation_digest !== preparationDigest
+          || (
+            prepared.operation.effect !== undefined
+            && completion.evidence.finality !== finality
+          )
         ) {
           throw new PraxisRuntimeError(
             'PRAXIS_COMPLETION_EVIDENCE_INVALID',
@@ -3139,6 +3621,7 @@ export async function run(source, {
           operation_digest: expectedDigest,
           preparation_digest: preparationDigest,
           authority_id: prepared.authority.authority_id,
+          finality,
           executor_receipt: Object.freeze({ ...result.receipt }),
           completion_evidence: Object.freeze({ ...completion.evidence })
         }));

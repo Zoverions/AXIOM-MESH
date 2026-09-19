@@ -210,6 +210,53 @@ Successful authority records only the digests of predicates that evaluated
 `true`. Prepared replay preserves and re-validates those predicate digests
 against the currently pinned policy. Model/advisor output remains veto-only.
 
+### P0.4 measured effects and irreversible finality
+
+P0.4 separates a program's **declared** effect from the synthetic host's
+authoritative operation contract. Source annotations exist for review and
+static checking; they do not define what the host operation actually does.
+
+`createHostOperationRegistry(...)` is a synthetic, host-owned registry of
+operation name, action, scope, effect label, irreversibility, and optional
+egress class/destination. At runtime an effect-declaring `op` must resolve to
+exactly one host contract for its action/scope. Missing or ambiguous mappings
+fail closed, and the source declaration must match the host contract exactly.
+The measured metadata is incorporated into the operation descriptor and exact
+operation digest.
+
+A signed charter can additionally contain per-principal effect envelopes.
+Measured effects require chartered authority. The older raw laboratory
+Permit/Lease/Quorum constructors remain compatible only with unmeasured P0
+operations; they cannot arm a host-measured effect.
+
+For chartered measured authority, the requester must have an explicit signed
+effect-envelope entry. Omitting the envelope is deny, not unrestricted access.
+The measured effect must be a member of that signed envelope at issuance,
+authorize, prepare, and terminal execution. When an envelope exists, the older
+unmeasured compatibility path cannot be used to bypass it.
+
+Source syntax can make the expected effect visible:
+
+```prax
+op release = Deploy("artifact") @ Production
+    effect deploy_release egress "provider:prod";
+
+op erase = Destroy("artifact") @ Production
+    effect destructive_delete irreversible egress "provider:prod";
+```
+
+Irreversibility is also host-owned. Reversible measured effects terminate with
+`commit`; irreversible measured effects terminate with `finalize`. The runtime
+rejects `commit` for a measured irreversible operation and rejects `finalize`
+for a reversible or unmeasured operation. Executor receipts and durable
+completion evidence must preserve the exact terminal finality for measured
+effects.
+
+Prepared replay re-links measured operation metadata against the current host
+registry before terminal execution and re-checks the signed effect envelope.
+Changing `commit` to `finalize`, changing effect/egress metadata, or replaying
+without the required registry is therefore denied before executor invocation.
+
 Secrets are represented separately from values:
 
 ```prax
@@ -258,11 +305,12 @@ requires prepared <name>: <Action> @ <Scope>;
 observe <name> = <literal-or-reference> from "<provenance>";
 verify <name> = <knowledge> with <Policy>;
 assess <name> = <knowledge> with <Policy>;
-op <name> = <Action>(<args...>) @ <Scope> [using secrets <name>, ...];
+op <name> = <Action>(<args...>) @ <Scope> [effect <Effect>] [irreversible] [egress "<class-or-destination>"] [using secrets <name>, ...];
 authorize <operation> using <permit-or-lease> as <name>;
 prepare <authorized-operation> as <name>;
 cancel <prepared-operation> as <cancellation-receipt>;
 commit <prepared-operation> as <receipt>;
+finalize <prepared-operation> as <receipt>;
 ```
 
 Comments begin with `//` or `#`.
@@ -281,7 +329,9 @@ The compiler rejects:
 - embedding a permit, lease, prepared operation, or secret reference as an ordinary operation argument;
 - binding a non-secret value through the secret-reference channel;
 - verification of non-evidence values;
-- undeclared bindings and duplicate bindings.
+- undeclared bindings and duplicate bindings;
+- `commit` of a statically declared irreversible effect;
+- `finalize` of a statically declared reversible effect.
 
 The runtime additionally rejects:
 
@@ -302,7 +352,13 @@ The runtime additionally rejects:
 - `commit` without both an executor and durable completion recorder;
 - uncertain executor outcomes or unverified receipts as completed effects;
 - completion evidence not bound to the same operation and preparation;
-- reuse of an imported prepared effect after durable completion or cancellation.
+- reuse of an imported prepared effect after durable completion or cancellation;
+- missing, ambiguous, or mismatched host-measured operation contracts;
+- effect-envelope downgrade or measured effect outside the signed requester envelope;
+- hostile IR effect/finality relabeling;
+- `commit` of a host-measured irreversible effect or `finalize` of a reversible/unmeasured effect;
+- executor or completion evidence that changes measured terminal finality;
+- prepared replay that no longer matches the host effect/egress/finality contract.
 
 ## IR
 
@@ -322,6 +378,7 @@ AUTHORIZE
 PREPARE
 CANCEL
 COMMIT
+FINALIZE
 ```
 
 This is intended to remain inspectable by humans, policy engines, formal tools,
@@ -366,7 +423,10 @@ It specifically defends against:
 - synthetic success from a missing or malformed executor receipt;
 - completion being claimed without durable completion evidence;
 - governed source or re-sealed IR weakening a charter-pinned quorum;
-- evidence expiring between authorization/preparation and external execution.
+- evidence expiring between authorization/preparation and external execution;
+- source-declared effects overriding host-measured effects;
+- effect-envelope widening through source or hostile IR;
+- irreversible operations being dispatched through ordinary commit semantics.
 
 This slice does not claim protection from a malicious embedding host,
 compromised Node.js runtime, hardware compromise, or an executor that lies while
@@ -437,6 +497,7 @@ node --test mesh/test/praxis-conformance-v0.test.mjs
 node --test mesh/test/praxis-adversarial-ir-v0.test.mjs
 node --test mesh/test/praxis-charter-evidence-v0.test.mjs
 node --test mesh/test/praxis-policy-premises-v0.test.mjs
+node --test mesh/test/praxis-measured-effects-v0.test.mjs
 ```
 
 The semantic corpus is stored at
