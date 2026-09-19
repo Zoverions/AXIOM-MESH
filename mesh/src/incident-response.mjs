@@ -1,5 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { digestObject, ValidationError } from './lib/canonical.mjs';
+import {
+  MODEL_BEHAVIOR_DISCLOSURE_TRACKS,
+  MODEL_BEHAVIOR_INCIDENT_SCHEMA
+} from './lib/model-behavior-incident.mjs';
 
 const POLICY_SCHEMA = 'axiom-incident-response-policy.v1';
 const PLAN_SCHEMA = 'axiom-incident-plan.v1';
@@ -194,6 +198,21 @@ export function validateIncidentResponsePolicy(policy) {
       throw new ValidationError('SEV-1 incident response policy is incomplete');
     }
   }
+  const disclosure = policy.model_behavior_disclosure_tracks;
+  if (
+    !plainObject(disclosure)
+    || disclosure.schema_ref !== MODEL_BEHAVIOR_INCIDENT_SCHEMA
+    || disclosure.authority_effect !== 'none'
+    || disclosure.automation !== 'none'
+    || disclosure.subordinate_to_security_md !== true
+    || disclosure.subordinate_to_incident_response !== true
+    || JSON.stringify(disclosure.tracks) !== JSON.stringify(MODEL_BEHAVIOR_DISCLOSURE_TRACKS)
+    || typeof disclosure.notes !== 'string'
+    || disclosure.notes.length < 1
+    || disclosure.notes.length > 2048
+  ) {
+    throw new ValidationError('Model behavior disclosure policy is invalid or drifted');
+  }
   if (
     !Array.isArray(policy.frameworks)
     || policy.frameworks.length < 2
@@ -208,7 +227,8 @@ export function validateIncidentResponsePolicy(policy) {
     schema: policy.schema,
     digest: digestObject(policy),
     severities: SEVERITY_ORDER.length,
-    actions: Object.keys(policy.actions).length
+    actions: Object.keys(policy.actions).length,
+    model_behavior_disclosure_tracks: MODEL_BEHAVIOR_DISCLOSURE_TRACKS.length
   };
 }
 
