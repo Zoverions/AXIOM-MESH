@@ -1,6 +1,6 @@
 import { digestObject, ValidationError } from './canonical.mjs';
 import {
-  validateBoundedDecisionProviderProfile
+  resolveBoundedDecisionProviderProfile
 } from './bounded-decision-provider-profile.mjs';
 import {
   validateBoundedDecisionQuestionSchema
@@ -77,12 +77,13 @@ export function validateCuaS1FormsQuestion(questionSchema) {
 export function normalizeCuaS1FormsFixtureResult(
   { result, observation },
   providerProfile,
-  questionSchema
+  questionSchema,
+  catalogEntry
 ) {
-  validateBoundedDecisionProviderProfile(providerProfile);
+  const resolvedProvider = resolveBoundedDecisionProviderProfile(providerProfile, catalogEntry);
   const question = validateCuaS1FormsQuestion(questionSchema);
   validateObservationInput(observation);
-  validateProviderBinding(providerProfile);
+  validateProviderBinding(providerProfile, resolvedProvider);
   validateResultEnvelope(result, providerProfile, questionSchema, observation);
 
   const probabilityEvidence = question.option_ids.map((optionId, index) => ({
@@ -117,6 +118,12 @@ export function normalizeCuaS1FormsFixtureResult(
     }
   }, providerProfile, questionSchema);
 
+  if (normalizedObservation.answer.selected_option_id !== selectedOptionId) {
+    throw new ValidationError(
+      'CUA-S1-FORMS normalization must preserve the provider-selected action; ambiguous tied actions fail closed'
+    );
+  }
+
   const targetBinding = {
     schema: CUA_S1_FORMS_TARGET_BINDING_SCHEMA,
     snapshot_id: result.snapshot_id,
@@ -143,10 +150,15 @@ export function normalizeCuaS1FormsFixtureResult(
   });
 }
 
-function validateProviderBinding(providerProfile) {
+function validateProviderBinding(providerProfile, resolvedProvider) {
   if (providerProfile.provider_mode !== 'owner-local') {
     throw new ValidationError(
       'CUA-S1-FORMS adapter currently accepts only owner-local provider profiles'
+    );
+  }
+  if (resolvedProvider.provider_mode !== 'owner-local' || resolvedProvider.network_required) {
+    throw new ValidationError(
+      'CUA-S1-FORMS adapter requires a catalog-resolved owner-local provider with no network requirement'
     );
   }
   if (providerProfile.offering_revision_evidence !== 'exact-artifact') {
