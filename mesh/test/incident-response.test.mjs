@@ -9,6 +9,7 @@ import {
   loadIncidentResponsePolicy,
   validateIncidentResponsePolicy
 } from '../src/incident-response.mjs';
+import { MODEL_BEHAVIOR_DISCLOSURE_TRACKS } from '../src/lib/model-behavior-incident.mjs';
 import {
   runIncidentTabletopDrill,
   verifyIncidentTabletopEvidence
@@ -22,6 +23,9 @@ test('incident policy classifies by the highest-impact signal and rejects drift'
   const verification = validateIncidentResponsePolicy(policy);
   assert.equal(verification.valid, true);
   assert.equal(verification.severities, 4);
+  assert.equal(verification.model_behavior_disclosure_tracks, MODEL_BEHAVIOR_DISCLOSURE_TRACKS.length);
+  assert.deepEqual(policy.model_behavior_disclosure_tracks.tracks, [...MODEL_BEHAVIOR_DISCLOSURE_TRACKS]);
+  assert.equal(policy.model_behavior_disclosure_tracks.subordinate_to_incident_response, true);
   assert.equal(
     classifyIncident(policy, {
       signals: [
@@ -52,6 +56,24 @@ test('incident policy classifies by the highest-impact signal and rejects drift'
   assert.throws(
     () => validateIncidentResponsePolicy(weakenedCritical),
     /SEV-1 incident response policy is incomplete/
+  );
+  const driftedDisclosureTrack = structuredClone(policy);
+  driftedDisclosureTrack.model_behavior_disclosure_tracks.tracks[0] = 'ready-for-publication';
+  assert.throws(
+    () => validateIncidentResponsePolicy(driftedDisclosureTrack),
+    /disclosure policy is invalid or drifted/
+  );
+  const detachedDisclosure = structuredClone(policy);
+  detachedDisclosure.model_behavior_disclosure_tracks.subordinate_to_incident_response = false;
+  assert.throws(
+    () => validateIncidentResponsePolicy(detachedDisclosure),
+    /disclosure policy is invalid or drifted/
+  );
+  const automatedDisclosure = structuredClone(policy);
+  automatedDisclosure.model_behavior_disclosure_tracks.automation = 'publish';
+  assert.throws(
+    () => validateIncidentResponsePolicy(automatedDisclosure),
+    /disclosure policy is invalid or drifted/
   );
 });
 
