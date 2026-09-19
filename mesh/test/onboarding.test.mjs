@@ -15,9 +15,7 @@ import {
 const CONFIG = Object.freeze({
   hosts: {
     gateway: '127.0.0.1',
-    hypervisor: '127.0.0.1',
-    sandbox: '127.0.0.1',
-    grid: '127.0.0.1'
+    internal: '127.0.0.1'
   },
   ports: {
     gateway: 4010,
@@ -127,6 +125,11 @@ test('doctor verifies setup and every configured service port without provisioni
     'sandbox',
     'grid'
   ]);
+  assert.deepEqual(
+    checked.map(item => item.host),
+    ['127.0.0.1', '127.0.0.1', '127.0.0.1', '127.0.0.1'],
+    'internal services must probe the internal loopback host, not an undefined bind address'
+  );
   assert.match(formatDoctorResult(result), /sandbox: 127\.0\.0\.1:4012 blocked \(EADDRINUSE\)/);
 });
 
@@ -180,4 +183,38 @@ test('doctor gives exact remediation for unsupported Node and npm versions', () 
     doctorFailureMessage(new Error('npm 10.9.2 is outside 11.0.0 <= version < 12.0.0')),
     /npm install --global npm@11/
   );
+});
+
+test('doctor npm remediation rewords the Node 22 clause and offers a user-space fallback', () => {
+  const detail = 'npm 10.9.4 is outside 11.0.0 <= version < 12.0.0';
+  const writable = doctorFailureMessage(new Error(detail), { npmPrefixWritable: true });
+  assert.match(writable, /npm install --global npm@11/);
+  assert.match(writable, /Node 22 compatibility track accepts npm >=10\.9\.8 <11/);
+  assert.doesNotMatch(writable, /or npm >=10\.9\.8 <11 with Node 22/);
+  assert.doesNotMatch(writable, /--prefix/);
+
+  const readOnly = doctorFailureMessage(new Error(detail), { npmPrefixWritable: false });
+  assert.match(readOnly, /npm install -g npm@11 --prefix ~\/\.npm-global/);
+  assert.match(readOnly, /~\/.npm-global\/bin.*PATH/);
+});
+
+test('doctor prints the working-tree permission warning when setup flags group-writable files', async () => {
+  const warning = '2 working-tree file(s) are group- or other-writable';
+  const result = await runDoctor({
+    config: CONFIG,
+    verifySetup: async () => ({
+      valid: true,
+      runtime: { node: '24.18.0', npm: '11.9.0' },
+      dependency_packages: 0,
+      working_tree_permissions: {
+        scanned: true,
+        group_writable_files: 2,
+        sample: ['mesh/src/dev.mjs'],
+        warning
+      }
+    }),
+    checkPort: async () => ({ available: true, code: null })
+  });
+  assert.match(formatDoctorResult(result), /Working tree: 2 working-tree file/);
+  assert.equal(result.ready, true, 'a permission warning must not fail doctor');
 });

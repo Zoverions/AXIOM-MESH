@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
+import { accessSync, constants } from 'node:fs';
 import { createServer } from 'node:net';
 import { pathToFileURL } from 'node:url';
 import { meshConfig } from './lib/config.mjs';
@@ -8,6 +10,9 @@ import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { verifyRepositorySetup } from './setup.mjs';
 
 const SERVICES = Object.freeze(['gateway', 'hypervisor', 'sandbox', 'grid']);
+// The gateway binds its own configured host; the hypervisor, sandbox, and
+// grid are internal services that always bind the internal loopback host.
+const INTERNAL_SERVICES = Object.freeze(['hypervisor', 'sandbox', 'grid']);
 
 export async function checkPortAvailable({ host, port }) {
   return new Promise(resolve => {
@@ -87,7 +92,9 @@ export async function runDoctor({
   const versionControl = detectGit();
   const gridRuntimeLock = await checkGridLock({ dataDir: config.dataDir });
   const ports = await Promise.all(SERVICES.map(async service => {
-    const host = config.hosts[service];
+    const host = INTERNAL_SERVICES.includes(service)
+      ? config.hosts.internal
+      : config.hosts.gateway;
     const port = config.ports[service];
     const result = await checkPort({ host, port, service });
     return {
@@ -128,6 +135,10 @@ export function formatDoctorResult(result, { json = false } = {}) {
     `Grid runtime lock: ${lockDescription}`,
     `Git: ${versionControlDescription(result.version_control)}`
   ];
+  const permissionWarning = result.setup?.working_tree_permissions?.warning;
+  if (permissionWarning) {
+    lines.push(`Working tree: ${permissionWarning}`);
+  }
   for (const item of result.ports) {
     lines.push(
       `${item.service}: ${item.host}:${item.port} ${item.available ? 'available' : `blocked (${item.error_code})`}`
@@ -148,7 +159,22 @@ function versionControlDescription(versionControl) {
     : `${versionControl.version} is below the required ${versionControl.minimum_version}; the credential-history audit will fail`;
 }
 
-export function doctorFailureMessage(error) {
+export function globalNpmPrefixWritable({ npmCommand = 'npm' } = {}) {
+  try {
+    const prefix = spawnSync(npmCommand, ['prefix', '--global'], {
+      encoding: 'utf8',
+      windowsHide: true
+    });
+    const directory = prefix.stdout?.trim();
+    if (prefix.status !== 0 || !directory) return false;
+    accessSync(directory, constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function doctorFailureMessage(error, { npmPrefixWritable = null } = {}) {
   const detail = error instanceof Error ? error.message : String(error);
   const nodeMatch = detail.match(/Node\.js ([0-9.]+) is outside/);
   if (nodeMatch) {
@@ -160,10 +186,20 @@ export function doctorFailureMessage(error) {
   }
   const npmMatch = detail.match(/npm ([0-9.]+) is outside ([0-9.]+) <= version < ([0-9.]+)/);
   if (npmMatch) {
-    return [
-      `AXIOM-MESH requires npm >=11.0.0 <12, or npm >=10.9.8 <11 with Node 22 (you have ${npmMatch[1]}).`,
+    const lines = [
+      `AXIOM-MESH requires npm >=11.0.0 <12 (you have ${npmMatch[1]}). The Node 22 compatibility track accepts npm >=10.9.8 <11 instead.`,
       'Recommended after selecting Node 24.18.0: npm install --global npm@11'
-    ].join('\n');
+    ];
+    const writable = npmPrefixWritable ?? globalNpmPrefixWritable();
+    if (!writable) {
+      lines.push(
+        'The npm global prefix is not writable here (common in containers and managed images); use the user-space fallback:',
+        '  npm install -g npm@11 --prefix ~/.npm-global',
+        'then add ~/.npm-global/bin to PATH, e.g.:',
+        '  export PATH="$HOME/.npm-global/bin:$PATH"'
+      );
+    }
+    return lines.join('\n');
   }
   return `AXIOM-MESH doctor failed: ${detail}`;
 }

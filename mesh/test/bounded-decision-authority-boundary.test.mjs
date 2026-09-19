@@ -9,7 +9,8 @@ const MODULES = [
   'bounded-decision-question-schema.mjs',
   'bounded-decision-observation.mjs',
   'bounded-decision-calibration-report.mjs',
-  'bounded-decision-interpretation.mjs'
+  'bounded-decision-interpretation.mjs',
+  'bounded-decision-cua-s1-forms-adapter.mjs'
 ];
 
 function intent() {
@@ -91,7 +92,7 @@ test('capability registry does not claim an implemented bounded-decision runtime
   ));
   const implementedBounded = registry.capabilities.filter(item =>
     item.status === 'implemented'
-    && /bounded[- ]decision|system[- ]one|jev/i.test(`${item.id} ${item.summary ?? ''}`)
+    && /bounded[- ]decision|system[- ]one|jev|cua[- ]?s1/i.test(`${item.id} ${item.summary ?? ''}`)
   );
   assert.deepEqual(implementedBounded, []);
 

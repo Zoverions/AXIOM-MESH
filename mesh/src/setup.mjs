@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { lstat, readFile } from 'node:fs/promises';
+import { lstat, readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -68,6 +68,18 @@ const REQUIRED_KERNEL_SCRIPTS = Object.freeze({
   'release:verify': 'node src/release.mjs'
 });
 const SEMVER = /^\d+\.\d+\.\d+$/;
+const VERIFICATION_STEPS = Object.freeze([
+  { name: 'check', arguments: ['run', 'check'], rerun: 'npm run check' },
+  {
+    name: 'release:verify',
+    arguments: ['run', 'release:verify'],
+    rerun: 'npm run release:verify'
+  }
+]);
+const PERMISSION_SCAN_IGNORED_DIRECTORIES = Object.freeze(
+  new Set(['.git', 'node_modules'])
+);
+const PERMISSION_SAMPLE_LIMIT = 10;
 
 export function validateSourceSetupPolicy(policy) {
   exactObject(policy, 'Source setup policy', [
@@ -262,11 +274,69 @@ export async function verifyRepositorySetup({
   const inputs = await readSetupInputs(repositoryRoot);
   const resolvedNpmCli = npmCliPath ?? await resolveNpmCli();
   const detectedNpmVersion = npmVersion ?? detectNpmVersion(resolvedNpmCli);
-  return validateSourceSetupState({
+  const workingTreePermissions = await checkWorkingTreePermissions({
+    repositoryRoot
+  });
+  const validated = validateSourceSetupState({
     ...inputs,
     nodeVersion,
     npmVersion: detectedNpmVersion
   });
+  return {
+    ...validated,
+    working_tree_permissions: workingTreePermissions
+  };
+}
+
+// Provider executables and artifacts must not be group- or other-writable,
+// but checkouts made with umask 0007/0002 produce 660/664 files. Warn here so
+// doctor surfaces the problem before provider execution rejects the files.
+export async function checkWorkingTreePermissions({
+  repositoryRoot = REPOSITORY_ROOT,
+  platform = process.platform,
+  readdirImpl = readdir,
+  statImpl = stat
+} = {}) {
+  const writable = [];
+  const pending = [repositoryRoot];
+  while (pending.length > 0) {
+    const directory = pending.pop();
+    let entries;
+    try {
+      entries = await readdirImpl(directory, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (PERMISSION_SCAN_IGNORED_DIRECTORIES.has(entry.name)) continue;
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(path);
+        continue;
+      }
+      if (!entry.isFile() || entry.isSymbolicLink()) continue;
+      let metadata;
+      try {
+        metadata = await statImpl(path);
+      } catch {
+        continue;
+      }
+      if (platform !== 'win32' && (metadata.mode & 0o022) !== 0) {
+        writable.push(path);
+      }
+    }
+  }
+  const sample = writable
+    .slice(0, PERMISSION_SAMPLE_LIMIT)
+    .map(path => path.slice(repositoryRoot.length + 1));
+  return {
+    scanned: true,
+    group_writable_files: writable.length,
+    sample,
+    warning: writable.length === 0
+      ? null
+      : `${writable.length} working-tree file(s) are group- or other-writable (e.g. ${sample[0]}); provider execution rejects such artifacts. Check out with umask 022.`
+  };
 }
 
 export async function installRepositorySetup({
@@ -304,16 +374,22 @@ export async function installRepositorySetup({
   }
 
   if (verify) {
-    execute({
-      npmCliPath: resolvedNpmCli,
-      cwd: repositoryRoot,
-      arguments: ['run', 'check']
-    });
-    execute({
-      npmCliPath: resolvedNpmCli,
-      cwd: repositoryRoot,
-      arguments: ['run', 'release:verify']
-    });
+    for (const step of VERIFICATION_STEPS) {
+      emitVerifyProgress(`starting ${step.rerun} (this runs the full verification suite)`);
+      try {
+        execute({
+          npmCliPath: resolvedNpmCli,
+          cwd: repositoryRoot,
+          arguments: [...step.arguments]
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new ValidationError(
+          `Setup verification failed at "${step.name}" (${detail}). Re-run it with: ${step.rerun}`
+        );
+      }
+      emitVerifyProgress(`passed ${step.rerun}`);
+    }
   }
   return {
     ...after,
@@ -469,6 +545,12 @@ function executeNpm({ npmCliPath, cwd, arguments: npmArguments }) {
   }
 }
 
+// Progress markers go to stderr so the JSON result on stdout stays
+// machine-readable while the slow --verify steps stream visibly.
+function emitVerifyProgress(message) {
+  process.stderr.write(`[setup:verify] ${message}\n`);
+}
+
 function setupEnvironment() {
   return {
     ...process.env,
@@ -588,7 +670,7 @@ async function main() {
     || process.argv.length > 4
   ) {
     throw new ValidationError(
-      'Usage: node mesh/src/setup.mjs check | install [--verify]'
+      'Usage: node mesh/src/setup.mjs check | install [--verify] (--verify runs the full verification suite and is slow; plain install is the fast path)'
     );
   }
   const result = command === 'check'
