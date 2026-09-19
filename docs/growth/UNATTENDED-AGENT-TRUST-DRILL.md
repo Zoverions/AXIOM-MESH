@@ -74,6 +74,60 @@ If you build or operate local/coding agents, test AXIOM-MESH against the failure
 6. **Recovery:** Can state be restored without silently discarding the audit trail?
 7. **Runtime replacement:** Can the model/runtime change without becoming a new source of authority?
 
+## Focused MCP metadata boundary
+
+Campaign: `ua-2026-09-18-mcp-metadata-boundary`
+
+The broad harness drill produced no measurable activation at its initial checkpoint, so this follow-up narrows the test surface to an existing offline read-only MCP laboratory.
+
+The intended property is:
+
+> MCP discovery, client metadata, protocol metadata, or a changed tool mapping must not silently become authority.
+
+Run:
+
+```bash
+npm run agent-commons:mcp-readonly:check
+node --test mesh/test/agent-commons-mcp-readonly.test.mjs
+```
+
+The laboratory has no network listener, no session state, no write-capable tools, no private Grid access, no machine-authority mapping, and no production MCP compatibility claim. Useful counterexamples include hostile metadata changing an accepted result, changed tool maps reaching a different C0 method without rejection, protocol/routing disagreement being accepted, or client-supplied capabilities becoming permission.
+
+Public challenge: https://github.com/Zoverions/AXIOM-MESH/issues/1685
+
+## Physical-action authority challenge
+
+Campaign: `ua-2026-09-18-physical-action-authority`
+
+Current MCP adoption is moving agent calls into physical environments. Google Home's Home MCP early access, for example, exposes device discovery, state/history access, and a `run_home_actions` tool while explicitly warning that connecting a real home to an AI agent can produce unexpected or undesired behavior.
+
+AXIOM-MESH does **not** claim Google Home compatibility. The acquisition experiment uses that current problem class only as a falsification target for an existing merged authority primitive.
+
+PR #1707 added an inert **Plural Capability Lease candidate evaluator**. It evaluates exact bounded scope, threshold approvals, required authority classes, distinct authority domains, expiry/currentness, duration ceilings, and scope-digest binding while returning no executable authority:
+
+- `authority_effect: none`
+- `runtime_activation: false`
+- `capability_registry_change: false`
+- `requires_effect_admission: true`
+
+Run its hostile tests:
+
+```bash
+node --test mesh/test/plural-capability-lease.test.mjs
+```
+
+For a smart-home, robotics, IoT, or physical-agent scenario, try to make a low-consequence approval authorize a different or higher-consequence effect; reuse an approval against a different scope digest; satisfy a threshold with duplicate/same-domain approvals; accept revoked, expired, unknown-currentness, or overlong approvals; or smuggle runtime activation, authority effects, registry promotion, or renewal into the candidate.
+
+Relevant public artifacts:
+
+- evaluator: `mesh/src/lib/plural-capability-lease.mjs`
+- hostile tests: `mesh/test/plural-capability-lease.test.mjs`
+- merged implementation: https://github.com/Zoverions/AXIOM-MESH/pull/1707
+- public challenge: https://github.com/Zoverions/AXIOM-MESH/issues/1712
+- current external problem context: https://developers.home.google.com/mcp/home
+
+The property to preserve is simple: **discovery and model intent must remain separate from authority to cause a physical effect.**
+
 ## Contribution target
 
 The most useful contribution is a concrete counterexample: a reproducible case where the current harness allows more authority than intended, loses provenance, misrepresents uncertainty, or makes recovery unsafe.
@@ -88,8 +142,8 @@ Open an issue in the AXIOM-MESH repository with:
 
 Repository: https://github.com/Zoverions/AXIOM-MESH
 
-Do not include secrets, private credentials, personal data, or production access tokens.
+Do not include secrets, private credentials, personal data, household/camera data, OAuth tokens, or production access tokens.
 
-## Why this experiment exists
+## Why these experiments exist
 
-Current agent-builder discussions are converging on the same practical controls: sandboxing, scoped permissions, short-lived access, checkpoints, rollback, tool-call observability, and post-run verification. This experiment tests whether AXIOM's authority/evidence substrate is understandable and useful to those builders without weakening the project's security or promotion boundaries.
+Current agent-builder discussions are converging on practical controls such as sandboxing, scoped permissions, short-lived access, metadata integrity, checkpoints, rollback, tool-call observability, independent approval, and post-run verification. These experiments test whether AXIOM's authority/evidence substrate is understandable and useful to builders facing those problems without weakening the project's security or promotion boundaries.
