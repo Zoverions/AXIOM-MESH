@@ -9,7 +9,8 @@ const MODULES = [
   'bounded-decision-question-schema.mjs',
   'bounded-decision-observation.mjs',
   'bounded-decision-calibration-report.mjs',
-  'bounded-decision-interpretation.mjs'
+  'bounded-decision-interpretation.mjs',
+  'bounded-decision-cua-s1-forms-adapter.mjs'
 ];
 
 function intent() {
