@@ -20,6 +20,9 @@ AXIOM application and declared downstream Mesh consumer.
 The machine-readable project/application boundary is recorded in
 [`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
 
+Zoverions writes and builds in the open: [zoverions.com](https://zoverions.com) ·
+[@zoverions on X](https://x.com/zoverions) · [YouTube](https://www.youtube.com/@zoverions)
+
 ## First 5 Minutes
 
 Primary production requirements: Node.js `>=24.14.0 <25` and npm

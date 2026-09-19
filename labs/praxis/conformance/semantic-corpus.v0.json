@@ -1,0 +1,386 @@
+{
+  "schema": "praxis-semantic-conformance.v0",
+  "version": 0,
+  "status": "inert-laboratory-corpus",
+  "coverage": [
+    {
+      "invariant": "knowledge-cannot-become-authority",
+      "status": "covered"
+    },
+    {
+      "invariant": "identity-cannot-become-authority",
+      "status": "covered-as-epistemic-value"
+    },
+    {
+      "invariant": "discovery-cannot-become-authority",
+      "status": "covered-as-epistemic-value"
+    },
+    {
+      "invariant": "planning-cannot-become-authority",
+      "status": "covered"
+    },
+    {
+      "invariant": "collective-agreement-cannot-amplify-authority",
+      "status": "covered-host-bound-quorum-and-runtime-hostile-ir"
+    },
+    {
+      "invariant": "permit-action-scope-binding",
+      "status": "covered-compile-time-and-runtime-hostile-ir"
+    },
+    {
+      "invariant": "linear-authority-consumption",
+      "status": "covered"
+    },
+    {
+      "invariant": "expiry-revocation",
+      "status": "covered-runtime-time-of-use-and-replay"
+    },
+    {
+      "invariant": "deny-on-absent-or-malformed-policy-result",
+      "status": "covered-runtime-tests"
+    },
+    {
+      "invariant": "durable-preparation-before-external-io",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "uncertain-external-outcome-remains-uncertain",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "completion-receipt-binds-exact-operation",
+      "status": "covered-runtime-tests"
+    },
+    {
+      "invariant": "cancellation",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "idempotency",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "replay",
+      "status": "covered-synthetic-host-contract"
+    },
+    {
+      "invariant": "rollback",
+      "status": "pending-operation-specific-semantics"
+    },
+    {
+      "invariant": "secret-reference-separation",
+      "status": "covered-compile-time-and-runtime-hostile-ir"
+    },
+    {
+      "invariant": "compiled-ir-is-untrusted",
+      "status": "covered-resealed-hostile-ir-runtime-tests"
+    },
+    {
+      "invariant": "authority-binds-exact-plan",
+      "status": "covered-runtime-and-hostile-ir"
+    },
+    {
+      "invariant": "quorum-threshold-is-host-bound",
+      "status": "covered-runtime-and-hostile-ir"
+    },
+    {
+      "invariant": "prepared-terminal-is-runtime-linear",
+      "status": "covered-runtime-and-hostile-ir"
+    },
+    {
+      "invariant": "charter-pins-policies-and-verifiers",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "one-key-one-principal-seat",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "signed-evidence-origin-authenticity-freshness",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "assessment-cannot-satisfy-authority-premise",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "pinned-advisor-veto-only-fail-closed",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "approval-request-binds-plan-evidence-requester-nonce-expiry",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "approval-replay-denied",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "requester-self-approval-excluded",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "human-minimum-quorum",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "chartered-authority-requires-runtime-charter",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "evidence-freshness-rechecked-at-commit",
+      "status": "covered-synthetic-charter-tests"
+    },
+    {
+      "invariant": "signed-charter-pins-reviewed-program-digest",
+      "status": "covered-resealed-hostile-ir-runtime-tests"
+    },
+    {
+      "invariant": "legacy-asserted-observation-cannot-satisfy-chartered-authority",
+      "status": "covered-synthetic-charter-tests"
+    }
+  ],
+  "compile_cases": [
+    {
+      "name": "valid-authorized-commit",
+      "source": "requires permit p: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;\nprepare armed as prepared;\ncommit prepared as receipt;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_PERMIT",
+          "PLAN",
+          "AUTHORIZE",
+          "PREPARE",
+          "COMMIT"
+        ]
+      }
+    },
+    {
+      "name": "valid-lease-authorization",
+      "source": "requires lease window: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using window as armed;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_LEASE",
+          "PLAN",
+          "AUTHORIZE"
+        ]
+      }
+    },
+    {
+      "name": "knowledge-cannot-authorize",
+      "source": "observe fact = \"safe\" from \"fixture\";\nop release = Deploy(fact) @ Production;\nauthorize release using fact as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT"
+      }
+    },
+    {
+      "name": "identity-value-cannot-authorize",
+      "source": "observe identity = \"agent:alice\" from \"identity-directory\";\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using identity as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT"
+      }
+    },
+    {
+      "name": "discovery-value-cannot-authorize",
+      "source": "observe discovered = \"service:deploy\" from \"discovery\";\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using discovered as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT"
+      }
+    },
+    {
+      "name": "assessment-cannot-authorize",
+      "source": "observe evidence = \"safe\" from \"fixture\";\nassess consensus = evidence with CollectiveReview;\nop release = Deploy(evidence) @ Production;\nauthorize release using consensus as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT"
+      }
+    },
+    {
+      "name": "planned-operation-cannot-authorize-another-operation",
+      "source": "op plan = Plan(\"x\") @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using plan as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORIZE_REQUIRES_PERMIT"
+      }
+    },
+    {
+      "name": "commit-requires-durable-preparation",
+      "source": "requires permit p: Deploy @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;\ncommit armed as receipt;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_COMMIT_REQUIRES_PREPARATION"
+      }
+    },
+    {
+      "name": "action-substitution-denied",
+      "source": "requires permit p: Restart @ Production;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORITY_MISMATCH"
+      }
+    },
+    {
+      "name": "scope-substitution-denied",
+      "source": "requires permit p: Deploy @ Staging;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using p as armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORITY_MISMATCH"
+      }
+    },
+    {
+      "name": "linear-permit-reuse-denied",
+      "source": "requires permit p: Deploy @ Production;\nop first = Deploy(\"a\") @ Production;\nop second = Deploy(\"b\") @ Production;\nauthorize first using p as first_armed;\nauthorize second using p as second_armed;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_LINEAR_AUTHORITY_REUSE"
+      }
+    },
+    {
+      "name": "authority-smuggling-denied",
+      "source": "requires permit p: Deploy @ Production;\nop leak = Log(p) @ Audit;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_AUTHORITY_EXFILTRATION"
+      }
+    },
+    {
+      "name": "permit-cannot-be-reobserved-as-knowledge",
+      "source": "requires permit p: Deploy @ Production;\nobserve leaked = p from \"self\";",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_INFORMATION_FLOW_VIOLATION"
+      }
+    },
+    {
+      "name": "verify-requires-evidence",
+      "source": "op plan = Plan(\"x\") @ Local;\nverify proof = plan with Policy;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_VERIFY_REQUIRES_EVIDENCE"
+      }
+    },
+    {
+      "name": "duplicate-binding-denied",
+      "source": "observe x = 1 from \"a\";\nobserve x = 2 from \"b\";",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_DUPLICATE_BINDING"
+      }
+    },
+    {
+      "name": "secret-reference-cannot-be-ordinary-argument",
+      "source": "requires secret key: SigningCredential;\nop leak = Log(key) @ Audit;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_SECRET_EXFILTRATION"
+      }
+    },
+    {
+      "name": "valid-opaque-secret-binding",
+      "source": "requires secret key: SigningCredential;\nop sign = Sign(\"digest\") @ Local using secrets key;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_SECRET",
+          "PLAN"
+        ]
+      }
+    },
+    {
+      "name": "valid-imported-prepared-commit",
+      "source": "requires prepared prior: Deploy @ Production;\ncommit prior as receipt;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_PREPARED",
+          "COMMIT"
+        ]
+      }
+    },
+    {
+      "name": "valid-prepared-cancellation",
+      "source": "requires prepared prior: Deploy @ Production;\ncancel prior as canceled;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_PREPARED",
+          "CANCEL"
+        ]
+      }
+    },
+    {
+      "name": "prepared-terminal-transition-is-linear",
+      "source": "requires prepared prior: Deploy @ Production;\ncancel prior as canceled;\ncommit prior as receipt;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_LINEAR_OPERATION_REUSE"
+      }
+    },
+    {
+      "name": "valid-explicit-quorum-authority",
+      "source": "requires quorum gate: Deploy @ Production threshold 2 of Operator, Security, Provider;\nop release = Deploy(\"artifact\") @ Production;\nauthorize release using gate as armed;",
+      "expect": {
+        "ok": true,
+        "instruction_ops": [
+          "REQUIRE_QUORUM",
+          "PLAN",
+          "AUTHORIZE"
+        ]
+      }
+    },
+    {
+      "name": "invalid-quorum-threshold",
+      "source": "requires quorum gate: Deploy @ Production threshold 3 of Operator, Security;",
+      "expect": {
+        "ok": false,
+        "code": "PRAXIS_INVALID_QUORUM"
+      }
+    }
+  ],
+  "canonical_fixtures": [
+    {
+      "name": "primitive-null",
+      "value": null
+    },
+    {
+      "name": "primitive-negative-zero-normalizes",
+      "value": 0
+    },
+    {
+      "name": "nested-record-key-order",
+      "value": {
+        "z": 1,
+        "a": {
+          "d": 4,
+          "b": 2
+        },
+        "m": [
+          3,
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "name": "unicode-and-empty",
+      "value": {
+        "empty": "",
+        "text": "Praxis Ω"
+      }
+    },
+    {
+      "name": "boolean-number-array",
+      "value": [
+        true,
+        false,
+        0,
+        -12.5,
+        42
+      ]
+    }
+  ]
+}

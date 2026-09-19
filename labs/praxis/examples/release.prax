@@ -1,0 +1,10 @@
+requires permit deploy_prod: Deploy @ Production;
+
+observe source_commit = "sha256:abc123" from "git:main";
+verify verified_source = source_commit with GitIntegrity;
+assess release_candidate = verified_source with ReleasePolicy;
+
+op release = Deploy(verified_source) @ Production;
+authorize release using deploy_prod as armed_release;
+prepare armed_release as prepared_release;
+commit prepared_release as release_receipt;
