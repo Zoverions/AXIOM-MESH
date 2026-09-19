@@ -19,7 +19,7 @@
 - the existing `Gateway -> Hypervisor -> Sandbox -> Grid` authority path
 - existing deny-dominant policy, explicit assurance tiers, observable decision provenance, exact-effect commitments, finite machine-principal ceilings, one-use capabilities, independent approvals, signed evidence, credential isolation, and fail-closed semantics
 
-**External research input:** TypeSafe AI, *Introducing System One Models and Jev* (2026-09-14), https://typesafe.ai/blog/introducing-system-one-models-and-jev ; TypeSafe AI documentation on System One primitives, confidence, and composition, https://docs.typesafe.ai/ . These sources motivate the architectural shape: unstructured state plus atomic typed questions, closed answer spaces, probability distributions, parallel evaluation, confidence-aware routing, and deterministic composition in ordinary software. TypeSafe's claims and current model performance are treated as external evidence, not as AXIOM trust roots or production-quality guarantees.
+**External research input:** TypeSafe AI, *Introducing System One Models and Jev* (2026-09-14), https://typesafe.ai/blog/introducing-system-one-models-and-jev ; TypeSafe AI documentation on System One primitives, confidence, and composition, https://docs.typesafe.ai/ . These sources motivate the architectural shape: unstructured state plus atomic typed questions, closed answer spaces, probability distributions, parallel evaluation, confidence-aware routing, and deterministic composition in ordinary software. Cua's open-source CUA-S1 research family, including the source-only `cua-s1-form-v0` form specialist under https://github.com/trycua/cua, provides a second concrete example: small specialist models can propose closed UI micro-decisions while ordinary code retains validation, sequencing, execution, and submission control. TypeSafe and Cua claims and current model performance are treated as external evidence, not as AXIOM trust roots or production-quality guarantees.
 
 **Authority boundary:** `mesh/config/capabilities.json` remains authoritative. This design creates no executable capability, no model-provider authority, no external network access, no credential visibility, no provider activation, no automatic tool use, no autonomous policy mutation, no assurance promotion, no production routing change, and no direct change to `axiom-plan.v1`. A bounded decision result is evidence only until independently consumed by deterministic AXIOM policy or a separately authorized workflow.
 
@@ -766,6 +766,25 @@ Therefore Jev should enter AXIOM, if separately implemented, as an **experimenta
 
 ---
 
+### 18.1 CUA-S1-FORMS local conformance posture
+
+CUA-S1-FORMS is a useful second conformance target because it demonstrates a narrower specialist pattern than Jev. The current Cua source defines form-element decisions over a closed action space derived from supplied document entities plus fixed `check`, `click`, and `skip` actions. Its planner separates scoring from execution, uses snapshot-bound element tokens, re-observes after mutations, and treats execution/submission as separate opt-ins.
+
+AXIOM adopts the interoperability lesson without importing Cua's runtime authority model:
+
+- the AXIOM adapter is evidence-only and performs no Cua Driver, MCP, filesystem, network, subprocess, credential, or UI action;
+- the first accepted provider posture is `owner-local` with `exact-artifact` revision evidence and full probability distributions;
+- AXIOM option identity is fixed before evaluation as contiguous `fill.N` entity choices followed by `check`, `click`, and explicit `skip` abstention;
+- the source snapshot id, opaque element token, state digest, question identity, and normalized observation digest remain bound in an inert target-binding receipt;
+- `skip` is preserved as abstention rather than converted into a fallback action;
+- a `click` decision never implies submit authorization; submit authority remains explicitly false in the adapter binding;
+- provider confidence remains probability evidence only and cannot raise AXIOM assurance;
+- no capability-registry entry, Gateway path, runtime activation, production route, or `axiom-plan.v1` field is added by this conformance adapter.
+
+As of the referenced Cua source release, the repository defines the research package and model profile but does not distribute official checkpoint weights or establish checkpoint performance claims. AXIOM therefore treats the adapter as a contract/conformance surface until a separately reviewed exact artifact and reproducible evaluation evidence exist.
+
+---
+
 ## 19. First implementation slices
 
 ### Slice A — inert contracts and fixtures
@@ -878,6 +897,7 @@ The following choices are normative for the implementation plan unless a new des
 13. Jev, if added later, begins as an experimental disabled-by-default adapter.
 14. Provider offering revision evidence must remain explicit; mutable aliases are not silently promoted to exact version identity.
 15. Any future production use for consequential actions requires a separate calibration, routing, disclosure, and authority review.
+16. CUA-S1-FORMS conformance begins as an owner-local exact-artifact evidence adapter only; snapshot/element binding, explicit `skip` abstention, and no-submit/no-execution semantics are mandatory until a separate runtime review changes that boundary.
 
 ---
 
