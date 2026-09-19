@@ -117,12 +117,17 @@ test('rejects authority-widening fields and digest mismatch', () => {
 });
 
 test('rejects embedded secrets in public incident artifacts', () => {
-  assert.throws(
-    () => baseIncident({
-      observed_behavior: 'Found api_key=sk-test-should-not-embed'
-    }),
-    /secret|credential/i
-  );
+  for (const observed_behavior of [
+    'Found api_key=sk-test-should-not-embed',
+    'Observed credential AKIA1234567890ABCDEF in public evidence.',
+    'Observed credential AIza12345678901234567890123456789012345 in public evidence.',
+    'Observed credential sk_live_1234567890abcdef in public evidence.'
+  ]) {
+    assert.throws(
+      () => baseIncident({ observed_behavior }),
+      /secret|credential/i
+    );
+  }
 });
 
 test('append-only supersession preserves original observation digest', () => {

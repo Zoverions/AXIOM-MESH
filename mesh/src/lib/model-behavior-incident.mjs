@@ -535,10 +535,14 @@ function validateBoundaryConstants(document) {
 function assertNoEmbeddedSecrets(document) {
   const forbidden = [
     /api[_-]?key\s*[:=]/i,
-    /bearer\s+[A-Za-z0-9._\-]+/i,
-    /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
-    /ghp_[A-Za-z0-9]{20,}/,
-    /xox[baprs]-[A-Za-z0-9-]+/
+    /\bBearer\s+[A-Za-z0-9._~+/=-]{20,4096}\b/i,
+    /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/,
+    /\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{40,255})\b/,
+    /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/,
+    /\bAIza[A-Za-z0-9_-]{35}\b/,
+    /\bxox[baprs]-[A-Za-z0-9-]{10,255}\b/,
+    /\bsk_(?:live|test)_[A-Za-z0-9]{16,255}\b/,
+    /\b[a-z][a-z0-9+.-]*:\/\/[^:\s/@]{1,256}:[^@\s/]{1,1024}@/i
   ];
   const text = JSON.stringify(document);
   for (const pattern of forbidden) {
