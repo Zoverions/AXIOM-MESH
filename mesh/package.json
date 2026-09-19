@@ -70,6 +70,7 @@
     "verify-export": "node src/verify-export.mjs",
     "verify-sync": "node src/verify-sync.mjs",
     "check-registry": "node src/check-registry.mjs",
+    "interrogation:report": "node src/interrogation-plane.mjs",
     "docs:check": "node src/check-docs.mjs",
     "status:generate": "node src/status.mjs --write",
     "status:check": "node src/status.mjs",
