@@ -420,22 +420,25 @@ async function readJson(path) {
 }
 
 test('working-tree permission scan flags group- or other-writable files', async () => {
+  // Build every mocked path with join() so the keys match what the
+  // implementation produces on any platform (Windows uses backslashes).
+  const root = join('/repo');
   const listing = new Map([
-    ['/repo', [
+    [root, [
       { name: 'clean.mjs', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
       { name: 'wide.mjs', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
       { name: 'node_modules', isDirectory: () => true, isFile: () => false, isSymbolicLink: () => false }
     ]],
-    ['/repo/node_modules', [
+    [join(root, 'node_modules'), [
       { name: 'dep.mjs', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false }
     ]]
   ]);
   const modes = new Map([
-    ['/repo/clean.mjs', 0o100644],
-    ['/repo/wide.mjs', 0o100664]
+    [join(root, 'clean.mjs'), 0o100644],
+    [join(root, 'wide.mjs'), 0o100664]
   ]);
   const result = await checkWorkingTreePermissions({
-    repositoryRoot: '/repo',
+    repositoryRoot: root,
     platform: 'linux',
     readdirImpl: async directory => listing.get(directory) ?? [],
     statImpl: async path => ({ mode: modes.get(path) })
