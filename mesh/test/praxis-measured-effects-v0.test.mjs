@@ -8,6 +8,7 @@ import {
   compile,
   createCharteredHostPermit,
   createHostOperationRegistry,
+  createHostPermit,
   createHostPreparedRef,
   createHostSecretRef,
   createOperationDescriptorPraxis,
@@ -95,6 +96,21 @@ const restrictedCharter = createSyntheticCharter({
     DestroyPolicy: {
       authority_kind: 'Permit',
       action: 'Destroy',
+      scope: 'Production',
+      expires_ms: 60_000
+    }
+  }
+}, root.privateKey);
+
+const noEnvelopeCharter = createSyntheticCharter({
+  principals,
+  agents: {
+    ReleaseAgent: 'Deployer'
+  },
+  policies: {
+    DeployPolicy: {
+      authority_kind: 'Permit',
+      action: 'Deploy',
       scope: 'Production',
       expires_ms: 60_000
     }
@@ -392,6 +408,49 @@ test('host action/scope/effect/egress contract mismatch fails at link time', asy
     ),
     error => error instanceof PraxisRuntimeError
       && error.code === 'PRAXIS_LINK_MISMATCH'
+  );
+});
+
+test('measured effects cannot execute under raw laboratory authority', async () => {
+  const operation = measuredOperation();
+  const gate = createHostPermit({
+    id: 'permit:raw-measured',
+    action: 'Deploy',
+    scope: 'Production',
+    operationDigest: operation.operation_digest
+  });
+  let prepareCalls = 0;
+
+  await assert.rejects(
+    () => run(DEPLOY_SOURCE, {
+      authorities: { gate },
+      hostOperations: registry,
+      now: 2_000,
+      preparer: async request => {
+        prepareCalls += 1;
+        return durablePreparer()(request);
+      }
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EFFECT_AUTHORITY_REQUIRED'
+  );
+
+  assert.equal(prepareCalls, 0);
+});
+
+test('measured chartered authority requires an explicit requester effect envelope', async () => {
+  await assert.rejects(
+    () => createCharteredHostPermit({
+      id: 'permit:no-effect-envelope',
+      charter: noEnvelopeCharter,
+      trustedRootKeys: trustedRoots,
+      policyName: 'DeployPolicy',
+      operation: measuredOperation(),
+      requester: 'ReleaseAgent',
+      now: 1_000
+    }),
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_EFFECT_ENVELOPE_REQUIRED'
   );
 });
 
