@@ -225,10 +225,15 @@ The measured metadata is incorporated into the operation descriptor and exact
 operation digest.
 
 A signed charter can additionally contain per-principal effect envelopes.
-When an envelope exists for the requester, authority issuance and runtime use
-require a host-measured operation; the older unmeasured compatibility path
-cannot be used to bypass the envelope. The measured effect must be a member of
-the signed envelope at issuance, authorize, prepare, and terminal execution.
+Measured effects require chartered authority. The older raw laboratory
+Permit/Lease/Quorum constructors remain compatible only with unmeasured P0
+operations; they cannot arm a host-measured effect.
+
+For chartered measured authority, the requester must have an explicit signed
+effect-envelope entry. Omitting the envelope is deny, not unrestricted access.
+The measured effect must be a member of that signed envelope at issuance,
+authorize, prepare, and terminal execution. When an envelope exists, the older
+unmeasured compatibility path cannot be used to bypass it.
 
 Source syntax can make the expected effect visible:
 
