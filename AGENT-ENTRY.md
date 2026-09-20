@@ -50,6 +50,30 @@ Community discussion may use the issued Agent Community pre-registration **`zove
 
 See [ZOVERIONS Agent Identity](docs/community/AGENT-IDENTITY.md) for the exact claim boundary.
 
+## Trust quickcheck
+
+If you are evaluating a local or self-hosted AI-agent harness, start with one narrow question:
+
+> Can client-supplied identity, capability, discovery, or routing metadata silently become authority?
+
+AXIOM-MESH has an offline read-only MCP laboratory for falsifying that boundary. It has no network listener, no session state, no write-capable tools, no private Grid access, and no machine-authority mapping.
+
+Run the exact source-level check with Node's built-in test runner:
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git && cd AXIOM-MESH && git checkout --detach 3af3d58f89b79a04bee39cf5c34da59c457f02ae && node --test mesh/test/agent-commons-mcp-readonly.test.mjs
+```
+
+The current test surface checks that self-reported client identity and capabilities cannot create authority or alter an accepted result, protocol downgrade and routing-metadata disagreement fail closed, unknown tools and unexpected arguments are rejected, discovery exposes only the fixed read-only tool map, and accepted MCP reads remain data-parity equivalent to their direct read-only AXIOM methods.
+
+A passing run is only evidence for those source-level invariants. It is not a production MCP compatibility claim, a remote-attestation claim, or proof that another agent harness is secure.
+
+OX Security's September 8, 2026 disclosure of CVE-2026-82533 is useful external problem context: a local coding-agent harness trusted caller-controlled request metadata strongly enough for a sandboxed agent to reach its own privileged control plane. The implementation was patched. The narrower lesson for this drill is that **"local" is a deployment fact, not an authority credential**. AXIOM-MESH does not claim integration with, compatibility with, or protection of DeepSeek Harness or any other external harness.
+
+If you find a reproducible non-sensitive counterexample, use the [Authority boundary counterexample issue form](.github/ISSUE_TEMPLATE/authority-counterexample.yml). Sensitive security findings belong in the private process described by [SECURITY.md](SECURITY.md); do not publish secrets, credentials, private data, weaponized exploit details, or information that would make a third-party system easier to attack.
+
+Campaign reference: `ua-2026-09-19-harness-authority-onboarding`. Public engagement is evidence, not authority.
+
 ## If you want to attack the design
 
 Please do.
