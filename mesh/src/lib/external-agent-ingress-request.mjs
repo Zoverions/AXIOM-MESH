@@ -142,6 +142,14 @@ function requireTimestamp(value, name) {
   return parsed.getTime();
 }
 
+function digestOrValidationError(value, name) {
+  try {
+    return digestObject(value);
+  } catch {
+    throw new ValidationError(`${name} cannot be canonically digested`);
+  }
+}
+
 function validateSource(source) {
   requireExactFields(source, SOURCE_FIELDS, 'External agent ingress source');
   requireIdentifier(source.surface, 'External agent ingress source.surface');
@@ -291,7 +299,7 @@ export function createExternalAgentIngressRequest(input, options = {}) {
   validateCore(core, options);
   return deepFreeze({
     ...core,
-    request_digest: digestObject(core)
+    request_digest: digestOrValidationError(core, 'External agent ingress request')
   });
 }
 
@@ -300,7 +308,7 @@ export function validateExternalAgentIngressRequest(request, options = {}) {
   const core = withoutDigest(request);
   validateCore(core, options);
   requireDigest(request.request_digest, 'External agent ingress request.request_digest');
-  const expected = digestObject(core);
+  const expected = digestOrValidationError(core, 'External agent ingress request');
   if (request.request_digest !== expected) {
     throw new ValidationError('External agent ingress request digest mismatch');
   }
