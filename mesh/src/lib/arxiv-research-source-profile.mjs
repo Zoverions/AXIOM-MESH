@@ -17,7 +17,7 @@ export const ARXIV_COMPLETE_FILES_SNAPSHOT = '2026-09-05';
 const ARXIV_ID = /^[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 const ARXIV_ABS_URL = /^https?:\/\/arxiv\.org\/abs\/[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}$/;
-const ARXIV_PDF_URL = /^https?:\/\/arxiv\.org\/pdf\/[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}$/;
+const ARXIV_PDF_URL = /^https?:\/\/arxiv\.org\/pdf\/[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}(?:\\.pdf)?$/;
 
 const AUTO_ADMIT_LICENSES = new Set([
   'http://creativecommons.org/publicdomain/zero/1.0/',
@@ -189,7 +189,7 @@ export function verifyArxivIndexRecord(value) {
 
   const normalized = normalizeIndexRecordForVerification(value);
   const expectedPolicy = classifyArxivLicense(normalized.license);
-  if (JSON.stringify(value.ingestion_policy) !== JSON.stringify(expectedPolicy)) {
+  if (digestObject(value.ingestion_policy) !== digestObject(expectedPolicy)) {
     throw new ValidationError('ArxivIndexRecord.ingestion_policy does not match license classification');
   }
 
@@ -229,7 +229,10 @@ export function buildArxivPaperTextManifest({
     ],
     code_refs: [],
     code_revision: null,
-    license_refs: [index.license],
+    license_refs: [
+      `paper-metadata-license:${index.license}`,
+      'license-scope:paper-level:not-version-history'
+    ],
     authorship_refs: [`${index.arxiv_abs_url}#authors`],
     correction_refs: [],
     currentness_state: 'unknown'
@@ -250,6 +253,9 @@ export function buildArxivVersionedPdfManifest({
   const index = verifyArxivIndexRecord(indexRecord);
   assertAutoAdmitted(index);
   const version = verifyVersionBinding(index, versionRow);
+  if (!version.is_latest_version) {
+    throw new ValidationError('historical arXiv PDF requires version-specific licence evidence');
+  }
   const pdf = verifyPdfBinding(index, version, pdfRow);
   const retrieved = canonicalTimestamp(retrievedAt, 'retrieved_at');
 
@@ -271,10 +277,13 @@ export function buildArxivVersionedPdfManifest({
     ],
     code_refs: [],
     code_revision: null,
-    license_refs: [index.license],
+    license_refs: [
+      `paper-metadata-license:${index.license}`,
+      'license-scope:latest-snapshot-version-candidate'
+    ],
     authorship_refs: [`${index.arxiv_abs_url}#authors`],
     correction_refs: [],
-    currentness_state: version.is_latest_version ? 'unknown' : 'stale_revision'
+    currentness_state: 'unknown'
   };
 
   return verifyResearchSourceManifest({
@@ -336,6 +345,10 @@ function verifyVersionBinding(index, versionRow) {
   const pdfUrl = requiredString(versionRow.arxiv_pdf_url, 'versionRow.arxiv_pdf_url', 512);
   if (!ARXIV_PDF_URL.test(pdfUrl)) {
     throw new ValidationError('versionRow.arxiv_pdf_url must be an arxiv.org PDF URL');
+  }
+  const pdfLocator = pdfUrl.slice(pdfUrl.indexOf('/pdf/') + 5).replace(/\\.pdf$/, '');
+  if (pdfLocator !== `${index.paper_id}v${version}`) {
+    throw new ValidationError('versionRow.arxiv_pdf_url must bind the exact paper_id and version');
   }
 
   return {
@@ -407,6 +420,9 @@ function normalizeIndexRecordForVerification(value) {
   assertInteger(value.n_versions, 'ArxivIndexRecord.n_versions', 1, 1000);
   const firstVersionDate = canonicalTimestamp(value.first_version_date, 'ArxivIndexRecord.first_version_date');
   const latestVersionDate = canonicalTimestamp(value.latest_version_date, 'ArxivIndexRecord.latest_version_date');
+  if (firstVersionDate !== value.first_version_date || latestVersionDate !== value.latest_version_date) {
+    throw new ValidationError('ArxivIndexRecord version timestamps must be canonical UTC ISO-8601');
+  }
   if (new Date(latestVersionDate).getTime() < new Date(firstVersionDate).getTime()) {
     throw new ValidationError('ArxivIndexRecord latest version cannot precede first version');
   }
