@@ -134,7 +134,7 @@ The dataset is a snapshot. Therefore `is_latest_version: true` means only "lates
 
 It does not prove live arXiv currentness.
 
-For a versioned PDF admitted by this v0 profile, latest-in-snapshot maps to `currentness_state: unknown`. A superseded version is not auto-admitted as full text because its exact historical licence is not established by this dataset.
+For versioned PDFs, the automatic profile is explicit:\n\n- latest-in-snapshot -> `currentness_state: unknown`;\n- superseded-in-snapshot -> automatic full-text admission denied until version-specific licence evidence exists.
 
 For `paper_text`, currentness is always `unknown` because the source package is not version-bound.
 
