@@ -22,7 +22,7 @@
         "has_pdf": true,
         "pdf_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "license": "http://creativecommons.org/licenses/by/4.0/",
-        "arxiv_pdf_url": "https://arxiv.org/pdf/2609.00001"
+        "arxiv_pdf_url": "https://arxiv.org/pdf/2609.00001v2"
       },
       "pdf": {
         "paper_id": "2609.00001",
@@ -84,7 +84,7 @@
         "has_pdf": true,
         "pdf_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "license": "http://creativecommons.org/publicdomain/zero/1.0/",
-        "arxiv_pdf_url": "https://arxiv.org/pdf/2609.00003"
+        "arxiv_pdf_url": "https://arxiv.org/pdf/2609.00003v2"
       },
       "pdf": {
         "paper_id": "2609.00003",
