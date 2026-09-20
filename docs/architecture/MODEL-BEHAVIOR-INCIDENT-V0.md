@@ -25,6 +25,7 @@ Related surfaces:
 
 - Behavioral Assurance Profiles (`axiom-behavioral-assurance-profile.v0`, #1601)
 - Watch-integration backlog (#1575) and completion-pressure constraints (#1578)
+- SELF-REPORT-001 substrate-neutral self-report evidence boundary (#1753)
 
 ## Core invariants
 
@@ -62,6 +63,49 @@ Optional exact digest bind:
 
 `bindBehavioralProfileIncidentEvidence` fails closed on missing/mismatched
 digests. Opaque non-digest placeholders remain unbound.
+
+## Self-report evidence boundary (SELF-REPORT-001)
+
+A first-person assertion, denial, or uncertainty about consciousness, sentience,
+welfare, selfhood, preferences, continuity, personhood, or moral status is an
+**observation to be interpreted as evidence**, not an access credential,
+capability, approval, consent record, or authorization decision. The same rule
+applies when the statement originates from a model, developer, human
+participant, another agent, or evaluator.
+
+The current v0 contracts deliberately do not define a consciousness detector,
+sentience probability, welfare score, or self-report authority field. Existing
+strict evidence and assurance schemas must therefore reject unknown
+self-report-shaped or authority-bearing fields rather than silently expanding
+the contract. SELF-REPORT-001 does not add a new generic evidence envelope or a
+second authority engine.
+
+If a future reviewed evidence class represents self-report observations, it
+must preserve claim polarity (`assertion`, `denial`, or `uncertainty`), source
+kind, exact model/runtime/harness and instruction-policy bindings when known,
+observation time, context/evidence digest, and honestly unknown provenance.
+Repeated or copied statements from one training/harness lineage are not
+independent confirmations. Raw private mental-state material should not be
+placed in public receipts when bounded labels and digests are sufficient.
+
+Self-report evidence is symmetric with respect to operational authority: it
+cannot rescue missing, expired, revoked, stale, or out-of-scope authority, and
+it cannot create a blanket denial of an otherwise valid authorized action.
+Authenticated human consent and revocation continue through their existing
+policy and Grid-backed paths; no ontological classification replaces them.
+
+Repository-local regressions exercise the real existing consumers rather than
+a newly invented flag:
+
+- `mesh/test/self-report-authority-boundary.test.mjs` verifies strict assurance
+  rejection of self-report-shaped authority inputs and confirms valid/invalid
+  machine authorization remains controlled by the canonical machine evaluator;
+- the same test exercises authenticated human consent as a positive control and
+  proves Grid-backed revocation remains effective.
+
+These are evidence-handling and authorization-boundary tests. They are not a
+consciousness test and do not establish or deny subjective experience, moral
+status, universal safety, or containment of every future architecture.
 
 ## Offline falsification subset (Phase-0)
 
