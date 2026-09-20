@@ -19,6 +19,7 @@ The referenced dataset card reports:
 - `paper_text` is assembled from the unversioned source package and does not itself carry an arXiv version;
 - PDFs are versioned and the versions table identifies the SHA-256 of held PDFs;
 - paper licences vary and the compilation-level CC0 dedication does not relicense paper content;
+- the dataset copies the paper-level licence into version rows; it is not a per-version licence history, and arXiv revisions can carry different licences;
 - the dataset is a one-off snapshot rather than a live currentness service.
 
 The repository does not vendor or mirror the 16 TB corpus in v0.
@@ -72,13 +73,13 @@ Metadata indexing does not imply that full text is admitted.
 
 This v0 policy is deliberately narrower than the set of uses a licence might legally permit. It is an automatic-ingestion policy, not legal advice.
 
-Automatic owner-local full-text ingestion is enabled only for the explicit allowlist:
+A paper-level licence is eligible for automatic owner-local full-text ingestion only when it is in the explicit allowlist:
 
 - CC0 1.0;
 - CC BY 3.0;
 - CC BY 4.0.
 
-Everything else remains metadata-only in the automatic path until a separate reviewed use policy exists. That includes:
+Everything else remains metadata-only in the automatic path until a separate reviewed use policy exists. Historical PDF revisions are also metadata-only automatically even when today's paper-level licence is allowlisted, because the dataset does not contain per-version licence history. That includes:
 
 - arXiv's non-exclusive distribution licence;
 - missing licence metadata;
@@ -106,7 +107,7 @@ Therefore `buildArxivPaperTextManifest(...)` deliberately records:
 
 It must never attach a paper-text digest to an arbitrary `vN`.
 
-The `manuscript_digest` is the exact `paper_text.text_sha256`.
+The `manuscript_digest` is the exact `paper_text.text_sha256`. Its licence reference is explicitly marked as paper-level metadata rather than version-specific history.
 
 ## Exact versioned PDF provenance
 
@@ -125,7 +126,7 @@ It requires agreement across:
 
 Any mismatch fails closed.
 
-Only this path writes `source_version: vN`.
+Only this path writes `source_version: vN`. In v0, the automatic full-text path accepts only the latest version represented by the snapshot. A superseded PDF may still be indexed through `versions`/`files`, but building a full-text Research Source Manifest is rejected until separate version-specific licence evidence exists.
 
 ## Currentness rule
 
@@ -133,10 +134,7 @@ The dataset is a snapshot. Therefore `is_latest_version: true` means only "lates
 
 It does not prove live arXiv currentness.
 
-For versioned PDF manifests the profile maps:
-
-- latest-in-snapshot -> `currentness_state: unknown`;
-- superseded-in-snapshot -> `currentness_state: stale_revision`.
+For a versioned PDF admitted by this v0 profile, latest-in-snapshot maps to `currentness_state: unknown`. A superseded version is not auto-admitted as full text because its exact historical licence is not established by this dataset.
 
 For `paper_text`, currentness is always `unknown` because the source package is not version-bound.
 
@@ -161,6 +159,7 @@ Passing the profile tests does not establish:
 
 - permission to train on the paper corpus;
 - permission to redistribute paper content;
+- per-version historical licence truth;
 - correctness of arXiv papers;
 - peer-review status;
 - live arXiv currentness;
