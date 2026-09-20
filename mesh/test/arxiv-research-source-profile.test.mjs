@@ -107,22 +107,23 @@ test('versioned PDF latest-in-snapshot is still unknown, never live current', as
   assert.notEqual(manifest.currentness_state, 'current');
   assert.equal(manifest.source_version, 'v2');
   assert.equal(manifest.manuscript_digest, `sha256:${raw.pdf.sha256}`);
+  assert.ok(manifest.license_refs.includes('license-scope:latest-snapshot-version-candidate'));
 });
 
-test('superseded versioned PDF is preserved as stale_revision', async () => {
+test('historical PDF is denied automatic full-text admission without version-specific licence evidence', async () => {
   const data = await fixtures();
   const raw = data.cases.find(item => item.id === 'cc0-stale-pdf');
   const index = normalizeArxivIndexRecord(raw.metadata);
-  const manifest = buildArxivVersionedPdfManifest({
-    index_record: index,
-    version_row: raw.version,
-    pdf_row: raw.pdf,
-    retrieved_at: '2026-09-20T16:30:00.000Z'
-  });
-
-  verifyResearchSourceManifest(manifest);
-  assert.equal(manifest.currentness_state, 'stale_revision');
-  assert.equal(manifest.source_version, 'v2');
+  assert.equal(raw.version.is_latest_version, false);
+  assert.throws(
+    () => buildArxivVersionedPdfManifest({
+      index_record: index,
+      version_row: raw.version,
+      pdf_row: raw.pdf,
+      retrieved_at: '2026-09-20T16:30:00.000Z'
+    }),
+    /historical arXiv PDF requires version-specific licence evidence/
+  );
 });
 
 test('arXiv nonexclusive paper remains metadata-only in automatic profile', async () => {
@@ -143,7 +144,7 @@ test('arXiv nonexclusive paper remains metadata-only in automatic profile', asyn
   );
 });
 
-test('paper, title, category, licence, version, and PDF digest mismatches fail closed', async () => {
+test('paper, title, category, licence, version locator, and PDF digest mismatches fail closed', async () => {
   const data = await fixtures();
   const raw = data.cases.find(item => item.id === 'cc-by-latest');
   const index = normalizeArxivIndexRecord(raw.metadata);
@@ -173,6 +174,16 @@ test('paper, title, category, licence, version, and PDF digest mismatches fail c
       retrieved_at: '2026-09-20T16:30:00.000Z'
     }),
     /title does not match/
+  );
+
+  assert.throws(
+    () => buildArxivVersionedPdfManifest({
+      index_record: index,
+      version_row: { ...raw.version, arxiv_pdf_url: 'https://arxiv.org/pdf/2609.00001v1' },
+      pdf_row: raw.pdf,
+      retrieved_at: '2026-09-20T16:30:00.000Z'
+    }),
+    /bind the exact paper_id and version/
   );
 
   assert.throws(
