@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-09-19
+**Updated:** 2026-09-20
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -128,7 +128,7 @@ capability.
 | AGENT-003 | Pending | Converge Agent Contributor Mode progression | Select one currentness -> bounded contributor session -> attenuation/delegation -> signed handoff -> portable receipt -> independent verification path; supersede overlapping laboratory variants before activation |
 | AGENT-004 | Pending | Govern first consequential contributor effect | Exact sponsor/currentness/authority digest, finite action/data/destination/budget, late revalidation, disposable execution, durable receipt, revocation, independent review, no authority from identity/reputation/majority |
 | AGENT-005 | Complete for production-unreachable inert selection | System One operation-candidate selection v0 | Merged PR #1683; deterministic eligibility before semantic ranking; exact task/operation/manifest evidence binding; bounded Top-K and visibility-preserving fallback; hard context ceiling; trusted-input proposal verification; zero authority/network/credential/runtime/execution effect |
-| SUPERVISE-001 | In progress — read-only v0 | Interrogation Plane | Deterministic capability/evidence and service-network graph; canonical documentation verification; conceptual authority path remains separate from actual network edges; future semantic attention signals remain advisory and grant no authority |
+| SUPERVISE-001 | Complete for production-unreachable read-only v0 | Interrogation Plane | Merged PR #1686; deterministic capability/evidence and service-network graph; canonical documentation verification; conceptual authority path remains separate from actual network edges; zero capability/network/credential/runtime/merge/deploy authority; future semantic attention signals remain advisory and grant no authority |
 | INTENT-001 | Complete for production-unreachable core | Signed dynamic repository-plan resolution | Fresh eligibility, exact repo/base/path/lifetime, signed plan, content-addressed resolution/handoff, staleness/tamper/substitution rejection |
 | INTENT-002 | Complete for production-unreachable core | Resolver admission/review/package/application observation | Independent implementation/security reviews, exact-one mapping package, exact before/after observation, no installation-as-authority |
 | INTENT-003 | Complete for production-unreachable core | Preserve target policy + atomically durable preparation | Resolved target policy/confirmation/independent approval; authenticated Grid read; one transaction `approval.consumed` + `external.effect.prepared`; one-winner concurrency proof |
@@ -147,7 +147,6 @@ closure should distinguish completion of the safety substrate from any later
 production activation decision.
 
 ## P2 — multi-host foundations
-
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | NET-001 | Complete for single-host candidate; multi-host custody pending | Mutually authenticated service transport | TLS 1.3, CA/active-leaf validation, signed caller binding, rotation/rollback, real-stack evidence |
