@@ -192,6 +192,19 @@ test('unsupported transport/effect values and duplicate refs fail closed', () =>
   );
 });
 
+test('canonicalization failures are normalized to ValidationError', () => {
+  const request = clone(createExternalAgentIngressRequest(baseInput(), OPTIONS));
+  Object.defineProperty(request.intent, 'hidden_state', {
+    value: 'must-not-escape-as-TypeError',
+    enumerable: false
+  });
+  assert.throws(
+    () => validateExternalAgentIngressRequest(request, OPTIONS),
+    (error) => error instanceof ValidationError
+      && /cannot be canonically digested/.test(error.message)
+  );
+});
+
 test('schema hard-codes the zero-authority ingress boundary', () => {
   const schema = JSON.parse(readFileSync(
     new URL('../config/external-agent-ingress-request-v0.schema.json', import.meta.url),
@@ -207,6 +220,15 @@ test('schema hard-codes the zero-authority ingress boundary', () => {
   assert.equal(schema.properties.principal.properties.identity_claim_external_only.const, true);
   assert.equal(schema.properties.evidence.properties.external_claim_only.const, true);
   assert.equal(allObjectSchemasClosed(schema), true);
+
+  const observedPattern = new RegExp(schema.properties.observed_at.pattern);
+  assert.equal(observedPattern.test('2026-09-20T15:00:00.000Z'), true);
+  assert.equal(observedPattern.test('2026-09-20T15:00:00Z'), false);
+  assert.equal(observedPattern.test('2026-09-20T11:00:00.000-04:00'), false);
+  assert.equal(
+    schema.properties.expires_at.pattern,
+    schema.properties.observed_at.pattern
+  );
 });
 
 test('A0 implementation has no network, Gateway, authority-engine, or secret path', () => {
