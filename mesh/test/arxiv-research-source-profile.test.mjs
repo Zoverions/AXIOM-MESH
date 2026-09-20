@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
-  buildArxivResearchSourceManifest,
+  buildArxivPaperTextManifest,
+  buildArxivVersionedPdfManifest,
   classifyArxivLicense,
   normalizeArxivIndexRecord,
   verifyArxivIndexRecord
@@ -73,32 +74,49 @@ test('metadata normalization is deterministic and digest-bound', async () => {
   assert.deepEqual(first.categories, ['cs.AI', 'cs.CR']);
 });
 
-test('latest-in-snapshot full text becomes unknown currentness, never live current', async () => {
+test('paper_text source remains explicitly unversioned and unknown-currentness', async () => {
   const data = await fixtures();
   const raw = data.cases.find(item => item.id === 'cc-by-latest');
   const index = normalizeArxivIndexRecord(raw.metadata);
-  const manifest = buildArxivResearchSourceManifest({
+  const manifest = buildArxivPaperTextManifest({
     index_record: index,
-    version_row: raw.version,
     paper_text_row: raw.paper_text,
     retrieved_at: '2026-09-20T16:30:00.000Z'
   });
 
   verifyResearchSourceManifest(manifest);
   assert.equal(manifest.currentness_state, 'unknown');
-  assert.notEqual(manifest.currentness_state, 'current');
+  assert.match(manifest.source_version, /^unversioned-source-snapshot:/);
   assert.equal(manifest.manuscript_digest, `sha256:${raw.paper_text.text_sha256}`);
-  assert.deepEqual(manifest.license_refs, [raw.metadata.license]);
+  assert.ok(manifest.data_refs.includes('provenance:paper_text:source_version_not_proven'));
 });
 
-test('superseded snapshot version is preserved as stale_revision', async () => {
+test('versioned PDF latest-in-snapshot is still unknown, never live current', async () => {
   const data = await fixtures();
-  const raw = data.cases.find(item => item.id === 'cc0-stale');
+  const raw = data.cases.find(item => item.id === 'cc-by-latest');
   const index = normalizeArxivIndexRecord(raw.metadata);
-  const manifest = buildArxivResearchSourceManifest({
+  const manifest = buildArxivVersionedPdfManifest({
     index_record: index,
     version_row: raw.version,
-    paper_text_row: raw.paper_text,
+    pdf_row: raw.pdf,
+    retrieved_at: '2026-09-20T16:30:00.000Z'
+  });
+
+  verifyResearchSourceManifest(manifest);
+  assert.equal(manifest.currentness_state, 'unknown');
+  assert.notEqual(manifest.currentness_state, 'current');
+  assert.equal(manifest.source_version, 'v2');
+  assert.equal(manifest.manuscript_digest, `sha256:${raw.pdf.sha256}`);
+});
+
+test('superseded versioned PDF is preserved as stale_revision', async () => {
+  const data = await fixtures();
+  const raw = data.cases.find(item => item.id === 'cc0-stale-pdf');
+  const index = normalizeArxivIndexRecord(raw.metadata);
+  const manifest = buildArxivVersionedPdfManifest({
+    index_record: index,
+    version_row: raw.version,
+    pdf_row: raw.pdf,
     retrieved_at: '2026-09-20T16:30:00.000Z'
   });
 
@@ -116,9 +134,8 @@ test('arXiv nonexclusive paper remains metadata-only in automatic profile', asyn
   assert.equal(index.ingestion_policy.owner_local_full_text_ingest, 'deny');
 
   assert.throws(
-    () => buildArxivResearchSourceManifest({
+    () => buildArxivPaperTextManifest({
       index_record: index,
-      version_row: raw.version,
       paper_text_row: raw.paper_text,
       retrieved_at: '2026-09-20T16:30:00.000Z'
     }),
@@ -126,25 +143,23 @@ test('arXiv nonexclusive paper remains metadata-only in automatic profile', asyn
   );
 });
 
-test('paper, title, category, and license binding mismatches fail closed', async () => {
+test('paper, title, category, licence, version, and PDF digest mismatches fail closed', async () => {
   const data = await fixtures();
   const raw = data.cases.find(item => item.id === 'cc-by-latest');
   const index = normalizeArxivIndexRecord(raw.metadata);
 
   assert.throws(
-    () => buildArxivResearchSourceManifest({
+    () => buildArxivPaperTextManifest({
       index_record: index,
-      version_row: { ...raw.version, paper_id: '2609.99999' },
-      paper_text_row: raw.paper_text,
+      paper_text_row: { ...raw.paper_text, paper_id: '2609.99999' },
       retrieved_at: '2026-09-20T16:30:00.000Z'
     }),
     /paper_id/
   );
 
   assert.throws(
-    () => buildArxivResearchSourceManifest({
+    () => buildArxivPaperTextManifest({
       index_record: index,
-      version_row: raw.version,
       paper_text_row: { ...raw.paper_text, license: 'http://creativecommons.org/publicdomain/zero/1.0/' },
       retrieved_at: '2026-09-20T16:30:00.000Z'
     }),
@@ -152,12 +167,21 @@ test('paper, title, category, and license binding mismatches fail closed', async
   );
 
   assert.throws(
-    () => buildArxivResearchSourceManifest({
+    () => buildArxivPaperTextManifest({
       index_record: index,
-      version_row: raw.version,
       paper_text_row: { ...raw.paper_text, title: 'Different title' },
       retrieved_at: '2026-09-20T16:30:00.000Z'
     }),
     /title does not match/
+  );
+
+  assert.throws(
+    () => buildArxivVersionedPdfManifest({
+      index_record: index,
+      version_row: raw.version,
+      pdf_row: { ...raw.pdf, sha256: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' },
+      retrieved_at: '2026-09-20T16:30:00.000Z'
+    }),
+    /pdf_sha256/
   );
 });
