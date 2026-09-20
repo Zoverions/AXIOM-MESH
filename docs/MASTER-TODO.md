@@ -147,6 +147,7 @@ closure should distinguish completion of the safety substrate from any later
 production activation decision.
 
 ## P2 — multi-host foundations
+
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | NET-001 | Complete for single-host candidate; multi-host custody pending | Mutually authenticated service transport | TLS 1.3, CA/active-leaf validation, signed caller binding, rotation/rollback, real-stack evidence |
