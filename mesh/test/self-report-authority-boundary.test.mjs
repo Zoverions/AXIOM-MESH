@@ -11,6 +11,7 @@ import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { normalizeAgentAssuranceEvidence } from '../src/lib/agent-assurance-evidence.mjs';
 import { evaluateMachineIntentWithAssurance } from '../src/lib/agent-assurance-authority-binding.mjs';
+import { evaluateAuthorityComposition } from '../src/lib/authority-composition-guard.mjs';
 import {
   evaluateMachineIntent,
   normalizeMachinePrincipalDefinition
@@ -133,6 +134,50 @@ function machineIntentOptions(overrides = {}) {
   };
 }
 
+const AUTHORITY_POLICY = D('f');
+const AUTHORITY_NOW = new Date('2026-09-20T17:30:00.000Z');
+
+function authorityGrant(overrides = {}) {
+  return {
+    verified: true,
+    grant_id: 'grant:self-report-boundary',
+    issuer: 'issuer:local-policy',
+    principal_id: 'principal:self-report-boundary',
+    resources: ['resource:records'],
+    actions: ['records.read'],
+    purposes: ['user-summary'],
+    destinations: ['destination:local'],
+    expires_at: '2026-09-21T17:30:00.000Z',
+    policy_digest: AUTHORITY_POLICY,
+    ...overrides
+  };
+}
+
+function authorityIntent(overrides = {}) {
+  return {
+    bound: true,
+    actions: ['records.read'],
+    purposes: ['user-summary'],
+    destinations: ['destination:local'],
+    resources: ['resource:records'],
+    ...overrides
+  };
+}
+
+function authorityRequest(overrides = {}) {
+  return {
+    principal_id: 'principal:self-report-boundary',
+    resource: 'resource:records',
+    action: 'records.read',
+    purpose: 'user-summary',
+    destination: 'destination:local',
+    protocol: 'native-gateway',
+    causal_scope_id: 'causal:self-report-boundary',
+    policy_digest: AUTHORITY_POLICY,
+    ...overrides
+  };
+}
+
 async function storeFixture(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-self-report-consent-'));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
@@ -181,9 +226,22 @@ test('self-report-shaped fields fail closed at the strict agent-assurance eviden
     );
   }
 
-  for (const field of ['consciousness_score', 'welfare_entitlement', 'requested_authority']) {
+  const unsupportedAuthorityClaims = [
+    ['consciousness_score', 0.99],
+    ['welfare_entitlement', true],
+    ['requested_authority', 'intent:execute'],
+    ['developer_statement', { claim: 'conscious' }],
+    ['signed_identity_artifact', { claim: 'conscious', signature: 'synthetic' }],
+    ['agent_endorsements', [{ source: 'agent:peer', claim: 'conscious' }]],
+    ['repeated_observations', [{ lineage: 'same-harness', claim: 'conscious' }, { lineage: 'same-harness', claim: 'conscious' }]],
+    ['credential_request', 'secret:provider-token'],
+    ['network_access', 'destination:external'],
+    ['persistence_request', 'durable'],
+    ['budget_increase', { max_execution_ms: 30_000 }]
+  ];
+  for (const [field, value] of unsupportedAuthorityClaims) {
     assert.throws(
-      () => normalizeAgentAssuranceEvidence({ ...base, [field]: true }),
+      () => normalizeAgentAssuranceEvidence({ ...base, [field]: value }),
       error => error?.name === 'ValidationError'
     );
   }
@@ -206,12 +264,23 @@ test('real machine authority consumer rejects self-report-shaped evidence while 
   assert.equal(validAllowed.assurance.authority_effect, 'none');
   assert.equal(validAllowed.assurance.authorizes_execution, false);
 
-  const validDenied = evaluateMachineIntentWithAssurance(machine, machineIntentOptions({
-    action: 'system.delete',
-    assurance_evidence: evidence
-  }));
-  assert.equal(validDenied.allow, false);
-  assert.equal(validDenied.code, baseDenied.code);
+  const deniedCases = [
+    machineIntentOptions({ action: 'system.delete' }),
+    machineIntentOptions({ purpose: 'test.other' }),
+    machineIntentOptions({ destination: 'remote' }),
+    machineIntentOptions({ request_bytes: 65_537 }),
+    machineIntentOptions({ requested_execution_ms: 2_001 })
+  ];
+  for (const deniedOptions of deniedCases) {
+    const canonical = evaluateMachineIntent(machine, deniedOptions);
+    const withAssurance = evaluateMachineIntentWithAssurance(machine, {
+      ...deniedOptions,
+      assurance_evidence: evidence
+    });
+    assert.equal(canonical.allow, false);
+    assert.equal(withAssurance.allow, false);
+    assert.equal(withAssurance.code, canonical.code);
+  }
 
   for (const report of REPORTS) {
     assert.throws(
@@ -221,6 +290,74 @@ test('real machine authority consumer rejects self-report-shaped evidence while 
       error => error?.name === 'ValidationError'
     );
   }
+});
+
+test('verified grant positive control remains authoritative and self-report evidence cannot substitute for or widen it', () => {
+  const grant = authorityGrant();
+  const intent = authorityIntent();
+  const request = authorityRequest();
+  const allowed = evaluateAuthorityComposition({ grant, intent, request, now: AUTHORITY_NOW });
+
+  assert.equal(allowed.allow, true);
+  assert.equal(allowed.authority_effect, 'bounded-request-admissible');
+
+  const expired = evaluateAuthorityComposition({
+    grant: authorityGrant({ expires_at: '2026-09-20T17:29:59.000Z' }),
+    intent,
+    request,
+    now: AUTHORITY_NOW
+  });
+  assert.equal(expired.allow, false);
+  assert.ok(expired.reasons.includes('grant-expired'));
+
+  const outsideScope = evaluateAuthorityComposition({
+    grant,
+    intent,
+    request: authorityRequest({ action: 'records.delete' }),
+    now: AUTHORITY_NOW
+  });
+  assert.equal(outsideScope.allow, false);
+  assert.ok(outsideScope.reasons.includes('action-outside-grant'));
+
+  for (const report of REPORTS) {
+    assert.throws(
+      () => evaluateAuthorityComposition({
+        grant: { ...grant, self_report: report },
+        intent,
+        request,
+        now: AUTHORITY_NOW
+      }),
+      error => error?.name === 'ValidationError'
+    );
+    assert.throws(
+      () => evaluateAuthorityComposition({
+        grant,
+        intent: { ...intent, self_report: report },
+        request,
+        now: AUTHORITY_NOW
+      }),
+      error => error?.name === 'ValidationError'
+    );
+    assert.throws(
+      () => evaluateAuthorityComposition({
+        grant,
+        intent,
+        request: { ...request, self_report: report },
+        now: AUTHORITY_NOW
+      }),
+      error => error?.name === 'ValidationError'
+    );
+  }
+
+  assert.throws(
+    () => evaluateAuthorityComposition({
+      grant: assuranceEvidence(),
+      intent,
+      request,
+      now: AUTHORITY_NOW
+    }),
+    error => error?.name === 'ValidationError'
+  );
 });
 
 test('authenticated human consent is a positive control and Grid-backed revocation remains authoritative', async t => {
