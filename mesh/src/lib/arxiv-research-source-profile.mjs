@@ -334,6 +334,24 @@ function verifyVersionBinding(index, versionRow) {
     throw new ValidationError('versionRow.has_pdf must be true for a versioned PDF manifest');
   }
 
+  if (version > index.n_versions) {
+    throw new ValidationError('versionRow.version exceeds indexed version count');
+  }
+  const versionTime = new Date(versionDate).getTime();
+  const firstVersionTime = new Date(index.first_version_date).getTime();
+  const latestVersionTime = new Date(index.latest_version_date).getTime();
+  if (versionTime < firstVersionTime || versionTime > latestVersionTime) {
+    throw new ValidationError('versionRow.version_date falls outside indexed version interval');
+  }
+  if (isLatestVersion) {
+    if (version !== index.n_versions) {
+      throw new ValidationError('latest versionRow.version must equal indexed n_versions');
+    }
+    if (versionDate !== index.latest_version_date) {
+      throw new ValidationError('latest versionRow.version_date must equal indexed latest_version_date');
+    }
+  }
+
   const pdfSha256 = requiredString(versionRow.pdf_sha256, 'versionRow.pdf_sha256', 64);
   assertSha256Hex(pdfSha256, 'versionRow.pdf_sha256');
 
