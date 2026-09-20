@@ -1,8 +1,8 @@
 # AXIOM Runtime & Connector Fabric
 
-**Status:** architecture draft `0.3.0`; documentation and contract work only
+**Status:** architecture draft `0.4.0`; documentation and contract work only
 
-**Updated:** 2026-08-21
+**Updated:** 2026-09-20
 
 **Authority boundary:** this document does not promote a capability. `mesh/config/capabilities.json` remains authoritative for runnable status.
 
@@ -575,3 +575,80 @@ This specification does not claim current support for:
 - production external-provider credentials.
 
 Those remain separately gated capabilities.
+
+
+## External-agent gateway profile: Muse-first ingress v0
+
+**Tracking:** GitHub issue #1746
+
+**Implementation status:** A0 inert ingress contract only. No Gateway route, provider I/O, connector credentials, persistence, capability promotion, or production activation is introduced by this stage.
+
+Meta's public Muse Connector Platform material, reviewed on 2026-09-20, establishes a useful integration shape: developers expose a service/API, Muse supplies the agent-side context and workflow, submitted connectors undergo functional/security/legal review, and approved connectors can appear in the Muse directory. The public platform page does not currently publish a stable wire schema or versioned connector endpoint contract that AXIOM can pin. AXIOM therefore records Muse as the first interoperability profile without inventing provider-specific protocol details.
+
+Public evidence:
+
+- https://muse.ai/platform
+- https://introducing.muse.ai/
+
+### A0 ingress contract
+
+The first implementation surface is the provider-neutral `axiom-external-agent-ingress-request.v0` contract:
+
+- implementation: `mesh/src/lib/external-agent-ingress-request.mjs`;
+- schema: `mesh/config/external-agent-ingress-request-v0.schema.json`;
+- falsification tests: `mesh/test/external-agent-ingress-request.test.mjs`.
+
+The envelope converts an external agent's request into bounded operation knowledge only. It carries a content digest for the external context instead of raw conversation or memory, an external-principal reference explicitly marked as an external claim, an exact AXIOM action name, an input digest, requested effect class, purpose, resource references, source evidence, and a short expiry.
+
+The hard boundary is encoded in both runtime validation and schema constants:
+
+- `authority_state = "unresolved"`;
+- `credentials_present = false`;
+- `grants_authority = false`;
+- `execution_effect = "none"`;
+- `network_effect = "none"`;
+- external identity and evidence claims are marked claim-only;
+- stale, future-dated, malformed, overlong, tampered, or unknown-field requests fail closed.
+
+A valid ingress request therefore means only: **an external surface proposed this exact bounded operation envelope**. It does not mean that the principal is authenticated to AXIOM, that consent exists, that policy allows the effect, that an approval exists, that a grant is current, or that execution may begin.
+
+The mandatory progression remains:
+
+```text
+external agent context
+  -> inert external-agent ingress request
+  -> canonical operation mapping
+  -> Gateway-authenticated AXIOM principal
+  -> Hypervisor policy / approval / grant
+  -> Sandbox bounded execution
+  -> Grid evidence / receipt
+```
+
+No Muse, MCP, A2A, browser-agent, plugin, or other external-agent profile may skip the authority stages merely because it has richer user context.
+
+### Intended connector capability surface
+
+The external-agent gateway should converge on a small capability vocabulary rather than one bespoke integration per agent:
+
+| Primitive | A0/A1 meaning | Authority effect |
+|---|---|---|
+| `discover_capabilities` | Read provider-neutral descriptions of operations that may be proposed | none |
+| `request_action` | Submit an inert external-agent ingress envelope | none |
+| `action_status` | Read status/evidence for a previously identified request/effect | none |
+| `request_approval` | Ask AXIOM to begin its ordinary approval path | none by itself |
+| `revoke_authority` | Request restrictive revocation through authenticated AXIOM control paths | cannot widen authority |
+| `get_audit_receipt` | Read an independently inspectable receipt by authorized reference | none |
+
+These names are an AXIOM capability surface, not claims about Meta's unpublished connector protocol. A future Muse adapter must map the provider's reviewed, version-pinned interface into these semantics without weakening them.
+
+### Promotion sequence
+
+1. **A0 — inert contract:** accepted in this issue. No live endpoint.
+2. **A1 — read-only adapter laboratory:** add connector discovery/status mapping only after a stable public or approved Muse connector specification can be pinned.
+3. **A2 — authenticated proposal ingress:** bind an external surface to a Gateway-authenticated AXIOM principal while keeping `request_action` non-authorizing.
+4. **A3 — consequential operations:** only ordinary AXIOM grants/approvals may reach Sandbox execution. Provider-side approval UI may add a requirement but cannot substitute for AXIOM authorization.
+5. **A4 — conformance:** prove equivalent authority results for Muse, MCP, A2A, CLI, and AXIOM One requests targeting the same canonical action.
+
+The architecture objective is interoperability without inherited authority:
+
+> **External agents may know what the user wants and may propose what to do; they do not acquire the right to do it merely by knowing.**
