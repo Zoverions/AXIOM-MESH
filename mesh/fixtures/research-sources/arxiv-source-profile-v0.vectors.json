@@ -19,7 +19,18 @@
         "version": 2,
         "version_date": "2026-09-10T12:00:00Z",
         "is_latest_version": true,
-        "license": "http://creativecommons.org/licenses/by/4.0/"
+        "has_pdf": true,
+        "pdf_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "license": "http://creativecommons.org/licenses/by/4.0/",
+        "arxiv_pdf_url": "https://arxiv.org/pdf/2609.00001"
+      },
+      "pdf": {
+        "paper_id": "2609.00001",
+        "version": 2,
+        "kind": "pdf",
+        "source": "gcs",
+        "path": "pdf/2609.00001v2.pdf",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       "paper_text": {
         "paper_id": "2609.00001",
@@ -43,13 +54,6 @@
         "latest_version_date": "2026-09-02T12:00:00Z",
         "arxiv_abs_url": "https://arxiv.org/abs/2609.00002"
       },
-      "version": {
-        "paper_id": "2609.00002",
-        "version": 1,
-        "version_date": "2026-09-02T12:00:00Z",
-        "is_latest_version": true,
-        "license": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
-      },
       "paper_text": {
         "paper_id": "2609.00002",
         "text_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
@@ -60,7 +64,7 @@
       }
     },
     {
-      "id": "cc0-stale",
+      "id": "cc0-stale-pdf",
       "metadata": {
         "paper_id": "2609.00003",
         "title": "Synthetic Stale Revision Paper",
@@ -77,15 +81,18 @@
         "version": 2,
         "version_date": "2026-09-09T12:00:00Z",
         "is_latest_version": false,
-        "license": "http://creativecommons.org/publicdomain/zero/1.0/"
-      },
-      "paper_text": {
-        "paper_id": "2609.00003",
-        "text_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
-        "title": "Synthetic Stale Revision Paper",
-        "primary_category": "math.CO",
+        "has_pdf": true,
+        "pdf_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "license": "http://creativecommons.org/publicdomain/zero/1.0/",
-        "resolution": "fallback"
+        "arxiv_pdf_url": "https://arxiv.org/pdf/2609.00003"
+      },
+      "pdf": {
+        "paper_id": "2609.00003",
+        "version": 2,
+        "kind": "pdf",
+        "source": "web_scrape",
+        "path": "pdf/2609.00003v2.pdf",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     }
   ]
