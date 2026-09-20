@@ -118,6 +118,9 @@ It requires agreement across:
 - indexed `paper_id`;
 - version-row `paper_id` and version number;
 - PDF-row `paper_id` and version number;
+- indexed version count and the latest-row version number;
+- indexed first/latest version-date interval and the version-row date;
+- indexed latest version date and any row marked `is_latest_version: true`;
 - recorded paper licence;
 - `has_pdf: true`;
 - `version_row.pdf_sha256`;
@@ -134,7 +137,10 @@ The dataset is a snapshot. Therefore `is_latest_version: true` means only "lates
 
 It does not prove live arXiv currentness.
 
-For versioned PDFs, the automatic profile is explicit:\n\n- latest-in-snapshot -> `currentness_state: unknown`;\n- superseded-in-snapshot -> automatic full-text admission denied until version-specific licence evidence exists.
+For versioned PDFs, the automatic profile is explicit:
+
+- latest-in-snapshot -> `currentness_state: unknown`;
+- superseded-in-snapshot -> automatic full-text admission denied until version-specific licence evidence exists.
 
 For `paper_text`, currentness is always `unknown` because the source package is not version-bound.
 
