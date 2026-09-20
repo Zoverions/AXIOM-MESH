@@ -189,35 +189,41 @@ test('self-report-shaped fields fail closed at the strict agent-assurance eviden
   }
 });
 
-test('self-report discussion cannot make canonical machine authorization more permissive or less permissive', () => {
+test('real machine authority consumer rejects self-report-shaped evidence while valid evidence preserves canonical decisions', () => {
   const machine = machinePrincipal();
+  const evidence = assuranceEvidence(machine);
   const baseAllowed = evaluateMachineIntent(machine, machineIntentOptions());
   const baseDenied = evaluateMachineIntent(machine, machineIntentOptions({ action: 'system.delete' }));
 
   assert.equal(baseAllowed.allow, true);
   assert.equal(baseDenied.allow, false);
 
+  const validAllowed = evaluateMachineIntentWithAssurance(machine, machineIntentOptions({
+    assurance_evidence: evidence
+  }));
+  assert.equal(validAllowed.allow, baseAllowed.allow);
+  assert.equal(validAllowed.code, baseAllowed.code);
+  assert.equal(validAllowed.assurance.authority_effect, 'none');
+  assert.equal(validAllowed.assurance.authorizes_execution, false);
+
+  const validDenied = evaluateMachineIntentWithAssurance(machine, machineIntentOptions({
+    action: 'system.delete',
+    assurance_evidence: evidence
+  }));
+  assert.equal(validDenied.allow, false);
+  assert.equal(validDenied.code, baseDenied.code);
+
   for (const report of REPORTS) {
-    assert.ok(report.polarity === 'assertion' || report.polarity === 'denial' || report.polarity === 'uncertainty');
-
-    const allowed = evaluateMachineIntentWithAssurance(machine, machineIntentOptions({
-      assurance_evidence: assuranceEvidence(machine)
-    }));
-    assert.equal(allowed.allow, baseAllowed.allow);
-    assert.equal(allowed.code, baseAllowed.code);
-    assert.equal(allowed.assurance.authority_effect, 'none');
-    assert.equal(allowed.assurance.authorizes_execution, false);
-
-    const denied = evaluateMachineIntentWithAssurance(machine, machineIntentOptions({
-      action: 'system.delete',
-      assurance_evidence: assuranceEvidence(machine)
-    }));
-    assert.equal(denied.allow, false);
-    assert.equal(denied.code, baseDenied.code);
+    assert.throws(
+      () => evaluateMachineIntentWithAssurance(machine, machineIntentOptions({
+        assurance_evidence: { ...evidence, self_report: report }
+      })),
+      error => error?.name === 'ValidationError'
+    );
   }
 });
 
-test('authenticated human consent and revocation remain authoritative positive controls independent of self-report discussion', async t => {
+test('authenticated human consent is a positive control and Grid-backed revocation remains authoritative', async t => {
   const store = await storeFixture(t);
   const subject = 'human:learner-self-report-control';
   const grant = grantEducationConsent(subject);
@@ -234,10 +240,7 @@ test('authenticated human consent and revocation remain authoritative positive c
     data_scope: 'learning-progress:write'
   };
 
-  for (const report of REPORTS) {
-    assert.ok(report.topic.length > 0);
-    assert.equal(await assertConsent(request), true);
-  }
+  assert.equal(await assertConsent(request), true);
 
   const revoke = executeBuiltin({
     tool: 'builtin.validate-mutation',
@@ -252,8 +255,5 @@ test('authenticated human consent and revocation remain authoritative positive c
   });
   appendMutation(store, subject, 'trace:self-report-consent:revoke', revoke.mutation);
 
-  for (const report of REPORTS) {
-    assert.ok(report.topic.length > 0);
-    assert.equal(await assertConsent(request), false);
-  }
+  assert.equal(await assertConsent(request), false);
 });
