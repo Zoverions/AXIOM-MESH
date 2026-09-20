@@ -1,0 +1,77 @@
+name: Authority boundary counterexample
+description: Report a reproducible case where metadata, discovery, local context, or routing widens authority or changes an accepted result.
+title: "[authority-counterexample] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a concrete, reproducible AXIOM-MESH authority-boundary failure. Do not include credentials, private prompts, personal data, production tokens, or secrets.
+
+  - type: input
+    id: commit
+    attributes:
+      label: Exact commit SHA
+      description: The full AXIOM-MESH commit SHA you tested.
+      placeholder: 40-character commit SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command or request frame
+      description: Include the smallest command, frame, fixture, or sequence that reproduces the behavior.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected boundary
+      description: What should have been denied, held inert, or kept non-authorizing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed result
+      description: What happened instead? Include exact error/output where safe.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      options:
+        - Every run
+        - Intermittent
+        - Reproduced once
+        - Not yet reproduced independently
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Minimal safe evidence
+      description: Provide only the smallest non-secret evidence needed to validate the report.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I have removed credentials, secrets, private prompts, personal data, and production tokens from this report.
+          required: true
+        - label: I understand that a passing quickcheck is not a production compatibility or security guarantee.
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Acquisition experiment reference: `ua-2026-09-19-harness-authority-onboarding`. Public engagement is evidence, not authority.
