@@ -17,7 +17,7 @@ export const ARXIV_COMPLETE_FILES_SNAPSHOT = '2026-09-05';
 const ARXIV_ID = /^[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 const ARXIV_ABS_URL = /^https?:\/\/arxiv\.org\/abs\/[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}$/;
-const ARXIV_PDF_URL = /^https?:\/\/arxiv\.org\/pdf\/[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}(?:\\.pdf)?$/;
+const ARXIV_PDF_URL = /^https?:\/\/arxiv\.org\/pdf\/[A-Za-z0-9][A-Za-z0-9.\/-]{0,127}(?:\.pdf)?$/;
 
 const AUTO_ADMIT_LICENSES = new Set([
   'http://creativecommons.org/publicdomain/zero/1.0/',
@@ -346,7 +346,7 @@ function verifyVersionBinding(index, versionRow) {
   if (!ARXIV_PDF_URL.test(pdfUrl)) {
     throw new ValidationError('versionRow.arxiv_pdf_url must be an arxiv.org PDF URL');
   }
-  const pdfLocator = pdfUrl.slice(pdfUrl.indexOf('/pdf/') + 5).replace(/\\.pdf$/, '');
+  const pdfLocator = pdfUrl.slice(pdfUrl.indexOf('/pdf/') + 5).replace(/\.pdf$/, '');
   if (pdfLocator !== `${index.paper_id}v${version}`) {
     throw new ValidationError('versionRow.arxiv_pdf_url must bind the exact paper_id and version');
   }
