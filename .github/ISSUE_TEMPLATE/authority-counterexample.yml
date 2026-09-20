@@ -5,7 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this form for a concrete, reproducible AXIOM-MESH authority-boundary failure. Do not include credentials, private prompts, personal data, production tokens, or secrets.
+        Use this public form for concrete, reproducible, non-sensitive AXIOM-MESH authority-boundary failures.
+
+        Do not include credentials, private prompts, personal data, production tokens, secrets, weaponized exploit details, or information that would make a third-party system easier to attack. Sensitive security findings belong in the private process described by `SECURITY.md`.
 
   - type: input
     id: commit
@@ -66,7 +68,7 @@ body:
     attributes:
       label: Safety check
       options:
-        - label: I have removed credentials, secrets, private prompts, personal data, and production tokens from this report.
+        - label: I have removed credentials, secrets, private prompts, personal data, production tokens, weaponized exploit details, and other sensitive security information from this public report.
           required: true
         - label: I understand that a passing quickcheck is not a production compatibility or security guarantee.
           required: true
