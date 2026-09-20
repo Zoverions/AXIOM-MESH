@@ -56,7 +56,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/INTERROGATION-PLANE.md',
-  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md',\n  'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md',
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md',
+  'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
   'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
@@ -583,7 +584,14 @@ const REQUIRED_CONTENT = Object.freeze({
     'grants_authority: false',
     'execution_effect: none'
   ],
-  'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md': [\n    '## Fail-closed licence profile',\n    'model training: denied',\n    'redistribution: denied',\n    'latest-in-snapshot -> `currentness_state: unknown`',\n    'Knowledge remains evidence. It never becomes authority.'\n  ],\n  'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md': [
+  'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md': [
+    '## Fail-closed licence profile',
+    'model training: denied',
+    'redistribution: denied',
+    'latest-in-snapshot -> `currentness_state: unknown`',
+    'Knowledge remains evidence. It never becomes authority.'
+  ],
+  'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md': [
     'Knowledge is not authority',
     'Operation is not authority',
     'Reproduction is not truth'
