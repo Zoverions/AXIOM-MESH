@@ -75,11 +75,13 @@ fn raw_linker_without_explicit_import_still_cannot_instantiate_component() {
 #[test]
 fn constant_expression_initialization_is_fuel_metered() {
     let mut config = wasmtime::Config::new();
-    config.consume_fuel(true).operator_cost(wasmtime::OperatorCost {
-        I32Const: 7,
-        I32Add: 100,
-        ..Default::default()
-    });
+    config
+        .consume_fuel(true)
+        .operator_cost(wasmtime::OperatorCost {
+            I32Const: 7,
+            I32Add: 100,
+            ..Default::default()
+        });
     let engine = wasmtime::Engine::new(&config).expect("fuel-enabled engine builds");
     let module = wasmtime::Module::new(
         &engine,
