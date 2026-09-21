@@ -10,4 +10,4 @@ license = "Apache-2.0"
 path = "src/lib.rs"
 
 [dependencies]
-wasmtime = { version = "=48.0.2", default-features = false, features = ["anyhow", "component-model", "cranelift", "runtime", "std", "wat"] }
+wasmtime = { version = "=49.0.0", default-features = false, features = ["anyhow", "component-model", "cranelift", "runtime", "std", "wat"] }
