@@ -75,16 +75,23 @@ fn raw_linker_without_explicit_import_still_cannot_instantiate_component() {
 #[test]
 fn constant_expression_initialization_is_fuel_metered() {
     let mut config = wasmtime::Config::new();
-    config.consume_fuel(true);
+    config.consume_fuel(true).operator_cost(wasmtime::OperatorCost {
+        I32Const: 7,
+        I32Add: 100,
+        ..Default::default()
+    });
     let engine = wasmtime::Engine::new(&config).expect("fuel-enabled engine builds");
-    let module = wasmtime::Module::new(&engine, "(module (global i32 (i32.const 1)))")
-        .expect("constant-expression module compiles");
+    let module = wasmtime::Module::new(
+        &engine,
+        "(module (global i32 (i32.add (i32.const 1) (i32.const 2))))",
+    )
+    .expect("extended constant-expression module compiles");
     let mut store = wasmtime::Store::new(&engine, ());
     store.set_fuel(0).expect("fuel can be configured");
 
     assert!(
         wasmtime::Instance::new(&mut store, &module, &[]).is_err(),
-        "zero fuel must not permit constant-expression initialization"
+        "zero fuel must not permit configured-cost constant-expression initialization"
     );
 }
 
