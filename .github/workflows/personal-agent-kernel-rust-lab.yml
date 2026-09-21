@@ -100,11 +100,16 @@ jobs:
           persist-credentials: false
       - name: Install pinned Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt
+      - name: Resolve Wasmtime 49 compatibility lock in CI workspace
+        run: cargo +1.98.1 update --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml -p wasmtime --precise 49.0.0
+      - name: Verify resolved Wasmtime version
+        shell: bash
+        run: cargo +1.98.1 tree --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml -p wasmtime --depth 0
       - name: Verify formatting
         run: cargo +1.98.1 fmt --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --all -- --check
       - name: Verify Clippy
         run: cargo +1.98.1 clippy --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --all-targets --locked -- -D warnings
-      - name: Verify real Component Model host denial
+      - name: Verify real Component Model host denial and initialization fuel bounds
         run: cargo +1.98.1 test --manifest-path labs/personal-agent-kernel-wasmtime-host/Cargo.toml --locked
 
   offline-single-spend-journal:
