@@ -6,8 +6,8 @@ const checks = [
     args: ['--test', 'mesh/test/agent-commons-mcp-readonly.test.mjs']
   },
   {
-    label: 'revoked or cancelled authority cannot survive into a later accepted effect',
-    args: ['--test', 'mesh/test/runtime-adapter-conformance.test.mjs']
+    label: 'revoked or cancelled authority cannot survive queued or retried work',
+    args: ['--test', 'mesh/test/runtime-adapter-revocation-queue.test.mjs']
   }
 ];
 
