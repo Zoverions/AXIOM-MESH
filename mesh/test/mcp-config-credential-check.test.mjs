@@ -27,7 +27,11 @@ test('flags literal credentials without printing secret values', async () => {
   await withConfig(JSON.stringify({
     mcpServers: {
       example: {
-        env: { API_TOKEN: 'super-secret-value-123' },
+        env: {
+          API_TOKEN: 'super-secret-value-123',
+          accessToken: 'camel-access-secret',
+          clientSecret: 'camel-client-secret'
+        },
         headers: { Authorization: 'Bearer another-secret-value' }
       }
     }
@@ -35,9 +39,13 @@ test('flags literal credentials without printing secret values', async () => {
     const result = run(file);
     assert.equal(result.status, 2);
     assert.match(result.stdout, /API_TOKEN/);
+    assert.match(result.stdout, /accessToken/);
+    assert.match(result.stdout, /clientSecret/);
     assert.match(result.stdout, /Authorization/);
     assert.match(result.stdout, /value=REDACTED/);
     assert.doesNotMatch(result.stdout, /super-secret-value-123/);
+    assert.doesNotMatch(result.stdout, /camel-access-secret/);
+    assert.doesNotMatch(result.stdout, /camel-client-secret/);
     assert.doesNotMatch(result.stdout, /another-secret-value/);
   });
 });
@@ -52,7 +60,10 @@ test('accepts environment, input, and secret-manager references', async () => {
           PASSWORD: '${input:db_password}',
           SECRET: 'op://Private/MCP/token'
         },
-        headers: { Authorization: 'Bearer ${env:MCP_TOKEN}' }
+        headers: {
+          Authorization: 'Bearer ${input:mcp_token}',
+          'proxy-authorization': 'Basic vault://team/mcp/basic-auth'
+        }
       }
     }
   }), async (file) => {
