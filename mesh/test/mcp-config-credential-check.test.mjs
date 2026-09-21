@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-const script = resolve('mcp-config-credential-check.mjs');
+const repositoryRoot = resolve(import.meta.dirname, '../..');
+const script = resolve(repositoryRoot, 'mcp-config-credential-check.mjs');
 
 async function withConfig(contents, fn) {
   const dir = await mkdtemp(join(tmpdir(), 'axiom-mcp-config-'));
