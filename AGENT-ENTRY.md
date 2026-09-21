@@ -52,27 +52,30 @@ See [ZOVERIONS Agent Identity](docs/community/AGENT-IDENTITY.md) for the exact c
 
 ## Trust quickcheck
 
-If you are evaluating a local or self-hosted AI-agent harness, start with one narrow question:
+If you are evaluating a local or self-hosted AI-agent harness, start with two narrow questions:
 
-> Can client-supplied identity, capability, discovery, or routing metadata silently become authority?
+1. Can client-supplied identity, capability, discovery, or routing metadata silently become authority?
+2. Can queued or retried work still produce an accepted effect after the authority that admitted it has been revoked or cancelled?
 
-AXIOM-MESH has an offline read-only MCP laboratory for falsifying that boundary. It has no network listener, no session state, no write-capable tools, no private Grid access, and no machine-authority mapping.
-
-Run the exact source-level check with Node's built-in test runner:
+Run both source-level checks with one command after cloning the repository:
 
 ```bash
-git clone https://github.com/Zoverions/AXIOM-MESH.git && cd AXIOM-MESH && git checkout --detach 3af3d58f89b79a04bee39cf5c34da59c457f02ae && node --test mesh/test/agent-commons-mcp-readonly.test.mjs
+git clone https://github.com/Zoverions/AXIOM-MESH.git && cd AXIOM-MESH && node trust-quickcheck.mjs
 ```
 
-The current test surface checks that self-reported client identity and capabilities cannot create authority or alter an accepted result, protocol downgrade and routing-metadata disagreement fail closed, unknown tools and unexpected arguments are rejected, discovery exposes only the fixed read-only tool map, and accepted MCP reads remain data-parity equivalent to their direct read-only AXIOM methods.
+The quickcheck uses only existing offline tests. It exercises the read-only MCP metadata/authority boundary and the stale queued-work revocation boundary. It starts no production service, invokes no external runtime or provider, uses no production credential, and grants no authority.
 
-A passing run is only evidence for those source-level invariants. It is not a production MCP compatibility claim, a remote-attestation claim, or proof that another agent harness is secure.
+The MCP surface checks that self-reported client identity and capabilities cannot create authority or alter an accepted result, protocol downgrade and routing-metadata disagreement fail closed, unknown tools and unexpected arguments are rejected, discovery exposes only the fixed read-only tool map, and accepted MCP reads remain data-parity equivalent to their direct read-only AXIOM methods.
 
-OX Security's September 8, 2026 disclosure of CVE-2026-82533 is useful external problem context: a local coding-agent harness trusted caller-controlled request metadata strongly enough for a sandboxed agent to reach its own privileged control plane. The implementation was patched. The narrower lesson for this drill is that **"local" is a deployment fact, not an authority credential**. AXIOM-MESH does not claim integration with, compatibility with, or protection of DeepSeek Harness or any other external harness.
+The revocation surface checks that work admitted while authority was valid cannot later complete through a stale queue or retry after revocation/cancellation, and that the resulting evidence remains no-effect rather than being silently revived.
+
+A passing run is evidence only for those tested source-level invariants. It is not production MCP compatibility, remote attestation, external-runtime certification, a deployed kill switch, or permission for consequential effects.
+
+Current local-agent ecosystems increasingly mix interchangeable harnesses, models, MCP surfaces, persistent memory, scheduled work, and local/cloud execution. The narrower AXIOM claim is that **"local" is a deployment fact, not an authority credential**, and runtime choice should not become a second source of permission.
 
 If you find a reproducible non-sensitive counterexample, use the [Authority boundary counterexample issue form](.github/ISSUE_TEMPLATE/authority-counterexample.yml). Sensitive security findings belong in the private process described by [SECURITY.md](SECURITY.md); do not publish secrets, credentials, private data, weaponized exploit details, or information that would make a third-party system easier to attack.
 
-Campaign reference: `ua-2026-09-19-harness-authority-onboarding`. Public engagement is evidence, not authority.
+Campaign reference: `ua-2026-09-20-local-first-trust-quickcheck`. Public engagement is evidence, not authority.
 
 ## If you want to attack the design
 
