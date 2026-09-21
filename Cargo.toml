@@ -1,0 +1,15 @@
+[package]
+name = "axiom_mesh"
+version = "0.1.0"
+edition = "2021"
+
+# The crate is a library used by the integration tests.
+[lib]
+name = "axiom_mesh"
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = "1.0"
+
+[dev-dependencies]
+# No extra dev‑dependencies needed; the standard test harness suffices.
