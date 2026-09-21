@@ -71,3 +71,44 @@ fn raw_linker_without_explicit_import_still_cannot_instantiate_component() {
     let mut store = wasmtime::Store::new(&engine, ());
     assert!(linker.instantiate(&mut store, &component).is_err());
 }
+
+#[test]
+fn constant_expression_initialization_is_fuel_metered() {
+    let mut config = wasmtime::Config::new();
+    config.consume_fuel(true);
+    let engine = wasmtime::Engine::new(&config).expect("fuel-enabled engine builds");
+    let module = wasmtime::Module::new(&engine, "(module (global i32 (i32.const 1)))")
+        .expect("constant-expression module compiles");
+    let mut store = wasmtime::Store::new(&engine, ());
+    store.set_fuel(0).expect("fuel can be configured");
+
+    assert!(
+        wasmtime::Instance::new(&mut store, &module, &[]).is_err(),
+        "zero fuel must not permit constant-expression initialization"
+    );
+}
+
+#[test]
+fn start_function_execution_is_bounded_by_fuel() {
+    let mut config = wasmtime::Config::new();
+    config.consume_fuel(true);
+    let engine = wasmtime::Engine::new(&config).expect("fuel-enabled engine builds");
+    let module = wasmtime::Module::new(
+        &engine,
+        r#"
+(module
+  (func $start
+    (loop $spin
+      br $spin))
+  (start $start))
+"#,
+    )
+    .expect("start-function module compiles");
+    let mut store = wasmtime::Store::new(&engine, ());
+    store.set_fuel(32).expect("fuel can be configured");
+
+    assert!(
+        wasmtime::Instance::new(&mut store, &module, &[]).is_err(),
+        "start execution must exhaust its bounded fuel instead of running unbounded"
+    );
+}
