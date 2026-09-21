@@ -533,6 +533,69 @@ textarea::placeholder {
   gap: 1rem;
 }
 
+.feed-controls {
+  display: grid;
+  gap: 1rem;
+}
+
+.feed-objectives {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.feed-objective {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.72rem;
+}
+
+.feed-objective.unavailable {
+  opacity: 0.68;
+}
+
+.feed-objective label {
+  font-weight: 720;
+}
+
+.feed-objective-help {
+  margin: 0.35rem 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.feed-slider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.feed-slider-row input[type="range"] {
+  width: 100%;
+}
+
+.feed-slider-row output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-status {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.feed-status > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.feed-item .feed-score {
+  font-weight: 700;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -706,6 +769,10 @@ footer {
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-objectives {
     grid-template-columns: 1fr;
   }
 

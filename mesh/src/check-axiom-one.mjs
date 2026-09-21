@@ -409,8 +409,12 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
   const socialMarkers = [
     "state.client.call('social.get'",
     "response.network_effect === 'none'",
-    "publication.status ?? 'unknown'",
-    'Owner-local Social corpus',
+    "from '/shared/axiom-one-social-feed-preview.mjs'",
+    'buildAxiomOneSocialFeedPreview',
+    'Feed / Discovery preview',
+    'Why am I seeing this?',
+    'chronological-fallback',
+    'Append-only publication history',
     'No federation'
   ];
   if (socialMarkers.some(marker => !app.includes(marker))) {
@@ -437,12 +441,22 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     !server.includes("'/presentation.mjs'")
     || !server.includes("'/human-contract.json'")
     || !server.includes("'/local-organize.mjs'")
+    || !server.includes("'/shared/axiom-one-social-feed-preview.mjs'")
+    || !server.includes("'/shared/social-feed-ranking-core.mjs'")
+    || !server.includes("'mesh', 'src', 'lib', 'axiom-one-social-feed-preview.mjs'")
+    || !server.includes("'mesh', 'src', 'lib', 'social-feed-ranking-core.mjs'")
     || !worker.includes("'/presentation.mjs'")
     || !worker.includes("'/human-contract.json'")
     || !worker.includes("'/local-organize.mjs'")
-  ) throw new ValidationError('AXIOM One public explanation assets are not exact');
-  if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
-    throw new ValidationError('AXIOM One reduced-motion behavior is missing');
+    || !worker.includes("'/shared/axiom-one-social-feed-preview.mjs'")
+    || !worker.includes("'/shared/social-feed-ranking-core.mjs'")
+  ) throw new ValidationError('AXIOM One public explanation/feed assets are not exact');
+  if (
+    !styles.includes('@media (prefers-reduced-motion: reduce)')
+    || !styles.includes('.feed-objectives')
+    || !styles.includes('grid-template-columns: 1fr')
+  ) {
+    throw new ValidationError('AXIOM One responsive/reduced-motion feed behavior is missing');
   }
   if (!icon.includes('<svg') || /<script\b/i.test(icon)) {
     throw new ValidationError('AXIOM One icon is invalid');
