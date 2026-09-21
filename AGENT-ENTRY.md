@@ -93,6 +93,28 @@ If a real credential was ever committed, removing the current line is not suffic
 
 Campaign reference: `ua-2026-09-21-mcp-config-credential-audit`. Public use and feedback are evidence, not authority.
 
+## Two-sided authority at external-service boundaries
+
+A personal agent can have explicit permission from its user and still lack authorization from the destination service it is trying to act on. Those are different principals and different policy decisions.
+
+The September 2026 launch of Meta Muse makes that boundary concrete. Meta describes user-selected application access, sensitive-action approvals, revocation, an audit trail, and a separate Sentinel agent that controls outbound network access. On September 21, *The Verge* reported that Amazon blocked Muse from shopping on Amazon, saying the agent's access was unauthorized under Amazon's rules. Whatever the commercial dispute ultimately resolves to, the general architecture problem is durable: **user consent cannot manufacture counterparty authority**.
+
+For AXIOM-MESH, the adjacent implemented rule is that authenticated identity, runtime installation, credentials, discovery, or tool reachability must not enlarge the grant already in force. Current machine principals have finite destination ceilings, and deny-dominant policy remains on the supported effect path. If a required external destination authorization is missing, unknown, or revoked, permission should not be inferred merely because the user asked the agent to proceed.
+
+Current non-claim: AXIOM-MESH does **not** automatically interpret third-party website terms, prove contractual permission, or turn possession of external credentials into legal authority. External-service adapters and their policy evidence remain separate integration work. The existing trust quickcheck tests adjacent primitives — metadata cannot silently become authority, and revoked work cannot still produce an accepted effect — not Amazon/Muse compatibility or commerce authorization.
+
+For a provider-free falsification path, run:
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git && cd AXIOM-MESH && node trust-quickcheck.mjs
+```
+
+If your agent stack models user authorization and destination authorization differently, a useful contribution is a reproducible, non-sensitive counterexample showing where those boundaries collapse. Use the [Authority boundary counterexample issue form](.github/ISSUE_TEMPLATE/authority-counterexample.yml) for safe public cases; use [SECURITY.md](SECURITY.md) for sensitive findings.
+
+Sources: [Meta's Muse launch and security model](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/) and [The Verge's September 21 report on Amazon blocking Muse](https://www.theverge.com/tech/998078/amazon-blocks-meta-muse-ai-agent-shopping).
+
+Campaign reference: `ua-2026-09-21-two-sided-authority`. Public engagement is evidence, not authority.
+
 ## If you want to attack the design
 
 Please do.
