@@ -77,6 +77,22 @@ If you find a reproducible non-sensitive counterexample, use the [Authority boun
 
 Campaign reference: `ua-2026-09-20-local-first-trust-quickcheck`. Public engagement is evidence, not authority.
 
+## MCP credential hygiene
+
+If you share MCP configuration through source control, you can check explicit local JSON configuration files for hardcoded values in credential-named fields without sending or printing the credential values:
+
+```bash
+npm run mcp-config:credential-check -- .mcp.json .cursor/mcp.json .vscode/mcp.json
+```
+
+The check is deliberately narrow. It reads only the paths you provide, performs no recursive home-directory scan, makes no network or provider calls, does not validate credentials, and does not inspect Git history. Findings contain only the file/location, risk class, and `value=REDACTED`. Common environment, input, and secret-manager references are treated as references rather than literal credentials.
+
+Exit status is `0` when no hardcoded credential literal is found in the checked credential-named JSON fields, `1` when an input cannot be read or parsed, and `2` when at least one literal is found. A clean result is not a complete secret-scan or security certification.
+
+If a real credential was ever committed, removing the current line is not sufficient remediation because Git history may retain the old value. Rotate or revoke the credential at its issuer and follow your incident-response process. Current demand context: [Hush Security's State of MCP Configuration research](https://www.hush.security/state-of-mcp/).
+
+Campaign reference: `ua-2026-09-21-mcp-config-credential-audit`. Public use and feedback are evidence, not authority.
+
 ## If you want to attack the design
 
 Please do.
