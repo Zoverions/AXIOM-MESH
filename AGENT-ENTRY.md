@@ -87,6 +87,8 @@ npm run trust-profile
 
 The command emits `axiom-trust-profile.v0` JSON tied to the exact local Git commit when available. It reports only the two existing offline source-level checks above, their test paths, pass/fail status, and explicit non-certification fields. It sends no telemetry, starts no production service, makes no provider or network call, inspects no credential material, and grants no authority.
 
+A profile can report `passed: true` only when Git can identify the commit and the worktree is clean, including no untracked files. The JSON exposes this as `working_tree_clean`; a dirty or unverifiable source state fails closed so modified bytes cannot be misattributed to the recorded commit.
+
 The result intentionally omits timestamps, hostnames, usernames, hardware identifiers, environment variables, file contents, and credential material so an independent operator can attach or compare the result without publishing machine-specific data.
 
 A passing profile is not a general agent benchmark or production certification. The acquisition experiment is narrower: make an exact-revision trust-boundary result portable enough for technical creators, evaluators, researchers, and independent operators to rerun and falsify.
