@@ -5,8 +5,13 @@ const CREDENTIAL_KEY = /(^|[_-])(api[_-]?key|token|secret|password|passwd|creden
 const AUTHORIZATION_KEY = /^(authorization|proxy-authorization|auth)$/i;
 const PLACEHOLDER = /^(?:<[^>]+>|REPLACE[_-]?ME|CHANGE[_-]?ME|YOUR[_-][A-Z0-9_-]+|NONE|NULL)$/i;
 
+function normalizedKey(key) {
+  return String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2');
+}
+
 function isCredentialKey(key) {
-  return AUTHORIZATION_KEY.test(key) || CREDENTIAL_KEY.test(key);
+  const normalized = normalizedKey(key);
+  return AUTHORIZATION_KEY.test(normalized) || CREDENTIAL_KEY.test(normalized);
 }
 
 function isSafeReference(value) {
@@ -15,8 +20,8 @@ function isSafeReference(value) {
   if (/^\$\{(?:env:)?[A-Za-z_][A-Za-z0-9_]*\}$/.test(trimmed)) return true;
   if (/^\$\{input:[^}]+\}$/.test(trimmed)) return true;
   if (/^(?:op|vault):\/\/.+$/i.test(trimmed)) return true;
-  if (/^Bearer\s+\$\{(?:env:)?[A-Za-z_][A-Za-z0-9_]*\}$/i.test(trimmed)) return true;
-  if (/^Basic\s+\$\{(?:env:)?[A-Za-z_][A-Za-z0-9_]*\}$/i.test(trimmed)) return true;
+  if (/^(?:Bearer|Basic)\s+\$\{(?:(?:env:)?[A-Za-z_][A-Za-z0-9_]*|input:[^}]+)\}$/i.test(trimmed)) return true;
+  if (/^(?:Bearer|Basic)\s+(?:op|vault):\/\/.+$/i.test(trimmed)) return true;
   return false;
 }
 
