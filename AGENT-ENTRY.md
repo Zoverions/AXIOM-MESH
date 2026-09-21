@@ -77,6 +77,24 @@ If you find a reproducible non-sensitive counterexample, use the [Authority boun
 
 Campaign reference: `ua-2026-09-20-local-first-trust-quickcheck`. Public engagement is evidence, not authority.
 
+## Reproducible trust profile
+
+For a machine-readable version of the same bounded evaluation surface, run:
+
+```bash
+npm run trust-profile
+```
+
+The command emits `axiom-trust-profile.v0` JSON tied to the exact local Git commit when available. It reports only the two existing offline source-level checks above, their test paths, pass/fail status, and explicit non-certification fields. It sends no telemetry, starts no production service, makes no provider or network call, inspects no credential material, and grants no authority.
+
+The result intentionally omits timestamps, hostnames, usernames, hardware identifiers, environment variables, file contents, and credential material so an independent operator can attach or compare the result without publishing machine-specific data.
+
+A passing profile is not a general agent benchmark or production certification. The acquisition experiment is narrower: make an exact-revision trust-boundary result portable enough for technical creators, evaluators, researchers, and independent operators to rerun and falsify.
+
+Current demand context includes the September 2026 harness study [*Scanning the Harness*](https://arxiv.org/abs/2609.07360) and reproducible harness benchmark work such as [BenchClaw](https://benchclaw.io/), both of which emphasize revision-pinned, rerunnable evidence rather than model-name comparisons alone.
+
+Campaign reference: `ua-2026-09-21-reproducible-trust-profile`. Public use and feedback are evidence, not authority.
+
 ## MCP credential hygiene
 
 If you share MCP configuration through source control, you can check explicit local JSON configuration files for hardcoded values in credential-named fields without sending or printing the credential values:
