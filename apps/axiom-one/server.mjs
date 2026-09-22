@@ -25,6 +25,12 @@ const STATIC_ASSETS = new Map([
   ['/manifest.webmanifest', asset('manifest.webmanifest', 'application/manifest+json')],
   ['/sw.mjs', asset('sw.mjs', 'text/javascript; charset=utf-8')],
   ['/icon.svg', asset('icon.svg', 'image/svg+xml')],
+  ['/icons/icon-192.png', asset('icons/icon-192.png', 'image/png')],
+  ['/icons/icon-512.png', asset('icons/icon-512.png', 'image/png')],
+  ['/icons/icon-maskable-192.png', asset('icons/icon-maskable-192.png', 'image/png')],
+  ['/icons/icon-maskable-512.png', asset('icons/icon-maskable-512.png', 'image/png')],
+  ['/screenshots/screenshot-wide.png', asset('screenshots/screenshot-wide.png', 'image/png')],
+  ['/screenshots/screenshot-narrow.png', asset('screenshots/screenshot-narrow.png', 'image/png')],
   ['/vendor/axiom-client.mjs', {
     path: join(REPOSITORY_ROOT, 'packages', 'axiom-client', 'index.mjs'),
     contentType: 'text/javascript; charset=utf-8'

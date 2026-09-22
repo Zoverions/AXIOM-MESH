@@ -9,6 +9,12 @@ const SHELL_ASSETS = Object.freeze([
   '/human-contract.json',
   '/manifest.webmanifest',
   '/icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
+  '/screenshots/screenshot-wide.png',
+  '/screenshots/screenshot-narrow.png',
   '/vendor/axiom-client.mjs',
   '/mesh/config/gateway-client-contract.json'
 ]);
