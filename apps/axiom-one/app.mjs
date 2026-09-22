@@ -28,6 +28,8 @@ const state = {
   route: 'overview',
   lastIntent: null,
   pendingIntent: null,
+  meeting: freshMeetingState(),
+  assembly: freshAssemblyState(),
   vault: {
     pending: null,
     last: null,
@@ -35,6 +37,31 @@ const state = {
     organizeDraft: null
   }
 };
+
+// The Meeting (birthing interview) and the Assembly (source opt-in) live
+// entirely in this page's memory: no persistent browser storage, no Gateway
+// calls, no Mesh authority. Resetting them on disconnect keeps the
+// memory-only policy consistent with the token lifecycle.
+function freshMeetingState() {
+  return {
+    open: false,
+    step: 0,
+    answers: {},
+    directive: null,
+    nameReview: null,
+    complete: false
+  };
+}
+
+function freshAssemblyState() {
+  return {
+    open: false,
+    draft: {},
+    confirmed: null,
+    reviewing: false,
+    editing: false
+  };
+}
 
 const view = document.querySelector('#view');
 const connectPanel = document.querySelector('#connect-panel');
@@ -82,6 +109,8 @@ disconnectButton.addEventListener('click', () => {
   state.pendingIntent = null;
   state.vault.pending = null;
   state.vault.last = null;
+  state.meeting = freshMeetingState();
+  state.assembly = freshAssemblyState();
   announce('Disconnected and cleared the in-memory token');
   renderRoute();
   tokenInput.focus();
@@ -151,6 +180,17 @@ function renderDisconnected() {
 }
 
 async function renderOverview() {
+  // The Meeting and the Assembly are local in-page sub-experiences of the
+  // overview route: they render instead of the dashboard and make no Gateway
+  // calls, so branch before any network fetch.
+  if (state.meeting.open) {
+    drawMeeting();
+    return;
+  }
+  if (state.assembly.open) {
+    drawAssembly();
+    return;
+  }
   const [status, capabilities] = await Promise.all([
     state.client.call('status.get'),
     state.client.call('capabilities.list')
@@ -168,8 +208,615 @@ async function renderOverview() {
       card('Capability registry', `${capabilities.capabilities?.length ?? 0} declared capabilities. Only registry entries marked implemented are runnable claims.`, {
         badge: ['Exact source', 'good']
       })
-    ])
+    ]),
+    becomingSection()
   );
+}
+
+function becomingSection() {
+  const meetingLabel = state.meeting.complete
+    ? 'Review the Meeting'
+    : (state.meeting.step > 0 ? 'Resume the Meeting' : 'Begin the Meeting');
+  const assemblyLabel = state.assembly.confirmed ? 'Review the Assembly' : 'Open the Assembly';
+  return element('section', { className: 'stack ritual', attrs: { 'aria-labelledby': 'becoming-heading' } }, [
+    element('h2', { text: 'Becoming', attrs: { id: 'becoming-heading' } }),
+    element('p', { className: 'lede', text: 'Two rituals for the future principal. Both run entirely in this page: no external AI, no Mesh authority, nothing sent anywhere.' }),
+    grid([
+      ritualCard(
+        'The Meeting',
+        'A birthing interview for the mind that will walk beside you: the symbiont framing, a prime directive with explicit consent, a provisional name, and reflections. Experimental local preview.',
+        meetingLabel,
+        openMeeting
+      ),
+      ritualCard(
+        'The Assembly',
+        'Opt corpus sources into the future agent\u2019s source material. This records the owner\u2019s intent in this page only: it grants no Mesh authority, writes nothing to the Vault, and sends no data.',
+        assemblyLabel,
+        openAssembly
+      )
+    ])
+  ]);
+}
+
+function ritualCard(title, description, buttonLabel, onOpen) {
+  const open = element('button', {
+    className: 'button button-primary',
+    text: buttonLabel,
+    attrs: { type: 'button' }
+  });
+  open.addEventListener('click', onOpen);
+  return element('article', { className: 'card' }, [
+    element('h2', { text: title }),
+    element('p', { text: description }),
+    element('div', { className: 'actions' }, [open])
+  ]);
+}
+
+function openMeeting() {
+  state.meeting.open = true;
+  state.meeting.nameReview = null;
+  state.assembly.open = false;
+  renderOverview();
+}
+
+function openAssembly() {
+  state.assembly.open = true;
+  state.assembly.reviewing = false;
+  state.assembly.editing = false;
+  state.meeting.open = false;
+  if (!state.assembly.confirmed && Object.keys(state.assembly.draft).length === 0) {
+    state.assembly.draft = Object.fromEntries(ASSEMBLY_SOURCES.map(source => [source.id, false]));
+  }
+  renderOverview();
+}
+
+function closeSubViews() {
+  state.meeting.open = false;
+  state.meeting.nameReview = null;
+  state.assembly.open = false;
+  state.assembly.reviewing = false;
+  state.assembly.editing = false;
+}
+
+function returnToOverviewButton() {
+  const button = element('button', {
+    className: 'button button-quiet return-quiet',
+    text: 'Return to overview',
+    attrs: { type: 'button' }
+  });
+  button.addEventListener('click', () => {
+    closeSubViews();
+    announce('Returned to the overview');
+    renderOverview();
+  });
+  return button;
+}
+
+// ---------------------------------------------------------------------------
+// The Meeting (birthing interview) and the Assembly (source opt-in).
+//
+// Both are local in-page sub-experiences of the overview route. They keep all
+// state in this page's memory, make zero Gateway calls, and grant no Mesh
+// authority. Leaving the overview route and returning resumes the current
+// step; disconnecting resets both to their initial values.
+// ---------------------------------------------------------------------------
+
+const PRIME_DIRECTIVE = "A guardian that never takes what isn't freely given.";
+
+const MEETING_TITLES = [
+  'The Meeting',
+  'The symbiont',
+  'The Prime Directive',
+  'A provisional name',
+  'Reflection',
+  'The Meeting, kept'
+];
+
+const ASSEMBLY_SOURCES = [
+  {
+    id: 'core-books',
+    name: 'Core book shelf',
+    detail: 'The Framework, Age of Production, Working With New Minds, Why I Fear AI, the Greyhaven novel, The Harmonistic Bible, Scarcity as a Service.'
+  },
+  {
+    id: 'essays',
+    name: 'Essays and philosophy writing',
+    detail: 'Long-form essays and philosophy pieces.'
+  },
+  {
+    id: 'music',
+    name: 'Original music',
+    detail: 'The Zoverions music catalog.'
+  },
+  {
+    id: 'magic-fox',
+    name: "Magic Fox children's books",
+    detail: 'The Clover Dappledown picture books.'
+  },
+  {
+    id: 'public-writing',
+    name: 'Public writing and threads',
+    detail: 'X threads and public social essays.'
+  }
+];
+
+const ASSEMBLY_SCOPE_NOTE = 'Opting in means the future agent may learn from this material. It grants no Mesh authority and sends nothing anywhere.';
+
+function subViewHeader(eyebrowText, title, lede, headingId) {
+  return element('div', { className: 'view-header' }, [
+    element('div', {}, [
+      element('p', { className: 'eyebrow', text: eyebrowText }),
+      element('h1', { text: title, attrs: { id: headingId, tabindex: '-1' } }),
+      element('p', { className: 'lede', text: lede })
+    ])
+  ]);
+}
+
+function meetingHonesty() {
+  return notice('Experimental local preview. This interview runs entirely in this page. No external AI, no Mesh authority, no data sent.');
+}
+
+function assemblyHonesty() {
+  return notice('This opt-in records the owner\u2019s intent in this page only. It grants no Mesh authority, writes nothing to the Vault, and sends no data.');
+}
+
+function meetingStepper(step) {
+  const indicators = [];
+  for (let i = 0; i < MEETING_TITLES.length; i++) {
+    indicators.push(element('span', {
+      className: `step-indicator${i < step ? ' done' : ''}${i === step ? ' current' : ''}`,
+      attrs: { 'aria-hidden': 'true' }
+    }));
+  }
+  return element('div', { className: 'stepper' }, [
+    element('div', {
+      className: 'steps',
+      attrs: { role: 'img', 'aria-label': `Step ${step + 1} of ${MEETING_TITLES.length}` }
+    }, indicators),
+    element('p', { className: 'step-count', text: `Step ${step + 1} of ${MEETING_TITLES.length}` })
+  ]);
+}
+
+function drawMeeting(announceText) {
+  const step = state.meeting.step;
+  const builders = [
+    meetingStepWelcome,
+    meetingStepSymbiont,
+    meetingStepDirective,
+    meetingStepNaming,
+    meetingStepReflection,
+    meetingStepCompletion
+  ];
+  view.replaceChildren(
+    subViewHeader('The Meeting \u00b7 overview', MEETING_TITLES[step],
+      'A birthing interview for the future principal. Nothing here leaves this page.',
+      'meeting-step-heading'),
+    meetingStepper(step),
+    builders[step](),
+    meetingHonesty(),
+    element('div', { className: 'actions' }, [returnToOverviewButton()])
+  );
+  const heading = document.querySelector('#meeting-step-heading');
+  if (heading) heading.focus();
+  announce(announceText ?? `The Meeting, step ${step + 1} of ${MEETING_TITLES.length}: ${MEETING_TITLES[step]}`);
+}
+
+function goMeetingStep(step) {
+  state.meeting.step = step;
+  state.meeting.nameReview = null;
+  drawMeeting();
+}
+
+function meetingActions({ back = false, continueLabel = 'Continue', onContinue }) {
+  const actions = element('div', { className: 'actions' });
+  if (back) {
+    const backButton = element('button', {
+      className: 'button button-secondary',
+      text: 'Back',
+      attrs: { type: 'button' }
+    });
+    backButton.addEventListener('click', () => goMeetingStep(state.meeting.step - 1));
+    actions.append(backButton);
+  }
+  const next = element('button', {
+    className: 'button button-primary',
+    text: continueLabel,
+    attrs: { type: 'button' }
+  });
+  next.addEventListener('click', onContinue);
+  actions.append(next);
+  return actions;
+}
+
+function meetingStepWelcome() {
+  return element('div', { className: 'stack' }, [
+    element('p', { className: 'ritual-copy', text: 'You are about to meet the mind that will walk beside you.' }),
+    element('p', {
+      text: 'This is an experimental local preview: no external AI is present, the future agent is not yet born, and this interview shapes a future principal while staying in this page. Six short steps, at your pace \u2014 step back, pause, and return freely; nothing is recorded until you say so.'
+    }),
+    meetingActions({ continueLabel: 'Begin the interview', onContinue: () => goMeetingStep(1) })
+  ]);
+}
+
+function meetingStepSymbiont() {
+  const area = element('textarea', {
+    attrs: {
+      id: 'meeting-symbiont',
+      maxlength: '2000',
+      placeholder: 'For example: a quiet companion, a second pair of eyes, a guardian at the gate\u2026'
+    }
+  });
+  area.value = state.meeting.answers.symbiont ?? '';
+  return element('div', { className: 'stack' }, [
+    element('p', {
+      className: 'ritual-copy',
+      text: 'The owner frames the agent as a symbiont \u2014 a firewall between the owner\u2019s mind and the digital world.'
+    }),
+    field('What should this relationship feel like? (optional)', area, 'meeting-symbiont'),
+    meetingActions({
+      back: true,
+      onContinue: () => {
+        state.meeting.answers.symbiont = area.value;
+        goMeetingStep(2);
+      }
+    })
+  ]);
+}
+
+function meetingStepDirective() {
+  const reviewCard = element('article', { className: 'card full' }, [
+    element('h2', { text: 'Review before accepting' }),
+    element('dl', { className: 'fact-list' }, [
+      element('dt', { text: 'Directive text' }),
+      element('dd', { text: PRIME_DIRECTIVE }),
+      element('dt', { text: 'Scope' }),
+      element('dd', { text: 'Binds the future agent\u2019s conduct.' }),
+      element('dt', { text: 'Revocability' }),
+      element('dd', { text: 'Revocable by the owner at any time.' }),
+      element('dt', { text: 'Declining' }),
+      element('dd', { text: 'Declining is allowed and recorded honestly.' })
+    ])
+  ]);
+  const accept = element('button', {
+    className: 'button button-primary',
+    text: 'Accept the directive',
+    attrs: { type: 'button' }
+  });
+  const decline = element('button', {
+    className: 'button button-secondary',
+    text: 'Decline',
+    attrs: { type: 'button' }
+  });
+  accept.addEventListener('click', () => {
+    state.meeting.directive = true;
+    goMeetingStep(3);
+  });
+  decline.addEventListener('click', () => {
+    state.meeting.directive = false;
+    goMeetingStep(3);
+  });
+  const children = [
+    element('p', { className: 'directive-quote', text: `\u201c${PRIME_DIRECTIVE}\u201d` }),
+    reviewCard
+  ];
+  if (state.meeting.directive !== null) {
+    children.push(notice(`Currently recorded: ${state.meeting.directive ? 'Accepted' : 'Declined'}. You may choose again.`));
+  }
+  children.push(element('div', { className: 'actions' }, [accept, decline]));
+  if (state.meeting.step > 0) {
+    const backButton = element('button', {
+      className: 'button button-secondary',
+      text: 'Back',
+      attrs: { type: 'button' }
+    });
+    backButton.addEventListener('click', () => goMeetingStep(state.meeting.step - 1));
+    children.push(element('div', { className: 'actions' }, [backButton]));
+  }
+  return element('div', { className: 'stack' }, children);
+}
+
+function meetingStepNaming() {
+  const answers = state.meeting.answers;
+  if (state.meeting.nameReview !== null) {
+    const record = element('button', {
+      className: 'button button-primary',
+      text: 'Record this name',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Change',
+      attrs: { type: 'button' }
+    });
+    record.addEventListener('click', () => {
+      answers.name = state.meeting.nameReview;
+      answers.nameDeferred = false;
+      goMeetingStep(4);
+    });
+    change.addEventListener('click', () => {
+      state.meeting.nameReview = null;
+      drawMeeting('Name entry reopened; nothing was recorded');
+    });
+    return element('div', { className: 'stack' }, [
+      element('p', { className: 'ritual-copy', text: `Record the provisional name \u201c${state.meeting.nameReview}\u201d?` }),
+      element('p', { text: 'Review before recording: this is exactly what will be kept.' }),
+      element('div', { className: 'actions' }, [record, change])
+    ]);
+  }
+  const input = element('input', {
+    attrs: {
+      id: 'meeting-name',
+      maxlength: '64',
+      placeholder: 'A provisional name',
+      autocomplete: 'off',
+      spellcheck: 'false'
+    }
+  });
+  input.value = answers.name ?? '';
+  const later = element('button', {
+    className: 'button button-secondary',
+    text: 'Decide later',
+    attrs: { type: 'button' }
+  });
+  later.addEventListener('click', () => {
+    answers.nameDeferred = true;
+    delete answers.name;
+    goMeetingStep(4);
+  });
+  const children = [
+    element('p', {
+      text: 'No permanent name is given at birth. A provisional name is a handle for the work ahead; it can change, and the future agent will choose its lasting name together with the owner later.'
+    })
+  ];
+  if (answers.name) {
+    children.push(notice(`Currently recorded: \u201c${answers.name}\u201d. Enter a new name to replace it, or decide later.`));
+  } else if (answers.nameDeferred) {
+    children.push(notice('Currently recorded: deferred \u2014 to be decided later.'));
+  }
+  children.push(
+    field('Provisional name (optional)', input, 'meeting-name'),
+    meetingActions({
+      back: true,
+      continueLabel: 'Review this name',
+      onContinue: () => {
+        const clean = input.value.trim();
+        if (!clean) {
+          input.setCustomValidity('Enter a provisional name, or choose Decide later.');
+          input.reportValidity();
+          return;
+        }
+        input.setCustomValidity('');
+        state.meeting.nameReview = clean;
+        drawMeeting('Review the proposed name before recording');
+      }
+    }),
+    element('div', { className: 'actions' }, [later])
+  );
+  return element('div', { className: 'stack' }, children);
+}
+
+function meetingStepReflection() {
+  const neverDo = element('textarea', {
+    attrs: {
+      id: 'meeting-never-do',
+      maxlength: '2000',
+      placeholder: 'Lines the future agent must never cross\u2026'
+    }
+  });
+  const goodDay = element('textarea', {
+    attrs: {
+      id: 'meeting-good-day',
+      maxlength: '2000',
+      placeholder: 'What a good day together looks like\u2026'
+    }
+  });
+  neverDo.value = state.meeting.answers.neverDo ?? '';
+  goodDay.value = state.meeting.answers.goodDay ?? '';
+  return element('div', { className: 'stack' }, [
+    element('p', { text: 'Optional. These reflections are kept with the Meeting record in this page.' }),
+    field('What should the agent never do? (optional)', neverDo, 'meeting-never-do'),
+    field('What does a good day with the agent look like? (optional)', goodDay, 'meeting-good-day'),
+    meetingActions({
+      back: true,
+      continueLabel: 'Keep the Meeting',
+      onContinue: () => {
+        state.meeting.answers.neverDo = neverDo.value;
+        state.meeting.answers.goodDay = goodDay.value;
+        state.meeting.complete = true;
+        state.meeting.completedAt = new Date().toISOString();
+        goMeetingStep(5);
+      }
+    })
+  ]);
+}
+
+function meetingRecord() {
+  const answers = state.meeting.answers;
+  const clean = value => {
+    const text = typeof value === 'string' ? value.trim() : '';
+    return text ? text : null;
+  };
+  return {
+    directive: state.meeting.directive,
+    provisional_name: answers.nameDeferred ? null : (clean(answers.name) ?? null),
+    name_deferred: Boolean(answers.nameDeferred),
+    symbiont: clean(answers.symbiont),
+    never_do: clean(answers.neverDo),
+    good_day: clean(answers.goodDay),
+    scope: 'page-local only; no Mesh authority granted; nothing sent anywhere',
+    completed_at: state.meeting.completedAt ?? null
+  };
+}
+
+function meetingStepCompletion() {
+  const record = meetingRecord();
+  const toAssembly = element('button', {
+    className: 'button button-primary',
+    text: 'Continue to the Assembly',
+    attrs: { type: 'button' }
+  });
+  toAssembly.addEventListener('click', () => {
+    state.meeting.open = false;
+    openAssembly();
+    announce('The Meeting is kept. The Assembly is open.');
+  });
+  return element('div', { className: 'stack' }, [
+    element('p', { className: 'ritual-copy', text: 'The Meeting is kept \u2014 in this page, and only here.' }),
+    element('article', { className: 'card full' }, [
+      element('h2', { text: 'Summary ledger' }),
+      element('dl', { className: 'fact-list' }, [
+        element('dt', { text: 'Prime Directive' }),
+        element('dd', { text: record.directive === true ? 'Accepted' : (record.directive === false ? 'Declined' : 'Not recorded') }),
+        element('dt', { text: 'Provisional name' }),
+        element('dd', { text: record.provisional_name ?? 'Deferred \u2014 to be decided later' }),
+        element('dt', { text: 'Symbiont note' }),
+        element('dd', { text: record.symbiont ? 'Recorded' : 'None given' }),
+        element('dt', { text: 'Reflections' }),
+        element('dd', { text: (record.never_do || record.good_day) ? 'Recorded' : 'None given' }),
+        element('dt', { text: 'Standing' }),
+        element('dd', { text: 'Experimental \u00b7 page-local only \u00b7 no Mesh authority granted \u00b7 nothing sent anywhere' })
+      ])
+    ]),
+    rawDetails('Exact Meeting record', record),
+    element('div', { className: 'actions' }, [toAssembly])
+  ]);
+}
+
+function drawAssembly(announceText) {
+  const assembly = state.assembly;
+  const title = assembly.reviewing
+    ? 'Review the Assembly'
+    : (assembly.confirmed && !assembly.editing ? 'The Assembly, kept' : 'The Assembly');
+  const body = assembly.reviewing
+    ? assemblyReview()
+    : (assembly.confirmed && !assembly.editing ? assemblyLedger() : assemblyDraft());
+  view.replaceChildren(
+    subViewHeader('The Assembly \u00b7 overview', title,
+      'The owner opts corpus sources into the future agent\u2019s source material.',
+      'assembly-heading'),
+    body,
+    assemblyHonesty(),
+    element('div', { className: 'actions' }, [returnToOverviewButton()])
+  );
+  const heading = document.querySelector('#assembly-heading');
+  if (heading) heading.focus();
+  announce(announceText ?? title);
+}
+
+function assemblyToggle(source) {
+  const checkbox = element('input', {
+    attrs: { type: 'checkbox', id: `assembly-${source.id}` }
+  });
+  checkbox.checked = state.assembly.draft[source.id] === true;
+  checkbox.addEventListener('change', () => {
+    state.assembly.draft[source.id] = checkbox.checked;
+  });
+  return element('label', {
+    className: 'toggle-row',
+    attrs: { for: `assembly-${source.id}` }
+  }, [
+    checkbox,
+    element('div', {}, [
+      element('strong', { text: source.name }),
+      element('p', { text: source.detail }),
+      element('p', { className: 'scope-note', text: ASSEMBLY_SCOPE_NOTE })
+    ])
+  ]);
+}
+
+function assemblyDraft() {
+  const review = element('button', {
+    className: 'button button-primary',
+    text: 'Review the Assembly',
+    attrs: { type: 'button' }
+  });
+  review.addEventListener('click', () => {
+    state.assembly.reviewing = true;
+    drawAssembly('Review the exact inclusion set before confirming');
+  });
+  return element('div', { className: 'stack' }, [
+    element('p', {
+      text: 'Choose the corpus sources the future agent may learn from. Toggling drafts your intent; nothing is recorded until you confirm.'
+    }),
+    element('div', {
+      className: 'stack',
+      attrs: { role: 'group', 'aria-label': 'Corpus sources' }
+    }, ASSEMBLY_SOURCES.map(assemblyToggle)),
+    element('div', { className: 'actions' }, [review])
+  ]);
+}
+
+function assemblyReview() {
+  const draft = state.assembly.draft;
+  const rows = ASSEMBLY_SOURCES.map(source => {
+    const included = draft[source.id] === true;
+    return element('li', {}, [
+      element('span', {
+        className: `badge ${included ? 'good' : 'pending'}`,
+        text: included ? 'Included' : 'Excluded'
+      }),
+      element('strong', { text: source.name }),
+      element('span', { text: source.detail })
+    ]);
+  });
+  const confirm = element('button', {
+    className: 'button button-primary',
+    text: 'Confirm the Assembly',
+    attrs: { type: 'button' }
+  });
+  const change = element('button', {
+    className: 'button button-secondary',
+    text: 'Change selections',
+    attrs: { type: 'button' }
+  });
+  confirm.addEventListener('click', () => {
+    state.assembly.confirmed = {
+      sources: ASSEMBLY_SOURCES.filter(source => draft[source.id] === true).map(source => source.id),
+      at: new Date().toISOString()
+    };
+    state.assembly.reviewing = false;
+    state.assembly.editing = false;
+    drawAssembly('The Assembly is confirmed and recorded in this page');
+  });
+  change.addEventListener('click', () => {
+    state.assembly.reviewing = false;
+    drawAssembly('Assembly draft reopened; nothing was confirmed');
+  });
+  return element('div', { className: 'stack' }, [
+    element('p', { text: 'Review before confirming: this is the exact inclusion set that will be kept.' }),
+    element('ul', { className: 'data-list' }, rows),
+    element('div', { className: 'actions' }, [confirm, change])
+  ]);
+}
+
+function assemblyLedger() {
+  const confirmed = state.assembly.confirmed;
+  const included = ASSEMBLY_SOURCES.filter(source => confirmed.sources.includes(source.id));
+  const change = element('button', {
+    className: 'button button-secondary',
+    text: 'Change the Assembly',
+    attrs: { type: 'button' }
+  });
+  change.addEventListener('click', () => {
+    state.assembly.draft = Object.fromEntries(
+      ASSEMBLY_SOURCES.map(source => [source.id, confirmed.sources.includes(source.id)])
+    );
+    state.assembly.editing = true;
+    state.assembly.reviewing = false;
+    drawAssembly('Assembly draft reopened from the confirmed record');
+  });
+  return element('div', { className: 'stack' }, [
+    element('p', { className: 'ritual-copy', text: 'The Assembly is kept \u2014 in this page, and only here.' }),
+    included.length
+      ? grid(included.map(source => element('article', { className: 'card' }, [
+        element('span', { className: 'badge good', text: 'Included' }),
+        element('h2', { text: source.name }),
+        element('p', { text: source.detail })
+      ])))
+      : empty('No sources were opted in. The future agent begins with no corpus material.'),
+    rawDetails('Exact Assembly record', confirmed),
+    element('div', { className: 'actions' }, [change])
+  ]);
 }
 
 async function renderAsk() {

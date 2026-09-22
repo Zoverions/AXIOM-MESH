@@ -727,6 +727,126 @@ pre {
   animation: spin 0.9s linear infinite;
 }
 
+/* ---- becoming ritual (Meeting + Assembly) ---- */
+
+.ritual h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+.ritual-copy {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.directive-quote {
+  margin: 0;
+  padding: 1rem 1.2rem;
+  border-left: 3px solid var(--gold);
+  color: var(--gold);
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.7;
+}
+
+.stepper {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.step-indicator {
+  width: 2rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--line-soft);
+}
+
+.step-indicator.done {
+  background: var(--gold-deep);
+}
+
+.step-indicator.current {
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(216, 179, 106, 0.5);
+}
+
+.step-count {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  min-height: 2.9rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 0.75rem;
+  background: rgba(11, 10, 8, 0.5);
+  cursor: pointer;
+}
+
+.toggle-row:hover {
+  border-color: var(--line);
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  min-height: 0;
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  padding: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.toggle-row strong {
+  display: block;
+  font-weight: 400;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.toggle-row p {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.toggle-row .scope-note {
+  color: #6f6455;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.data-list li .badge {
+  display: inline-flex;
+  margin-bottom: 0.55rem;
+}
+
+.return-quiet {
+  min-height: 2.9rem;
+  font-size: 0.85rem;
+}
+
 /* ---- footer ---- */
 
 footer {
