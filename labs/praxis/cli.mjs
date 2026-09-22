@@ -6,6 +6,7 @@ import { format, formatCheckReport } from './format.mjs';
 function usage() {
   console.error('usage: node labs/praxis/cli.mjs <check|ir> <file.prax>');
   console.error('       node labs/praxis/cli.mjs format [--check] [file.prax|-]');
+  console.error('       node labs/praxis/cli.mjs run <file.prax> [more files...] [--arg k=v ...]');
   console.error('       (format reads stdin when no file is given; --check exits 1 with a diff when input is not canonical)');
 }
 
@@ -31,6 +32,16 @@ async function readInput(file) {
 
 const [command, ...rest] = process.argv.slice(2);
 
+// BEGIN praxis-run-commands
+if (command === 'run') {
+  const { runPraxisCli } = await import('./run-command.mjs');
+  process.exitCode = await runPraxisCli(rest, {
+    readInput,
+    stdout: process.stdout,
+    stderr: process.stderr
+  });
+} else
+// END praxis-run-commands
 if (command === 'format') {
   const check = rest.includes('--check');
   const file = rest.find((arg) => arg !== '--check');

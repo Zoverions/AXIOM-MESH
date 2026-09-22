@@ -24,8 +24,9 @@ It is not enabled as an AXIOM runtime, is not network exposed, is not
 production promoted, and grants no Mesh, Grid, Hypervisor, Sandbox, repository,
 credential, deployment, spending, or external-effect authority.
 
-The CLI supports only parsing, static checking, and IR inspection. It has no
-`run` command.
+The CLI supports parsing, static checking, IR inspection, and `run`, which
+executes programs against the synthetic host only (see `labs/praxis/RUN.md`).
+The synthetic host performs no real effects: it is production-unreachable.
 
 Compiled IR is sealed with a canonical module digest, but the runtime does not
 treat that digest as proof that the compiler was trustworthy. Hand-edited,
