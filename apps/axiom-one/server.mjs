@@ -372,7 +372,7 @@ function securityHeaders(headers) {
       "font-src 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "img-src 'self'",
+      "img-src 'self' data:",
       "manifest-src 'self'",
       "object-src 'none'",
       "script-src 'self'",
