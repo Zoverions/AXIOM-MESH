@@ -23,6 +23,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'agent-commons/PLUGIN-INTEGRITY-DRILL.md',
   'labs/praxis/README.md',
   'labs/praxis/BOOTSTRAP.md',
+  'labs/praxis/SPEC.md',
   'registry/axiom-ui/INTERFACE-BOUNDARY.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
