@@ -10,7 +10,8 @@
 //
 // Budgets encode "non-pathological": the front end must stay roughly linear,
 // so a 10x input must not cost more than ~20x the time, and absolute caps
-// keep CI honest.
+// keep CI honest. Measurements use a short warm-up and a median sample so
+// one JIT/GC/timer outlier cannot create a false scaling failure.
 
 import { performance } from 'node:perf_hooks';
 
@@ -18,6 +19,9 @@ import { lex } from './lexer.mjs';
 import { parse } from './parser.mjs';
 import { formatProgram } from './format.mjs';
 import { compile } from './compiler.mjs';
+
+const BENCHMARK_WARMUPS = 1;
+const BENCHMARK_SAMPLES = 5;
 
 export function syntheticProgram(lines) {
   let src = '';
@@ -27,10 +31,23 @@ export function syntheticProgram(lines) {
   return src;
 }
 
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
 function measure(fn) {
-  const start = performance.now();
-  const result = fn();
-  return { ms: performance.now() - start, result };
+  for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
+
+  const samples = [];
+  let result;
+  for (let i = 0; i < BENCHMARK_SAMPLES; i++) {
+    const start = performance.now();
+    result = fn();
+    samples.push(performance.now() - start);
+  }
+
+  return { ms: median(samples), result };
 }
 
 export function benchmarkSource(label, source) {
