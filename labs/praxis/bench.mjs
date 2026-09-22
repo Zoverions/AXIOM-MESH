@@ -4,13 +4,15 @@
 // (lexer, parser, formatter, compiler front end).
 //
 // Pure: takes source strings as input and returns measurements. No I/O,
-// no network, no wall-clock mocking beyond Date.now(). The caller (test or
-// CLI) supplies the corpus. Safe for the interpreter transport-surface
+// no network, no wall-clock mocking beyond performance.now(). The caller
+// (test or CLI) supplies the corpus. Safe for the interpreter transport-surface
 // conformance scan.
 //
 // Budgets encode "non-pathological": the front end must stay roughly linear,
 // so a 10x input must not cost more than ~20x the time, and absolute caps
 // keep CI honest.
+
+import { performance } from 'node:perf_hooks';
 
 import { lex } from './lexer.mjs';
 import { parse } from './parser.mjs';
@@ -26,9 +28,9 @@ export function syntheticProgram(lines) {
 }
 
 function measure(fn) {
-  const start = Date.now();
+  const start = performance.now();
   const result = fn();
-  return { ms: Date.now() - start, result };
+  return { ms: performance.now() - start, result };
 }
 
 export function benchmarkSource(label, source) {

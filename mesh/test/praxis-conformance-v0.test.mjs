@@ -156,15 +156,52 @@ commit prepared as receipt;
 
 
 test('Praxis interpreter has no built-in external-effect transport surface', async () => {
-  // Scan every interpreter module, not just the index.mjs facade.
-  // cli.mjs is intentionally excluded: it is the file-reading entry point by
-  // design (it must read .prax files from disk via node:fs/promises), while
-  // the invariant here covers the interpreter itself.
+  // Keep the core interpreter boundary explicit, while also classifying every
+  // non-CLI Praxis module so new files cannot silently escape this transport
+  // scan. cli.mjs remains the one intentional file-reading entry point.
   const dir = new URL('../../labs/praxis/', import.meta.url);
-  const modules = (await readdir(dir))
+  const coreInterpreterModules = [
+    'analyzer.mjs',
+    'canonical.mjs',
+    'charter.mjs',
+    'compiler.mjs',
+    'crypto.mjs',
+    'effects.mjs',
+    'errors.mjs',
+    'host-symbols.mjs',
+    'host.mjs',
+    'index.mjs',
+    'lexer.mjs',
+    'parser.mjs',
+    'policy.mjs',
+    'registry.mjs'
+  ];
+  const inertToolModules = [
+    'bench.mjs',
+    'format.mjs',
+    'fuzz.mjs',
+    'ledger.mjs',
+    'lsp.mjs',
+    'repl.mjs',
+    'run-command.mjs'
+  ];
+  const modules = [...coreInterpreterModules, ...inertToolModules].sort();
+  const present = new Set(await readdir(dir));
+  const presentNonCliModules = [...present]
     .filter((name) => name.endsWith('.mjs') && name !== 'cli.mjs')
     .sort();
-  assert.ok(modules.length > 1, `expected split interpreter modules, found ${modules.join(', ')}`);
+
+  assert.deepEqual(
+    presentNonCliModules,
+    modules,
+    'every non-CLI Praxis module must be explicitly classified in the transport boundary'
+  );
+  for (const name of modules) {
+    assert.ok(present.has(name), `expected classified Praxis module ${name}`);
+  }
+  assert.ok(coreInterpreterModules.includes('index.mjs'), 'core transport scan must include index.mjs facade');
+  assert.ok(coreInterpreterModules.includes('host.mjs'), 'core transport scan must include host.mjs implementation');
+  assert.ok(inertToolModules.includes('run-command.mjs'), 'synthetic run tooling must remain transport-scanned');
 
   for (const forbidden of [
     "node:http",
@@ -182,7 +219,7 @@ test('Praxis interpreter has no built-in external-effect transport surface', asy
   ]) {
     for (const name of modules) {
       const source = await readFile(new URL(name, dir), 'utf8');
-      assert.equal(source.includes(forbidden), false, `interpreter module ${name} must not contain ${forbidden}`);
+      assert.equal(source.includes(forbidden), false, `Praxis module ${name} must not contain ${forbidden}`);
     }
   }
 });
@@ -206,8 +243,8 @@ test('Praxis CLI invokes run only through the delimited synthetic run-command bl
   assert.equal(source.includes('createHostLease'), false);
   assert.equal(source.includes('createHostSecretRef'), false);
 
-  // run-command.mjs is covered by the no-transport-surface scan above (it is
-  // not cli.mjs), and it must stay synthetic-only with no file I/O of its own.
+  // run-command.mjs is covered by the no-transport-surface scan above and
+  // must stay synthetic-only with no file I/O of its own.
   const runSource = await readFile(
     new URL('../../labs/praxis/run-command.mjs', import.meta.url),
     'utf8'
