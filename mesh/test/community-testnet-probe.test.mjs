@@ -1,9 +1,35 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import { buildProbe, classifyMemory } from '../../community-testnet-probe.mjs';
 
 const GIB = 1024 ** 3;
+const repositoryRoot = fileURLToPath(new URL('../..', import.meta.url));
+const probePath = join(repositoryRoot, 'community-testnet-probe.mjs');
+
+function runGit(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    windowsHide: true
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result;
+}
+
+function runProbe(cwd) {
+  return spawnSync(process.execPath, [probePath], {
+    cwd,
+    encoding: 'utf8',
+    env: process.env,
+    windowsHide: true
+  });
+}
 
 test('classifyMemory reports broad non-identifying resource buckets', () => {
   assert.equal(classifyMemory(2 * GIB), '<4GiB');
@@ -15,7 +41,7 @@ test('classifyMemory reports broad non-identifying resource buckets', () => {
   assert.equal(classifyMemory(Number.NaN), 'unknown');
 });
 
-test('buildProbe binds exact source and exposes only bounded environment data', () => {
+test('buildProbe binds exact source and exposes only bounded environment preflight data', () => {
   const probe = buildProbe({
     sourceRef: 'a'.repeat(40),
     workingTreeClean: true,
@@ -29,7 +55,7 @@ test('buildProbe binds exact source and exposes only bounded environment data', 
   assert.equal(probe.campaign_reference, 'ua-2026-09-22-community-testnet-probe');
   assert.equal(probe.source_ref, 'a'.repeat(40));
   assert.equal(probe.working_tree_clean, true);
-  assert.equal(probe.scope, 'community-testnet-environment-only');
+  assert.equal(probe.scope, 'community-testnet-environment-preflight-only');
   assert.deepEqual(probe.environment, {
     platform: 'linux',
     architecture: 'arm64',
@@ -37,11 +63,22 @@ test('buildProbe binds exact source and exposes only bounded environment data', 
     memory_class: '8-16GiB'
   });
   assert.deepEqual(probe.suggested_lanes, ['T4', 'T5']);
+  assert.deepEqual(probe.required_result_fields, [
+    'participation_role',
+    'testnet_lane',
+    'environment_custody',
+    'exact_method',
+    'observed_disposition',
+    'observations',
+    'independence_status',
+    'limitations'
+  ]);
   assert.equal(probe.network_accessed, false);
   assert.equal(probe.telemetry_sent, false);
   assert.equal(probe.authority_granted, false);
   assert.equal(probe.production_certification, false);
-  assert.equal(probe.ready_to_submit, true);
+  assert.equal(probe.environment_preflight_ready, true);
+  assert.equal(probe.submission_ready, false);
 
   const serialized = JSON.stringify(probe);
   for (const forbidden of [
@@ -67,7 +104,8 @@ test('buildProbe fails closed for dirty or unverifiable source state', () => {
     nodeVersion: 'v24.18.0',
     totalMemoryBytes: 16 * GIB
   });
-  assert.equal(dirty.ready_to_submit, false);
+  assert.equal(dirty.environment_preflight_ready, false);
+  assert.equal(dirty.submission_ready, false);
 
   const unknown = buildProbe({
     sourceRef: 'main',
@@ -79,5 +117,57 @@ test('buildProbe fails closed for dirty or unverifiable source state', () => {
   });
   assert.equal(unknown.source_ref, null);
   assert.equal(unknown.working_tree_clean, null);
-  assert.equal(unknown.ready_to_submit, false);
+  assert.equal(unknown.environment_preflight_ready, false);
+  assert.equal(unknown.submission_ready, false);
+});
+
+test('CLI reports a clean exact-revision environment as preflight-ready but not submission-ready', () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), 'axiom-testnet-probe-clean-'));
+
+  try {
+    runGit(tempRoot, ['init', '--quiet']);
+    runGit(tempRoot, ['config', 'user.email', 'axiom-test@example.invalid']);
+    runGit(tempRoot, ['config', 'user.name', 'AXIOM test']);
+    runGit(tempRoot, ['config', 'commit.gpgsign', 'false']);
+    writeFileSync(join(tempRoot, 'tracked.txt'), 'clean\n', 'utf8');
+    runGit(tempRoot, ['add', 'tracked.txt']);
+    runGit(tempRoot, ['commit', '--quiet', '-m', 'initial']);
+
+    const result = runProbe(tempRoot);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+
+    const probe = JSON.parse(result.stdout);
+    assert.match(probe.source_ref, /^[0-9a-f]{40}$/u);
+    assert.equal(probe.working_tree_clean, true);
+    assert.equal(probe.environment_preflight_ready, true);
+    assert.equal(probe.submission_ready, false);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('CLI rejects a dirty repository as environment-preflight ready', () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), 'axiom-testnet-probe-dirty-'));
+
+  try {
+    runGit(tempRoot, ['init', '--quiet']);
+    runGit(tempRoot, ['config', 'user.email', 'axiom-test@example.invalid']);
+    runGit(tempRoot, ['config', 'user.name', 'AXIOM test']);
+    runGit(tempRoot, ['config', 'commit.gpgsign', 'false']);
+    writeFileSync(join(tempRoot, 'tracked.txt'), 'clean\n', 'utf8');
+    runGit(tempRoot, ['add', 'tracked.txt']);
+    runGit(tempRoot, ['commit', '--quiet', '-m', 'initial']);
+    writeFileSync(join(tempRoot, 'untracked.txt'), 'dirty\n', 'utf8');
+
+    const result = runProbe(tempRoot);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+
+    const probe = JSON.parse(result.stdout);
+    assert.match(probe.source_ref, /^[0-9a-f]{40}$/u);
+    assert.equal(probe.working_tree_clean, false);
+    assert.equal(probe.environment_preflight_ready, false);
+    assert.equal(probe.submission_ready, false);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
