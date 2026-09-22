@@ -2,7 +2,7 @@
 
 **Status:** public participation design; distributed evidence network; not a federated AXIOM runtime
 
-**Updated:** 2026-08-20
+**Updated:** 2026-09-22
 
 AXIOM-MESH Community Testnet v0 is a way for independent people, agents, researchers, and hardware operators to run the same repository revision on different environments and return reviewable evidence.
 
@@ -35,6 +35,22 @@ The purpose is to answer a simpler question first:
 ```
 
 No node becomes authoritative because it is online, popular, old, fast, well-known, or operated by a trusted organization. Multiple matching results increase confidence in reproducibility; they do not create protocol consensus or AXIOM authority.
+
+## One-command environment preflight
+
+From a clean checkout pinned to an exact revision, operators can run:
+
+```bash
+git checkout <exact-40-hex-commit>
+npm run testnet:probe
+```
+
+The probe is an **environment preflight only**. It reports the exact source revision, clean-worktree state, platform, architecture, Node version, and a broad memory class. It deliberately omits hostname, username, home directory, IP/MAC data, environment variables, credentials, timestamps, and serial identifiers; it performs no network access or telemetry.
+
+A successful preflight does **not** mean a Community Testnet result is ready to submit. Continue with a bounded lane such as T4 or T5, record the exact method and observations, then use the existing Community Testnet result intake:
+
+- Testnet contract: <https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/COMMUNITY-TESTNET-V0.md>
+- Result intake: <https://github.com/Zoverions/AXIOM-MESH/issues/new?template=community-testnet-result.yml>
 
 ## Participation roles
 
