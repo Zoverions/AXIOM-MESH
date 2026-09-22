@@ -90,7 +90,7 @@ Tool: Android SDK build-tools 36.1.0 (`apksigner`, `aapt`), `jarsigner`.
 ## Explicit non-claims
 
 - `fingerprints` in `twa-manifest.json` is empty: no Digital Asset Links
-  statement was published (publishing is Zov-gated). The rehearsal APK
+  statement was published (publishing is owner-gated). The rehearsal APK
   therefore falls back to a Custom Tab (`"fallbackType": "customtabs"`)
   instead of a verified fullscreen TWA — expected, not a failure.
 - The APK was NOT installed on a device and NOT uploaded anywhere. No
@@ -99,5 +99,5 @@ Tool: Android SDK build-tools 36.1.0 (`apksigner`, `aapt`), `jarsigner`.
   `axiomone-rehearsal-debug`) is a throwaway in local scratch, git-ignored,
   never committed, and must never sign a release build.
 - This log proves the local pipeline only. Production origin, release
-  keystore ceremony, DAL publication, and Play steps are Zov-gated per
-  `RUNBOOK.md` and have NOT been executed.
+  keystore ceremony, DAL publication, and Play steps are separately gated
+  per `RUNBOOK.txt` and have NOT been executed.
