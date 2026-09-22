@@ -187,7 +187,11 @@ test('Praxis interpreter has no built-in external-effect transport surface', asy
   }
 });
 
-test('Praxis CLI exposes compile/check/format surfaces only and cannot invoke run', async () => {
+test('Praxis CLI invokes run only through the delimited synthetic run-command block', async () => {
+  // The CLI gained a `run` command against the synthetic host (see
+  // labs/praxis/RUN.md). The run implementation must live in run-command.mjs
+  // behind the BEGIN/END praxis-run-commands markers; cli.mjs itself must not
+  // mint authorities or inject effect handlers.
   const source = await readFile(
     new URL('../../labs/praxis/cli.mjs', import.meta.url),
     'utf8'
@@ -195,11 +199,21 @@ test('Praxis CLI exposes compile/check/format surfaces only and cannot invoke ru
 
   assert.match(source, /import \{ compile \} from '\.\/index\.mjs';/);
   assert.match(source, /from '\.\/format\.mjs';/);
-  assert.equal(source.includes('run('), false);
-  assert.equal(source.includes('executor'), false);
+  assert.match(source, /\/\/ BEGIN praxis-run-commands/);
+  assert.match(source, /\/\/ END praxis-run-commands/);
+  assert.match(source, /await import\('\.\/run-command\.mjs'\)/);
   assert.equal(source.includes('createHostPermit'), false);
   assert.equal(source.includes('createHostLease'), false);
   assert.equal(source.includes('createHostSecretRef'), false);
+
+  // run-command.mjs is covered by the no-transport-surface scan above (it is
+  // not cli.mjs), and it must stay synthetic-only with no file I/O of its own.
+  const runSource = await readFile(
+    new URL('../../labs/praxis/run-command.mjs', import.meta.url),
+    'utf8'
+  );
+  assert.match(runSource, /synthetic/);
+  assert.equal(runSource.includes('node:fs'), false);
 });
 
 test('plain objects cannot forge host authority tokens', async () => {
