@@ -194,7 +194,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
   'labs/rust-trust-core/EXPERIMENT.md',
   'mesh/README.md',
-  'mesh/PRODUCTION.md'
+  'mesh/PRODUCTION.md',
+  'apps/axiom-one/feed-contract/README.md'
 ]);
 
 const REQUIRED_CONTENT = Object.freeze({
