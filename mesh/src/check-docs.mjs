@@ -26,6 +26,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'labs/praxis/SPEC.md',
   'labs/praxis/TUTORIAL.md',
   'labs/praxis/RUN.md',
+  'labs/praxis/INTEROP.md',
   'labs/praxis/examples/MANIFEST.md',
   'registry/axiom-ui/INTERFACE-BOUNDARY.md',
   'docs/README.md',
