@@ -1,0 +1,7 @@
+requires quorum board: Append @ Ledger threshold 2 of alice, bob, carol;
+observe motion = "approve-release-47" from "board:minutes";
+assess ruling = motion with MajorityRulePolicy;
+op append = Append(ruling) @ Ledger effect ledger_append irreversible;
+authorize append using board as armed_append;
+prepare armed_append as prepared_append;
+finalize prepared_append as append_receipt;

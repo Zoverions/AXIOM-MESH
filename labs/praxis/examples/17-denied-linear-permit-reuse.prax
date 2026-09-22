@@ -1,0 +1,5 @@
+requires permit deploy_prod: Deploy @ Production;
+op a = Deploy("one") @ Production;
+op b = Deploy("two") @ Production;
+authorize a using deploy_prod as armed_a;
+authorize b using deploy_prod as armed_b;

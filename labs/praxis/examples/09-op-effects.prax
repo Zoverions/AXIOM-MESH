@@ -1,0 +1,6 @@
+requires permit purge_cache: Purge @ Edge;
+requires secret edge_token: api_key;
+op purge = Purge("region:us-east") @ Edge effect cache_invalidation irreversible egress "https://edge.example/purge" using secrets edge_token;
+authorize purge using purge_cache as armed_purge;
+prepare armed_purge as prepared_purge;
+finalize prepared_purge as purge_receipt;

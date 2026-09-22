@@ -1,0 +1,4 @@
+requires permit read_reports: Read @ Reports;
+op fetch = Read("quarterly") @ Reports;
+authorize fetch using read_reports as armed_fetch;
+prepare armed_fetch as prepared_fetch;

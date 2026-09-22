@@ -1,0 +1,5 @@
+requires permit wipe_node: Wipe @ Decommissioned;
+op wipe = Wipe("node-7") @ Decommissioned effect data_destruction irreversible;
+authorize wipe using wipe_node as armed_wipe;
+prepare armed_wipe as prepared_wipe;
+commit prepared_wipe as wipe_receipt;
