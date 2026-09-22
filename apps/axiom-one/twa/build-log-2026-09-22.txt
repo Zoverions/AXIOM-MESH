@@ -1,0 +1,103 @@
+# AXIOM One TWA rehearsal — build log (2026-09-22)
+
+Rehearsal of the PWA → TWA → APK path for AXIOM One, item 7 of the
+post-sprint build wave. Built locally at $0 with the real Bubblewrap
+toolchain against the placeholder origin
+`axiom-one.twa-rehearsal.invalid` (RFC 2606 `.invalid` — can never
+resolve) and a throwaway debug keystore.
+
+## Toolchain (all local, $0)
+
+- `@bubblewrap/cli` 1.25.0 (`@bubblewrap/core` `TwaManifest` for config)
+- OpenJDK 17 (17.0.20.1)
+- Gradle 8.11.1 (wrapper) + Android Gradle Plugin 8.9.1
+- Android SDK: cmdline-tools 6609375, `platforms;android-36`,
+  `build-tools;36.1.0`
+- Node: system node running the Bubblewrap CLI
+
+## Environment bootstrap notes (this machine)
+
+Three environment-specific workarounds were needed; all are local-only and
+do not change what the rehearsal proves:
+
+1. The egress proxy hostname resolves to a dead IPv6 address via
+   `/etc/hosts`; the working IPv4 comes from DNS. Java prefers IPv6, so
+   every Java network call reset until `-Djava.net.preferIPv4Stack=true`
+   was set (sdkmanager, Gradle wrapper, Gradle daemon).
+2. Bubblewrap 1.25's SDK validator expects the legacy `tools/` layout
+   directly under the SDK root, so the command-line tools were placed at
+   `<sdk>/tools/` (not `<sdk>/cmdline-tools/latest/`).
+3. Bubblewrap's Gradle wrapper executes `./gradlew` from `process.cwd()`,
+   so the build must run with cwd = the generated project directory.
+
+The Android SDK platform and build-tools were installed with
+`sdkmanager --install "platforms;android-36" "build-tools;36.1.0"`.
+
+## Sanitized build transcript
+
+Secrets redacted (`<redacted>`): egress-proxy credentials that the JVM
+echoes via `JDK_JAVA_OPTIONS`, and the throwaway debug-keystore passwords.
+`--skipPwaValidation` was used ONLY because the `.invalid` rehearsal
+origin cannot be live; the release build MUST NOT skip PWA validation.
+
+```
+,-----.        ,--.  ,--.  ,--.
+|  |) /_,--.,--|  |-.|  |-.|  |,---.,--.   ,--,--.--.,--,--.,---.
+|  .-.  |  ||  | .-. | .-. |  | .-. |  |.'.|  |  .--' ,-.  | .-. |
+|  '--' '  ''  | `-' | `-' |  \   --|   .'.   |  |  \ '-'  | '-' '
+`------' `----' `---' `---'`--'`----'--'   '--`--'   `--`--|  |-'
+                                                           `--'    
+Using passwords set in the BUBBLEWRAP_KEYSTORE_PASSWORD and BUBBLEWRAP_KEY_PASSWORD environmental variables.
+Building the Android App...
+(node:59247) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+	- Generated Android APK at ./app-release-signed.apk
+	- Generated Android App Bundle at ./app-release-bundle.aab
+
+```
+
+## Artifact verification (2026-09-22, post-build)
+
+Tool: Android SDK build-tools 36.1.0 (`apksigner`, `aapt`), `jarsigner`.
+
+### app-release-signed.apk (1,500,206 bytes)
+
+- `apksigner verify`: signature VALID.
+- Signer DN: `CN=AXIOM One TWA rehearsal DEBUG ONLY, OU=rehearsal,
+  O=invalid, C=XX` — the throwaway debug keystore. No production key
+  material exists in this rehearsal; no release keystore was created.
+- Signer SHA-256:
+  `71a933e1479cc0135c00465907e6f27cd64dd219637fe5699d244c9c24c976f0`
+- `aapt dump badging`:
+  `package: name='invalid.twa_rehearsal.axiom_one.twa' versionCode='1'
+  versionName='1'`, `sdkVersion:'21'`, `targetSdkVersion:'36'`,
+  `application-label:'AXIOM One Local Preview'`
+- `launchable-activity`:
+  `invalid.twa_rehearsal.axiom_one.twa.LauncherActivity`, label 'AXIOM One'
+- Manifest intent filter: `android.intent.action.VIEW` +
+  `android.intent.category.BROWSABLE`, scheme `https`
+- `string/hostName` = `axiom-one.twa-rehearsal.invalid`
+- `string/launchUrl` = `https://axiom-one.twa-rehearsal.invalid/`
+- Application icon: adaptive icon `res/BW.xml` (generated from the 512px
+  any + maskable icons of the item-6 manifest)
+- Shortcuts wired via `android.app.shortcuts` meta-data → `xml/shortcuts`:
+  `Local Social` → `/#social`, `Vault` → `/#vault` (icons `shortcut_0/1`)
+
+### app-release-bundle.aab (1,615,491 bytes)
+
+- `jarsigner -verify`: `jar verified.`
+
+## Explicit non-claims
+
+- `fingerprints` in `twa-manifest.json` is empty: no Digital Asset Links
+  statement was published (publishing is Zov-gated). The rehearsal APK
+  therefore falls back to a Custom Tab (`"fallbackType": "customtabs"`)
+  instead of a verified fullscreen TWA — expected, not a failure.
+- The APK was NOT installed on a device and NOT uploaded anywhere. No
+  Google Play interaction, no assetlinks publication, no DNS change.
+- The debug keystore (`twa-debug.keystore`, alias
+  `axiomone-rehearsal-debug`) is a throwaway in local scratch, git-ignored,
+  never committed, and must never sign a release build.
+- This log proves the local pipeline only. Production origin, release
+  keystore ceremony, DAL publication, and Play steps are Zov-gated per
+  `RUNBOOK.md` and have NOT been executed.
