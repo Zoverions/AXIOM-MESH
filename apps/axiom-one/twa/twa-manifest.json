@@ -11,7 +11,7 @@
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#08111F",
-  "enableNotifications": true,
+  "enableNotifications": false,
   "startUrl": "/",
   "iconUrl": "https://axiom-one.twa-rehearsal.invalid/icons/icon-512.png",
   "maskableIconUrl": "https://axiom-one.twa-rehearsal.invalid/icons/icon-maskable-512.png",
