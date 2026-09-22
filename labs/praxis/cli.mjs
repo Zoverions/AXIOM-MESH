@@ -30,6 +30,15 @@ async function readInput(file) {
   return readFile(file, 'utf8');
 }
 
+// BEGIN praxis-repl-commands
+import { runRepl } from './repl.mjs';
+
+if (process.argv[2] === 'repl') {
+  await runRepl();
+  process.exit(0);
+}
+// END praxis-repl-commands
+
 const [command, ...rest] = process.argv.slice(2);
 
 // BEGIN praxis-run-commands
