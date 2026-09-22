@@ -312,15 +312,82 @@ function validateExplanations(policy, humanContract) {
 }
 
 function validateManifest(manifest) {
+  const expectedIcons = [
+    { purpose: 'any', sizes: '192x192', src: '/icons/icon-192.png', type: 'image/png' },
+    { purpose: 'any', sizes: '512x512', src: '/icons/icon-512.png', type: 'image/png' },
+    { purpose: 'maskable', sizes: '192x192', src: '/icons/icon-maskable-192.png', type: 'image/png' },
+    { purpose: 'maskable', sizes: '512x512', src: '/icons/icon-maskable-512.png', type: 'image/png' },
+    { purpose: 'any', sizes: 'any', src: '/icon.svg', type: 'image/svg+xml' }
+  ];
+  const expectedScreenshots = [
+    {
+      form_factor: 'wide',
+      label: 'AXIOM One local preview (stylized mockup): Local Social and Vault sections.',
+      sizes: '1280x720',
+      src: '/screenshots/screenshot-wide.png',
+      type: 'image/png'
+    },
+    {
+      form_factor: 'narrow',
+      label: 'AXIOM One local preview (stylized mockup): compact mobile layout.',
+      sizes: '390x844',
+      src: '/screenshots/screenshot-narrow.png',
+      type: 'image/png'
+    }
+  ];
+  const expectedShortcuts = [
+    {
+      description: 'Open the owner-scoped local social feed.',
+      icons: [{ sizes: '192x192', src: '/icons/icon-192.png', type: 'image/png' }],
+      name: 'Local Social',
+      short_name: 'Social',
+      url: '/#social'
+    },
+    {
+      description: 'Open the partitioned local vault.',
+      icons: [{ sizes: '192x192', src: '/icons/icon-192.png', type: 'image/png' }],
+      name: 'Vault',
+      short_name: 'Vault',
+      url: '/#vault'
+    }
+  ];
+  exactObject(manifest, 'AXIOM One web manifest', [
+    'background_color',
+    'categories',
+    'description',
+    'dir',
+    'display',
+    'display_override',
+    'icons',
+    'id',
+    'lang',
+    'name',
+    'orientation',
+    'scope',
+    'screenshots',
+    'short_name',
+    'shortcuts',
+    'start_url',
+    'theme_color'
+  ]);
   if (
     manifest.name !== 'AXIOM One Local Preview'
+    || manifest.short_name !== 'AXIOM One'
+    || manifest.description !== 'Experimental local interface for an AXIOM-MESH personal node. Owner-scoped; no external AI, sharing, or federation is claimed.'
     || manifest.id !== '/'
     || manifest.start_url !== '/'
     || manifest.scope !== '/'
     || manifest.display !== 'standalone'
-    || manifest.icons?.length !== 1
-    || manifest.icons[0].src !== '/icon.svg'
-    || manifest.icons[0].type !== 'image/svg+xml'
+    || manifest.dir !== 'ltr'
+    || manifest.lang !== 'en'
+    || manifest.orientation !== 'any'
+    || manifest.background_color !== '#08111f'
+    || manifest.theme_color !== '#0b1526'
+    || canonicalJson(manifest.categories) !== canonicalJson(['productivity', 'utilities'])
+    || canonicalJson(manifest.display_override) !== canonicalJson(['window-controls-overlay', 'standalone'])
+    || canonicalJson(manifest.icons) !== canonicalJson(expectedIcons)
+    || canonicalJson(manifest.screenshots) !== canonicalJson(expectedScreenshots)
+    || canonicalJson(manifest.shortcuts) !== canonicalJson(expectedShortcuts)
   ) throw new ValidationError('AXIOM One web manifest is invalid');
 }
 
@@ -441,6 +508,18 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     || !worker.includes("'/human-contract.json'")
     || !worker.includes("'/local-organize.mjs'")
   ) throw new ValidationError('AXIOM One public explanation assets are not exact');
+  const pwaAssets = [
+    '/icons/icon-192.png',
+    '/icons/icon-512.png',
+    '/icons/icon-maskable-192.png',
+    '/icons/icon-maskable-512.png',
+    '/screenshots/screenshot-wide.png',
+    '/screenshots/screenshot-narrow.png'
+  ];
+  if (pwaAssets.some(assetPath => (
+    !server.includes(`'${assetPath}'`)
+    || !worker.includes(`'${assetPath}'`)
+  ))) throw new ValidationError('AXIOM One installable shell asset inventory drifted');
   if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
     throw new ValidationError('AXIOM One reduced-motion behavior is missing');
   }
