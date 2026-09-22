@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-09-18
+**Updated:** 2026-09-22
 
 **Active build:** `0.12.0-dev.3`
 
@@ -78,7 +78,7 @@ or agent security result does not itself authorize any AXIOM effect.
 | Axiom Education | In progress; independent downstream application with Mesh convergence candidate | Governed learner memory/write/self-read substrate is being converged onto current Mesh without production policy activation; after Mesh merge, pin exact compatibility in `Zoverions/Axiom-Education`, update feature-adoption ledger, and require downstream protected CI before claiming adoption |
 | Owner-local social substrate | In progress: intent-authorized local actor/persona/publication create/supersede/retract plus owner-derived `/v1/social`; A2 publication projection; no federation or network distribution | Complete exact-head owner-read evidence, then AXIOM One UI; later exchange/federation requires a separate protocol/security gate |
 | Remote social review inspection | Candidate mechanism implemented; not production-promoted: owner-only `/v1/social/remote-review`, owner derived from authenticated principal, query overrides rejected, minimized G5A projection, accepted `SocialGridStore`, no remote-schema creation and no social/network/authority effect | Same-head Clean Kernel/Windows/chain evidence is required before PR readiness; any staging/admission/follow/transport/federation remains a separate gate |
-| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete local social UI, onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
+| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views; LAB-GRADE installable manifest with exact local PNG/maskable icons, stylized screenshots, shortcuts, and shell-cache verification | Complete local social write UI, onboarding, session/device security, production browser evidence, accessibility/usability, signed packaging, safe update/rollback/recovery/uninstall, and support |
 | Human authority explanations | Experimental bounded slice (`UX-003`): five-action review, stable outcomes/events, approval states, raw evidence, uncertainty recovery | Authoritative policy-bound broader consequential plan/execute, reversible approval actions, consent/revocation journeys, comprehension evidence |
 | Governed memory lifecycle | Experimental (`UX-004`): owner create/list, three fixed provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives | Edge deletion, bounded bulk ingest, authorized hard deletion, restore/recovery, download threat analysis, human lifecycle evidence |
 | Browser security | Planned (`UX-005`) | CSP, CSRF, origin, session/cookie/token, clickjacking, device revocation, storage inspection |
