@@ -1,0 +1,60 @@
+{
+  "packageId": "invalid.twa_rehearsal.axiom_one.twa",
+  "host": "axiom-one.twa-rehearsal.invalid",
+  "name": "AXIOM One Local Preview",
+  "launcherName": "AXIOM One",
+  "display": "standalone",
+  "themeColor": "#0B1526",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#08111F",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://axiom-one.twa-rehearsal.invalid/icons/icon-512.png",
+  "maskableIconUrl": "https://axiom-one.twa-rehearsal.invalid/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./twa-debug.keystore",
+    "alias": "axiomone-rehearsal-debug"
+  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Local Social",
+      "shortName": "Social",
+      "url": "/#social",
+      "chosenIconUrl": "https://axiom-one.twa-rehearsal.invalid/icons/icon-192.png"
+    },
+    {
+      "name": "Vault",
+      "shortName": "Vault",
+      "url": "/#vault",
+      "chosenIconUrl": "https://axiom-one.twa-rehearsal.invalid/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://axiom-one.twa-rehearsal.invalid/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://axiom-one.twa-rehearsal.invalid/",
+  "minSdkVersion": 21,
+  "orientation": "any",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "appVersion": "1"
+}
