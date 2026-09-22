@@ -33,7 +33,7 @@ export function buildProbe({
     campaign_reference: 'ua-2026-09-22-community-testnet-probe',
     source_ref: exactSource,
     working_tree_clean: clean,
-    scope: 'community-testnet-environment-only',
+    scope: 'community-testnet-environment-preflight-only',
     environment: {
       platform: platformName,
       architecture,
@@ -42,13 +42,24 @@ export function buildProbe({
     },
     suggested_lanes: ['T4', 'T5'],
     next_commands: ['npm run doctor', 'npm run setup:check'],
+    required_result_fields: [
+      'participation_role',
+      'testnet_lane',
+      'environment_custody',
+      'exact_method',
+      'observed_disposition',
+      'observations',
+      'independence_status',
+      'limitations'
+    ],
     testnet_contract_url: 'https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/COMMUNITY-TESTNET-V0.md',
     result_intake_url: 'https://github.com/Zoverions/AXIOM-MESH/issues/new?template=community-testnet-result.yml',
     network_accessed: false,
     telemetry_sent: false,
     authority_granted: false,
     production_certification: false,
-    ready_to_submit: exactSource !== null && clean === true
+    environment_preflight_ready: exactSource !== null && clean === true,
+    submission_ready: false
   };
 }
 
@@ -95,7 +106,7 @@ function main() {
   });
 
   process.stdout.write(`${JSON.stringify(probe, null, 2)}\n`);
-  process.exitCode = probe.ready_to_submit ? 0 : 1;
+  process.exitCode = probe.environment_preflight_ready ? 0 : 1;
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
