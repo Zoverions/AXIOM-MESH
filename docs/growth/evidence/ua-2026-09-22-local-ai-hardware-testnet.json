@@ -1,0 +1,34 @@
+{
+  "experiment": "ua-2026-09-22-local-ai-hardware-testnet",
+  "date": "2026-09-22",
+  "segment": "homelab, local-AI, ARM, self-hosted, and heterogeneous-hardware operators",
+  "hypothesis": "Moving the Community Testnet invitation from repository-native documentation to a source-linked owned landing page with one exact-revision preflight and the existing result intake will increase qualified test runs and portability contributions.",
+  "channel": "zoverions.com owned resource page -> AXIOM-MESH pinned source / Community Testnet result intake",
+  "asset": "https://zoverions.com/resources/local-ai-hardware-testnet/",
+  "campaign": {
+    "utm_source": "zoverions.com",
+    "utm_medium": "owned",
+    "utm_campaign": "ua-2026-09-22-local-ai-hardware-testnet"
+  },
+  "activation": {
+    "repository": "https://github.com/Zoverions/AXIOM-MESH",
+    "commit": "5f2627b0b42940396b04c01c3fecf3a4572aeab3",
+    "command": "npm run testnet:probe",
+    "contract": "https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/COMMUNITY-TESTNET-V0.md",
+    "result_intake": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=community-testnet-result.yml"
+  },
+  "baseline": {
+    "stars": 3,
+    "forks": 1,
+    "subscribers": 0,
+    "community_testnet_issues_since_2026_09_22": 0
+  },
+  "published": {
+    "website_pull_request": "https://github.com/Zoverions/zoverions-com/pull/37",
+    "website_merge_commit": "e90581d77dd251cff544d7addf0a0b1e34891152",
+    "preview_status": "success"
+  },
+  "result": "Owned source and Vercel deployment pipeline succeeded. No external Community Testnet submission or attributable activation is claimed at launch.",
+  "next_decision": "Measure exact-revision probe runs indirectly through attributable repository movement, Community Testnet submissions, platform diversity, substantive issues, forks, and reproducibility findings. If the external landing page also produces no qualified activation, retire this Testnet ask and rotate to a different user job rather than repeating it.",
+  "safety": "No runtime, protocol, credential, privacy, federation, production, or authority semantics changed. The page explicitly states that Community Testnet v0 is not a federated runtime, production service, security certification, or authority network."
+}
