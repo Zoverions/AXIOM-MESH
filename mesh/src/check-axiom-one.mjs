@@ -104,7 +104,13 @@ export async function checkAxiomOnePreview() {
     styles,
     worker,
     server,
-    icon
+    icon,
+    icon192,
+    icon512,
+    iconMaskable192,
+    iconMaskable512,
+    screenshotWide,
+    screenshotNarrow
   ] = await Promise.all([
     readJson('app-policy.json'),
     readJson('human-contract.json'),
@@ -116,12 +122,24 @@ export async function checkAxiomOnePreview() {
     readText('styles.css'),
     readText('sw.mjs'),
     readText('server.mjs'),
-    readText('icon.svg')
+    readText('icon.svg'),
+    readBinary('icons/icon-192.png'),
+    readBinary('icons/icon-512.png'),
+    readBinary('icons/icon-maskable-192.png'),
+    readBinary('icons/icon-maskable-512.png'),
+    readBinary('screenshots/screenshot-wide.png'),
+    readBinary('screenshots/screenshot-narrow.png')
   ]);
   validatePolicy(policy);
   validateExplanations(policy, humanContract);
   validateManifest(manifest);
   validateAssets({ index, app, presentation, localOrganize, styles, worker, server, icon });
+  validatePng(icon192, 'icons/icon-192.png', 192, 192);
+  validatePng(icon512, 'icons/icon-512.png', 512, 512);
+  validatePng(iconMaskable192, 'icons/icon-maskable-192.png', 192, 192);
+  validatePng(iconMaskable512, 'icons/icon-maskable-512.png', 512, 512);
+  validatePng(screenshotWide, 'screenshots/screenshot-wide.png', 1280, 720);
+  validatePng(screenshotNarrow, 'screenshots/screenshot-narrow.png', 390, 844);
   return {
     valid: true,
     schema: policy.schema,
@@ -160,6 +178,12 @@ export async function checkAxiomOnePreview() {
       worker: sha256(worker),
       server: sha256(server),
       icon: sha256(icon),
+      icon_192_png: sha256(icon192),
+      icon_512_png: sha256(icon512),
+      icon_maskable_192_png: sha256(iconMaskable192),
+      icon_maskable_512_png: sha256(iconMaskable512),
+      screenshot_wide_png: sha256(screenshotWide),
+      screenshot_narrow_png: sha256(screenshotNarrow),
       manifest: digestObject(manifest)
     })
   };
@@ -528,6 +552,17 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
   }
 }
 
+function validatePng(buffer, name, expectedWidth, expectedHeight) {
+  if (
+    !Buffer.isBuffer(buffer)
+    || buffer.length < 24
+    || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
+    || buffer.subarray(12, 16).toString('ascii') !== 'IHDR'
+    || buffer.readUInt32BE(16) !== expectedWidth
+    || buffer.readUInt32BE(20) !== expectedHeight
+  ) throw new ValidationError(`AXIOM One PNG asset is invalid: ${name}`);
+}
+
 function exactObject(value, name, keys) {
   if (
     !value
@@ -539,6 +574,10 @@ function exactObject(value, name, keys) {
 
 function readText(name) {
   return readFile(join(APP_ROOT, name), 'utf8');
+}
+
+function readBinary(name) {
+  return readFile(join(APP_ROOT, name));
 }
 
 async function readJson(name) {
