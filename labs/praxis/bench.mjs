@@ -9,9 +9,12 @@
 // conformance scan.
 //
 // Budgets encode "non-pathological": the front end must stay roughly linear,
-// so a 10x input must not cost more than ~20x the time, and absolute caps
+// so a 10x input must not cost more than ~30x the time, and absolute caps
 // keep CI honest. Measurements use a short warm-up and a median sample so
-// one JIT/GC/timer outlier cannot create a false scaling failure.
+// one JIT/GC/timer outlier cannot create a false scaling failure. The scaling
+// budget carries headroom because shared/virtualized CI runners (notably
+// macos-15-intel) show ~20-24x on genuinely linear parses; a truly quadratic
+// blowup would read ~100x and still fail loudly.
 
 import { performance } from 'node:perf_hooks';
 
@@ -82,8 +85,10 @@ export function runBenchmarks(corpus) {
 export const BUDGETS = {
   maxParseMs10k: 5000,
   maxFormatMs10k: 5000,
-  // 10x input must cost less than 20x time (linear-ish, not quadratic).
-  maxScalingRatio: 20
+  // 10x input must cost less than 30x time (linear-ish, not quadratic).
+  // Raised from 20x on 2026-09-22: the 20x budget was a flaky gate on
+  // macos-15-intel CI (measured 20.0x and 23.6x on identical, passing code).
+  maxScalingRatio: 30
 };
 
 export function checkBudgets(results) {
