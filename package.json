@@ -23,6 +23,7 @@
     "agent-commons:a2a-card:check": "node mesh/src/check-agent-commons-a2a-card-candidate.mjs",
     "mcp-config:credential-check": "node mcp-config-credential-check.mjs",
     "trust-profile": "node trust-profile.mjs",
+    "memory-lifecycle:profile": "node memory-lifecycle-profile.mjs",
     "testnet:probe": "node community-testnet-probe.mjs",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
