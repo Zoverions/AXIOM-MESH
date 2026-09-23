@@ -1,0 +1,134 @@
+{
+  "schema": "axiom-circle-grid-persistence-threat-review.v0",
+  "version": 0,
+  "status": "inert-grid-persistence-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "scope": "circle-historical-binding-to-existing-grid-event-chain-admission-contract-only",
+  "threats": [
+    {
+      "id": "deterministic-event-id-substitution",
+      "mitigations": [
+        "event-id-recomputed-from-circle-id-and-binding-digest",
+        "event-subject-must-equal-circle-id"
+      ],
+      "residual_limit": "deterministic identity prevents caller-chosen aliases for the represented binding but does not authenticate who requested persistence or prove the historical binding itself is legitimate"
+    },
+    {
+      "id": "hidden-payload-extension-or-metadata-substitution",
+      "mitigations": [
+        "exact-payload-key-inventory",
+        "payload-binding-digest-recomputed",
+        "record-and-charter-metadata-cross-checked-against-embedded-binding"
+      ],
+      "residual_limit": "canonical candidate validation prevents alternate interpretations of the supplied object but cannot prove the original event snapshot was truthfully produced by an authorized actor"
+    },
+    {
+      "id": "persistence-policy-digest-substitution",
+      "mitigations": [
+        "candidate-policy-digest-recomputed-from-active-policy",
+        "payload-policy-digest-must-match-candidate"
+      ],
+      "residual_limit": "binding to the supplied active policy prevents self-consistent policy-digest forgery inside the candidate but does not establish governance approval for changing that policy"
+    },
+    {
+      "id": "stale-or-skipped-circle-head",
+      "mitigations": [
+        "expected-prior-circle-head-required",
+        "expected-head-must-equal-historical-binding-predecessor",
+        "resulting-head-is-exact-binding-digest"
+      ],
+      "residual_limit": "the inert contract checks the caller-supplied expected head against historical structure; live atomic compare-and-set against durable Grid state is still a promotion blocker"
+    },
+    {
+      "id": "exact-replay-versus-conflicting-event-reuse",
+      "mitigations": [
+        "deterministic-grid-event-id",
+        "exact-kind-subject-and-payload-digest-replay-classification",
+        "conflicting-reuse-is-distinct-from-idempotent-retry"
+      ],
+      "residual_limit": "classification is deterministic once the existing Grid event is supplied, but this slice does not yet perform the durable event lookup or append transaction itself"
+    },
+    {
+      "id": "retry-instability-after-history-extension",
+      "mitigations": [
+        "historical-ledger-prefix-digest-through-binding",
+        "charter-lifecycle-prefix-digest-through-governing-charter",
+        "mutable-full-tail-digests-excluded-from-event-payload"
+      ],
+      "residual_limit": "prefix binding keeps retries stable as represented histories extend; it does not prove omitted history never existed or that an externally supplied prefix is globally complete"
+    },
+    {
+      "id": "request-replay-guard-misrepresented-as-durable-idempotency",
+      "mitigations": [
+        "request-replay-guard-counts-as-durable-persistence-false",
+        "deterministic-grid-event-id-used-for-durable-identity",
+        "existing-grid-event-chain-reused"
+      ],
+      "residual_limit": "the contract separates ephemeral signed-request freshness from durable event identity, while live durable conflict handling still depends on future Grid integration"
+    },
+    {
+      "id": "parallel-circle-database-or-ledger-fork",
+      "mitigations": [
+        "separate-circle-database-created-false",
+        "global-grid-chain-is-reused",
+        "grid-chain-verification-required-for-receipt"
+      ],
+      "residual_limit": "reusing the Grid evidence chain avoids a second persistence authority, but a Circle-specific durable head projection and concurrency check are not activated in this contract"
+    },
+    {
+      "id": "grid-receipt-evidence-laundering",
+      "mitigations": [
+        "grid-event-envelope-hash-recomputed",
+        "grid-signature-metadata-required",
+        "successful-grid-chain-verification-covering-event-required"
+      ],
+      "residual_limit": "the receipt records supplied successful chain-verification evidence and signature presence; this inert helper does not independently call the Grid verifier or cryptographically verify the signature object"
+    },
+    {
+      "id": "persistence-reinterpreted-as-governance-authority",
+      "mitigations": [
+        "candidate-runtime-authority-false",
+        "receipt-runtime-authority-false",
+        "portable-authority-false",
+        "authority-effect-none"
+      ],
+      "residual_limit": "a durable Grid record can establish that AXIOM stored a specific historical binding candidate; it does not prove consent, quorum, legitimacy, legal authority, execution authority, or truth"
+    },
+    {
+      "id": "runtime-integration-overclaim",
+      "mitigations": [
+        "live-grid-append-false",
+        "grid-route-false",
+        "gateway-route-false",
+        "hypervisor-action-false",
+        "grid-materialized-projection-false"
+      ],
+      "residual_limit": "this slice defines and validates the admission object only; it does not persist Circle records through the running Grid service and must not be advertised as live Circle persistence"
+    }
+  ],
+  "promotion_blockers": [
+    "grid-internal-circle-event-preflight",
+    "durable-circle-head-lookup-or-projection",
+    "atomic-expected-head-compare-and-set-with-grid-append",
+    "durable-event-id-replay-and-conflict-lookup",
+    "receipt-built-from-grid-internal-chain-verification-not-caller-supplied-evidence",
+    "authenticated-hypervisor-or-equivalent-authority-boundary",
+    "crash-restart-and-concurrent-writer-tests",
+    "backup-restore-and-chain-checkpoint-recovery-tests",
+    "privacy-retention-export-and-redaction-review",
+    "security-and-governance-review-before-real-circle-use"
+  ],
+  "non_claims": {
+    "circle_persistence_is_live": false,
+    "candidate_proves_actor_authorization": false,
+    "receipt_proves_governance_legitimacy": false,
+    "receipt_proves_historical_truth": false,
+    "request_replay_guard_is_durable_idempotency": false,
+    "separate_circle_database_exists": false,
+    "runtime_authority_granted": false,
+    "portable_authority_granted": false,
+    "distributed_consensus_enabled": false
+  }
+}

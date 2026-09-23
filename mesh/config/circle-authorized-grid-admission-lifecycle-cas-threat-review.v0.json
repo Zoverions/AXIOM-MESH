@@ -1,0 +1,87 @@
+{
+  "schema": "axiom-circle-authorized-grid-admission-lifecycle-cas-threat-review.v0",
+  "version": 0,
+  "status": "inert-lifecycle-cas-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "threat": "authorization-commit-race",
+      "mitigations": ["single-signed-capability-binds-lifecycle-guard-set", "guard-check-executes-inside-grid-begin-immediate", "circle-event-and-projection-rollback-on-guard-failure"],
+      "residual_limitation": "The guarantee is local to the authoritative Grid transaction; it does not establish distributed consensus or trusted real-world time."
+    },
+    {
+      "threat": "stale-membership-or-credential-head",
+      "mitigations": ["one-exact-guard-per-authorization-membership", "guard-binds-lifecycle-head-and-source-event", "membership-and-credential-lifecycle-digests-must-match-authorization-context"],
+      "residual_limitation": "The retained lifecycle head proves technical currentness inside this Grid, not that the underlying lifecycle mutation was legitimately authorized."
+    },
+    {
+      "threat": "guard-omission",
+      "mitigations": ["guard-set-membership-inventory-derived-from-eligibility-evidence", "exact-guard-count", "verification-rechecks-authorization-membership-coverage"],
+      "residual_limitation": "Bootstrap and invited-principal self-acceptance intentionally have no preexisting membership guard because their authorization modes do not depend on an existing member lifecycle."
+    },
+    {
+      "threat": "guard-substitution",
+      "mitigations": ["hypervisor-capability-binds-guard-set-digest", "guard-identities-bind-circle-membership-principal", "grid-compares-exact-projection-fields"],
+      "residual_limitation": "Hypervisor signing-key compromise remains outside this contract."
+    },
+    {
+      "threat": "authorization-context-substitution",
+      "mitigations": ["parent-lifecycle-aware-authorization-recomputed-before-issue", "parent-invocation-digest-bound", "guard-lifecycle-digests-must-equal-member-context-digests"],
+      "residual_limitation": "Credential lifecycle validation does not prove possession of the credential private key."
+    },
+    {
+      "threat": "post-commit-lifecycle-change-rewrites-history",
+      "mitigations": ["exact-replay-returns-retained-event-before-new-guard-check", "receipt-binds-original-grid-event", "append-only-grid-history"],
+      "residual_limitation": "A later suspension or compromise can block future effects but does not retroactively invalidate a record that committed before that later state transition."
+    },
+    {
+      "threat": "different-token-replay",
+      "mitigations": ["capability-derived-trace-id", "existing-event-trace-must-match", "same-event-different-capability-rejected"],
+      "residual_limitation": "This is durable admission identity, not general request-freshness proof."
+    },
+    {
+      "threat": "unguarded-parent-path-bypass",
+      "mitigations": ["successor-policy-requires-guarded-grid-append", "successor-store-is-separate-and-unwired", "promotion-boundary-test-keeps-parent-route-unpromoted"],
+      "residual_limitation": "The older inert parent helper remains in the repository for provenance and tests; runtime promotion must later prove the guarded successor is the sole service-level Circle append path."
+    },
+    {
+      "threat": "lifecycle-head-projection-drift",
+      "mitigations": ["parent-grid-head-layer-reconstructs-from-signed-events", "verified-head-read-requires-full-chain", "guard-compares-source-event-id-and-sequence"],
+      "residual_limitation": "Compromise capable of replacing both trusted Grid signing material and durable storage remains outside this contract."
+    },
+    {
+      "threat": "cross-circle-or-membership-confusion",
+      "mitigations": ["guard-set-exact-circle-membership-principal-binding", "guarded-store-rejects-cross-circle-guard", "authorization-evidence-coverage-check"],
+      "residual_limitation": "Cross-Circle recognition and delegation semantics remain undefined."
+    }
+  ],
+  "non_claims": [
+    "credential-possession",
+    "authorized-lifecycle-mutation-service",
+    "human-identity",
+    "legal-identity",
+    "historical-backfill-authority",
+    "membership-resume-authority",
+    "role-grant-authority",
+    "credential-issuance-authority",
+    "trusted-wall-clock",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "credential-possession-proof-bound-to-request",
+    "authorized-grid-backed-membership-and-credential-lifecycle-mutations",
+    "historical-backfill-import-authority-and-live-event-freshness-policy",
+    "role-grant-membership-resume-credential-issuance-and-recovery-authority-procedures",
+    "guarded-successor-as-sole-service-level-circle-append-path",
+    "internally-obtained-trusted-grid-chain-verification",
+    "accessible-member-facing-currentness-and-denial-explanations",
+    "independent-security-privacy-coercion-sybil-recovery-capture-governance-review"
+  ]
+}
