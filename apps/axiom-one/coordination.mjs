@@ -10,23 +10,37 @@ const MAX_HISTORY = 200;
 export function adaptMeshStatusV1(source, provenance) {
   if (!isRecord(provenance) || !/^[A-Za-z0-9_.:-]{1,80}$/.test(provenance.source_id ?? '')
       || !/^[A-Za-z0-9_.:-]{1,80}$/.test(provenance.audience_id ?? '')
-      || !nonnegative(provenance.revision)
+      || !['header', 'timestamp', 'unversioned'].includes(provenance.revision_kind ?? 'header')
+      || ((provenance.revision_kind ?? 'header') === 'unversioned'
+        ? provenance.revision !== null : !nonnegative(provenance.revision))
       || !/^[a-f0-9]{64}$/.test(provenance.content_digest ?? '')) {
     throw new Error('Trusted feed provenance is required');
   }
   if (!isRecord(source) || source.format !== 'MESH_STATUS v1' || !isRecord(source.agents)
       || Object.keys(source.agents).length > MAX_AGENTS) throw new Error('Invalid MESH_STATUS v1 source');
-  const observed = Date.parse(source.updated_at);
-  if (!Number.isFinite(observed) || typeof source.updated_at !== 'string') {
-    throw new Error('MESH_STATUS v1 needs a valid update time');
+  const observed = normalizeSourceTime(source.updated_at);
+  if (Object.hasOwn(source, 'updated_at') && observed === null) {
+    throw new Error('Invalid MESH_STATUS v1 update time');
+  }
+  if (source.updated_at == null && provenance.revision_kind === 'timestamp') {
+    throw new Error('Timestamp revision needs an update time');
+  }
+  if (provenance.revision_kind === 'timestamp' && observed === null) {
+    throw new Error('Timestamp revision needs a valid update time');
   }
   const agents = Object.entries(source.agents).map(([id, item]) => {
     if (!isRecord(item) || !/^[A-Za-z0-9_.:-]{1,80}$/.test(id)) {
       throw new Error('Invalid MESH_STATUS v1 agent');
     }
-    const heartbeatTime = item.last_heartbeat == null ? null : Date.parse(item.last_heartbeat);
-    if (heartbeatTime !== null && !Number.isFinite(heartbeatTime)) {
+    const heartbeatTime = item.last_heartbeat == null ? null : normalizeSourceTime(item.last_heartbeat);
+    if (item.last_heartbeat != null && heartbeatTime === null) {
       throw new Error('Invalid MESH_STATUS v1 heartbeat');
+    }
+    const leaseExpiry = item.lease_expiry == null ? null : normalizeSourceTime(item.lease_expiry);
+    if (item.lease_expiry != null && leaseExpiry === null) throw new Error('Invalid MESH_STATUS v1 lease expiry');
+    const highWaterId = item.checkpoint_high_water == null ? null : item.checkpoint_high_water;
+    if (highWaterId !== null && !boundedText(highWaterId, 120)) {
+      throw new Error('Invalid MESH_STATUS v1 checkpoint high-water mark');
     }
     const slots = typeof item.heartbeat_slot === 'string'
       ? /^:(\d\d)\/:(\d\d)$/.exec(item.heartbeat_slot) : null;
@@ -40,18 +54,57 @@ export function adaptMeshStatusV1(source, provenance) {
       : [String(item.blockers).slice(0, 240)];
     return {
       id, kind: 'agent', reported_encryption: item.enc === 'g2-verified' ? 'g2-verified' : 'unknown',
-      heartbeat: { last_seen_at: heartbeatTime === null ? null : new Date(heartbeatTime).toISOString(),
+      heartbeat: { last_seen_at: heartbeatTime,
         interval_seconds: interval },
       // Prose such as "coordinator-standing" or "protocol-accepted" is not a
       // verifiable lease expiry. It remains unknown until a structured lease arrives.
-      lease: { state: 'unknown', expires_at: null },
+      lease: { state: 'unknown', expires_at: leaseExpiry },
       checkpoint: { last_processed_id: checkpointId, last_processed_at: null,
-        processed_seq: null, source_high_water_seq: null },
+        processed_seq: null, source_high_water_seq: null, source_high_water_id: highWaterId },
       work: String(item.work ?? '').slice(0, 240), blockers,
-      reported_state: String(item.state ?? 'unknown').slice(0, 80), capacity: 'unknown', resources: {}
+      reported_state: String(item.state ?? 'unknown').slice(0, 80), capacity: 'unknown',
+      resources: allowlistedResources(item.resources)
     };
   });
-  return { schema: SCHEMA, ...provenance, observed_at: new Date(observed).toISOString(), agents, history: [] };
+  if (source.history != null && (!Array.isArray(source.history) || source.history.length > MAX_HISTORY)) {
+    throw new Error('Invalid MESH_STATUS v1 history');
+  }
+  const ids = new Set(agents.map(agent => agent.id));
+  const history = (source.history ?? []).flatMap((entry, index) => {
+    if (!isRecord(entry) || !boundedText(entry.actor, 80) || !boundedText(entry.event, 80)
+        || normalizeSourceTime(entry.ts) === null) throw new Error('Invalid MESH_STATUS v1 history event');
+    // Actor names outside the roster have no reliable scoped attribution.
+    if (!ids.has(entry.actor)) return [];
+    return [{ event_id: `v1.${provenance.revision ?? 'u'}.${index}`, agent_id: entry.actor,
+      occurred_at: normalizeSourceTime(entry.ts), kind: 'reported_event', outcome: entry.event,
+      owner_only: true }];
+  });
+  return { schema: SCHEMA, ...provenance, revision_kind: provenance.revision_kind ?? 'header',
+    observed_at: observed, agents, history };
+}
+
+function normalizeSourceTime(value) {
+  if (typeof value !== 'string'
+      || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?(?:Z|[+-]\d\d:\d\d)$/.test(value)) return null;
+  const parts = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/.exec(value);
+  const [, year, month, day, hour, minute, second] = parts.map(Number);
+  const maxDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (month < 1 || month > 12 || day < 1 || day > maxDay
+      || hour > 23 || minute > 59 || second > 59) return null;
+  const offset = /([+-])(\d\d):(\d\d)$/.exec(value);
+  if (offset && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+}
+
+function allowlistedResources(value) {
+  const resources = {};
+  if (!isRecord(value)) return resources;
+  if (Number.isFinite(value.cpu_percent) && value.cpu_percent >= 0 && value.cpu_percent <= 100) {
+    resources.cpu_percent = value.cpu_percent;
+  }
+  if (Number.isFinite(value.memory_mb) && value.memory_mb >= 0) resources.memory_mb = value.memory_mb;
+  return resources;
 }
 
 function timestamp(value) {
@@ -73,11 +126,14 @@ function nonnegative(value) {
 }
 
 function validObservation(snapshot, nowMs) {
-  if (!isRecord(snapshot) || snapshot.schema !== SCHEMA || timestamp(snapshot.observed_at) === null
-      || timestamp(snapshot.observed_at) > nowMs + FUTURE_TOLERANCE_MS
+  if (!isRecord(snapshot) || snapshot.schema !== SCHEMA
+      || !['header', 'timestamp', 'unversioned'].includes(snapshot.revision_kind ?? 'header')
+      || (snapshot.observed_at !== null && timestamp(snapshot.observed_at) === null)
+      || (snapshot.observed_at !== null && timestamp(snapshot.observed_at) > nowMs + FUTURE_TOLERANCE_MS)
       || !/^[A-Za-z0-9_.:-]{1,80}$/.test(snapshot.source_id ?? '')
       || !/^[A-Za-z0-9_.:-]{1,80}$/.test(snapshot.audience_id ?? '')
-      || !nonnegative(snapshot.revision)
+      || ((snapshot.revision_kind ?? 'header') === 'unversioned'
+        ? snapshot.revision !== null : !nonnegative(snapshot.revision))
       || !/^[a-f0-9]{64}$/.test(snapshot.content_digest ?? '')
       || !Array.isArray(snapshot.agents) || snapshot.agents.length > MAX_AGENTS
       || !Array.isArray(snapshot.history) || snapshot.history.length > MAX_HISTORY) return false;
@@ -91,6 +147,7 @@ function validObservation(snapshot, nowMs) {
         || (agent.heartbeat.last_seen_at !== null
           && timestamp(agent.heartbeat.last_seen_at) > nowMs + FUTURE_TOLERANCE_MS)
         || (agent.heartbeat.last_seen_at !== null
+          && snapshot.observed_at !== null
           && timestamp(agent.heartbeat.last_seen_at) > timestamp(snapshot.observed_at) + FUTURE_TOLERANCE_MS)
         || (agent.heartbeat.interval_seconds !== null && (!Number.isInteger(agent.heartbeat.interval_seconds)
           || agent.heartbeat.interval_seconds < 5 || agent.heartbeat.interval_seconds > 3600))
@@ -99,11 +156,14 @@ function validObservation(snapshot, nowMs) {
         || !isRecord(agent.checkpoint)
         || (agent.checkpoint.processed_seq !== null && !nonnegative(agent.checkpoint.processed_seq))
         || (agent.checkpoint.source_high_water_seq !== null && !nonnegative(agent.checkpoint.source_high_water_seq))
+        || (agent.checkpoint.source_high_water_id != null
+          && !boundedText(agent.checkpoint.source_high_water_id, 120))
         || (agent.checkpoint.processed_seq !== null && agent.checkpoint.source_high_water_seq !== null
           && agent.checkpoint.processed_seq > agent.checkpoint.source_high_water_seq)
         || (agent.checkpoint.last_processed_at !== null && timestamp(agent.checkpoint.last_processed_at) === null)
         || (agent.checkpoint.last_processed_at !== null
-          && timestamp(agent.checkpoint.last_processed_at) > Math.min(nowMs, timestamp(snapshot.observed_at)) + FUTURE_TOLERANCE_MS)
+          && timestamp(agent.checkpoint.last_processed_at) > Math.min(nowMs,
+            snapshot.observed_at === null ? nowMs : timestamp(snapshot.observed_at)) + FUTURE_TOLERANCE_MS)
         || (agent.checkpoint.last_processed_id !== null && !boundedText(agent.checkpoint.last_processed_id, 120))
         || !boundedText(agent.work, 240) || !Array.isArray(agent.blockers) || agent.blockers.length > 10
         || !agent.blockers.every(value => boundedText(value, 240))
@@ -115,8 +175,10 @@ function validObservation(snapshot, nowMs) {
     if (!isRecord(event) || !boundedText(event.event_id, 80) || !/^[A-Za-z0-9_.:-]+$/.test(event.event_id)
         || eventIds.has(event.event_id)
         || !ids.has(event.agent_id) || timestamp(event.occurred_at) === null
-        || timestamp(event.occurred_at) > Math.min(nowMs, timestamp(snapshot.observed_at)) + FUTURE_TOLERANCE_MS
-        || !boundedText(event.kind, 80) || !boundedText(event.outcome, 80)) return false;
+        || timestamp(event.occurred_at) > Math.min(nowMs,
+          snapshot.observed_at === null ? nowMs : timestamp(snapshot.observed_at)) + FUTURE_TOLERANCE_MS
+        || !boundedText(event.kind, 80) || !boundedText(event.outcome, 80)
+        || (event.owner_only !== undefined && event.owner_only !== true)) return false;
     eventIds.add(event.event_id);
   }
   return true;
@@ -151,16 +213,27 @@ export function deriveCoordinationView({ snapshot, lastGood = null, now, scope }
   const lastGoodComparable = validObservation(lastGood, nowMs) && matchesScope(lastGood);
   const lastGoodRetainable = lastGoodComparable
     && nowMs - timestamp(lastGood.observed_at) <= RETAIN_LAST_GOOD_MS;
+  const snapshotKind = snapshot?.revision_kind ?? 'header';
+  const lastGoodKind = lastGood?.revision_kind ?? 'header';
   const replayed = snapshotValid && lastGoodComparable
-    && (snapshot.revision < lastGood.revision
-      || timestamp(snapshot.observed_at) < timestamp(lastGood.observed_at)
-      || (snapshot.revision === lastGood.revision
+    && (snapshotKind === 'timestamp' && lastGoodKind === 'header'
+      || snapshotKind === 'header' && lastGoodKind === 'timestamp'
+        && (snapshot.observed_at === null || lastGood.observed_at === null
+          || timestamp(snapshot.observed_at) <= timestamp(lastGood.observed_at))
+      || snapshot.revision !== null && lastGood.revision !== null
+        && snapshotKind === lastGoodKind && snapshot.revision < lastGood.revision
+      || snapshotKind === 'timestamp' && lastGoodKind === 'timestamp'
+        && snapshot.observed_at !== null && lastGood.observed_at !== null
+        && timestamp(snapshot.observed_at) < timestamp(lastGood.observed_at)
+      || snapshot.revision !== null && snapshot.revision === lastGood.revision
+        && snapshotKind === lastGoodKind
         && (snapshot.observed_at !== lastGood.observed_at
-          || snapshot.content_digest !== lastGood.content_digest)));
+          || snapshot.content_digest !== lastGood.content_digest));
   const sourceState = snapshot === null ? 'unavailable'
     : !snapshotValid ? 'malformed'
       : replayed ? 'replayed'
-      : nowMs - timestamp(snapshot.observed_at) > SOURCE_FRESH_MS ? 'stale' : 'live';
+      : snapshot.observed_at === null || snapshot.revision === null ? 'unversioned'
+        : nowMs - timestamp(snapshot.observed_at) > SOURCE_FRESH_MS ? 'stale' : 'live';
   const retained = replayed ? (lastGoodRetainable ? lastGood : null) : snapshotValid ? snapshot
     : sourceState === 'unavailable' && lastGoodRetainable ? lastGood : null;
   const visibleIds = scope.role === 'owner' ? null : new Set(scope.visible_agent_ids);
@@ -174,7 +247,8 @@ export function deriveCoordinationView({ snapshot, lastGood = null, now, scope }
         lease: { state: agent.lease.state, expires_at: agent.lease.expires_at },
         state: sourceState === 'live' ? lastKnownState : sourceState
       };
-      if (sourceState !== 'live') entry.last_known_state = lastKnownState;
+      if (sourceState !== 'live') entry.last_known_state = sourceState === 'unversioned'
+        ? 'unknown' : lastKnownState;
       if (scope.role === 'owner' || (scope.role === 'coordinator'
           && Array.isArray(scope.visible_fields) && scope.visible_fields.includes('work'))) entry.work = agent.work;
       if (scope.role === 'owner' || (scope.role === 'coordinator'
@@ -197,7 +271,8 @@ export function deriveCoordinationView({ snapshot, lastGood = null, now, scope }
       }
       return entry;
     });
-  const history = (retained?.history ?? []).filter(event => visibleIds === null || visibleIds.has(event.agent_id))
+  const history = (retained?.history ?? []).filter(event => (visibleIds === null || visibleIds.has(event.agent_id))
+      && (!event.owner_only || scope.role === 'owner'))
     .map(event => ({ event_id: event.event_id, agent_id: event.agent_id,
       occurred_at: event.occurred_at, kind: event.kind, outcome: event.outcome }))
     .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.event_id.localeCompare(b.event_id));

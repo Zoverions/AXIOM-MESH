@@ -6,6 +6,7 @@ import { adaptMeshStatusV1 } from './coordination.mjs';
 
 const MAX_BYTES = 64 * 1024;
 const TIMEOUT_MS = 5_000;
+const BEARER_PATTERN = /^[A-Za-z0-9._~+/-]{16,4096}={0,2}$/;
 
 function validateSourceUrl(sourceUrl) {
   let url;
@@ -26,7 +27,7 @@ async function loadSourceToken(tokenFile) {
     if (!info.isFile() || (info.mode & 0o077) !== 0
         || info.uid !== process.getuid() || info.size > 4096) throw new Error('Unsafe token file permissions');
     const token = (await handle.readFile('utf8')).trim();
-    if (!/^[A-Za-z0-9._~+/-]{16,4096}$/.test(token)) throw new Error('Invalid source token');
+    if (!BEARER_PATTERN.test(token)) throw new Error('Invalid source token');
     return token;
   } catch (error) {
     if (error?.code === 'ELOOP') throw new Error('Unsafe token file permissions');
@@ -34,6 +35,38 @@ async function loadSourceToken(tokenFile) {
   } finally {
     await handle?.close();
   }
+}
+
+function sourceRevision(response, source) {
+  const header = response.headers.get('x-mesh-revision');
+  if (header !== null) {
+    if (!/^(0|[1-9][0-9]*)$/.test(header)) throw new Error('Invalid source revision');
+    const revision = Number(header);
+    if (!Number.isSafeInteger(revision)) throw new Error('Invalid source revision');
+    return { revision_kind: 'header', revision };
+  }
+  // Date.parse accepts non-ISO text and silently normalizes impossible dates.
+  // Use only a real ISO instant as a provisional version when the feed lacks
+  // the coordinator's monotonically increasing revision header.
+  const value = source?.updated_at;
+  if (typeof value === 'string') {
+    const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d{1,9})?(Z|[+-]\d\d:\d\d)$/.exec(value);
+    if (match) {
+      const [, year, month, day, hour, minute, second, zone] = match;
+      const local = new Date(0);
+      local.setUTCFullYear(+year, +month - 1, +day);
+      local.setUTCHours(+hour, +minute, +second, 0);
+      const calendarValid = local.getUTCFullYear() === +year && local.getUTCMonth() + 1 === +month
+        && local.getUTCDate() === +day && local.getUTCHours() === +hour
+        && local.getUTCMinutes() === +minute && local.getUTCSeconds() === +second;
+      const zoneValid = zone === 'Z' || (+zone.slice(1, 3) <= 23 && +zone.slice(4, 6) <= 59);
+      const revision = Date.parse(value);
+      if (calendarValid && zoneValid && Number.isSafeInteger(revision) && revision >= 0) {
+        return { revision_kind: 'timestamp', revision };
+      }
+    }
+  }
+  return { revision_kind: 'unversioned', revision: null };
 }
 
 async function boundedJson(response) {
@@ -57,12 +90,16 @@ async function boundedJson(response) {
 
 // Deliberately unwired. A future server route must authenticate its browser
 // principal separately and project the result through deriveCoordinationView.
-export async function readMeshStatus({ sourceUrl, tokenFile, sourceId, audienceId,
+export async function readMeshStatus({ sourceUrl = process.env.MESH_STATUS_URL, tokenFile,
+  bearer = tokenFile === undefined ? process.env.MESH_STATUS_BEARER : undefined,
+  sourceId, audienceId,
   fetchImpl = globalThis.fetch } = {}) {
   const url = validateSourceUrl(sourceUrl);
   if (typeof fetchImpl !== 'function' || !/^[A-Za-z0-9_.:-]{1,80}$/.test(sourceId ?? '')
       || !/^[A-Za-z0-9_.:-]{1,80}$/.test(audienceId ?? '')) throw new Error('Invalid source configuration');
-  const token = await loadSourceToken(tokenFile);
+  if (tokenFile !== undefined && bearer !== undefined) throw new Error('Ambiguous source credentials');
+  const token = tokenFile === undefined ? bearer : await loadSourceToken(tokenFile);
+  if (typeof token !== 'string' || !BEARER_PATTERN.test(token)) throw new Error('Invalid source token');
   let response;
   try {
     response = await fetchImpl(url, { method: 'GET', redirect: 'error',
@@ -72,12 +109,6 @@ export async function readMeshStatus({ sourceUrl, tokenFile, sourceId, audienceI
   if (response.status === 401 || response.status === 403) throw new Error('Source unauthorized');
   if (response.status !== 200) throw new Error('Source unavailable');
   const { source, contentDigest } = await boundedJson(response);
-  const revisionHeader = response.headers.get('x-mesh-revision');
-  if (revisionHeader !== null && !/^(0|[1-9][0-9]*)$/.test(revisionHeader)) {
-    throw new Error('Invalid source revision');
-  }
-  const revision = revisionHeader === null ? Date.parse(source.updated_at) : Number(revisionHeader);
-  if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid source revision');
   return adaptMeshStatusV1(source, { source_id: sourceId, audience_id: audienceId,
-    revision, content_digest: contentDigest });
+    ...sourceRevision(response, source), content_digest: contentDigest });
 }

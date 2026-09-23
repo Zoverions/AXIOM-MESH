@@ -115,7 +115,8 @@ test('actual MESH_STATUS v1 shape keeps missing lease expiry and progress waterm
   assert.equal(normalized.agents[0].heartbeat.interval_seconds, 1800);
   assert.deepEqual(normalized.agents[0].lease, { state: 'unknown', expires_at: null });
   assert.deepEqual(normalized.agents[0].checkpoint, {
-    last_processed_id: null, last_processed_at: null, processed_seq: null, source_high_water_seq: null
+    last_processed_id: null, last_processed_at: null, processed_seq: null,
+    source_high_water_seq: null, source_high_water_id: null
   });
   const view = deriveCoordinationView({ snapshot: normalized, now: NOW, scope: OWNER });
   assert.equal(view.source_state, 'live');
@@ -219,17 +220,17 @@ test('a heartbeat after the stated source observation time is rejected', () => {
   assert.equal(deriveCoordinationView({ snapshot: input, now: NOW, scope: OWNER }).source_state, 'malformed');
 });
 
-test('a higher revision with an older observed time cannot move the view backward', () => {
+test('a higher header revision with old observation time is stale, not numeric replay', () => {
   const newer = observation(); newer.revision = 10;
   const backwards = observation(); backwards.revision = 11;
-  backwards.observed_at = '2026-09-23T11:30:00.000Z';
+  backwards.observed_at = '2026-09-23T11:20:00.000Z';
   backwards.history = [];
-  backwards.agents[0].heartbeat.last_seen_at = '2026-09-23T11:29:40.000Z';
-  backwards.agents[1].heartbeat.last_seen_at = '2026-09-23T11:29:30.000Z';
-  backwards.agents.forEach(agent => { agent.checkpoint.last_processed_at = '2026-09-23T11:29:00.000Z'; });
+  backwards.agents[0].heartbeat.last_seen_at = '2026-09-23T11:19:40.000Z';
+  backwards.agents[1].heartbeat.last_seen_at = '2026-09-23T11:19:30.000Z';
+  backwards.agents.forEach(agent => { agent.checkpoint.last_processed_at = '2026-09-23T11:19:00.000Z'; });
   const view = deriveCoordinationView({ snapshot: backwards, lastGood: newer, now: NOW, scope: OWNER });
-  assert.equal(view.source_state, 'replayed');
-  assert.equal(view.as_of, newer.observed_at);
+  assert.equal(view.source_state, 'stale');
+  assert.equal(view.as_of, backwards.observed_at);
 });
 
 test('an expired last-good cache still prevents a lower revision from becoming live', () => {
@@ -270,4 +271,130 @@ test('changed content at the same revision and timestamp is rejected as a confli
   const view = deriveCoordinationView({ snapshot: changed, lastGood: retained, now: NOW, scope: OWNER });
   assert.equal(view.source_state, 'replayed');
   assert.equal(view.revision, retained.revision);
+});
+
+test('optional structured lease, opaque watermark, resources, and bounded history preserve uncertainty', () => {
+  const source = { format: 'MESH_STATUS v1', updated_at: NOW, agents: {
+    cosmo: { heartbeat_slot: ':00/:30', last_heartbeat: '2026-09-23T11:59:40Z',
+      lease: 'coordinator-standing', lease_expiry: '2026-09-23T12:10:00Z',
+      checkpoint_high_water: 'opaque-end-43', last_processed_id: 'opaque-42',
+      resources: { cpu_percent: 31, memory_mb: 512, bearer_token: 'never-copy' }, work: 'Review' },
+    peppy: { lease: 'none', resources: { cpu_percent: 101, access_key: 'never-copy' } }
+  }, history: [
+    { ts: '2026-09-23T11:59:30Z', event: 'Heartbeat received', actor: 'cosmo' },
+    { ts: '2026-09-23T11:59:31Z', event: 'Unmapped actor', actor: 'some-other-id' }
+  ] };
+  const normalized = adaptMeshStatusV1(source, { ...PROVENANCE, revision_kind: 'header' });
+  assert.deepEqual(normalized.agents[0].lease, { state: 'unknown', expires_at: '2026-09-23T12:10:00.000Z' });
+  assert.equal(normalized.agents[0].checkpoint.source_high_water_id, 'opaque-end-43');
+  assert.equal(normalized.agents[0].checkpoint.source_high_water_seq, null);
+  assert.deepEqual(normalized.agents[0].resources, { cpu_percent: 31, memory_mb: 512 });
+  assert.deepEqual(normalized.agents[1].resources, {});
+  assert.equal(normalized.history.length, 1);
+  const owner = deriveCoordinationView({ snapshot: normalized, now: NOW, scope: OWNER });
+  assert.equal(owner.source_state, 'live');
+  assert.equal(owner.agents[0].state, 'unknown');
+  assert.equal(owner.history[0].outcome, 'Heartbeat received');
+  const member = deriveCoordinationView({ snapshot: normalized, now: NOW,
+    scope: { ...OWNER, role: 'member', visible_agent_ids: ['cosmo'] } });
+  assert.deepEqual(member.history, []);
+  assert.equal(member.agents[0].checkpoint, undefined);
+  assert.equal(member.agents[0].resources, undefined);
+});
+
+test('missing optional fields remain unknown and expired structured expiry cannot imply active', () => {
+  const source = { format: 'MESH_STATUS v1', updated_at: NOW,
+    agents: { cosmo: { lease_expiry: '2026-09-23T11:59:00Z' } } };
+  const normalized = adaptMeshStatusV1(source, PROVENANCE);
+  assert.equal(normalized.agents[0].checkpoint.source_high_water_id, null);
+  assert.deepEqual(normalized.history, []);
+  assert.equal(deriveCoordinationView({ snapshot: normalized, now: NOW, scope: OWNER }).agents[0].state, 'lease_expired');
+  source.agents.cosmo.lease_expiry = 'invalid';
+  assert.throws(() => adaptMeshStatusV1(source, PROVENANCE), /lease expiry/);
+});
+
+test('unversioned feed stays readable without freshness or healthy claims', () => {
+  const normalized = adaptMeshStatusV1({ format: 'MESH_STATUS v1', agents: {
+    cosmo: { lease_expiry: '2026-09-23T12:10:00Z', last_heartbeat: '2026-09-23T11:59:40Z' }
+  } }, { ...PROVENANCE, revision_kind: 'unversioned', revision: null });
+  assert.equal(normalized.observed_at, null);
+  const view = deriveCoordinationView({ snapshot: normalized, now: NOW, scope: OWNER });
+  assert.equal(view.source_state, 'unversioned');
+  assert.equal(view.as_of, null);
+  assert.equal(view.agents[0].state, 'unversioned');
+  assert.equal(view.agents[0].last_known_state, 'unknown');
+});
+
+test('too many history events or malformed optional data are rejected instead of silently trusted', () => {
+  const source = { format: 'MESH_STATUS v1', updated_at: NOW, agents: { cosmo: {} },
+    history: Array.from({ length: 201 }, () => ({ ts: NOW, event: 'heartbeat', actor: 'cosmo' })) };
+  assert.throws(() => adaptMeshStatusV1(source, PROVENANCE), /history/);
+  source.history = [{ ts: '2100-01-01T00:00:00Z', event: 'heartbeat', actor: 'cosmo' }];
+  assert.equal(deriveCoordinationView({ snapshot: adaptMeshStatusV1(source, PROVENANCE), now: NOW, scope: OWNER }).source_state, 'malformed');
+});
+
+test('a missing update time remains readable but never live even with a header revision', () => {
+  const normalized = adaptMeshStatusV1({ format: 'MESH_STATUS v1', agents: { cosmo: {} } },
+    { ...PROVENANCE, revision_kind: 'header' });
+  assert.equal(normalized.observed_at, null);
+  const view = deriveCoordinationView({ snapshot: normalized, now: NOW, scope: OWNER });
+  assert.equal(view.source_state, 'unversioned');
+  assert.equal(view.agents[0].state, 'unversioned');
+});
+
+test('a present malformed update time is rejected rather than downgraded to unversioned', () => {
+  for (const provenance of [PROVENANCE, { ...PROVENANCE, revision_kind: 'unversioned', revision: null }]) {
+    for (const updated_at of ['not-a-date', null]) {
+      assert.throws(() => adaptMeshStatusV1({ format: 'MESH_STATUS v1', updated_at,
+        agents: { cosmo: {} } }, provenance), /update time/);
+    }
+  }
+});
+
+test('ISO-8601 fractional seconds through nanoseconds normalize to millisecond UTC', () => {
+  const source = { format: 'MESH_STATUS v1', updated_at: '2026-09-23T11:59:59.123456789Z',
+    agents: { cosmo: { last_heartbeat: '2026-09-23T07:59:40.123456789-04:00' } },
+    history: [{ ts: '2026-09-23T11:59:30.987654321Z', event: 'heartbeat', actor: 'cosmo' }] };
+  const normalized = adaptMeshStatusV1(source, { ...PROVENANCE, revision_kind: 'timestamp' });
+  assert.equal(normalized.observed_at, '2026-09-23T11:59:59.123Z');
+  assert.equal(normalized.agents[0].heartbeat.last_seen_at, '2026-09-23T11:59:40.123Z');
+  assert.equal(normalized.history[0].occurred_at, '2026-09-23T11:59:30.987Z');
+  assert.equal(deriveCoordinationView({ snapshot: normalized, now: NOW, scope: OWNER }).source_state, 'live');
+  source.updated_at = '2026-09-23T11:59:59.1234567890Z';
+  assert.throws(() => adaptMeshStatusV1(source, PROVENANCE), /update time/);
+});
+
+test('timestamp revision cannot downgrade an established header revision', () => {
+  const previous = observation();
+  previous.revision_kind = 'header';
+  const incoming = observation();
+  incoming.revision_kind = 'timestamp';
+  incoming.revision = Date.parse(incoming.observed_at);
+  incoming.observed_at = '2026-09-23T12:00:00.000Z';
+  const view = deriveCoordinationView({ snapshot: incoming, lastGood: previous, now: NOW, scope: OWNER });
+  assert.equal(view.source_state, 'replayed');
+  assert.equal(view.revision, previous.revision);
+});
+
+test('newer header revision can upgrade a timestamp revision without comparing numeric schemes', () => {
+  const previous = observation();
+  previous.revision_kind = 'timestamp';
+  previous.revision = Date.parse(previous.observed_at);
+  const incoming = observation();
+  incoming.revision_kind = 'header';
+  incoming.revision = 2;
+  incoming.observed_at = '2026-09-23T12:00:00.000Z';
+  const upgraded = deriveCoordinationView({ snapshot: incoming, lastGood: previous, now: NOW, scope: OWNER });
+  assert.equal(upgraded.source_state, 'live');
+  assert.equal(upgraded.revision, 2);
+  incoming.observed_at = previous.observed_at;
+  assert.equal(deriveCoordinationView({ snapshot: incoming, lastGood: previous, now: NOW, scope: OWNER }).source_state, 'replayed');
+  incoming.observed_at = null;
+  assert.equal(deriveCoordinationView({ snapshot: incoming, lastGood: previous, now: NOW, scope: OWNER }).source_state, 'replayed');
+});
+
+test('legacy observations with implicit header kind still enforce numeric replay ordering', () => {
+  const previous = observation(); previous.revision = 10;
+  const incoming = observation(); incoming.revision_kind = 'header'; incoming.revision = 9;
+  assert.equal(deriveCoordinationView({ snapshot: incoming, lastGood: previous, now: NOW, scope: OWNER }).source_state, 'replayed');
 });
