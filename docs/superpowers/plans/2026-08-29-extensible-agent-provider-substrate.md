@@ -300,3 +300,92 @@ production promotion state
 - [ ] **Step 5: Open a draft PR**
 
 The PR must state the explicit non-claims: no provider execution, no external interoperability claim, no hardware-root proof, no settlement activation, no authority grant, and no capability promotion.
+
+### Task 5: Beacon observation to Entity Assurance provenance normalization
+
+**Files:**
+- Create: `mesh/test/beacon-entity-assurance-evidence.test.mjs`
+- Create: `mesh/src/lib/beacon-entity-assurance-evidence.mjs`
+- Modify: `mesh/test/agent-provider-boundary-static.test.mjs`
+- Modify: `docs/superpowers/specs/2026-08-29-extensible-agent-provider-substrate-design.md`
+
+**Interfaces:**
+- Consumes:
+  - `validateAgentProviderProfile(profile)`
+  - `agentProviderProfileDigest(profile)`
+  - `verifyBeaconObservationEnvelope(envelope, options)`
+  - `digestObject(value)`
+  - `normalizeEntityAssuranceEvidence(raw)`
+- Produces:
+  - `beaconEntityAssuranceSubjectId(senderKeyFingerprint)`
+  - `normalizeBeaconObservationEntityAssuranceEvidence({ envelope, provider_profile, now, seen_replay_keys })`
+
+- [ ] **Step 1: Define the failing normalization contract**
+
+Write tests first that require the new module and prove the exported evidence artifact is fixed to:
+
+```text
+subject_id = external.beacon.key.<verified-key-fingerprint>
+dimension = provenance
+result = pass
+strength = moderate
+evidence_class = measured
+issuer_id = null
+binding_scope = pseudonymous
+non_authorizing = true
+evidence_digest = <canonical digest>
+```
+
+The exported artifact must remain valid input to `evaluateEntityAssurance()`. Therefore derived decision/presentation fields such as `authority_granted` are not part of the evidence artifact. Tests must also prove deterministic output, tamper/replay rejection, provider-class/evidence/assurance-ceiling enforcement, and rejection of a caller-supplied `subject_id`.
+
+- [ ] **Step 2: Verify RED**
+
+Run the targeted Node test before creating the module. Expected: `ERR_MODULE_NOT_FOUND` for `mesh/src/lib/beacon-entity-assurance-evidence.mjs`.
+
+- [ ] **Step 3: Implement the minimal bridge**
+
+The input object contains exactly:
+
+```text
+envelope
+provider_profile
+now
+seen_replay_keys
+```
+
+The bridge validates the provider profile, requires `provider_class = agent-interop`, requires `signed-envelope` and `replay-protected-envelope`, requires assurance ceiling `cryptographic | hardware-rooted`, and then re-runs `verifyBeaconObservationEnvelope()` itself.
+
+Derive:
+
+```js
+const subjectId = `external.beacon.key.${verification.sender_key_fingerprint}`;
+const basisDigest = digestObject({
+  provider_profile_digest: agentProviderProfileDigest(provider_profile),
+  observation_digest: verification.observation_digest,
+  sender_key_fingerprint: verification.sender_key_fingerprint,
+  replay_key: verification.replay_key
+});
+```
+
+Delegate validation/canonical digesting to `normalizeEntityAssuranceEvidence()` with fixed moderate measured provenance semantics, then export only the schema-valid evidence artifact fields plus `evidence_digest`. Do not export the normalizer's derived `authority_granted` presentation field, and do not accept a verification receipt or caller-selected subject.
+
+- [ ] **Step 4: Prove Entity Assurance integration remains non-authorizing**
+
+Pass the exported evidence artifact directly to `evaluateEntityAssurance()` with a policy requiring moderate measured provenance. The decision may be satisfied, but tests must assert:
+
+```js
+assert.equal(decision.authority_granted, false);
+assert.equal(decision.delegation_granted, false);
+```
+
+- [ ] **Step 5: Extend the static zero-effect guard**
+
+Scan `mesh/src/lib/beacon-entity-assurance-evidence.mjs` with the existing provider boundary test and reject network, filesystem, subprocess, Grid, credential, wallet, token, or secret runtime imports/effects.
+
+- [ ] **Step 6: Keep canonical documentation disciplined**
+
+Integrate the normalization design and implementation record into this existing canonical provider spec/plan rather than proliferating parallel canonical documents. Preserve intermediate design/plan commits in branch history, but keep the supported documentation tree exact.
+
+- [ ] **Step 7: Run protected verification on the exact final head**
+
+Require Clean Kernel, Node 22, container deny-egress/isolation, Windows, macOS ARM, macOS Intel, and CodeQL changed-code analysis to pass. Confirm no capability registry, authority-path, principal/credential-store, network-policy, or production-promotion change.
