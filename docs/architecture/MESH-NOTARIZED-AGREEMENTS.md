@@ -45,6 +45,11 @@ A notarized-agreement record contains:
   canonicalization (no class instances, accessors, or prototype state);
 - `metadata` — schema version, `recorded_at` claim, optional context tags,
   and supersession links to earlier records it replaces;
+- `agreement_payload` — the exact JSON-compatible plain-data object
+  `{agreement_id,parties,body_digest,metadata}`. A future Grid append MUST set
+  its event `payload_digest` to the canonical digest of this exact object, so
+  `agreement_id`, `body_digest`, party bindings, and `metadata.recorded_at`
+  cannot be substituted independently of the signed Grid event;
 - `grid_event` — the agreement payload is bound through the existing global
   Grid event envelope. Grid continuity is the repository's current
   `seq` / `prev_hash` / `event_hash` sequence. `event_hash` is the canonical
@@ -59,11 +64,13 @@ A notarized-agreement record contains:
 An independent verifier can check, without trusting either party:
 
 1. the body digest recomputes from the canonical text presented;
-2. the bound Grid event recomputes to its `event_hash`, its Grid signature
+2. the canonical digest of the presented `agreement_payload` equals the bound
+   Grid event's `payload_digest`;
+3. the bound Grid event recomputes to its `event_hash`, its Grid signature
    validates, and its global `seq` / `prev_hash` continuity is valid against the
    trusted Grid history or retained continuity anchor used for that proof;
-3. every acceptance signature validates against the bound principal identity;
-4. the record conforms to this schema version.
+4. every acceptance signature validates against the bound principal identity;
+5. the record conforms to this schema version.
 
 Verification proves the agreement was *recorded as stated*. It does not prove
 the agreement is fair, legally enforceable, wise, or true.
