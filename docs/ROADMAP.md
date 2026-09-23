@@ -2,7 +2,7 @@
 
 **Status:** canonical strategic roadmap
 
-**Updated:** 2026-08-17
+**Updated:** 2026-09-23
 
 **Planning horizon:** active build `0.12.0-dev.3` through evidence-gated 1.0 and isolated frontier incubation
 
@@ -305,6 +305,20 @@ They change no current capability status.
   with named participants and explicit consent;
 - measure activation, successful outcomes, support burden, accessibility,
   revocation, export, deletion, and trust comprehension.
+
+Evidence-direction designs (DESIGN-ONLY unless separately gated):
+
+- **Mesh-notarized agreements** — maintain the
+  [specification](architecture/MESH-NOTARIZED-AGREEMENTS.md) as the stated
+  direction for hash-chained, honestly timestamped, metadata-separated mutual
+  commitment records. No implementation, registry change, or promotion claim
+  until the normal gates pass.
+- **Orchestration provenance** — follow the
+  [runtime and connector fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
+  (P5 durable task/event/artifact/handoff model; P6 attenuation-only
+  delegation with delegation/worker lineage in receipts) as the stated
+  direction for provenanced orchestrated work. Planned gaps only; no runtime
+  claim until the queue items land.
 
 ### Personal compute and Local Trust MVP sequence
 
