@@ -97,6 +97,24 @@ Current demand context includes the September 2026 harness study [*Scanning the 
 
 Campaign reference: `ua-2026-09-21-reproducible-trust-profile`. Public use and feedback are evidence, not authority.
 
+## Agent memory lifecycle profile
+
+If you are comparing persistent or local-first agent-memory systems, inspect lifecycle semantics rather than recall quality alone:
+
+```bash
+npm run memory-lifecycle:profile
+```
+
+The command emits `axiom-memory-lifecycle-profile.v0` JSON from the existing experimental AXIOM One memory policy. It reports the current memory actions, read/export routes, provenance relations, correction behavior, explicit bundle-reveal rule, browser-persistence setting, and the current hard-delete, restore, and sharing claims.
+
+The profile can report `passed: true` only when the AXIOM One policy validates, Git identifies the exact source revision, and the worktree is clean. A dirty or unverifiable source tree fails closed so lifecycle claims cannot be attributed to a commit that does not match the bytes being evaluated.
+
+This is a source-level profile of an **experimental local preview**, not a production memory certification, privacy certification, recall benchmark, deletion guarantee, backup guarantee, interoperability claim, or permission grant. It makes no provider or network call, sends no telemetry, starts no production service, scans no credentials or user memories, and grants no authority. Unsupported lifecycle features remain explicit negative values rather than being inferred from roadmap intent.
+
+Current demand context includes agent-memory systems that now expose lifecycle operations such as creation, connection, update, supersession, retrieval, expiration/deletion, local persistence, provenance, and cross-tool continuity. The bounded experiment is to make AXIOM's present lifecycle contract exact-revision and machine-readable enough to compare or falsify.
+
+Campaign reference: `ua-2026-09-23-memory-lifecycle-profile`. Public use and feedback are evidence, not authority.
+
 ## MCP credential hygiene
 
 If you share MCP configuration through source control, you can check explicit local JSON configuration files for hardcoded values in credential-named fields without sending or printing the credential values:
