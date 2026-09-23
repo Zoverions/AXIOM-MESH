@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
@@ -44,4 +47,34 @@ test('memory lifecycle profile emits bounded machine-readable lifecycle evidence
     restore: false,
     sharing: false
   });
+});
+
+test('dirty source tree cannot produce a passing exact-revision memory lifecycle profile', () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), 'axiom-memory-lifecycle-profile-'));
+  const cloneRoot = join(tempRoot, 'repo');
+
+  try {
+    const cloneResult = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', repositoryRoot, cloneRoot], {
+      encoding: 'utf8',
+      windowsHide: true
+    });
+    assert.equal(cloneResult.status, 0, cloneResult.stderr || cloneResult.stdout);
+
+    writeFileSync(join(cloneRoot, 'untracked-profile-test.txt'), 'dirty\n', 'utf8');
+
+    const result = spawnSync(process.execPath, ['memory-lifecycle-profile.mjs'], {
+      cwd: cloneRoot,
+      encoding: 'utf8',
+      env: process.env,
+      windowsHide: true
+    });
+
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const profile = JSON.parse(result.stdout);
+    assert.match(profile.source_ref, /^[0-9a-f]{40}$/u);
+    assert.equal(profile.working_tree_clean, false);
+    assert.equal(profile.passed, false);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
