@@ -1,0 +1,81 @@
+{
+  "schema": "axiom-social-activitypub-content-audience.v0",
+  "version": 0,
+  "status": "inert-projection-contract",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "audience": {
+    "public_listed": {
+      "axiom_audience_mode": "public",
+      "axiom_discoverability": "listed",
+      "activitypub_public_collection": "to",
+      "mapping_status": "exact-enough-for-projection"
+    },
+    "public_unlisted": {
+      "axiom_audience_mode": "public",
+      "axiom_discoverability": "unlisted",
+      "activitypub_public_collection": "cc",
+      "mapping_status": "exact-enough-for-projection"
+    },
+    "followers": {
+      "axiom_audience_mode": "followers",
+      "activitypub_followers_collection_required": true,
+      "activitypub_public_collection_present": false,
+      "mapping_status": "specified-requires-live-follow-state"
+    },
+    "circle": {
+      "axiom_audience_mode": "circle",
+      "mapping_status": "prohibited-v0",
+      "reason": "no-exact-activitypub-circle-membership-disclosure-mapping"
+    },
+    "direct_or_limited": {
+      "mapping_status": "unsupported-v0",
+      "reason": "axiom-publication-v1-has-no-explicit-recipient-or-mention-addressing-model"
+    }
+  },
+  "content": {
+    "axiom_media_types": [
+      "text/plain",
+      "text/markdown"
+    ],
+    "activitypub_status_content_form": "sanitized-html",
+    "plain_text_directly_available_from_remote_mastodon": false,
+    "outbound_renderer_required": true,
+    "renderer_must_preserve_source_digest": true,
+    "renderer_output_is_canonical_source": false,
+    "renderer_may_invent_links_mentions_or_hashtags": false,
+    "renderer_may_claim_author_exact_html": false
+  },
+  "attachments": {
+    "axiom_current_publication_representation": "digest-only",
+    "activitypub_requires_public_media_projection": true,
+    "digest_alone_may_be_exported_as_attachment_url": false,
+    "mapping_status": "blocked-pending-public-media-contract"
+  },
+  "replies": {
+    "activitypub_property": "inReplyTo",
+    "axiom_current_publication_field_present": false,
+    "mapping_status": "unsupported-v0"
+  },
+  "sensitivity": {
+    "mastodon_sensitive_property_supported": true,
+    "user_local_presentation_preference_is_author_sensitive_flag": false,
+    "user_local_softening_may_be_federated": false,
+    "author_declared_content_warning_model_present": false,
+    "mapping_status": "blocked-pending-author-declared-content-warning-contract"
+  },
+  "remote_html": {
+    "must_be_treated_as_remote_rendered_content": true,
+    "must_not_be_treated_as_canonical_plain_text": true,
+    "sanitization_required_before_local_render": true,
+    "local_reconstruction_of_author_original_markup_claimed": false
+  },
+  "non_claims": {
+    "activitypub_visibility_equals_circle_governance": false,
+    "followers_only_is_end_to_end_encrypted": false,
+    "remote_html_is_author_original_source": false,
+    "local_sensitivity_setting_is_remote_author_intent": false,
+    "attachment_digest_is_public_media_locator": false
+  }
+}

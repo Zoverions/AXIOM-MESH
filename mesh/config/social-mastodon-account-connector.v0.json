@@ -1,0 +1,95 @@
+{
+  "schema": "axiom-social-mastodon-account-connector.v0",
+  "version": 0,
+  "status": "inert-existing-account-connector-contract",
+  "runtime_activation": false,
+  "connector_mode": "existing-account-oauth",
+  "canonical_social_model": "axiom-social",
+  "activitypub_identity_hosting": false,
+  "federation_effect": "none",
+  "authority_effect": "none",
+  "network_effect": "none",
+  "instance_binding": {
+    "user_selected_instance_required": true,
+    "https_required": true,
+    "wildcard_instance_allowed": false,
+    "origin_substitution_allowed": false,
+    "authorization_server_metadata_discovery": "preferred-when-supported"
+  },
+  "oauth": {
+    "flow": "authorization-code",
+    "pkce_required": true,
+    "pkce_method": "S256",
+    "state_required": true,
+    "current_mastodon_client_type": "confidential",
+    "client_secret_required_by_current_mastodon": true,
+    "authorization_code_loggable": false,
+    "access_token_loggable": false,
+    "browser_token_persistence": false,
+    "browser_client_secret_persistence": false,
+    "client_secret_custody": "encrypted-node-secret-store-required-before-runtime",
+    "access_token_custody": "encrypted-node-secret-store-required-before-runtime",
+    "revocation_supported": true
+  },
+  "initial_phase": {
+    "mode": "read-only",
+    "registered_scopes": [
+      "profile",
+      "read:statuses"
+    ],
+    "requested_scopes": [
+      "profile",
+      "read:statuses"
+    ],
+    "write_scopes_allowed": false,
+    "admin_scopes_allowed": false,
+    "deprecated_follow_scope_allowed": false,
+    "home_timeline_read": true,
+    "current_account_profile_read": true,
+    "notifications_read": false,
+    "relationship_graph_read": false,
+    "posting": false,
+    "deleting": false,
+    "favouriting": false,
+    "boosting": false,
+    "following": false,
+    "blocking": false,
+    "reporting": false
+  },
+  "delegation_boundaries": {
+    "oauth_token_is_axiom_authority": false,
+    "oauth_token_is_circle_authority": false,
+    "mastodon_account_is_legal_identity_proof": false,
+    "mastodon_account_is_axiom_actor_identity_proof": false,
+    "remote_profile_is_content_truth_proof": false,
+    "remote_timeline_is_complete_network_view": false,
+    "remote_instance_policy_becomes_local_policy": false
+  },
+  "data_boundaries": {
+    "circle_private_data_export_allowed": false,
+    "private_axiom_actor_state_export_allowed": false,
+    "protected_persona_state_export_allowed": false,
+    "feed_diversity_preferences_export_allowed": false,
+    "local_presentation_preferences_export_allowed": false,
+    "remote_results_enter_as_observations": true
+  },
+  "future_write_phase": {
+    "enabled": false,
+    "requires_separate_user_authorization": true,
+    "requires_granular_scope_upgrade": true,
+    "requires_per_action_mesh_egress_authorization": true,
+    "requires_append_only_delivery_receipt": true,
+    "write_statuses_scope": "write:statuses",
+    "write_media_scope": "write:media",
+    "write_follows_scope": "write:follows",
+    "write_blocks_scope": "write:blocks",
+    "write_reports_scope": "write:reports",
+    "broad_write_scope_allowed": false
+  },
+  "disconnect": {
+    "oauth_revocation_required_when_available": true,
+    "local_secret_removal_required": true,
+    "historical_receipts_rewritten": false,
+    "remote_deletion_claimed": false
+  }
+}
