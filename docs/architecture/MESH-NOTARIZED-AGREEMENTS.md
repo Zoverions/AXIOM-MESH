@@ -16,12 +16,14 @@ and settles nothing.
 
 ## Design goals
 
-- **Hash-chained ordering.** Each record binds the digest of the previous
-  record head, so silent reordering, backdating, or deletion is detectable by
-  anyone who holds an earlier digest.
+- **Existing global Grid ordering.** A future agreement event participates in
+  the existing global Grid evidence sequence. Its `prev_hash` binds the
+  immediately preceding Grid event, not a previous agreement or a
+  principal-specific chain head. Agreement supersession links separately bind
+  related agreement revisions.
 - **Honest timestamps.** The recorded time is a `recorded_at` claim bound into
-  the digest. The chain proves relative order; absolute clock truth is claimed
-  only where an independent attestation exists.
+  the event. The Grid chain proves relative event order; absolute clock truth is
+  claimed only where an independent attestation exists.
 - **Metadata kept, separated.** Identity digests of the committing principals,
   schema version, content digest, timestamp, and supersession links travel with
   the record; private agreement content never does.
@@ -43,9 +45,12 @@ A notarized-agreement record contains:
   canonicalization (no class instances, accessors, or prototype state);
 - `metadata` — schema version, `recorded_at` claim, optional context tags,
   and supersession links to earlier records it replaces;
-- `chain` — `prev_head_digest`; the record is appended to the principal's
-  Grid evidence chain (`core.evidence-chain`), preserving the
-  Gateway -> Hypervisor -> Sandbox -> Grid authority sequence;
+- `grid_event` — the agreement payload is bound through the existing global
+  Grid event envelope. Grid continuity is the repository's current
+  `seq` / `prev_hash` / `event_hash` sequence. `event_hash` is the canonical
+  digest of `{seq,event_id,trace_id,actor,kind,subject,occurred_at,payload_digest,prev_hash}`,
+  and Grid signs `{event_hash}`. This draft introduces no separate per-principal
+  evidence chain and no independent `prev_head_digest`;
 - `acceptances` — each party's signed acceptance receipt referencing
   `agreement_id` and `body_digest`, consistent with `consent.receipts`.
 
@@ -54,7 +59,9 @@ A notarized-agreement record contains:
 An independent verifier can check, without trusting either party:
 
 1. the body digest recomputes from the canonical text presented;
-2. the chain is continuous from a trusted earlier head;
+2. the bound Grid event recomputes to its `event_hash`, its Grid signature
+   validates, and its global `seq` / `prev_hash` continuity is valid against the
+   trusted Grid history or retained continuity anchor used for that proof;
 3. every acceptance signature validates against the bound principal identity;
 4. the record conforms to this schema version.
 
