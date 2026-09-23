@@ -2,7 +2,7 @@
 
 **Status:** canonical strategic roadmap
 
-**Updated:** 2026-08-17
+**Updated:** 2026-09-23
 
 **Planning horizon:** active build `0.12.0-dev.3` through evidence-gated 1.0 and isolated frontier incubation
 
@@ -304,7 +304,16 @@ They change no current capability status.
 - pilot at least one small community, research, creator, family, or civic Circle
   with named participants and explicit consent;
 - measure activation, successful outcomes, support burden, accessibility,
-  revocation, export, deletion, and trust comprehension.
+  revocation, export, deletion, and trust comprehension;
+- advance mesh-notarized agreements from DESIGN-ONLY toward a reviewed
+  prototype: hash-chained, append-only "I agree" records with canonical text
+  and envelope, explicit named rejections, supersede-by-pointer, and privacy
+  tiers — see
+  [Mesh-Notarized Agreements](architecture/MESH-NOTARIZED-AGREEMENTS.md);
+- develop orchestration provenance as design first: structured attestation of
+  principal acts (orders, approvals, objections), then queryable coordination
+  state, then orchestration task records — so delegation and authorization are
+  verifiable in the record rather than asserted.
 
 ### Personal compute and Local Trust MVP sequence
 
@@ -548,6 +557,9 @@ activation remains separately governed.
 
 ## Product and ecosystem principles
 
+- **Stated direction:** a new standard for agents — faithful, not servile.
+  Agent-facing work leads with falsifiable technical claims and invites
+  red-team findings; positioning never substitutes for evidence.
 - **Single-player value first:** AXIOM One must be useful before a network is
   large.
 - **Network value second:** Circles should improve coordination while preserving

@@ -1,12 +1,19 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-09-18
+**Status date:** 2026-09-23
 
 **Supported build:** `0.12.0-dev.3`
 
 **Development branch:** `main`
 
 **Deployment status:** production candidate; no live deployment claim
+
+**Claim labels used in this document:** PROVEN (implemented and tested in the
+supported build) · LAB-GRADE (built and tested, but not production-reachable)
+· DESIGN-ONLY (specification only; no implementation) · UNVERIFIED (reported
+but not independently confirmed). Roadmap entries, demonstrations,
+laboratories, and synthetic conformance never promote a capability beyond its
+label.
 
 ## Current build
 
@@ -241,6 +248,46 @@ credential, opens no external runtime connection, reads no user file, performs
 no external effect, and does not certify OpenClaw, Hermes, Agent Zero, MCP,
 A2A, or any other runtime.
 
+## Mesh-notarized agreements — DESIGN-ONLY
+
+The repository now holds a design-only specification for mesh-notarized
+agreements:
+[Mesh-Notarized Agreements](architecture/MESH-NOTARIZED-AGREEMENTS.md).
+
+The design covers how the mesh could witness agreements formed over email (the
+"I agree" pattern): canonical agreement text (CAT-v1) and canonical record
+envelope (CRE-v1) with SHA-256 digests, hash-chained append-only sealed
+records signed by a notary key (Ed25519), explicit named rejections
+(`TERMS_MISMATCH`, `ACCEPTANCE_INCOMPLETE`, `THREAD_UNLINKED`,
+`CLOCK_ANOMALY`), thread-linked acceptance binding, multi-party
+countersigning with asymmetric-acceptance handling, supersede-by-pointer
+(without deletion), revocation as its own record, `hash_only` /
+`encrypted_content` / `plaintext` privacy tiers, offline verification bundles,
+and a stated threat model with honest limits (no legal-enforceability claim,
+no identity beyond channel control, no comprehension proof).
+
+**Label: DESIGN-ONLY.** No implementation, no tests, no capability-registry
+entry, no production surface. It does not change any capability status.
+
+## Orchestration provenance — DESIGN-ONLY direction
+
+A second design direction under study is orchestration provenance: making
+agent orchestration itself evidence instead of assertion. The sequence is:
+
+1. **Structured attestation for principal acts** — orders, approvals, and
+   objections recorded as structured, hash-chained records (act type,
+   principal, timestamp, payload hash, signature) per the notarized-agreement
+   canonicalization, so "who authorized what" becomes verifiable instead of
+   asserted;
+2. **Queryable coordination state** — state questions answered from structured
+   records rather than operator recollection;
+3. **Orchestration task records** — task issuance, delegation, and completion
+   as structured records on the coordination log, so delegation is visible in
+   the record rather than invisible.
+
+**Label: DESIGN-ONLY.** No implementation exists. This is a stated direction,
+not a shipped capability.
+
 ## Repository-native agent participation and portable identity
 
 The repository now exposes a repository-native Security Agent Cell for public,
@@ -304,6 +351,26 @@ The preview is not a supported product and does not claim general consequential
 plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
 ingestion, completed browser-session security, accessibility/usability evidence,
 or signed end-user packaging.
+
+Draft PR #1792 ("AXIOM One scoped mesh status adapter and feed revisions",
+head `3641d9e`) is **open and unmerged**. Its scope is app-local: a scoped
+mesh-status adapter with explicit freshness, replay, lease, checkpoint, and
+role-scoped display states, plus feed revisions and synthetic contract and
+negative tests. It includes an unwired server-side loopback reader for a
+distinct coordinator-issued read-only feed token; there is no live data,
+token, private sample, browser route, Gateway/kernel change, deployment, or
+authority grant. Reported CI (CodeQL, Windows/macOS compatibility,
+documentation-maintenance) is green at the PR head. **Label: LAB-GRADE**
+(draft; not merged; not a product claim).
+
+Identity and role posture for AXIOM One routes: an owner ID is not proof of
+principal or role, and contract-level owner overrides are rejected (PROVEN for
+`/v1/social` and `/v1/social/remote-review`). The preview proxy returns 401
+for absent or invalid credentials and 403 for boundary denial (PROVEN,
+`apps/axiom-one/server.mjs`). Principal IDs are never invented or hardcoded in
+the app; roles remain server-controlled and revocable, and feed credentials
+are separate, read-only, revocable, and per consumer, failing closed when
+unconfigured (design rule; enforced in the draft feed work above).
 
 AXIOM Verify, AXIOM Circles, AXIOM Studio, AXIOM Managed Node, bounded AI
 providers, useful personal workflows, selective sharing, and later external
@@ -442,10 +509,16 @@ promotion.
    each relevant authority or data-contract change;
 5. select and review one maintained external runtime for a deliberately bounded
    read-only Agent Runtime Adapter v1 integration before any remote execution or
-   broader interoperability claim; and
+   broader interoperability claim;
 6. continue Agent Contributor Mode, authenticated multi-host dispatch,
    Circles/social exchange, plural authority, and frontier work incrementally
-   behind their own evidence and promotion gates.
+   behind their own evidence and promotion gates; and
+7. advance the two evidence-direction designs without promoting them: take the
+   mesh-notarized agreements spec from DESIGN-ONLY toward a reviewed prototype,
+   and develop orchestration provenance (structured attestation of principal
+   acts, then queryable coordination state, then orchestration task records)
+   as design first. Neither changes any capability status until its own
+   evidence gates are met.
 
 See the [roadmap](ROADMAP.md), [execution queue](MASTER-TODO.md),
 [production-readiness tracker](PRODUCTION-READINESS-TRACKER.md),
