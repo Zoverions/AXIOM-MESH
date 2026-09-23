@@ -9,12 +9,11 @@
 // conformance scan.
 //
 // Budgets encode "non-pathological": the front end must stay roughly linear,
-// so a 10x input must not cost more than ~30x the time, and absolute caps
-// keep CI honest. Measurements use a short warm-up and a median sample so
-// one JIT/GC/timer outlier cannot create a false scaling failure. The scaling
-// budget carries headroom because shared/virtualized CI runners (notably
-// macos-15-intel) show ~20-24x on genuinely linear parses; a truly quadratic
-// blowup would read ~100x and still fail loudly.
+// so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
+// caps keep CI honest. Measurements use a short warm-up and median samples.
+// CPU time is used only for the scaling ratio so unrelated runner scheduling
+// cannot turn a linear parse into a false superlinear signal; the existing
+// absolute parse/format wall-clock budgets remain unchanged.
 
 import { performance } from 'node:perf_hooks';
 
@@ -42,15 +41,23 @@ function median(values) {
 function measure(fn) {
   for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
 
-  const samples = [];
+  const wallSamples = [];
+  const cpuSamples = [];
   let result;
   for (let i = 0; i < BENCHMARK_SAMPLES; i++) {
-    const start = performance.now();
+    const cpuStart = process.cpuUsage();
+    const wallStart = performance.now();
     result = fn();
-    samples.push(performance.now() - start);
+    wallSamples.push(performance.now() - wallStart);
+    const cpu = process.cpuUsage(cpuStart);
+    cpuSamples.push((cpu.user + cpu.system) / 1000);
   }
 
-  return { ms: median(samples), result };
+  return {
+    ms: median(wallSamples),
+    cpuMs: median(cpuSamples),
+    result
+  };
 }
 
 export function benchmarkSource(label, source) {
@@ -71,6 +78,7 @@ export function benchmarkSource(label, source) {
     bytes,
     lexMs: lexed.ms,
     parseMs: parsed.ms,
+    parseCpuMs: parsed.cpuMs,
     formatMs: formatted.ms,
     compileMs
   };
@@ -81,14 +89,13 @@ export function runBenchmarks(corpus) {
   return corpus.map(({ label, source }) => benchmarkSource(label, source));
 }
 
-// Absolute budgets (ms) and scaling budgets for the standard corpus.
+// Absolute wall-clock budgets (ms) and CPU-time scaling budget for the
+// standard corpus.
 export const BUDGETS = {
   maxParseMs10k: 5000,
   maxFormatMs10k: 5000,
-  // 10x input must cost less than 30x time (linear-ish, not quadratic).
-  // Raised from 20x on 2026-09-22: the 20x budget was a flaky gate on
-  // macos-15-intel CI (measured 20.0x and 23.6x on identical, passing code).
-  maxScalingRatio: 30
+  // 10x input must cost less than 20x CPU time (linear-ish, not quadratic).
+  maxScalingRatio: 20
 };
 
 export function checkBudgets(results) {
@@ -104,20 +111,25 @@ export function checkBudgets(results) {
       failures.push(`10k-line format took ${large.formatMs}ms (budget ${BUDGETS.maxFormatMs10k}ms)`);
     }
   }
-  if (small && large && small.parseMs > 0) {
-    const ratio = large.parseMs / small.parseMs;
-    if (ratio > BUDGETS.maxScalingRatio) {
-      failures.push(`parse scaling ratio 1k->10k is ${ratio.toFixed(1)}x (budget ${BUDGETS.maxScalingRatio}x)`);
+  if (small && large) {
+    if (!(small.parseCpuMs > 0) || !(large.parseCpuMs >= 0)) {
+      failures.push('parse CPU timing is missing or invalid for scaling check');
+    } else {
+      const ratio = large.parseCpuMs / small.parseCpuMs;
+      if (ratio > BUDGETS.maxScalingRatio) {
+        failures.push(`parse CPU scaling ratio 1k->10k is ${ratio.toFixed(1)}x (budget ${BUDGETS.maxScalingRatio}x)`);
+      }
     }
   }
   return failures;
 }
 
 export function formatReport(results) {
-  const header = 'label           lines    bytes  lex(ms) parse(ms) format(ms) compile(ms)';
+  const header = 'label           lines    bytes  lex(ms) parse(ms) parseCPU(ms) format(ms) compile(ms)';
   const rows = results.map((r) =>
     `${r.label.padEnd(15)} ${String(r.lines).padStart(6)} ${String(r.bytes).padStart(7)} ` +
-    `${String(r.lexMs).padStart(7)} ${String(r.parseMs).padStart(9)} ${String(r.formatMs).padStart(10)} ` +
+    `${String(r.lexMs).padStart(7)} ${String(r.parseMs).padStart(9)} ${String(r.parseCpuMs).padStart(12)} ` +
+    `${String(r.formatMs).padStart(10)} ` +
     `${r.compileMs === null ? '   n/a'.padStart(11) : String(r.compileMs).padStart(11)}`
   );
   return [header, ...rows].join('\n');

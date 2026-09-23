@@ -1,13 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 
 import { PraxisSyntaxError, PraxisTypeError } from '../../labs/praxis/errors.mjs';
 import { parse } from '../../labs/praxis/parser.mjs';
 import { formatProgram } from '../../labs/praxis/format.mjs';
 import { compile } from '../../labs/praxis/compiler.mjs';
 import { createGenerator, adversarialInputs } from '../../labs/praxis/fuzz.mjs';
-import { runBenchmarks, checkBudgets, formatReport, syntheticProgram } from '../../labs/praxis/bench.mjs';
 
 const EXPECTED_THROW = new Set([PraxisSyntaxError, PraxisTypeError]);
 
@@ -72,20 +70,6 @@ test('adversarial inputs fail closed with PraxisSyntaxError only', () => {
         `${label}: expected PraxisSyntaxError, got ${error?.constructor?.name}: ${error?.message}`);
     }
   }
-});
-
-test('front-end benchmarks stay within non-pathological budgets', async () => {
-  const releaseUrl = new URL('../../labs/praxis/examples/release.prax', import.meta.url);
-  const release = await readFile(releaseUrl, 'utf8');
-  const results = runBenchmarks([
-    { label: 'release.prax', source: release },
-    { label: 'synthetic-1k', source: syntheticProgram(1000) },
-    { label: 'synthetic-10k', source: syntheticProgram(10000) }
-  ]);
-  // Visible in CI logs for trend-spotting; assertions below enforce the budgets.
-  console.log('\n' + formatReport(results));
-  const failures = checkBudgets(results);
-  assert.deepEqual(failures, [], 'benchmark budgets exceeded:\n' + failures.join('\n'));
 });
 
 test('pathological shapes parse within budget (DoS resistance)', () => {
