@@ -68,7 +68,7 @@ test('reader uses the server-side MESH_STATUS configuration without putting cred
   }
 });
 
-test('reader uses ISO updated_at as a provisional revision, otherwise flags an unversioned feed', async () => {
+test('reader uses ISO or numeric epoch-ms updated_at as a provisional revision, otherwise flags an unversioned feed', async () => {
   await withTokenFile(async tokenFile => {
     const base = { sourceUrl: 'http://127.0.0.1:3999/status', tokenFile,
       sourceId: 'cosmo', audienceId: 'owner-1' };
@@ -85,6 +85,18 @@ test('reader uses ISO updated_at as a provisional revision, otherwise flags an u
     assert.equal(nanoseconds.revision_kind, 'timestamp');
     assert.equal(nanoseconds.revision, Date.parse('2026-09-23T12:00:00.123Z'));
     assert.equal(nanoseconds.observed_at, '2026-09-23T12:00:00.123Z');
+    const epochMs = Date.parse(SOURCE.updated_at);
+    const numeric = await readMeshStatus({ ...base,
+      fetchImpl: async () => new Response(JSON.stringify({ ...SOURCE, updated_at: epochMs }),
+        { status: 200, headers: { 'content-type': 'application/json' } }) });
+    assert.equal(numeric.revision_kind, 'timestamp');
+    assert.equal(numeric.revision, timestamp.revision);
+    assert.equal(numeric.observed_at, timestamp.observed_at);
+    const header = await readMeshStatus({ ...base,
+      fetchImpl: async () => new Response(JSON.stringify({ ...SOURCE, updated_at: epochMs }),
+        { status: 200, headers: { 'content-type': 'application/json', 'x-mesh-revision': '9' } }) });
+    assert.equal(header.revision_kind, 'header');
+    assert.equal(header.revision, 9);
     const absent = await readMeshStatus({ ...base,
       fetchImpl: async () => new Response(JSON.stringify({ format: SOURCE.format, agents: SOURCE.agents }),
         { status: 200, headers: { 'content-type': 'application/json' } }) });
@@ -95,6 +107,11 @@ test('reader uses ISO updated_at as a provisional revision, otherwise flags an u
       fetchImpl: async () => new Response(JSON.stringify({ ...SOURCE,
         updated_at: '2026-02-30T12:00:00Z' }), { status: 200,
         headers: { 'content-type': 'application/json' } }) }), /update time/);
+    for (const malformed of [-1, 1.5, 253402300800000, String(epochMs)]) {
+      await assert.rejects(readMeshStatus({ ...base,
+        fetchImpl: async () => new Response(JSON.stringify({ ...SOURCE, updated_at: malformed }),
+          { status: 200, headers: { 'content-type': 'application/json' } }) }), /update time/);
+    }
   });
 });
 

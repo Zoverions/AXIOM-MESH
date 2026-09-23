@@ -18,7 +18,7 @@ export function adaptMeshStatusV1(source, provenance) {
   }
   if (!isRecord(source) || source.format !== 'MESH_STATUS v1' || !isRecord(source.agents)
       || Object.keys(source.agents).length > MAX_AGENTS) throw new Error('Invalid MESH_STATUS v1 source');
-  const observed = normalizeSourceTime(source.updated_at);
+  const observed = normalizeSourceUpdateTime(source.updated_at);
   if (Object.hasOwn(source, 'updated_at') && observed === null) {
     throw new Error('Invalid MESH_STATUS v1 update time');
   }
@@ -81,6 +81,17 @@ export function adaptMeshStatusV1(source, provenance) {
   });
   return { schema: SCHEMA, ...provenance, revision_kind: provenance.revision_kind ?? 'header',
     observed_at: observed, agents, history };
+}
+
+// The coordinator may publish its top-level update instant as a JSON number
+// of milliseconds since the Unix epoch. Other v1 time fields stay ISO-only.
+export function normalizeSourceUpdateTime(value) {
+  if (typeof value === 'number') {
+    // Keep the canonical four-digit UTC format used by the observation schema.
+    if (!Number.isSafeInteger(value) || value < 0 || value > 253402300799999) return null;
+    return new Date(value).toISOString();
+  }
+  return normalizeSourceTime(value);
 }
 
 function normalizeSourceTime(value) {

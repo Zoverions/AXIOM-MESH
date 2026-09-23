@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { isAbsolute } from 'node:path';
-import { adaptMeshStatusV1 } from './coordination.mjs';
+import { adaptMeshStatusV1, normalizeSourceUpdateTime } from './coordination.mjs';
 
 const MAX_BYTES = 64 * 1024;
 const TIMEOUT_MS = 5_000;
@@ -45,25 +45,12 @@ function sourceRevision(response, source) {
     if (!Number.isSafeInteger(revision)) throw new Error('Invalid source revision');
     return { revision_kind: 'header', revision };
   }
-  // Date.parse accepts non-ISO text and silently normalizes impossible dates.
-  // Use only a real ISO instant as a provisional version when the feed lacks
-  // the coordinator's monotonically increasing revision header.
-  const value = source?.updated_at;
-  if (typeof value === 'string') {
-    const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d{1,9})?(Z|[+-]\d\d:\d\d)$/.exec(value);
-    if (match) {
-      const [, year, month, day, hour, minute, second, zone] = match;
-      const local = new Date(0);
-      local.setUTCFullYear(+year, +month - 1, +day);
-      local.setUTCHours(+hour, +minute, +second, 0);
-      const calendarValid = local.getUTCFullYear() === +year && local.getUTCMonth() + 1 === +month
-        && local.getUTCDate() === +day && local.getUTCHours() === +hour
-        && local.getUTCMinutes() === +minute && local.getUTCSeconds() === +second;
-      const zoneValid = zone === 'Z' || (+zone.slice(1, 3) <= 23 && +zone.slice(4, 6) <= 59);
-      const revision = Date.parse(value);
-      if (calendarValid && zoneValid && Number.isSafeInteger(revision) && revision >= 0) {
-        return { revision_kind: 'timestamp', revision };
-      }
+  // Shared normalization makes ISO and epoch-ms updates use the same ordering.
+  const observed = normalizeSourceUpdateTime(source?.updated_at);
+  if (observed !== null) {
+    const revision = Date.parse(observed);
+    if (Number.isSafeInteger(revision) && revision >= 0) {
+      return { revision_kind: 'timestamp', revision };
     }
   }
   return { revision_kind: 'unversioned', revision: null };

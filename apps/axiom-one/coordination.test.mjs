@@ -344,11 +344,29 @@ test('a missing update time remains readable but never live even with a header r
 
 test('a present malformed update time is rejected rather than downgraded to unversioned', () => {
   for (const provenance of [PROVENANCE, { ...PROVENANCE, revision_kind: 'unversioned', revision: null }]) {
-    for (const updated_at of ['not-a-date', null]) {
+    for (const updated_at of ['not-a-date', null, -1, 1.5, 253402300800000, String(Date.parse(NOW))]) {
       assert.throws(() => adaptMeshStatusV1({ format: 'MESH_STATUS v1', updated_at,
         agents: { cosmo: {} } }, provenance), /update time/);
     }
   }
+});
+
+test('numeric epoch milliseconds normalize exactly and order against equivalent ISO updates', () => {
+  const source = { format: 'MESH_STATUS v1', updated_at: Date.parse(NOW),
+    agents: { cosmo: { last_heartbeat: '2026-09-23T11:59:40Z' } } };
+  const numeric = adaptMeshStatusV1(source,
+    { ...PROVENANCE, revision_kind: 'timestamp', revision: Date.parse(NOW) });
+  assert.equal(numeric.observed_at, NOW);
+  assert.equal(deriveCoordinationView({ snapshot: numeric, now: NOW, scope: OWNER }).source_state, 'live');
+  source.updated_at = NOW;
+  const iso = adaptMeshStatusV1(source,
+    { ...PROVENANCE, revision_kind: 'timestamp', revision: Date.parse(NOW) });
+  assert.equal(iso.observed_at, numeric.observed_at);
+  assert.equal(iso.revision, numeric.revision);
+  const older = adaptMeshStatusV1({ ...source, updated_at: Date.parse(NOW) - 1 },
+    { ...PROVENANCE, revision_kind: 'timestamp', revision: Date.parse(NOW) - 1 });
+  assert.equal(deriveCoordinationView({ snapshot: older, lastGood: iso, now: NOW, scope: OWNER }).source_state,
+    'replayed');
 });
 
 test('ISO-8601 fractional seconds through nanoseconds normalize to millisecond UTC', () => {
