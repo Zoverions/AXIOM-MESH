@@ -10,10 +10,13 @@
 //
 // Budgets encode "non-pathological": the front end must stay roughly linear,
 // so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
-// caps keep CI honest. Measurements use a short warm-up and median samples.
-// CPU time is used only for the scaling ratio so unrelated runner scheduling
-// cannot turn a linear parse into a false superlinear signal; the existing
-// absolute parse/format wall-clock budgets remain unchanged.
+// caps keep CI honest. Measurements use a short warm-up and median wall samples.
+// CPU time is measured across a bounded repeated parse batch so platforms with
+// coarse process CPU accounting still produce usable evidence; the per-parse
+// value is normalized by the run count. CPU time is used only for the scaling
+// ratio so unrelated runner scheduling cannot turn a linear parse into a false
+// superlinear signal; the existing absolute parse/format wall-clock budgets
+// remain unchanged.
 
 import { performance } from 'node:perf_hooks';
 
@@ -24,6 +27,7 @@ import { compile } from './compiler.mjs';
 
 const BENCHMARK_WARMUPS = 1;
 const BENCHMARK_SAMPLES = 5;
+const BENCHMARK_MAX_CPU_RUNS = 80;
 
 export function syntheticProgram(lines) {
   let src = '';
@@ -38,24 +42,41 @@ function median(values) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-function measure(fn) {
+function measureCpuPerRun(fn) {
+  const cpuStart = process.cpuUsage();
+  let runs = 0;
+  let nextBatch = BENCHMARK_SAMPLES;
+  let cpuMicros = 0;
+
+  while (runs < BENCHMARK_MAX_CPU_RUNS) {
+    const batch = Math.min(nextBatch, BENCHMARK_MAX_CPU_RUNS - runs);
+    for (let i = 0; i < batch; i++) fn();
+    runs += batch;
+
+    const cpu = process.cpuUsage(cpuStart);
+    cpuMicros = cpu.user + cpu.system;
+    if (cpuMicros > 0) break;
+
+    nextBatch *= 2;
+  }
+
+  return cpuMicros > 0 ? (cpuMicros / 1000) / runs : 0;
+}
+
+function measure(fn, { requireCpuEvidence = false } = {}) {
   for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
 
   const wallSamples = [];
-  const cpuSamples = [];
   let result;
   for (let i = 0; i < BENCHMARK_SAMPLES; i++) {
-    const cpuStart = process.cpuUsage();
     const wallStart = performance.now();
     result = fn();
     wallSamples.push(performance.now() - wallStart);
-    const cpu = process.cpuUsage(cpuStart);
-    cpuSamples.push((cpu.user + cpu.system) / 1000);
   }
 
   return {
     ms: median(wallSamples),
-    cpuMs: median(cpuSamples),
+    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn) : null,
     result
   };
 }
@@ -64,7 +85,7 @@ export function benchmarkSource(label, source) {
   const lines = source.split('\n').length;
   const bytes = source.length;
   const lexed = measure(() => lex(source));
-  const parsed = measure(() => parse(source));
+  const parsed = measure(() => parse(source), { requireCpuEvidence: true });
   const formatted = measure(() => formatProgram(parsed.result));
   let compileMs = null;
   try {
