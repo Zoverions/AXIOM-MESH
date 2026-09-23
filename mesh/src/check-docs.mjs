@@ -69,6 +69,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md',
   'docs/architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/architecture/MESH-NOTARIZED-AGREEMENTS.md',
   'docs/architecture/contracts/agent-challenge.v1.schema.json',
   'docs/architecture/contracts/agent-feedback.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',

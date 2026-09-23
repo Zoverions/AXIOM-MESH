@@ -366,11 +366,14 @@ documentation-maintenance) is green at the PR head. **Label: LAB-GRADE**
 Identity and role posture for AXIOM One routes: an owner ID is not proof of
 principal or role, and contract-level owner overrides are rejected (PROVEN for
 `/v1/social` and `/v1/social/remote-review`). The preview proxy returns 401
-for absent or invalid credentials and 403 for boundary denial (PROVEN,
-`apps/axiom-one/server.mjs`). Principal IDs are never invented or hardcoded in
-the app; roles remain server-controlled and revocable, and feed credentials
-are separate, read-only, revocable, and per consumer, failing closed when
-unconfigured (design rule; enforced in the draft feed work above).
+for absent or invalid credentials and 403 for browser-boundary (cross-origin)
+denial (PROVEN, `apps/axiom-one/server.mjs`). Server-side identity is never
+invented or hardcoded: the app derives the principal from the authenticated
+preview bearer token (the preview UI keeps a local-only `local-owner` display
+default for browser-only draft cards, which carry no authority). Roles remain
+server-controlled and revocable, and feed credentials are separate,
+read-only, revocable, and per consumer, failing closed when unconfigured
+(design rule; enforced in the draft feed work above).
 
 AXIOM Verify, AXIOM Circles, AXIOM Studio, AXIOM Managed Node, bounded AI
 providers, useful personal workflows, selective sharing, and later external
