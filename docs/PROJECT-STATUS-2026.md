@@ -1,12 +1,23 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-09-18
+**Status date:** 2026-09-23
 
 **Supported build:** `0.12.0-dev.3`
 
 **Development branch:** `main`
 
 **Deployment status:** production candidate; no live deployment claim
+
+## Claim labels
+
+New and updated status statements in this document carry explicit evidence
+labels:
+
+- **PROVEN** — capability-registry `implemented` plus protected CI evidence;
+- **LAB-GRADE** — built and tested in isolated or laboratory paths, not
+  production-reachable;
+- **DESIGN-ONLY** — specification or architecture with no implementation;
+- **UNVERIFIED** — stated direction with no supporting evidence yet.
 
 ## Current build
 
@@ -113,7 +124,9 @@ The production-candidate surface includes:
   projection, creates no remote-social schema, and performs no mutation,
   transport, federation, ranking, recommendation, or authority effect;
 - bounded-cardinality telemetry, readiness, operations reports, OpenMetrics,
-  and a host-side least-privilege OTLP/Alertmanager relay;
+  and a host-side least-privilege OTLP/Alertmanager relay (PROVEN as an
+  implemented `operations.observability` capability: HTTPS enforced for
+  non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
   internal network segments, a default-deny 42-route application policy,
@@ -305,6 +318,32 @@ plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
 ingestion, completed browser-session security, accessibility/usability evidence,
 or signed end-user packaging.
 
+### AXIOM One current slice state (2026-09-23)
+
+- **Item 7 — TWA/APK rehearsal** (merged PR #1776): **LAB-GRADE**. Local build
+  evidence plus a release runbook; strictly lab-grade and offline-verifiable.
+  Repeated build work moved to disposable scratch, CLI password exposure
+  removed, rehearsal notifications disabled, fail-closed on
+  trusted-origin/shortcut drift. Owner-gated production origin, signing, DAL,
+  and distribution steps are retained. No production distribution claim.
+- **Item 8 — Social write controls** (merged PR #1777): **LAB-GRADE**.
+  Review-only deterministic review evidence for the Social write-control
+  slice; browser-local authority minting and generic adapter execution were
+  removed, and a forged-scope-plus-adapter negative regression was added.
+  Executable authority remains in the existing authenticated kernel path.
+- **Item 9 — Feed contract** (merged PR #1769): **DESIGN-ONLY**. Typed feed
+  contract (JSON Schema + TypeScript types), synthetic fixtures across all
+  four audiences (public / circle / intimate / named) including a rescind
+  notice, a 127.0.0.1-only mock feed server, and 27 contract tests. Not wired
+  to the real relay; real wiring awaits the F-1..F-3 sequence (presence-post
+  registry proposal, registry adoption plumbing, scope-label migration).
+
+**Identity/role posture.** The preview server denies cross-origin requests
+with 403 before any identity check (browser-boundary denial) and requires a
+valid local bearer token with 401. Server-side identity is never invented:
+the preview UI's `local-owner` display default is a local label and carries
+no authority.
+
 AXIOM Verify, AXIOM Circles, AXIOM Studio, AXIOM Managed Node, bounded AI
 providers, useful personal workflows, selective sharing, and later external
 runtime integrations remain separately gated product work.
@@ -356,6 +395,31 @@ other four drafts. No wearable, pairing, agent capsule executor, Personal Agent
 Pack, inference router, compute dispatcher, identity presentation, payment
 mandate, or settlement adapter has been implemented or added to the capability
 registry.
+
+## Mesh-notarized agreements (DESIGN-ONLY)
+
+The [mesh-notarized agreements specification](architecture/MESH-NOTARIZED-AGREEMENTS.md)
+(`0.1.0-draft.1`) defines a machine-verifiable record format for mutual
+commitments between principals: hash-chained ordering, honest `recorded_at`
+claims, digest-bound party identities, and metadata kept separate from private
+content. Notarization is evidence, not enforcement: it proves an agreement was
+recorded as stated, and claims nothing about fairness, legality, or truth.
+
+This is a product direction, recorded as design only. It changes no capability
+status, adds no registry entry, and grants no new authority. Any future
+implementation follows the normal capability, policy, registry, and promotion
+gates.
+
+## Orchestration provenance (planned; UNVERIFIED)
+
+Provenance for orchestrated work — durable task, event, artifact, and handoff
+records bound to principal, catalog entry, runtime/connector identity, and
+policy/grant state — is a stated direction, not a current claim. The planned
+queue lives in
+[`docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md`](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
+(P5 durable task/event/artifact/handoff model; P6 attenuation-only delegation
+with human-readable delegation and worker lineage in receipts). Nothing in
+that queue is implemented, enabled, or promoted.
 
 ## Promotion blockers
 

@@ -251,6 +251,10 @@ decision.
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
   payment-mandate architecture with a phased MVP and explicit non-claims.
+- [Mesh-Notarized Agreements](architecture/MESH-NOTARIZED-AGREEMENTS.md)
+  — DESIGN-ONLY record format for mutual commitments between principals:
+  hash-chained ordering, honest timestamps, digest-bound identities, and
+  metadata separated from private content. Evidence, not enforcement.
 - [Sovereign Vaults and Local Context Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md)
   — compartmentalized owner data, deterministic vault authority, privileged
   owner-local context reasoning, minimized Context Capsules, companion
