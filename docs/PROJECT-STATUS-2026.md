@@ -16,7 +16,8 @@ labels:
 - **PROVEN** — capability-registry `implemented` plus protected CI evidence;
 - **LAB-GRADE** — built and tested in isolated or laboratory paths, not
   production-reachable;
-- **DESIGN-ONLY** — specification or architecture with no implementation;
+- **DESIGN-ONLY** — specification, architecture, or isolated contract/mock
+  scaffolding with no integrated supported-runtime or production capability;
 - **UNVERIFIED** — stated direction with no supporting evidence yet.
 
 ## Current build
@@ -338,11 +339,14 @@ or signed end-user packaging.
   to the real relay; real wiring awaits the F-1..F-3 sequence (presence-post
   registry proposal, registry adoption plumbing, scope-label migration).
 
-**Identity/role posture.** The preview server denies cross-origin requests
-with 403 before any identity check (browser-boundary denial) and requires a
-valid local bearer token with 401. Server-side identity is never invented:
-the preview UI's `local-owner` display default is a local label and carries
-no authority.
+**LAB-GRADE identity/role posture.** Preview `/v1/` processing first enforces the
+configured maximum target length and returns 400 for an oversized target. For
+within-limit recognized Gateway routes and query shapes, browser-boundary
+failures return 403 before bearer-token authentication; a missing or invalid
+local bearer token returns 401. Within-limit unknown or unallowed routes or
+query shapes return 404 before the browser-boundary and token checks.
+Server-side identity is never invented: the preview UI's `local-owner` display
+default is a local label and carries no authority.
 
 AXIOM Verify, AXIOM Circles, AXIOM Studio, AXIOM Managed Node, bounded AI
 providers, useful personal workflows, selective sharing, and later external
