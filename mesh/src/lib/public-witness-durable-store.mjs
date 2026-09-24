@@ -11,7 +11,7 @@ import {
   readFile,
   stat
 } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 import {
   ValidationError,
@@ -489,6 +489,22 @@ export class PublicWitnessDurableStore {
     return this.#core.witnessPublicKey;
   }
 
+  async findDurableObservationRecord(observationDigest, { statePath } = {}) {
+    const target = digest(observationDigest, 'public witness durable observationDigest');
+    const supplied = assertString(statePath, 'public witness durable backing statePath', { min: 1, max: 4096 });
+    if (resolve(supplied) !== resolve(this.#statePath)) {
+      throw new ValidationError('public witness durable observation must use the active store backing state path');
+    }
+    // Recheck the store's own signed backing chain, within its configured
+    // state/record limits; a caller-supplied signed copy is not this store.
+    await this.#assertDiskMatchesMemory();
+    const matches = this.#records.filter(record => record.statement.observation_digest === target);
+    if (matches.length > 1) {
+      throw new ValidationError('public witness durable observation digest appears in multiple records');
+    }
+    return matches.length === 0 ? null : structuredClone(matches[0]);
+  }
+
   async commit(operation, rawRequest, { committedAt } = {}) {
     const normalizedOperation = assertString(operation, 'public witness durable operation');
     if (!OPERATIONS.has(normalizedOperation)) throw new ValidationError('public witness durable operation is invalid');
@@ -639,7 +655,7 @@ export async function openPublicWitnessDurableStore({
   maxStateBytes,
   maxRecordBytes
 } = {}) {
-  const normalizedStatePath = assertString(statePath, 'public witness durable statePath', { min: 1, max: 4096 });
+  const normalizedStatePath = resolve(assertString(statePath, 'public witness durable statePath', { min: 1, max: 4096 }));
   const normalizedDomainId = identifier(domainId, 'public witness durable domainId');
   const normalizedWitnessId = identifier(witnessId, 'public witness durable witnessId');
   const normalizedMaxStateBytes = boundedInteger(maxStateBytes, 'public witness durable maxStateBytes', DEFAULT_MAX_STATE_BYTES, HARD_MAX_STATE_BYTES);
