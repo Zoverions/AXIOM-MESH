@@ -7,7 +7,7 @@ import {
   timingSafeEqual,
   verify
 } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalJson, sha256, AxiomError } from './canonical.mjs';
 import { assertTransportPeer } from './transport-credentials.mjs';
@@ -61,10 +61,30 @@ export async function ensureMeshIdentity(dataDir, service, { create = true } = {
   return new MeshIdentity(service, privatePem, publicPem);
 }
 
+// Parsed trusted keys by path, each bound to the file identity it was read
+// from (scalability audit S-05). Reading and parsing the PEM on every signed
+// request cost ~5x a stat. Any replacement of the file -- rotation writes a
+// new file and renames it into place -- changes the inode or timestamps, so
+// the next request reads the new key exactly as before.
+const trustedKeyCache = new Map();
+
+function trustFileIdentity(info) {
+  return `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`;
+}
+
 export async function loadTrustedKey(dataDir, service) {
   if (!KEY_PATTERN.test(service)) throw new AxiomError('invalid_service_identity', 'Invalid service identity', 401);
-  const pem = await readFile(join(dataDir, 'trust', `${service}.pub.pem`), 'utf8');
-  return createPublicKey(pem);
+  const path = join(dataDir, 'trust', `${service}.pub.pem`);
+  const before = trustFileIdentity(await stat(path, { bigint: true }));
+  const cached = trustedKeyCache.get(path);
+  if (cached?.identity === before) return cached.key;
+
+  const key = createPublicKey(await readFile(path, 'utf8'));
+  // Cache only if the file did not change while it was being read.
+  const after = trustFileIdentity(await stat(path, { bigint: true }));
+  if (after === before) trustedKeyCache.set(path, { identity: before, key });
+  else trustedKeyCache.delete(path);
+  return key;
 }
 
 function keyIdFor(service, publicKey) {

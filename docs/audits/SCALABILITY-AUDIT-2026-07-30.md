@@ -278,6 +278,17 @@ per-request TLS cost.
 - No trust-file read occurs in steady-state request verification.
 - Rotation and rollback tests prove immediate, deterministic generation change.
 
+**Remediation status (2026-09-24): read and parse removed from the hot path;
+generation model not built.** `loadTrustedKey` keeps each parsed key bound to
+the identity of the file it came from (device, inode, size, nanosecond mtime
+and ctime) and re-reads only when that identity changes, which a rename into
+place or an in-place rewrite always does. A request now costs one `stat`
+instead of a read and PEM parse: 166 µs to 45 µs per call. A removed file
+still fails closed, and tests cover rename, rewrite and removal (each fails
+against a cache that skips the identity check). An immutable in-memory trust
+generation, which would also remove the `stat`, needs rotation to publish
+generations and is still open.
+
 ### S-06 — Replay protection has an O(n) hot-path sweep and a low fixed ceiling
 
 **Severity:** High  
