@@ -259,3 +259,74 @@ test('an edited checkpoint head cannot make a tampered history verify', async t 
   assert.equal(store.verifyChain().reason, 'checkpoint_digest_mismatch');
   assert.equal(store.verifyFullChain().valid, true);
 });
+
+function countVerifiedCheckpoints(store) {
+  const verifyStoredEvent = store.verifyStoredEvent.bind(store);
+  const counter = { count: 0 };
+  store.verifyStoredEvent = row => {
+    counter.count += 1;
+    return verifyStoredEvent(row);
+  };
+  return counter;
+}
+
+function rewriteHistory(store, edit) {
+  const history = JSON.parse(store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoints_v1'"
+  ).get().value);
+  edit(history);
+  store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'"
+  ).run(JSON.stringify(history));
+}
+
+test('checkpoint verification re-verifies only records after an unchanged, verified prefix (S-03)', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 1 });
+  for (let index = 1; index <= 5; index += 1) appendAccepted(store, index);
+  const counter = countVerifiedCheckpoints(store);
+
+  assert.equal(store.verifyChain().valid, true);
+  assert.equal(counter.count, 5, 'first verification checks every checkpoint');
+
+  counter.count = 0;
+  assert.equal(store.verifyChain().valid, true);
+  assert.equal(counter.count, 1, 'unchanged history: only the latest checkpoint');
+
+  appendAccepted(store, 6);
+  appendAccepted(store, 7);
+  counter.count = 0;
+  const verified = store.verifyChain();
+  assert.equal(verified.valid, true);
+  assert.equal(verified.checkpoint_count, 7);
+  assert.equal(counter.count, 3, 'the previous latest plus the two new checkpoints');
+});
+
+test('a verified checkpoint prefix cannot hide later edits, key changes or a changed latest record', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 1 });
+  for (let index = 1; index <= 4; index += 1) appendAccepted(store, index);
+  assert.equal(store.verifyChain().valid, true);
+
+  // An earlier record edited after it was verified, digest field left intact.
+  const original = store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoints_v1'"
+  ).get().value;
+  rewriteHistory(store, history => {
+    history[0].statement.created_at = '2001-01-01T00:00:00.000Z';
+  });
+  assert.equal(store.verifyChain().reason, 'checkpoint_id_mismatch');
+
+  // The latest record is always verified again.
+  store.db.prepare("UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'").run(original);
+  assert.equal(store.verifyChain().valid, true);
+  rewriteHistory(store, history => {
+    history.at(-1).checkpoint_digest = 'e'.repeat(64);
+  });
+  assert.equal(store.verifyChain().reason, 'checkpoint_digest_mismatch');
+
+  // A change to the verification keys invalidates the verified prefix.
+  store.db.prepare("UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'").run(original);
+  assert.equal(store.verifyChain().valid, true);
+  const signer = JSON.parse(original)[0].attestation.key_id;
+  store.verificationKeys.delete(signer);
+  assert.equal(store.verifyChain().reason, 'checkpoint_verification_key_mismatch');
+});

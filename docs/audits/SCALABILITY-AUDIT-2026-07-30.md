@@ -205,10 +205,22 @@ signed history, and a test shows an edited head cannot make a tampered
 history verify. Measured append cost with 2,000 checkpoints (1.8 MB of
 history): 6.2 ms before, 0.8 ms after, the same as with none.
 
-Still open: creating checkpoint N still rewrites the array (once per interval,
-so small amortised), and checkpoint-mode verification still re-verifies every
-checkpoint signature on each call. Both are addressed by the table layout
-above.
+Checkpoint-mode verification re-verified every checkpoint signature and
+anchor event on each call, and `requireIntentEvidenceChain` (intent evidence
+reads and every external-effect append) runs it after any append: 786 ms per
+call with 2,000 checkpoints. It now remembers the digest of the exact stored
+bytes of the verified records before the latest, under the active key set,
+and re-verifies only the latest record and anything newer while those bytes
+and keys are unchanged: 26 ms at 2,000 checkpoints, the remainder being the
+parse and hash of the stored history. An edit to any earlier record, a key
+change or an edit to the latest record still fails verification (tested,
+including with the prefix comparison removed). Edits to event rows inside the
+prefix are outside checkpoint mode's assurance, as for every other prefix
+event; full verification from genesis still detects them.
+
+Still open: the history remains one JSON value, so creating checkpoint N
+rewrites it (once per interval, small amortised) and each verification still
+parses it. The table layout above removes both.
 
 ### S-04 — Production internal calls establish a new TLS connection for every hop
 
