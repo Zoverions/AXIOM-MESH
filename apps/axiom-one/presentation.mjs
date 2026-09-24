@@ -36,8 +36,49 @@ const ACTION_BOUNDARIES = Object.freeze({
   'ai.local-organize': Object.freeze({
     consequence: 'non-consequential-local-draft',
     confirmations: Object.freeze([])
+  }),
+  'social.actor.create': Object.freeze({
+    consequence: 'durable-local-social-actor-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.persona.create': Object.freeze({
+    consequence: 'durable-local-social-persona-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.create': Object.freeze({
+    consequence: 'durable-local-social-publication-write',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.supersede': Object.freeze({
+    consequence: 'durable-local-social-publication-supersede',
+    confirmations: Object.freeze([])
+  }),
+  'social.publication.retract': Object.freeze({
+    consequence: 'durable-local-social-publication-retract',
+    confirmations: Object.freeze([])
   })
 });
+
+export function projectCapabilityParity(response) {
+  const entries = Array.isArray(response?.capabilities) ? response.capabilities : [];
+  const capabilities = entries.map(item => ({
+    id: typeof item?.id === 'string' ? item.id : 'unknown',
+    family: typeof item?.family === 'string' ? item.family : 'other',
+    status: typeof item?.status === 'string' ? item.status : 'unknown',
+    summary: typeof item?.summary === 'string' ? item.summary : '',
+    runnable_claim: item?.status === 'implemented',
+    authorized_to_principal: null
+  }));
+  const families = [...new Set(capabilities.map(item => item.family))].sort();
+  return {
+    source: 'capabilities.list',
+    authority: 'not-inferred-from-discovery',
+    total: capabilities.length,
+    implemented: capabilities.filter(item => item.runnable_claim).length,
+    families,
+    capabilities
+  };
+}
 
 export function createHumanPresenter(contract) {
   validateHumanContract(contract);
