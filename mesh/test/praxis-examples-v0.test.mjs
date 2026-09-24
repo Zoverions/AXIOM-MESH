@@ -33,7 +33,8 @@ const GALLERY = [
   { file: '17-denied-linear-permit-reuse.prax', expects: { deny: 'PRAXIS_LINEAR_AUTHORITY_REUSE' } },
   { file: '18-denied-irreversible-commit.prax', expects: { deny: 'PRAXIS_IRREVERSIBLE_REQUIRES_FINALIZE' } },
   { file: '19-denied-authority-mismatch.prax', expects: { deny: 'PRAXIS_AUTHORITY_MISMATCH' } },
-  { file: '20-denied-secret-arg.prax', expects: { deny: 'PRAXIS_SECRET_EXFILTRATION' } }
+  { file: '20-denied-secret-arg.prax', expects: { deny: 'PRAXIS_SECRET_EXFILTRATION' } },
+  { file: '21-attestation-gate.prax', expects: 'clean' }
 ];
 
 for (const entry of GALLERY) {

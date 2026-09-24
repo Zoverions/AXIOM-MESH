@@ -177,6 +177,7 @@ test('Praxis interpreter has no built-in external-effect transport surface', asy
     'registry.mjs'
   ];
   const inertToolModules = [
+    'attestation.mjs',
     'bench.mjs',
     'format.mjs',
     'fuzz.mjs',
