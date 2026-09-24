@@ -41,7 +41,12 @@ const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'memory.link',
   'memory.tombstone',
   'export.create',
-  'ai.local-organize'
+  'ai.local-organize',
+  'social.actor.create',
+  'social.persona.create',
+  'social.publication.create',
+  'social.publication.supersede',
+  'social.publication.retract'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -204,6 +209,7 @@ function validatePolicy(policy) {
     'security',
     'human_explanations',
     'memory_lifecycle',
+    'capability_parity',
     'surfaces',
     'gateway_routes',
     'non_claims'
@@ -304,6 +310,23 @@ function validatePolicy(policy) {
     || policy.memory_lifecycle.restore !== false
     || policy.memory_lifecycle.sharing !== false
   ) throw new ValidationError('AXIOM One memory lifecycle boundary is weakened');
+  exactObject(policy.capability_parity, 'AXIOM One capability parity policy', [
+    'status',
+    'capability_route',
+    'runnable_claim_statuses',
+    'principal_authority',
+    'discovery_grants_authority',
+    'browser_mutation'
+  ]);
+  if (
+    policy.capability_parity.status !== 'experimental-read-only-projection'
+    || policy.capability_parity.capability_route !== 'capabilities.list'
+    || canonicalJson(policy.capability_parity.runnable_claim_statuses)
+      !== canonicalJson(['implemented'])
+    || policy.capability_parity.principal_authority !== 'not-inferred-from-discovery'
+    || policy.capability_parity.discovery_grants_authority !== false
+    || policy.capability_parity.browser_mutation !== false
+  ) throw new ValidationError('AXIOM One capability parity boundary is weakened');
   if (
     canonicalJson(policy.surfaces) !== canonicalJson(EXPECTED_SURFACES)
     || canonicalJson(policy.gateway_routes) !== canonicalJson(EXPECTED_ROUTES)
@@ -459,7 +482,11 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     'intentSuccess',
     'intentFailure',
     'retrySameRequest',
-    'Raw result and evidence'
+    'Raw result and evidence',
+    'verifyReport',
+    'Verify offline',
+    '/local/verify',
+    'integrity_versus_truth'
   ];
   if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {
     throw new ValidationError('AXIOM One human explanation surface is incomplete');
@@ -502,18 +529,44 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     "response.network_effect === 'none'",
     "publication.status ?? 'unknown'",
     'Owner-local Social corpus',
-    'No federation'
+    'No federation',
+    "action: 'social.actor.create'",
+    "action: 'social.persona.create'",
+    "action: 'social.publication.create'",
+    "action: 'social.publication.supersede'",
+    "action: 'social.publication.retract'",
+    "purpose: 'local-social-identity'",
+    "purpose: 'local-social-persona'",
+    "purpose: 'social-publish'",
+    "data_scopes: ['social:identity']",
+    "data_scopes: ['publication-projection']",
+    'if (activeActor && activePersona)',
+    "if (status === 'active' && activeActor && activePersona)",
+    'actor_state_digest: activeActor.actor_state_digest',
+    'protected_persona: activePersona.protected_persona',
+    'previous_publication: publication.publication',
+    "media_type: 'text/plain'",
+    "audience: { mode: 'public' }",
+    "discoverability: 'listed'",
+    "authorship_mode: 'human-authored'",
+    "reason_code: 'author-retracted'",
+    'axiom-one:social:'
   ];
   if (socialMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One owner-local Social surface is incomplete');
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
+    || !worker.includes("url.pathname.startsWith('/local/')")
     || !worker.includes('!SHELL_ASSETS.includes(url.pathname)')
   ) throw new ValidationError('AXIOM One service worker may cache API data');
   const serverMarkers = [
     "host !== LOOPBACK_HOST",
     "url.pathname.startsWith('/v1/')",
+    "url.pathname === '/local/verify'",
+    'handleLocalVerify',
+    'packages/axiom-verify',
+    'gateway_authority_client: false',
     'Cross-origin preview request denied',
     'gatewayContract.limits.maximum_query_values',
     "frame-ancestors 'none'",
