@@ -30,6 +30,7 @@ for each example lives here and in `mesh/test/praxis-examples-v0.test.mjs`.
 | `18-denied-irreversible-commit.prax` | DENIAL: `commit` on a statically irreversible prepared op | `PRAXIS_IRREVERSIBLE_REQUIRES_FINALIZE` |
 | `19-denied-authority-mismatch.prax` | DENIAL: permit scope does not match the operation scope | `PRAXIS_AUTHORITY_MISMATCH` |
 | `20-denied-secret-arg.prax` | DENIAL: a secret reference embedded as an ordinary op argument | `PRAXIS_SECRET_EXFILTRATION` |
+| `21-attestation-gate.prax` | Composed: loop-emitted attestations observed → verified with AttestationV0 → chartered MergeGate permit → irreversible gate_open finalized | checks clean (placeholders; execution covered by `mesh/test/praxis-attestation-gate-v0.test.mjs`) |
 
 ## Conventions
 
