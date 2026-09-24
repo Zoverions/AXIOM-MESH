@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 const inputs = process.argv.slice(2);
 
@@ -44,13 +44,14 @@ function classify(section, subsection, key) {
   return null;
 }
 
-function scanConfig(path) {
+function scanConfig(path, inputIndex) {
   let text;
   try {
     text = readFileSync(path, 'utf8');
   } catch (error) {
     return {
-      path,
+      input_index: inputIndex,
+      file_name: basename(path),
       readable: false,
       error: error?.code ?? 'READ_ERROR',
       findings: []
@@ -98,7 +99,8 @@ function scanConfig(path) {
   }
 
   return {
-    path,
+    input_index: inputIndex,
+    file_name: basename(path),
     readable: true,
     error: null,
     findings
@@ -122,7 +124,7 @@ if (inputs.length === 0) {
   process.stdout.write(`${JSON.stringify(profile, null, 2)}\n`);
   process.exitCode = 1;
 } else {
-  const files = inputs.map((input) => scanConfig(resolve(input)));
+  const files = inputs.map((input, inputIndex) => scanConfig(resolve(input), inputIndex));
   const findingCount = files.reduce((sum, file) => sum + file.findings.length, 0);
   const readable = files.every((file) => file.readable);
 
