@@ -4,7 +4,7 @@ import { basename, resolve } from 'node:path';
 const inputs = process.argv.slice(2);
 
 function normalizeSection(raw) {
-  const match = raw.match(/^\s*([^\s"]+)(?:\s+"([^"]+)")?\s*$/);
+  const match = raw.match(/^\s*([^\s"]+)(?:\s+"((?:\\.|[^"\\])*)")?\s*$/u);
   if (!match) return null;
   const [, section, subsection] = match;
   return {
@@ -42,6 +42,11 @@ function classify(section, subsection, key) {
   }
 
   return null;
+}
+
+function beginsShellAlias(rawValue) {
+  const trimmed = rawValue.trim();
+  return trimmed.startsWith('!') || trimmed.startsWith('"!');
 }
 
 function scanConfig(path, inputIndex) {
@@ -84,7 +89,7 @@ function scanConfig(path, inputIndex) {
     const [, key, value] = assignment;
     let classification = classify(section, subsection, key);
 
-    if (section === 'alias' && !subsection && value.trim().startsWith('!')) {
+    if (section === 'alias' && !subsection && beginsShellAlias(value)) {
       classification = { normalized_key: `alias.${key.toLowerCase()}`, risk_class: 'shell-alias' };
     }
 
