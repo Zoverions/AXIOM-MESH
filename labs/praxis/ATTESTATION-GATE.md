@@ -37,10 +37,11 @@ loop-emitted attestations (`mesh-attestation.v0`).
 
 - **Nullifier spend lives at the authority boundary.** The coordinator that
   converts verified attestations into chartered evidence spends nullifiers
-  from its (persisted) registry. The in-language `verify` re-check is
-  intentionally stateless: it re-verifies authenticity, freshness, and
-  non-claims without spending, so the program expresses what was checked
-  while replay state stays with the host that owns it.
+  from its registry. P0's default registry is in-memory; callers may inject a
+  durable store and are responsible for persisting spent digests. The
+  in-language `verify` re-check is intentionally stateless: it re-verifies
+  authenticity, freshness, and non-claims without spending, so the program
+  expresses what was checked while replay state stays with the host that owns it.
 - **No language syntax was added.** Everything the gate needs existed in
   P0: host-injected verifiers, deterministic policy premises, chartered
   issuance, measured effects with irreversible finalize, the signed
@@ -63,10 +64,11 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - Not Grid-integrated. P0 remains synthetic-host-only and
   production-unreachable by design.
 - The synthetic host and its signing key remain trusted. A compromised or
-  dishonest host could emit false observations; this branch only prevents
-  accidental laundering of an unverified result through the host adapter.
-  Host compromise and provenance from real loop emitters remain open for the
-  P0.5 decision-ledger and real-Grid integration track.
+  dishonest host could emit false observations; this implementation only
+  prevents accidental laundering of an unverified result through the host
+  adapter. The P0.5 signed decision ledger is already landed; real-emitter
+  provenance, host-compromise handling, persistent replay state, and real-Grid
+  integration remain separately gated follow-up work.
 
 ## Evidence
 
@@ -77,11 +79,13 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - Transport-boundary conformance: `attestation.mjs` classified inert, no
   network/fs/subprocess surface.
 
-## Next steps (not in this branch)
+## Next steps
 
 1. Real loop emitters producing `mesh-attestation.v0` (test runner,
    reviewer, CI) — operational layer.
 2. Persistent nullifier store owned by the coordinator.
-3. Adversarial review of this branch by a fresh context before any PR.
-4. Draft PR → protected CI → authorized review → separate merge decision
-   (Zov).
+3. Host-compromise and emitter-provenance threat handling before any real
+   authority-bearing integration.
+4. Any real-Grid, merge, deploy, or other consequential integration requires a
+   separately reviewed authority/production gate and fresh exact-head protected
+   verification.
