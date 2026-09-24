@@ -176,6 +176,8 @@ Examples include source control, mail, calendars, databases, browsers, storage, 
 
 Credentials are purpose-bound references and must not become ambient model context.
 
+The source-only fixed-recipient webhook sender (`mesh/src/channel-webhook-adapter.mjs`) is an ADAPTER-001 transport experiment. It sends bounded text to one operator-fixed HTTPS destination with an operator-supplied bearer credential, timeout, disabled redirects, and bounded responses. An injected transport and in-memory idempotency map are operator-owned test/configuration hooks; the latter has no restart durability. A request is dispatched only after its in-memory idempotency reservation is confirmed, and a transport result must be a real `Response`. Pre-dispatch cancellation leaves the key reusable. Any ambiguous post-dispatch outcome stays `uncertain`; HTTP 2xx says only that the endpoint accepted a request. Its `confirmed_recipient_id` is a caller assertion, not verified human confirmation. Receipts contain no text, credential, or URL and explicitly state that Mesh authority and recipient delivery were not verified. The sender is not connected to `channel.send`, whose production policy still denies. Durable Grid outbox, one-use Mesh authorization, real recipient confirmation, egress/DNS restriction, private credential custody, abuse/retention controls, and independent end-to-end evidence remain separate gates before activation or `PROMO-01` promotion.
+
 ### Protocol adapters
 
 MCP, A2A, ActivityPub, webhooks, and future protocols are transport/interoperability profiles. Protocol discovery never becomes permission.
