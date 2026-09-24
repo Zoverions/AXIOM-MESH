@@ -237,6 +237,30 @@ Those labels collapse unlike claims and can become misleading when evidence chan
 
 No derived or overlay label becomes authority.
 
+### Offline catalogue candidate assessment v0
+
+`mesh/src/lib/runtime-connector-catalog-assessment.mjs` provides a pure
+assessment over the existing draft catalog-entry contract. It binds a candidate
+to its canonical digest, rejects a changed entry under the same ID and version,
+and reports additions/removals in requested access separately from provenance,
+adapter-contract, orchestration, assurance, lifecycle, and non-claim changes.
+A comparison must refer to the same subject and integration class. A different
+entry ID must name the prior entry as its exact supersession target.
+The caller must provide `expectedPriorDigest` when comparing a prior entry;
+the assessor rejects a missing or mismatched digest. The caller must obtain
+that digest from an independently trusted record. Matching a caller-provided
+digest cannot authenticate its provenance. The returned assessment is deeply
+frozen so its nested diffs and reasons cannot be altered in place.
+
+Every result is `quarantined_inert` and `unverified`. Missing or stale declared
+assurance produces review reasons, while malformed contracts and identity
+substitution are rejected. A declared source, artifact/SBOM digest, observer
+result, or freshness interval is not independent verification of that fact.
+The assessment performs no fetch, signature check, installation, activation,
+storage mutation, credential access, or network effect. The catalog-entry v1
+contract remains a draft; this assessment does not promote
+`capsules.marketplace` or grant permission to execute a listed integration.
+
 ## Certification, curation, and authorization
 
 These concepts must remain separate.
