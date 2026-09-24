@@ -32,12 +32,24 @@ function withEnv(t, values) {
 
 async function fixture(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-anchor-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  const stores = [];
+  // Close every store before removing the directory: Windows cannot unlink
+  // a SQLite file that is still open.
+  t.after(async () => {
+    for (const store of stores) {
+      if (store.db.isOpen) store.close();
+    }
+    await rm(dataDir, { recursive: true, force: true });
+  });
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
   const protector = new DataProtector(randomBytes(32));
   const path = join(dataDir, 'grid.sqlite');
-  const open = (overrides = {}) => new GridStore({ path, dataDir, identity, protector, ...overrides });
-  return { dataDir, path, identity, protector, open };
+  const track = store => {
+    stores.push(store);
+    return store;
+  };
+  const open = (overrides = {}) => track(new GridStore({ path, dataDir, identity, protector, ...overrides }));
+  return { dataDir, path, identity, protector, open, track };
 }
 
 function acceptIntent(store, n) {
@@ -69,7 +81,6 @@ test('anchors are disabled by default and every start replays the log', async t 
   store.close();
 
   store = open();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'replayed:anchors-disabled');
   const anchors = store.db.prepare("SELECT key FROM meta WHERE key LIKE 'materialization_anchor:%'").all();
   assert.deepEqual(anchors, [], 'no anchor is written while the feature is disabled');
@@ -89,7 +100,6 @@ test('with anchors enabled, a clean restart skips replay and keeps identical sta
 
   withEnv(t, { [FULL]: '1' });
   store = open();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'replayed:forced');
   assert.deepEqual(ids.map(id => store.getIntent(id)), anchored, 'anchored state equals a full replay');
 });
@@ -106,7 +116,6 @@ test('with anchors enabled, an edit made at rest is detected and undone', async 
   raw.close();
 
   store = open();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'replayed:state_digest');
   assert.equal(store.getIntent(id).status, 'accepted');
 });
@@ -123,7 +132,6 @@ test('with anchors enabled, an edit by another connection during a session is un
   store.close(); // must refuse to vouch for this state
 
   store = open();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'replayed:missing');
   assert.equal(store.getIntent(id).status, 'accepted');
 });
@@ -140,7 +148,6 @@ test('with anchors enabled, a crash after new events forces replay', async t => 
   store.db.close(); // no clean close, so no fresh anchor
 
   store = open();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'replayed:stale');
   assert.equal(store.getIntent(id).status, 'accepted');
 });
@@ -161,7 +168,6 @@ test('with anchors enabled, a forged anchor is rejected', async t => {
   raw.close();
 
   store = open();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'replayed:signature');
   assert.equal(store.getIntent(id).status, 'accepted');
 });
@@ -180,8 +186,8 @@ test('protected-column sweep runs once, then startup samples and still rejects a
 
 test('with anchors enabled, each layer is anchored and rejected independently', async t => {
   withEnv(t, { [ANCHORS]: '1', [FULL]: undefined });
-  const { path, dataDir, identity, protector } = await fixture(t);
-  const openSocial = () => new SocialGridStore({ path, dataDir, identity, protector });
+  const { path, dataDir, identity, protector, track } = await fixture(t);
+  const openSocial = () => track(new SocialGridStore({ path, dataDir, identity, protector }));
 
   let store = openSocial();
   acceptIntent(store, 1);
@@ -201,7 +207,6 @@ test('with anchors enabled, each layer is anchored and rejected independently', 
   raw.close();
 
   store = openSocial();
-  t.after(() => store.db.isOpen && store.close());
   assert.equal(store.materializationStartup.core, 'anchored', 'an unrelated layer is unaffected');
   assert.equal(store.materializationStartup.social, 'replayed:fingerprint');
 });
