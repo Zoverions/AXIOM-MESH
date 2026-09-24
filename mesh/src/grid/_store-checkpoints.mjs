@@ -17,6 +17,10 @@ import {
 const GENESIS_HASH = '0'.repeat(64);
 const CHECKPOINT_SCHEMA = 'axiom-grid-chain-checkpoint.v1';
 const CHECKPOINT_META_KEY = 'chain_checkpoints_v1';
+// Scalar copy of the latest checkpoint's position (scalability audit S-03).
+// Only a scheduling hint: it decides whether an append must consult the
+// history, never whether anything verifies.
+const CHECKPOINT_HEAD_META_KEY = 'chain_checkpoint_head_v1';
 const DEFAULT_CHECKPOINT_INTERVAL = 10_000;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CHECKPOINT_ID = /^gcp_[a-f0-9]{64}$/;
@@ -60,7 +64,9 @@ export class GridStore extends CoreGridStore {
       )
     );
     const appended = super.appendEvents(input);
-    this.ensureChainCheckpoint({ minimumDistance: this.checkpointInterval });
+    if (this.checkpointDue(this.checkpointInterval)) {
+      this.ensureChainCheckpoint({ minimumDistance: this.checkpointInterval });
+    }
     const after = this.readLiveChainMarker();
     this.liveChainTrustedGrowth = trustedBase
       ? {
@@ -306,7 +312,10 @@ export class GridStore extends CoreGridStore {
     ).get().value;
     const history = this.readCheckpointHistory();
     const latest = history.at(-1);
-    if (latest && seq - latest.statement.seq < minimumDistance) return latest;
+    if (latest && seq - latest.statement.seq < minimumDistance) {
+      this.writeCheckpointHead(latest);
+      return latest;
+    }
     if (!Number.isFinite(Date.parse(createdAt))) {
       throw new ValidationError('Grid checkpoint timestamp is invalid');
     }
@@ -335,8 +344,63 @@ export class GridStore extends CoreGridStore {
         INSERT INTO meta(key, value) VALUES (?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value
       `).run(CHECKPOINT_META_KEY, canonicalJson(next));
+      this.writeCheckpointHead(record);
     });
     return structuredClone(record);
+  }
+
+  /**
+   * Whether an append at the current head needs the full checkpoint path.
+   *
+   * O(1): reads the scalar head instead of parsing the whole history on every
+   * append, which cost grew with checkpoint count. A missing, malformed or
+   * impossible head (ahead of the chain) answers true, so the authoritative
+   * path runs and rewrites it. A head edited to look recent can only delay the
+   * next checkpoint; verification always reads the signed history itself.
+   */
+  checkpointDue(minimumDistance) {
+    const seq = Number(
+      this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value
+    );
+    if (seq === 0) return false;
+    const head = this.readCheckpointHead();
+    return !head || head.seq > seq || seq - head.seq >= minimumDistance;
+  }
+
+  readCheckpointHead() {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(
+      CHECKPOINT_HEAD_META_KEY
+    );
+    if (!row) return null;
+    try {
+      const head = JSON.parse(row.value);
+      if (
+        isPlainObject(head)
+        && Number.isSafeInteger(head.seq)
+        && head.seq >= 1
+        && DIGEST.test(head.checkpoint_digest ?? '')
+      ) {
+        return head;
+      }
+    } catch {
+      // Treated as absent: the authoritative path rewrites it.
+    }
+    return null;
+  }
+
+  writeCheckpointHead(record) {
+    const value = canonicalJson({
+      seq: record.statement.seq,
+      checkpoint_digest: record.checkpoint_digest
+    });
+    const current = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(
+      CHECKPOINT_HEAD_META_KEY
+    );
+    if (current?.value === value) return;
+    this.db.prepare(`
+      INSERT INTO meta(key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(CHECKPOINT_HEAD_META_KEY, value);
   }
 
   readCheckpointHistory() {

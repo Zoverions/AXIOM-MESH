@@ -177,3 +177,85 @@ test('checkpoint verification detects corruption in the suffix', async t => {
   assert.equal(verification.seq, 2);
   assert.equal(verification.reason, 'payload_decryption_failed');
 });
+
+function appendAccepted(store, index) {
+  store.appendEvents({
+    traceId: `trace_checkpoint_head_${index}`,
+    actor: 'person:checkpoint',
+    events: [acceptedEvent(index)]
+  });
+}
+
+function readHead(store) {
+  const row = store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoint_head_v1'"
+  ).get();
+  return row ? JSON.parse(row.value) : null;
+}
+
+test('routine appends do not read checkpoint history (S-03)', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 3 });
+  appendAccepted(store, 1); // first append always checkpoints
+  assert.deepEqual(readHead(store), {
+    seq: 1,
+    checkpoint_digest: store.listChainCheckpoints().at(-1).checkpoint_digest
+  });
+
+  const readHistory = store.readCheckpointHistory.bind(store);
+  let historyReads = 0;
+  store.readCheckpointHistory = () => {
+    historyReads += 1;
+    return readHistory();
+  };
+  appendAccepted(store, 2);
+  appendAccepted(store, 3);
+  assert.equal(historyReads, 0, 'appends before the interval never parse history');
+
+  appendAccepted(store, 4);
+  assert.equal(historyReads, 1, 'the append that reaches the interval takes the full path');
+  assert.equal(store.listChainCheckpoints().at(-1).statement.seq, 4);
+  assert.equal(readHead(store).seq, 4);
+  assert.equal(store.verifyChain().valid, true);
+});
+
+test('a missing, malformed or impossible checkpoint head falls back to the history', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 3 });
+  appendAccepted(store, 1);
+  const setHead = value => store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoint_head_v1'"
+  ).run(value);
+
+  // Ahead of the chain: rewritten from the history, no checkpoint skipped.
+  setHead(JSON.stringify({ seq: 999, checkpoint_digest: 'a'.repeat(64) }));
+  appendAccepted(store, 2);
+  assert.equal(readHead(store).seq, 1);
+
+  setHead('not json');
+  appendAccepted(store, 3);
+  assert.equal(readHead(store).seq, 1);
+
+  // A pre-S-03 store has no head at all.
+  store.db.prepare("DELETE FROM meta WHERE key = 'chain_checkpoint_head_v1'").run();
+  appendAccepted(store, 4);
+  assert.equal(readHead(store).seq, 4);
+  assert.equal(store.listChainCheckpoints().length, 2);
+});
+
+test('an edited checkpoint head cannot make a tampered history verify', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 3 });
+  appendAccepted(store, 1);
+  const history = JSON.parse(store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoints_v1'"
+  ).get().value);
+  history[0].checkpoint_digest = 'f'.repeat(64);
+  store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'"
+  ).run(JSON.stringify(history));
+  store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoint_head_v1'"
+  ).run(JSON.stringify({ seq: 1, checkpoint_digest: 'f'.repeat(64) }));
+
+  appendAccepted(store, 2); // not due, so the corrupt history is not consulted
+  assert.equal(store.verifyChain().reason, 'checkpoint_digest_mismatch');
+  assert.equal(store.verifyFullChain().valid, true);
+});

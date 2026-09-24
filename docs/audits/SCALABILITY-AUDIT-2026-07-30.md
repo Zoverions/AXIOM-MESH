@@ -194,6 +194,22 @@ writes and quadratic cumulative rewrite cost over the life of the node.
 - Creating checkpoint N does not serialize checkpoints 1 through N-1.
 - Rotation, rollback, boundary tamper, and missing-key coverage remains intact.
 
+**Remediation status (2026-09-24): hot path remediated; storage unchanged.**
+Routine appends now read a scalar `chain_checkpoint_head_v1` meta value
+(latest checkpoint sequence and digest), written in the same transaction as
+each checkpoint, instead of parsing the whole history. Only the append that
+reaches the interval, or finds the head missing, malformed or ahead of the
+chain, takes the full path, which rewrites the head. The head schedules
+checkpoint creation and nothing else; verification still reads and checks the
+signed history, and a test shows an edited head cannot make a tampered
+history verify. Measured append cost with 2,000 checkpoints (1.8 MB of
+history): 6.2 ms before, 0.8 ms after, the same as with none.
+
+Still open: creating checkpoint N still rewrites the array (once per interval,
+so small amortised), and checkpoint-mode verification still re-verifies every
+checkpoint signature on each call. Both are addressed by the table layout
+above.
+
 ### S-04 — Production internal calls establish a new TLS connection for every hop
 
 **Severity:** Critical for throughput  
