@@ -87,7 +87,7 @@ function fixture() {
 }
 
 async function makeTransferInSourceProcess({ credential, admission, source, previousTransfer = null, transferId, createdAt, expiresAt }) {
-  const path = fileURLToPath(new URL('./fixtures/public-witness-source-child.mjs', import.meta.url));
+  const path = fileURLToPath(new URL('../test-support/public-witness-source-child.mjs', import.meta.url));
   const child = spawn(process.execPath, [path], { stdio: ['pipe', 'pipe', 'pipe'] });
   let output = '';
   let diagnostic = '';

@@ -1,5 +1,5 @@
-import { createPublicWitnessTransferPackage } from '../../src/lib/public-witness-transfer.mjs';
-import { canonicalJson } from '../../src/lib/canonical.mjs';
+import { createPublicWitnessTransferPackage } from '../src/lib/public-witness-transfer.mjs';
+import { canonicalJson } from '../src/lib/canonical.mjs';
 
 let input = '';
 for await (const chunk of process.stdin) input += chunk;
