@@ -37,10 +37,11 @@ loop-emitted attestations (`mesh-attestation.v0`).
 
 - **Nullifier spend lives at the authority boundary.** The coordinator that
   converts verified attestations into chartered evidence spends nullifiers
-  from its (persisted) registry. The in-language `verify` re-check is
-  intentionally stateless: it re-verifies authenticity, freshness, and
-  non-claims without spending, so the program expresses what was checked
-  while replay state stays with the host that owns it.
+  from its registry. P0's default registry is in-memory; callers may inject a
+  durable store and are responsible for persisting spent digests. The
+  in-language `verify` re-check is intentionally stateless: it re-verifies
+  authenticity, freshness, and non-claims without spending, so the program
+  expresses what was checked while replay state stays with the host that owns it.
 - **No language syntax was added.** Everything the gate needs existed in
   P0: host-injected verifiers, deterministic policy premises, chartered
   issuance, measured effects with irreversible finalize, the signed
