@@ -4,9 +4,10 @@ import { basename, resolve } from 'node:path';
 const inputs = process.argv.slice(2);
 
 function normalizeSection(raw) {
-  const match = raw.match(/^\s*([^\s"]+)(?:\s+"([^"]+)")?\s*$/);
+  const match = raw.match(/^\s*([^\s".]+)(?:(?:\s+"((?:\\.|[^"\\])*)")|(?:\.([^\s]+)))?\s*$/);
   if (!match) return null;
-  const [, section, subsection] = match;
+  const [, section, quotedSubsection, legacySubsection] = match;
+  const subsection = quotedSubsection ?? legacySubsection ?? null;
   return {
     section: section.toLowerCase(),
     subsection: subsection ? subsection.toLowerCase() : null
@@ -44,6 +45,11 @@ function classify(section, subsection, key) {
   return null;
 }
 
+function beginsShellAlias(rawValue) {
+  const trimmed = rawValue.trim();
+  return trimmed.startsWith('!') || trimmed.startsWith('"!');
+}
+
 function scanConfig(path, inputIndex) {
   let text;
   try {
@@ -68,9 +74,8 @@ function scanConfig(path, inputIndex) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) continue;
 
-    const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/u);
-    if (sectionMatch) {
-      const parsed = normalizeSection(sectionMatch[1]);
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      const parsed = normalizeSection(trimmed.slice(1, -1));
       section = parsed?.section ?? null;
       subsection = parsed?.subsection ?? null;
       continue;
@@ -84,7 +89,7 @@ function scanConfig(path, inputIndex) {
     const [, key, value] = assignment;
     let classification = classify(section, subsection, key);
 
-    if (section === 'alias' && !subsection && value.trim().startsWith('!')) {
+    if (section === 'alias' && !subsection && beginsShellAlias(value)) {
       classification = { normalized_key: `alias.${key.toLowerCase()}`, risk_class: 'shell-alias' };
     }
 
