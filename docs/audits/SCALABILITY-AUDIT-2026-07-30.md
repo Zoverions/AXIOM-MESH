@@ -102,6 +102,36 @@ work must not be treated as closure of startup scalability.
 - Corrupt, missing, stale, or schema-incompatible anchors fail closed or select
   the explicit repair path.
 
+**Remediation status (2026-09-24)**
+
+- *Streaming:* full rebuilds in the core, social and sovereign-information
+  layers now iterate the event log instead of loading it with `.all()`, so
+  rebuild memory no longer grows with history.
+- *Materialization anchors: built, not enabled.* `mesh/src/grid/materialization-anchor.mjs`
+  records a per-layer anchor at clean shutdown, signed with the Grid identity
+  and binding the layer fingerprint (layer version, kernel version, schema),
+  chain position and a streaming digest of the layer's tables. With
+  `AXIOM_GRID_MATERIALIZATION_ANCHORS=1`, a start whose anchor verifies skips
+  replay; a missing, malformed, unsigned, stale, upgraded or mismatched anchor
+  replays as before, and `AXIOM_GRID_FULL_REBUILD=1` forces replay.
+- *Why it is disabled by default.* Replay on every start currently undoes any
+  edit to a materialized table, including one made during a session; the
+  kernel test "Grid evidence survives restart and detects payload tampering"
+  pins that guarantee. Anchors keep it for edits made at rest (signed digest)
+  and for edits by any other database connection during a session (SQLite
+  `data_version`), but not for edits made through the Grid's own connection.
+  That writer is inside the Grid process and already holds the signing key,
+  yet it is still a narrowing of a pinned guarantee, so enabling it is a
+  maintainer decision under the capability lifecycle.
+- *Measured* (20,000 events, worst case where every event adds a row): full
+  replay 1,041 ms against an anchor check of 188 ms; total startup 3.7 s
+  (original) → 3.0 s (default, with S-02) → 2.1 s (anchors enabled). The
+  remaining ~1.9 s is checkpoint-bounded chain verification of the events
+  since the last checkpoint, which does not grow with total history.
+- Not done: shadow-table rebuild. The existing rebuild already runs inside a
+  single `BEGIN IMMEDIATE` transaction, so a failed replay rolls back to the
+  previous materialization rather than leaving it deleted.
+
 ### S-02 — Protected-column migration scans and decrypts complete tables on every startup
 
 **Severity:** High  
@@ -125,6 +155,15 @@ state.
 - A no-op restart performs no table-wide protected-column scan.
 - Interrupted migration resumes or rolls back deterministically.
 - Wrong-key and corrupt-ciphertext negative tests remain fail closed.
+
+**Remediation status (2026-09-24): remediated.** A completed full pass
+records `protected_columns:core` bound to the column mapping. Later starts
+open one stored value per protected column instead of every value, which
+still fails closed on a wrong data key (tested). A new mapping, a missing
+marker, `AXIOM_GRID_FULL_REBUILD=1`, or plaintext found in the sample triggers
+the full pass again. With anchors disabled, the startup replay still opens
+every event payload, so this removes a redundant second pass rather than a
+check.
 
 ### S-03 — Checkpoint history is a growing JSON array rewritten from one metadata row
 

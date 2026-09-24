@@ -21,6 +21,15 @@ import {
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
 import { runMigrations } from './migrations.mjs';
+import {
+  anchorsEnabled,
+  checkMaterializationAnchor,
+  clearMaterializationAnchor,
+  fullRebuildRequested,
+  layerFingerprint,
+  readDataVersion,
+  writeMaterializationAnchor
+} from './materialization-anchor.mjs';
 import { validateImportBundle } from '../lib/importer.mjs';
 import { validateAuthorityReducingPolicy } from '../lib/policy.mjs';
 import {
@@ -45,6 +54,38 @@ const GENESIS_HASH = '0'.repeat(64);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const CAPSULE_ID = /^[a-z][a-z0-9.-]{2,127}$/;
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
+/**
+ * Tables derived entirely from the event log by applyMaterializedEvent.
+ * Bump CORE_MATERIALIZER_VERSION whenever that logic changes, so anchored
+ * state from an older build is rebuilt rather than trusted.
+ */
+const CORE_MATERIALIZER_VERSION = 1;
+const CORE_MATERIALIZED_TABLES = Object.freeze([
+  'sync_heads',
+  'sync_updates',
+  'sync_bundles',
+  'governance_appeals',
+  'policy_overlays',
+  'import_records',
+  'imports',
+  'accounting_entries',
+  'accounting_journals',
+  'accounting_accounts',
+  'memory_edges',
+  'memory_objects',
+  'votes',
+  'proposals',
+  'storage_offers',
+  'node_schedules',
+  'nodes',
+  'approvals',
+  'consents',
+  'capsules',
+  'backups',
+  'exports',
+  'intents'
+]);
+
 const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ['events', 'event_id', ['payload_json']],
   ['intents', 'intent_id', ['result_json', 'error_json']],
@@ -96,6 +137,8 @@ export class GridStore {
     this.db = new DatabaseSync(path);
     try {
       this.initialize();
+      // Baseline for detecting writes by other connections during this session.
+      this.sessionDataVersion = readDataVersion(this.db);
     } catch (error) {
       try {
         this.db.close();
@@ -232,15 +275,82 @@ export class GridStore {
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('last_seq', '0');
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('last_hash', GENESIS_HASH);
     this.migrations = runMigrations(this.db);
+    this.materializationLayers = new Map();
+    this.materializationStartup = {};
+    this.registerMaterializationLayer('core', {
+      layerVersion: CORE_MATERIALIZER_VERSION,
+      schema: this.migrations,
+      tables: CORE_MATERIALIZED_TABLES
+    });
     this.migrateProtectedColumns();
     const chain = this.verifyChain();
     if (!chain.valid) {
       throw new ValidationError(`Grid evidence chain failed startup verification: ${chain.reason}`);
     }
-    this.rebuildMaterializedState();
+    this.ensureMaterialized('core', () => this.rebuildMaterializedState());
+  }
+
+  /**
+   * Declares a set of tables derived from the event log, so their state can
+   * be anchored at shutdown and trusted at the next start (see
+   * materialization-anchor.mjs).
+   */
+  registerMaterializationLayer(layer, { layerVersion, schema, tables }) {
+    this.materializationLayers.set(layer, {
+      fingerprint: layerFingerprint({ layer, layerVersion, schema }),
+      tables: Object.freeze([...tables])
+    });
+  }
+
+  /**
+   * Skips replay when a signed anchor proves the layer's tables are exactly
+   * as they were at the last clean shutdown. Otherwise replays the full log.
+   * The outcome is recorded in materializationStartup for diagnostics.
+   */
+  ensureMaterialized(layer, rebuild) {
+    if (!anchorsEnabled()) {
+      this.materializationStartup[layer] = 'replayed:anchors-disabled';
+      rebuild();
+      return;
+    }
+    if (fullRebuildRequested()) {
+      this.materializationStartup[layer] = 'replayed:forced';
+      rebuild();
+      return;
+    }
+    const check = checkMaterializationAnchor(this, layer);
+    if (check.valid) {
+      this.materializationStartup[layer] = 'anchored';
+      return;
+    }
+    this.materializationStartup[layer] = `replayed:${check.reason}`;
+    rebuild();
+  }
+
+  /**
+   * Records a signed anchor for every layer, unless another connection wrote
+   * to the database during this session -- then the state cannot be vouched
+   * for, so existing anchors are removed and the next start replays.
+   * Failure is not an error: without an anchor the next start replays.
+   */
+  recordMaterializationAnchors() {
+    if (!anchorsEnabled() || !this.materializationLayers?.size || this.db.isOpen === false) return;
+    try {
+      const externallyModified = this.sessionDataVersion === undefined
+        || readDataVersion(this.db) !== this.sessionDataVersion;
+      this.transaction(() => {
+        for (const layer of this.materializationLayers.keys()) {
+          if (externallyModified) clearMaterializationAnchor(this, layer);
+          else writeMaterializationAnchor(this, layer);
+        }
+      });
+    } catch {
+      // Intentionally ignored; see above.
+    }
   }
 
   close() {
+    this.recordMaterializationAnchors();
     this.db.close();
   }
 
@@ -300,7 +410,49 @@ export class GridStore {
     };
   }
 
+  /**
+   * Seals any legacy plaintext in protected columns.
+   *
+   * Scalability audit S-02: this used to open every protected value on every
+   * start, including every event payload, so startup cost grew with history.
+   * Once a full pass has completed for the current column mapping, a marker
+   * is recorded; later starts only open a bounded sample per column, which
+   * still fails closed on a wrong data key. A new mapping, a missing marker,
+   * AXIOM_GRID_FULL_REBUILD=1, or plaintext found in the sample all trigger
+   * the full pass again.
+   */
   migrateProtectedColumns() {
+    const marker = sha256(canonicalJson(PROTECTED_COLUMN_MAPPINGS));
+    const recorded = this.db.prepare("SELECT value FROM meta WHERE key = 'protected_columns:core'").get()?.value;
+    if (!fullRebuildRequested() && recorded === marker && this.sampleProtectedColumns(PROTECTED_COLUMN_MAPPINGS)) {
+      return;
+    }
+    this.migrateAllProtectedColumns();
+    this.db.prepare(
+      "INSERT INTO meta(key, value) VALUES ('protected_columns:core', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    ).run(marker);
+  }
+
+  /**
+   * Opens one stored value per protected column. Throws on a wrong key or
+   * corrupt ciphertext, exactly as the full pass would. Returns false if any
+   * sampled value is still plaintext, so the caller falls back to a full pass.
+   */
+  sampleProtectedColumns(mappings) {
+    for (const [table, keyExpression, columns] of mappings) {
+      for (const column of columns) {
+        const row = this.db.prepare(
+          `SELECT ${keyExpression} AS protection_key, ${column} AS value FROM ${table} WHERE ${column} IS NOT NULL LIMIT 1`
+        ).get();
+        if (!row) continue;
+        if (!this.protector.isProtected(row.value)) return false;
+        this.openJson(table, column, row.protection_key, row.value);
+      }
+    }
+    return true;
+  }
+
+  migrateAllProtectedColumns() {
     this.transaction(() => {
       for (const [table, keyExpression, columns] of PROTECTED_COLUMN_MAPPINGS) {
         const rows = this.db.prepare(
@@ -331,36 +483,12 @@ export class GridStore {
   }
 
   rebuildMaterializedState() {
-    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
     this.transaction(() => {
-      for (const table of [
-        'sync_heads',
-        'sync_updates',
-        'sync_bundles',
-        'governance_appeals',
-        'policy_overlays',
-        'import_records',
-        'imports',
-        'accounting_entries',
-        'accounting_journals',
-        'accounting_accounts',
-        'memory_edges',
-        'memory_objects',
-        'votes',
-        'proposals',
-        'storage_offers',
-        'node_schedules',
-        'nodes',
-        'approvals',
-        'consents',
-        'capsules',
-        'backups',
-        'exports',
-        'intents'
-      ]) {
+      for (const table of CORE_MATERIALIZED_TABLES) {
         this.db.exec(`DELETE FROM ${table}`);
       }
-      for (const row of rows) {
+      // Stream the log: loading it whole made memory grow with history.
+      for (const row of this.db.prepare('SELECT * FROM events ORDER BY seq').iterate()) {
         const payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
         validateMaterializedPayload(row.kind, payload);
         this.applyMaterializedEvent({
