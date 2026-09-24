@@ -61,6 +61,29 @@ test('repo entry profile reports recognized execution-capable git config without
   }
 });
 
+test('repo entry profile recognizes escaped subsection quotes and quoted shell aliases', () => {
+  const { tempRoot, result, profile } = runProfile(`
+[filter "a\\\"b"]
+  process = /tmp/filter-process --token=secret
+[alias]
+  inspect = "!sh -c 'echo secret'"
+`);
+
+  try {
+    assert.equal(result.status, 2, result.stderr || result.stdout);
+    assert.equal(profile.passed, false);
+    assert.equal(profile.finding_count, 2);
+    assert.deepEqual(profile.files[0].findings.map(({ key, risk_class, value }) => ({ key, risk_class, value })), [
+      { key: 'filter.*.process', risk_class: 'content-filter-command', value: 'REDACTED' },
+      { key: 'alias.inspect', risk_class: 'shell-alias', value: 'REDACTED' }
+    ]);
+    assert.doesNotMatch(result.stdout, /secret/u);
+    assert.doesNotMatch(result.stdout, /\/tmp\/filter-process/u);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('repo entry profile passes only when explicit config is readable and no recognized surface is present', () => {
   const { tempRoot, result, profile } = runProfile(`
 [core]
