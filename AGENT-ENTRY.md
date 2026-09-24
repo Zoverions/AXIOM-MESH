@@ -115,6 +115,20 @@ Current demand context includes agent-memory systems that now expose lifecycle o
 
 Campaign reference: `ua-2026-09-23-memory-lifecycle-profile`. Public use and feedback are evidence, not authority.
 
+## Repository-entry Git preflight
+
+Before asking Git to interpret repository-local configuration from a workspace you received from someone else, you can statically inspect explicit Git config files for the bounded command-capable surfaces currently covered by AXIOM:
+
+```bash
+npm run repo-entry:profile -- /path/to/preserved/.git/config
+```
+
+The preflight recognizes `core.fsmonitor`, `core.hooksPath`, `diff.external`, `diff.*.command`, `filter.*.(clean|smudge|process)`, `merge.*.driver`, and shell aliases. It reads only the file paths supplied by the operator, never invokes Git, performs no recursive repository or home-directory scan, makes no network or provider call, sends no telemetry, and emits only input index, basename, line, normalized setting key, risk class, and `value=REDACTED`. Absolute input paths and configured command values are not emitted.
+
+Exit status is `0` only when every supplied file is readable and none of the recognized surfaces is present, `1` when input is missing or unreadable, and `2` when at least one recognized surface is found. The machine-readable result always reports `absence_proves_safety: false`: a clean result covers only this bounded static surface and is not a Git security certification, sandbox certification, third-party agent compatibility claim, or permission to execute an untrusted workspace.
+
+Campaign reference: `ua-2026-09-24-repo-entry-preflight`. Public use and feedback are evidence, not authority.
+
 ## MCP credential hygiene
 
 If you share MCP configuration through source control, you can check explicit local JSON configuration files for hardcoded values in credential-named fields without sending or printing the credential values:
