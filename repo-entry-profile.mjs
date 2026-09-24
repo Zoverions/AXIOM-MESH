@@ -41,10 +41,6 @@ function classify(section, subsection, key) {
     return { normalized_key: 'merge.*.driver', risk_class: 'merge-driver-command' };
   }
 
-  if (section === 'alias' && !subsection && /^!/u.test(key.trim())) {
-    return { normalized_key: `alias.${normalizedKey}`, risk_class: 'shell-alias' };
-  }
-
   return null;
 }
 
