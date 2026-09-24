@@ -4,7 +4,7 @@ import { basename, resolve } from 'node:path';
 const inputs = process.argv.slice(2);
 
 function normalizeSection(raw) {
-  const match = raw.match(/^\s*([^\s"]+)(?:\s+"((?:\\.|[^"\\])*)")?\s*$/u);
+  const match = raw.match(/^\s*([^\s"]+)(?:\s+"((?:\\.|[^"\\])*)")?\s*$/);
   if (!match) return null;
   const [, section, subsection] = match;
   return {
