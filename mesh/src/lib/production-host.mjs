@@ -84,9 +84,19 @@ export async function startProductionHost({
   child.stderr.on('data', collect);
   child.on('message', collectMessage);
   try {
+    const startupDeadline = Date.now() + startupTimeoutMs;
     await waitForReady(`${gateway}/ready`, child, startupTimeoutMs);
-    const processDeadline = Date.now() + 1_000;
+    // The gateway reports ready before the supervisor finishes its own health
+    // polling and publishes the inventory, so that gap shares the startup
+    // budget rather than a fixed second a slow host can exceed.
+    const processDeadline = Math.max(startupDeadline, Date.now() + 1_000);
     while (!supervisorProcesses && Date.now() < processDeadline) {
+      if (child.exitCode !== null || child.signalCode !== null) {
+        throw Object.assign(
+          new Error('Supervisor exited before publishing its process inventory'),
+          { code: 'supervisor_exited' }
+        );
+      }
       await new Promise(resolvePromise => setTimeout(resolvePromise, 10));
     }
     if (!supervisorProcesses) {
