@@ -61,10 +61,14 @@ test('repo entry profile reports recognized execution-capable git config without
   }
 });
 
-test('repo entry profile recognizes escaped subsection quotes and quoted shell aliases', () => {
+test('repo entry profile recognizes valid quoted and legacy subsection forms plus quoted shell aliases', () => {
   const { tempRoot, result, profile } = runProfile(`
 [filter "a\\\"b"]
-  process = /tmp/filter-process --token=secret
+  process = /tmp/filter-escaped-quote --token=secret
+[filter "a]b"]
+  clean = /tmp/filter-bracket --token=secret
+[filter.legacy]
+  smudge = /tmp/filter-legacy --token=secret
 [alias]
   inspect = "!sh -c 'echo secret'"
 `);
@@ -72,13 +76,15 @@ test('repo entry profile recognizes escaped subsection quotes and quoted shell a
   try {
     assert.equal(result.status, 2, result.stderr || result.stdout);
     assert.equal(profile.passed, false);
-    assert.equal(profile.finding_count, 2);
+    assert.equal(profile.finding_count, 4);
     assert.deepEqual(profile.files[0].findings.map(({ key, risk_class, value }) => ({ key, risk_class, value })), [
       { key: 'filter.*.process', risk_class: 'content-filter-command', value: 'REDACTED' },
+      { key: 'filter.*.clean', risk_class: 'content-filter-command', value: 'REDACTED' },
+      { key: 'filter.*.smudge', risk_class: 'content-filter-command', value: 'REDACTED' },
       { key: 'alias.inspect', risk_class: 'shell-alias', value: 'REDACTED' }
     ]);
     assert.doesNotMatch(result.stdout, /secret/u);
-    assert.doesNotMatch(result.stdout, /\/tmp\/filter-process/u);
+    assert.doesNotMatch(result.stdout, /\/tmp\/filter-/u);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
