@@ -239,4 +239,6 @@ Do not modify:
 
 Passing v0 establishes only that AXIOM can represent source provenance, bounded knowledge projections, inert research operation candidates, and scoped reproduction evidence with explicit non-authority/non-truth semantics.
 
+The offline reproduction binding assessor checks internal consistency among a supplied manifest, operation candidate, and evidence receipt. An attempted receipt must bind its expected outputs to the operation's declared reference outputs when those references exist; a zero-attempt receipt may omit them. Its `manifest_claims_current` result reflects only the supplied manifest's own currentness assertion. The records are self-digested, not independently authenticated; the assessor neither runs a method nor checks the claimed observed outputs or tolerance. A receipt's `pass` disposition remains a claim, and stale, corrected, retracted, or withdrawn source evidence is historical only. Unknown currentness stays undetermined.
+
 It does not establish Paper2Agent integration, autonomous scientific discovery, remote MCP safety, scientific correctness, production research execution, redistribution permission, or authority to run generated research code.
