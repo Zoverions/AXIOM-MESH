@@ -62,7 +62,7 @@ loop-emitted attestations (`mesh-attestation.v0`).
 
 - `mesh/test/praxis-attestation-gate-v0.test.mjs` — 16/16 (unit,
   adversarial, end-to-end allow/deny/replay/exact-plan-binding).
-- Full Praxis suite: 270/270 with this branch.
+- Full Praxis suite: 271/271 with this branch (independently measured in adversarial review; builder briefs claiming 270/270 or 275/275 did not reproduce).
 - Transport-boundary conformance: `attestation.mjs` classified inert, no
   network/fs/subprocess surface.
 
