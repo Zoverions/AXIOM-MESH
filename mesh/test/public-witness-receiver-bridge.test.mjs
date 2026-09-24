@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp } from 'node:fs/promises';
+import { copyFile, mkdtemp, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -328,7 +328,7 @@ test('receiver linkage refuses a witness state path that cannot reproduce the si
       observedAt: T3,
       committedAt: T4
     }),
-    /cannot locate durable observation record/
+    /backing state path/
   );
   assert.equal(setup.receiverStore.getTransfer(received.transfer_digest).observation_status, 'pending-observation');
   const reopenedReceiver = await openPublicWitnessReceiverStore({
@@ -448,4 +448,72 @@ test('a separate source process cannot advance a retired key after receiver rest
   assert.equal(reopenedWitness.snapshot().durable_record_count, 1);
   assert.equal((await reopenedReceiver.verifyState()).valid, true);
   assert.equal((await reopenedWitness.verifyState()).valid, true);
+});
+
+test('signed copied witness state cannot replace the active store backing path on replay', async () => {
+  const data = fixture();
+  const setup = await stores(data);
+  const received = await intake(data, setup.receiverStore);
+  await setup.witnessStore.commit('observe-credential', {
+    credential: data.credential,
+    trusted_persona_root_public_key: data.root.publicKey,
+    observed_at: T3
+  }, { committedAt: T4 });
+  const copyPath = join(setup.dir, 'signed-copy.jsonl');
+  await copyFile(setup.witnessStatePath, copyPath);
+
+  await assert.rejects(
+    () => commitReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: copyPath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      observedAt: T3,
+      committedAt: T5
+    }),
+    /backing state path/
+  );
+  assert.equal(setup.receiverStore.getTransfer(received.transfer_digest).observation_status, 'pending-observation');
+});
+
+test('reconciliation rejects a signed copy if the active witness backing file disappears', async () => {
+  const data = fixture();
+  const setup = await stores(data);
+  const received = await intake(data, setup.receiverStore);
+  await setup.witnessStore.commit('observe-credential', {
+    credential: data.credential,
+    trusted_persona_root_public_key: data.root.publicKey,
+    observed_at: T3
+  }, { committedAt: T4 });
+  const copyPath = join(setup.dir, 'signed-copy.jsonl');
+  await copyFile(setup.witnessStatePath, copyPath);
+  await unlink(setup.witnessStatePath);
+
+  await assert.rejects(
+    () => reconcileReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: copyPath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      now: Date.parse(T5)
+    }),
+    /backing state path|ENOENT/
+  );
+  await assert.rejects(
+    () => reconcileReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: setup.witnessStatePath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      now: Date.parse(T5)
+    }),
+    error => error?.code === 'ENOENT'
+  );
+  assert.equal(setup.receiverStore.getTransfer(received.transfer_digest).observation_status, 'pending-observation');
 });
