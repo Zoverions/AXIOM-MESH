@@ -73,6 +73,29 @@ Landed for AI-001 without promoting `ai.providers`:
 
 Still deferred: Mesh Gateway→Hypervisor→Sandbox adapter wiring for providers, external/local model adapters, Verify receipt export, production AI claims.
 
+## Offline synthetic draft attestation
+
+`mesh/src/lib/ai-provider-draft-attestation.mjs` can sign and independently
+verify one synthetic draft-receipt statement without a route, model invocation,
+network access, or credential storage. It recomputes the existing invoke and
+receipt digests, then binds those digests, the declared provider/model/principal,
+one verifier nonce and audience, and a lifetime no longer than five minutes.
+It reuses the repository's Ed25519 object-signature functions. The verifier
+must independently pin the attestor ID and public key, choose a fresh
+unpredictable nonce, supply `at` from its own trusted clock, and persist
+consumed nonce digests if one-use challenges are required. Backdating `at` can
+mask expiry. The attestor's key custody, authorization to speak about a
+provider, rotation, and revocation are external obligations; a signature here
+only proves possession of the pinned key over the exact draft tuple.
+
+The output is evidence about a draft receipt. It does not prove that the
+declared provider or model ran, that its output is true, or that stated budget,
+retention, cancellation, or data-egress rules were enforced. It grants no
+permission, does not make a provider capsule available, and leaves
+`ai.providers` as `adapter_required`. The verifier receives the full invoke and
+receipt, including any included note text. Digest-only proof fields are not
+confidentiality or anonymization for guessable notes.
+
 ## Non-claims
 
 This wedge does not claim: supported One release; production AI provider; autonomous agents; Education compliance; Circles; Managed Node; wearable/Personal Agent Pack; or that model summaries are true.
