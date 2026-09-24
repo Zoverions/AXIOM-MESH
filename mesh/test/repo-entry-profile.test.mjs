@@ -45,6 +45,9 @@ test('repo entry profile reports recognized execution-capable git config without
     assert.equal(profile.authority_granted, false);
     assert.equal(profile.passed, false);
     assert.equal(profile.finding_count, 4);
+    assert.equal(profile.files[0].input_index, 0);
+    assert.equal(profile.files[0].file_name, 'config');
+    assert.equal(result.stdout.includes(tempRoot), false);
     assert.deepEqual(profile.files[0].findings.map(({ key, risk_class, value }) => ({ key, risk_class, value })), [
       { key: 'core.fsmonitor', risk_class: 'automatic-helper', value: 'REDACTED' },
       { key: 'core.hookspath', risk_class: 'hook-redirection', value: 'REDACTED' },
