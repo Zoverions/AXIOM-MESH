@@ -12,6 +12,7 @@ import { createHostOperationRegistry } from '../../labs/praxis/registry.mjs';
 import {
   ATTESTATION_KIND_VERIFIERS,
   MESH_ATTESTATION_SCHEMA,
+  assertAttestationExecutionBinding,
   attestationJson,
   attestationSetDigest,
   attestationToHostObservation,
@@ -203,27 +204,33 @@ const hostOperations = createHostOperationRegistry({
 
 const PREPARATION_DIGEST = 'sha256:' + 'd'.repeat(64);
 
-function testPreparer() {
-  return async request => ({
-    ok: true,
-    evidence: {
-      durable: true,
-      operation_digest: request.operation.operation_digest,
-      preparation_digest: PREPARATION_DIGEST
-    }
-  });
+function testPreparer(onPrepare = () => {}) {
+  return async request => {
+    onPrepare(request);
+    return {
+      ok: true,
+      evidence: {
+        durable: true,
+        operation_digest: request.operation.operation_digest,
+        preparation_digest: PREPARATION_DIGEST
+      }
+    };
+  };
 }
 
-function testExecutor() {
-  return async request => ({
-    status: 'completed',
-    receipt: {
-      operation_digest: request.operation.operation_digest,
-      preparation_digest: request.preparation.preparation_digest,
-      finality: request.finality,
-      executor: 'synthetic-attestation-gate-test'
-    }
-  });
+function testExecutor(onExecute = () => {}) {
+  return async request => {
+    onExecute(request);
+    return {
+      status: 'completed',
+      receipt: {
+        operation_digest: request.operation.operation_digest,
+        preparation_digest: request.preparation.preparation_digest,
+        finality: request.finality,
+        executor: 'synthetic-attestation-gate-test'
+      }
+    };
+  };
 }
 
 function testCompleter() {
@@ -256,6 +263,9 @@ async function gateDecide({ testsAtt, reviewAtt, ciAtt, nullifiers, ledger, now 
       verified: v,
       charter,
       trustedRootKeys: [root.publicKey],
+      trustedKeys,
+      trustedAttestorsByKind,
+      requiredNonClaims: ZERO_CLAIMS,
       principal: 'GateHost',
       privateKey: gateHost.privateKey,
       issuedAt: now,
@@ -303,20 +313,48 @@ function gateProgram(testsAtt, reviewAtt, ciAtt, mergeTarget, setDigest) {
   ].join('\n');
 }
 
-async function runGateProgram({ testsAtt, reviewAtt, ciAtt, mergeTarget = MERGE_TARGET, setDigest, authority, now = NOW }) {
+async function runGateProgram({
+  testsAtt, reviewAtt, ciAtt, mergeTarget = MERGE_TARGET, setDigest, authority, now = NOW,
+  onPrepare, onExecute
+}) {
+  const verifier = createAttestationVerifier({ trustedKeys, trustedAttestorsByKind, now, requiredNonClaims: ZERO_CLAIMS });
+  const expectedKinds = new Map([
+    ['loop:tests', 'tests-reproduced'],
+    ['loop:review', 'adversarial-review'],
+    ['loop:ci', 'protected-ci']
+  ]);
+  const verifiedByProvenance = new Map();
   return run(gateProgram(testsAtt, reviewAtt, ciAtt, mergeTarget, setDigest), {
     authorities: { open_merge_gate: authority },
     verifiers: {
       // In-language re-check: stateless (no nullifier spend). Replay state
       // stays with the host that owns it; the spend happened in gateDecide.
-      AttestationV0: createAttestationVerifier({ trustedKeys, trustedAttestorsByKind, now, requiredNonClaims: ZERO_CLAIMS })
+      AttestationV0: async input => {
+        const result = await verifier(input);
+        const provenance = input.provenance;
+        if (result.evidence.kind !== expectedKinds.get(provenance) || verifiedByProvenance.has(provenance)) {
+          throw new PraxisRuntimeError('PRAXIS_ATTESTATION_PLAN_MISMATCH', 'unexpected or duplicate gate evidence');
+        }
+        verifiedByProvenance.set(provenance, { evidence: result.evidence, digest: result.digest });
+        return result;
+      }
     },
     charter,
     trustedCharterKeys: [root.publicKey],
     hostOperations,
     now,
-    preparer: testPreparer(),
-    executor: testExecutor(),
+    preparer: async request => {
+      const verified = [...expectedKinds.keys()].map(provenance => verifiedByProvenance.get(provenance));
+      if (verified.some(result => result === undefined) || verifiedByProvenance.size !== expectedKinds.size) {
+        throw new PraxisRuntimeError('PRAXIS_ATTESTATION_PLAN_MISMATCH', 'gate evidence is missing');
+      }
+      assertAttestationExecutionBinding(verified, {
+        mergeTarget: request.operation.args[0],
+        setDigest: request.operation.args[1]
+      });
+      return testPreparer(onPrepare)(request);
+    },
+    executor: testExecutor(onExecute),
     completer: testCompleter()
   });
 }
@@ -654,6 +692,64 @@ test('exact-plan binding: permit is valid for exactly one attestation set', asyn
   );
 });
 
+async function assertSwappedExecutionAttestationDenied({ replace, expectedBindingCode, tag }) {
+  const original = freshSet();
+  const { decision, setDigest } = await gateDecide({
+    ...original,
+    nullifiers: createNullifierRegistry(),
+    ledger: freshLedger(tag)
+  });
+  assert.equal(decision.decision, 'allow');
+
+  const changed = { ...original, ...replace };
+  const executionVerified = [changed.testsAtt, changed.reviewAtt, changed.ciAtt].map(attestation =>
+    verifyAttestation(attestation, { trustedKeys, trustedAttestorsByKind, now: NOW, requiredNonClaims: ZERO_CLAIMS })
+  );
+  assert.throws(
+    () => assertAttestationExecutionBinding(executionVerified, { mergeTarget: MERGE_TARGET, setDigest }),
+    error => error instanceof PraxisRuntimeError && error.code === expectedBindingCode
+  );
+
+  let durablePreparations = 0;
+  let executorCalls = 0;
+  let gateResult;
+  await assert.rejects(
+    async () => {
+      gateResult = await runGateProgram({
+        ...changed,
+        setDigest,
+        authority: decision.authority,
+        onPrepare: () => { durablePreparations += 1; },
+        onExecute: () => { executorCalls += 1; }
+      });
+    },
+    // The interpreter wraps preparer errors while preserving fail-closed
+    // behavior and recording that the executor has not run.
+    error => error instanceof PraxisRuntimeError
+      && error.code === 'PRAXIS_PREPARATION_UNCOMMITTED'
+      && error.details?.executor_invoked === false
+  );
+  assert.equal(gateResult, undefined, 'no gate receipt is returned');
+  assert.equal(durablePreparations, 0, 'durable preparation is not invoked');
+  assert.equal(executorCalls, 0, 'no irreversible gate effect is executed');
+}
+
+test('changed signed review verdict cannot execute with an earlier allow permit', async () => {
+  await assertSwappedExecutionAttestationDenied({
+    replace: { reviewAtt: reviewAttestation({ claims: { verdict: 'DENY', rounds_used: 1, probes_passed: 3 } }) },
+    expectedBindingCode: 'PRAXIS_ATTESTATION_PLAN_MISMATCH',
+    tag: 'execution-review-swap'
+  });
+});
+
+test('changed signed CI target cannot execute with an earlier allow permit', async () => {
+  await assertSwappedExecutionAttestationDenied({
+    replace: { ciAtt: ciAttestation({ mergeTarget: OTHER_MERGE_TARGET }) },
+    expectedBindingCode: 'PRAXIS_ATTESTATION_TARGET_MISMATCH',
+    tag: 'execution-target-swap'
+  });
+});
+
 test('adversarial: forged attestor key cannot mint gate evidence', async () => {
   const ledger = freshLedger('forged');
   const nullifiers = createNullifierRegistry();
@@ -697,6 +793,39 @@ test('one trusted tests key cannot impersonate review or protected CI evidence',
     );
     assert.ok(!ledgerEntries(ledger).some(entry => entry.kind === 'authority_issued'));
   }
+});
+
+test('host observation adapter rejects fabricated verification results even with its signing key', () => {
+  const actual = verifyAttestation(testsAttestation(), {
+    trustedKeys,
+    trustedAttestorsByKind,
+    now: NOW,
+    requiredNonClaims: ZERO_CLAIMS
+  });
+  const fakeReview = {
+    ...actual,
+    evidence: {
+      ...actual.evidence,
+      kind: 'adversarial-review',
+      claims: { verdict: 'APPROVE', rounds_used: 1 }
+    },
+    digest: 'sha256:' + 'f'.repeat(64)
+  };
+  assert.throws(
+    () => attestationToHostObservation({
+      verified: fakeReview,
+      trustedKeys,
+      trustedAttestorsByKind,
+      requiredNonClaims: ZERO_CLAIMS,
+      charter,
+      trustedRootKeys: [root.publicKey],
+      principal: 'GateHost',
+      privateKey: gateHost.privateKey,
+      issuedAt: NOW,
+      now: NOW
+    }),
+    error => error instanceof TypeError && /verifyAttestation result/.test(error.message)
+  );
 });
 
 test('attestations for different merge targets cannot mint one gate permit', async () => {

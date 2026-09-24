@@ -94,8 +94,9 @@ Host wiring (synthetic host, `labs/praxis/attestation.mjs`):
 2. Each verified attestation becomes a chartered host observation
    (`createHostObservation`/`verifyHostObservation`) under a distinct pinned
    verifier name (`attestation:tests`, `attestation:review`,
-   `attestation:ci`) — one evidence item per verifier, satisfying the
-   `PRAXIS_EVIDENCE_AMBIGUOUS` rule.
+   `attestation:ci`) — the adapter requires a module-sealed verification result
+   and independently rechecks it with the host's pinned keys and signer roles.
+   One evidence item per verifier satisfies the `PRAXIS_EVIDENCE_AMBIGUOUS` rule.
 3. `decideCharteredAuthority` with pinned `MergeGate` policy evaluates the
    deterministic premises (e.g. `claims.tests_failed == 0`,
    `claims.verdict == "APPROVE"`, `claims.protected_workflows_green == true`),
@@ -105,6 +106,12 @@ Host wiring (synthetic host, `labs/praxis/attestation.mjs`):
    program's `authorize` fails closed.
 4. `finalize` + ledger `recordTerminalEffect` close the loop with an
    append-only, hash-linked record.
+
+Before the irreversible effect is prepared, the synthetic host collects the
+attestations actually verified by the running program and recomputes their
+merge target and set digest with `assertAttestationExecutionBinding`. It
+compares both against the permitted operation arguments. Replacing a program
+attestation after a permit was issued fails before an executor is invoked.
 
 The op args are the merge target and its attestation-set digest:
 exact-plan binding means the permit is valid for one pinned head and one

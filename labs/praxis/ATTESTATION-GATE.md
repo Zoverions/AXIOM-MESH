@@ -16,8 +16,8 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - Praxis verifies the attestation chain:
   - `labs/praxis/attestation.mjs` — schema, Ed25519 signatures, freshness,
     non-claim enforcement, nullifier registry, host-injectable verifier for
-    `verify ... with AttestationV0`, and the adapter that wraps verified
-    attestations as chartered host observations.
+    `verify ... with AttestationV0`, and the adapter that wraps provenance-sealed
+    results as chartered host observations after a second signature/role check.
   - `labs/praxis/examples/21-attestation-gate.prax` — the gate program:
     observe → verify → authorize → prepare → finalize.
   - The chartered `MergeGate` policy (pinned in the synthetic charter)
@@ -29,6 +29,9 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - The gate opens only on verification: the permit is bound to the PR/head
   merge target and exact attestation-set digest (exact-plan binding). New
   evidence or a new head → new permit.
+- The synthetic host checks the attestations verified during program execution
+  against both permit arguments before it prepares an irreversible effect;
+  replacing an input after permit issuance cannot finalize the gate.
 
 ## Layering decisions
 
@@ -59,13 +62,18 @@ loop-emitted attestations (`mesh-attestation.v0`).
   yet; the `mesh-attestation.v0` schema is the contract they will implement.
 - Not Grid-integrated. P0 remains synthetic-host-only and
   production-unreachable by design.
+- The synthetic host and its signing key remain trusted. A compromised or
+  dishonest host could emit false observations; this branch only prevents
+  accidental laundering of an unverified result through the host adapter.
+  Host compromise and provenance from real loop emitters remain open for the
+  P0.5 decision-ledger and real-Grid integration track.
 
 ## Evidence
 
-- `mesh/test/praxis-attestation-gate-v0.test.mjs` — 20/20 (unit,
+- `mesh/test/praxis-attestation-gate-v0.test.mjs` — 23/23 (unit,
   adversarial, end-to-end allow/deny/replay/exact-plan-binding).
-- Full Praxis suite: 275/275 with the signer/target corrections; the
-  original two-patch draft passed 271/271 before the four regression tests.
+- Full Praxis suite: 278/278 with signer/target, execution binding, and
+  host-adapter corrections; the original two-patch draft passed 271/271.
 - Transport-boundary conformance: `attestation.mjs` classified inert, no
   network/fs/subprocess surface.
 

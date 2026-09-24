@@ -34,6 +34,9 @@ export const ATTESTATION_KIND_VERIFIERS = Object.freeze({
 });
 
 const NULLIFIER_RE = /^sha256:[a-f0-9]{64}$/;
+// A result's shape is not proof that it passed this module's verifier.
+// This private brand only marks results returned by verifyAttestation.
+const verifiedAttestationResults = new WeakSet();
 
 function attestationError(code, message) {
   return new PraxisRuntimeError(code, message);
@@ -301,11 +304,13 @@ export function verifyAttestation(
     expires_at_ms: body.expires_at_ms,
     evidence_refs: body.evidence_refs
   });
-  return Object.freeze({
+  const result = Object.freeze({
     attestation: Object.freeze({ ...body, signature: raw.signature }),
     evidence,
     digest
   });
+  verifiedAttestationResults.add(result);
+  return result;
 }
 
 // Host-injectable verifier for `verify x = y with AttestationV0`.
@@ -319,8 +324,8 @@ export function createAttestationVerifier(options) {
         'attestation verifier requires Observed or Verified input'
       );
     }
-    const { evidence } = verifyAttestation(input.value, options);
-    return { ok: true, evidence };
+    const { evidence, digest } = verifyAttestation(input.value, options);
+    return { ok: true, evidence, digest };
   };
 }
 
@@ -341,14 +346,45 @@ export function attestationSetDigest(digests, { mergeTarget } = {}) {
   });
 }
 
+// The execution host collects results from the verifiers that actually ran
+// in the program. Before preparing an irreversible effect, check that those
+// results are the same signed target and evidence set as the permitted op.
+// A verifier result is used here, never an unverified observe input.
+export function assertAttestationExecutionBinding(verifiedResults, { mergeTarget, setDigest } = {}) {
+  if (!Array.isArray(verifiedResults) || verifiedResults.length === 0) {
+    throw attestationError('PRAXIS_ATTESTATION_PLAN_MISMATCH', 'no execution attestations were verified');
+  }
+  if (typeof mergeTarget !== 'string' || mergeTarget.trim().length === 0) {
+    throw attestationError('PRAXIS_ATTESTATION_TARGET_MISMATCH', 'permitted merge target is invalid');
+  }
+  const digests = verifiedResults.map(result => {
+    if (!result || !isPlainObject(result.evidence) || typeof result.digest !== 'string' || !NULLIFIER_RE.test(result.digest)) {
+      throw attestationError('PRAXIS_ATTESTATION_PLAN_MISMATCH', 'execution verifier result is invalid');
+    }
+    if (result.evidence.merge_target !== mergeTarget) {
+      throw attestationError('PRAXIS_ATTESTATION_TARGET_MISMATCH', 'execution attestation targets a different merge');
+    }
+    return result.digest;
+  });
+  const actualSetDigest = attestationSetDigest(digests, { mergeTarget });
+  if (actualSetDigest !== setDigest) {
+    throw attestationError('PRAXIS_ATTESTATION_PLAN_MISMATCH', 'execution evidence differs from the permitted attestation set');
+  }
+  return true;
+}
+
 // Host-side adapter: wrap an already-verified attestation as a chartered
 // host observation under the pinned verifier name for its kind, so
 // `decideCharteredAuthority` can evaluate gate policy premises over it.
-// The attestation itself is NOT re-verified here: its nullifier was spent by
-// the (in-program or host-side) verifyAttestation call that produced
-// `verified`. Callers must pass the verifyAttestation result, not raw input.
+// Accept only an actual verifyAttestation result, then re-check its signature,
+// signer role, target and freshness with the host's pinned trust policy. The
+// second check is stateless: the authority boundary already spent the
+// nullifier during the first verification.
 export function attestationToHostObservation({
   verified,
+  trustedKeys,
+  trustedAttestorsByKind,
+  requiredNonClaims = [],
   charter,
   trustedRootKeys,
   principal,
@@ -357,14 +393,23 @@ export function attestationToHostObservation({
   issuedAt = Date.now(),
   now = Date.now()
 } = {}) {
-  if (!verified || !verified.evidence || !verified.digest) {
+  if (!verified || !verifiedAttestationResults.has(verified)) {
     throw new TypeError('attestationToHostObservation requires a verifyAttestation result');
   }
-  const verifierName = ATTESTATION_KIND_VERIFIERS[verified.evidence.kind];
+  const checked = verifyAttestation(verified.attestation, {
+    trustedKeys,
+    trustedAttestorsByKind,
+    requiredNonClaims,
+    now
+  });
+  if (checked.digest !== verified.digest || canonicalJsonPraxis(checked.evidence) !== canonicalJsonPraxis(verified.evidence)) {
+    throw attestationError('PRAXIS_ATTESTATION_SIGNATURE', 'verified attestation evidence does not match its signed body');
+  }
+  const verifierName = ATTESTATION_KIND_VERIFIERS[checked.evidence.kind];
   if (!verifierName) {
     throw attestationError(
       'PRAXIS_ATTESTATION_MALFORMED',
-      'no chartered verifier for attestation kind ' + verified.evidence.kind
+      'no chartered verifier for attestation kind ' + checked.evidence.kind
     );
   }
   if (!principal || !privateKey) {
@@ -373,8 +418,8 @@ export function attestationToHostObservation({
   const observation = createHostObservation({
     source,
     value: {
-      ...verified.evidence,
-      attestation_digest: verified.digest
+      ...checked.evidence,
+      attestation_digest: checked.digest
     },
     issuedAt,
     principal,
