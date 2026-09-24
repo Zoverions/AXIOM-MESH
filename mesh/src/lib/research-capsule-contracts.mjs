@@ -322,6 +322,62 @@ export function verifyResearchReproductionEvidence(value) {
   return object;
 }
 
+// This checks only consistency among supplied, self-digested records. It does not
+// authenticate the records, execute the operation, or verify its claimed result.
+export function assessResearchReproductionBinding(
+  evidenceValue,
+  operationValue,
+  sourceManifestValue
+) {
+  const evidence = verifyResearchReproductionEvidence(evidenceValue);
+  const operation = verifyResearchOperationCandidate(operationValue);
+  const sourceManifest = verifyResearchSourceManifest(sourceManifestValue);
+
+  if (operation.source_manifest_digest !== sourceManifest.manifest_digest ||
+      evidence.source_manifest_digest !== sourceManifest.manifest_digest) {
+    throw new ValidationError('Research reproduction source manifest digest binding mismatch');
+  }
+  if (evidence.operation_digest !== operation.operation_digest) {
+    throw new ValidationError('Research reproduction operation digest binding mismatch');
+  }
+  if (operation.source_revision !== sourceManifest.code_revision ||
+      evidence.source_revision !== operation.source_revision) {
+    throw new ValidationError('Research reproduction source revision binding mismatch');
+  }
+  if (evidence.environment_digest !== operation.environment_digest) {
+    throw new ValidationError('Research reproduction environment digest binding mismatch');
+  }
+  if (evidence.disposition === 'pass' &&
+      (evidence.attempt_count === 0 || evidence.expected_output_digests.length === 0 ||
+        evidence.observed_output_digests.length === 0)) {
+    throw new ValidationError('Research reproduction claimed pass requires an attempt and expected/observed outputs');
+  }
+  if (operation.reference_output_digests.length > 0 &&
+      evidence.attempt_count > 0 &&
+      !sameDigestSet(evidence.expected_output_digests, operation.reference_output_digests)) {
+    throw new ValidationError('Research reproduction reference output digest binding mismatch');
+  }
+
+  const currentnessAssessment = sourceManifest.currentness_state === 'current'
+    ? 'manifest_claims_current'
+    : sourceManifest.currentness_state === 'unknown'
+      ? 'unknown'
+      : 'historical_only';
+  return Object.freeze({
+    binding: 'structurally_consistent',
+    manifest_currentness_claim: sourceManifest.currentness_state,
+    currentness_assessment: currentnessAssessment,
+    execution_verified: false,
+    truth_established: false,
+    authority_effect: 'none'
+  });
+}
+
+function sameDigestSet(left, right) {
+  return left.length === right.length && new Set(left).size === left.length &&
+    left.every(digest => right.includes(digest));
+}
+
 export function verifyResearchClaimAdjudication(value) {
   const object = boundedCanonical(value, 'ResearchClaimAdjudication');
   assertExactFields(object, CLAIM_ADJUDICATION_FIELDS, 'ResearchClaimAdjudication');
