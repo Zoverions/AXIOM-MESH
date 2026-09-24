@@ -11,8 +11,8 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - Loops (build/verify/review/CI) stay operational — schedulers,
   coordinators, relay, human gates. They are protocols, not syntax.
 - Each loop round emits a signed attestation: checkable claim payloads,
-  explicit non-claims, a nullifier, a freshness window, pointers to raw
-  evidence (which never enters the attestation).
+  explicit non-claims, a shared PR and pinned head merge target, a nullifier,
+  a freshness window, pointers to raw evidence (which never enters the attestation).
 - Praxis verifies the attestation chain:
   - `labs/praxis/attestation.mjs` — schema, Ed25519 signatures, freshness,
     non-claim enforcement, nullifier registry, host-injectable verifier for
@@ -21,12 +21,14 @@ loop-emitted attestations (`mesh-attestation.v0`).
   - `labs/praxis/examples/21-attestation-gate.prax` — the gate program:
     observe → verify → authorize → prepare → finalize.
   - The chartered `MergeGate` policy (pinned in the synthetic charter)
-    evaluates deterministic premises over the verified claim sets.
+    evaluates deterministic premises over the verified claim sets and checks
+    each signed merge target against the OpenGate argument. Signer IDs are
+    pinned to their own tests, review, or CI attestation kind.
     `decideCharteredAuthority` returns a signed allow/deny receipt;
     denials carry closed-vocabulary codes (deny **with reasons**).
-- The gate opens only on verification: the permit is bound to the exact
-  attestation-set digest (exact-plan binding). New evidence → new digest →
-  new permit.
+- The gate opens only on verification: the permit is bound to the PR/head
+  merge target and exact attestation-set digest (exact-plan binding). New
+  evidence or a new head → new permit.
 
 ## Layering decisions
 
@@ -60,9 +62,10 @@ loop-emitted attestations (`mesh-attestation.v0`).
 
 ## Evidence
 
-- `mesh/test/praxis-attestation-gate-v0.test.mjs` — 16/16 (unit,
+- `mesh/test/praxis-attestation-gate-v0.test.mjs` — 20/20 (unit,
   adversarial, end-to-end allow/deny/replay/exact-plan-binding).
-- Full Praxis suite: 271/271 with this branch (independently measured in adversarial review; builder briefs claiming 270/270 or 275/275 did not reproduce).
+- Full Praxis suite: 275/275 with the signer/target corrections; the
+  original two-patch draft passed 271/271 before the four regression tests.
 - Transport-boundary conformance: `attestation.mjs` classified inert, no
   network/fs/subprocess surface.
 

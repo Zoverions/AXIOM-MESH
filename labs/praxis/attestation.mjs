@@ -53,6 +53,7 @@ export function attestationBody(attestation) {
     schema,
     attestor,
     subject,
+    merge_target: mergeTarget,
     kind,
     claims,
     non_claims: nonClaims,
@@ -72,6 +73,9 @@ export function attestationBody(attestation) {
   }
   if (typeof subject !== 'string' || subject.length === 0) {
     throw attestationError('PRAXIS_ATTESTATION_MALFORMED', 'attestation subject is invalid');
+  }
+  if (typeof mergeTarget !== 'string' || mergeTarget.trim().length === 0) {
+    throw attestationError('PRAXIS_ATTESTATION_MALFORMED', 'attestation merge_target is invalid');
   }
   if (!Object.hasOwn(ATTESTATION_KIND_VERIFIERS, kind)) {
     throw attestationError(
@@ -103,6 +107,7 @@ export function attestationBody(attestation) {
     schema,
     attestor,
     subject,
+    merge_target: mergeTarget,
     kind,
     claims: immutablePraxisSnapshot(claims),
     non_claims: Object.freeze([...nonClaims]),
@@ -120,7 +125,7 @@ export function attestationDigest(attestation) {
 // Synthetic helper: sign an attestation body with an attestor key.
 // Production attestors would sign in their own custody; P0 tests use this.
 export function signAttestation(
-  { attestor, subject, kind, claims, nonClaims, nullifier, issuedAtMs, expiresAtMs, evidenceRefs = [] },
+  { attestor, subject, mergeTarget, kind, claims, nonClaims, nullifier, issuedAtMs, expiresAtMs, evidenceRefs = [] },
   privateKey
 ) {
   if (!privateKey) throw new TypeError('signAttestation requires a private key');
@@ -128,6 +133,7 @@ export function signAttestation(
     schema: MESH_ATTESTATION_SCHEMA,
     attestor,
     subject,
+    merge_target: mergeTarget,
     kind,
     claims,
     non_claims: nonClaims,
@@ -185,6 +191,21 @@ function normalizeTrustedKeys(trustedKeys) {
   return Object.freeze(out);
 }
 
+function normalizeTrustedAttestorsByKind(trustedAttestorsByKind) {
+  if (!isPlainObject(trustedAttestorsByKind)) {
+    throw new TypeError('attestation verifier requires a trustedAttestorsByKind map');
+  }
+  const out = Object.create(null);
+  for (const kind of Object.keys(ATTESTATION_KIND_VERIFIERS)) {
+    const ids = trustedAttestorsByKind[kind];
+    if (ids !== undefined && (!Array.isArray(ids) || !ids.every(id => typeof id === 'string' && id.length > 0))) {
+      throw new TypeError('attestation verifier requires an attestor ID array for ' + kind);
+    }
+    out[kind] = new Set(ids ?? []);
+  }
+  return out;
+}
+
 function coerceAttestation(value) {
   if (typeof value === 'string') {
     try {
@@ -204,6 +225,7 @@ export function verifyAttestation(
   value,
   {
     trustedKeys,
+    trustedAttestorsByKind,
     nullifiers,
     now = Date.now(),
     maxAgeMs = 15 * 60 * 1000,
@@ -211,6 +233,7 @@ export function verifyAttestation(
   } = {}
 ) {
   const keys = normalizeTrustedKeys(trustedKeys);
+  const roles = normalizeTrustedAttestorsByKind(trustedAttestorsByKind);
   // Replay protection is host state: the nullifier is spent only when the
   // caller supplies a registry. The authority boundary (the coordinator that
   // converts verified attestations into chartered evidence) MUST supply one.
@@ -239,6 +262,12 @@ export function verifyAttestation(
   if (typeof raw.signature !== 'string' || !verifyDigestSignature(digest, raw.signature, publicKey)) {
     throw attestationError('PRAXIS_ATTESTATION_SIGNATURE', 'attestation signature is invalid');
   }
+  if (!roles[body.kind].has(body.attestor)) {
+    throw attestationError(
+      'PRAXIS_ATTESTATION_ATTESTOR_ROLE',
+      'attestor ' + body.attestor + ' is not trusted for attestation kind ' + body.kind
+    );
+  }
   if (body.issued_at_ms > nowMs) {
     throw attestationError('PRAXIS_ATTESTATION_STALE', 'attestation is issued in the future');
   }
@@ -263,6 +292,7 @@ export function verifyAttestation(
   const evidence = Object.freeze({
     attestor: body.attestor,
     subject: body.subject,
+    merge_target: body.merge_target,
     kind: body.kind,
     claims: body.claims,
     non_claims: body.non_claims,
@@ -294,15 +324,21 @@ export function createAttestationVerifier(options) {
   };
 }
 
-// Digest over the sorted attestation digests: the exact evidence set the
-// gate opens for. Used as the operation argument so the chartered permit is
-// bound to exactly one evidence set (exact-plan binding).
-export function attestationSetDigest(digests) {
+// Digest over the signed merge target and sorted attestation digests: the
+// exact target and evidence set the gate opens for (exact-plan binding).
+export function attestationSetDigest(digests, { mergeTarget } = {}) {
   if (!Array.isArray(digests) || digests.length === 0) {
     throw new TypeError('attestationSetDigest requires a non-empty digest array');
   }
   const sorted = [...digests].map(String).sort();
-  return 'sha256:' + digestPraxis({ schema: 'mesh-attestation-set.v0', digests: sorted });
+  if (typeof mergeTarget !== 'string' || mergeTarget.trim().length === 0) {
+    throw new TypeError('attestationSetDigest mergeTarget must be a non-empty string');
+  }
+  return 'sha256:' + digestPraxis({
+    schema: 'mesh-attestation-set.v0',
+    merge_target: mergeTarget,
+    digests: sorted
+  });
 }
 
 // Host-side adapter: wrap an already-verified attestation as a chartered

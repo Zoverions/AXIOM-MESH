@@ -32,6 +32,7 @@ it is that capabilities are still conventional, not language-enforced.
   "schema": "mesh-attestation.v0",
   "attestor": "<key id, e.g. attest:review-coordinator>",
   "subject": "<what is attested, e.g. merge-review:PR-1813:round-1>",
+  "merge_target": "<shared PR + pinned head digest, e.g. pr:1813@sha256:<hex>>",
   "kind": "<tests-reproduced | adversarial-review | protected-ci | scope-honesty>",
   "claims": { "<claim>": "<value>" },
   "non_claims": ["<explicit non-claim>", "..."],
@@ -47,6 +48,11 @@ Design rules (borrowed from tonight's session):
 - **Event attestations with claim payloads** — `claims` carries the checkable
   facts (tests_passed, verdict, workflows green). Raw evidence stays out;
   `evidence_refs` points at it.
+- **Signer roles and a shared merge target** — the verifier checks each
+  attestor ID against the pinned signer list for that attestation kind. Every
+  signed attestation carries the same PR and pinned head target; the
+  coordinator checks equality across the set, and the policy checks each
+  evidence target against the OpenGate operation argument.
 - **Nullifiers against replay** — one `nullifier` per attestation, spent on
   first verification; reuse fails closed (`PRAXIS_ATTESTATION_REPLAY`).
 - **Explicit non-claims (B5 zero-claim pattern)** — `non_claims` is REQUIRED
@@ -70,7 +76,7 @@ observe ci_att = "<attestation json>" from "loop:ci";
 verify v_tests = tests_att with AttestationV0;
 verify v_review = review_att with AttestationV0;
 verify v_ci = ci_att with AttestationV0;
-op open_gate = OpenGate("sha256:<attestation-set-digest>") @ MergeQueue effect gate_open irreversible;
+op open_gate = OpenGate("pr:<number>@sha256:<head>", "sha256:<attestation-set-digest>") @ MergeQueue effect gate_open irreversible;
 authorize open_gate using open_merge_gate as armed_gate;
 prepare armed_gate as prepared_gate;
 finalize prepared_gate as gate_receipt;
@@ -78,10 +84,13 @@ finalize prepared_gate as gate_receipt;
 
 Host wiring (synthetic host, `labs/praxis/attestation.mjs`):
 
-1. `createAttestationVerifier({trustedKeys, nullifiers, now, ...})` injected
-   as `verifiers.AttestationV0` — checks schema, attestor, Ed25519 signature,
-   freshness window, non-claims, spends nullifier. Denies with specific
-   `PRAXIS_ATTESTATION_*` codes (deny **with reasons**).
+1. `createAttestationVerifier({trustedKeys, trustedAttestorsByKind, now, ...})`
+   injected as `verifiers.AttestationV0` — checks schema, attestor and its
+   pinned role, the signed merge target, Ed25519 signature,
+   freshness window, and non-claims. The authority-boundary host call supplies
+   the nullifier registry and spends on success; the in-language verification
+   re-checks the signature and claims without spending again. Denies with
+   specific `PRAXIS_ATTESTATION_*` codes (deny **with reasons**).
 2. Each verified attestation becomes a chartered host observation
    (`createHostObservation`/`verifyHostObservation`) under a distinct pinned
    verifier name (`attestation:tests`, `attestation:review`,
@@ -89,15 +98,17 @@ Host wiring (synthetic host, `labs/praxis/attestation.mjs`):
    `PRAXIS_EVIDENCE_AMBIGUOUS` rule.
 3. `decideCharteredAuthority` with pinned `MergeGate` policy evaluates the
    deterministic premises (e.g. `claims.tests_failed == 0`,
-   `claims.verdict == "APPROVE"`, `claims.protected_workflows_green == true`).
+   `claims.verdict == "APPROVE"`, `claims.protected_workflows_green == true`),
+   plus equality of each evidence merge target to the OpenGate target.
    Allow → signed permit bound to the exact operation digest; deny → signed
    decision receipt with a `DECISION_DENIAL_CODES` code, no permit, and the
    program's `authorize` fails closed.
 4. `finalize` + ledger `recordTerminalEffect` close the loop with an
    append-only, hash-linked record.
 
-The op arg is the attestation-set digest: exact-plan binding means the permit
-is valid for exactly one evidence set. New evidence → new digest → new permit.
+The op args are the merge target and its attestation-set digest:
+exact-plan binding means the permit is valid for one pinned head and one
+evidence set. New evidence or a new head → new digest → new permit.
 
 ## 2c. P0 gaps: stub or wait
 

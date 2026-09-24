@@ -36,6 +36,8 @@ import {
 // ---------------------------------------------------------------------------
 
 const NOW = 1_700_000_000_000;
+const MERGE_TARGET = 'pr:attestation-gate@sha256:' + 'a'.repeat(64);
+const OTHER_MERGE_TARGET = 'pr:other@sha256:' + 'b'.repeat(64);
 
 function keypair() {
   return generateKeyPairSync('ed25519');
@@ -68,6 +70,12 @@ const trustedKeys = {
   [ATTESTOR_IDS.review]: attestorReview.publicKey,
   [ATTESTOR_IDS.ci]: attestorCi.publicKey
 };
+const trustedAttestorsByKind = {
+  'tests-reproduced': [ATTESTOR_IDS.tests],
+  'adversarial-review': [ATTESTOR_IDS.review],
+  'protected-ci': [ATTESTOR_IDS.ci],
+  'scope-honesty': [ATTESTOR_IDS.ci]
+};
 
 function freshNullifier() {
   return 'sha256:' + randomBytes(32).toString('hex');
@@ -78,6 +86,7 @@ function makeAttestation({
   attestorId,
   kind,
   subject,
+  mergeTarget = MERGE_TARGET,
   claims,
   nonClaims = [...ZERO_CLAIMS],
   issuedAtMs = NOW - 60_000,
@@ -90,6 +99,7 @@ function makeAttestation({
       attestor: attestorId,
       subject,
       kind,
+      mergeTarget,
       claims,
       nonClaims,
       nullifier,
@@ -168,7 +178,12 @@ const charter = createSyntheticCharter(
           premise('attestation:tests', ['claims', 'tests_passed'], 'gte', 1),
           premise('attestation:review', ['claims', 'verdict'], 'eq', 'APPROVE'),
           premise('attestation:review', ['claims', 'rounds_used'], 'lte', 2),
-          premise('attestation:ci', ['claims', 'protected_workflows_green'], 'eq', true)
+          premise('attestation:ci', ['claims', 'protected_workflows_green'], 'eq', true),
+          ...['attestation:tests', 'attestation:review', 'attestation:ci'].map(verifier => ({
+            op: 'eq',
+            left: { source: 'evidence', verifier, path: ['merge_target'] },
+            right: { source: 'operation', path: ['args', 0] }
+          }))
         ]
       }
     }
@@ -228,10 +243,14 @@ function testCompleter() {
 // the authority boundary), wrap as chartered observations, decide.
 async function gateDecide({ testsAtt, reviewAtt, ciAtt, nullifiers, ledger, now = NOW }) {
   const verified = [
-    verifyAttestation(testsAtt, { trustedKeys, nullifiers, now, requiredNonClaims: ZERO_CLAIMS }),
-    verifyAttestation(reviewAtt, { trustedKeys, nullifiers, now, requiredNonClaims: ZERO_CLAIMS }),
-    verifyAttestation(ciAtt, { trustedKeys, nullifiers, now, requiredNonClaims: ZERO_CLAIMS })
+    verifyAttestation(testsAtt, { trustedKeys, trustedAttestorsByKind, nullifiers, now, requiredNonClaims: ZERO_CLAIMS }),
+    verifyAttestation(reviewAtt, { trustedKeys, trustedAttestorsByKind, nullifiers, now, requiredNonClaims: ZERO_CLAIMS }),
+    verifyAttestation(ciAtt, { trustedKeys, trustedAttestorsByKind, nullifiers, now, requiredNonClaims: ZERO_CLAIMS })
   ];
+  const mergeTarget = verified[0].evidence.merge_target;
+  if (!mergeTarget || verified.some(item => item.evidence.merge_target !== mergeTarget)) {
+    throw new PraxisRuntimeError('PRAXIS_ATTESTATION_TARGET_MISMATCH', 'gate attestations must bind one merge target');
+  }
   const observations = verified.map(v =>
     attestationToHostObservation({
       verified: v,
@@ -243,11 +262,11 @@ async function gateDecide({ testsAtt, reviewAtt, ciAtt, nullifiers, ledger, now 
       now
     })
   );
-  const setDigest = attestationSetDigest(verified.map(v => v.digest));
+  const setDigest = attestationSetDigest(verified.map(v => v.digest), { mergeTarget });
   const operation = createOperationDescriptorPraxis({
     action: 'OpenGate',
     scope: 'MergeQueue',
-    args: [setDigest],
+    args: [mergeTarget, setDigest],
     effect: 'gate_open',
     irreversible: true,
     egress: null,
@@ -265,10 +284,10 @@ async function gateDecide({ testsAtt, reviewAtt, ciAtt, nullifiers, ledger, now 
     requester: 'GateAgent',
     now
   });
-  return { decision, operation, setDigest, verified };
+  return { decision, operation, setDigest, mergeTarget, verified, observations };
 }
 
-function gateProgram(testsAtt, reviewAtt, ciAtt, setDigest) {
+function gateProgram(testsAtt, reviewAtt, ciAtt, mergeTarget, setDigest) {
   return [
     'requires permit open_merge_gate: OpenGate @ MergeQueue;',
     `observe tests_att = ${JSON.stringify(attestationJson(testsAtt))} from "loop:tests";`,
@@ -277,20 +296,20 @@ function gateProgram(testsAtt, reviewAtt, ciAtt, setDigest) {
     'verify v_tests = tests_att with AttestationV0;',
     'verify v_review = review_att with AttestationV0;',
     'verify v_ci = ci_att with AttestationV0;',
-    `op open_gate = OpenGate(${JSON.stringify(setDigest)}) @ MergeQueue effect gate_open irreversible;`,
+    `op open_gate = OpenGate(${JSON.stringify(mergeTarget)}, ${JSON.stringify(setDigest)}) @ MergeQueue effect gate_open irreversible;`,
     'authorize open_gate using open_merge_gate as armed_gate;',
     'prepare armed_gate as prepared_gate;',
     'finalize prepared_gate as gate_receipt;'
   ].join('\n');
 }
 
-async function runGateProgram({ testsAtt, reviewAtt, ciAtt, setDigest, authority, now = NOW }) {
-  return run(gateProgram(testsAtt, reviewAtt, ciAtt, setDigest), {
+async function runGateProgram({ testsAtt, reviewAtt, ciAtt, mergeTarget = MERGE_TARGET, setDigest, authority, now = NOW }) {
+  return run(gateProgram(testsAtt, reviewAtt, ciAtt, mergeTarget, setDigest), {
     authorities: { open_merge_gate: authority },
     verifiers: {
       // In-language re-check: stateless (no nullifier spend). Replay state
       // stays with the host that owns it; the spend happened in gateDecide.
-      AttestationV0: createAttestationVerifier({ trustedKeys, now, requiredNonClaims: ZERO_CLAIMS })
+      AttestationV0: createAttestationVerifier({ trustedKeys, trustedAttestorsByKind, now, requiredNonClaims: ZERO_CLAIMS })
     },
     charter,
     trustedCharterKeys: [root.publicKey],
@@ -326,11 +345,13 @@ test('attestation signs and verifies with normalized evidence', () => {
   const att = testsAttestation();
   const { evidence, digest } = verifyAttestation(att, {
     trustedKeys,
+    trustedAttestorsByKind,
     nullifiers: createNullifierRegistry(),
     now: NOW,
     requiredNonClaims: ZERO_CLAIMS
   });
   assert.equal(evidence.kind, 'tests-reproduced');
+  assert.equal(evidence.merge_target, MERGE_TARGET);
   assert.equal(evidence.claims.tests_failed, 0);
   assert.deepEqual([...evidence.non_claims], [...ZERO_CLAIMS]);
   assert.match(digest, /^sha256:[a-f0-9]{64}$/);
@@ -344,9 +365,16 @@ test('tampered claims fail signature verification', () => {
     () =>
       verifyAttestation(tampered, {
         trustedKeys,
+        trustedAttestorsByKind,
         nullifiers: createNullifierRegistry(),
         now: NOW
       }),
+    error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_SIGNATURE'
+  );
+  assert.throws(
+    () => verifyAttestation({ ...att, merge_target: OTHER_MERGE_TARGET }, {
+      trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW
+    }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_SIGNATURE'
   );
 });
@@ -361,17 +389,28 @@ test('unknown attestor is rejected', () => {
     claims: { tests_passed: 1, tests_failed: 0 }
   });
   assert.throws(
-    () => verifyAttestation(att, { trustedKeys, nullifiers: createNullifierRegistry(), now: NOW }),
+    () => verifyAttestation(att, { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_UNKNOWN_ATTESTOR'
+  );
+});
+
+test('verifier requires an explicit trusted attestor role map', () => {
+  assert.throws(
+    () => verifyAttestation(testsAttestation(), {
+      trustedKeys,
+      nullifiers: createNullifierRegistry(),
+      now: NOW
+    }),
+    error => error instanceof TypeError && /trustedAttestorsByKind/.test(error.message)
   );
 });
 
 test('nullifier reuse is a replay and fails closed', () => {
   const nullifiers = createNullifierRegistry();
   const att = testsAttestation();
-  verifyAttestation(att, { trustedKeys, nullifiers, now: NOW });
+  verifyAttestation(att, { trustedKeys, trustedAttestorsByKind, nullifiers, now: NOW });
   assert.throws(
-    () => verifyAttestation(att, { trustedKeys, nullifiers, now: NOW }),
+    () => verifyAttestation(att, { trustedKeys, trustedAttestorsByKind, nullifiers, now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_REPLAY'
   );
 });
@@ -379,12 +418,12 @@ test('nullifier reuse is a replay and fails closed', () => {
 test('expired and future-dated attestations are rejected', () => {
   const expired = testsAttestation({ expiresAtMs: NOW - 1 });
   assert.throws(
-    () => verifyAttestation(expired, { trustedKeys, nullifiers: createNullifierRegistry(), now: NOW }),
+    () => verifyAttestation(expired, { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_EXPIRED'
   );
   const future = testsAttestation({ issuedAtMs: NOW + 60_000, expiresAtMs: NOW + 600_000 });
   assert.throws(
-    () => verifyAttestation(future, { trustedKeys, nullifiers: createNullifierRegistry(), now: NOW }),
+    () => verifyAttestation(future, { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_STALE'
   );
 });
@@ -397,6 +436,7 @@ test('missing non_claims fails the honesty check', () => {
     schema: MESH_ATTESTATION_SCHEMA,
     attestor: ATTESTOR_IDS.tests,
     subject: 'tests:bare',
+    merge_target: MERGE_TARGET,
     kind: 'tests-reproduced',
     claims: { tests_passed: 1, tests_failed: 0 },
     non_claims: [],
@@ -407,7 +447,7 @@ test('missing non_claims fails the honesty check', () => {
     signature: 'bogus'
   };
   assert.throws(
-    () => verifyAttestation(bare, { trustedKeys, nullifiers: createNullifierRegistry(), now: NOW }),
+    () => verifyAttestation(bare, { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_NON_CLAIMS'
   );
 });
@@ -423,6 +463,7 @@ test('widened claims fail closed even with a valid signature', () => {
     () =>
       verifyAttestation(widened, {
         trustedKeys,
+        trustedAttestorsByKind,
         nullifiers: createNullifierRegistry(),
         now: NOW,
         requiredNonClaims: ZERO_CLAIMS
@@ -437,13 +478,14 @@ test('widened claims fail closed even with a valid signature', () => {
 test('malformed attestations are rejected', () => {
   assert.throws(
     () =>
-      verifyAttestation('not json', { trustedKeys, nullifiers: createNullifierRegistry(), now: NOW }),
+      verifyAttestation('not json', { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_MALFORMED'
   );
   const wrongKind = {
     schema: MESH_ATTESTATION_SCHEMA,
     attestor: ATTESTOR_IDS.tests,
     subject: 'x',
+    merge_target: MERGE_TARGET,
     kind: 'vibes',
     claims: {},
     non_claims: [...ZERO_CLAIMS],
@@ -454,13 +496,13 @@ test('malformed attestations are rejected', () => {
     signature: 'bogus'
   };
   assert.throws(
-    () => verifyAttestation(wrongKind, { trustedKeys, nullifiers: createNullifierRegistry(), now: NOW }),
+    () => verifyAttestation(wrongKind, { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_MALFORMED'
   );
 });
 
 test('verifier factory returns explicit ok:true for the interpreter', async () => {
-  const verifier = createAttestationVerifier({ trustedKeys, now: NOW });
+  const verifier = createAttestationVerifier({ trustedKeys, trustedAttestorsByKind, now: NOW });
   const result = await verifier({ kind: 'Observed', value: attestationJson(testsAttestation()) });
   assert.equal(result.ok, true);
   assert.equal(result.evidence.kind, 'tests-reproduced');
@@ -544,7 +586,7 @@ test('gate denies with reasons: review verdict DENY -> signed denial receipt, no
         testsAtt,
         reviewAtt,
         ciAtt,
-        setDigest: attestationSetDigest(['sha256:' + 'e'.repeat(64)]),
+        setDigest: attestationSetDigest(['sha256:' + 'e'.repeat(64)], { mergeTarget: MERGE_TARGET }),
         authority: undefined
       }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_HOST_AUTHORITY_REQUIRED'
@@ -597,7 +639,9 @@ test('exact-plan binding: permit is valid for exactly one attestation set', asyn
 
   // Same permit, different evidence set digest in the program: the operation
   // digest no longer matches the permit's bound digest.
-  const otherDigest = attestationSetDigest(['sha256:' + 'f'.repeat(64), 'sha256:' + '0'.repeat(64)]);
+  const otherDigest = attestationSetDigest(['sha256:' + 'f'.repeat(64), 'sha256:' + '0'.repeat(64)], {
+    mergeTarget: MERGE_TARGET
+  });
   await assert.rejects(
     () =>
       runGateProgram({
@@ -634,4 +678,67 @@ test('adversarial: forged attestor key cannot mint gate evidence', async () => {
     !entries.some(entry => entry.kind === 'authority_issued'),
     'no authority was issued for forged evidence'
   );
+});
+
+test('one trusted tests key cannot impersonate review or protected CI evidence', async () => {
+  for (const kind of ['adversarial-review', 'protected-ci']) {
+    const ledger = freshLedger(`cross-role-${kind}`);
+    const nullifiers = createNullifierRegistry();
+    const set = freshSet();
+    const impersonated = {
+      key: attestorTests,
+      attestorId: ATTESTOR_IDS.tests
+    };
+    if (kind === 'adversarial-review') set.reviewAtt = reviewAttestation(impersonated);
+    else set.ciAtt = ciAttestation(impersonated);
+    await assert.rejects(
+      () => gateDecide({ ...set, nullifiers, ledger }),
+      error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_ATTESTOR_ROLE'
+    );
+    assert.ok(!ledgerEntries(ledger).some(entry => entry.kind === 'authority_issued'));
+  }
+});
+
+test('attestations for different merge targets cannot mint one gate permit', async () => {
+  const ledger = freshLedger('cross-target');
+  const nullifiers = createNullifierRegistry();
+  const { testsAtt, reviewAtt } = freshSet();
+  const ciAtt = ciAttestation({ mergeTarget: OTHER_MERGE_TARGET });
+  await assert.rejects(
+    () => gateDecide({ testsAtt, reviewAtt, ciAtt, nullifiers, ledger }),
+    error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_TARGET_MISMATCH'
+  );
+  assert.ok(!ledgerEntries(ledger).some(entry => entry.kind === 'authority_issued'));
+});
+
+test('chartered policy binds each signed merge target to the operation target', async () => {
+  const { observations, setDigest } = await gateDecide({
+    ...freshSet(),
+    nullifiers: createNullifierRegistry(),
+    ledger: freshLedger('policy-target-baseline')
+  });
+  const substitutedOperation = createOperationDescriptorPraxis({
+    action: 'OpenGate',
+    scope: 'MergeQueue',
+    args: [OTHER_MERGE_TARGET, setDigest],
+    effect: 'gate_open',
+    irreversible: true,
+    egress: null,
+    hostOperation: 'OpenGate'
+  });
+  const decision = await decideCharteredAuthority({
+    ledger: freshLedger('policy-target-substitution'),
+    authorityKind: 'Permit',
+    id: 'permit:merge-gate:wrong-target',
+    charter,
+    trustedRootKeys: [root.publicKey],
+    policyName: 'MergeGate',
+    operation: substitutedOperation,
+    evidence: observations,
+    requester: 'GateAgent',
+    now: NOW
+  });
+  assert.equal(decision.decision, 'deny');
+  assert.equal(decision.authority, null);
+  assert.equal(decision.denial.code, 'PREMISE_FAILED');
 });
