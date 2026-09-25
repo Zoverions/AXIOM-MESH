@@ -119,6 +119,8 @@
 - [ ] Complete security and privacy review.
 - [ ] Do not include public authority, payroll, treasury, coercive eligibility, or regulated decisions in the first pilot.
 
+**CIRCLE-002 shared-object checkpoint (2026-09-24):** Canonical Shared Artifact v0 already keeps stale-parent concurrent edits as explicit multiple heads and requires complete conflict resolution. The first Circle-specific composition adds only a pure admission verifier for one appended revision: exact Circle authority-domain binding, current membership assurance, immutable prior revisions/owner/domain/sharing, exact external authorization-evidence binding, and zero artifact/governance/execution/network effect. It does not persist or apply a revision. Commitments, Circle-specific approvals, live causal exchange, export/exit retention and human conflict-resolution workflows remain open.
+
 ## Priority 9 — Institutional authority model
 
 - [ ] Define institution identity and charter.
