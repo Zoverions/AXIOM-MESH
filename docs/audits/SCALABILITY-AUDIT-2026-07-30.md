@@ -399,6 +399,13 @@ raises a critical `replay-guard-saturated` alert, and a high-water mark at
 carries the connection-pool counters (S-04) and trusted-key reads and hits
 (S-05).
 
+Correction (2026-09-25): the telemetry relay accepts only alerts in a fixed
+vocabulary, and an unknown alert id fails its alert state on the next cycle.
+Neither replay-guard alert was in it, so the first one would have stopped
+alert relaying altogether. Both are now named (`AxiomReplayGuardSaturated`,
+`AxiomReplayGuardNearCapacity`), and a relay test raises every such alert
+across two cycles and fails without them.
+
 ### S-07 — Public authentication is linear in configured credential count
 
 **Severity:** Medium now; High for managed nodes  
@@ -1028,7 +1035,7 @@ and intent admission is bounded; the rest is open.**
   It survives normalization, so it reaches the Gateway's operations report.
   `/v1/metrics` renders it as `axiom_admission_state` and
   `axiom_admission_events_total`. Any refusal raises an
-  `admission-refused` warning. A service without a queue reports no group,
+  `admission-refused` warning, relayed as `AxiomAdmissionRefused`. A service without a queue reports no group,
   and the format stays `axiom-operations.v1`.
 - **Evidence for admission.** `mesh/test/execution-gate.test.mjs`:
   - first-come, first-served order;

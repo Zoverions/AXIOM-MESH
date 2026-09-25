@@ -33,9 +33,14 @@ const RELIABILITY_KINDS = Object.freeze([
   'internal_errors_total',
   'integrity_failures_total'
 ]);
+// Every alert the operations report can raise must be named here: an
+// unknown alert id fails the relay's alert state on the next cycle.
 const ALERT_NAMES = Object.freeze({
+  'admission-refused': 'AxiomAdmissionRefused',
   'authentication-failures': 'AxiomAuthenticationFailures',
   'integrity-failure': 'AxiomIntegrityFailure',
+  'replay-guard-near-capacity': 'AxiomReplayGuardNearCapacity',
+  'replay-guard-saturated': 'AxiomReplayGuardSaturated',
   'replay-rejected': 'AxiomReplayRejected',
   'server-error-ratio': 'AxiomServerErrorRatio',
   'service-not-ready': 'AxiomServiceNotReady',
@@ -43,8 +48,11 @@ const ALERT_NAMES = Object.freeze({
   'upstream-unavailable': 'AxiomUpstreamUnavailable'
 });
 const ALERT_SUMMARIES = Object.freeze({
+  'admission-refused': 'Bounded admission refused work because its queue was full or its wait bound passed.',
   'authentication-failures': 'Repeated authentication failures reached the bounded threshold.',
   'integrity-failure': 'A runtime integrity verification failed.',
+  'replay-guard-near-capacity': 'Replay protection reached 80% of its capacity.',
+  'replay-guard-saturated': 'Replay protection refused requests because it was full.',
   'replay-rejected': 'One or more replay attempts were rejected.',
   'server-error-ratio': 'The server-error ratio exceeded the static threshold.',
   'service-not-ready': 'A critical service readiness check failed.',

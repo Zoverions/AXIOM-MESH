@@ -130,6 +130,41 @@ test('resolved alerts preserve their Alertmanager fingerprint during bounded rep
   assert.equal(resolved.endsAt, resolvedAt);
 });
 
+test('every alert the operations report raises is relayed across cycles, including transport and admission alerts', async () => {
+  const policy = await loadTelemetryRoutingPolicy();
+  const report = reportWithAuthenticationAlert();
+  const byName = new Map(report.services.map(service => [service.service, service]));
+  const zero = keys => Object.fromEntries(Object.keys(keys).map(key => [key, 0]));
+  const hypervisor = byName.get('hypervisor');
+  hypervisor.transport = { ...zero(hypervisor.transport), replay_capacity: 100, replay_saturated_total: 1 };
+  hypervisor.admission = {
+    active: 1, queued: 0, max_concurrent: 1, max_queued: 0, high_water: 1,
+    started_total: 1, queued_total: 0, rejected_full_total: 1, rejected_timeout_total: 0
+  };
+  const sandbox = byName.get('sandbox');
+  sandbox.transport = { ...zero(sandbox.transport), replay_capacity: 100, replay_high_water: 80 };
+  const firing = operationsReport([...byName.values()]);
+  const ids = firing.alerts.map(alert => alert.id).sort();
+  for (const id of ['admission-refused:hypervisor', 'replay-guard-near-capacity:sandbox', 'replay-guard-saturated:hypervisor']) {
+    assert.ok(ids.includes(id), id);
+  }
+
+  const first = updateAlertState({}, firing, policy, OBSERVED_AT);
+  const second = updateAlertState(first, firing, policy, '2026-07-28T22:00:30.000Z');
+  const names = buildAlertmanagerRequest(firing, second, policy, '2026-07-28T22:00:30.000Z')
+    .map(alert => alert.labels.alertname);
+  for (const name of ['AxiomAdmissionRefused', 'AxiomReplayGuardNearCapacity', 'AxiomReplayGuardSaturated']) {
+    assert.ok(names.includes(name), name);
+  }
+  assert.equal(names.length, ids.length, 'every raised alert is relayed');
+
+  // Resolution replays under the same names.
+  const quiet = reportWithAuthenticationAlert(0);
+  const resolvedAt = '2026-07-28T22:01:00.000Z';
+  const resolved = buildAlertmanagerRequest(quiet, updateAlertState(second, quiet, policy, resolvedAt), policy, resolvedAt);
+  assert.ok(resolved.filter(alert => alert.endsAt === resolvedAt).some(alert => alert.labels.alertname === 'AxiomAdmissionRefused'));
+});
+
 test('scraping requires both authenticated bounded endpoints and sanitizes the report', async () => {
   const policy = await loadTelemetryRoutingPolicy();
   const report = reportWithAuthenticationAlert();
