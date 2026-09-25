@@ -29,7 +29,7 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
-import { COLLECTION_PAGE_MAX, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
+import { COLLECTION_PAGE_MAX, decodeCollectionCursor, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
 import { runMigrations } from './migrations.mjs';
 import {
   anchorsEnabled,
@@ -53,7 +53,10 @@ import {
   verifyCausalBundle
 } from '../lib/causal-sync.mjs';
 import {
-  discoverAdmittedNodes,
+  NODE_DISCOVERY_COLLECTION,
+  NODE_SECURITY_LEVEL_SQL,
+  discoverAdmittedNodesPage,
+  nodeDiscoveryWindow,
   effectiveScheduleStatus,
   normalizeNodeDiscoveryQuery,
   normalizeNodeScheduleRequest,
@@ -1857,12 +1860,30 @@ export class GridStore {
     });
   }
 
-  discoverNodes(query, { asOf = new Date().toISOString() } = {}) {
-    return discoverAdmittedNodes(
-      this.listNodes({ asOf }),
-      normalizeNodeDiscoveryQuery(query),
-      { asOf }
+  // Scalability audit S-10: discovery pages in ranking order (security level
+  // high to low, then node id). SQL drops inactive, expiring and
+  // under-level nodes on plain columns and orders the rest; only the rows a
+  // page needs (plus one) are decoded, never every node ever registered.
+  discoverNodes(query, { asOf = new Date().toISOString(), after } = {}) {
+    const normalized = normalizeNodeDiscoveryQuery(query);
+    const { instant, leaseBoundary } = nodeDiscoveryWindow(normalized, asOf);
+    const cursor = decodeCollectionCursor(NODE_DISCOVERY_COLLECTION, after);
+    const level = NODE_SECURITY_LEVEL_SQL;
+    const rows = this.db.prepare(`
+      SELECT * FROM nodes
+      WHERE status = 'active' AND expires_at > ? AND ${level} >= ?
+        ${cursor ? `AND (${level} < ? OR (${level} = ? AND node_id > ?))` : ''}
+      ORDER BY ${level} DESC, node_id ASC
+    `).iterate(
+      leaseBoundary,
+      normalized.minimum_security_level,
+      ...(cursor ? [Number(cursor.sort), Number(cursor.sort), cursor.id] : [])
     );
+    const store = this;
+    function* decoded() {
+      for (const row of rows) yield store.decodeNodeRow(row);
+    }
+    return discoverAdmittedNodesPage(decoded(), normalized, { asOf: instant });
   }
 
   getNodeSchedule(scheduleId, requester, {
@@ -1955,23 +1976,24 @@ export class GridStore {
   }
 
   decodedNodeRows(clause, params) {
-    const rows = this.db.prepare(`SELECT * FROM nodes ${clause}`).all(...params);
-    return rows.map(row => {
-      const decoded = this.decodeProtectedRow(
-        'nodes',
-        'node_id',
-        row,
-        [
-          'capabilities_json',
-          'discovery_json',
-          'public_key_json',
-          'quarantine_reason_json'
-        ]
-      );
-      decoded.capabilities = decoded.capabilities_json;
-      decoded.discovery = decoded.discovery_json;
-      return decoded;
-    });
+    return this.db.prepare(`SELECT * FROM nodes ${clause}`).all(...params).map(row => this.decodeNodeRow(row));
+  }
+
+  decodeNodeRow(row) {
+    const decoded = this.decodeProtectedRow(
+      'nodes',
+      'node_id',
+      row,
+      [
+        'capabilities_json',
+        'discovery_json',
+        'public_key_json',
+        'quarantine_reason_json'
+      ]
+    );
+    decoded.capabilities = decoded.capabilities_json;
+    decoded.discovery = decoded.discovery_json;
+    return decoded;
   }
 
   decodedSchedules(clause = 'ORDER BY created_at DESC', params = []) {

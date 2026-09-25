@@ -306,7 +306,7 @@ export async function createGridService(config = meshConfig()) {
         0
       ),
       limit: integerQuery(url.searchParams.get('limit'), 100)
-    });
+    }, { after: url.searchParams.get('cursor') ?? undefined });
     return {
       ...discovery,
       attestation: identity.signObject(discovery)

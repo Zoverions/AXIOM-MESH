@@ -51,9 +51,9 @@ const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 // Updated for optional `cursor` and `limit` query parameters on `sync.list`
 // and the other paged collections, including `accounting.get` journals, and
 // for the `sync_bundles.list` and `sync_updates.get` routes (scalability
-// audit S-10).
+// audit S-10), and for an optional `cursor` on `nodes.discover`.
 const EXPECTED_CONTRACT_DIGEST =
-  '14a12f0c7cc4715e5c6f369c7acb6519c34bb9c8979ee2e73be2a71c6160695b';
+  '6cb7be4889ffe28e85c142df6f311fa87c6f4e98827b21bbe3daf655f8261f10';
 const EXPECTED_JSON_SCHEMA_DIGEST =
   '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
 

@@ -629,7 +629,7 @@ Grid reservation control. Signed v2 admission binds node identity, owner,
 capability/security/software statement, HTTPS origin, failure domain, roles,
 resource ceilings, and expiry. `GET /v1/node-discovery` requires `node:read`,
 applies bounded filters, excludes expired/quarantined nodes, omits raw node
-keys, and returns a Grid-signed result.
+keys, and returns a Grid-signed, ranked page (`cursor` reads on).
 
 The `node.schedule` intent follows the normal kernel authority path. It creates
 only a complete deterministic placement within admission lease, declared

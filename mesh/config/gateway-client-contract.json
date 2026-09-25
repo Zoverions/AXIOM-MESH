@@ -334,7 +334,8 @@
         "role",
         "minimum_security_level",
         "minimum_lease_seconds",
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-node-discovery.v1",

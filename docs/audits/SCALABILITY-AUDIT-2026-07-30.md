@@ -651,8 +651,23 @@ fit are unchanged. This adds a second read-only route: the contract is now
 200 KB heads fails without the omission; the kernel test fetches an update
 through real servers and checks owner isolation.
 
-Still open: `node-discovery` (a ranked query result) is not paged, and
-artifacts have no streaming contract.
+Node discovery pages too (2026-09-25). It is ranked (security level, then
+node id in byte order, which the in-memory ranking now also uses), so its
+cursor is keyed on that order. SQL filters status, lease and minimum
+security level on plain columns and orders by the level derived from the
+profile; rows are decoded lazily and reading stops once a page and one
+more eligible node are found, so a page decodes at most `limit + 1` rows
+however many nodes have expired. The signed answer gains `page`, and the
+contract an optional `cursor` (digest and tripwire pins updated
+deliberately). Tests page through a mixed population (inactive, expired,
+quarantined, under-level, missing capability, mixed-case ids) and match the
+unpaged ranking exactly; they fail when the cursor is ignored, with a
+locale tie-break, without the early stop, without the SQL filter, or with
+an unranked SQL order. Remaining: the SQL still reads the nodes table's
+plain columns and sorts them per request (no expression index), which is
+cheap next to decoding but grows with registrations.
+
+Still open: artifacts have no streaming contract.
 
 Related defect fixed (2026-09-25): personal exports read memory through the
 paged API method, so an export silently held only the first 100 memory

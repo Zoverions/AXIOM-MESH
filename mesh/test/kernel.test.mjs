@@ -1035,6 +1035,13 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     discovery.nodes.map(node => node.node_id),
     ['node:e2e']
   );
+  // Discovery pages (scalability audit S-10); the page is part of the signed
+  // answer, and a malformed cursor is refused.
+  assert.deepEqual(discovery.page, { limit: 100, has_more: false, next_cursor: null });
+  assert.equal(
+    (await api(gateway, token, '/v1/node-discovery?cursor=not*a*cursor', {}, 400)).error.code,
+    'validation_error'
+  );
   const discoveryStatement = structuredClone(discovery);
   delete discoveryStatement.attestation;
   const gridIdentity = stack.services.find(

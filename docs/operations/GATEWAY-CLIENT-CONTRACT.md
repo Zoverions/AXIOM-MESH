@@ -60,7 +60,7 @@ client.
 | `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) and `cursor` |
 | `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) and `cursor` |
 | `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) and `cursor` |
-| `nodes.discover` | `GET /v1/node-discovery` | `node:read` | capability, role, security, lease, and limit filters |
+| `nodes.discover` | `GET /v1/node-discovery` | `node:read` | capability, role, security, lease, and limit filters; ranked, paged by `cursor` |
 | `node_schedules.list` | `GET /v1/node-schedules` | `node:read` | optional `limit` (1-100; default 100) and `cursor` |
 | `consents.list` | `GET /v1/consents` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `approvals.list` | `GET /v1/approvals` | owner | optional `limit` (1-100; default 100) and `cursor` |

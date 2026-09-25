@@ -7,6 +7,7 @@ import {
   digestObject,
   sha256
 } from './canonical.mjs';
+import { encodeCollectionCursor } from './collection-page.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
@@ -115,29 +116,69 @@ export function normalizeNodeDiscoveryQuery(input = {}) {
   };
 }
 
-export function discoverAdmittedNodes(nodes, query, {
-  asOf = new Date().toISOString()
-} = {}) {
-  const normalized = normalizeNodeDiscoveryQuery(query);
+export const NODE_DISCOVERY_COLLECTION = 'node_discovery';
+
+// The ranking key of a node in SQL: the level of its security profile
+// ('S0_' to 'S3_'), or -1. Must agree with securityLevel below.
+export const NODE_SECURITY_LEVEL_SQL = "CASE WHEN security_profile GLOB 'S[0-3]_*' THEN CAST(substr(security_profile, 2, 1) AS INTEGER) ELSE -1 END";
+
+/** The instant a discovery answers for, and the lease every result must outlive. */
+export function nodeDiscoveryWindow(normalized, asOf) {
   const instant = normalizeTimestamp(asOf, 'discovery as_of');
   const leaseBoundary = new Date(
     Date.parse(instant) + normalized.minimum_lease_seconds * 1_000
   ).toISOString();
-  const eligible = nodes
-    .filter(node => nodeIsEligible(node, normalized, leaseBoundary))
-    .sort((left, right) => (
-      securityLevel(right.security_profile)
-      - securityLevel(left.security_profile)
-      || left.node_id.localeCompare(right.node_id)
-    ))
-    .slice(0, normalized.limit)
-    .map(publicNode);
+  return { instant, leaseBoundary };
+}
+
+/**
+ * Ranking order: highest security level first, then node id in byte order
+ * (the order SQL uses, so pages and the in-memory ranking agree).
+ */
+export function compareDiscoveryRank(left, right) {
+  return securityLevel(right.security_profile) - securityLevel(left.security_profile)
+    || (left.node_id < right.node_id ? -1 : left.node_id > right.node_id ? 1 : 0);
+}
+
+export function discoverAdmittedNodes(nodes, query, {
+  asOf = new Date().toISOString()
+} = {}) {
+  return discoverAdmittedNodesPage([...nodes].sort(compareDiscoveryRank), query, { asOf });
+}
+
+/**
+ * One page of discovery from nodes already in ranking order (after any
+ * cursor). Stops reading as soon as the page and one more eligible node are
+ * found, so a caller can pass a lazily decoded sequence (scalability audit
+ * S-10). `page.next_cursor` resumes strictly after the last node returned.
+ */
+export function discoverAdmittedNodesPage(rankedNodes, query, {
+  asOf = new Date().toISOString()
+} = {}) {
+  const normalized = normalizeNodeDiscoveryQuery(query);
+  const { instant, leaseBoundary } = nodeDiscoveryWindow(normalized, asOf);
+  const eligible = [];
+  for (const node of rankedNodes) {
+    if (!nodeIsEligible(node, normalized, leaseBoundary)) continue;
+    eligible.push(node);
+    if (eligible.length > normalized.limit) break;
+  }
+  const hasMore = eligible.length > normalized.limit;
+  const page = eligible.slice(0, normalized.limit);
+  const last = page.at(-1);
   return {
     schema: 'axiom-node-discovery.v1',
     as_of: instant,
     query: normalized,
-    count: eligible.length,
-    nodes: eligible
+    count: page.length,
+    nodes: page.map(publicNode),
+    page: {
+      limit: normalized.limit,
+      has_more: hasMore,
+      next_cursor: hasMore && last
+        ? encodeCollectionCursor(NODE_DISCOVERY_COLLECTION, String(securityLevel(last.security_profile)), last.node_id)
+        : null
+    }
   };
 }
 

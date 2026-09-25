@@ -434,6 +434,11 @@ export async function createGatewayService(config = meshConfig()) {
         { label: 'node discovery limit', min: 1, max: 500 }
       )));
     }
+    const discoveryCursor = url.searchParams.get('cursor');
+    if (discoveryCursor !== null) {
+      if (!PAGE_CURSOR.test(discoveryCursor)) throw new ValidationError('Page cursor is invalid');
+      query.set('cursor', discoveryCursor);
+    }
     const suffix = query.size ? `?${query}` : '';
     return gridGet(`/internal/v1/node-discovery${suffix}`, traceId);
   });

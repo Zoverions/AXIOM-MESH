@@ -12,16 +12,18 @@ const PARENT_BLOBS = Object.freeze({
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
   // the other paged collections, including accounting journals, and for the
   // read-only `sync_bundles.list` and `sync_updates.get` routes over the
-  // owner's own bundle summaries and sync updates (scalability audit S-10).
-  // No existing route, access rule or response schema changed.
-  gateway_contract: 'aa04d59fc8c16cba8cfee1668e52f0087bdee444',
+  // owner's own bundle summaries and sync updates (scalability audit S-10),
+  // and an optional `cursor` on `nodes.discover`, whose signed answer gains a
+  // `page`. No existing route, access rule or response schema changed.
+  gateway_contract: '1a5094b3cb3dd427d2ef3f00c0d176802fe6b605',
   // Updated deliberately for the online-sync head (signed, nonce-bound count
   // of an owner's sync bundle events on /internal/v1/events) and for keyset
   // paging of sync state and the other collections, including accounting
   // journals and bundle summaries (`cursor` and `limit`), and single sync
-  // updates for heads too large for a page. The server still composes no
-  // SIEA store; the assertions below are unchanged.
-  grid_server: '0ddad5328000b1d86e22e7ff1c67380577d4725d',
+  // updates for heads too large for a page, and a `cursor` passed to node
+  // discovery. The server still composes no SIEA store; the assertions
+  // below are unchanged.
+  grid_server: '94f4128165b797b4552fd8e718c34751f154a0c8',
   // Updated deliberately for core migration 11 (index-only: composite
   // indexes for the paged collections, accounting journals, node schedules
   // and sync bundles, scalability audit S-11). No table or column changed.
