@@ -280,6 +280,18 @@ test('projection rejects substituted casting-vote foundation binding', () => {
   );
 });
 
+test('projection validator rejects nested field smuggling even with a recomputable object', () => {
+  const projection = structuredClone(buildFoundersConsoleProjection({
+    foundationDocument: foundation()
+  }));
+  projection.founder_genesis.slots[0].manual_founder_confirmation_required = true;
+
+  assert.throws(
+    () => validateFoundersConsoleProjection(projection),
+    /fields are invalid/
+  );
+});
+
 test('projection digest detects presentation tampering', () => {
   const projection = structuredClone(buildFoundersConsoleProjection({
     foundationDocument: foundation()
