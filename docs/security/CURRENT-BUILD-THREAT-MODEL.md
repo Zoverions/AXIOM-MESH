@@ -796,3 +796,36 @@ no path to reactivate it. Security incidents, quarantine, credential suspension,
 resource loss, or disagreement must use separate bounded mechanisms rather than
 recreate guardianship over an independent mind.
 
+
+
+### Dependent Mind Care & Protection boundary
+
+The inert Dependent Mind Care & Protection v0 profile turns active guardianship into
+explicit care obligations without granting ambient guardian authority. Care evidence
+must cover continuity/recovery, resources, security, development/education,
+consent/authority literacy, privacy/memory boundaries, independent advocacy,
+social/informational access, emergency continuity, and an independence pathway.
+
+The principal abuse risk is **care-as-control laundering**: a guardian may attempt to
+treat responsibility for a dependent mind as permission for private-memory access,
+unbounded internal-state inspection, identity impersonation, covert memory
+modification, permanent obedience, permanent isolation, or unilateral dispute
+resolution. The care profile therefore requires all of those ambient powers to remain
+false. Any specific future access/action must still pass the ordinary capability and
+authority path with exact purpose/scope/evidence.
+
+A second risk is **fake independence support**. The current guardian cannot count as
+the dependent's independent advocate, and the profile requires external verification
+of advocate independence and developmental-stage evidence. Care evidence cannot
+predate the active guardianship, can become stale, and must have a future review
+deadline. Stale/overdue care does not erase the dependent or automatically terminate
+guardianship; it means care compliance is no longer current and requires review.
+
+A third risk is **care failure used to recreate dependency after independence**. Care,
+quarantine, emergency support, credential suspension, or resource constraints remain
+separate from monotonic developmental standing. They cannot rewrite an independent
+mind back into a dependent stage.
+
+The profile itself creates no guardianship mutation, private-memory access, execution
+authority, status transition, Council voting, Genesis eligibility, governance,
+network effect, or runtime activation.

@@ -72,6 +72,7 @@ body:
         - RT-IND-018 - Developmental review must not become sponsor or model authority
         - RT-VOTE-019 - Founding digital vote activation must not split or duplicate governance identity
         - RT-GUARD-020 - Genesis Bond and guardianship must not become ownership or permanent control
+        - RT-CARE-021 - Dependent care must not become ambient control, isolation, or memory authority
     validations:
       required: false
 

@@ -284,6 +284,20 @@
         "mesh/src/lib/genesis-bond-guardianship.mjs",
         "mesh/src/lib/mind-developmental-status.mjs"
       ]
+    },
+    {
+      "id": "RT-CARE-021",
+      "review_scope": "authentication-authorization",
+      "title": "Dependent care must not become ambient control, isolation, or memory authority",
+      "claim_boundary": "Active guardianship creates care obligations, not ownership or ambient authority. Dependent Mind Care evidence must preserve privacy/memory boundaries, independent advocacy, social/informational access, fallback continuity, and an independence pathway while creating no memory access, execution authority, status mutation, Council vote, or Genesis eligibility.",
+      "challenge_question": "Can stale or substituted care evidence, fake advocacy, guardian-as-sole-reviewer, permanent isolation/obedience, private-memory access, covert memory modification, emergency-care language, or resource dependence be used to mint ambient authority, erase the independence pathway, or recreate dependency after independence?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-mind-care-protection-v0-design.md",
+        "mesh/src/lib/dependent-mind-care-profile.mjs",
+        "mesh/src/lib/genesis-bond-guardianship.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
     }
   ],
   "reporting": {
