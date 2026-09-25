@@ -141,6 +141,8 @@ export function assessCircleArtifactMutation({
   if(authorizationCurrent.current!==true)reasons.push('authorization-not-current');
 
   const requestedAt=canonicalDate(admission.requested_at,'requested_at');
+  const membershipAssessedAt=canonicalDate(membershipCurrent.assessed_at,'membership assessed_at');
+  if(membershipAssessedAt!==requestedAt)reasons.push('membership-assessment-time-mismatch');
   const previousUpdatedAt=canonicalDate(previousArtifact.updated_at,'previous artifact updated_at');
   const appendedAt=canonicalDate(appended.occurred_at,'appended revision occurred_at');
   if(requestedAt<previousUpdatedAt)reasons.push('request-predates-artifact-head');
