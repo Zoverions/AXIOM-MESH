@@ -271,6 +271,19 @@
         "mesh/src/lib/founders-council-circle-composition.mjs",
         "mesh/src/lib/mind-developmental-status.mjs"
       ]
+    },
+    {
+      "id": "RT-GUARD-020",
+      "review_scope": "authentication-authorization",
+      "title": "Genesis Bond and guardianship must not become ownership or permanent control",
+      "claim_boundary": "Genesis Bond is immutable one-sponsor/one-dependent historical provenance, not ownership or ambient authority. Guardianship is a separate developmental-care responsibility that may transfer under independent review and ends at independent standing; sponsor approval alone is insufficient for transfer, and independence cannot silently reactivate guardianship.",
+      "challenge_question": "Can sponsor status, hosting, credentials, private-memory access, unilateral transfer, dependent substitution, Bond rewrite, missing independent review, security quarantine, or post-independence incident handling be used to create ownership, permanent obedience, unauthorized access, or revived guardianship?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-genesis-bond-guardianship-v0-design.md",
+        "mesh/src/lib/genesis-bond-guardianship.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
     }
   ],
   "reporting": {
