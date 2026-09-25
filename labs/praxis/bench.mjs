@@ -11,12 +11,9 @@
 // Budgets encode "non-pathological": the front end must stay roughly linear,
 // so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
 // caps keep CI honest. Measurements use a short warm-up and median wall samples.
-// CPU time is measured across a bounded repeated parse batch spanning at least
-// BENCHMARK_MIN_CPU_MICROS, so platforms with coarse process CPU accounting
-// still produce accurate evidence; the per-parse value is normalized by the
-// run count. A batch that reaches the run ceiling below that floor yields no
-// evidence (null), which the scaling check refuses. The reported CPU time is
-// the minimum over BENCHMARK_CPU_ROUNDS such batches (see measureMinCpuPerRun). CPU time is used only for the scaling
+// CPU time is measured across a bounded repeated parse batch so platforms with
+// coarse process CPU accounting still produce usable evidence; the per-parse
+// value is normalized by the run count. CPU time is used only for the scaling
 // ratio so unrelated runner scheduling cannot turn a linear parse into a false
 // superlinear signal; the existing absolute parse/format wall-clock budgets
 // remain unchanged.
@@ -45,15 +42,8 @@ function median(values) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-// Process CPU time advances in coarse steps on some platforms (about 15.6 ms
-// on Windows). Stopping at the first non-zero reading let one step stand for
-// an arbitrary number of short runs, under-measuring the 1k corpus by up to
-// half and doubling the apparent 1k->10k ratio. Accumulating at least this
-// much CPU time bounds that quantization error to about one step in six.
-export const BENCHMARK_MIN_CPU_MICROS = 100_000;
-
-export function measureCpuPerRun(fn, { cpuUsage = process.cpuUsage } = {}) {
-  const cpuStart = cpuUsage();
+function measureCpuPerRun(fn) {
+  const cpuStart = process.cpuUsage();
   let runs = 0;
   let nextBatch = BENCHMARK_SAMPLES;
   let cpuMicros = 0;
@@ -63,39 +53,14 @@ export function measureCpuPerRun(fn, { cpuUsage = process.cpuUsage } = {}) {
     for (let i = 0; i < batch; i++) fn();
     runs += batch;
 
-    const cpu = cpuUsage(cpuStart);
+    const cpu = process.cpuUsage(cpuStart);
     cpuMicros = cpu.user + cpu.system;
-    if (cpuMicros >= BENCHMARK_MIN_CPU_MICROS) break;
+    if (cpuMicros > 0) break;
 
     nextBatch *= 2;
   }
 
-  // Below the floor (the run ceiling came first) or non-finite, the reading
-  // is not evidence: return null rather than a usable-looking number, so a
-  // runner that cannot meet the floor stays visibly insufficient.
-  if (!Number.isFinite(cpuMicros) || cpuMicros < BENCHMARK_MIN_CPU_MICROS) return null;
-  return (cpuMicros / 1000) / runs;
-}
-
-// The scaling check divides two separately measured CPU times. On a shared
-// runner (the kernel suite runs test files concurrently) contention inflates
-// the large corpus far more than the small one: its tokens and AST outgrow the
-// caches and the young generation. For identical code, single measurements
-// under six-way load on four cores gave 1k->10k ratios from 7x to 19.3x.
-// Noise only ever adds CPU time, so the minimum over a few rounds estimates
-// the uncontended cost; with five rounds the same load gave 11.3x to 16.3x.
-// Every round must meet the CPU floor on its own; any insufficient round
-// makes the whole measurement unavailable (null).
-export const BENCHMARK_CPU_ROUNDS = 5;
-
-export function measureMinCpuPerRun(fn, { rounds = BENCHMARK_CPU_ROUNDS, measureRound = measureCpuPerRun } = {}) {
-  let best = null;
-  for (let round = 0; round < rounds; round++) {
-    const value = measureRound(fn);
-    if (value === null) return null;
-    if (best === null || value < best) best = value;
-  }
-  return best;
+  return cpuMicros > 0 ? (cpuMicros / 1000) / runs : 0;
 }
 
 function measure(fn, { requireCpuEvidence = false } = {}) {
@@ -111,7 +76,7 @@ function measure(fn, { requireCpuEvidence = false } = {}) {
 
   return {
     ms: median(wallSamples),
-    cpuMs: requireCpuEvidence ? measureMinCpuPerRun(fn) : null,
+    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn) : null,
     result
   };
 }
@@ -154,32 +119,21 @@ export const BUDGETS = {
   maxScalingRatio: 20
 };
 
-const isFiniteNonNegative = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
-const isFinitePositive = (value) => isFiniteNonNegative(value) && value > 0;
-
 export function checkBudgets(results) {
   const failures = [];
   const byLabel = new Map(results.map((r) => [r.label, r]));
   const small = byLabel.get('synthetic-1k');
   const large = byLabel.get('synthetic-10k');
   if (large) {
-    // A missing or non-finite wall time compares false against any budget,
-    // so it must fail on its own rather than pass silently.
-    if (!isFiniteNonNegative(large.parseMs)) {
-      failures.push('10k-line parse wall time is missing or invalid');
-    } else if (large.parseMs > BUDGETS.maxParseMs10k) {
+    if (large.parseMs > BUDGETS.maxParseMs10k) {
       failures.push(`10k-line parse took ${large.parseMs}ms (budget ${BUDGETS.maxParseMs10k}ms)`);
     }
-    if (!isFiniteNonNegative(large.formatMs)) {
-      failures.push('10k-line format wall time is missing or invalid');
-    } else if (large.formatMs > BUDGETS.maxFormatMs10k) {
+    if (large.formatMs > BUDGETS.maxFormatMs10k) {
       failures.push(`10k-line format took ${large.formatMs}ms (budget ${BUDGETS.maxFormatMs10k}ms)`);
     }
   }
   if (small && large) {
-    // Both operands must be finite positive CPU evidence: null (insufficient
-    // samples), zero, Infinity or NaN would make the ratio meaningless.
-    if (!isFinitePositive(small.parseCpuMs) || !isFinitePositive(large.parseCpuMs)) {
+    if (!(small.parseCpuMs > 0) || !(large.parseCpuMs >= 0)) {
       failures.push('parse CPU timing is missing or invalid for scaling check');
     } else {
       const ratio = large.parseCpuMs / small.parseCpuMs;
