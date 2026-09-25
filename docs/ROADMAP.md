@@ -309,10 +309,12 @@ They change no current capability status.
 Evidence-direction designs (DESIGN-ONLY unless separately gated):
 
 - **Mesh-notarized agreements** — maintain the
-  [specification](architecture/MESH-NOTARIZED-AGREEMENTS.md) as the stated
-  direction for hash-chained, honestly timestamped, metadata-separated mutual
-  commitment records. No implementation, registry change, or promotion claim
-  until the normal gates pass.
+  [specification](architecture/MESH-NOTARIZED-AGREEMENTS.md) and inert v0
+  agreement/acceptance evidence contracts as the stated direction for
+  content-addressed, honestly timestamped, metadata-separated mutual
+  commitment records. The v0 verifier separates recorded acceptance from
+  later consent currentness and performs no Grid mutation, enforcement,
+  settlement, registry change, or promotion.
 - **Orchestration provenance** — follow the
   [runtime and connector fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
   (P5 durable task/event/artifact/handoff model; P6 attenuation-only
