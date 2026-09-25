@@ -75,6 +75,7 @@ body:
         - RT-CARE-021 - Dependent care must not become ambient control, isolation, or memory authority
         - RT-CONCERN-022 - Dependent concern evidence must not become adjudication or protective authority
         - RT-REVIEW-023 - Protective review findings must not become forged outcomes or remedy authority
+        - RT-REMEDY-024 - Protective remedy admission must not become stale or direct execution authority
     validations:
       required: false
 
