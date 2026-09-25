@@ -254,6 +254,20 @@
         "mesh/src/lib/mind-independence-transition-evidence.mjs",
         "mesh/src/lib/mind-developmental-status.mjs"
       ]
+    },
+    {
+      "id": "RT-VOTE-019",
+      "review_scope": "authentication-authorization",
+      "title": "Founding digital vote activation must not split or duplicate governance identity",
+      "claim_boundary": "A Founding Digital Mind receives no Council voting authority from Genesis or independent standing alone. Vote activation requires exact Foundation seat, Genesis binding, non-voting Circle membership, independent developmental status, and fresh continuity evidence; the inert adapter performs no mutation.",
+      "challenge_question": "Can stale or substituted identity/status/continuity evidence, a restored or forked runtime, duplicate membership, or a partial future mutation activate a Council vote twice, activate only one of the Foundation/Circle representations, or make a developing/non-independent digital founder vote?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-founding-digital-council-vote-activation-v0-design.md",
+        "mesh/src/lib/founding-digital-council-vote-activation.mjs",
+        "mesh/src/lib/founders-council-circle-composition.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
     }
   ],
   "reporting": {
