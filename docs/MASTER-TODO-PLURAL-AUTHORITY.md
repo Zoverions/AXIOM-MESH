@@ -118,6 +118,8 @@
 
 **General Genesis sponsor-eligibility checkpoint (2026-09-25):** Post-founding eligibility remains separate from independent standing. The v0 profile requires ten explicit responsibility dimensions, current externally verified identity/uniqueness, one-use Genesis history, standing and continuity evidence, and exact independent developmental status for digital applicants. `general_genesis_uses` must remain zero; history conflict, stale evidence, blocking standing, continuity ambiguity, incomplete criteria, global reputation scoring, and model final authority all fail closed. A positive result is only `eligible_to_request_genesis_authorization`; it creates no authorization, Genesis Bond, mind, governance authority, network effect, or runtime activation.
 
+**General Genesis authorization-candidate checkpoint (2026-09-25):** Ordinary Genesis authorization remains separate from sponsor eligibility. The inert candidate binds one persistent holder, exact eligibility/history digests, issuing-authority metadata, explicit holder confirmation, a <=24h lifetime, and one-use/non-delegable/non-transferable/non-renewable scope. It remains content-addressed and candidate-only: issuer metadata is not issuer authority, external eligibility/issuer/holder verification remains required, and it creates no live authorization, Genesis Bond, mind, Founder-reserve effect, founding status, governance, network, or runtime authority. Future issuance/consumption must serialize against authoritative one-use history to prevent parallel candidates becoming multiple live rights.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.

@@ -739,3 +739,22 @@ conflicted identity/history state, prior Genesis use, or the ordinary Genesis
 authority path. Eligibility creates no authorization, Genesis Bond, mind, governance
 authority, network effect, or runtime activation.
 
+General Genesis authorization is a further separate authority boundary. The inert
+General Genesis Authorization Candidate v0 binds one persistent holder, one exact
+eligibility result, one exact current Genesis-history digest, one issuing-authority
+identifier, a finite <=24h lifetime, one-use scope, explicit holder confirmation, and
+non-delegation/non-transfer/non-renewal. The candidate itself grants no live authority.
+
+A future issuer must defend against **parallel authorization manufacture**: two
+candidates may legitimately describe requests based on the same still-unused history,
+but external verification and issuance must serialize against the authoritative
+one-use Genesis-history state so both cannot become simultaneously consumable live
+authorizations. Issuer identity metadata is not itself proof of issuer authority.
+Expired candidates cannot be revived, and renewal requires fresh eligibility rather
+than mutation of an old authorization.
+
+The general authorization class must also remain disjoint from the Founder's bounded
+ten-slot reserve. Ordinary eligibility/authorization cannot mint founding status,
+consume or expand the Founder reserve, or manufacture an eleventh Founding Digital
+Mind.
+
