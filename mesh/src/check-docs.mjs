@@ -186,6 +186,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md',
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md',
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
+  'docs/operations/CIRCLE-EXCHANGE-TRANSPORT.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
   'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md',
@@ -702,6 +703,15 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Signed partition/rejoin drill',
     '## Pilot repetition and non-claims'
   ],
+  // Laboratory transport: the gate, the admission rule and the limits it
+  // does not cover stay stated.
+  'docs/operations/CIRCLE-EXCHANGE-TRANSPORT.md': [
+    '**Status:** laboratory',
+    '`"enabled": true`',
+    '## Who may sync',
+    '## What the transport does not protect',
+    '## Before activation'
+  ],
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': [
     '## Trust and authority boundary',
     '## Request and response protocol',
@@ -847,6 +857,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md': 5_000,
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': 5_000,
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': 6_000,
+  'docs/operations/CIRCLE-EXCHANGE-TRANSPORT.md': 6_000,
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': 8_000,
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': 8_000,
   'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md': 8_000,

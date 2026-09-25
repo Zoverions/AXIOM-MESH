@@ -360,6 +360,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Independent service units](operations/INDEPENDENT-SERVICE-UNITS.md)
 - [Admitted-node discovery and scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
 - [Online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
+- [Circle exchange transport (laboratory, off by default)](operations/CIRCLE-EXCHANGE-TRANSPORT.md)
 - [Deployment-independent providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
 - [Pilot deployment dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md)
 - [Foundational execution pack — 2026-09](operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md)

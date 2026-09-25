@@ -81,7 +81,9 @@ import {
  * complete and nothing new is learned.
  *
  * Nothing here grants authority, executes an effect, opens a network
- * connection, or changes the Grid's causal sync.
+ * connection, or changes the Grid's causal sync. circle-transport.mjs
+ * carries this protocol between members' nodes over HTTPS (laboratory, off
+ * by default; docs/operations/CIRCLE-EXCHANGE-TRANSPORT.md).
  */
 
 export const CIRCLE_GENESIS_SCHEMA = 'axiom-circle-genesis.v0';
@@ -280,6 +282,61 @@ export class CircleReplica {
   /** Updates held because their key has not been seen yet. */
   pendingUpdates() {
     return this.pendingCount;
+  }
+
+  /**
+   * Every update this replica holds (accepted, equivocation evidence and
+   * pending), in an order that rebuilds the same replica when received
+   * again: each key log in counter order, then the evidence, then what is
+   * still pending.
+   */
+  exportUpdates() {
+    const updates = [];
+    for (const pair of [...this.logs.keys()].sort()) {
+      for (const item of this.logs.get(pair)) updates.push(item.update);
+    }
+    for (const pair of [...this.equivocations.keys()].sort()) {
+      updates.push(this.equivocations.get(pair).conflicting);
+    }
+    for (const pair of [...this.pending.keys()].sort()) {
+      const held = [...this.pending.get(pair).values()]
+        .sort((left, right) => left.body.counter - right.body.counter);
+      updates.push(...held);
+    }
+    return updates;
+  }
+
+  /**
+   * The public key announced for (principal, key id) by an accepted update
+   * or the genesis, or null. Announcement only means a signature can be
+   * checked; memberKey decides whether the key counts.
+   */
+  announcedKey(principalId, keyId) {
+    return this.announced.get(pairKey(principalId, keyId)) ?? null;
+  }
+
+  /**
+   * The public key `keyId` names if, in the view as of `asOf`, it is an
+   * active key the Circle established (the creator's, or one endorsed or
+   * rotated in) and its principal either holds standing at that moment or
+   * has never held a membership (endorsed to join, not yet joined: their
+   * acceptance is in their own log, which others can only learn from them).
+   * A principal whose membership has ended, in any charter period, gets
+   * null, as does a revoked or rotated key. A transport uses this to decide
+   * who may sync the Circle.
+   */
+  memberKey({ keyId, asOf }) {
+    const view = this.view({ asOf });
+    const key = view.keys.find(item => item.key_id === keyId && item.status === 'active');
+    if (!key) return null;
+    const principal = key.principal_id;
+    const inStanding = circleStanding(view.package).principalAt(principal, new Date(view.as_of));
+    const everJoined = view.epochs.some(epoch => epoch.package.memberships.some(item => item.principal_id === principal));
+    if (!inStanding && everJoined) return null;
+    const publicKey = this.announced.get(pairKey(principal, keyId));
+    return publicKey
+      ? Object.freeze({ principal_id: principal, key_id: keyId, public_key: publicKey, standing: inStanding ? 'member' : 'endorsed' })
+      : null;
   }
 
   hold(pair, update, digest, body) {
