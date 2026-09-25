@@ -278,10 +278,9 @@ The successor may only reduce authority:
 - `purposes_successor ⊆ purposes_predecessor`;
 - `destinations_successor ⊆ destinations_predecessor`;
 - every numeric budget is `<=` its predecessor value;
-- an existing expiry may move earlier, never later;
-- a persistent principal may be converted to a bounded non-persistent lifetime
-  only when the resulting expiry is finite and earlier than any deployment
-  maximum established by policy;
+- lifetime class is fixed in v1;
+- for non-persistent principals, an existing expiry may move earlier, never later;
+- persistent principals remain persistent under `narrow`; changing a persistent principal into a session/ephemeral principal is deferred to a later separately specified policy constraint;
 - a non-persistent lifetime may not become persistent.
 
 The implementation must normalize the successor authority itself and derive the
