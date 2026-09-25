@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-decision-request-evidence-v0.schema.json",
+  "title": "AXIOM Circle Decision Request Evidence v0",
+  "description": "Inert evidence that an accepted Circle-local decision coherently supports asking the ordinary AXIOM authority path to evaluate one exact request. It never submits the request or creates a grant, approval, prepared effect, execution, network effect, or runtime authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "evidence_id",
+    "circle_id",
+    "proposal_id",
+    "decision_id",
+    "circle_package_digest",
+    "charter_digest",
+    "proposal_digest",
+    "decision_digest",
+    "current_snapshot_evidence_ref",
+    "current_snapshot_evidence_digest",
+    "request_descriptor",
+    "request_digest",
+    "proposal_request_binding_ref",
+    "requested_at",
+    "ordinary_authority_path_required",
+    "creates_grant",
+    "creates_approval",
+    "creates_prepared_effect",
+    "authority_effect",
+    "governance_effect",
+    "execution_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-circle-decision-request-evidence.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-request-evidence"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^circle-decision-request:[a-f0-9]{64}$"
+    },
+    "circle_id": {
+      "$ref": "#/$defs/id"
+    },
+    "proposal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "decision_id": {
+      "$ref": "#/$defs/id"
+    },
+    "circle_package_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "charter_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "proposal_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "decision_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "current_snapshot_evidence_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "current_snapshot_evidence_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "request_descriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource",
+        "action",
+        "purpose",
+        "destination",
+        "data_classes",
+        "effect_class",
+        "consequence_class"
+      ],
+      "properties": {
+        "resource": {
+          "$ref": "#/$defs/id"
+        },
+        "action": {
+          "$ref": "#/$defs/id"
+        },
+        "purpose": {
+          "$ref": "#/$defs/id"
+        },
+        "destination": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ]
+        },
+        "data_classes": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "effect_class": {
+          "enum": [
+            "none",
+            "read-external",
+            "write-external",
+            "publish-external",
+            "communication",
+            "financial",
+            "create-external-resource",
+            "delete-external-resource",
+            "physical"
+          ]
+        },
+        "consequence_class": {
+          "enum": [
+            "C0",
+            "C1",
+            "C2",
+            "C3"
+          ]
+        }
+      }
+    },
+    "request_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "proposal_request_binding_ref": {
+      "type": "string",
+      "pattern": "^circle-request:[a-f0-9]{64}$"
+    },
+    "requested_at": {
+      "$ref": "#/$defs/date"
+    },
+    "ordinary_authority_path_required": {
+      "const": true
+    },
+    "creates_grant": {
+      "const": false
+    },
+    "creates_approval": {
+      "const": false
+    },
+    "creates_prepared_effect": {
+      "const": false
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d{3}Z$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-decision-request-evidence.mjs",
+  "x-axiom-non-claims": [
+    "request-submission",
+    "grant-issuance",
+    "approval-issuance",
+    "prepared-effect",
+    "execution-authority",
+    "circle-governance-authority",
+    "network-activation",
+    "runtime-activation"
+  ]
+}
