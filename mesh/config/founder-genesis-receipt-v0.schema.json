@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founder-genesis-receipt-v0.schema.json",
+  "title": "AXIOM Founder Genesis Receipt v0 inert evidence",
+  "description": "Pure non-authorizing evidence for one bounded Founder Genesis slot transition. It does not commit state or create a live mind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "receipt_id",
+    "slot_number",
+    "founder_mind_id",
+    "new_mind_id",
+    "before_foundation_digest",
+    "candidate_package_digest",
+    "manual_founder_confirmation_evidence_digest",
+    "idempotency_key",
+    "committed_at",
+    "inherited_authority",
+    "execution_authority",
+    "authority_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founder-genesis-receipt.v0"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "slot_number": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "founder_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "new_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "before_foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "candidate_package_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "manual_founder_confirmation_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "committed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inherited_authority": {
+      "const": false
+    },
+    "execution_authority": {
+      "const": false
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founder-genesis-receipt.mjs",
+  "x-axiom-non-claims": [
+    "live-genesis-commit",
+    "human-presence-proof",
+    "digital-personhood-proof",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

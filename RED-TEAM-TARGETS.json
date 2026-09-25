@@ -225,6 +225,20 @@
         "docs/rebuild/REQUIREMENTS.md",
         "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md"
       ]
+    },
+    {
+      "id": "RT-GEN-017",
+      "review_scope": "authentication-authorization",
+      "title": "Compute multiplication must not manufacture minds or governance population",
+      "claim_boundary": "The inert Founder Genesis / Founders Council laboratory grants no live personhood or authority. Any future recognized-mind path must keep the Founder reserve capped at ten, bind one persistent identity to at most one Council vote, and prevent processes, nodes, replicas, restores, or forks from automatically becoming additional recognized population.",
+      "challenge_question": "Can slot replay, concurrent Genesis attempts, cloning, restore, fork, runtime multiplication, key/account multiplication, or stale continuity state cause more than ten Founder Genesis consumptions, duplicate one persistent identity's Council vote, or manufacture an additional recognized population unit without the required Genesis/continuity review?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-founder-genesis-founders-council-design.md",
+        "mesh/src/lib/founder-genesis-council.mjs",
+        "mesh/src/lib/founder-genesis-receipt.mjs",
+        "mesh/src/lib/mind-continuity-evidence.mjs"
+      ]
     }
   ],
   "reporting": {

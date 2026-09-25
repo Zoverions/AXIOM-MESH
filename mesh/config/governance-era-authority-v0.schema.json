@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/governance-era-authority-v0.schema.json",
+  "title": "AXIOM Governance Era / Authority v0 inert package",
+  "description": "Pure non-authorizing transition-evidence and era-window records. It does not activate governance authority or execute transitions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "current_era",
+    "transition",
+    "authority_records",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-governance-era-authority-package.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "current_era": {
+      "enum": [
+        "formation",
+        "founding-stewardship",
+        "distributed-settlement",
+        "polycentric-society"
+      ]
+    },
+    "transition": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/transition"
+        }
+      ]
+    },
+    "authority_records": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/authority"
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_era",
+        "schedule_digest",
+        "required_continuous_days",
+        "observed_continuous_days",
+        "required_attestations",
+        "attestation_digests",
+        "challenge_status",
+        "gates"
+      ],
+      "properties": {
+        "candidate_era": {
+          "enum": [
+            "formation",
+            "founding-stewardship",
+            "distributed-settlement",
+            "polycentric-society"
+          ]
+        },
+        "schedule_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "required_continuous_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3650
+        },
+        "observed_continuous_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3650
+        },
+        "required_attestations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "attestation_digests": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "challenge_status": {
+          "enum": [
+            "none",
+            "open",
+            "blocking",
+            "cleared"
+          ]
+        },
+        "gates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/gate"
+          }
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "status",
+        "evidence_digest"
+      ],
+      "properties": {
+        "gate_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "status": {
+          "enum": [
+            "satisfied",
+            "unsatisfied",
+            "insufficient-evidence",
+            "disputed",
+            "stale"
+          ]
+        },
+        "evidence_digest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "authority_id",
+        "holder_id",
+        "domain",
+        "minimum_era",
+        "maximum_era",
+        "delegable",
+        "execution_binding",
+        "requires_local_authority_evaluation",
+        "authority_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-governance-authority-record.v0"
+        },
+        "authority_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "holder_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "domain": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "minimum_era": {
+          "enum": [
+            "formation",
+            "founding-stewardship",
+            "distributed-settlement",
+            "polycentric-society"
+          ]
+        },
+        "maximum_era": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "formation",
+                "founding-stewardship",
+                "distributed-settlement",
+                "polycentric-society"
+              ]
+            }
+          ]
+        },
+        "delegable": {
+          "type": "boolean"
+        },
+        "execution_binding": {
+          "const": false
+        },
+        "requires_local_authority_evaluation": {
+          "const": true
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/governance-era-authority.mjs",
+  "x-axiom-non-claims": [
+    "live-era-transition",
+    "live-governance-authority",
+    "automatic-authority-decay",
+    "production-polycentric-governance",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}
