@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import {
+  benchmarkSource,
   runBenchmarks,
   checkBudgets,
   formatReport,
@@ -61,3 +62,42 @@ test('benchmark scaling uses CPU time without weakening absolute wall-clock caps
     'missing scaling evidence must fail closed'
   );
 });
+
+function withCpuDeltas(deltas, fn) {
+  const original = process.cpuUsage;
+  let index = 0;
+  process.cpuUsage = (start) => {
+    if (start === undefined) return { user: 0, system: 0 };
+    return { user: deltas[index++] ?? 0, system: 0 };
+  };
+  try {
+    return fn(() => index);
+  } finally {
+    process.cpuUsage = original;
+  }
+}
+
+test('CPU sampling median resists one first-batch outlier', () => {
+  withCpuDeltas([100_000, 10_000, 10_000, 10_000, 10_000], getSamples => {
+    const result = benchmarkSource('cpu-sampler-outlier', 'observe x = "v" from "src";\n');
+    assert.equal(result.parseCpuMs, 2);
+    assert.equal(getSamples(), 5);
+  });
+});
+
+test('CPU sampling fails closed when only one nonzero batch fits the bounded run budget', () => {
+  withCpuDeltas([0, 0, 0, 0, 10_000], getSamples => {
+    const result = benchmarkSource('cpu-sampler-insufficient', 'observe x = "v" from "src";\n');
+    assert.equal(result.parseCpuMs, 0);
+    assert.equal(getSamples(), 5);
+  });
+});
+
+test('CPU sampling recovers from an initial coarse zero to a stable multi-sample median', () => {
+  withCpuDeltas([0, 20_000, 10_000, 10_000, 10_000, 10_000], getSamples => {
+    const result = benchmarkSource('cpu-sampler-coarse', 'observe x = "v" from "src";\n');
+    assert.equal(result.parseCpuMs, 2);
+    assert.equal(getSamples(), 6);
+  });
+});
+
