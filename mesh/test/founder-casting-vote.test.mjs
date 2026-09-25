@@ -190,6 +190,27 @@ test('Founder casting vote cannot repair a missing fixed threshold or supermajor
   assert.equal(result.reason, 'decision-class-does-not-permit-casting-vote');
 });
 
+test('Founder casting vote cannot convert an ordinary fixed-threshold failure into approval', () => {
+  const foundation = fullFoundation();
+  const input = assessment(foundation);
+  input.decision_rule.mode = 'fixed-threshold';
+  input.decision_rule.yes_threshold = 14;
+  input.ballot_summary = {
+    biological_for: 5,
+    biological_against: 5,
+    biological_abstain: 0,
+    digital_for: 5,
+    digital_against: 5,
+    digital_abstain: 0
+  };
+
+  const result = assessFounderCastingVote(foundation, input);
+
+  assert.equal(result.pre_cast_outcome, 'rejected');
+  assert.equal(result.casting_vote_eligible, false);
+  assert.equal(result.reason, 'fixed-threshold-not-satisfied');
+});
+
 test('Founder casting vote cannot repair biological or digital yes minima', () => {
   const foundation = fullFoundation();
   const input = assessment(foundation);
