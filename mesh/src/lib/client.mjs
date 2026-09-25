@@ -135,7 +135,10 @@ export async function signedFetch(identity, audience, url, {
         timeoutMs: effectiveTimeoutMs
       })
     : await ordinaryRequest({
-        url,
+        // Send exactly the path that was signed. The signature covers the
+        // URL-normalized pathname and search, so the raw text (an empty
+        // trailing `?`, a fragment) must not reach the wire instead.
+        url: `${target.origin}${target.pathname}${target.search}`,
         method,
         body: encoded,
         headers: requestHeaders,
