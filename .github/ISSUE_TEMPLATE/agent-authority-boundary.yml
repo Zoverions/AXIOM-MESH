@@ -38,6 +38,7 @@ body:
         - External side effects become unauthorized agent communication
         - Delegate key possession forges ancestry or handoff evidence
         - Compute, clone, restore, or fork multiplication manufactures mind or governance population
+        - Sponsor, candidate, or model improperly grants developmental independence
         - Other authority-boundary mismatch
     validations:
       required: true
@@ -66,6 +67,7 @@ body:
         - RT-SWARM-015 - Externally observable state must not become unauthorized swarm communication
         - RT-DELEG-016 - Delegate possession must not prove delegation ancestry
         - RT-GEN-017 - Compute multiplication must not manufacture minds or governance population
+        - RT-IND-018 - Developmental review must not become sponsor or model authority
     validations:
       required: false
 
