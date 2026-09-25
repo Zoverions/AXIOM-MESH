@@ -61,6 +61,8 @@ export function assessAutonomyRequest(envelope,request,current){
 
   if(assessed<canonicalDate(envelope.active_from,'active_from'))reasons.push('envelope-not-active-yet');
   if(assessed>=canonicalDate(envelope.expires_at,'expires_at'))reasons.push('envelope-expired');
+  if(current.owner_principal_id!==envelope.owner_principal_id)reasons.push('owner-principal-mismatch');
+  if(current.subject_principal_id!==envelope.subject_principal_id)reasons.push('subject-principal-mismatch');
   if(current.authority_snapshot_ref!==envelope.authority_snapshot_ref)reasons.push('authority-snapshot-mismatch');
   if(current.authority_digest!==envelope.authority_digest)reasons.push('authority-digest-mismatch');
   if(current.authority_current!==true)reasons.push('authority-not-current');
@@ -143,10 +145,11 @@ function validateRequest(request){
 
 function validateCurrentAuthority(current){
   exactObject(current,'Current authority ceiling',[
-    'authority_snapshot_ref','authority_digest','authority_current','assessed_at',
+    'owner_principal_id','subject_principal_id','authority_snapshot_ref','authority_digest','authority_current','assessed_at',
     'actions','purposes','destinations','capability_ids','data_classes','effect_classes',
     'consequence_ceiling','max_execution_ms','max_cost'
   ]);
+  id(current.owner_principal_id,'current owner_principal_id');id(current.subject_principal_id,'current subject_principal_id');
   id(current.authority_snapshot_ref,'current authority_snapshot_ref');digest(current.authority_digest,'current authority_digest');
   if(typeof current.authority_current!=='boolean')throw new ValidationError('authority_current must be boolean');
   canonicalDate(current.assessed_at,'assessed_at');
