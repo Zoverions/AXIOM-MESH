@@ -21,7 +21,7 @@ function fixture(overrides = {}) {
   const fields = {
     attestor: 'attest:ordering',
     subject: 'tests:attestation-ordering',
-    mergeTarget: `pr:synthetic-ordering@sha256:${'a'.repeat(64)}`,
+    mergeTarget: `pr:1831@sha256:${'a'.repeat(64)}`,
     kind: 'tests-reproduced',
     claims: { tests_failed: 0 },
     nonClaims: [...REQUIRED],
