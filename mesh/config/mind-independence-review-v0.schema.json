@@ -12,6 +12,8 @@
     "mind_id",
     "sponsor_mind_id",
     "developmental_stage",
+    "developmental_state_evidence_digest",
+    "continuity_evidence_digest",
     "criteria_profile",
     "criteria",
     "review_policy",
@@ -100,6 +102,14 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "developmental_state_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   },
   "$defs": {
