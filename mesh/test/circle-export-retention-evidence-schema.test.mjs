@@ -14,16 +14,7 @@ test('Circle Export Retention Evidence v0 is closed, retention-only, and non-aut
   assert.equal(schema.properties.requires_disclosure_authorization.const,true);
   assert.equal(schema.properties.requires_external_snapshot_verification.const,true);
   assert.equal(schema.properties.requires_external_record_evidence_verification.const,true);
-  assert.equal(schema.properties.record_observations_digest.pattern,'^[a-f0-9]{64}
-  assert.equal(schema.properties.portable_authority.const,false);
-  assert.equal(schema.properties.authority_effect.const,'none');
-  assert.equal(schema.properties.governance_effect.const,'none');
-  assert.equal(schema.properties.export_effect.const,'none');
-  assert.equal(schema.properties.network_effect.const,'none');
-  assert.equal(schema.properties.runtime_activation.const,false);
-  assert.equal(schema['x-axiom-semantic-validator'],'mesh/src/lib/circle-export-retention-evidence.mjs');
-});
-);
+  assert.equal(schema.properties.record_observations_digest.pattern,'^[a-f0-9]{64}$');
   assert.equal(schema.properties.portable_authority.const,false);
   assert.equal(schema.properties.authority_effect.const,'none');
   assert.equal(schema.properties.governance_effect.const,'none');
