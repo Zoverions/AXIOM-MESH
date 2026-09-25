@@ -201,6 +201,103 @@ test('abort after dispatch is uncertain and does not retry the same key', async 
   assert.equal(calls, 1);
 });
 
+test('oversized injected idempotency state is rejected at construction', () => {
+  const state = new Map();
+  for (let index = 0; index < 5_001; index += 1) {
+    state.set(`synthetic-retained-${index}`, Object.freeze({ retained: true }));
+  }
+  assert.throws(
+    () => createFixedRecipientWebhookSender(CONFIG, {
+      state,
+      fetchImpl: async () => new Response('', { status: 202 })
+    }),
+    /idempotency state exceeds capacity/
+  );
+});
+
+test('reservation-side Map expansion fails closed before transport', async () => {
+  let calls = 0;
+  class ExpandingMap extends Map {
+    set(key, value) {
+      super.set(key, value);
+      if (String(key).startsWith('delivery:')) {
+        super.set('synthetic-side-effect', Object.freeze({ retained: true }));
+      }
+      return this;
+    }
+  }
+  const state = new ExpandingMap();
+  for (let index = 0; index < 4_999; index += 1) {
+    state.set(`synthetic-retained-${index}`, Object.freeze({ retained: true }));
+  }
+  const sender = createFixedRecipientWebhookSender(CONFIG, {
+    state,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('', { status: 202 });
+    }
+  });
+  await assert.rejects(sender.send(command()), /idempotency state capacity exhausted/);
+  assert.equal(calls, 0);
+  assert.equal(Map.prototype.has.call(state, command().idempotency_key), false);
+  assert.equal(Object.getOwnPropertyDescriptor(Map.prototype, 'size').get.call(state), 5_000);
+});
+
+test('idempotency capacity fails closed without evicting prior effect keys', async () => {
+  const state = new Map();
+  for (let index = 0; index < 4_999; index += 1) {
+    state.set(`synthetic-retained-${index}`, Object.freeze({ retained: true }));
+  }
+  let calls = 0;
+  const sender = createFixedRecipientWebhookSender(CONFIG, {
+    state,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('', { status: 202 });
+    }
+  });
+
+  const first = await sender.send(command());
+  assert.equal(state.size, 5_000);
+  await assert.rejects(
+    sender.send(command({ idempotency_key: 'delivery:fixed-room:overflow-0001' })),
+    /idempotency state capacity exhausted/
+  );
+  assert.equal(state.size, 5_000);
+  assert.deepEqual(await sender.send(command()), first);
+  assert.equal(calls, 1);
+});
+
+test('pre-dispatch cancellation releases a bounded idempotency slot', async () => {
+  const state = new Map();
+  for (let index = 0; index < 4_999; index += 1) {
+    state.set(`synthetic-retained-${index}`, Object.freeze({ retained: true }));
+  }
+  let calls = 0;
+  const sender = createFixedRecipientWebhookSender(CONFIG, {
+    state,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('', { status: 202 });
+    }
+  });
+  const controller = new AbortController();
+  const pending = sender.send(command({ idempotency_key: 'delivery:fixed-room:cancelled-0001' }), {
+    signal: controller.signal
+  });
+  controller.abort();
+
+  const cancelled = await pending;
+  assert.equal(cancelled.state, 'cancelled_before_dispatch');
+  await Promise.resolve();
+  assert.equal(state.size, 4_999);
+
+  const accepted = await sender.send(command({ idempotency_key: 'delivery:fixed-room:after-cancel-0001' }));
+  assert.equal(accepted.state, 'accepted_by_endpoint');
+  assert.equal(state.size, 5_000);
+  assert.equal(calls, 1);
+});
+
 test('a dispatched request reaches only a loopback test receiver', async t => {
   const received = [];
   const server = createServer(async (request, response) => {
