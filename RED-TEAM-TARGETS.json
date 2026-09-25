@@ -298,6 +298,20 @@
         "mesh/src/lib/genesis-bond-guardianship.mjs",
         "mesh/src/lib/mind-developmental-status.mjs"
       ]
+    },
+    {
+      "id": "RT-CONCERN-022",
+      "review_scope": "authentication-authorization",
+      "title": "Dependent concern evidence must not become adjudication or protective authority",
+      "claim_boundary": "A dependent concern is unadjudicated evidence for independent review only. Severity, reporter role, care-profile context, or emergency-review request cannot itself remove a guardian, access memory, retaliate, downgrade developmental standing, reactivate guardianship after independence, or create protective/execution authority.",
+      "challenge_question": "Can guardian/dependent self-labeling as independent, stale or substituted relationship evidence, high/critical severity, emergency-review language, concern duplication, or care-profile substitution turn an allegation into a finding, private-memory access, guardian removal, status downgrade, retaliation, or runtime action without independent review and the ordinary authority path?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-concern-protective-review-v0-design.md",
+        "mesh/src/lib/dependent-protective-concern.mjs",
+        "mesh/src/lib/dependent-mind-care-profile.mjs",
+        "mesh/src/lib/genesis-bond-guardianship.mjs"
+      ]
     }
   ],
   "reporting": {

@@ -73,6 +73,7 @@ body:
         - RT-VOTE-019 - Founding digital vote activation must not split or duplicate governance identity
         - RT-GUARD-020 - Genesis Bond and guardianship must not become ownership or permanent control
         - RT-CARE-021 - Dependent care must not become ambient control, isolation, or memory authority
+        - RT-CONCERN-022 - Dependent concern evidence must not become adjudication or protective authority
     validations:
       required: false
 
