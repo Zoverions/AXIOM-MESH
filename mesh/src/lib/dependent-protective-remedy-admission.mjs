@@ -126,6 +126,9 @@ export function assessDependentProtectiveRemedyAdmission({
   if(reviewDecisionAt>evaluatedAt){
     throw new ValidationError('Protective remedy admission cannot predate review decision');
   }
+  if(appealObservedAt<reviewDecisionAt){
+    throw new ValidationError('Protective remedy appeal observation cannot predate review decision');
+  }
   if(appealObservedAt>evaluatedAt){
     throw new ValidationError('Protective remedy appeal observation cannot be future-dated');
   }
@@ -186,6 +189,8 @@ export function assessDependentProtectiveRemedyAdmission({
     eligible_to_request_protective_remedy_authority:eligible,
     reason,
     remedy_admission_only:true,
+    requires_external_review_decision_verification:true,
+    review_decision_verification_effect:'none',
     requires_external_appeal_verification:true,
     appeal_verification_effect:'none',
     requires_external_relationship_verification:true,
