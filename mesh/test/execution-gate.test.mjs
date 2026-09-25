@@ -5,6 +5,14 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createGatewayClient } from '../../packages/axiom-client/index.mjs';
 import { ExecutionGate } from '../src/lib/execution-gate.mjs';
+import {
+  ADMISSION_COUNTERS,
+  ADMISSION_GAUGES,
+  ServiceTelemetry,
+  operationsReport,
+  readinessState,
+  renderOpenMetrics
+} from '../src/lib/observability.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
 import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 
@@ -53,10 +61,10 @@ test('waiting tasks start first come, first served as slots free', async () => {
     queued: 0,
     max_concurrent: 2,
     max_queued: 8,
-    started: 5,
+    started_total: 5,
     queued_total: 3,
-    rejected_full: 0,
-    rejected_timeout: 0,
+    rejected_full_total: 0,
+    rejected_timeout_total: 0,
     high_water: 2
   });
 });
@@ -72,7 +80,7 @@ test('a full queue refuses at once, and the refused task never runs', async () =
   hold.resolve('first');
   assert.equal(await first, 'first');
   assert.equal(await second, 'second');
-  assert.equal(gate.snapshot().rejected_full, 1);
+  assert.equal(gate.snapshot().rejected_full_total, 1);
 
   // With no queue at all, a busy gate refuses every extra task.
   const strict = new ExecutionGate({ maxConcurrent: 1, maxQueued: 0 });
@@ -95,8 +103,8 @@ test('a task that waits too long is refused, never runs, and leaves the queue', 
   await first;
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(ran, false);
-  assert.equal(gate.snapshot().rejected_timeout, 1);
-  assert.equal(gate.snapshot().started, 1);
+  assert.equal(gate.snapshot().rejected_timeout_total, 1);
+  assert.equal(gate.snapshot().started_total, 1);
 });
 
 test('a failing task frees its slot and its error reaches the caller', async () => {
@@ -113,7 +121,7 @@ test('a failing task frees its slot and its error reaches the caller', async () 
   assert.equal(gate.snapshot().active, 0);
   // A task that left the queue for a slot is never also counted as timed out.
   await new Promise(resolve => setTimeout(resolve, 60));
-  assert.equal(gate.snapshot().rejected_timeout, 0);
+  assert.equal(gate.snapshot().rejected_timeout_total, 0);
 });
 
 test('the gate refuses invalid bounds and carries its code and details', async () => {
@@ -141,6 +149,57 @@ test('the gate refuses invalid bounds and carries its code and details', async (
   });
   hold.resolve();
   await running;
+});
+
+test('the operations report carries admission evidence and alerts on refused work', async () => {
+  const gate = new ExecutionGate({ maxConcurrent: 1, maxQueued: 0 });
+  const telemetry = new ServiceTelemetry('hypervisor');
+  telemetry.setAdmissionSource(() => gate.snapshot());
+  const hold = deferred();
+  const running = gate.run(() => hold.promise);
+  await assert.rejects(gate.run(async () => {}), overloaded('queue_full'));
+
+  const busy = telemetry.snapshot(readinessState('hypervisor', [{ name: 'identity', ok: true }]));
+  assert.deepEqual(busy.admission, {
+    active: 1,
+    queued: 0,
+    max_concurrent: 1,
+    max_queued: 0,
+    high_water: 1,
+    started_total: 1,
+    queued_total: 0,
+    rejected_full_total: 1,
+    rejected_timeout_total: 0
+  });
+  const quiet = new ServiceTelemetry('grid').snapshot(readinessState('grid', [{ name: 'identity', ok: true }]));
+  assert.equal(quiet.admission, undefined, 'a service without a queue reports none');
+  const report = operationsReport([busy, quiet]);
+  const named = name => report.services.find(service => service.service === name);
+  assert.deepEqual(named('hypervisor').admission, busy.admission, 'the group survives normalization');
+  assert.equal(named('grid').admission, undefined);
+  const alert = report.alerts.find(item => item.id === 'admission-refused:hypervisor');
+  assert.equal(alert?.severity, 'warning');
+  assert.equal(report.alerts.some(item => item.id === 'admission-refused:grid'), false);
+
+  const metrics = renderOpenMetrics(report);
+  assert.match(metrics, /^# TYPE axiom_admission_state gauge$/m);
+  assert.match(metrics, /^axiom_admission_state\{service="hypervisor",kind="active"\} 1$/m);
+  assert.match(metrics, /^axiom_admission_events_total\{service="hypervisor",kind="rejected_full_total"\} 1$/m);
+  assert.doesNotMatch(metrics, /^axiom_admission_\w+\{service="grid"/m);
+  for (const kind of [...ADMISSION_GAUGES, ...ADMISSION_COUNTERS]) {
+    assert.match(metrics, new RegExp(`^axiom_admission_\\w+\\{service="hypervisor",kind="${kind}"\\} \\d+$`, 'm'));
+  }
+
+  // No refusal, no alert; invalid evidence does not validate.
+  hold.resolve();
+  await running;
+  const calm = new ServiceTelemetry('hypervisor');
+  calm.setAdmissionSource(() => new ExecutionGate().snapshot());
+  const calmReport = operationsReport([calm.snapshot(readinessState('hypervisor', []))]);
+  assert.equal(calmReport.alerts.some(item => item.id.startsWith('admission-refused')), false);
+  const forged = { ...busy, admission: { ...busy.admission, queued: -1 } };
+  assert.throws(() => operationsReport([forged]), /telemetry/i);
+  assert.throws(() => telemetry.setAdmissionSource(null), /Admission metrics source/);
 });
 
 test('a saturated Hypervisor refuses intents with a retryable 503 before recording anything', async t => {
@@ -209,7 +268,17 @@ test('a saturated Hypervisor refuses intents with a retryable 503 before recordi
   assert.equal(intent.status, 'completed');
   assert.equal(intent.message, 'bounded');
   assert.equal(intent.idempotent_replay, undefined, 'the refused attempt left no intent behind');
-  assert.equal(hypervisor.intentGate.snapshot().rejected_full, 1);
+  assert.equal(hypervisor.intentGate.snapshot().rejected_full_total, 1);
+  // The refusal reaches the Gateway's operations report and metrics.
+  const operations = await client.call('operations.get');
+  const reported = operations.services.find(service => service.service === 'hypervisor');
+  assert.equal(reported.admission.rejected_full_total, 1);
+  assert.equal(reported.admission.max_concurrent, 1);
+  assert.ok(operations.alerts.some(alert => alert.id === 'admission-refused:hypervisor'));
+  const metrics = await fetch(`http://127.0.0.1:${basePort}/v1/metrics`, {
+    headers: { authorization: `Bearer ${token}` }
+  }).then(response => response.text());
+  assert.match(metrics, /^axiom_admission_events_total\{service="hypervisor",kind="rejected_full_total"\} 1$/m);
   const after = await client.call('events.list', { query: { limit: 500 } });
   assert.equal(after.events.some(event => JSON.stringify(event).includes('intent-gate-test')), true, 'the check above can see an intent');
 });

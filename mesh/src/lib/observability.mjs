@@ -53,6 +53,22 @@ export function transportMetricsSnapshot() {
   }
   return totals;
 }
+// Admission evidence for a service that bounds its own work (scalability
+// audit S-15): the Hypervisor's intent queue. Per service, not per process.
+export const ADMISSION_GAUGES = Object.freeze([
+  'active',
+  'queued',
+  'max_concurrent',
+  'max_queued',
+  'high_water'
+]);
+export const ADMISSION_COUNTERS = Object.freeze([
+  'started_total',
+  'queued_total',
+  'rejected_full_total',
+  'rejected_timeout_total'
+]);
+const ADMISSION_METRICS = Object.freeze([...ADMISSION_GAUGES, ...ADMISSION_COUNTERS]);
 const AUTHORIZATION_ERRORS = new Set([
   'caller_not_allowed',
   'forbidden',
@@ -88,6 +104,13 @@ export class ServiceTelemetry {
     this.upstreamUnavailable = 0;
     this.internalErrors = 0;
     this.integrityIncidents = new Set();
+    this.admissionSource = null;
+  }
+
+  /** Reports a bounded queue's ADMISSION_METRICS with every snapshot. */
+  setAdmissionSource(read) {
+    if (typeof read !== 'function') throw new ValidationError('Admission metrics source is invalid');
+    this.admissionSource = read;
   }
 
   beginRequest() {
@@ -170,7 +193,15 @@ export class ServiceTelemetry {
         cpu_user_microseconds: safeMetric(cpu.user),
         cpu_system_microseconds: safeMetric(cpu.system)
       },
-      transport: transportMetricsSnapshot()
+      transport: transportMetricsSnapshot(),
+      ...(this.admissionSource
+        ? {
+            admission: Object.fromEntries(ADMISSION_METRICS.map(key => [
+              key,
+              safeMetric(this.admissionSource()?.[key])
+            ]))
+          }
+        : {})
     };
   }
 }
@@ -249,7 +280,11 @@ export function renderOpenMetrics(report) {
     '# HELP axiom_transport_state Internal transport state: replay guard occupancy, capacity and high water.',
     '# TYPE axiom_transport_state gauge',
     '# HELP axiom_transport_events_total Internal transport events: replay saturation and expiry, connection reuse, trusted-key reads.',
-    '# TYPE axiom_transport_events_total counter'
+    '# TYPE axiom_transport_events_total counter',
+    '# HELP axiom_admission_state Bounded work admission: running, waiting, bounds and high water.',
+    '# TYPE axiom_admission_state gauge',
+    '# HELP axiom_admission_events_total Bounded work admission: started, queued and refused work.',
+    '# TYPE axiom_admission_events_total counter'
   ];
   for (const service of services) {
     const label = `service="${service.service}"`;
@@ -304,6 +339,16 @@ export function renderOpenMetrics(report) {
       for (const kind of TRANSPORT_COUNTERS) {
         lines.push(
           `axiom_transport_events_total{${label},kind="${kind}"} ${safeMetric(service.transport[kind])}`
+        );
+      }
+    }
+    if (service.admission) {
+      for (const kind of ADMISSION_GAUGES) {
+        lines.push(`axiom_admission_state{${label},kind="${kind}"} ${safeMetric(service.admission[kind])}`);
+      }
+      for (const kind of ADMISSION_COUNTERS) {
+        lines.push(
+          `axiom_admission_events_total{${label},kind="${kind}"} ${safeMetric(service.admission[kind])}`
         );
       }
     }
@@ -459,7 +504,11 @@ function validateServiceSnapshot(value) {
     // (an older build during an upgrade) still validates.
     ...(value.transport === undefined
       ? {}
-      : { transport: normalizeCounterGroup(value.transport, TRANSPORT_METRICS, value.service) })
+      : { transport: normalizeCounterGroup(value.transport, TRANSPORT_METRICS, value.service) }),
+    // Optional: only a service that bounds its own work reports admission.
+    ...(value.admission === undefined
+      ? {}
+      : { admission: normalizeCounterGroup(value.admission, ADMISSION_METRICS, value.service) })
   };
 }
 
@@ -506,6 +555,16 @@ function evaluateAlerts(services) {
         severity: 'warning',
         service: service.service,
         condition: 'replay protection reached 80% of its capacity'
+      });
+    }
+    const refused = (service.admission?.rejected_full_total ?? 0)
+      + (service.admission?.rejected_timeout_total ?? 0);
+    if (refused > 0) {
+      alerts.push({
+        id: `admission-refused:${service.service}`,
+        severity: 'warning',
+        service: service.service,
+        condition: 'work was refused because the admission queue was full or its wait bound passed'
       });
     }
     if (service.security.authentication_failures_total >= 5) {

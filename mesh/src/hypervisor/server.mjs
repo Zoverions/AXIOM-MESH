@@ -110,6 +110,7 @@ export async function createHypervisorService(config = meshConfig()) {
     details: { service: 'hypervisor' },
     ...config.intentGate
   });
+  telemetry.setAdmissionSource(() => intentGate.snapshot());
   // Scalability audit S-15: rebuilt only when Grid's overlay generation
   // changes; Grid is still asked on every intent (lib/policy.mjs).
   const cachedActivePolicy = createActivePolicy({

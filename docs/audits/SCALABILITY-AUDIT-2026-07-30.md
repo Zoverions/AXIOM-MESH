@@ -1019,6 +1019,17 @@ and intent admission is bounded; the rest is open.**
     succeeds once there is room. Every intent that starts runs to its own
     terminal state as before.
   - Code: `mesh/src/lib/execution-gate.mjs`.
+- **Queue depth is reported.** The Hypervisor's service snapshot carries an
+  optional `admission` group:
+  - gauges: running, waiting, both bounds, and the concurrency high water;
+  - counters: started, queued, refused because full, and refused after the
+    wait bound.
+
+  It survives normalization, so it reaches the Gateway's operations report.
+  `/v1/metrics` renders it as `axiom_admission_state` and
+  `axiom_admission_events_total`. Any refusal raises an
+  `admission-refused` warning. A service without a queue reports no group,
+  and the format stays `axiom-operations.v1`.
 - **Evidence for admission.** `mesh/test/execution-gate.test.mjs`:
   - first-come, first-served order;
   - immediate refusal when the queue is full;
@@ -1028,20 +1039,23 @@ and intent admission is bounded; the rest is open.**
   - invalid bounds are refused;
   - through the four services, a saturated Hypervisor refuses an intent
     with the retryable code before recording anything, and the retry with
-    the same key completes.
+    the same key completes. The refusal then appears in the Gateway's
+    operations report, alerts and metrics.
 
   Mutation checks: the tests fail when the route bypasses the gate, when
   either bound is off by one, when a timed-out task keeps its place, when
   the order is last-in first-out, when a finished task keeps its slot, when
   a started task can still time out, and when the reason or details are
-  dropped.
+  dropped. For reporting, they fail when the Hypervisor registers no
+  source, when the snapshot or normalization drops the group, when the
+  metrics are not rendered, and when the alert is removed or ignores a full
+  queue.
 
 Still open:
 
 - accepted/pending/completed API semantics for actions that need not
   complete in one HTTP request (admission is bounded, but every admitted
   intent still completes within its request);
-- queue depth in the operations report;
 - group commit of accepted and terminal events;
 - separate latency targets;
 - crash tests for terminal states.

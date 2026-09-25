@@ -34,14 +34,14 @@ export class ExecutionGate {
     Object.assign(this, { maxConcurrent, maxQueued, queueTimeoutMs, retryAfterSeconds, code, message, details });
     this.active = 0;
     this.waiting = [];
-    this.counters = { started: 0, queued_total: 0, rejected_full: 0, rejected_timeout: 0, high_water: 0 };
+    this.counters = { started_total: 0, queued_total: 0, rejected_full_total: 0, rejected_timeout_total: 0, high_water: 0 };
   }
 
   /** Runs `task` when a slot is free; resolves or rejects with its result. */
   async run(task) {
     if (this.active >= this.maxConcurrent) await this.wait();
     this.active += 1;
-    this.counters.started += 1;
+    this.counters.started_total += 1;
     this.counters.high_water = Math.max(this.counters.high_water, this.active);
     try {
       return await task();
@@ -53,7 +53,7 @@ export class ExecutionGate {
 
   wait() {
     if (this.waiting.length >= this.maxQueued) {
-      this.counters.rejected_full += 1;
+      this.counters.rejected_full_total += 1;
       return Promise.reject(this.overloaded('queue_full'));
     }
     this.counters.queued_total += 1;
@@ -62,7 +62,7 @@ export class ExecutionGate {
       entry.timer = setTimeout(() => {
         const index = this.waiting.indexOf(entry);
         if (index !== -1) this.waiting.splice(index, 1);
-        this.counters.rejected_timeout += 1;
+        this.counters.rejected_timeout_total += 1;
         reject(this.overloaded('queue_timeout'));
       }, this.queueTimeoutMs);
       this.waiting.push(entry);
