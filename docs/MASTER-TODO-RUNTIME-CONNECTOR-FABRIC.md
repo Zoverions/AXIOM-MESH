@@ -95,14 +95,16 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 
 ## P5 — durable task, event, artifact, and handoff model
 
-- [ ] Define durable task identifiers and causal parent/child/handoff relationships.
-- [ ] Implement `queued`, `running`, `awaiting-approval`, `blocked`, `completed`, `failed`, `cancelled`, `expired`, and `uncertain` states.
-- [ ] Bind lifecycle transitions to principal, exact catalog entry, runtime/connector identity, exact adapter contract, policy/grant state where applicable, and evidence.
-- [ ] Define typed digest-bound artifacts with source, schema/MIME, size, data class, retention class, and custody metadata.
+- [x] Define durable task identifiers and causal parent/child/handoff relationships.
+- [x] Implement `queued`, `running`, `awaiting-approval`, `blocked`, `completed`, `failed`, `cancelled`, `expired`, and `uncertain` transition semantics over the frozen v1 snapshots.
+- [x] Bind lifecycle transitions to principal, exact catalog entry, runtime/connector identity, exact adapter contract, policy/grant state where applicable, and append-only evidence.
+- [x] Enforce typed digest-bound artifacts as append-only task outputs while preserving the frozen v1 source/schema/MIME/size/data/retention metadata.
 - [ ] Add bounded polling and event observation without transcript replay.
-- [ ] Add cancellation/expiry semantics that do not falsely claim rollback after an effect occurred.
-- [ ] Preserve uncertain outcomes until reconciliation.
-- [ ] Add runaway-loop, child-task, tool-call, time, storage, bandwidth, and currency-explicit cost budget tests.
+- [ ] Add cancellation/expiry effect-boundary semantics that can distinguish a requested cancellation from an already-committed external effect.
+- [x] Preserve uncertain outcomes until explicit reconciliation to completed or failed.
+- [ ] Add the remaining runaway-loop, storage, bandwidth, and full resource-accounting tests; the continuity slice already enforces attenuation-only timeout/step/tool/child/currency ceilings across snapshots and handoffs.
+
+**P5 continuity checkpoint (2026-09-24):** `mesh/src/lib/runtime-task-continuity.mjs` now composes the byte-pinned `axiom-task-artifact-handoff.v1` validator rather than changing its frozen schema. The pure verifier enforces immutable task/request/target/input bindings, monotonic grant/delegation references plus attenuation-only budgets, legal lifecycle transitions, append-only outputs/events, non-backdated cancellation/events, unresolved-uncertainty preservation, handoff scope attenuation, no source-grant reuse, delegation-reference presence for independently authorized receiving principals (attenuation proof remains P6), and closed acyclic causal graphs with one root per causal workflow. It performs no persistence, polling, runtime invocation, delegation issuance, grant issuance, external effect, or capability promotion.
 
 ## P6 — worker spawning and attenuation-only delegation
 
