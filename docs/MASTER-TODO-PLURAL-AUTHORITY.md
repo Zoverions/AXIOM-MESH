@@ -8,9 +8,9 @@
 
 ## Priority 0 — Protect current truth
 
-- [ ] Close capability-to-evidence binding before adding new implemented governance claims.
-- [ ] Require capability IDs to bind to named assertions rather than only shared file paths.
-- [ ] Reject missing, non-existent, non-executable, stale, or capability-irrelevant evidence.
+- [x] Close capability-to-evidence binding before adding new implemented governance claims. Current `validateCapabilityEvidenceBindings` requires implemented capabilities to have executable bindings before validation passes.
+- [x] Require capability IDs to bind to named assertions rather than only shared file paths. Bindings name the capability, runnable test declaration, and exact assertion lines.
+- [x] Reject missing, non-existent, non-executable, stale, or capability-irrelevant evidence. The current checker rejects missing paths, non-files/symlinks, non-runnable binding paths, absent named tests, absent exact assertion anchors, duplicate bindings, and registry/binding digest disagreement.
 - [ ] Keep registry digest synchronized across every digest-bearing canonical document.
 - [ ] Complete the authentic current-build pilot and independent security review.
 - [ ] Update the current threat model for every new human, Circle, delegation, or assurance entry point.
@@ -105,6 +105,8 @@
 - [ ] Define Circle assurance floors and member-level stronger protections.
 - [ ] Treat Circle votes, assignments, charter decisions, and shared state as governance evidence for local authority evaluation; no collective result directly mints Sandbox authority.
 - [ ] Build human explanations and comprehension tests before real pilots.
+
+**Founders Council / recognized-mind Genesis checkpoint (2026-09-25):** Issue #1855 and draft PR #1856 establish a bounded constitutional laboratory for the initial 20-seat Founders Council (10 biological / 10 digital), the Founder's ten manual single-use non-delegable/non-transferable/non-renewable Founder Genesis authorizations, and a Founder casting-vote evaluator that is available only after all 20 original voting positions are active and only for a qualifying ordinary tie. The laboratory also adds monotonic governance-era / authority-window evidence semantics and an explicit Genesis/population-integrity threat-model boundary. All current records remain inert (`authority_effect: none`, `runtime_activation: false`); no Gateway route, Grid mutation, live Genesis, Council execution authority, portable personhood, or capability-registry promotion is claimed. General Circle decisions remain evidence for local authority evaluation and do not directly mint Sandbox authority.
 
 ## Priority 8 — Circle workflows and pilot
 
