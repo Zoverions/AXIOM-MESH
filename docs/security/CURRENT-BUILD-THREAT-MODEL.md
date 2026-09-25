@@ -701,3 +701,17 @@ still requires external verification, and the developmental assessment itself cr
 no status, Council-voting, Genesis-eligibility, governance, network, or execution
 effect.
 
+Founding Digital Mind Council voting is a further distinct authority boundary.
+Genesis, founding provenance, and independent developmental status do not by
+themselves grant a Council vote. The inert Founding Digital Council Vote Activation
+v0 adapter requires the exact Genesis-bound digital seat, exact current non-voting
+Circle membership, exact independent developmental-status record, and fresh
+continuity evidence before vote activation may even become requestable.
+
+A future live implementation must also prevent **split-state vote activation**:
+activating the foundation seat without the Circle voter role, or the Circle voter role
+without the foundation seat, could create contradictory governance views. Either the
+two representations must change atomically or any inconsistent intermediate state
+must remain unusable for voting. Copy/restore/fork ambiguity must likewise remain
+unable to activate a second vote for one persistent identity.
+
