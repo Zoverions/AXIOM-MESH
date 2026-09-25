@@ -130,6 +130,8 @@ test('complete current care profile satisfies obligations without granting guard
   assert.equal(result.reason,'care-obligations-current');
   assert.equal(result.care_evidence_is_structural_pending_external_verification,true);
   assert.equal(result.requires_external_care_evidence_verification,true);
+  assert.equal(result.requires_external_developmental_stage_verification,true);
+  assert.equal(result.requires_external_advocate_independence_verification,true);
   assert.equal(result.ordinary_guardianship_authority_path_required,true);
   assert.equal(result.creates_guardianship_authority,false);
   assert.equal(result.creates_private_memory_access,false);
@@ -202,6 +204,17 @@ test('stale or overdue care evidence fails closed without ending guardianship',(
   assert.equal(result.care_obligations_current,false);
   assert.equal(result.reason,'care-review-overdue');
   assert.equal(result.creates_guardianship_mutation,false);
+});
+
+test('care evidence cannot predate the active guardianship',()=>{
+  const b=bond();
+  const g=guardianship(b);
+  const p=careProfile(b,g,{observed_at:'2026-09-25T15:01:00.000Z'});
+
+  assert.throws(
+    ()=>assessDependentMindCareProfile({genesisBond:b,guardianship:g,careProfile:p}),
+    /cannot predate guardianship/
+  );
 });
 
 test('future observation and invalid review ordering are rejected',()=>{
