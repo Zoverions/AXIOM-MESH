@@ -77,7 +77,7 @@ These labels are planning labels only. They are not valid substitutes for regist
 
 | Capability | Planning state | Existing foundation | Remaining work |
 |---|---|---|---|
-| Invitation and membership | planned | Identity, consent, node records | Circle identities, device membership, expiry, revocation |
+| Invitation and membership | specified-next; Circle Core v0 + inert membership assurance | Identity, consent, node records, Circle Core invitation/membership | Runtime persistence/admission, device registration/currentness source integration, consent source integration, expiry/revocation application and human workflow |
 | Versioned Circle charters | specified-next | Local governance records and policy overlays | Charter schema, amendment, activation, rollback, comprehension |
 | Scoped roles and delegation | specified-next | Capability grants and governance records | Portable delegation chain, term, succession, separation of duties |
 | Shared proposals and commitments | planned | Local proposals and causal exchange | Multi-node proposal lifecycle and conflict semantics |
