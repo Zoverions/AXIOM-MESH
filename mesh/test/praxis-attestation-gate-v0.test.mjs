@@ -37,8 +37,8 @@ import {
 // ---------------------------------------------------------------------------
 
 const NOW = 1_700_000_000_000;
-const MERGE_TARGET = 'pr:attestation-gate@sha256:' + 'a'.repeat(64);
-const OTHER_MERGE_TARGET = 'pr:other@sha256:' + 'b'.repeat(64);
+const MERGE_TARGET = 'pr:1815@sha256:' + 'a'.repeat(64);
+const OTHER_MERGE_TARGET = 'pr:9999@sha256:' + 'b'.repeat(64);
 
 function keypair() {
   return generateKeyPairSync('ed25519');
@@ -536,6 +536,57 @@ test('malformed attestations are rejected', () => {
   assert.throws(
     () => verifyAttestation(wrongKind, { trustedKeys, trustedAttestorsByKind, nullifiers: createNullifierRegistry(), now: NOW }),
     error => error instanceof PraxisRuntimeError && error.code === 'PRAXIS_ATTESTATION_MALFORMED'
+  );
+});
+
+test('merge target grammar binds one numeric PR to one lowercase SHA-256 digest', () => {
+  const valid = 'pr:1@sha256:' + '0'.repeat(64);
+  assert.doesNotThrow(() => testsAttestation({ mergeTarget: valid }));
+  assert.match(attestationSetDigest(['sha256:' + '1'.repeat(64)], { mergeTarget: valid }), /^sha256:[a-f0-9]{64}$/);
+
+  for (const mergeTarget of [
+    'main',
+    'refs/heads/main',
+    'pr:main@sha256:' + '0'.repeat(64),
+    'pr:0@sha256:' + '0'.repeat(64),
+    'pr:01@sha256:' + '0'.repeat(64),
+    'pr:1@sha1:' + '0'.repeat(40),
+    'pr:1@sha256:' + '0'.repeat(63),
+    'pr:1@sha256:' + '0'.repeat(65),
+    'pr:1@sha256:' + 'A'.repeat(64),
+    'pr:1@sha256:' + 'g'.repeat(64),
+    ' pr:1@sha256:' + '0'.repeat(64),
+    'pr:1@sha256:' + '0'.repeat(64) + ' '
+  ]) {
+    assert.throws(
+      () => testsAttestation({ mergeTarget }),
+      error => error instanceof PraxisRuntimeError &&
+        error.code === 'PRAXIS_ATTESTATION_MALFORMED' &&
+        /merge_target/.test(error.message),
+      mergeTarget
+    );
+    assert.throws(
+      () => attestationSetDigest(['sha256:' + '1'.repeat(64)], { mergeTarget }),
+      /numeric PR.*lowercase SHA-256/,
+      mergeTarget
+    );
+  }
+});
+
+test('execution binding rejects an invalid permitted merge target before comparison', () => {
+  const verified = verifyAttestation(testsAttestation(), {
+    trustedKeys,
+    trustedAttestorsByKind,
+    now: NOW,
+    requiredNonClaims: ZERO_CLAIMS
+  });
+  assert.throws(
+    () => assertAttestationExecutionBinding([verified], {
+      mergeTarget: 'main',
+      setDigest: attestationSetDigest([verified.digest], { mergeTarget: MERGE_TARGET })
+    }),
+    error => error instanceof PraxisRuntimeError &&
+      error.code === 'PRAXIS_ATTESTATION_TARGET_MISMATCH'
   );
 });
 
