@@ -47,7 +47,7 @@ The transition-evidence package binds:
 - continuity observation time;
 - current continuity status;
 - exact appeal path;
-- current appeal status and evidence where applicable;
+- current appeal status, exact appeal-state evidence, and observation time;
 - one evaluation timestamp;
 - explicit maximum age for the review;
 - explicit maximum age for state observations.
@@ -65,8 +65,9 @@ The evaluator fails closed when:
 - developmental or continuity observation is stale;
 - an observation occurs after the evaluation timestamp;
 - continuity is disputed, stale, or unknown;
+- appeal-state observation is stale;
 - appeal is open, stayed, reversed, or unknown;
-- non-`none` appeal state lacks exact evidence.
+- appeal state lacks exact evidence, including evidence that no appeal is currently open.
 
 Permitted appeal states for transition-request evidence are:
 
