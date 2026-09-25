@@ -361,7 +361,6 @@ test('request descriptor requires finite canonical data classes and effect vocab
   const unsorted=fixture();
   unsorted.evidence.request_descriptor.data_classes=['z-private','a-private'];
   unsorted.evidence.request_digest=digestObject(unsorted.evidence.request_descriptor);
-  unsorted.evidence.proposal_request_binding_ref=circleRequestBindingRef(unsorted.evidence.request_descriptor);
   unsorted.evidence.evidence_id=deriveCircleDecisionRequestEvidenceId(unsorted.evidence);
   assert.throws(()=>validateCircleDecisionRequestEvidence(unsorted.evidence),/data_classes must be sorted/);
 
