@@ -19,6 +19,7 @@
     "required_runtime_ids",
     "required_model_refs",
     "required_tool_refs",
+    "minimum_evidence_level",
     "minimum_security_level",
     "require_attestation",
     "max_latency_ms",
@@ -158,6 +159,13 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "minimum_evidence_level": {
+      "enum": [
+        "declared",
+        "measured",
+        "verified"
+      ]
     }
   },
   "$defs": {
