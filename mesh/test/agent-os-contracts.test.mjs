@@ -150,7 +150,7 @@ test('uncertain external effect cannot be relabeled verified', () => {
   value.lifecycle_state = 'completed-verified';
   value.effect_state = 'uncertain';
   value.result_refs = ['artifact:claimed'];
-  assert.throws(() => validateTaskLifecycle(value), /pending or uncertain|uncertain effect_state/);
+  assert.throws(() => validateTaskLifecycle(value), /requires no external effect or a confirmed effect|uncertain effect_state/);
 });
 
 test('skill admission is deterministic but never permission', () => {
@@ -162,9 +162,11 @@ test('skill admission is deterministic but never permission', () => {
   const admitted = assessSkillInvocation(value, {
     capability:'files.read',
     effect:'none',
+    filesystem_access:'read',
     filesystem_path:'/workspace/input.txt',
     network_destination:null,
-    command:null
+    command:null,
+    assessed_at:'2026-09-24T12:30:00.000Z'
   });
   assert.equal(admitted.admitted, true);
   assert.equal(admitted.authority_effect, 'none');
@@ -175,9 +177,11 @@ test('undeclared skill effects and destinations fail closed', () => {
   const network = assessSkillInvocation(value, {
     capability:'files.read',
     effect:'none',
+    filesystem_access:'read',
     filesystem_path:'/workspace/input.txt',
     network_destination:'https://example.com',
-    command:null
+    command:null,
+    assessed_at:'2026-09-24T12:30:00.000Z'
   });
   assert.equal(network.admitted, false);
   assert.ok(network.reasons.includes('network-scope-undeclared'));
@@ -185,14 +189,32 @@ test('undeclared skill effects and destinations fail closed', () => {
   const write = assessSkillInvocation(value, {
     capability:'files.write',
     effect:'write-external',
+    filesystem_access:'write',
     filesystem_path:'/workspace/output.txt',
     network_destination:null,
-    command:null
+    command:null,
+    assessed_at:'2026-09-24T12:30:00.000Z'
   });
   assert.equal(write.admitted, false);
   assert.ok(write.reasons.includes('capability-undeclared'));
   assert.ok(write.reasons.includes('effect-undeclared'));
   assert.ok(write.reasons.includes('filesystem-scope-undeclared'));
+  assert.ok(write.reasons.includes('filesystem-mode-denied'));
+});
+
+test('skill currentness expires at invocation time even if the stored state says current', () => {
+  const value = skill();
+  const decision = assessSkillInvocation(value, {
+    capability:'files.read',
+    effect:'none',
+    filesystem_access:'read',
+    filesystem_path:'/workspace/input.txt',
+    network_destination:null,
+    command:null,
+    assessed_at:'2026-09-25T12:00:00.000Z'
+  });
+  assert.equal(decision.admitted, false);
+  assert.ok(decision.reasons.includes('skill-currentness-expired'));
 });
 
 test('revoked skill remains structurally valid but is not admitted for invocation', () => {
@@ -202,9 +224,11 @@ test('revoked skill remains structurally valid but is not admitted for invocatio
   const decision = assessSkillInvocation(value, {
     capability:'files.read',
     effect:'none',
+    filesystem_access:'read',
     filesystem_path:'/workspace/input.txt',
     network_destination:null,
-    command:null
+    command:null,
+    assessed_at:'2026-09-24T12:30:00.000Z'
   });
   assert.equal(decision.admitted, false);
   assert.ok(decision.reasons.includes('skill-not-active'));
