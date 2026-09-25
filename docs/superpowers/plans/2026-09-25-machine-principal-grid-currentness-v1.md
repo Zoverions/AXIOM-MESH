@@ -911,6 +911,17 @@ git commit -m "feat(auth): bind machine grants to current lifecycle"
 - Modify: `mesh/src/sandbox/server.mjs`
 - Create: `mesh/test/machine-effect-release.test.mjs`
 - Create: `mesh/test/machine-effect-release-route.test.mjs`
+- Modify: `README.md`
+- Modify: `mesh/PRODUCTION.md`
+- Modify: `docs/PRODUCTION-GRADE.md`
+- Modify: `docs/rebuild/PRODUCT-DEFINITION.md`
+- Modify: `docs/PROJECT-STATUS-2026.md`
+- Modify: `docs/MASTER-TODO.md`
+- Modify: `docs/ROADMAP.md`
+- Modify: `docs/PRODUCTION-READINESS-TRACKER.md`
+- Modify: `docs/releases/0.12.0-dev.3.md`
+- Modify: `docs/rebuild/SOURCE-TRACEABILITY.md`
+- Modify: `docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md`
 
 **Interfaces:**
 - Consumes: currentness-bound capability claims, durable capability consumption event/receipt.
@@ -972,10 +983,11 @@ return this.transaction(() => {
     actor,
     events: [projectMachineEffectReleasedEvent(release)]
   });
-  this.insertMachineEffectRelease(event, release);
   return { event, release };
 });
 ```
+
+`applyMaterializedEvent('machine.effect.released')` inserts `machine_effect_releases` from the event payload. Do not side-write the table after append; event replay must reconstruct it.
 
 The current lifecycle **must equal** the capability-bound lifecycle sequence/head/effective authority digest. Any relevant mutation after issuance makes the capability stale.
 
@@ -999,6 +1011,8 @@ Add exactly:
 ```
 
 Expected route count after Task 6: **45**.
+
+Update all computed current-build network-route claims and `docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md` in the same Stage D commit, then run `npm --prefix mesh run docs:check`.
 
 No Sandbox->Grid route is added.
 
