@@ -239,6 +239,19 @@
         "mesh/src/lib/founder-genesis-receipt.mjs",
         "mesh/src/lib/mind-continuity-evidence.mjs"
       ]
+    },
+    {
+      "id": "RT-IND-018",
+      "review_scope": "authentication-authorization",
+      "title": "Developmental review must not become sponsor or model authority",
+      "claim_boundary": "The inert Mind Independence Review v0 may summarize whether exact evidence satisfies a declared review policy, but neither the Genesis sponsor, candidate, model, conflicted reviewer, reputation signal, nor review receipt can unilaterally grant independent standing, Council voting, or Genesis eligibility.",
+      "challenge_question": "Can sponsor-only review, sponsor-as-independent substitution, candidate self-approval, duplicate/conflicted reviewers, uncertain evidence, model confidence, suppressed appeal, or a prior review receipt be made to produce or imply independent status or downstream authority without the required independent evidence and separate status-transition authority?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-mind-development-independence-v0-design.md",
+        "mesh/src/lib/mind-independence-review.mjs",
+        "mesh/test/mind-independence-review.test.mjs"
+      ]
     }
   ],
   "reporting": {
