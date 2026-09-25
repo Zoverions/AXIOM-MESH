@@ -64,7 +64,7 @@ export function validateGovernanceEraAuthorityPackage(document) {
     return validated;
   });
 
-  const transitionAssessment = assessTransition(transition);
+  const transitionAssessment = transition === null ? null : assessTransition(transition);
   const authorityAssessments = authorityRecords.map(record => (
     assessGovernanceAuthorityAtEra(record, document.current_era)
   ));
@@ -119,6 +119,16 @@ export function assessGovernanceAuthorityAtEra(record, era) {
 }
 
 function validateTransition(transition, currentEra) {
+  if (transition === null) {
+    if (currentEra !== 'polycentric-society') {
+      throw new ValidationError('Only the terminal governance era may omit a transition');
+    }
+    return null;
+  }
+  if (currentEra === 'polycentric-society') {
+    throw new ValidationError('Terminal governance era cannot define a successor transition');
+  }
+
   exactObject(transition, 'Governance era transition', [
     'candidate_era',
     'schedule_digest',
