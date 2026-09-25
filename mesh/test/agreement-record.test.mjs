@@ -135,14 +135,18 @@ test('later consent revocation changes currentness without rewriting historical 
   assert.equal(result.historical_acceptance_survives_later_revocation,true);
 });
 
-test('expired current consent does not erase valid recorded acceptance',()=>{
+test('later expiry does not erase valid recorded acceptance',()=>{
   const f=fixture();
-  f.currentConsentObservations[1].record.expires_at='2026-09-24T12:15:00.000Z';
-  // Current-state mutation no longer matches the immutable grant, so currentness fails visibly.
+  f.assessedAt='2026-10-24T12:00:00.000Z';
+  f.currentConsentObservations=f.currentConsentObservations.map(item=>({
+    ...item,
+    observed_at:'2026-10-24T12:00:00.000Z'
+  }));
   const result=assessAgreementEvidence(f);
   assert.equal(result.recorded_commitment_valid,true);
   assert.equal(result.all_acceptances_current,false);
-  assert.ok(result.currentness_reasons.some(reason=>reason.includes('current-consent-binding-mismatch')));
+  assert.ok(result.currentness_reasons.some(reason=>reason.includes('current-consent-expired')));
+  assert.equal(result.historical_acceptance_survives_later_revocation,true);
 });
 
 test('missing outsider duplicate and substituted acceptances fail closed',()=>{
