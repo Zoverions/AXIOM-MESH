@@ -9,6 +9,7 @@ const ROUTES = new Set(ROUTE_ORDER);
 const EFFECTS = new Set(["none","read-external","write-external","publish-external","communication","financial","create-external-resource","delete-external-resource","physical","unknown"]);
 const CONSEQUENCE = new Set(['C0','C1','C2','C3']);
 const AVAILABILITY = new Set(['available','degraded','unavailable']);
+const AVAILABILITY_RANK = new Map([['available',0],['degraded',1],['unavailable',2]]);
 const CURRENTNESS = new Set(['current','stale','unknown']);
 const DETERMINISM = new Map([['high',0],['medium',1],['low',2]]);
 const CONSEQUENTIAL_EFFECTS = new Set([
@@ -120,6 +121,8 @@ function assess(policy,candidate,instant){
 function compare(policy,left,right){
   const routeDelta=policy.route_order.indexOf(left.kind)-policy.route_order.indexOf(right.kind);
   if(routeDelta!==0) return routeDelta;
+  const availabilityDelta=AVAILABILITY_RANK.get(left.availability)-AVAILABILITY_RANK.get(right.availability);
+  if(availabilityDelta!==0)return availabilityDelta;
   const deterministicDelta=DETERMINISM.get(left.determinism)-DETERMINISM.get(right.determinism);
   return deterministicDelta||left.route_id.localeCompare(right.route_id);
 }
