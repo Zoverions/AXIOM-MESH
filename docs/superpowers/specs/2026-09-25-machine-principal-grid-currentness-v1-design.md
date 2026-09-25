@@ -350,7 +350,7 @@ The authorization presented to Grid must bind at least:
 - transition kind;
 - normalized successor authority digest for `narrow`;
 - reason code;
-- active policy id/version/digest;
+- active policy version/digest;
 - exact operation/action identifier;
 - issue time;
 - effective time;
@@ -610,7 +610,7 @@ The following fail closed:
 - predecessor digest mismatch;
 - same command id with different command digest;
 - mutation authorization signature/binding mismatch;
-- policy id/version/digest mismatch;
+- policy version/digest mismatch;
 - actor/target substitution;
 - successor authority widening;
 - sponsor/runtime substitution;
@@ -782,7 +782,7 @@ The historical mutation draft must not be rebased wholesale because:
 
 - `narrow` proves only that an authority digest changed;
 - predecessor/successor normalized authority facts are not compared;
-- policy id/version/digest is not bound;
+- policy version/digest is not bound;
 - durable command replay semantics are incomplete;
 - competing-successor behavior is not proved;
 - crash/torn-state coverage is incomplete;
