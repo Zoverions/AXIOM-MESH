@@ -163,6 +163,13 @@ A positive deterministic result may state:
 
 `eligible_to_request_genesis_authorization: true`
 
+That result is structural requestability over the supplied bindings, not proof that
+the bound identity/history/standing/responsibility evidence is authentic. The result
+therefore also states
+`eligibility_is_structural_pending_external_verification: true`, and the later
+Genesis authority path must verify every required external evidence class before any
+authorization can exist.
+
 It MUST also state:
 
 - `requires_external_identity_verification: true`;
