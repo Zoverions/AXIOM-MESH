@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -11,6 +10,7 @@ import {
   EDUCATION_CONTRACT_VERSION,
 } from '../src/domain/education-contract.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import { canonicalJson } from '../src/lib/canonical.mjs';
 
 const DIGEST = 'a'.repeat(64);
@@ -39,32 +39,6 @@ async function api(base, token, path, {
     `HTTP ${method} ${path} expected ${expectedStatus}, got ${response.status}: ${canonicalJson(payload)}`,
   );
   return payload;
-}
-
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(
-        servers.map(server => new Promise(resolve => server.close(resolve))),
-      );
-      return base;
-    } catch {
-      await Promise.all(
-        servers.map(server => new Promise(resolve => server.close(resolve))),
-      );
-    }
-  }
-  throw new Error('Unable to reserve a local four-port block');
 }
 
 function learnerEventInput({
@@ -144,7 +118,8 @@ test('test-only policy proves native learner append and self-read across Gateway
   ]);
   await writeFile(policyPath, JSON.stringify(conformancePolicy), 'utf8');
 
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('education native append conformance');
+  const basePort = portLease.base_port;
   const learnerToken = `education-learner-${crypto.randomUUID()}-${'l'.repeat(24)}`;
   const educatorToken = `education-educator-${crypto.randomUUID()}-${'e'.repeat(24)}`;
   const imposterToken = `education-imposter-${crypto.randomUUID()}-${'i'.repeat(24)}`;
@@ -456,6 +431,7 @@ test('test-only policy proves native learner append and self-read across Gateway
     assert.ok(rows.every(row => row.payload.evidence?.execution?.signature));
   } finally {
     if (stack) await stack.stop().catch(() => {});
+    await portLease.release();
     await rm(dataDir, { recursive: true, force: true });
   }
 });
