@@ -1,6 +1,7 @@
 import { digestObject, ValidationError } from './canonical.mjs';
 import { validateTaskArtifactHandoff } from './runtime-connector-fabric-contracts.mjs';
 
+const TASK_ID=/^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,191}$/;
 const TERMINAL = new Set(['completed','failed','cancelled','expired']);
 const TRANSITIONS = Object.freeze({
   queued: new Set(['queued','running','awaiting-approval','blocked','completed','failed','cancelled','expired','uncertain']),
@@ -35,7 +36,7 @@ export function taskHandoffDetailDigest(sourceTaskId, childTaskId, causalId){
     [childTaskId,'childTaskId'],
     [causalId,'causalId']
   ]) {
-    if (typeof value !== 'string' || value.length < 2 || value.length > 192) {
+    if (typeof value !== 'string' || !TASK_ID.test(value)) {
       throw new ValidationError(`${label} is invalid`);
     }
   }
