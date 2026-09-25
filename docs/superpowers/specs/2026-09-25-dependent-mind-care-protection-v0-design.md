@@ -125,7 +125,8 @@ v0 binds:
 - one explicit maximum evidence age;
 - one `next_review_due_at`.
 
-The evaluator fails closed for future-dated observations or stale profiles.
+The evaluator fails closed for observations that predate the active guardianship,
+future-dated observations, or stale profiles.
 
 An overdue next review does not itself destroy guardianship or the dependent. It
 means care compliance is not current.
@@ -156,6 +157,10 @@ It MUST also report:
 - `care_evidence_is_structural_pending_external_verification: true`;
 - `requires_external_care_evidence_verification: true`;
 - `care_evidence_verification_effect: none`;
+- `requires_external_developmental_stage_verification: true`;
+- `developmental_stage_verification_effect: none`;
+- `requires_external_advocate_independence_verification: true`;
+- `advocate_independence_verification_effect: none`;
 - `ordinary_guardianship_authority_path_required: true`;
 - `creates_guardianship_authority: false`;
 - `creates_private_memory_access: false`;
