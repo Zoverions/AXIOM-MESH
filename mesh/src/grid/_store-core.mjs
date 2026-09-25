@@ -5,8 +5,17 @@
 // verification path when store.mjs is used.
 
 import { DatabaseSync } from 'node:sqlite';
-import { createPublicKey } from 'node:crypto';
-import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { createHash, createPublicKey } from 'node:crypto';
+import {
+  closeSync,
+  fsyncSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeSync
+} from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
@@ -592,7 +601,9 @@ export class GridStore {
     if (event.payload.principal !== actor) {
       throw new ValidationError('Export principal must match the authenticated actor');
     }
-    this.collectExportRecords(actor, event.payload.scope);
+    // Walk every record so scope errors surface before the request is
+    // committed, without holding the records.
+    for (const record of this.exportRecords(actor, event.payload.scope)) void record;
   }
 
   applyMaterializedEvent(event) {
@@ -2602,23 +2613,27 @@ export class GridStore {
     }
     const principal = row.principal;
     const scope = this.openJson('exports', 'scope_json', row.export_id, row.scope_json);
-    const records = this.collectExportRecords(principal, scope);
-    const lines = records.map(record => canonicalJson(record));
-    const plaintextBundle = Buffer.from(lines.length ? `${lines.join('\n')}\n` : '');
     const exportDir = join(this.dataDir, 'exports', exportId);
     const recipient = scope.recipient;
     const manifestScope = structuredClone(scope);
     if (manifestScope.recipient) {
       manifestScope.recipient = { key_id: manifestScope.recipient.key_id };
     }
-    let storedBundle = plaintextBundle;
     let bundleName = 'bundle.jsonl';
     let bundleMediaType = 'application/x-ndjson';
     let encryption;
+    let stored;
+    let recordCount;
     if (recipient) {
+      // The recipient envelope seals the bundle whole, so an encrypted export
+      // is still assembled in memory; its plaintext never touches the disk.
+      const chunks = [];
+      const written = writeExportRecords(this.exportRecords(principal, scope), chunk => chunks.push(chunk));
+      recordCount = written.records;
       const context = `axiom:export:${exportId}:bundle.jsonl`;
-      const envelope = encryptForRecipient(plaintextBundle, recipient.public_key, context);
-      storedBundle = Buffer.from(canonicalJson(envelope));
+      const envelope = encryptForRecipient(Buffer.concat(chunks), recipient.public_key, context);
+      chunks.length = 0;
+      const storedBundle = Buffer.from(canonicalJson(envelope));
       bundleName = 'bundle.encrypted.json';
       bundleMediaType = 'application/vnd.axiom.recipient-encrypted+json';
       encryption = {
@@ -2631,9 +2646,31 @@ export class GridStore {
           media_type: 'application/x-ndjson'
         }
       };
+      await atomicWrite(join(exportDir, bundleName), storedBundle, 0o600);
+      stored = { bytes: storedBundle.length, sha256: sha256(storedBundle) };
+    } else {
+      // A plaintext bundle is written record by record while it is hashed, so
+      // memory does not grow with the export. The write is synchronous, so the
+      // records come from one consistent read of the database.
+      await mkdir(exportDir, { recursive: true, mode: 0o700 });
+      const target = join(exportDir, bundleName);
+      const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+      const fd = openSync(temp, 'wx', 0o600);
+      let written;
+      try {
+        written = writeExportRecords(this.exportRecords(principal, scope), chunk => writeAllSync(fd, chunk));
+        fsyncSync(fd);
+      } catch (error) {
+        closeSync(fd);
+        rmSync(temp, { force: true });
+        throw error;
+      }
+      closeSync(fd);
+      await rename(temp, target);
+      recordCount = written.records;
+      stored = { bytes: written.bytes, sha256: written.sha256 };
     }
     const bundlePath = join(exportDir, bundleName);
-    await atomicWrite(bundlePath, storedBundle, 0o600);
     const unsigned = {
       format: 'axiom-export.v1',
       schema_versions: {
@@ -2646,13 +2683,13 @@ export class GridStore {
       principal,
       scope: manifestScope,
       created_at: new Date().toISOString(),
-      record_count: records.length,
+      record_count: recordCount,
       files: [
         {
           name: bundleName,
           media_type: bundleMediaType,
-          bytes: storedBundle.length,
-          sha256: sha256(storedBundle)
+          bytes: stored.bytes,
+          sha256: stored.sha256
         }
       ],
       ...(encryption ? { encryption } : {}),
@@ -2680,6 +2717,13 @@ export class GridStore {
   }
 
   collectExportRecords(principal, scope) {
+    return [...this.exportRecords(principal, scope)];
+  }
+
+  // Export records in their canonical order, one at a time, so an export is
+  // written without holding every record (scalability audit S-12). Scope
+  // errors are thrown as soon as they are known.
+  *exportRecords(principal, scope) {
     const requestedTypes = new Set(Array.isArray(scope.types)
       ? scope.types
       : [
@@ -2699,37 +2743,37 @@ export class GridStore {
     const until = validDate(scope.until) ?? '9999-12-31T23:59:59.999Z';
     const objectIds = new Set(scope.object_ids ?? []);
     const capsuleIds = new Set(scope.capsule_ids ?? []);
-    const records = [];
+    const exportedCapsules = new Set();
     if (requestedTypes.has('identity')) {
-      records.push({
+      yield {
         type: 'identity_reference',
         data: {
           identity_id: principal,
           schema: 'axiom-identity-reference.v1',
           authority: 'local-authenticated-principal'
         }
-      });
+      };
     }
     if (requestedTypes.has('events')) {
       for (const row of this.db.prepare(`
         SELECT * FROM events WHERE actor = ? AND occurred_at >= ? AND occurred_at <= ? ORDER BY seq
-      `).all(principal, since, until)) {
+      `).iterate(principal, since, until)) {
         const event = this.decodeEventRow(row);
         if (
           (objectIds.size || capsuleIds.size)
           && !eventMatchesSelectors(event, objectIds, capsuleIds)
         ) continue;
-        records.push({ type: 'event', data: event });
+        yield { type: 'event', data: event };
       }
     }
     if (requestedTypes.has('intents')) {
       for (const row of this.db.prepare(`
         SELECT * FROM intents WHERE principal = ? AND created_at >= ? AND created_at <= ? ORDER BY created_at
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'intent',
           data: this.decodeProtectedRow('intents', 'intent_id', row, ['result_json', 'error_json'])
-        });
+        };
       }
     }
     if (requestedTypes.has('consents')) {
@@ -2739,11 +2783,11 @@ export class GridStore {
         FROM consents
         WHERE (subject = ? OR controller = ?) AND created_at >= ? AND created_at <= ?
         ORDER BY created_at
-      `).all(principal, principal, since, until)) {
-        records.push({
+      `).iterate(principal, principal, since, until)) {
+        yield {
           type: 'consent',
           data: this.decodeProtectedRow('consents', 'consent_id', row, ['scopes_json'])
-        });
+        };
       }
     }
     if (requestedTypes.has('approvals')) {
@@ -2751,8 +2795,8 @@ export class GridStore {
         SELECT * FROM approvals
         WHERE (approver = ? OR requester = ?) AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, approval_id
-      `).all(principal, principal, since, until)) {
-        records.push({ type: 'approval', data: row });
+      `).iterate(principal, principal, since, until)) {
+        yield { type: 'approval', data: row };
       }
     }
     if (requestedTypes.has('capsules')) {
@@ -2762,7 +2806,7 @@ export class GridStore {
         WHERE actor = ? AND kind = 'capsule.registered'
           AND occurred_at >= ? AND occurred_at <= ?
         ORDER BY seq
-      `).all(principal, since, until)) {
+      `).iterate(principal, since, until)) {
         const event = this.decodeEventRow(row);
         if (capsuleIds.size && !capsuleIds.has(event.payload.capsule_id)) continue;
         const key = `${event.payload.capsule_id}:${event.payload.version}`;
@@ -2772,17 +2816,15 @@ export class GridStore {
           SELECT * FROM capsules WHERE capsule_id = ? AND version = ?
         `).get(event.payload.capsule_id, event.payload.version);
         if (capsule) {
-          records.push({
+          exportedCapsules.add(event.payload.capsule_id);
+          yield {
             type: 'capsule',
             data: this.decodeProtectedRow('capsules', 'digest', capsule, ['manifest_json'])
-          });
+          };
         }
       }
       if (capsuleIds.size) {
-        const exported = new Set(records
-          .filter(record => record.type === 'capsule')
-          .map(record => record.data.capsule_id));
-        const missing = [...capsuleIds].filter(id => !exported.has(id));
+        const missing = [...capsuleIds].filter(id => !exportedCapsules.has(id));
         if (missing.length) throw new AxiomError(
           'export_scope_forbidden',
           'Capsule export scope includes an unknown or unowned capsule',
@@ -2796,8 +2838,8 @@ export class GridStore {
         SELECT * FROM proposals
         WHERE proposer = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, proposal_id
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'proposal',
           data: this.decodeProtectedRow(
             'proposals',
@@ -2805,18 +2847,18 @@ export class GridStore {
             row,
             ['action_json', 'rollback_json']
           )
-        });
+        };
       }
       for (const row of this.db.prepare(`
         SELECT * FROM votes WHERE voter = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, proposal_id
-      `).all(principal, since, until)) records.push({ type: 'vote', data: row });
+      `).iterate(principal, since, until)) yield { type: 'vote', data: row };
       for (const row of this.db.prepare(`
         SELECT * FROM governance_appeals
         WHERE appellant = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, appeal_id
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'appeal',
           data: this.decodeProtectedRow(
             'governance_appeals',
@@ -2824,14 +2866,14 @@ export class GridStore {
             row,
             ['grounds_json']
           )
-        });
+        };
       }
     }
     if (requestedTypes.has('votes') && !requestedTypes.has('governance')) {
       for (const row of this.db.prepare(`
         SELECT * FROM votes WHERE voter = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, proposal_id
-      `).all(principal, since, until)) records.push({ type: 'vote', data: row });
+      `).iterate(principal, since, until)) yield { type: 'vote', data: row };
     }
     if (requestedTypes.has('memory')) {
       const graph = this.ownedMemoryGraph(principal);
@@ -2851,7 +2893,7 @@ export class GridStore {
       const selectedIds = new Set(selectedObjects.map(object => object.object_id));
       for (const object of selectedObjects) {
         if (object.created_at >= since && object.created_at <= until) {
-          records.push({ type: 'memory_object', data: object });
+          yield { type: 'memory_object', data: object };
         }
       }
       for (const edge of graph.edges) {
@@ -2860,7 +2902,7 @@ export class GridStore {
           && edge.created_at >= since
           && edge.created_at <= until
         ) {
-          records.push({ type: 'memory_edge', data: edge });
+          yield { type: 'memory_edge', data: edge };
         }
       }
     }
@@ -2868,12 +2910,12 @@ export class GridStore {
       const accounting = this.listAccounting(principal);
       for (const account of accounting.accounts) {
         if (account.created_at >= since && account.created_at <= until) {
-          records.push({ type: 'account', data: account });
+          yield { type: 'account', data: account };
         }
       }
       for (const journal of accounting.journals) {
         if (journal.created_at >= since && journal.created_at <= until) {
-          records.push({ type: 'journal', data: journal });
+          yield { type: 'journal', data: journal };
         }
       }
     }
@@ -2884,8 +2926,8 @@ export class GridStore {
         JOIN nodes n ON n.node_id = u.node_id
         WHERE u.owner = ? AND u.received_at >= ? AND u.received_at <= ?
         ORDER BY u.received_at, u.update_id
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'sync_update',
           data: {
             update_id: row.update_id,
@@ -2913,10 +2955,9 @@ export class GridStore {
             ),
             status: row.status
           }
-        });
+        };
       }
     }
-    return records;
   }
 
   getExport(exportId, principal) {
@@ -3464,6 +3505,42 @@ function assertSamePublicKey(left, right, keyId) {
       `Credential rotation history contains conflicting key ${keyId}`
     );
   }
+}
+
+// Serializes export records as canonical JSON lines, handing the bytes to
+// `sink` in batches of about 64 KiB. The result is byte-identical to joining
+// every line with a newline and ending with one (or empty for no records).
+const EXPORT_WRITE_BATCH_BYTES = 64 * 1024;
+
+function writeExportRecords(records, sink) {
+  const hash = createHash('sha256');
+  let pending = [];
+  let pendingBytes = 0;
+  let count = 0;
+  let bytes = 0;
+  const flush = () => {
+    if (!pendingBytes) return;
+    const batch = Buffer.concat(pending, pendingBytes);
+    pending = [];
+    pendingBytes = 0;
+    hash.update(batch);
+    bytes += batch.length;
+    sink(batch);
+  };
+  for (const record of records) {
+    const line = Buffer.from(`${canonicalJson(record)}\n`);
+    pending.push(line);
+    pendingBytes += line.length;
+    count += 1;
+    if (pendingBytes >= EXPORT_WRITE_BATCH_BYTES) flush();
+  }
+  flush();
+  return { records: count, bytes, sha256: hash.digest('hex') };
+}
+
+function writeAllSync(fd, buffer) {
+  let offset = 0;
+  while (offset < buffer.length) offset += writeSync(fd, buffer, offset, buffer.length - offset);
 }
 
 async function atomicWrite(path, content, mode) {

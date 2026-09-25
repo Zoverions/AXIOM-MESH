@@ -771,6 +771,32 @@ Gateway forwarding path.
 - Multi-gigabyte synthetic exports complete without blocking intent commits.
 - Interrupted exports are resumable or cleanly discarded with evidence.
 
+**Remediation status (2026-09-25): plaintext generation streams; the rest is
+open.**
+
+- **Streaming generation.** Export records are produced one at a time, in the
+  same canonical order, from row iterators (`exportRecords` in
+  `mesh/src/grid/_store-core.mjs`). A plaintext bundle is written to a
+  temporary file in batches of about 64 KiB while it is hashed, then
+  renamed into place. The bundle is byte-identical to the previous joined
+  serialization, so `axiom-export.v1` and its verifiers are unchanged.
+  Generation stays synchronous, so the records come from one consistent read.
+  Export preflight walks the same records to find scope errors, without
+  holding them.
+- **Evidence.** A 25 MiB export is generated within 8 MiB of live memory,
+  measured in a child process from inside generation; the previous code
+  measures 58 MiB and fails. A scope error part-way leaves no bundle or
+  temporary file and the export pending. Tests fail without the temporary-file
+  cleanup, the final batch flush, or the preflight walk.
+- **Not yet streaming.** A recipient-encrypted export is still assembled in
+  memory, because its envelope seals the bundle whole; its plaintext is never
+  written to disk. The owner's memory graph and accounting are read whole, as
+  before.
+
+Still open: a chunked recipient envelope, generation as a background job
+(S-14), a streaming bundle route (bundles are still read whole to serve, and
+Gateway forwarding caps responses at 1 MiB), and resumable exports.
+
 ### S-13 — Backup and restore read the complete database into memory
 
 **Severity:** Critical for durable-state growth  
@@ -836,8 +862,8 @@ data-key rotation supports it.**
   snapshot above 512 MiB cannot be rotated.
 
 Still open: making v2 the default, streaming rotation of the live database
-and staged artifacts, background maintenance with a bounded I/O rate, and
-the same treatment for exports (S-12).
+and staged artifacts, and background maintenance with a bounded I/O rate.
+Exports (S-12) now generate plaintext bundles by streaming.
 
 ### S-14 — Long-running artifact work is performed inline with commit requests
 
