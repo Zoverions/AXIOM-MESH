@@ -80,6 +80,7 @@ intentional initialization runway for Stage D.
   - `machineAuthoritySnapshot(principal) -> normalized full authority object`
   - `assertMachineAuthorityAttenuation(predecessor, successor, { now }) -> normalized successor`
   - `machineAuthoritySnapshotDigest(snapshot) -> 64-char hex digest`
+  - `resolveEffectiveMachinePrincipal(rootPrincipal, currentness) -> { effective_principal, currentness_binding }`
   - fixed schema constants for mutation authorization, lifecycle transition, currentness projection, and effect release
   - strict normalizers for those four contracts
 
@@ -235,6 +236,7 @@ export function normalizeMachineMutationAuthorization(value) { /* exact fields *
 export function normalizeMachineLifecycleTransition(value) { /* exact fields */ }
 export function normalizeMachineCurrentnessProjection(value) { /* exact fields */ }
 export function normalizeMachineEffectRelease(value) { /* exact fields */ }
+export function resolveEffectiveMachinePrincipal(rootPrincipal, currentness) { /* exact root/currentness checks */ }
 ```
 
 The JSON Schemas must mirror the JS exact-field boundary and set `additionalProperties:false` at every object layer.
@@ -272,6 +274,7 @@ git commit -m "feat(auth): add machine currentness v1 contracts"
   - migration **11** `machine-principal-grid-currentness-v1`
   - `GridStore.getMachineCurrentness(principalId)`
   - `GridStore.commitMachineCurrentnessMutation({ traceId, actor, authorization, transition })`
+  - internal store helpers `readMachineLifecycleHead(principalId)`, `readMachineMutationCommand(commandId)`, `appendEventsInTransaction(args)`, `verifyExpectedPredecessor(current, authorization, transition)`, and `projectLifecycleEvent(transition, authorization)`
   - durable exact replay through event-derived `machine_principal_mutation_commands`
 
 - [ ] **Step 1: Assert the migration baseline before editing**
@@ -617,6 +620,8 @@ git commit -m "feat(grid): expose authenticated machine currentness routes"
 - Consumes: existing `POST /v1/intents`, Gateway-loaded principal registry, Task 3 Grid routes.
 - Produces:
   - `buildMachineMutationAuthorization(identity, {...}) -> { statement, signature, digest }`
+  - `isMachineLifecycleAction(action) -> boolean`
+  - `handleMachineLifecycleIntent(args) -> completed/denied intent result`
   - two policy actions:
     - `machine.principal.lifecycle.initialize`
     - `machine.principal.lifecycle.mutate`
@@ -931,6 +936,7 @@ git commit -m "feat(auth): bind machine grants to current lifecycle"
   - `machine.effect.released`
   - `machine_effect_releases`
   - Grid-signed `axiom-machine-effect-release.v1` receipt
+  - internal helpers `readMachineEffectRelease(releaseId)`, `assertCurrentnessMatchesCapability(current, claims)`, `assertCapabilityConsumptionExists(jti, receiptDigest)`, `buildReleaseStatement(input)`, and `projectMachineEffectReleasedEvent(release)`
   - service-network policy count 44 -> **45**
 
 - [ ] **Step 1: Write RED release tests**
@@ -1282,7 +1288,7 @@ If the canonical boundary reports a new Markdown/schema file as unexpected, add 
 node --test   mesh/test/machine-principal*.test.mjs   mesh/test/machine-currentness*.test.mjs   mesh/test/machine-effect-release*.test.mjs   mesh/test/capability-consumption.test.mjs   mesh/test/service-network-policy.test.mjs   mesh/test/machine-receipt*.test.mjs
 ```
 
-Expected: PASS, zero skipped/cancelled/todo for the new currentness/release tests.
+Expected: PASS with zero skipped, cancelled, or pending test-runner markers for the new currentness/release tests.
 
 - [ ] **Step 7: Run the full repository verification**
 
