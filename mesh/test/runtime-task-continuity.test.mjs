@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   taskArtifactSnapshotDigest,
+  taskHandoffDetailDigest,
   verifyClosedTaskCausalGraph,
   verifyTaskHandoffEdge,
   verifyTaskSnapshotTransition
@@ -143,7 +144,7 @@ async function handoffPair(){
   source.causal_id='causal:workflow-001';
   source.lifecycle.updated_at='2026-08-21T23:31:06Z';
   source.request.data_classes=['owner-private'];
-  source.events.push(event('event:handoff-001','task.handoff','2026-08-21T23:31:06Z'));
+  // The exact child-bound handoff event is appended after the child identity is fixed below.
 
   const child=await load(minimalUrl);
   child.task_id='task:child-001';
@@ -156,6 +157,10 @@ async function handoffPair(){
   child.lifecycle.created_at='2026-08-21T23:31:06Z';
   child.lifecycle.updated_at='2026-08-21T23:31:06Z';
   child.events=[event('event:child-created','task.created','2026-08-21T23:31:06Z','principal:worker')];
+  source.events.push({
+    ...event('event:handoff-001','task.handoff','2026-08-21T23:31:06Z'),
+    detail_digest:taskHandoffDetailDigest(source.task_id,child.task_id,child.causal_id)
+  });
   return {source,child};
 }
 
@@ -173,6 +178,18 @@ test('handoff preserves causal/scope/budget boundaries without transferring auth
   const budget=structuredClone(child);
   budget.budgets.timeout_ms=6000;
   assert.throws(()=>verifyTaskHandoffEdge(source,budget),/timeout_ms cannot widen/);
+
+  const action=structuredClone(child);
+  action.request.axiom_action='memory.delete';
+  assert.throws(()=>verifyTaskHandoffEdge(source,action),/cannot change AXIOM action/);
+
+  const capability=structuredClone(child);
+  capability.request.capability_id='different.capability';
+  assert.throws(()=>verifyTaskHandoffEdge(source,capability),/cannot change capability_id/);
+
+  const unbound=structuredClone(source);
+  unbound.events.find(item=>item.type==='task.handoff').detail_digest='0'.repeat(64);
+  assert.throws(()=>verifyTaskHandoffEdge(unbound,child),/exact child-bound task.handoff event/);
 });
 
 test('handoff cannot reuse source grant and independent child grant requires delegation',async()=>{
