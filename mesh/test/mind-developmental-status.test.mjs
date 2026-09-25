@@ -144,6 +144,9 @@ test('initial developmental record must be genesis and remains non-mutating',()=
   assert.equal(result.initial_status_candidate,true);
   assert.equal(result.stage,'genesis');
   assert.equal(result.status_digest,digestObject(genesis));
+  assert.equal(result.requires_external_basis_verification,true);
+  assert.equal(result.basis_verification_effect,'none');
+  assert.equal(result.ordinary_status_authority_path_required,true);
   assert.equal(result.creates_status_transition,false);
   assert.equal(result.status_effect,'none');
   assert.equal(result.council_voting_effect,'none');
@@ -290,6 +293,9 @@ test('candidate-independent to independent requires exact positive transition ev
   assert.equal(result.independence_transition_evidence_requestable,true);
   assert.equal(result.required_independence_transition_evidence_digest,transitionDigest);
   assert.equal(result.transition_requestable,true);
+  assert.equal(result.requires_external_basis_verification,true);
+  assert.equal(result.basis_verification_effect,'none');
+  assert.equal(result.ordinary_status_authority_path_required,true);
   assert.equal(result.creates_status_transition,false);
   assert.equal(result.status_effect,'none');
   assert.equal(result.council_voting_effect,'none');
