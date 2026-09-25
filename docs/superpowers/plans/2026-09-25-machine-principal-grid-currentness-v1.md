@@ -361,8 +361,9 @@ CREATE TABLE IF NOT EXISTS machine_principal_mutation_commands (
 CREATE TABLE IF NOT EXISTS machine_effect_releases (
   release_id TEXT PRIMARY KEY,
   principal_id TEXT NOT NULL,
-  capability_id TEXT NOT NULL,
-  attempt_id TEXT NOT NULL,
+  capability_id TEXT NOT NULL UNIQUE,
+  attempt_id TEXT NOT NULL UNIQUE,
+  sandbox_execution_epoch TEXT NOT NULL,
   intent_id TEXT NOT NULL,
   plan_digest TEXT NOT NULL,
   action TEXT NOT NULL,
@@ -373,8 +374,7 @@ CREATE TABLE IF NOT EXISTS machine_effect_releases (
   effective_authority_digest TEXT NOT NULL,
   consumption_receipt_digest TEXT NOT NULL,
   release_digest TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  UNIQUE(capability_id, attempt_id)
+  created_at TEXT NOT NULL
 ) STRICT;
 ```
 
@@ -838,6 +838,7 @@ There is no silent auto-initialization fallback.
     - `effective_authority_digest`
     - `currentness_seq`
     - `currentness_head_digest`
+    - `execution_attempt_id`
   - plan/invocation evidence with the same exact binding
 
 - [ ] **Step 1: Write RED issuance tests**
@@ -859,6 +860,10 @@ With no lifecycle row after enforcement is enabled, assert `machine_currentness_
 
 With mismatched root digest, assert `machine_currentness_root_mismatch`.
 
+With retained status `active`/`narrowed` but `expires_at <= observed_at`, assert `machine_principal_expired` without requiring an `expired` Grid event.
+
+For a request admitted shortly before non-persistent machine expiry, assert the capability `exp` is no later than `Math.floor(Date.parse(effectivePrincipal.expires_at) / 1000)`.
+
 - [ ] **Step 2: Resolve currentness before machine evaluation**
 
 In Hypervisor, for machine principals only:
@@ -868,16 +873,20 @@ const currentness = await gridGet(
   `/internal/v1/machine-currentness/${encodeURIComponent(intent.principal.id)}`,
   traceId
 );
+const observedAt = new Date();
 const effectivePrincipal = resolveEffectiveMachinePrincipal(
   intent.principal,
-  currentness
+  currentness,
+  { observedAt }
 );
 ```
 
 `resolveEffectiveMachinePrincipal()` belongs in Task 1's currentness module and must:
 - require root digest equality;
-- deny terminal state;
-- normalize protected effective authority;
+- distinguish `retained_status` from `effective_status`;
+- derive effective natural expiry at the explicit observation time without mutating Grid;
+- deny retained terminal state or derived effective expiry;
+- normalize protected effective authority using the historical snapshot normalizer;
 - prove it remains an attenuation of the current root;
 - return both `effective_principal` and immutable `currentness_binding`.
 
@@ -896,18 +905,31 @@ machine_currentness: {
 }
 ```
 
-Add the same four fields to capability claims.
+Generate one execution attempt id before capability issuance:
+
+```js
+const executionAttemptId = newId('attempt');
+const ordinaryExp = now + config.capabilityTtlSeconds;
+const authorityExp = effectivePrincipal.expires_at
+  ? Math.floor(Date.parse(effectivePrincipal.expires_at) / 1000)
+  : Number.MAX_SAFE_INTEGER;
+const capabilityExp = Math.min(ordinaryExp, authorityExp);
+if (capabilityExp <= now) throw machineExpiredError();
+```
+
+Add the four currentness fields plus `execution_attempt_id: executionAttemptId` to capability claims, and set `exp: capabilityExp`.
 
 Retain the existing `authority_digest` claim as the configured root authority digest and add `effective_authority_digest`; do not rename or reinterpret `authority_digest` in v1.
 
 - [ ] **Step 4: Bind accepted/terminal evidence**
 
-Add `machine_currentness` to `intent.accepted` evidence and terminal result evidence.
+Add `machine_currentness` and `execution_attempt_id` to `intent.accepted` evidence and terminal result evidence.
 
 Update machine receipt verification so it proves:
 - accepted root digest == terminal root digest;
 - accepted effective digest == terminal effective digest;
-- accepted lifecycle seq/head == terminal lifecycle seq/head used for capability issuance.
+- accepted lifecycle seq/head == terminal lifecycle seq/head used for capability issuance;
+- accepted `execution_attempt_id` == terminal `execution_attempt_id`.
 
 Receipt semantics remain evidence of recorded AXIOM state, not external truth.
 
