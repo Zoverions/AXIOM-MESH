@@ -256,6 +256,25 @@ latency.
   overlap beyond policy.
 - Load tests show bounded sockets and no unbounded request queue.
 
+**Remediation status (2026-09-25): connection reuse remediated; load test
+open.** `mutuallyAuthenticatedRequest` now takes a keep-alive `https.Agent`
+from a pool keyed by caller service, audience and origin, and bound to a
+credential generation (a digest of the caller's certificate, key and trusted
+CA). Limits: 64 sockets, 16 idle, 4 s idle timeout (under the services' 5 s
+keep-alive timeout); the existing per-request timeout still applies. A new
+generation replaces the pool and drains the old one: idle sockets close at
+once and busy ones close when released. Node's agent already separates
+sockets by TLS credentials, so the generation key is a second guard that also
+retires old pools. `transportPoolStats()` reports pools, new connections,
+reused sockets and drained pools. In a test, five warm calls use one
+connection and four reuses. A supervisor certificate swap is refused on a new
+connection and drains the pool. Swapping back opens a new connection. The
+test fails with `agent: false` and fails with a pool that ignores the
+generation. For 300 timed sequential local calls after 20 warm-up calls, the
+pooled path took 1.94 ms per call, with one connection serving all 320 calls.
+The old path took 5.47 ms per call and opened one connection per call. Active sockets and queued requests are not exported, and no load
+test has measured behavior near the socket limit.
+
 ### S-05 — Trusted service keys are read and parsed from disk for every signed request
 
 **Severity:** High  

@@ -1,5 +1,5 @@
 import https from 'node:https';
-import { AxiomError, ValidationError } from './canonical.mjs';
+import { AxiomError, ValidationError, sha256 } from './canonical.mjs';
 import { signedRequestHeaders } from './identity.mjs';
 import { evaluateMachineIntentWithAssurance } from './agent-assurance-authority-binding.mjs';
 import { validatePlan } from './plan.mjs';
@@ -11,6 +11,67 @@ import { authorizeServiceRequest } from './service-network-policy.mjs';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REQUEST_TIMEOUT_MS = 300_000;
+
+// Keep-alive pools for mutually authenticated internal calls (scalability
+// audit S-04). Every hop used to open a new TCP and TLS 1.3 connection.
+// A pool serves one caller service, one audience and one origin under one
+// credential generation (the caller's certificate, key and trusted CA), so a
+// reused socket always carries the same authenticated identity the server
+// bound when it was opened. A new generation gets a new pool and the old one
+// drains: its idle sockets close and busy ones close when released.
+// Idle sockets close after 4 s, before the services' 5 s keep-alive timeout,
+// so a request is never written to a socket the server is closing.
+const TRANSPORT_POOL_LIMITS = Object.freeze({
+  maxSockets: 64,
+  maxFreeSockets: 16,
+  idleTimeoutMs: 4_000
+});
+const transportPools = new Map();
+const transportPoolCounters = { connections: 0, reused: 0, drained_pools: 0 };
+
+function transportAgent(transport, audience, target) {
+  const scope = `${transport.service}\u0000${audience}\u0000${target.origin}`;
+  const generation = sha256(`${transport.cert}\u0000${transport.key}\u0000${transport.ca}`);
+  const existing = transportPools.get(scope);
+  if (existing?.generation === generation) return existing.agent;
+  if (existing) drainAgent(existing.agent);
+  const agent = new https.Agent({
+    keepAlive: true,
+    maxSockets: TRANSPORT_POOL_LIMITS.maxSockets,
+    maxFreeSockets: TRANSPORT_POOL_LIMITS.maxFreeSockets,
+    timeout: TRANSPORT_POOL_LIMITS.idleTimeoutMs,
+    scheduling: 'lifo'
+  });
+  transportPools.set(scope, { generation, agent });
+  return agent;
+}
+
+function drainAgent(agent) {
+  agent.keepAlive = false;
+  for (const sockets of Object.values(agent.freeSockets)) {
+    for (const socket of sockets) socket.destroy();
+  }
+  transportPoolCounters.drained_pools += 1;
+}
+
+/** Connection reuse evidence for the internal transport pools. */
+export function transportPoolStats() {
+  return Object.freeze({
+    pools: transportPools.size,
+    ...transportPoolCounters,
+    limits: TRANSPORT_POOL_LIMITS
+  });
+}
+
+/**
+ * Closes every pooled internal connection now. Idle pooled sockets are
+ * unreferenced, so they never hold a process open; this is for tests and for
+ * callers that want connections closed immediately.
+ */
+export function closeTransportPools() {
+  for (const { agent } of transportPools.values()) agent.destroy();
+  transportPools.clear();
+}
 
 export async function signedFetch(identity, audience, url, {
   method = 'GET',
@@ -221,7 +282,7 @@ async function mutuallyAuthenticatedRequest({
       checkServerIdentity: (_hostname, peer) => (
         verifyTransportServerIdentity(transport, audience, peer)
       ),
-      agent: false
+      agent: transportAgent(transport, audience, target)
     }, response => {
       const chunks = [];
       let size = 0;
@@ -255,6 +316,10 @@ async function mutuallyAuthenticatedRequest({
           payload
         });
       });
+    });
+    request.once('socket', () => {
+      if (request.reusedSocket) transportPoolCounters.reused += 1;
+      else transportPoolCounters.connections += 1;
     });
     request.setTimeout(timeoutMs, () => {
       request.destroy(new Error('Mutually authenticated request timed out'));

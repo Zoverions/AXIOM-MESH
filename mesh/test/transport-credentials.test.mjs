@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { signedFetch } from '../src/lib/client.mjs';
+import { closeTransportPools, signedFetch, transportPoolStats } from '../src/lib/client.mjs';
 import { canonicalJson } from '../src/lib/canonical.mjs';
 import {
   ReplayGuard,
@@ -346,3 +346,56 @@ function tlsGet({ url, ca, cert, key, servername }) {
     request.once('error', reject);
   });
 }
+
+test('warm internal calls reuse one authenticated connection; a new credential generation never does', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-transport-pool-'));
+  const provisioned = await provisionProduction({
+    dataDir: join(root, 'data'),
+    secretDir: join(root, 'secrets')
+  });
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const gatewayIdentity = await ensureMeshIdentity(provisioned.data_dir, 'gateway', { create: false });
+  const gatewayTransport = await loadTransportRuntime({
+    transportDir: provisioned.transport.transport_dir,
+    service: 'gateway'
+  });
+  gatewayIdentity.transport = gatewayTransport;
+  const active = await startAuthenticatedTestService({
+    dataDir: provisioned.data_dir,
+    transportDir: provisioned.transport.transport_dir,
+    certificateService: 'hypervisor',
+    audience: 'hypervisor',
+    allowedCallers: ['gateway']
+  });
+  t.after(() => close(active.server));
+  t.after(() => closeTransportPools());
+  closeTransportPools();
+
+  const url = `${active.origin}/internal/v1/operations`;
+  const start = transportPoolStats();
+  for (let index = 0; index < 5; index += 1) {
+    assert.equal((await signedFetch(gatewayIdentity, 'hypervisor', url)).caller, 'gateway');
+  }
+  const warm = transportPoolStats();
+  assert.equal(warm.connections - start.connections, 1, 'one handshake for five calls');
+  assert.equal(warm.reused - start.reused, 4);
+
+  // Another certificate for the same caller name is a new generation: it
+  // gets its own connection, and the server still refuses it.
+  const supervisorTransport = await loadTransportRuntime({
+    transportDir: provisioned.transport.transport_dir,
+    service: 'supervisor'
+  });
+  gatewayIdentity.transport = { ...supervisorTransport, service: 'gateway' };
+  await assert.rejects(
+    () => signedFetch(gatewayIdentity, 'hypervisor', url),
+    error => error.code === 'invalid_transport_peer'
+  );
+  const swapped = transportPoolStats();
+  assert.equal(swapped.connections - warm.connections, 1);
+  assert.equal(swapped.drained_pools - warm.drained_pools, 1);
+
+  gatewayIdentity.transport = gatewayTransport;
+  assert.equal((await signedFetch(gatewayIdentity, 'hypervisor', url)).caller, 'gateway');
+  assert.equal(transportPoolStats().connections - swapped.connections, 1, 'no socket crosses generations');
+});
