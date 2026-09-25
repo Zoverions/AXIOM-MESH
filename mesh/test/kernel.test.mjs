@@ -742,6 +742,11 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   );
   const metrics = await metricsResponse.text();
   assert.match(metrics, /axiom_service_ready\{service="grid"\} 1/);
+  // Replay protection evidence reaches the operator-facing metrics (S-06).
+  assert.match(metrics, /^axiom_transport_state\{service="grid",kind="replay_capacity"\} [1-9]\d*$/m);
+  // These tests run all four services in one process, so the process-wide
+  // counters include guards from other tests; only their presence is checked.
+  assert.match(metrics, /^axiom_transport_events_total\{service="hypervisor",kind="replay_saturated_total"\} \d+$/m);
   assert.doesNotMatch(metrics, /local-operator|independent-approver/);
 
   const idempotencyKey = `e2e-${crypto.randomUUID()}`;

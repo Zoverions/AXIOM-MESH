@@ -278,10 +278,13 @@ there. The test fails with `agent: false`, with a pool that ignores the
 generation, and with a generation that leaves out the audience pin. Leaving
 out the pin let a warm socket serve the audience after its pin changed. The
 test also fails with the pool's identity check removed, and on Node 22 with
-a per-request check. For 300 timed sequential local calls after 20 warm-up calls, the
-pooled path took 1.94 ms per call, with one connection serving all 320 calls.
-The old path took 5.47 ms per call and opened one connection per call. Active sockets and queued requests are not exported, and no load
-test has measured behavior near the socket limit.
+a per-request check. For 300 timed sequential local calls after 20 warm-up
+calls, the pooled path took 1.94 ms per call, with one connection serving all
+320 calls. The old path took 5.47 ms per call and opened one connection per
+call. New connections, reuses and drained pools are exported in the
+operations report and `/v1/metrics` (see S-06). Active sockets and queued
+requests are not, and no load test has measured behavior near the socket
+limit.
 
 ### S-05 — Trusted service keys are read and parsed from disk for every signed request
 
@@ -374,9 +377,18 @@ already separate errors (409 and 503). `stats()` now also reports:
 - the longest time an expired nonce stayed resident.
 
 The tests fail with a full-scan sweep, with the old 10,000 default, and with
-an off-by-one expiry. Still open: these stats are not yet in the operations
-report, and the guard is still process-local. Replicating a service still
-needs one of the three designs above.
+an off-by-one expiry. The guard is still process-local, so replicating a
+service still needs one of the three designs above.
+
+Follow-up (2026-09-25): the stats are now in every service's operations
+report (`transport` group, format unchanged at `axiom-operations.v1`, the
+group optional for older snapshots) and in `/v1/metrics` as
+`axiom_transport_state` (occupancy, capacity, high water) and
+`axiom_transport_events_total` (saturations, expiries). Any saturation
+raises a critical `replay-guard-saturated` alert, and a high-water mark at
+80% of capacity raises a `replay-guard-near-capacity` warning. The same group
+carries the connection-pool counters (S-04) and trusted-key reads and hits
+(S-05).
 
 ### S-07 — Public authentication is linear in configured credential count
 

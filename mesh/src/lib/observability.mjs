@@ -15,6 +15,44 @@ const AUTHENTICATION_ERRORS = new Set([
   'body_digest_mismatch'
 ]);
 const REPLAY_ERRORS = new Set(['replayed_request', 'capability_replayed']);
+// Process-wide internal-transport evidence: replay guards, mTLS connection
+// pools and the trusted-key cache (scalability audit S-04 to S-06). The
+// modules that own that state register a reader here; a snapshot reads them
+// all. A process runs one service, so these belong to that service.
+export const TRANSPORT_GAUGES = Object.freeze([
+  'replay_entries',
+  'replay_capacity',
+  'replay_high_water'
+]);
+export const TRANSPORT_COUNTERS = Object.freeze([
+  'replay_saturated_total',
+  'replay_expired_total',
+  'pool_connections_total',
+  'pool_reused_total',
+  'pool_drained_total',
+  'trusted_key_reads_total',
+  'trusted_key_hits_total'
+]);
+const TRANSPORT_METRICS = Object.freeze([...TRANSPORT_GAUGES, ...TRANSPORT_COUNTERS]);
+const transportReaders = new Map();
+
+/** Registers a reader for some of the TRANSPORT_METRICS, under a source name. */
+export function registerTransportMetrics(source, read) {
+  if (!CHECK_NAME.test(source) || typeof read !== 'function') {
+    throw new ValidationError('Transport metrics source is invalid');
+  }
+  transportReaders.set(source, read);
+}
+
+export function transportMetricsSnapshot() {
+  const totals = Object.fromEntries(TRANSPORT_METRICS.map(key => [key, 0]));
+  for (const read of transportReaders.values()) {
+    for (const [key, value] of Object.entries(read() ?? {})) {
+      if (Object.hasOwn(totals, key)) totals[key] += safeMetric(value);
+    }
+  }
+  return totals;
+}
 const AUTHORIZATION_ERRORS = new Set([
   'caller_not_allowed',
   'forbidden',
@@ -131,7 +169,8 @@ export class ServiceTelemetry {
         external_memory_bytes: safeMetric(memory.external),
         cpu_user_microseconds: safeMetric(cpu.user),
         cpu_system_microseconds: safeMetric(cpu.system)
-      }
+      },
+      transport: transportMetricsSnapshot()
     };
   }
 }
@@ -206,7 +245,11 @@ export function renderOpenMetrics(report) {
     '# HELP axiom_process_resident_memory_bytes Resident process memory.',
     '# TYPE axiom_process_resident_memory_bytes gauge',
     '# HELP axiom_process_cpu_seconds_total Process CPU time by mode.',
-    '# TYPE axiom_process_cpu_seconds_total counter'
+    '# TYPE axiom_process_cpu_seconds_total counter',
+    '# HELP axiom_transport_state Internal transport state: replay guard occupancy, capacity and high water.',
+    '# TYPE axiom_transport_state gauge',
+    '# HELP axiom_transport_events_total Internal transport events: replay saturation and expiry, connection reuse, trusted-key reads.',
+    '# TYPE axiom_transport_events_total counter'
   ];
   for (const service of services) {
     const label = `service="${service.service}"`;
@@ -254,6 +297,16 @@ export function renderOpenMetrics(report) {
       `axiom_process_cpu_seconds_total{${label},mode="system"} `
       + `${metricNumber(service.process.cpu_system_microseconds / 1_000_000)}`
     );
+    if (service.transport) {
+      for (const kind of TRANSPORT_GAUGES) {
+        lines.push(`axiom_transport_state{${label},kind="${kind}"} ${safeMetric(service.transport[kind])}`);
+      }
+      for (const kind of TRANSPORT_COUNTERS) {
+        lines.push(
+          `axiom_transport_events_total{${label},kind="${kind}"} ${safeMetric(service.transport[kind])}`
+        );
+      }
+    }
   }
   lines.push('# EOF', '');
   return lines.join('\n');
@@ -401,7 +454,12 @@ function validateServiceSnapshot(value) {
     },
     security,
     reliability,
-    process: processMetrics
+    process: processMetrics,
+    // Optional so that a report from a service without transport evidence
+    // (an older build during an upgrade) still validates.
+    ...(value.transport === undefined
+      ? {}
+      : { transport: normalizeCounterGroup(value.transport, TRANSPORT_METRICS, value.service) })
   };
 }
 
@@ -430,6 +488,24 @@ function evaluateAlerts(services) {
         severity: 'warning',
         service: service.service,
         condition: 'one or more replay attempts were rejected'
+      });
+    }
+    if (service.transport?.replay_saturated_total > 0) {
+      alerts.push({
+        id: `replay-guard-saturated:${service.service}`,
+        severity: 'critical',
+        service: service.service,
+        condition: 'replay protection refused requests because it was full'
+      });
+    } else if (
+      service.transport?.replay_capacity > 0
+      && service.transport.replay_high_water * 10 >= service.transport.replay_capacity * 8
+    ) {
+      alerts.push({
+        id: `replay-guard-near-capacity:${service.service}`,
+        severity: 'warning',
+        service: service.service,
+        condition: 'replay protection reached 80% of its capacity'
       });
     }
     if (service.security.authentication_failures_total >= 5) {

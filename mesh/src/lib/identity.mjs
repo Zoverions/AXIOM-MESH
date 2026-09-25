@@ -11,6 +11,7 @@ import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalJson, sha256, AxiomError } from './canonical.mjs';
 import { assertTransportPeer } from './transport-credentials.mjs';
+import { registerTransportMetrics } from './observability.mjs';
 
 const KEY_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 
@@ -73,6 +74,10 @@ export async function ensureMeshIdentity(dataDir, service, { create = true } = {
 // any further write gets a timestamp outside the tick and shows as a change.
 const trustedKeyCache = new Map();
 const trustedKeyCounters = { reads: 0, hits: 0 };
+registerTransportMetrics('trusted-keys', () => ({
+  trusted_key_reads_total: trustedKeyCounters.reads,
+  trusted_key_hits_total: trustedKeyCounters.hits
+}));
 export const TRUSTED_KEY_RACY_MARGIN_MS = 2_000;
 
 function trustFileIdentity(info) {
@@ -173,6 +178,31 @@ export function replayGuardCapacity({
 
 export const REPLAY_DEFAULT_CAPACITY = replayGuardCapacity();
 
+// Every live guard in this process (a service holds one or two), weakly, so
+// the operations report can sum them without keeping discarded guards alive.
+const liveReplayGuards = new Set();
+const replayGuardCollector = new FinalizationRegistry(reference => liveReplayGuards.delete(reference));
+
+registerTransportMetrics('replay', () => {
+  const totals = {
+    replay_entries: 0,
+    replay_capacity: 0,
+    replay_high_water: 0,
+    replay_saturated_total: 0,
+    replay_expired_total: 0
+  };
+  for (const reference of liveReplayGuards) {
+    const stats = reference.deref()?.stats();
+    if (!stats) continue;
+    totals.replay_entries += stats.entries;
+    totals.replay_capacity += stats.capacity;
+    totals.replay_high_water += stats.high_water;
+    totals.replay_saturated_total += stats.saturated_total;
+    totals.replay_expired_total += stats.expired_total;
+  }
+  return totals;
+});
+
 /**
  * Remembers nonces until they expire. Every live nonce is indexed under its
  * expiry time, and expiries are kept in a min-heap, so each admission evicts
@@ -193,6 +223,9 @@ export class ReplayGuard {
     this.highWater = 0;
     this.maxExpiryLagMs = 0;
     this.counters = { admitted: 0, replayed: 0, saturated: 0, expired: 0 };
+    const reference = new WeakRef(this);
+    liveReplayGuards.add(reference);
+    replayGuardCollector.register(this, reference);
   }
 
   // Compatibility surface retained for existing callers/tests that only need

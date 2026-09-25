@@ -8,6 +8,7 @@ import {
   verifyTransportServerIdentity
 } from './transport-credentials.mjs';
 import { authorizeServiceRequest } from './service-network-policy.mjs';
+import { registerTransportMetrics } from './observability.mjs';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REQUEST_TIMEOUT_MS = 300_000;
@@ -33,6 +34,11 @@ const TRANSPORT_POOL_LIMITS = Object.freeze({
 });
 const transportPools = new Map();
 const transportPoolCounters = { connections: 0, reused: 0, drained_pools: 0 };
+registerTransportMetrics('transport-pools', () => ({
+  pool_connections_total: transportPoolCounters.connections,
+  pool_reused_total: transportPoolCounters.reused,
+  pool_drained_total: transportPoolCounters.drained_pools
+}));
 
 function transportAgent(transport, audience, target) {
   const scope = `${transport.service}\u0000${audience}\u0000${target.origin}`;
