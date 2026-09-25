@@ -93,6 +93,22 @@ export function assessInitialGuardianship({
     throw new ValidationError('Initial guardianship state is invalid');
   }
 
+  const bondCreatedAt=canonicalDate(genesisBond.created_at,'Genesis Bond created_at');
+  const transactionEvaluatedAt=canonicalDate(
+    genesisTransactionCandidate.evaluated_at,
+    'General Genesis transaction evaluated_at'
+  );
+  const guardianshipEffectiveAt=canonicalDate(
+    guardianship.effective_at,
+    'Initial guardianship effective_at'
+  );
+  if(bondCreatedAt<transactionEvaluatedAt){
+    throw new ValidationError('Genesis Bond cannot predate its transaction candidate');
+  }
+  if(guardianshipEffectiveAt<bondCreatedAt){
+    throw new ValidationError('Initial guardianship cannot predate Genesis Bond');
+  }
+
   requireNullTransferEvidence(guardianship);
 
   return relationshipAssessment('initial-guardianship-candidate',genesisBond,guardianship);
@@ -199,6 +215,20 @@ export function assessGuardianshipEndAtIndependence({
   ){
     throw new ValidationError('Guardianship independence closure status digest is invalid');
   }
+  const independenceEffectiveAt=canonicalDate(
+    independentDevelopmentalStatus.effective_at,
+    'independent developmental status effective_at'
+  );
+  const guardianshipEndAt=canonicalDate(
+    candidateGuardianship.effective_at,
+    'guardianship independence end effective_at'
+  );
+  if(independenceEffectiveAt>guardianshipEndAt){
+    throw new ValidationError(
+      'Guardianship cannot end before independent developmental status is effective'
+    );
+  }
+
   requireNullTransferEvidence(candidateGuardianship);
   ensureTimeAdvances(currentGuardianship,candidateGuardianship);
 
