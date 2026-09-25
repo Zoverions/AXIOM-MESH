@@ -65,24 +65,52 @@ export async function ensureMeshIdentity(dataDir, service, { create = true } = {
 // request cost ~5x a stat. Any replacement of the file -- rotation writes a
 // new file and renames it into place -- changes the inode or timestamps, so
 // the next request reads the new key exactly as before.
+//
+// Timestamps only change when the filesystem clock ticks: about every 15.6 ms
+// on NTFS, a few ms on Linux, 2 s on FAT. A same-size rewrite within one tick
+// of the cached read keeps the identity, so a file modified that recently is
+// never served from the cache ("racy git"). Once it is older than the margin,
+// any further write gets a timestamp outside the tick and shows as a change.
 const trustedKeyCache = new Map();
+const trustedKeyCounters = { reads: 0, hits: 0 };
+export const TRUSTED_KEY_RACY_MARGIN_MS = 2_000;
 
 function trustFileIdentity(info) {
   return `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`;
 }
 
-export async function loadTrustedKey(dataDir, service) {
+/** True when a trust file is settled enough for its identity to be trusted. */
+export function trustedKeyCacheable(info, nowMs = Date.now()) {
+  const now = BigInt(Math.floor(nowMs)) * 1_000_000n;
+  const margin = BigInt(TRUSTED_KEY_RACY_MARGIN_MS) * 1_000_000n;
+  return now - info.mtimeNs >= margin && now - info.ctimeNs >= margin;
+}
+
+/** Trust-file reads and cache hits since start, for evidence and tests. */
+export function trustedKeyCacheStats() {
+  return Object.freeze({ entries: trustedKeyCache.size, ...trustedKeyCounters });
+}
+
+export async function loadTrustedKey(dataDir, service, { nowMs = Date.now() } = {}) {
   if (!KEY_PATTERN.test(service)) throw new AxiomError('invalid_service_identity', 'Invalid service identity', 401);
   const path = join(dataDir, 'trust', `${service}.pub.pem`);
-  const before = trustFileIdentity(await stat(path, { bigint: true }));
+  const info = await stat(path, { bigint: true });
+  const before = trustFileIdentity(info);
   const cached = trustedKeyCache.get(path);
-  if (cached?.identity === before) return cached.key;
+  if (cached?.identity === before) {
+    trustedKeyCounters.hits += 1;
+    return cached.key;
+  }
 
+  trustedKeyCounters.reads += 1;
   const key = createPublicKey(await readFile(path, 'utf8'));
-  // Cache only if the file did not change while it was being read.
+  // Cache only a settled file that did not change while it was being read.
   const after = trustFileIdentity(await stat(path, { bigint: true }));
-  if (after === before) trustedKeyCache.set(path, { identity: before, key });
-  else trustedKeyCache.delete(path);
+  if (after === before && trustedKeyCacheable(info, nowMs)) {
+    trustedKeyCache.set(path, { identity: before, key });
+  } else {
+    trustedKeyCache.delete(path);
+  }
   return key;
 }
 

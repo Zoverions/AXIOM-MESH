@@ -316,6 +316,14 @@ against a cache that skips the identity check). An immutable in-memory trust
 generation, which would also remove the `stat`, needs rotation to publish
 generations and is still open.
 
+Follow-up (2026-09-25): Windows CI showed that a same-size rewrite in place
+within one filesystem timestamp tick keeps the file identity. NTFS ticks
+about every 15.6 ms and Linux's coarse clock every few ms, so the cache
+could keep serving the old key. As in Git's "racy clean" rule, a trust file
+modified or changed within the last 2 s is now re-read on every request and
+cached only once it is older. A test fails without that rule.
+`trustedKeyCacheStats()` reports reads and cache hits.
+
 ### S-06 — Replay protection has an O(n) hot-path sweep and a low fixed ceiling
 
 **Severity:** High  
