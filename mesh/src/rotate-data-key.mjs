@@ -45,6 +45,7 @@ import {
 } from './lib/data-key-history.mjs';
 import {
   SIDECAR_SUFFIX,
+  prepareChunkedArtifactRewrap,
   prepareProtectedArtifactRewrap
 } from './lib/protected-artifact.mjs';
 import {
@@ -183,30 +184,16 @@ export async function rotateDataProtectionKey({
     for (const [index, artifact] of artifacts.entries()) {
       preparedArtifacts.push({
         ...artifact,
-        prepared: await prepareProtectedArtifactRewrap({
-          artifactPath: artifact.path,
-          relativePath: artifact.logical_path,
-          context: artifact.context,
-          encoding: artifact.encoding,
-          expected: artifact.expected,
-          expectedPlaintext: artifact.expected_plaintext,
-          sourceProtector,
-          targetProtector,
+        prepared: await prepareArtifactRewrap({
+          artifact,
+          index,
+          workRoot,
+          dataDir: roots.data,
           identity,
           rotationId,
           verificationKeys,
-          transform: artifact.kind === 'backup'
-            ? database => reencryptBackupDatabase({
-              database,
-              workRoot,
-              index,
-              artifact,
-              dataDir: roots.data,
-              identity,
-              sourceProtector,
-              targetProtector
-            })
-            : undefined
+          sourceProtector,
+          targetProtector
         })
       });
     }
@@ -689,30 +676,16 @@ export async function rollbackDataProtectionKey({
     for (const [index, artifact] of currentArtifacts.entries()) {
       preparedArtifacts.push({
         ...artifact,
-        prepared: await prepareProtectedArtifactRewrap({
-          artifactPath: artifact.path,
-          relativePath: artifact.logical_path,
-          context: artifact.context,
-          encoding: artifact.encoding,
-          expected: artifact.expected,
-          expectedPlaintext: artifact.expected_plaintext,
-          sourceProtector: currentProtector,
-          targetProtector,
+        prepared: await prepareArtifactRewrap({
+          artifact,
+          index,
+          workRoot,
+          dataDir: roots.data,
           identity,
           rotationId: rollbackId,
           verificationKeys,
-          transform: artifact.kind === 'backup'
-            ? database => reencryptBackupDatabase({
-              database,
-              workRoot,
-              index,
-              artifact,
-              dataDir: roots.data,
-              identity,
-              sourceProtector: currentProtector,
-              targetProtector
-            })
-            : undefined
+          sourceProtector: currentProtector,
+          targetProtector
         })
       });
     }
@@ -978,7 +951,8 @@ export function verifyDataKeyRotationManifest({ manifest }) {
       !['backup', 'credential-rollback', 'credential-forward'].includes(
         artifact.kind
       )
-      || !['bytes', 'json'].includes(artifact.encoding)
+      || !['bytes', 'json', 'chunked'].includes(artifact.encoding)
+      || (artifact.encoding === 'chunked' && artifact.kind !== 'backup')
       || typeof artifact.context !== 'string'
       || artifact.context.length < 1
       || artifact.context.length > 512
@@ -1262,16 +1236,12 @@ async function discoverBackupArtifact({
     join(directory, MANIFEST_FILE),
     MAX_MANIFEST_BYTES
   )).toString('utf8'));
-  if (manifest?.format === 'axiom-grid-backup.v2') {
-    // Streaming (chunked) backups cannot be rewrapped yet: fail closed
-    // before any artifact is touched (scalability audit S-13).
-    throw new ValidationError(
-      `Backup ${expectedBackupId} is a streaming (axiom-grid-backup.v2) backup, which data-key rotation cannot rewrap yet`
-    );
-  }
+  const streaming = manifest?.format === 'axiom-grid-backup.v2';
   if (
-    manifest?.format !== 'axiom-grid-backup.v1'
-    || manifest.snapshot?.name !== 'snapshot.axb'
+    !(
+      (manifest?.format === 'axiom-grid-backup.v1' && manifest.snapshot?.name === 'snapshot.axb')
+      || (streaming && manifest.snapshot?.name === 'snapshot.axc')
+    )
     || manifest.backup_id !== expectedBackupId
   ) {
     throw new ValidationError(
@@ -1296,9 +1266,10 @@ async function discoverBackupArtifact({
     kind: 'backup',
     path,
     relative_path: portableRelative(dataDir, path),
-    logical_path: `backups/${manifest.backup_id}/snapshot.axb`,
+    logical_path: `backups/${manifest.backup_id}/${manifest.snapshot.name}`,
     context: manifest.snapshot.context,
-    encoding: 'bytes',
+    // A streaming backup is rewrapped chunk by chunk (scalability audit S-13).
+    encoding: streaming ? 'chunked' : 'bytes',
     expected: {
       bytes: manifest.snapshot.bytes,
       sha256: manifest.snapshot.sha256
@@ -1307,12 +1278,131 @@ async function discoverBackupArtifact({
       bytes: manifest.database.bytes,
       sha256: manifest.database.sha256
     },
+    ...(streaming ? {
+      expected_chunked: {
+        salt: manifest.snapshot.chunked?.salt,
+        chunk_bytes: manifest.snapshot.chunked?.chunk_bytes,
+        chunks: manifest.snapshot.chunked?.chunks
+      }
+    } : {}),
     database: {
       schema_version: manifest.database.schema_version,
       evidence_events: manifest.database.evidence_events,
       evidence_head: manifest.database.evidence_head
     }
   };
+}
+
+// Rewraps one protected artifact under the target key. A streaming backup
+// is decrypted to disk, its protected columns are re-encrypted in that file,
+// and it is sealed again chunk by chunk; every other artifact is rewrapped
+// as one envelope.
+async function prepareArtifactRewrap({
+  artifact,
+  index,
+  workRoot,
+  dataDir,
+  identity,
+  rotationId,
+  verificationKeys,
+  sourceProtector,
+  targetProtector
+}) {
+  if (artifact.encoding === 'chunked') {
+    const workDir = join(workRoot, `artifact-${index}`);
+    await mkdir(workDir, { mode: 0o700 });
+    try {
+      return await prepareChunkedArtifactRewrap({
+        artifactPath: artifact.path,
+        relativePath: artifact.logical_path,
+        context: artifact.context,
+        expected: artifact.expected,
+        expectedPlaintext: artifact.expected_plaintext,
+        expectedChunked: artifact.expected_chunked,
+        sourceProtector,
+        targetProtector,
+        identity,
+        rotationId,
+        verificationKeys,
+        workDir,
+        transformFile: path => reencryptBackupDatabaseFile({
+          path,
+          artifact,
+          dataDir,
+          identity,
+          sourceProtector,
+          targetProtector
+        })
+      });
+    } finally {
+      await rm(workDir, { recursive: true, force: true });
+    }
+  }
+  return prepareProtectedArtifactRewrap({
+    artifactPath: artifact.path,
+    relativePath: artifact.logical_path,
+    context: artifact.context,
+    encoding: artifact.encoding,
+    expected: artifact.expected,
+    expectedPlaintext: artifact.expected_plaintext,
+    sourceProtector,
+    targetProtector,
+    identity,
+    rotationId,
+    verificationKeys,
+    transform: artifact.kind === 'backup'
+      ? database => reencryptBackupDatabase({
+        database,
+        workRoot,
+        index,
+        artifact,
+        dataDir,
+        identity,
+        sourceProtector,
+        targetProtector
+      })
+      : undefined
+  });
+}
+
+// Re-encrypts a backup database's protected columns in place, on disk, and
+// checks that its signed evidence state is preserved.
+async function reencryptBackupDatabaseFile({
+  path,
+  artifact,
+  dataDir,
+  identity,
+  sourceProtector,
+  targetProtector
+}) {
+  const db = new DatabaseSync(path);
+  try {
+    reencryptGridProtectedColumns({ db, sourceProtector, targetProtector });
+  } finally {
+    db.close();
+  }
+  const store = new GridStore({ path, dataDir, identity, protector: targetProtector });
+  let status;
+  let chain;
+  try {
+    status = store.getStatus();
+    chain = store.verifyChain();
+  } finally {
+    store.close();
+  }
+  if (
+    !chain.valid
+    || status.schema_version !== artifact.database.schema_version
+    || status.last_seq !== artifact.database.evidence_events
+    || status.last_hash !== artifact.database.evidence_head
+  ) {
+    throw new ValidationError('Re-encrypted backup does not preserve its signed evidence state');
+  }
+  await Promise.all([
+    rm(`${path}-wal`, { force: true }),
+    rm(`${path}-shm`, { force: true })
+  ]);
+  return path;
 }
 
 async function reencryptBackupDatabase({

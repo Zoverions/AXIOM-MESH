@@ -800,7 +800,7 @@ Peak memory therefore grows by multiples of database size.
   budget.
 
 **Remediation status (2026-09-25): streaming format built, off by default;
-rotation support open.**
+data-key rotation supports it.**
 
 - **Format.** `axiom-grid-backup.v2` stores the snapshot as a chunked
   protected artifact (`mesh/src/lib/chunked-artifact.mjs`): records of
@@ -822,13 +822,22 @@ rotation support open.**
   that keeps every chunk measures 50 MiB and fails. Backup tests restore
   byte-exactly, refuse a tampered snapshot or re-signed manifest without
   touching the live database, and plan retention across v1 and v2 backups.
-- **Opt-in.** `AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2`. The default
-  stays v1 because data-key rotation re-encrypts backups in memory and
-  cannot rewrap a chunked snapshot yet; it refuses to start while one exists.
+- **Rotation.** Data-key rotation and rollback rewrap a streaming backup
+  chunk by chunk: the snapshot is decrypted to disk, its protected columns
+  are re-encrypted in that file, and it is sealed again under the new key.
+  A signed rewrap record (the existing `axiom-protected-artifact-rewrap.v1`
+  sidecar, encoding `chunked`) binds the source and target ciphertext,
+  plaintext and chunk parameters, and verification follows that history. A
+  forged or discontinuous record, re-signed or not, is refused. Tests fail
+  without the column re-encryption, the chunk continuity rule, following the
+  history on open, and with the snapshot rotated as one envelope.
+- **Opt-in.** `AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2`. Rotation still
+  stages each rewrapped artifact and the live database in memory, so a
+  snapshot above 512 MiB cannot be rotated.
 
-Still open: streaming data-key rotation for chunked backups (then v2 by
-default), background maintenance with a bounded I/O rate, and the same
-treatment for exports (S-12).
+Still open: making v2 the default, streaming rotation of the live database
+and staged artifacts, background maintenance with a bounded I/O rate, and
+the same treatment for exports (S-12).
 
 ### S-14 — Long-running artifact work is performed inline with commit requests
 

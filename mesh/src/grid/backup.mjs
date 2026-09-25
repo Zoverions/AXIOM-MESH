@@ -17,10 +17,9 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
-import { openProtectedArtifact } from '../lib/protected-artifact.mjs';
+import { openChunkedProtectedArtifact, openProtectedArtifact } from '../lib/protected-artifact.mjs';
 import {
   CHUNKED_ARTIFACT_FORMAT,
-  openFileChunked,
   sealFileChunked,
   validateChunkedMetadata
 } from '../lib/chunked-artifact.mjs';
@@ -30,9 +29,9 @@ const BACKUP_FORMAT = 'axiom-grid-backup.v1';
 const BACKUP_FILE = 'snapshot.axb';
 // Streaming format (scalability audit S-13): the snapshot is a chunked
 // protected artifact, so backup, verification and restore hold a bounded
-// amount of memory whatever the database size. Opt-in with
-// AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2 until data-key rotation
-// can rewrap chunked snapshots; rotation refuses them for now.
+// amount of memory whatever the database size. Data-key rotation rewraps it
+// chunk by chunk under a signed rewrap record. Opt-in with
+// AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2.
 export const STREAMING_BACKUP_FORMAT = 'axiom-grid-backup.v2';
 const STREAMING_BACKUP_FILE = 'snapshot.axc';
 const BACKUP_FORMATS = new Set([BACKUP_FORMAT, STREAMING_BACKUP_FORMAT]);
@@ -221,6 +220,7 @@ export async function verifyGridBackupArtifact({
       identity,
       protector,
       expectedDatabaseDigest,
+      artifactRelativePath,
       keepDatabase
     });
   }
@@ -312,6 +312,7 @@ async function verifyStreamingBackupArtifact({
   identity,
   protector,
   expectedDatabaseDigest,
+  artifactRelativePath,
   keepDatabase
 }) {
   if (manifest.schema_versions?.manifest !== 1 || manifest.schema_versions?.evidence !== 1) {
@@ -336,7 +337,9 @@ async function verifyStreamingBackupArtifact({
     }
   }
   const chunked = manifest.snapshot.chunked ?? {};
-  const expected = validateChunkedMetadata({
+  // The snapshot as signed at backup time; a data-key rotation since then
+  // is followed through its signed rewrap history.
+  validateChunkedMetadata({
     format: chunked.format,
     algorithm: manifest.snapshot.protection,
     kdf: chunked.kdf,
@@ -347,7 +350,7 @@ async function verifyStreamingBackupArtifact({
     sha256: manifest.snapshot.sha256,
     plaintext: { bytes: manifest.database?.bytes, sha256: manifest.database?.sha256 }
   });
-  if (expected.format !== CHUNKED_ARTIFACT_FORMAT) throw new ValidationError('Grid backup snapshot format is invalid');
+  if (chunked.format !== CHUNKED_ARTIFACT_FORMAT) throw new ValidationError('Grid backup snapshot format is invalid');
   const snapshotPath = join(dirname(manifestPath), STREAMING_BACKUP_FILE);
 
   const recoveryRoot = join(dataDir, 'recovery');
@@ -357,13 +360,19 @@ async function verifyStreamingBackupArtifact({
   const validationPath = join(directory, 'grid.sqlite');
   let chain;
   let kept = false;
+  let opened;
   try {
-    await openFileChunked({
-      protector,
-      sourcePath: snapshotPath,
-      targetPath: databasePath,
+    opened = await openChunkedProtectedArtifact({
+      artifactPath: snapshotPath,
+      relativePath: artifactRelativePath
+        ?? relative(dataDir, snapshotPath).replaceAll('\\', '/'),
       context: manifest.snapshot.context,
-      expected
+      expected: { bytes: manifest.snapshot.bytes, sha256: manifest.snapshot.sha256 },
+      expectedPlaintext: { bytes: manifest.database.bytes, sha256: manifest.database.sha256 },
+      expectedChunked: { salt: chunked.salt, chunk_bytes: chunked.chunk_bytes, chunks: chunked.chunks },
+      protector,
+      verificationKeys,
+      targetPath: databasePath
     });
     await copyFile(databasePath, validationPath);
     const { GridStore } = await import('./store.mjs');
@@ -386,8 +395,11 @@ async function verifyStreamingBackupArtifact({
   return {
     valid: true,
     backup_id: manifest.backup_id,
-    database_digest: manifest.database.sha256,
+    // After a data-key rotation the database's protected columns carry the
+    // new key, so its digest is the latest signed plaintext digest.
+    database_digest: opened.plaintext_metadata.sha256,
     source_database_digest: manifest.database.sha256,
+    rewrapped: opened.rewrapped,
     manifest,
     manifest_path: manifestPath,
     snapshot_path: snapshotPath,
