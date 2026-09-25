@@ -6,7 +6,7 @@
 
 **Status:** experimental local preview; not a supported product
 
-**Updated:** 2026-08-20
+**Updated:** 2026-09-24
 
 ## Purpose and exact claim
 
@@ -95,7 +95,7 @@ reverse tunnel, or production deployment.
 
 ## Implemented surfaces
 
-The preview has eight primary sections. Their labels describe the intended
+The preview has nine primary sections. Their labels describe the intended
 product organization, but only the functions in this table are current.
 
 | Surface | Current behavior | Gateway routes | Current boundary |
@@ -104,10 +104,11 @@ product organization, but only the functions in this table are current.
 | Ask | Reviews one `system.echo` request before sending, exposes effect/provider/destination/information/retention/timeout/cancellation/reversibility, then presents completion or a stable fail-closed outcome | `intents.submit` | Transparent deterministic test; review is not a kernel plan or grant; same-key recovery only when outcome is uncertain |
 | Vault organize | Reviews `ai.local-organize`, runs the local organizer stub on owner-selected text, shows a draft suggestion with provider/scope/budget/timeout/cancel/retention/digest fields, and only writes via a separate `memory.put` review | browser-local stub; optional later `memory.put` | Draft only; not production AI; not a Mesh grant; `ai.providers` remains `adapter_required` |
 | Social | Reads the authenticated owner's bounded local actor, persona, publication corpus, supersession/retraction status, transition count, truncation state, and raw snapshot | `social.get` | Read-only owner-local projection; owner is derived from authentication; `network_effect` must remain `none`; no federation, remote distribution, or browser Social mutation |
+| Circles | Reads the exact local built-in `axiom-circle-template-catalog.v0` as a public shell asset and explains its roles/decision defaults | none | Static inert templates only; works without a token; cannot create/join/invite, assign membership/roles, govern, delegate, execute, federate, or lower the raise-only protection floor |
 | Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
 | Vault | Lists active owner-scoped memory objects and edges, creates one private note at a time, optionally organizes owner-selected text into a local draft suggestion, records one of three fixed directional provenance links, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get`; local organizer stub | Bounded lifecycle only; organize drafts are ephemeral and non-authorizing; no arbitrary relation, direct edge deletion, hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
 | Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
-| Share | Displays explicit unavailable Selective Sharing and Circles states | none | Sends nothing; sharing and Circles remain disabled |
+| Share | Displays explicit unavailable Selective Sharing state and points to the separate inert Circles template browser | none | Sends nothing; sharing and live Circles remain disabled |
 | Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
 The policy lists exactly 15 client route identifiers. The checker requires
@@ -115,6 +116,17 @@ every identifier to exist in the active Gateway client contract. The loopback
 server independently matches method, path, and query names against that
 contract before proxying. `/internal/...`, unlisted `/v1/...`, a wrong method,
 or an undeclared query parameter is never forwarded.
+
+The Circles surface is deliberately separate from live Circle capability. It
+serves the repository's exact `mesh/config/circle-templates-v0.json` through
+the loopback static-asset allowlist, validates the catalog again in the browser,
+and constructs all output with text-only DOM helpers. The catalog is a public,
+user-data-free shell asset and may be cached by the service worker for offline
+reference. It contains no invitations, memberships, credentials, grants, or
+runtime state. Template fields fix execution and membership authority to false,
+retain the raise-only policy floor, and provide only reusable roles and decision
+starting points. No control on that surface creates a Circle or sends a Gateway
+request.
 
 The Social surface calls only `social.get` with a bounded publication limit of
 100. The browser supplies no owner override; Gateway authentication determines
