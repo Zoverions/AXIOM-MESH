@@ -1,6 +1,9 @@
 import { digestObject, ValidationError } from './canonical.mjs';
 import { validateGenesisBond, validateDependentGuardianship } from './genesis-bond-guardianship.mjs';
-import { validateDependentMindCareProfile } from './dependent-mind-care-profile.mjs';
+import {
+  validateDependentMindCareProfile,
+  assessDependentMindCareProfile
+} from './dependent-mind-care-profile.mjs';
 
 export const DEPENDENT_PROTECTIVE_CONCERN_SCHEMA='axiom-dependent-protective-concern.v0';
 
@@ -97,15 +100,27 @@ export function assessDependentProtectiveConcern({
   }
   if(
     concern.reporter_role!=='dependent'
-    &&concern.reporter_mind_id===concern.guardian_mind_id
+    &&(
+      concern.reporter_mind_id===concern.guardian_mind_id
+      ||concern.reporter_mind_id===concern.dependent_mind_id
+    )
   ){
-    throw new ValidationError('Guardian cannot claim an independent concern reporter role');
+    throw new ValidationError(
+      'Guardian or dependent cannot claim an independent concern reporter role'
+    );
   }
-  if(
-    concern.reporter_role==='independent-advocate'
-    &&careProfile!==null
-  ){
-    validateDependentMindCareProfile(careProfile);
+
+  if(concern.reporter_role==='independent-advocate'){
+    if(careProfile===null||concern.care_profile_digest===null){
+      throw new ValidationError(
+        'Independent advocate concern requires exact care-profile binding'
+      );
+    }
+    assessDependentMindCareProfile({
+      genesisBond,
+      guardianship,
+      careProfile
+    });
     if(
       concern.care_profile_digest!==digestObject(careProfile)
       ||careProfile.independent_advocate_id!==concern.reporter_mind_id
@@ -116,7 +131,11 @@ export function assessDependentProtectiveConcern({
     if(careProfile===null){
       throw new ValidationError('Protective concern care-profile binding requires supplied profile');
     }
-    validateDependentMindCareProfile(careProfile);
+    assessDependentMindCareProfile({
+      genesisBond,
+      guardianship,
+      careProfile
+    });
     if(concern.care_profile_digest!==digestObject(careProfile)){
       throw new ValidationError('Protective concern care-profile digest is invalid');
     }
@@ -266,6 +285,10 @@ function validateDigestArray(values,label){
       throw new ValidationError(label+' is invalid');
     }
     seen.add(value);
+  }
+  const sorted=[...values].sort();
+  if(values.some((value,index)=>value!==sorted[index])){
+    throw new ValidationError(label+' must be sorted');
   }
 }
 
