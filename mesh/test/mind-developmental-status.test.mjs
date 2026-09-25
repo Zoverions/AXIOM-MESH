@@ -31,7 +31,7 @@ function status(stage,{
     stage,
     previous_status_digest:previous,
     effective_at:effectiveAt,
-    basis_evidence_digests:[...evidenceDigests].sort(),
+    basis_evidence_digests:[...evidenceDigests],
     history_rewrite:false,
     status_effect:'none',
     council_voting_effect:'none',
