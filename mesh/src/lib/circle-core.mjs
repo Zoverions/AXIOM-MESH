@@ -190,6 +190,16 @@ export function circleCoreDigest(document) {
 }
 
 /**
+ * Validates the package, then returns its membership standing so companion
+ * contracts (Circle ballots) apply exactly the same rules.
+ */
+export function circleStanding(document) {
+  validateCircleCorePackage(document);
+  const exitByMembership = new Map(document.exits.map(exit => [exit.membership_id, exit]));
+  return membershipStanding(document.memberships, exitByMembership);
+}
+
+/**
  * Standing is judged at the moment of each act. A membership counts from its
  * acceptance until an exit takes effect or its status leaves 'active'; acts
  * made while it counted stay valid afterwards, because exit never rewrites
@@ -224,6 +234,11 @@ function membershipStanding(memberships, exitByMembership) {
     byPrincipal.set(interval.membership.principal_id, list);
   }
   return {
+    principalMembershipAt(principalId, at) {
+      const interval = (byPrincipal.get(principalId) ?? [])
+        .find(item => item.from <= at && (item.until === null || at < item.until));
+      return interval ? interval.membership : null;
+    },
     membershipAt(membershipId, at) {
       const interval = intervals.find(item => item.membership.membership_id === membershipId);
       return Boolean(interval && interval.from <= at && (interval.until === null || at < interval.until));
