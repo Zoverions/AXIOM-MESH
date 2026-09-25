@@ -52,7 +52,7 @@ function nextStatus(current,stage,effectiveAt,evidenceDigests=['2'.repeat(64)]){
   });
 }
 
-function review(){
+function review({developmentalStateDigest='d'.repeat(64)}={}){
   return {
     schema:MIND_INDEPENDENCE_REVIEW_SCHEMA,
     version:0,
@@ -60,7 +60,7 @@ function review(){
     mind_id:'digital.founder.1',
     sponsor_mind_id:'human.founder',
     developmental_stage:'candidate-independent',
-    developmental_state_evidence_digest:'d'.repeat(64),
+    developmental_state_evidence_digest:developmentalStateDigest,
     continuity_evidence_digest:'e'.repeat(64),
     criteria_profile:INDEPENDENCE_CRITERIA_PROFILE,
     criteria:REQUIRED_INDEPENDENCE_CRITERIA.map((criterionId,index)=>({
@@ -202,10 +202,11 @@ test('developmental transition rejects stage skipping and regression',()=>{
   );
 
   const dependent=nextStatus(genesis,'dependent','2026-09-25T12:01:00.000Z');
-  const backwards=nextStatus(dependent,'genesis','2026-09-25T12:02:00.000Z');
+  const developing=nextStatus(dependent,'developing','2026-09-25T12:02:00.000Z');
+  const backwards=nextStatus(developing,'dependent','2026-09-25T12:03:00.000Z');
   assert.throws(
     ()=>assessMindDevelopmentalStatusTransition({
-      currentStatus:dependent,
+      currentStatus:developing,
       candidateStatus:backwards
     }),
     /advance exactly one stage/
@@ -268,7 +269,7 @@ test('candidate-independent to independent requires exact positive transition ev
     effectiveAt:'2026-09-25T14:20:00.000Z',
     evidenceDigests:['d'.repeat(64)]
   });
-  const r=review();
+  const r=review({developmentalStateDigest:digestObject(current)});
   const transitionEvidence=independenceEvidence(r);
   const transitionDigest=digestObject(transitionEvidence);
   const candidate=nextStatus(
@@ -300,7 +301,7 @@ test('independent candidate must bind the exact transition evidence digest',()=>
     previous:'9'.repeat(64),
     effectiveAt:'2026-09-25T14:20:00.000Z'
   });
-  const r=review();
+  const r=review({developmentalStateDigest:digestObject(current)});
   const transitionEvidence=independenceEvidence(r);
   const candidate=nextStatus(
     current,
@@ -320,12 +321,37 @@ test('independent candidate must bind the exact transition evidence digest',()=>
   );
 });
 
-test('non-requestable independence evidence cannot support independent transition',()=>{
+test('independence evidence for another candidate status cannot be replayed',()=>{
   const current=status('candidate-independent',{
     previous:'9'.repeat(64),
     effectiveAt:'2026-09-25T14:20:00.000Z'
   });
   const r=review();
+  const transitionEvidence=independenceEvidence(r);
+  const candidate=nextStatus(
+    current,
+    'independent',
+    '2026-09-25T14:31:00.000Z',
+    [digestObject(transitionEvidence)]
+  );
+
+  assert.throws(
+    ()=>assessMindDevelopmentalStatusTransition({
+      currentStatus:current,
+      candidateStatus:candidate,
+      independenceReviewDocument:r,
+      independenceTransitionEvidence:transitionEvidence
+    }),
+    /does not bind the exact current developmental status/
+  );
+});
+
+test('non-requestable independence evidence cannot support independent transition',()=>{
+  const current=status('candidate-independent',{
+    previous:'9'.repeat(64),
+    effectiveAt:'2026-09-25T14:20:00.000Z'
+  });
+  const r=review({developmentalStateDigest:digestObject(current)});
   const transitionEvidence=independenceEvidence(r,{continuity_status:'disputed'});
   const candidate=nextStatus(
     current,
