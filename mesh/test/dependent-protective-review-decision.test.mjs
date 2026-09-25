@@ -204,6 +204,17 @@ test('panel requires at least three unique conflict-free reviewers',()=>{
   assert.throws(()=>deriveDependentProtectiveReviewDecisionId(d),/reviewer is invalid/);
 });
 
+test('reviewer attestations must be canonical by reviewer identity',()=>{
+  const b=bond(); const g=guardianship(b); const c=concern(b,g);
+  const d=decision(b,g,c);
+  [d.reviewers[0],d.reviewers[1]]=[d.reviewers[1],d.reviewers[0]];
+
+  assert.throws(
+    ()=>deriveDependentProtectiveReviewDecisionId(d),
+    /reviewers must be sorted by identity/
+  );
+});
+
 test('guardian dependent and direct-party reporter cannot sit on panel',()=>{
   const b=bond(); const g=guardianship(b); const c=concern(b,g);
   for(const reviewerId of [g.guardian_mind_id,g.dependent_mind_id,c.reporter_mind_id]){
