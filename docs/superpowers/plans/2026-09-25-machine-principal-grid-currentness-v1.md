@@ -39,6 +39,28 @@
 
 ---
 
+## Delivery slices and merge order
+
+This plan is implemented as four separately reviewable stages so the mutable
+authority path exists before execution begins depending on it:
+
+1. **Stage A / contracts:** Task 1 only. Inert schemas and pure attenuation.
+2. **Stage B / Grid substrate:** Tasks 2-3. Durable lifecycle state, replay,
+   projection, specialized internal routes, and exact network-policy/docs
+   reconciliation. No Gateway lifecycle intent and no execution enforcement.
+3. **Stage C / authorized mutation:** Task 4. Human-authorized lifecycle
+   initialization/mutation becomes reachable through existing intent ingress.
+   Ordinary machine execution still uses the existing root-only behavior, so
+   operators can initialize retained lifecycle heads before Stage D.
+4. **Stage D / enforcement and ordered release:** Tasks 5-7 plus the applicable
+   Task 8 documentation/release work. Machine execution now requires retained
+   currentness and Grid-ordered release.
+5. **Stage E / #1840 disclosure:** explicitly outside this implementation plan.
+
+Each stage gets its own branch/PR, exact-head protected CI, review, and merge.
+Do not combine Stages C and D into one first deployment: Stage C is the
+intentional initialization runway for Stage D.
+
 ## Task 1: Pure authority attenuation and v1 contract surface
 
 **Files:**
