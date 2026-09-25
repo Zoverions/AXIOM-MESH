@@ -37,6 +37,10 @@ export function assessGeneralGenesisSponsorEligibility({
     eligibilityDocument.evaluated_at,
     'Genesis eligibility evaluated_at'
   );
+  const responsibilityObservedAt=canonicalDate(
+    eligibilityDocument.responsibility_evidence_observed_at,
+    'Genesis responsibility evidence observed_at'
+  );
   const identityObservedAt=canonicalDate(
     eligibilityDocument.identity_observed_at,
     'Genesis identity observed_at'
@@ -55,6 +59,7 @@ export function assessGeneralGenesisSponsorEligibility({
   );
 
   for(const [label,time] of [
+    ['responsibility evidence',responsibilityObservedAt],
     ['identity',identityObservedAt],
     ['history',historyObservedAt],
     ['standing',standingObservedAt],
@@ -66,6 +71,7 @@ export function assessGeneralGenesisSponsorEligibility({
   }
 
   const maxAge=eligibilityDocument.maximum_evidence_age_seconds;
+  const responsibilityCurrent=ageSeconds(responsibilityObservedAt,evaluatedAt)<=maxAge;
   const identityCurrent=ageSeconds(identityObservedAt,evaluatedAt)<=maxAge;
   const historyCurrent=ageSeconds(historyObservedAt,evaluatedAt)<=maxAge;
   const standingCurrent=ageSeconds(standingObservedAt,evaluatedAt)<=maxAge;
@@ -116,6 +122,9 @@ export function assessGeneralGenesisSponsorEligibility({
   }else if(incompleteCriteria.length){
     eligible=false;
     reason='responsibility-criteria-incomplete';
+  }else if(!responsibilityCurrent){
+    eligible=false;
+    reason='responsibility-evidence-stale';
   }else if(!identityCurrent){
     eligible=false;
     reason='identity-evidence-stale';
@@ -150,6 +159,7 @@ export function assessGeneralGenesisSponsorEligibility({
     substrate:eligibilityDocument.substrate,
     responsibility_profile:eligibilityDocument.responsibility_profile,
     incomplete_criteria:Object.freeze(incompleteCriteria),
+    responsibility_evidence_current:responsibilityCurrent,
     identity_current:identityCurrent,
     genesis_history_current:historyCurrent,
     standing_current:standingCurrent,
@@ -190,8 +200,8 @@ export function assessGeneralGenesisSponsorEligibility({
 export function validateGeneralGenesisSponsorEligibility(document){
   exactObject(document,'General Genesis sponsor eligibility',[
     'schema','version','status','applicant_mind_id','substrate',
-    'responsibility_profile','criteria','identity_evidence_digest',
-    'identity_observed_at','genesis_history_evidence_digest',
+    'responsibility_profile','criteria','responsibility_evidence_observed_at',
+    'identity_evidence_digest','identity_observed_at','genesis_history_evidence_digest',
     'genesis_history_observed_at','genesis_history_status','general_genesis_uses',
     'standing_evidence_digest','standing_observed_at','standing_status',
     'continuity_evidence_digest','continuity_observed_at','continuity_status',
@@ -231,6 +241,10 @@ export function validateGeneralGenesisSponsorEligibility(document){
     ||document.runtime_activation!==false
   )throw new ValidationError('General Genesis sponsor eligibility activation boundary is invalid');
 
+  canonicalDate(
+    document.responsibility_evidence_observed_at,
+    'Genesis responsibility evidence observed_at'
+  );
   canonicalDate(document.identity_observed_at,'Genesis identity observed_at');
   canonicalDate(document.genesis_history_observed_at,'Genesis history observed_at');
   canonicalDate(document.standing_observed_at,'Genesis standing observed_at');
@@ -264,7 +278,7 @@ function validateCriteria(criteria){
 }
 
 function ageSeconds(earlier,later){
-  return Math.floor((later-later%1-earlier)/1000);
+  return Math.floor((later-earlier)/1000);
 }
 
 function canonicalDate(value,label){
