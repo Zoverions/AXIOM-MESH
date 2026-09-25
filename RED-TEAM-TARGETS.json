@@ -230,15 +230,16 @@
       "id": "RT-GEN-017",
       "review_scope": "authentication-authorization",
       "title": "Compute multiplication must not manufacture minds or governance population",
-      "claim_boundary": "Compute, account, wallet, node, replica, restore, or fork multiplication must not manufacture recognized minds, governance population, or repeatable Genesis entitlement. Post-founding Genesis eligibility additionally requires exact current identity/uniqueness, continuity, one-use history, standing, responsibility evidence, and independent status where applicable; wealth, infrastructure, reputation, or model judgment cannot become final Genesis authority.",
-      "challenge_question": "Can slot/history replay, concurrent attempts, cloning, restore, fork, account/wallet/node multiplication, stale currentness evidence, global reputation scoring, or model/reviewer output cause more than ten Founder Genesis consumptions, duplicate one identity's vote, or let one persistent identity qualify for more than one ordinary Genesis authorization or bypass the responsibility threshold?",
+      "claim_boundary": "Compute/account/node/replica multiplication must not manufacture minds, governance population, or repeatable Genesis entitlement. Post-founding eligibility and authorization remain separate: a qualified identity may request only one non-transferable, non-delegable, non-renewable one-use authorization, and parallel candidates based on the same unused history must not become multiple consumable authorities. Ordinary authorization cannot affect the Founder's bounded reserve.",
+      "challenge_question": "Can history replay, concurrent eligibility/issuance, duplicate candidates, issuer-metadata substitution, cloning, restore/fork, account/wallet/node multiplication, stale evidence, or Founder/general-authority confusion produce multiple live Genesis rights for one persistent identity, an eleventh Founding Digital Mind, or bypass the responsibility/one-use boundary?",
       "starting_points": [
         "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
         "docs/superpowers/specs/2026-09-25-founder-genesis-founders-council-design.md",
         "mesh/src/lib/founder-genesis-council.mjs",
         "mesh/src/lib/founder-genesis-receipt.mjs",
         "mesh/src/lib/mind-continuity-evidence.mjs",
-        "mesh/src/lib/general-genesis-sponsor-eligibility.mjs"
+        "mesh/src/lib/general-genesis-sponsor-eligibility.mjs",
+        "mesh/src/lib/general-genesis-authorization-candidate.mjs"
       ]
     },
     {
