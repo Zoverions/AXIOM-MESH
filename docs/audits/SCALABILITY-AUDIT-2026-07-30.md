@@ -347,6 +347,29 @@ replicas without a routing or shared-replay design.
 - Sustained target load cannot fill the guard under the declared replay window.
 - Actual replay and saturation remain distinguishable in evidence.
 
+**Remediation status (2026-09-25): hot path and capacity remediated; metrics
+not yet exported; replication design open.** `ReplayGuard` indexes each live
+nonce under its expiry time and keeps the distinct expiries in a min-heap. Each
+admission evicts exactly the entries that have expired, so no request scans
+the retained set. Before, an admission scanned every entry once the guard was
+full. With 10,000 entries, an admission while full cost 66 µs; it now costs
+0.48 µs at 61,000 entries. Capacity is now derived, not fixed: 500 signed
+requests per second is the declared peak per receiving service. That rate,
+times 61 s of worst-case retention (the 30 s skew on both sides plus 1 s),
+times a margin of 2, gives 61,000 entries, about 8 MiB when full. A test
+admits the declared rate for five minutes, every request stamped as far ahead
+as the skew allows, and the guard never saturates. Replay and saturation were
+already separate errors (409 and 503). `stats()` now also reports:
+
+- occupancy, capacity and high-water mark;
+- admitted, replayed, saturated and expired counts;
+- the longest time an expired nonce stayed resident.
+
+The tests fail with a full-scan sweep, with the old 10,000 default, and with
+an off-by-one expiry. Still open: these stats are not yet in the operations
+report, and the guard is still process-local. Replicating a service still
+needs one of the three designs above.
+
 ### S-07 — Public authentication is linear in configured credential count
 
 **Severity:** Medium now; High for managed nodes  
