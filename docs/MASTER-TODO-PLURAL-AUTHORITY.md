@@ -123,6 +123,8 @@
 
 **CIRCLE-002 historical commitment checkpoint (2026-09-24):** The generic Agreement Record v0 remains Circle-neutral. The Circle adapter binds one exact agreement/digest to one exact historical Circle Core package/charter digest plus independently evidenced historical membership-assurance/context bindings for every agreement party at `agreement.recorded_at`. Later consent or membership revocation does not rewrite a historically valid record, but currentness remains separate. The adapter validates evidence shape and exact bindings only; historical snapshot/evidence authenticity remains separately verified and no agreement/Circle record grants enforcement or execution authority.
 
+**CIRCLE-002 decision-to-request checkpoint (2026-09-25):** Reuse `axiom-circle-decision.v0` as the sole collective result record. A separate inert request-evidence layer may treat only an exact `accepted` + `circle-local-accepted` decision as support for asking ordinary AXIOM policy to evaluate one exact request. The proposal must contain the content-addressed binding for the exact resource/action/purpose/destination/data/effect/consequence descriptor; the current Circle package/charter/proposal/decision and externally supplied snapshot evidence must match; open or accepted decision appeals block requestability. The result never submits the request and explicitly creates no grant, approval, prepared effect, execution, networking, or runtime authority. Every consequential effect still re-enters Gateway -> Hypervisor -> Sandbox -> Grid.
+
 ## Priority 9 — Institutional authority model
 
 - [ ] Define institution identity and charter.
