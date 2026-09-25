@@ -856,3 +856,35 @@ Stale concern evidence remains historical evidence but is not requestable as cur
 protective-review input. A protective review remains a later independent process;
 concern creation cannot mutate guardianship, developmental status, governance,
 authority, network, or runtime state.
+
+
+### Dependent Protective Review Decision boundary
+
+The inert Dependent Protective Review Decision v0 contract adds adjudicative structure
+without collapsing adjudication into execution. A valid decision binds the exact
+protective concern, Genesis Bond, active guardianship, dependent, guardian, review
+policy, evidence set, due-process evidence, appeal path, and a canonically ordered
+independent reviewer panel.
+
+The primary risk is **panel capture or outcome forgery**. Reviewers must be unique,
+conflict-free persistent identities; the guardian and dependent cannot sit on the
+independent panel, and a direct-party concern reporter cannot review its own dispute.
+The declared panel outcome is recomputed deterministically using the v0 strict-majority
+policy and is rejected if it differs from reviewer attestations. Reviewer ordering is
+canonical so equivalent panels cannot create different content-addressed decisions.
+
+A second risk is **finding-to-remedy laundering**. Even a substantiated outcome remains
+institutional evidence for a later remedy-authority path. It cannot directly remove or
+transfer a guardian, inspect private memory/internal state, seize evidence, suspend
+credentials, quarantine runtime, create emergency authority, alter developmental
+status, or execute any remedy. Appeal remains available and the decision is explicitly
+not final for execution.
+
+The review also requires externally verified guardian response-opportunity,
+dependent-voice, independent-advocacy, reviewer-identity, and evidence-set bindings.
+Absence of response is not automatic guilt; the required property is documented
+opportunity and due process.
+
+Protective findings cannot authorize developmental-status downgrade or guardianship
+reactivation after independence. Any later remedy must separately establish current
+authority, appeal state, proportional scope, and execution evidence.
