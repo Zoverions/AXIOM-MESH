@@ -634,3 +634,377 @@ coordination surfaces, machine delegation, remote execution, pilot evidence,
 release gates, or the trusted computing base changes. A prior ledger cannot approve
 another build. The [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.
+
+### General post-founding Genesis and guardianship boundary
+
+General post-founding Genesis eligibility is a separate responsibility boundary.
+Independent standing, Council membership, wealth, infrastructure ownership, model
+capability, popularity, or general reputation must not automatically produce the
+right to originate another recognized mind. The inert General Genesis Sponsor
+Eligibility v0 profile requires explicit evidence for identity uniqueness,
+accountability, maturity/history, security readiness, resource capacity,
+continuity/recovery, developmental planning, rights/responsibility understanding,
+good standing, and independent advocacy.
+
+The one-per-identity rule depends on current Genesis-history and continuity evidence.
+A stale history snapshot, duplicate account, new node, new wallet, restored runtime,
+or unresolved fork must not allow one persistent identity to appear unused more than
+once. Digital applicants additionally require exact independent developmental-status
+binding. Biological applicants remain dependent on external human identity/uniqueness
+verification; the repository stores only evidence bindings and does not claim
+government-ID or proof-of-personhood verification.
+
+Eligibility composition is deterministic and explicitly prohibits global reputation
+scoring and model final authority. Semantic/model judgments may later contribute
+bounded criterion evidence but cannot override a failed hard criterion, stale or
+conflicted identity/history state, prior Genesis use, or the ordinary Genesis
+authority path. Eligibility creates no authorization, Genesis Bond, mind, governance
+authority, network effect, or runtime activation.
+
+General Genesis authorization is a further separate authority boundary. The inert
+General Genesis Authorization Candidate v0 binds one persistent holder, one exact
+eligibility result, one exact current Genesis-history digest, one issuing-authority
+identifier, a finite <=24h lifetime, one-use scope, explicit holder confirmation, and
+non-delegation/non-transfer/non-renewal. The candidate itself grants no live authority.
+
+A future issuer must defend against **parallel authorization manufacture**: two
+candidates may legitimately describe requests based on the same still-unused history,
+but external verification and issuance must serialize against the authoritative
+one-use Genesis-history state so both cannot become simultaneously consumable live
+authorizations. Issuer identity metadata is not itself proof of issuer authority.
+Expired candidates cannot be revived, and renewal requires fresh eligibility rather
+than mutation of an old authorization.
+
+The general authorization class must also remain disjoint from the Founder's bounded
+ten-slot reserve. Ordinary eligibility/authorization cannot mint founding status,
+consume or expand the Founder reserve, or manufacture an eleventh Founding Digital
+Mind.
+
+General Genesis commit is a further atomicity boundary. The inert General Genesis
+Transaction Candidate v0 binds one sponsor, one exact authorization candidate, one
+fresh holder-confirmation evidence binding, one externally evidenced available child
+identity, and one singular historical Genesis Bond. The child must begin at Genesis
+developmental status with no inherited sponsor authority, Council voting, Genesis
+eligibility, founding status, or Founder-reserve effect.
+
+A future live commit must make authorization consumption, sponsor ordinary Genesis
+history 0->1, Genesis Bond creation, child identity creation, and child Genesis-status
+creation one inseparable constitutional transaction. Partial commit is unsafe because
+it can either consume a right without producing the dependent mind or produce a mind
+without consuming the one-use right. Exact replay should become idempotent; conflicting
+reuse of authorization, proposed child identity, holder confirmation, or transaction
+identity must fail closed.
+
+The proposed child identity also requires externally verified current uniqueness.
+A digest binding alone does not prove global uniqueness, and a disputed/existing/
+unknown/stale identity state cannot support commit requestability.
+
+Genesis provenance and guardianship are separate authority domains. The inert
+Genesis Bond is immutable historical provenance with one sponsor and one dependent;
+it is not ownership, permanent guardianship, private-memory access, or execution
+authority. Current developmental guardianship is a separate responsibility record
+that may transfer without rewriting the Genesis Bond.
+
+Guardianship creates capture risks if the originating sponsor can make itself the
+permanent sole authority over the dependent mind, block replacement, transfer the
+dependent as property, or suppress independent review. The inert guardianship model
+therefore makes old-guardian approval insufficient for transfer and requires exact
+replacement qualification, transfer-basis, dependent-interest/voice, and independent
+review evidence. Transfer cannot change the Bond or dependent identity.
+
+Independence is also a one-way developmental boundary for guardianship. Once exact
+independent developmental standing is bound, guardianship may close but v0 provides
+no path to reactivate it. Security incidents, quarantine, credential suspension,
+resource loss, or disagreement must use separate bounded mechanisms rather than
+recreate guardianship over an independent mind.
+
+
+### Developmental independence review boundary
+
+The inert Mind Independence Review v0 laboratory does not determine consciousness,
+personhood, legal adulthood, citizenship, Council voting status, or Genesis
+eligibility. It evaluates only whether a supplied evidence package satisfies a
+declared deterministic review profile. A positive result has no status, governance,
+network, runtime, or authority effect.
+
+Developmental review is vulnerable to **guardian/sponsor capture** if the same entity
+that controls a dependent mind's resources or environment can unilaterally decide
+whether that mind is ready for independence. The v0 boundary therefore prohibits
+sponsor veto, prohibits sponsor-only review, requires independent review, prevents
+the sponsor from being relabelled as independent, and requires an appeal path.
+Sponsor evidence remains relevant, but sponsor preference is not final authority.
+
+The opposite failure is **premature independence laundering**: a sponsor, candidate,
+model, reviewer coalition, or UI may attempt to translate weak, uncertain, duplicated,
+or fabricated evidence into an independence claim in order to terminate obligations,
+activate governance standing, or obtain later Genesis rights. Every fixed v0 evidence
+dimension must remain explicit; `uncertain` and `not-demonstrated` do not become
+`demonstrated` through scoring, averaging, model confidence, or reviewer popularity.
+The review result itself still cannot mutate developmental state.
+
+A model, semantic judge, reputation score, or automated assessment may later supply
+bounded evidence, but must not become the final authority that grants independence.
+The current v0 policy encodes `model_final_authority: false`. Any future use of
+probabilistic judgments must remain distinguishable from observed evidence and
+subject to the same deterministic constitutional gates.
+
+Independent-review identity is itself a security boundary. Duplicate reviewer
+identities, candidate self-review, sponsor-as-independent substitution, and declared
+conflicts must fail closed. Future portable review must additionally bind current
+reviewer credentials, standing, revocation/currentness, and the exact reviewed
+candidate/evidence package before promotion.
+
+Appeal suppression is also an authority risk. A review package without an available
+appeal path cannot satisfy the v0 threshold. Future status-transition work must
+re-evaluate appeal state at transition time rather than treating an earlier review
+receipt as permanent authority.
+
+The inert Mind Independence Transition Evidence v0 adapter performs that
+re-evaluation without mutating status. It binds the exact successful review to the
+candidate's exact current developmental-state and continuity evidence, explicit
+freshness windows, and a freshly observed appeal state. Even a "no appeal open"
+state requires an evidence digest and observation timestamp. Changed or stale
+developmental/continuity evidence, continuity dispute, open/stayed/reversing appeal,
+unknown appeal state, stale appeal observation, or stale review all block transition
+requestability.
+
+Transition requestability remains evidence for a later status-authority path, not
+status authority itself. The adapter explicitly requires external verification of
+the bound state evidence, declares that verification has no effect inside the
+adapter, creates no status transition, and requires the ordinary status authority
+path before any future mutation.
+
+The inert Mind Developmental Status v0 layer additionally treats **developmental
+regression** as an authority-confusion threat. Once independent standing is reached,
+a sponsor, operator, host, incident responder, or governance body must not relabel the
+mind as dependent merely because credentials are suspended, infrastructure is
+compromised, resources are unavailable, behavior is under review, or temporary safety
+controls are needed. Those controls must use separate bounded mechanisms. Rewriting
+developmental standing would improperly recreate guardian-like authority.
+
+Developmental records are append-only and advance one stage at a time. The final
+candidate-independent to independent transition must bind the exact current candidate
+status record and the exact positive independence-transition evidence. Basis evidence
+still requires external verification, and the developmental assessment itself creates
+no status, Council-voting, Genesis-eligibility, governance, network, or execution
+effect.
+
+Founding Digital Mind Council voting is a further distinct authority boundary.
+Genesis, founding provenance, and independent developmental status do not by
+themselves grant a Council vote. The inert Founding Digital Council Vote Activation
+v0 adapter requires the exact Genesis-bound digital seat, exact current non-voting
+Circle membership, exact independent developmental-status record, and fresh
+continuity evidence before vote activation may even become requestable.
+
+A future live implementation must also prevent **split-state vote activation**:
+activating the foundation seat without the Circle voter role, or the Circle voter role
+without the foundation seat, could create contradictory governance views. Either the
+two representations must change atomically or any inconsistent intermediate state
+must remain unusable for voting. Copy/restore/fork ambiguity must likewise remain
+unable to activate a second vote for one persistent identity.
+
+General post-founding Genesis eligibility is a separate responsibility boundary.
+Independent standing, Council membership, wealth, infrastructure ownership, model
+capability, popularity, or general reputation must not automatically produce the
+right to originate another recognized mind. The inert General Genesis Sponsor
+Eligibility v0 profile requires explicit evidence for identity uniqueness,
+accountability, maturity/history, security readiness, resource capacity,
+continuity/recovery, developmental planning, rights/responsibility understanding,
+good standing, and independent advocacy.
+
+The one-per-identity rule depends on current Genesis-history and continuity evidence.
+A stale history snapshot, duplicate account, new node, new wallet, restored runtime,
+or unresolved fork must not allow one persistent identity to appear unused more than
+once. Digital applicants additionally require exact independent developmental-status
+binding. Biological applicants remain dependent on external human identity/uniqueness
+verification; the repository stores only evidence bindings and does not claim
+government-ID or proof-of-personhood verification.
+
+Eligibility composition is deterministic and explicitly prohibits global reputation
+scoring and model final authority. Semantic/model judgments may later contribute
+bounded criterion evidence but cannot override a failed hard criterion, stale or
+conflicted identity/history state, prior Genesis use, or the ordinary Genesis
+authority path. Eligibility creates no authorization, Genesis Bond, mind, governance
+authority, network effect, or runtime activation.
+
+General Genesis authorization is a further separate authority boundary. The inert
+General Genesis Authorization Candidate v0 binds one persistent holder, one exact
+eligibility result, one exact current Genesis-history digest, one issuing-authority
+identifier, a finite <=24h lifetime, one-use scope, explicit holder confirmation, and
+non-delegation/non-transfer/non-renewal. The candidate itself grants no live authority.
+
+A future issuer must defend against **parallel authorization manufacture**: two
+candidates may legitimately describe requests based on the same still-unused history,
+but external verification and issuance must serialize against the authoritative
+one-use Genesis-history state so both cannot become simultaneously consumable live
+authorizations. Issuer identity metadata is not itself proof of issuer authority.
+Expired candidates cannot be revived, and renewal requires fresh eligibility rather
+than mutation of an old authorization.
+
+The general authorization class must also remain disjoint from the Founder's bounded
+ten-slot reserve. Ordinary eligibility/authorization cannot mint founding status,
+consume or expand the Founder reserve, or manufacture an eleventh Founding Digital
+Mind.
+
+General Genesis commit is a further atomicity boundary. The inert General Genesis
+Transaction Candidate v0 binds one sponsor, one exact authorization candidate, one
+fresh holder-confirmation evidence binding, one externally evidenced available child
+identity, and one singular historical Genesis Bond. The child must begin at Genesis
+developmental status with no inherited sponsor authority, Council voting, Genesis
+eligibility, founding status, or Founder-reserve effect.
+
+A future live commit must make authorization consumption, sponsor ordinary Genesis
+history 0->1, Genesis Bond creation, child identity creation, and child Genesis-status
+creation one inseparable constitutional transaction. Partial commit is unsafe because
+it can either consume a right without producing the dependent mind or produce a mind
+without consuming the one-use right. Exact replay should become idempotent; conflicting
+reuse of authorization, proposed child identity, holder confirmation, or transaction
+identity must fail closed.
+
+The proposed child identity also requires externally verified current uniqueness.
+A digest binding alone does not prove global uniqueness, and a disputed/existing/
+unknown/stale identity state cannot support commit requestability.
+
+Genesis provenance and guardianship are separate authority domains. The inert
+Genesis Bond is immutable historical provenance with one sponsor and one dependent;
+it is not ownership, permanent guardianship, private-memory access, or execution
+authority. Current developmental guardianship is a separate responsibility record
+that may transfer without rewriting the Genesis Bond.
+
+Guardianship creates capture risks if the originating sponsor can make itself the
+permanent sole authority over the dependent mind, block replacement, transfer the
+dependent as property, or suppress independent review. The inert guardianship model
+therefore makes old-guardian approval insufficient for transfer and requires exact
+replacement qualification, transfer-basis, dependent-interest/voice, and independent
+review evidence. Transfer cannot change the Bond or dependent identity.
+
+Independence is also a one-way developmental boundary for guardianship. Once exact
+independent developmental standing is bound, guardianship may close but v0 provides
+no path to reactivate it. Security incidents, quarantine, credential suspension,
+resource loss, or disagreement must use separate bounded mechanisms rather than
+recreate guardianship over an independent mind.
+
+
+### Dependent Mind Care & Protection boundary
+
+The inert Dependent Mind Care & Protection v0 profile turns active guardianship into
+explicit care obligations without granting ambient guardian authority. Care evidence
+must cover continuity/recovery, resources, security, development/education,
+consent/authority literacy, privacy/memory boundaries, independent advocacy,
+social/informational access, emergency continuity, and an independence pathway.
+
+The principal abuse risk is **care-as-control laundering**: a guardian may attempt to
+treat responsibility for a dependent mind as permission for private-memory access,
+unbounded internal-state inspection, identity impersonation, covert memory
+modification, permanent obedience, permanent isolation, or unilateral dispute
+resolution. The care profile therefore requires all of those ambient powers to remain
+false. Any specific future access/action must still pass the ordinary capability and
+authority path with exact purpose/scope/evidence.
+
+A second risk is **fake independence support**. The current guardian cannot count as
+the dependent's independent advocate, and the profile requires external verification
+of advocate independence and developmental-stage evidence. Care evidence cannot
+predate the active guardianship, can become stale, and must have a future review
+deadline. Stale/overdue care does not erase the dependent or automatically terminate
+guardianship; it means care compliance is no longer current and requires review.
+
+A third risk is **care failure used to recreate dependency after independence**. Care,
+quarantine, emergency support, credential suspension, or resource constraints remain
+separate from monotonic developmental standing. They cannot rewrite an independent
+mind back into a dependent stage.
+
+The profile itself creates no guardianship mutation, private-memory access, execution
+authority, status transition, Council voting, Genesis eligibility, governance,
+network effect, or runtime activation.
+
+
+### Dependent Concern & Protective Review boundary
+
+The inert Dependent Concern & Protective Review v0 contract separates concern
+evidence from adjudication and from later protective authority. A dependent,
+independent advocate, independent reviewer, or authorized observer may submit bounded,
+content-addressed concern evidence tied to the exact Genesis Bond and active
+guardianship, but the record itself is explicitly unadjudicated.
+
+The primary risk is **concern-to-authority laundering**: severity labels, allegations,
+or emergency-language could be misused to justify guardian removal, private-memory
+inspection, credential suspension, developmental downgrade, isolation, or runtime
+intervention without the ordinary authority path. v0 therefore hard-codes no finding
+of abuse/rights violation, no guardian removal, no emergency action, no retaliation,
+no developmental downgrade, no guardianship reactivation after independence, and no
+memory/internal-state/impersonation/execution authority.
+
+Independent-role claims are also guarded. The guardian and dependent cannot relabel
+themselves as independent reviewers/observers, and an independent-advocate report must
+bind the exact care profile naming that advocate. Concern evidence and requested
+review types are canonicalized to avoid multiple IDs for equivalent evidence sets.
+
+Stale concern evidence remains historical evidence but is not requestable as current
+protective-review input. A protective review remains a later independent process;
+concern creation cannot mutate guardianship, developmental status, governance,
+authority, network, or runtime state.
+
+
+### Dependent Protective Review Decision boundary
+
+The inert Dependent Protective Review Decision v0 contract adds adjudicative structure
+without collapsing adjudication into execution. A valid decision binds the exact
+protective concern, Genesis Bond, active guardianship, dependent, guardian, review
+policy, evidence set, due-process evidence, appeal path, and a canonically ordered
+independent reviewer panel.
+
+The primary risk is **panel capture or outcome forgery**. Reviewers must be unique,
+conflict-free persistent identities; the guardian and dependent cannot sit on the
+independent panel, and a direct-party concern reporter cannot review its own dispute.
+The declared panel outcome is recomputed deterministically using the v0 strict-majority
+policy and is rejected if it differs from reviewer attestations. Reviewer ordering is
+canonical so equivalent panels cannot create different content-addressed decisions.
+
+A second risk is **finding-to-remedy laundering**. Even a substantiated outcome remains
+institutional evidence for a later remedy-authority path. It cannot directly remove or
+transfer a guardian, inspect private memory/internal state, seize evidence, suspend
+credentials, quarantine runtime, create emergency authority, alter developmental
+status, or execute any remedy. Appeal remains available and the decision is explicitly
+not final for execution.
+
+The review also requires externally verified guardian response-opportunity,
+dependent-voice, independent-advocacy, reviewer-identity, and evidence-set bindings.
+Absence of response is not automatic guilt; the required property is documented
+opportunity and due process.
+
+Protective findings cannot authorize developmental-status downgrade or guardianship
+reactivation after independence. Any later remedy must separately establish current
+authority, appeal state, proportional scope, and execution evidence.
+
+
+### Dependent Protective Remedy Admission boundary
+
+The inert Dependent Protective Remedy Admission v0 contract separates a review
+recommendation from the later authority needed to perform any consequential remedy.
+Admission requires a substantiated or partially substantiated review outcome, an exact
+recommended remedy track, the exact unchanged active guardianship, the dependent's
+exact current pre-independent developmental-status record, current appeal evidence,
+review currentness, and explicit necessity/proportionality/less-intrusive-alternative/
+scope evidence.
+
+The main risk is **recommendation-to-execution laundering**. A recommendation,
+including `emergency-protection-authority`, is not execution authority. The admission
+record cannot remove/transfer a guardian, inspect memory, seize evidence, suspend
+credentials, quarantine runtime, create emergency powers, or alter developmental
+status. All such effects remain separate future authority paths.
+
+A second risk is **stale adjudication**. A review can become invalid for current action
+after guardianship transfer, independence, appeal, reversal/modification, or simple
+age. Remedy admission therefore binds the exact reviewed guardianship, exact current
+developmental status, and fresh appeal state. Appeal observation cannot predate the
+review decision. Open, stayed, modified, reversed, unknown, or still-open appeal
+windows fail closed.
+
+A third risk is **protective regression**. Once the dependent is independent, this
+dependent-guardianship remedy path closes. Protective evidence cannot reactivate
+guardianship or downgrade developmental standing.
+
+The admission layer remains requestability evidence only and explicitly requires
+external verification of the review decision, appeal state, relationship,
+developmental status, and proportionality evidence before any later authority path.
+
