@@ -11,7 +11,8 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - Loops (build/verify/review/CI) stay operational — schedulers,
   coordinators, relay, human gates. They are protocols, not syntax.
 - Each loop round emits a signed attestation: checkable claim payloads,
-  explicit non-claims, a shared PR and pinned head merge target, a nullifier,
+  explicit non-claims, a shared PR and pinned head merge target using the exact
+  `pr:<positive-decimal>@sha256:<64 lowercase hex>` grammar, a nullifier,
   a freshness window, pointers to raw evidence (which never enters the attestation).
 - Praxis verifies the attestation chain:
   - `labs/praxis/attestation.mjs` — schema, Ed25519 signatures, freshness,
