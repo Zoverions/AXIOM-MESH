@@ -278,6 +278,16 @@ export function effectiveScheduleStatus(schedule, nodes, {
   return schedule.status === 'degraded' ? 'degraded' : 'active';
 }
 
+/**
+ * The instant schedule status and load are judged at, normalized exactly as
+ * `effectiveScheduleStatus` and `selectNodePlacements` normalize it. A store
+ * that reads only schedules that can carry load (`active` or `degraded`,
+ * expiring after this instant) must compare against this value.
+ */
+export function scheduleLoadInstant(value, name = 'schedule status as_of') {
+  return normalizeTimestamp(value, name);
+}
+
 function activeLoads(schedules, instant) {
   const loads = new Map();
   for (const schedule of schedules) {

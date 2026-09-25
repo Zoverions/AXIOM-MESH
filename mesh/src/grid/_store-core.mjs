@@ -48,6 +48,7 @@ import {
   effectiveScheduleStatus,
   normalizeNodeDiscoveryQuery,
   normalizeNodeScheduleRequest,
+  scheduleLoadInstant,
   selectNodePlacements
 } from '../lib/node-scheduling.mjs';
 
@@ -1012,7 +1013,9 @@ export class GridStore {
           }
           const schedule = selectNodePlacements({
             nodes: this.decodedNodes(),
-            schedules: this.decodedSchedules(),
+            schedules: this.loadBearingSchedules(
+              scheduleLoadInstant(event.occurred_at, 'schedule occurred_at')
+            ),
             normalizedRequest: normalized,
             occurredAt: event.occurred_at
           });
@@ -1865,12 +1868,9 @@ export class GridStore {
   getNodeSchedule(scheduleId, requester, {
     asOf = new Date().toISOString()
   } = {}) {
-    const schedules = this.decodedSchedules();
-    const schedule = schedules.find(
-      item => (
-        item.schedule_id === scheduleId
-        && item.requester === requester
-      )
+    const [schedule] = this.decodedSchedules(
+      'WHERE schedule_id = ? AND requester = ?',
+      [scheduleId, requester]
     );
     if (!schedule) {
       throw new AxiomError(
@@ -1881,39 +1881,38 @@ export class GridStore {
     }
     schedule.status = effectiveScheduleStatus(
       schedule,
-      this.listNodes({ asOf }),
-      { asOf, schedules }
+      this.placementNodes([schedule], asOf),
+      { asOf, schedules: this.loadBearingSchedules(scheduleLoadInstant(asOf)) }
     );
     return schedule;
   }
 
+  // Scalability audit S-11: a requester's page is an index seek, and status
+  // reads only the nodes that page is placed on and the schedules that can
+  // carry load, never every schedule ever recorded.
   listNodeSchedules(requester, {
     asOf = new Date().toISOString(),
     limit = 100,
     after
   } = {}) {
     const safeLimit = boundedInteger(limit, 'node schedule limit', 1, COLLECTION_PAGE_MAX + 1);
-    const nodes = this.listNodes({ asOf });
-    const schedules = this.decodedSchedules();
-    const owned = schedules
-      .filter(schedule => schedule.requester === requester)
-      .sort((left, right) => (
-        right.created_at.localeCompare(left.created_at)
-        || right.schedule_id.localeCompare(left.schedule_id)
-      ))
-      .filter(schedule => !after || (
-        schedule.created_at < after.sort
-        || (schedule.created_at === after.sort && schedule.schedule_id < after.id)
-      ));
+    const instant = scheduleLoadInstant(asOf);
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'schedule_id' });
+    const owned = this.decodedSchedules(
+      `WHERE requester = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, schedule_id DESC
+      LIMIT ?`,
+      [requester, ...keyset.params, safeLimit + 1]
+    );
     const truncated = owned.length > safeLimit;
+    const page = owned.slice(0, safeLimit);
+    const nodes = this.placementNodes(page, asOf);
+    const schedules = page.length ? this.loadBearingSchedules(instant) : [];
     return {
-      schedules: owned
-        .slice(0, safeLimit)
-        .map(schedule => ({
-          ...schedule,
-          status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
-        }))
-        .sort((left, right) => right.created_at.localeCompare(left.created_at)),
+      schedules: page.map(schedule => ({
+        ...schedule,
+        status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
+      })),
       truncated
     };
   }
@@ -1944,15 +1943,19 @@ export class GridStore {
 
   decodedNodes({ limit, after } = {}) {
     const keyset = keysetClause(after, { sortColumn: 'registered_at', idColumn: 'node_id' });
-    const rows = this.db.prepare(`
-      SELECT * FROM nodes
-      ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+    return this.decodedNodeRows(
+      `${keyset.sql ? `WHERE ${keyset.sql}` : ''}
       ORDER BY registered_at DESC, node_id DESC
-      ${limit === undefined ? '' : 'LIMIT ?'}
-    `).all(
-      ...keyset.params,
-      ...(limit === undefined ? [] : [boundedInteger(limit, 'node list limit', 1, COLLECTION_PAGE_MAX + 1)])
+      ${limit === undefined ? '' : 'LIMIT ?'}`,
+      [
+        ...keyset.params,
+        ...(limit === undefined ? [] : [boundedInteger(limit, 'node list limit', 1, COLLECTION_PAGE_MAX + 1)])
+      ]
     );
+  }
+
+  decodedNodeRows(clause, params) {
+    const rows = this.db.prepare(`SELECT * FROM nodes ${clause}`).all(...params);
     return rows.map(row => {
       const decoded = this.decodeProtectedRow(
         'nodes',
@@ -1971,10 +1974,10 @@ export class GridStore {
     });
   }
 
-  decodedSchedules() {
+  decodedSchedules(clause = 'ORDER BY created_at DESC', params = []) {
     return this.db.prepare(
-      'SELECT * FROM node_schedules ORDER BY created_at DESC'
-    ).all().map(row => {
+      `SELECT * FROM node_schedules ${clause}`
+    ).all(...params).map(row => {
       const decoded = this.decodeProtectedRow(
         'node_schedules',
         'schedule_id',
@@ -1989,11 +1992,45 @@ export class GridStore {
     });
   }
 
+  /**
+   * The schedules whose placements count toward node load at `instant`
+   * (a `scheduleLoadInstant` value): exactly those `activeLoads` counts.
+   * Expired and revoked history is never decoded.
+   */
+  loadBearingSchedules(instant) {
+    return this.decodedSchedules(
+      `WHERE status IN ('active', 'degraded') AND expires_at > ?
+      ORDER BY created_at DESC`,
+      [instant]
+    );
+  }
+
+  // The admitted nodes named by `schedules`' placements, with the same
+  // expiry view as `listNodes`.
+  placementNodes(schedules, asOf) {
+    const ids = [...new Set(schedules.flatMap(
+      schedule => schedule.placements.map(placement => placement.node_id)
+    ))];
+    const nodes = [];
+    for (let index = 0; index < ids.length; index += 500) {
+      const chunk = ids.slice(index, index + 500);
+      nodes.push(...this.decodedNodeRows(
+        `WHERE node_id IN (${chunk.map(() => '?').join(', ')})`,
+        chunk
+      ));
+    }
+    return nodes.map(node => {
+      if (node.status === 'active' && node.expires_at <= asOf) {
+        node.status = 'expired';
+      }
+      return node;
+    });
+  }
+
   degradeNodeSchedules(nodeId) {
-    for (const schedule of this.decodedSchedules()) {
+    for (const schedule of this.decodedSchedules("WHERE status = 'active'")) {
       if (
-        schedule.status !== 'active'
-        || !schedule.placements.some(
+        !schedule.placements.some(
           placement => placement.node_id === nodeId
         )
       ) continue;
@@ -2005,15 +2042,16 @@ export class GridStore {
   }
 
   degradeIneligibleNodeSchedules(nodeId, asOf) {
-    const schedules = this.decodedSchedules();
-    const nodes = this.listNodes({ asOf });
-    for (const schedule of schedules) {
+    const affected = this.decodedSchedules("WHERE status = 'active'")
+      .filter(schedule => schedule.placements.some(
+        placement => placement.node_id === nodeId
+      ));
+    if (!affected.length) return;
+    const schedules = this.loadBearingSchedules(scheduleLoadInstant(asOf));
+    const nodes = this.placementNodes(affected, asOf);
+    for (const schedule of affected) {
       if (
-        schedule.status !== 'active'
-        || !schedule.placements.some(
-          placement => placement.node_id === nodeId
-        )
-        || effectiveScheduleStatus(
+        effectiveScheduleStatus(
           schedule,
           nodes,
           { asOf, schedules }

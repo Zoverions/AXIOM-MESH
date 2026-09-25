@@ -16,9 +16,9 @@ const PARENT_BLOBS = Object.freeze({
   // the assertions below are unchanged.
   grid_server: '277723ab8e62b5ed5e59d4fa46e05578b3eaa97c',
   // Updated deliberately for core migration 11 (index-only: composite
-  // indexes for the paged collections and accounting journals, scalability
-  // audit S-11). No table or column changed.
-  core_migrations: '5e89468692f34851453eacf1e08f0af4acf53278'
+  // indexes for the paged collections, accounting journals and node
+  // schedules, scalability audit S-11). No table or column changed.
+  core_migrations: 'f470d2c900692ed8ed41f6e79b1c4721013029cf'
 });
 
 async function gitBlobSha(relative) {

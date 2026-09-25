@@ -659,7 +659,7 @@ Representative problems include:
 - Query latency grows with page size, not total unrelated tenant data.
 
 **Remediation status (2026-09-25): paged queries index-backed; two N+1
-patterns removed; node schedules open.**
+patterns removed; node schedule reads scoped.**
 
 - **Memory disclosure.** Consent was checked with one full scan of
   `consents` per memory object. A reader's active consents are now read
@@ -670,8 +670,8 @@ patterns removed; node schedules open.**
   Its composite indexes match each paged route's predicate followed by the
   page order, time then identifier: capsules, proposals, nodes, approvals
   by approver and by requester, consents by subject and by controller,
-  memory, imports, appeals, storage offers, backups and accounting
-  journals by owner. It also adds
+  memory, imports, appeals, storage offers, backups, accounting
+  journals by owner, and node schedules by requester. It also adds
   `consents(subject, controller, status, expires_at)` for the consent check
   and `events(actor, seq)` for actor-filtered event pages.
 - **Query shapes.** Proposals now choose the page before joining votes.
@@ -688,10 +688,28 @@ patterns removed; node schedules open.**
 - **Pins.** The pinned `core_migrations` blob and the SIEA migration test's
   core schema version (now 11) were updated deliberately.
 
-Node schedule status is computed against every schedule
-(`effectiveScheduleStatus`), so scoping that read is a design change and is
-still open. So are query-plan fixtures for the non-paged routes and
-rows-examined evidence in scale drills.
+- **Node schedules.** Listing, reading or degrading schedules decoded
+  every schedule ever recorded, and every node, then filtered in
+  JavaScript. A schedule's status depends on node load, which other
+  requesters' schedules contribute, so the read cannot be scoped to the
+  requester alone. It is now scoped to what status depends on:
+  - the requester's page, by index;
+  - the nodes that page is placed on, by key;
+  - the schedules that can carry load: `active` or `degraded`, expiring
+    after the instant judged. These are exactly the schedules the load
+    calculation counts, so expired and revoked history is never decoded.
+  Placement at creation reads the same load-bearing set. Statuses and stored
+  writes are unchanged. A test with 300 expired and revoked schedules
+  compares every status against the whole-table result and bounds the
+  schedules decoded per page. It fails if load omits other requesters or
+  degraded schedules, if a schedule expiring at the instant counts, and
+  against the whole-table read.
+
+Still open: load-bearing schedules and candidate nodes are still read in
+full for each status check and placement. They are bounded by admitted
+capacity, not by history, but a per-node load table would remove the read.
+So are query-plan fixtures for the non-paged routes and rows-examined
+evidence in scale drills.
 
 ### S-12 — Export creation is fully materialized in memory
 
