@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { EventEmitter, once } from 'node:events';
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { loadApiPrincipals, meshConfig } from '../src/lib/config.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import {
   operationsReport,
   readinessState,
@@ -574,7 +574,8 @@ test('production supervisor boots the real four-process stack from provisioned s
     dataDir: join(root, 'data'),
     secretDir: join(root, 'secrets')
   });
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('operations supervisor test');
+  const basePort = portLease.base_port;
   const child = spawn(process.execPath, ['src/supervisor.mjs'], {
     cwd: new URL('../', import.meta.url),
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
@@ -608,13 +609,17 @@ test('production supervisor boots the real four-process stack from provisioned s
     if (output.length < 16_384) output += chunk;
   });
   t.after(async () => {
-    await stopSupervisor(child);
-    await rm(root, {
-      recursive: true,
-      force: true,
-      maxRetries: process.platform === 'win32' ? 5 : 0,
-      retryDelay: 100
-    });
+    try {
+      await stopSupervisor(child);
+    } finally {
+      await portLease.release();
+      await rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: process.platform === 'win32' ? 5 : 0,
+        retryDelay: 100
+      });
+    }
   });
   const gateway = `http://127.0.0.1:${basePort}`;
   await waitForReady(`${gateway}/ready`, child, () => output);
@@ -683,24 +688,3 @@ async function waitForReady(url, child, diagnostics) {
   throw new Error(`Production supervisor did not become ready: ${diagnostics()}`);
 }
 
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new Error('Unable to reserve a production runtime port block');
-}
