@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { sha256 } from '../src/lib/canonical.mjs';
 import {assessCommandIntake,commandIntakeDigest,validateCommandIntake} from '../src/lib/command-intake.mjs';
 
 function command(channel_kind='voice',overrides={}){
@@ -9,6 +10,7 @@ function command(channel_kind='voice',overrides={}){
     channel_binding_ref:'channel.binding.1',claimed_principal_id:'owner.alice',
     content_digest:'a'.repeat(64),content_type:channel_kind==='voice'?'transcript':'text',
     normalized_text:'Summarize the local project notes.',
+    normalized_text_digest:sha256('Summarize the local project notes.'),
     data_classes:['owner-private'],received_at:'2026-09-24T12:00:00.000Z',
     expires_at:'2026-09-24T12:05:00.000Z',nonce:'nonce-0123456789abcdef',
     authentication_evidence_refs:['auth:evidence.1'],channel_identity_authority:false,
@@ -17,8 +19,9 @@ function command(channel_kind='voice',overrides={}){
 }
 function current(overrides={}){
   return {
-    resolved_principal_id:'owner.alice',channel_binding_ref:'channel.binding.1',
-    channel_binding_current:true,authentication_current:true,replay_seen:false,
+    resolved_principal_id:'owner.alice',channel_kind:'voice',channel_instance_ref:'channel.instance.1',
+    channel_binding_ref:'channel.binding.1',channel_binding_current:true,
+    authentication_current:true,replay_seen:false,
     assessed_at:'2026-09-24T12:01:00.000Z',...overrides
   };
 }
@@ -27,7 +30,7 @@ test('voice and web commands enter the same intent pipeline without authority',(
   for(const kind of ['voice','web']){
     const value=command(kind);
     assert.equal(validateCommandIntake(value).intake_digest,commandIntakeDigest(value));
-    const result=assessCommandIntake(value,current());
+    const result=assessCommandIntake(value,current({channel_kind:kind}));
     assert.equal(result.admitted_to_intent_pipeline,true);
     assert.equal(result.resolved_principal_id,'owner.alice');
     assert.equal(result.identity_effect,'none');
@@ -38,7 +41,7 @@ test('voice and web commands enter the same intent pipeline without authority',(
 
 test('paired channel does not override resolved principal identity',()=>{
   const value=command('messaging');
-  const result=assessCommandIntake(value,current({resolved_principal_id:'owner.bob'}));
+  const result=assessCommandIntake(value,current({channel_kind:'messaging',resolved_principal_id:'owner.bob'}));
   assert.equal(result.admitted_to_intent_pipeline,false);
   assert.ok(result.reasons.includes('principal-claim-mismatch'));
 });
@@ -58,8 +61,25 @@ test('channel binding substitution is denied',()=>{
 
 test('anonymous channel claim may be resolved by current authentication without becoming authority',()=>{
   const value=command('cli',{claimed_principal_id:null});
-  const result=assessCommandIntake(value,current());
+  const result=assessCommandIntake(value,current({channel_kind:'cli'}));
   assert.equal(result.admitted_to_intent_pipeline,true);
   assert.equal(result.resolved_principal_id,'owner.alice');
   assert.equal(result.authority_effect,'none');
+});
+
+test('channel kind and instance substitution are denied',()=>{
+  const value=command('voice');
+  const kind=assessCommandIntake(value,current({channel_kind:'messaging'}));
+  assert.equal(kind.admitted_to_intent_pipeline,false);
+  assert.ok(kind.reasons.includes('channel-kind-mismatch'));
+
+  const instance=assessCommandIntake(value,current({channel_instance_ref:'channel.instance.attacker'}));
+  assert.equal(instance.admitted_to_intent_pipeline,false);
+  assert.ok(instance.reasons.includes('channel-instance-mismatch'));
+});
+
+test('normalized command text is digest-bound',()=>{
+  const value=command();
+  value.normalized_text='Do something different.';
+  assert.throws(()=>validateCommandIntake(value),/normalized_text_digest does not match/);
 });
