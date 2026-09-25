@@ -137,9 +137,13 @@ A separate closed-lineage verifier checks content-addressed supersession
 references, missing records, chronological supersession, cycles, and a
 permutation-stable lineage digest.
 
-A future Circle adapter may require current Circle membership and charter
-bindings around the generic agreement record. Circle-specific authority is not
-part of the generic agreement contract.
+Circle-specific adapters now provide two inert evidence-only layers around the
+generic agreement record. Historical commitment admission binds one exact
+agreement to an exact historical Circle package, charter, and membership
+context; the read-only commitment-status projection separately binds supplied
+current Circle membership, charter, and consent observations. Neither adapter
+adds Circle-specific authority to the generic agreement contract or creates
+enforcement, execution, persistence, network, or runtime authority.
 
 ### Observation coverage for historical and present conclusions
 
