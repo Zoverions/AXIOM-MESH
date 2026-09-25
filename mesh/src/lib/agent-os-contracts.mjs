@@ -103,9 +103,15 @@ export function validateTaskLifecycle(document) {
   nullableId(document.provider_ref, 'provider_ref');
   nullableId(document.node_ref, 'node_ref');
   nullableId(document.authority_snapshot_ref, 'authority_snapshot_ref');
-  nullableDate(document.authority_checked_at, 'authority_checked_at');
+  const authorityChecked = nullableDate(document.authority_checked_at, 'authority_checked_at');
   nullableId(document.budget_ref, 'budget_ref');
-  nullableDate(document.budget_checked_at, 'budget_checked_at');
+  const budgetChecked = nullableDate(document.budget_checked_at, 'budget_checked_at');
+  if (authorityChecked !== null && (authorityChecked < created || authorityChecked > updated)) {
+    throw new ValidationError('Task authority_checked_at must fall within the task observation window');
+  }
+  if (budgetChecked !== null && (budgetChecked < created || budgetChecked > updated)) {
+    throw new ValidationError('Task budget_checked_at must fall within the task observation window');
+  }
   if (typeof document.resume_requested !== 'boolean') throw new ValidationError('resume_requested must be boolean');
   if (document.resume_from_digest !== null) digest(document.resume_from_digest, 'resume_from_digest');
   if (document.resume_requested) {
@@ -123,8 +129,8 @@ export function validateTaskLifecycle(document) {
   uniqueTextArray(document.result_refs, 'result_refs', 0, 512, 512);
   if (document.lifecycle_state === 'completed-verified') {
     if (document.result_refs.length === 0) throw new ValidationError('Verified task completion requires result_refs');
-    if (document.effect_state === 'pending' || document.effect_state === 'uncertain') {
-      throw new ValidationError('Verified task completion cannot carry pending or uncertain effect state');
+    if (!['none','confirmed'].includes(document.effect_state)) {
+      throw new ValidationError('Verified task completion requires no external effect or a confirmed effect');
     }
   }
   if (document.lifecycle_state === 'uncertain-effect' && document.effect_state !== 'uncertain') {
@@ -155,6 +161,12 @@ export function assessTaskResume(document, current) {
   exactObject(current, 'Task resume current state', [
     'previous_task_digest','authority_snapshot_ref','authority_current','budget_ref','budget_current'
   ]);
+  digest(current.previous_task_digest, 'previous_task_digest');
+  id(current.authority_snapshot_ref, 'authority_snapshot_ref');
+  id(current.budget_ref, 'budget_ref');
+  if (typeof current.authority_current !== 'boolean' || typeof current.budget_current !== 'boolean') {
+    throw new ValidationError('Task resume currentness flags must be boolean');
+  }
   const reasons = [];
   if (!document.resume_requested) reasons.push('resume-not-requested');
   if (document.resume_from_digest !== current.previous_task_digest) reasons.push('prior-task-digest-mismatch');
@@ -224,23 +236,40 @@ export function skillAdmissionDigest(document) {
 export function assessSkillInvocation(document, request) {
   validateSkillAdmission(document);
   exactObject(request, 'Skill invocation request', [
-    'capability','effect','filesystem_path','network_destination','command'
+    'capability','effect','filesystem_access','filesystem_path','network_destination','command','assessed_at'
   ]);
   id(request.capability, 'capability');
   if (!EFFECTS.has(request.effect)) throw new ValidationError('Skill invocation effect is invalid');
+  if (![null,'read','write'].includes(request.filesystem_access)) {
+    throw new ValidationError('Skill invocation filesystem_access is invalid');
+  }
   nullableText(request.filesystem_path, 'filesystem_path', 1024);
   nullableText(request.network_destination, 'network_destination', 2048);
   nullableText(request.command, 'command', 512);
+  const assessedAt = canonicalDate(request.assessed_at, 'assessed_at');
 
   const reasons = [];
   if (document.revocation_state !== 'active') reasons.push('skill-not-active');
   if (document.currentness.state !== 'current') reasons.push('skill-not-current');
+  if (
+    document.currentness.state === 'current'
+    && assessedAt >= canonicalDate(document.currentness.expires_at, 'Skill currentness expires_at')
+  ) reasons.push('skill-currentness-expired');
   if (!document.requested_capabilities.includes(request.capability)) reasons.push('capability-undeclared');
   if (!document.expected_effects.includes(request.effect)) reasons.push('effect-undeclared');
 
+  if (request.filesystem_access === null && request.filesystem_path !== null) {
+    reasons.push('filesystem-access-unspecified');
+  }
+  if (request.filesystem_access !== null && request.filesystem_path === null) {
+    reasons.push('filesystem-path-unspecified');
+  }
   if (request.filesystem_path !== null) {
     if (document.filesystem.mode === 'none' || !document.filesystem.paths.includes(request.filesystem_path)) {
       reasons.push('filesystem-scope-undeclared');
+    }
+    if (request.filesystem_access === 'write' && document.filesystem.mode !== 'read-write') {
+      reasons.push('filesystem-mode-denied');
     }
   }
   if (request.network_destination !== null) {
