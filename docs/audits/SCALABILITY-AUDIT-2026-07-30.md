@@ -971,8 +971,9 @@ and intent admission is bounded; the rest is open.**
   - When Grid's matches, Grid answers with the generation alone, and the
     Hypervisor reuses the engine it built for exactly that generation.
     Nothing is decrypted, sent or merged.
-  - Otherwise Grid sends the overlays. They must hash to the generation it
-    names.
+  - Otherwise Grid sends the overlays. The Hypervisor verifies each policy
+    body against its declared digest, then verifies the ordered set against
+    the generation Grid names. A malformed overlay list is not an empty set.
   - An inconsistent answer fails closed (`503 policy_unavailable`) and drops
     the cache.
 - **Deliberate deviation.** The Hypervisor still asks Grid on every intent.
@@ -981,6 +982,9 @@ and intent admission is bounded; the rest is open.**
   very next intent. The saving is the decryption, transfer and merge, not
   the round trip. Removing the round trip needs a pushed, signed generation
   change, which does not exist yet.
+- **Remaining signature work.** The generation travels over the authenticated
+  internal channel; it is not a standalone Grid-signed policy-generation
+  receipt. That part of the required remediation remains open.
 - **Evidence.**
   - Unit tests cover the cache:
     - reuse while unchanged;

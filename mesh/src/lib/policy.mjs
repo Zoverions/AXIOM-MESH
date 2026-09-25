@@ -288,7 +288,30 @@ export function createActivePolicy({ basePolicy, fetchOverlays }) {
       }
       return cached.engine;
     }
-    const overlays = Array.isArray(response?.overlays) ? response.overlays : [];
+    if (!Array.isArray(response?.overlays)) {
+      cached = null;
+      throw unavailable('Policy overlay response has no valid overlay list');
+    }
+    const overlays = response.overlays;
+    // The generation binds the declared digests. Bind each declaration to
+    // its actual policy before it can replace a previously cached deny.
+    const valid = overlays.every(overlay => {
+      if (
+        !overlay || typeof overlay.overlay_id !== 'string'
+        || !/^[a-f0-9]{64}$/.test(overlay.policy_digest ?? '')
+        || !overlay.policy_json || typeof overlay.policy_json !== 'object'
+        || Array.isArray(overlay.policy_json)
+      ) return false;
+      try {
+        return digestObject(overlay.policy_json) === overlay.policy_digest;
+      } catch {
+        return false;
+      }
+    });
+    if (!valid) {
+      cached = null;
+      throw unavailable('Policy overlay content does not match its digest');
+    }
     const generation = policyOverlayGenerationDigest(overlays.map(overlay => [overlay.overlay_id, overlay.policy_digest]));
     if (response?.generation !== undefined && response.generation !== generation) {
       cached = null;
