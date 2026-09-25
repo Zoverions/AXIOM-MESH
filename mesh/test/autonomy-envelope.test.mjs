@@ -22,6 +22,7 @@ function envelope(overrides={}){
 }
 function current(overrides={}){
   return {
+    owner_principal_id:'owner.alice',subject_principal_id:'agent.helper.1',
     authority_snapshot_ref:'authority.snapshot.1',authority_digest:AUTH,authority_current:true,
     assessed_at:'2026-09-24T12:30:00.000Z',actions:['memory.read','message.send'],
     purposes:['assist.personal'],destinations:['local','contact:bob'],
@@ -93,4 +94,14 @@ test('expired envelope cannot be used even when underlying authority remains cur
   const result=assessAutonomyRequest(envelope({expires_at:'2026-09-24T12:15:00.000Z'}),request(),current());
   assert.equal(result.eligible_to_request,false);
   assert.ok(result.reasons.includes('envelope-expired'));
+});
+
+test('autonomy envelope cannot be applied to a different owner or subject',()=>{
+  const owner=assessAutonomyRequest(envelope(),request(),current({owner_principal_id:'owner.mallory'}));
+  assert.equal(owner.eligible_to_request,false);
+  assert.ok(owner.reasons.includes('owner-principal-mismatch'));
+
+  const subject=assessAutonomyRequest(envelope(),request(),current({subject_principal_id:'agent.other'}));
+  assert.equal(subject.eligible_to_request,false);
+  assert.ok(subject.reasons.includes('subject-principal-mismatch'));
 });
