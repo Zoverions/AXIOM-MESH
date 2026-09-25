@@ -29,6 +29,24 @@ export function taskArtifactSnapshotDigest(task){
   return digestObject(task);
 }
 
+export function taskHandoffDetailDigest(sourceTaskId, childTaskId, causalId){
+  for (const [value,label] of [
+    [sourceTaskId,'sourceTaskId'],
+    [childTaskId,'childTaskId'],
+    [causalId,'causalId']
+  ]) {
+    if (typeof value !== 'string' || value.length < 2 || value.length > 192) {
+      throw new ValidationError(`${label} is invalid`);
+    }
+  }
+  return digestObject({
+    schema:'axiom-task-handoff-detail.v0',
+    source_task_id:sourceTaskId,
+    child_task_id:childTaskId,
+    causal_id:causalId
+  });
+}
+
 export function verifyTaskSnapshotTransition(previous,current){
   validateTaskArtifactHandoff(previous);
   validateTaskArtifactHandoff(current);
@@ -133,14 +151,28 @@ export function verifyTaskHandoffEdge(source,child){
   }
 
   const childCreated=timestamp(child.lifecycle.created_at,'child created_at');
-  const handoffEvents=(source.events??[]).filter(event=>event.type==='task.handoff');
+  const expectedHandoffDigest=taskHandoffDetailDigest(
+    source.task_id,
+    child.task_id,
+    child.causal_id
+  );
+  const handoffEvents=(source.events??[]).filter(event=>(
+    event.type==='task.handoff'
+    && event.detail_digest===expectedHandoffDigest
+  ));
   if(!handoffEvents.length){
-    throw new ValidationError('Task handoff source requires a task.handoff event');
+    throw new ValidationError('Task handoff source requires an exact child-bound task.handoff event');
   }
   if(!handoffEvents.some(event=>timestamp(event.at,'handoff event at')<=childCreated)){
     throw new ValidationError('Task handoff event must not occur after child creation');
   }
 
+  if(child.request.axiom_action!==source.request.axiom_action){
+    throw new ValidationError('Task handoff cannot change AXIOM action');
+  }
+  if(child.request.capability_id!==source.request.capability_id){
+    throw new ValidationError('Task handoff cannot change capability_id');
+  }
   if(child.request.purpose!==source.request.purpose){
     throw new ValidationError('Task handoff cannot widen or replace purpose');
   }
