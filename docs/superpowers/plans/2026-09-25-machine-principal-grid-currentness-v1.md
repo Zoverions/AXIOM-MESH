@@ -645,11 +645,10 @@ const signed = buildMachineMutationAuthorization(hypervisorIdentity, {
   transition_kind: 'revoke',
   reason: 'incident-response',
   policy: {
-    id: 'policy.active',
     version: decision.policy_version,
     digest: decision.policy_digest
   },
-  command_id: 'machine_cmd_001',
+  intent_id: intent.intent_id,
   issued_at: NOW,
   effective_at: NOW,
   expires_at: LATER
@@ -660,13 +659,18 @@ assert.equal(signed.statement.schema,
 assert.equal(signed.statement.actor_id, humanPrincipal.id);
 assert.equal(signed.statement.target_principal_id, rootMachine.id);
 assert.equal(signed.statement.root_authority_digest, rootMachine.authority_digest);
+assert.equal(signed.statement.policy_version, decision.policy_version);
 assert.equal(signed.statement.policy_digest, decision.policy_digest);
+assert.equal(
+  signed.statement.command_id,
+  `machine_cmd_${sha256(intent.intent_id)}`
+);
 assert.ok(verifyObjectSignature(
   signed.statement, signed.signature, hypervisorIdentity.publicKey
 ));
 ```
 
-Mutation tests must show changing actor, target, predecessor head, successor digest, transition kind, policy digest, command id, or expiry breaks verification/binding.
+Mutation tests must show changing actor, target, predecessor head, successor digest, transition kind, policy version/digest, accepted intent id, or expiry breaks verification/binding. The public request cannot supply `command_id`.
 
 - [ ] **Step 2: Implement authorization builder/verifier**
 
@@ -680,7 +684,7 @@ export function verifyMachineMutationAuthorization(value, {
 }) { ... }
 ```
 
-The statement digest is `digestObject(statement)`; `command_digest` is derived from the exact normalized mutation command and cannot be caller-supplied independently.
+The statement digest is `digestObject(statement)`; `command_id` is derived exactly as `machine_cmd_${sha256(intent_id)}` by Hypervisor, and `command_digest` is derived from the exact normalized signed mutation statement. Neither is caller-supplied independently. Set `issued_at` and `effective_at` from Hypervisor time and use a fixed 30-second inner authorization TTL; Grid verifies expiry against Grid-local time.
 
 - [ ] **Step 3: Add policy actions**
 
@@ -710,6 +714,21 @@ Add:
 Do not grant `machine:write` to machine principals.
 
 - [ ] **Step 4: Resolve target root only in Gateway**
+
+Pin the public lifecycle input shapes before lookup:
+
+```js
+// initialize
+{ target_principal_id, reason }
+
+// mutate terminal
+{ target_principal_id, transition: 'revoke' | 'compromise' | 'expire', reason }
+
+// mutate narrow
+{ target_principal_id, transition: 'narrow', reason, successor_authority }
+```
+
+Reject unknown fields, `command_id`, `resolved_machine_root`, policy fields, lifecycle sequence/head fields, and caller-supplied authorization evidence.
 
 Build an id index once after `loadApiPrincipals(config)`:
 
@@ -754,7 +773,7 @@ The handler must:
 3. enforce normal confirmation and independent-approval semantics;
 4. load current Grid currentness for mutate, or require absence for initialize;
 5. for `narrow`, call `assertMachineAuthorityAttenuation(currentEffective, successor)`;
-6. build/sign the exact mutation authorization;
+6. derive `command_id = machine_cmd_${sha256(intent.intent_id)}` and build/sign the exact mutation authorization bound to `decision.policy_version` + `decision.policy_digest`;
 7. call `POST /internal/v1/machine-currentness/mutate`;
 8. commit `intent.completed` with a minimized lifecycle result projection;
 9. never issue a Sandbox capability for the lifecycle action.
@@ -766,6 +785,7 @@ Use Gateway public `/v1/intents` and prove:
 - human without `machine:write` denied before target enumeration;
 - initialization requires exact target root;
 - target root is Gateway-resolved, not caller-overridable;
+- caller-supplied `command_id`, policy/currentness bindings, or resolved root are rejected;
 - independent approval required and one-use;
 - narrow truly reduces authority;
 - widened budget/destination/action denies;
