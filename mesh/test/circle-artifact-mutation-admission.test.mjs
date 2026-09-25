@@ -290,3 +290,13 @@ test('admission time binds the exact appended revision and current artifact head
   assert.ok(assess(backdated).reasons.includes('request-predates-artifact-head'));
   assert.ok(assess(backdated).reasons.includes('revision-time-mismatch'));
 });
+
+test('membership currentness cannot be borrowed from another assessment time',()=>{
+  const future=fixture();
+  future.membershipCurrent.assessed_at='2026-09-24T12:01:00.000Z';
+  assert.ok(assess(future).reasons.includes('membership-assessment-time-mismatch'));
+
+  const past=fixture();
+  past.membershipCurrent.assessed_at='2026-09-24T11:59:00.000Z';
+  assert.ok(assess(past).reasons.includes('membership-assessment-time-mismatch'));
+});
