@@ -11,12 +11,13 @@
 // Budgets encode "non-pathological": the front end must stay roughly linear,
 // so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
 // caps keep CI honest. Measurements use a short warm-up and median wall samples.
-// CPU time is measured across a bounded repeated parse batch so platforms with
-// coarse process CPU accounting still produce usable evidence; the per-parse
-// value is normalized by the run count. CPU time is used only for the scaling
-// ratio so unrelated runner scheduling cannot turn a linear parse into a false
-// superlinear signal; the existing absolute parse/format wall-clock budgets
-// remain unchanged.
+// CPU time is measured across multiple independent bounded parse batches so a
+// single GC/JIT/accounting outlier cannot determine the scaling ratio. Each
+// nonzero batch is normalized per parse and the median is used. Coarse zero
+// readings may increase the next batch size, but at least three nonzero samples
+// are required; otherwise timing evidence fails closed as 0. CPU time is used
+// only for the scaling ratio, and the existing absolute parse/format wall-clock
+// budgets remain unchanged.
 
 import { performance } from 'node:perf_hooks';
 
@@ -27,6 +28,9 @@ import { compile } from './compiler.mjs';
 
 const BENCHMARK_WARMUPS = 1;
 const BENCHMARK_SAMPLES = 5;
+const BENCHMARK_CPU_TARGET_SAMPLES = 5;
+const BENCHMARK_CPU_MIN_SAMPLES = 3;
+const BENCHMARK_CPU_BASE_RUNS = 5;
 const BENCHMARK_MAX_CPU_RUNS = 80;
 
 export function syntheticProgram(lines) {
@@ -43,24 +47,27 @@ function median(values) {
 }
 
 function measureCpuPerRun(fn) {
-  const cpuStart = process.cpuUsage();
+  const samples = [];
   let runs = 0;
-  let nextBatch = BENCHMARK_SAMPLES;
-  let cpuMicros = 0;
+  let nextBatch = BENCHMARK_CPU_BASE_RUNS;
 
-  while (runs < BENCHMARK_MAX_CPU_RUNS) {
+  while (samples.length < BENCHMARK_CPU_TARGET_SAMPLES && runs < BENCHMARK_MAX_CPU_RUNS) {
     const batch = Math.min(nextBatch, BENCHMARK_MAX_CPU_RUNS - runs);
+    const cpuStart = process.cpuUsage();
     for (let i = 0; i < batch; i++) fn();
     runs += batch;
 
     const cpu = process.cpuUsage(cpuStart);
-    cpuMicros = cpu.user + cpu.system;
-    if (cpuMicros > 0) break;
-
-    nextBatch *= 2;
+    const cpuMicros = cpu.user + cpu.system;
+    if (cpuMicros > 0) {
+      samples.push((cpuMicros / 1000) / batch);
+      nextBatch = BENCHMARK_CPU_BASE_RUNS;
+    } else {
+      nextBatch *= 2;
+    }
   }
 
-  return cpuMicros > 0 ? (cpuMicros / 1000) / runs : 0;
+  return samples.length >= BENCHMARK_CPU_MIN_SAMPLES ? median(samples) : 0;
 }
 
 function measure(fn, { requireCpuEvidence = false } = {}) {

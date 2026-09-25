@@ -168,3 +168,68 @@ coverage is in `mesh/test/agreement-observation-window.test.mjs`; serialized UTC
 pattern coverage across the four related contracts is in
 `mesh/test/commitment-timestamp-patterns.test.mjs`. Calendar validity remains a
 semantic-validator responsibility in addition to JSON Schema timestamp shape.
+
+### Read-only Circle commitment status projection
+
+`mesh/src/lib/circle-commitment-status.mjs` adds
+`assessCircleCommitmentStatus` without replacing an agreement, membership, or
+historical-admission contract. It composes the existing assessors and exposes
+retained historical results beside separate present membership and consent
+observations. This is a callable evidence projection, not a live Axiom One
+screen, store, polling loop, or authority decision.
+
+The caller supplies `historicalInput`, `currentCircleEvidence`,
+`currentAgreementEvidenceInput`, and `assessedAt`. Either current evidence
+bundle may explicitly be null. A present Circle bundle contains the exact
+package, snapshot evidence, and bounded per-party membership evidence. Its
+Circle ID, package digest, charter digest, and observation time must match.
+Each supplied membership context must identify the original agreement party
+and use the same assessment instant. Duplicate or outsider evidence is rejected.
+
+Present agreement evidence must retain the same agreement, acceptances, and
+immutable consent-grant statements; only its current consent observations and
+assessment time vary. Input arrays may be reordered without changing per-party
+decisions. The `input_digest` deliberately binds the exact supplied packet,
+including ordering, and `status_digest` binds the complete resulting projection.
+
+Each party has separate membership and consent support states: `supported`,
+`not-supported`, or `unknown`. These labels describe support under the supplied
+inputs, not externally authenticated truth. Missing present evidence and stale
+positive observations remain unknown; they never borrow an older positive
+result. Explicit negative findings dominate uncertainty both per party and in
+the aggregate. A stale observation reporting revocation, expiry, or a binding
+mismatch remains `not-supported`, with the stale-evidence reason retained.
+When the present agreement bundle is supplied, expiry in its exact immutable
+party-bound consent grant remains negative even if its current observation is
+missing. No positive present consent is inferred from that grant.
+
+A current Circle snapshot can likewise establish an effective exit or inactive
+status for the exact historical membership even when supplemental member
+context is missing. That fallback is negative-only: an active label without
+context stays unknown, a future-dated exit or status is not treated as already
+effective, and a separately assessed new membership is not overridden by the
+old membership's exit. All findings still depend on independently verified
+snapshot authenticity and completeness. Unknown evidence dominates success;
+it never conceals an already established negative finding.
+
+A later exit or consent revocation does not mutate the retained historical
+input. Conversely, preserving history must not conceal contradictory evidence.
+An explicitly dated pre-recording consent revocation, membership inactivity,
+or exit concerning the historical membership raises
+`historical_review_required` with reasons. This limited discrepancy signal is
+not a proof that all possible contradictions or omissions were detected.
+Historical and current findings must be displayed together, not collapsed into
+an unconditional agreement-validity label.
+
+A renewed current charter is reported separately as `charter_changed`; it is
+never substituted into the historical admission. A status assessment cannot
+predate the retained historical evaluation. Inputs are copied through the
+existing plain-data canonicalizer before use, so accessors and prototype state
+cannot participate in the projection. Neither input snapshots nor prior
+assessments are edited.
+
+Regression coverage is in `mesh/test/circle-commitment-status.test.mjs`.
+All authority, governance, enforcement, execution, payment, settlement, and
+network effects remain none; runtime activation remains false. Snapshot
+completeness, provenance, signatures, and external evidence authenticity must
+still be verified independently. No live interface or capability is promoted.
