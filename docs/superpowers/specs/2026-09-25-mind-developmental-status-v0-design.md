@@ -52,6 +52,12 @@ They do not rewrite developmental history.
 The record is evidence/state description only in v0. It does not mutate Grid state
 and does not itself activate Council voting or execution authority.
 
+Basis-evidence digests are binding references, not authentication by themselves.
+Every initial/transition assessment therefore reports
+`requires_external_basis_verification: true` and
+`basis_verification_effect: none`. A future status-authority path must verify the
+bound evidence independently before writing any live state.
+
 ## Transition rules
 
 ### Initial record
