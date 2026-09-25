@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founding-digital-council-vote-activation-v0.schema.json",
+  "title": "AXIOM Founding Digital Council Vote Activation v0 inert request",
+  "description": "Evidence-only request for later activation of a Founding Digital Mind voter role after independent developmental standing. It performs no foundation, Circle, voting, governance, network, or runtime mutation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "mind_id",
+    "seat_id",
+    "membership_id",
+    "foundation_digest",
+    "circle_package_digest",
+    "independent_status_digest",
+    "continuity_evidence_digest",
+    "continuity_status",
+    "continuity_observed_at",
+    "maximum_continuity_age_seconds",
+    "evaluated_at",
+    "creates_foundation_mutation",
+    "creates_circle_membership_mutation",
+    "creates_vote_authority",
+    "council_voting_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founding-digital-council-vote-activation-request.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-request-evidence"
+    },
+    "mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "seat_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "membership_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "circle_package_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "independent_status_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_status": {
+      "enum": [
+        "clear",
+        "disputed",
+        "stale",
+        "unknown"
+      ]
+    },
+    "continuity_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_continuity_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 604800
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "creates_foundation_mutation": {
+      "const": false
+    },
+    "creates_circle_membership_mutation": {
+      "const": false
+    },
+    "creates_vote_authority": {
+      "const": false
+    },
+    "council_voting_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founding-digital-council-vote-activation.mjs",
+  "x-axiom-non-claims": [
+    "live-council-vote-activation",
+    "circle-membership-mutation",
+    "foundation-mutation",
+    "vote-authority",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

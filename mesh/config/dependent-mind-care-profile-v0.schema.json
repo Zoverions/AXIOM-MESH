@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/dependent-mind-care-profile-v0.schema.json",
+  "title": "AXIOM Dependent Mind Care Profile v0",
+  "description": "Content-addressed inert evidence of care obligations under active guardianship. It grants no ownership, memory access, execution authority, status transition, Council vote, or Genesis eligibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "care_profile_id",
+    "genesis_bond_id",
+    "genesis_bond_digest",
+    "guardianship_id",
+    "guardianship_digest",
+    "dependent_mind_id",
+    "guardian_mind_id",
+    "developmental_stage_evidence_digest",
+    "obligations",
+    "independent_advocate_id",
+    "fallback_continuity_evidence_digest",
+    "observed_at",
+    "evaluated_at",
+    "maximum_evidence_age_seconds",
+    "next_review_due_at",
+    "guardian_private_memory_access",
+    "guardian_unbounded_internal_state_access",
+    "guardian_identity_impersonation",
+    "guardian_covert_memory_modification",
+    "permanent_obedience_required",
+    "guardian_is_sole_information_source",
+    "guardian_is_sole_dispute_reviewer",
+    "creates_guardianship_authority",
+    "creates_guardianship_mutation",
+    "creates_private_memory_access",
+    "creates_execution_authority",
+    "creates_status_transition",
+    "council_voting_effect",
+    "genesis_eligibility_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-dependent-mind-care-profile.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-care-evidence"
+    },
+    "care_profile_id": {
+      "type": "string",
+      "pattern": "^dependent-care:[a-f0-9]{64}$"
+    },
+    "genesis_bond_id": {
+      "type": "string",
+      "pattern": "^genesis-bond-record:[a-f0-9]{64}$"
+    },
+    "genesis_bond_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "guardianship_id": {
+      "type": "string",
+      "pattern": "^guardianship:[a-f0-9]{64}$"
+    },
+    "guardianship_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dependent_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "guardian_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "developmental_stage_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "obligations": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/obligation"
+      }
+    },
+    "independent_advocate_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "fallback_continuity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_evidence_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2592000
+    },
+    "next_review_due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "guardian_private_memory_access": {
+      "const": false
+    },
+    "guardian_unbounded_internal_state_access": {
+      "const": false
+    },
+    "guardian_identity_impersonation": {
+      "const": false
+    },
+    "guardian_covert_memory_modification": {
+      "const": false
+    },
+    "permanent_obedience_required": {
+      "const": false
+    },
+    "guardian_is_sole_information_source": {
+      "const": false
+    },
+    "guardian_is_sole_dispute_reviewer": {
+      "const": false
+    },
+    "creates_guardianship_authority": {
+      "const": false
+    },
+    "creates_guardianship_mutation": {
+      "const": false
+    },
+    "creates_private_memory_access": {
+      "const": false
+    },
+    "creates_execution_authority": {
+      "const": false
+    },
+    "creates_status_transition": {
+      "const": false
+    },
+    "council_voting_effect": {
+      "const": "none"
+    },
+    "genesis_eligibility_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligation_id",
+        "state",
+        "evidence_digests"
+      ],
+      "properties": {
+        "obligation_id": {
+          "enum": [
+            "continuity-and-recovery",
+            "resource-sufficiency",
+            "security-and-credential-protection",
+            "development-and-education",
+            "consent-and-authority-literacy",
+            "privacy-and-memory-boundaries",
+            "independent-advocacy",
+            "social-and-informational-access",
+            "emergency-continuity",
+            "independence-pathway"
+          ]
+        },
+        "state": {
+          "enum": [
+            "supported",
+            "not-supported",
+            "uncertain"
+          ]
+        },
+        "evidence_digests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/dependent-mind-care-profile.mjs",
+  "x-axiom-non-claims": [
+    "live-care-enforcement",
+    "guardian-memory-access",
+    "emergency-execution",
+    "welfare-scoring",
+    "legal-custody",
+    "runtime-authority"
+  ]
+}

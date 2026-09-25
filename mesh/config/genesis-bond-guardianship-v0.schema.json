@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/genesis-bond-guardianship-v0.schema.json",
+  "title": "AXIOM Genesis Bond and Dependent Guardianship v0",
+  "description": "Definitions for immutable historical Genesis Bond and inert current guardianship responsibility records.",
+  "$defs": {
+    "genesisBond": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "status",
+        "bond_id",
+        "sponsor_mind_id",
+        "dependent_mind_id",
+        "genesis_transaction_candidate_digest",
+        "created_at",
+        "single_sponsor",
+        "ownership",
+        "transferable",
+        "delegable",
+        "creates_private_memory_access",
+        "authority_effect",
+        "governance_effect",
+        "network_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-genesis-bond.v0"
+        },
+        "version": {
+          "const": 0
+        },
+        "status": {
+          "const": "inert-historical-bond"
+        },
+        "bond_id": {
+          "type": "string",
+          "pattern": "^genesis-bond-record:[a-f0-9]{64}$"
+        },
+        "sponsor_mind_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "dependent_mind_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "genesis_transaction_candidate_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "single_sponsor": {
+          "const": true
+        },
+        "ownership": {
+          "const": false
+        },
+        "transferable": {
+          "const": false
+        },
+        "delegable": {
+          "const": false
+        },
+        "creates_private_memory_access": {
+          "const": false
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "governance_effect": {
+          "const": "none"
+        },
+        "network_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    },
+    "guardianship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "status",
+        "guardianship_id",
+        "genesis_bond_id",
+        "genesis_bond_digest",
+        "dependent_mind_id",
+        "guardian_mind_id",
+        "previous_guardianship_digest",
+        "state",
+        "transition_reason",
+        "guardian_qualification_evidence_digest",
+        "support_plan_digest",
+        "continuity_plan_digest",
+        "development_plan_digest",
+        "independent_advocacy_evidence_digest",
+        "transfer_basis_evidence_digest",
+        "dependent_interest_evidence_digest",
+        "independent_review_evidence_digest",
+        "independence_status_digest",
+        "effective_at",
+        "ownership",
+        "creates_private_memory_access",
+        "ambient_execution_authority",
+        "old_guardian_approval_is_sufficient",
+        "authority_effect",
+        "governance_effect",
+        "network_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-dependent-guardianship.v0"
+        },
+        "version": {
+          "const": 0
+        },
+        "status": {
+          "const": "inert-guardianship-record"
+        },
+        "guardianship_id": {
+          "type": "string",
+          "pattern": "^guardianship:[a-f0-9]{64}$"
+        },
+        "genesis_bond_id": {
+          "type": "string",
+          "pattern": "^genesis-bond-record:[a-f0-9]{64}$"
+        },
+        "genesis_bond_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "dependent_mind_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "guardian_mind_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "previous_guardianship_digest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "active",
+            "ended-independent"
+          ]
+        },
+        "transition_reason": {
+          "enum": [
+            "genesis",
+            "transfer",
+            "independence"
+          ]
+        },
+        "guardian_qualification_evidence_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "support_plan_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "continuity_plan_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "development_plan_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "independent_advocacy_evidence_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "transfer_basis_evidence_digest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "dependent_interest_evidence_digest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "independent_review_evidence_digest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "independence_status_digest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "effective_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ownership": {
+          "const": false
+        },
+        "creates_private_memory_access": {
+          "const": false
+        },
+        "ambient_execution_authority": {
+          "const": false
+        },
+        "old_guardian_approval_is_sufficient": {
+          "const": false
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "governance_effect": {
+          "const": "none"
+        },
+        "network_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/genesis-bond-guardianship.mjs",
+  "x-axiom-non-claims": [
+    "live-guardianship-authority",
+    "ownership-of-mind",
+    "private-memory-access",
+    "legal-custody",
+    "live-guardianship-transfer",
+    "runtime-authority"
+  ]
+}

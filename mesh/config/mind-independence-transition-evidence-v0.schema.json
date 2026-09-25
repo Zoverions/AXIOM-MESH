@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/mind-independence-transition-evidence-v0.schema.json",
+  "title": "AXIOM Mind Independence Transition Evidence v0",
+  "description": "Pure non-authorizing currentness adapter over an independence review. It can make a later transition requestable but does not grant or mutate independent status.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "mind_id",
+    "independence_review_digest",
+    "current_developmental_stage",
+    "current_developmental_state_evidence_digest",
+    "developmental_state_observed_at",
+    "current_continuity_evidence_digest",
+    "continuity_observed_at",
+    "continuity_status",
+    "appeal_path_id",
+    "appeal_status",
+    "appeal_evidence_digest",
+    "appeal_observed_at",
+    "maximum_review_age_seconds",
+    "maximum_state_observation_age_seconds",
+    "evaluated_at",
+    "status_effect",
+    "council_voting_effect",
+    "genesis_eligibility_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-mind-independence-transition-evidence.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-transition-evidence"
+    },
+    "mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "independence_review_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "current_developmental_stage": {
+      "enum": [
+        "candidate-independent",
+        "developing",
+        "dependent",
+        "independent"
+      ]
+    },
+    "current_developmental_state_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "developmental_state_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "current_continuity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "continuity_status": {
+      "enum": [
+        "clear",
+        "disputed",
+        "stale",
+        "unknown"
+      ]
+    },
+    "appeal_path_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "appeal_status": {
+      "enum": [
+        "none",
+        "open",
+        "stayed",
+        "resolved-uphold",
+        "resolved-reverse",
+        "unknown"
+      ]
+    },
+    "appeal_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "maximum_review_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2592000
+    },
+    "maximum_state_observation_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 604800
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_effect": {
+      "const": "none"
+    },
+    "council_voting_effect": {
+      "const": "none"
+    },
+    "genesis_eligibility_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "appeal_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/mind-independence-transition-evidence.mjs",
+  "x-axiom-non-claims": [
+    "live-independence-transition",
+    "independent-status-grant",
+    "council-voting-activation",
+    "genesis-eligibility",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

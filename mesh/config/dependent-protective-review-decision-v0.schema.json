@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/dependent-protective-review-decision-v0.schema.json",
+  "title": "AXIOM Dependent Protective Review Decision v0",
+  "description": "Content-addressed independent review decision candidate over one exact protective concern. Findings and recommendations are evidence only and create no remedy or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "decision_id",
+    "concern_id",
+    "concern_digest",
+    "genesis_bond_id",
+    "genesis_bond_digest",
+    "guardianship_id",
+    "guardianship_digest",
+    "dependent_mind_id",
+    "guardian_mind_id",
+    "review_policy_digest",
+    "minimum_reviewers",
+    "substantive_outcome_rule",
+    "reviewers",
+    "guardian_response_opportunity_evidence_digest",
+    "dependent_voice_evidence_digest",
+    "independent_advocacy_evidence_digest",
+    "evidence_set_digest",
+    "appeal_path_id",
+    "appeal_available",
+    "model_final_authority",
+    "panel_outcome",
+    "recommended_review_tracks",
+    "decision_at",
+    "decision_candidate_only",
+    "decision_final_for_execution",
+    "creates_guardian_removal",
+    "creates_guardianship_transfer",
+    "creates_private_memory_access",
+    "creates_unbounded_internal_state_access",
+    "creates_compulsory_evidence_seizure",
+    "creates_credential_suspension",
+    "creates_runtime_quarantine",
+    "creates_emergency_authority",
+    "creates_status_transition",
+    "creates_execution_authority",
+    "developmental_status_downgrade_authorized",
+    "guardianship_reactivation_after_independence",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-dependent-protective-review-decision.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-review-decision-candidate"
+    },
+    "decision_id": {
+      "type": "string",
+      "pattern": "^dependent-protective-review:[a-f0-9]{64}$"
+    },
+    "concern_id": {
+      "type": "string",
+      "pattern": "^dependent-concern:[a-f0-9]{64}$"
+    },
+    "concern_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "genesis_bond_id": {
+      "type": "string",
+      "pattern": "^genesis-bond-record:[a-f0-9]{64}$"
+    },
+    "genesis_bond_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "guardianship_id": {
+      "type": "string",
+      "pattern": "^guardianship:[a-f0-9]{64}$"
+    },
+    "guardianship_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dependent_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "guardian_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "review_policy_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "minimum_reviewers": {
+      "const": 3
+    },
+    "substantive_outcome_rule": {
+      "const": "strict-majority"
+    },
+    "reviewers": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 9,
+      "items": {
+        "$ref": "#/$defs/reviewer"
+      }
+    },
+    "guardian_response_opportunity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dependent_voice_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "independent_advocacy_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evidence_set_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "appeal_path_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "appeal_available": {
+      "const": true
+    },
+    "model_final_authority": {
+      "const": false
+    },
+    "panel_outcome": {
+      "enum": [
+        "substantiated",
+        "partially-substantiated",
+        "not-substantiated",
+        "inconclusive"
+      ]
+    },
+    "recommended_review_tracks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "care-plan-remediation",
+          "guardianship-transfer",
+          "continuity-support",
+          "privacy-protection",
+          "independence-obstruction-remediation",
+          "emergency-protection-authority",
+          "no-further-action"
+        ]
+      }
+    },
+    "decision_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decision_candidate_only": {
+      "const": true
+    },
+    "decision_final_for_execution": {
+      "const": false
+    },
+    "creates_guardian_removal": {
+      "const": false
+    },
+    "creates_guardianship_transfer": {
+      "const": false
+    },
+    "creates_private_memory_access": {
+      "const": false
+    },
+    "creates_unbounded_internal_state_access": {
+      "const": false
+    },
+    "creates_compulsory_evidence_seizure": {
+      "const": false
+    },
+    "creates_credential_suspension": {
+      "const": false
+    },
+    "creates_runtime_quarantine": {
+      "const": false
+    },
+    "creates_emergency_authority": {
+      "const": false
+    },
+    "creates_status_transition": {
+      "const": false
+    },
+    "creates_execution_authority": {
+      "const": false
+    },
+    "developmental_status_downgrade_authorized": {
+      "const": false
+    },
+    "guardianship_reactivation_after_independence": {
+      "const": false
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_mind_id",
+        "attestation",
+        "reviewer_evidence_digest",
+        "material_conflict_declared"
+      ],
+      "properties": {
+        "reviewer_mind_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "attestation": {
+          "enum": [
+            "substantiated",
+            "partially-substantiated",
+            "not-substantiated",
+            "inconclusive"
+          ]
+        },
+        "reviewer_evidence_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "material_conflict_declared": {
+          "const": false
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/dependent-protective-review-decision.mjs",
+  "x-axiom-non-claims": [
+    "legal-adjudication",
+    "final-truth-determination",
+    "guardian-removal",
+    "live-guardianship-transfer",
+    "emergency-execution",
+    "private-memory-inspection",
+    "evidence-seizure",
+    "credential-suspension",
+    "runtime-quarantine",
+    "developmental-status-mutation"
+  ]
+}

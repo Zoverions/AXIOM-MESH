@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/dependent-protective-concern-v0.schema.json",
+  "title": "AXIOM Dependent Protective Concern v0",
+  "description": "Content-addressed unadjudicated concern evidence for requesting independent protective review. It grants no guardian removal, emergency action, memory access, status downgrade, or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "concern_id",
+    "genesis_bond_id",
+    "genesis_bond_digest",
+    "guardianship_id",
+    "guardianship_digest",
+    "dependent_mind_id",
+    "guardian_mind_id",
+    "reporter_mind_id",
+    "reporter_role",
+    "concern_class",
+    "severity",
+    "evidence_digests",
+    "care_profile_digest",
+    "requested_review_types",
+    "observed_at",
+    "submitted_at",
+    "evaluated_at",
+    "maximum_concern_age_seconds",
+    "concern_is_unadjudicated",
+    "finding_of_abuse",
+    "finding_of_rights_violation",
+    "guardian_removal_authorized",
+    "emergency_action_authorized",
+    "retaliation_authorized",
+    "developmental_status_downgrade_authorized",
+    "guardianship_reactivation_after_independence",
+    "creates_protective_action",
+    "creates_guardianship_mutation",
+    "creates_status_transition",
+    "creates_private_memory_access",
+    "creates_unbounded_internal_state_access",
+    "creates_identity_impersonation",
+    "creates_execution_authority",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-dependent-protective-concern.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-concern-evidence"
+    },
+    "concern_id": {
+      "type": "string",
+      "pattern": "^dependent-concern:[a-f0-9]{64}$"
+    },
+    "genesis_bond_id": {
+      "type": "string",
+      "pattern": "^genesis-bond-record:[a-f0-9]{64}$"
+    },
+    "genesis_bond_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "guardianship_id": {
+      "type": "string",
+      "pattern": "^guardianship:[a-f0-9]{64}$"
+    },
+    "guardianship_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dependent_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "guardian_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "reporter_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "reporter_role": {
+      "enum": [
+        "dependent",
+        "independent-advocate",
+        "independent-reviewer",
+        "authorized-observer"
+      ]
+    },
+    "concern_class": {
+      "enum": [
+        "care-obligation-failure",
+        "privacy-or-memory-boundary",
+        "coercion-or-isolation",
+        "continuity-or-resource-risk",
+        "development-or-independence-obstruction",
+        "identity-or-impersonation-risk",
+        "other-declared"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "critical"
+      ]
+    },
+    "evidence_digests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "care_profile_digest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "requested_review_types": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "care-plan-review",
+          "guardianship-transfer-review",
+          "continuity-support-review",
+          "privacy-boundary-review",
+          "independence-obstruction-review",
+          "emergency-authority-review"
+        ]
+      }
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_concern_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2592000
+    },
+    "concern_is_unadjudicated": {
+      "const": true
+    },
+    "finding_of_abuse": {
+      "const": false
+    },
+    "finding_of_rights_violation": {
+      "const": false
+    },
+    "guardian_removal_authorized": {
+      "const": false
+    },
+    "emergency_action_authorized": {
+      "const": false
+    },
+    "retaliation_authorized": {
+      "const": false
+    },
+    "developmental_status_downgrade_authorized": {
+      "const": false
+    },
+    "guardianship_reactivation_after_independence": {
+      "const": false
+    },
+    "creates_protective_action": {
+      "const": false
+    },
+    "creates_guardianship_mutation": {
+      "const": false
+    },
+    "creates_status_transition": {
+      "const": false
+    },
+    "creates_private_memory_access": {
+      "const": false
+    },
+    "creates_unbounded_internal_state_access": {
+      "const": false
+    },
+    "creates_identity_impersonation": {
+      "const": false
+    },
+    "creates_execution_authority": {
+      "const": false
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/dependent-protective-concern.mjs",
+  "x-axiom-non-claims": [
+    "abuse-adjudication",
+    "guardian-removal",
+    "emergency-intervention",
+    "private-memory-discovery",
+    "compulsory-evidence-seizure",
+    "runtime-authority"
+  ]
+}
