@@ -94,6 +94,13 @@ export function assessDependentMindCareProfile({
     careProfile.next_review_due_at,
     'Care profile next_review_due_at'
   );
+  const guardianshipEffectiveAt=canonicalDate(
+    guardianship.effective_at,
+    'Guardianship effective_at'
+  );
+  if(observedAt<guardianshipEffectiveAt){
+    throw new ValidationError('Care profile observation cannot predate guardianship');
+  }
   if(observedAt>evaluatedAt){
     throw new ValidationError('Care profile observation cannot be future-dated');
   }
@@ -141,6 +148,10 @@ export function assessDependentMindCareProfile({
     care_evidence_is_structural_pending_external_verification:true,
     requires_external_care_evidence_verification:true,
     care_evidence_verification_effect:'none',
+    requires_external_developmental_stage_verification:true,
+    developmental_stage_verification_effect:'none',
+    requires_external_advocate_independence_verification:true,
+    advocate_independence_verification_effect:'none',
     ordinary_guardianship_authority_path_required:true,
     creates_guardianship_authority:false,
     creates_guardianship_mutation:false,
