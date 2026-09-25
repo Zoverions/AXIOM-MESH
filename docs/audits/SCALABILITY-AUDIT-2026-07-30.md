@@ -551,6 +551,43 @@ response-size limits fail unpredictably.
 - Cursor mutation/concurrency tests prove no duplicate or skipped records under
   the documented consistency model.
 
+**Remediation status (2026-09-25): causal sync state paged; other collections
+open.** An inventory of the Gateway's collection routes found:
+
+- `capsules`, `proposals`, `nodes`, `node-discovery`, `node-schedules`,
+  `approvals`, `memory`, `backups` and `audit/verify` already take a bounded
+  `limit`, capped at 100 for the first three, but no cursor. Records beyond
+  the first page are unreachable.
+- `consents`, `accounting`, `imports`, `appeals` and `storage-offers` are
+  unbounded.
+- `/v1/sync` returned at most 1,000 head rows with a `truncated` flag.
+
+That row cut in `/v1/sync` was also a correctness defect. It could fall
+inside a record with several concurrent heads, which then reported fewer
+heads, `status: active` instead of `conflict`, and a wrong `conflicts` count.
+Sync values reach 256 KiB, so a few records could also exceed the 1 MiB
+internal response ceiling.
+
+`/v1/sync` is now paged by record in `(namespace, record_id)` order, with an
+opaque, canonical-only cursor. A page holds `limit` records (default 100, at
+most 200) or about 512 KiB of records, whichever comes first, and always
+every current head of each record on it. The response adds `page.has_more`
+and `page.next_cursor`; existing fields are unchanged, and `truncated` now
+means more pages or more bundles. Tests page 250 records at page sizes of 1,
+7, 100 and 200: every record appears exactly once, in order, with all of its
+heads. Another test checks that records written during a pass appear once if
+ahead of the cursor and wait for the next pass if behind it. A third checks
+that the byte budget keeps pages under 1 MiB. Tampered cursors are refused.
+The tests fail with an inclusive cursor, without the byte budget, with
+`has_more` forced false, and against the previous row-limited query.
+
+This added two optional query parameters to the Gateway client contract, so
+its digest and the contract blob pin in
+`sovereign-information-grid-nonpromotion.test.mjs` were updated deliberately.
+Still open: cursors for the limited collections, bounds for the unbounded
+ones, the 100-bundle list inside sync state, a separate fetch for one record
+larger than the budget, and a streaming contract for artifacts.
+
 ### S-11 — Query patterns contain missing indexes and N+1 work
 
 **Severity:** High  

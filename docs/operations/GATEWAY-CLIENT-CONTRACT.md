@@ -70,7 +70,7 @@ client.
 | `imports.get` | `GET /v1/imports/:id` | owner | `id` |
 | `appeals.list` | `GET /v1/appeals` | owner | none |
 | `storage_offers.list` | `GET /v1/storage-offers` | owner | none |
-| `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id` |
+| `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id`, `cursor`, `limit` |
 | `sync_bundles.get` | `GET /v1/sync/bundles/:digest` | owner | `digest` |
 | `backups.list` | `GET /v1/backups` | owner | none |
 | `backups.get` | `GET /v1/backups/:id` | owner | `id` |

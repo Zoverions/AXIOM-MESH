@@ -406,7 +406,13 @@ export async function createGridService(config = meshConfig()) {
         pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
       });
     }
-    return store.listCausalSync(owner, { namespace, recordId });
+    const cursor = url.searchParams.get('cursor') ?? undefined;
+    const limit = integerQuery(url.searchParams.get('limit'), 100, {
+      label: 'sync limit',
+      min: 1,
+      max: 200
+    });
+    return store.listCausalSync(owner, { namespace, recordId, cursor, limit });
   });
   router.add(
     'GET',

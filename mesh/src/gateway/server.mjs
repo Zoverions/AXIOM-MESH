@@ -529,9 +529,18 @@ export async function createGatewayService(config = meshConfig()) {
       assertString(recordId, 'record_id', { max: 160, pattern: PRINCIPAL_ID });
       query.set('record_id', recordId);
     }
-    const suffix = query.size ? `?${query}` : '';
+    const cursor = url.searchParams.get('cursor');
+    if (cursor !== null) {
+      assertString(cursor, 'cursor', { max: 512, pattern: /^[A-Za-z0-9_-]+$/ });
+      query.set('cursor', cursor);
+    }
+    query.set('limit', String(boundedIntegerQuery(url.searchParams.get('limit'), 100, {
+      label: 'sync limit',
+      min: 1,
+      max: 200
+    })));
     return gridGet(
-      `/internal/v1/sync/${encodeURIComponent(principal.id)}${suffix}`,
+      `/internal/v1/sync/${encodeURIComponent(principal.id)}?${query}`,
       traceId
     );
   });

@@ -500,7 +500,9 @@
       "path_parameters": [],
       "query_parameters": [
         "namespace",
-        "record_id"
+        "record_id",
+        "cursor",
+        "limit"
       ],
       "request_schema": null,
       "response_schema": "axiom-causal-sync-state.v1",

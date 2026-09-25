@@ -2100,18 +2100,39 @@ export class GridStore {
     return summary;
   }
 
-  listCausalSync(owner, { namespace, recordId } = {}) {
-    const clauses = ['h.owner = ?'];
+  // Causal sync state is paged by record (scalability audit S-10). A page
+  // always holds every current head of each record it lists, so a record's
+  // status and the conflict count are never computed from a partial set of
+  // heads, as a fixed row limit could. Pages follow (namespace, record_id)
+  // order from an opaque cursor, and stop at the record limit or once the
+  // listed records pass a byte budget, which keeps a page under the 1 MiB
+  // internal response ceiling unless one record alone is larger.
+  listCausalSync(owner, { namespace, recordId, cursor, limit = SYNC_PAGE_DEFAULT_RECORDS } = {}) {
+    const safeLimit = boundedInteger(limit, 'sync page limit', 1, SYNC_PAGE_MAX_RECORDS);
+    const after = cursor === undefined ? null : decodeSyncCursor(cursor);
+    const clauses = ['owner = ?'];
     const parameters = [owner];
     if (namespace !== undefined) {
-      clauses.push('h.namespace = ?');
+      clauses.push('namespace = ?');
       parameters.push(namespace);
     }
     if (recordId !== undefined) {
-      clauses.push('h.record_id = ?');
+      clauses.push('record_id = ?');
       parameters.push(recordId);
     }
-    const rows = this.db.prepare(`
+    if (after) {
+      clauses.push('(namespace, record_id) > (?, ?)');
+      parameters.push(after.namespace, after.record_id);
+    }
+    const keys = this.db.prepare(`
+      SELECT DISTINCT namespace, record_id FROM sync_heads
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY namespace, record_id
+      LIMIT ?
+    `).all(...parameters, safeLimit + 1);
+    let hasMore = keys.length > safeLimit;
+    const pageKeys = keys.slice(0, safeLimit);
+    const headsFor = this.db.prepare(`
       SELECT
         h.owner, h.namespace, h.record_id, u.update_id, u.node_id,
         u.operation, u.value_digest, u.value_json, u.vector_json,
@@ -2119,53 +2140,52 @@ export class GridStore {
         u.public_key_digest, u.signature_json, u.status
       FROM sync_heads h
       JOIN sync_updates u ON u.update_id = h.update_id
-      WHERE ${clauses.join(' AND ')}
-      ORDER BY h.namespace, h.record_id, u.update_id
-      LIMIT 1000
-    `).all(...parameters).map(row => this.decodeProtectedRow(
-      'sync_updates',
-      'update_id',
-      row,
-      ['value_json', 'vector_json', 'resolves_json', 'signature_json']
-    ));
+      WHERE h.owner = ? AND h.namespace = ? AND h.record_id = ?
+      ORDER BY u.update_id
+    `);
     const records = [];
-    for (const row of rows) {
-      let record = records.at(-1);
-      if (
-        !record
-        || record.namespace !== row.namespace
-        || record.record_id !== row.record_id
-      ) {
-        record = {
-          owner,
-          namespace: row.namespace,
-          record_id: row.record_id,
-          status: 'active',
-          heads: []
-        };
-        records.push(record);
-      }
-      record.heads.push({
-        update_id: row.update_id,
-        node_id: row.node_id,
-        operation: row.operation,
-        value_digest: row.value_digest,
-        value: row.value_json,
-        vector: row.vector_json,
-        resolves: row.resolves_json,
-        occurred_at: row.occurred_at,
-        received_at: row.received_at,
-        author_counter: row.author_counter,
-        public_key_digest: row.public_key_digest,
-        signature: row.signature_json
-      });
-    }
-    for (const record of records) {
+    let pageBytes = 0;
+    for (const key of pageKeys) {
+      const record = {
+        owner,
+        namespace: key.namespace,
+        record_id: key.record_id,
+        status: 'active',
+        heads: headsFor.all(owner, key.namespace, key.record_id).map(row => {
+          const decoded = this.decodeProtectedRow(
+            'sync_updates',
+            'update_id',
+            row,
+            ['value_json', 'vector_json', 'resolves_json', 'signature_json']
+          );
+          return {
+            update_id: decoded.update_id,
+            node_id: decoded.node_id,
+            operation: decoded.operation,
+            value_digest: decoded.value_digest,
+            value: decoded.value_json,
+            vector: decoded.vector_json,
+            resolves: decoded.resolves_json,
+            occurred_at: decoded.occurred_at,
+            received_at: decoded.received_at,
+            author_counter: decoded.author_counter,
+            public_key_digest: decoded.public_key_digest,
+            signature: decoded.signature_json
+          };
+        })
+      };
       if (record.heads.length > 1) {
         record.status = 'conflict';
-      } else if (record.heads[0].operation === 'delete') {
+      } else if (record.heads[0]?.operation === 'delete') {
         record.status = 'tombstoned';
       }
+      const recordBytes = Buffer.byteLength(JSON.stringify(record));
+      if (records.length && pageBytes + recordBytes > SYNC_PAGE_BYTE_BUDGET) {
+        hasMore = true;
+        break;
+      }
+      records.push(record);
+      pageBytes += recordBytes;
     }
     const bundles = this.db.prepare(`
       SELECT * FROM sync_bundles
@@ -2178,12 +2198,20 @@ export class GridStore {
       row,
       ['result_json']
     ));
+    const last = records.at(-1);
     return {
       owner,
       records,
       bundles,
+      // Conflicts among the records on this page; each is counted from all
+      // of its heads.
       conflicts: records.filter(record => record.status === 'conflict').length,
-      truncated: rows.length === 1000 || bundles.length === 100
+      page: {
+        limit: safeLimit,
+        has_more: hasMore,
+        next_cursor: hasMore && last ? encodeSyncCursor(last) : null
+      },
+      truncated: hasMore || bundles.length === 100
     };
   }
 
@@ -3160,4 +3188,36 @@ async function atomicWrite(path, content, mode) {
   const temp = `${path}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(temp, content, { mode, flag: 'wx' });
   await rename(temp, path);
+}
+
+export const SYNC_PAGE_DEFAULT_RECORDS = 100;
+export const SYNC_PAGE_MAX_RECORDS = 200;
+export const SYNC_PAGE_BYTE_BUDGET = 512 * 1024;
+const SYNC_CURSOR_NAMESPACE = /^[a-z][a-z0-9.-]{0,127}$/;
+const SYNC_CURSOR_RECORD = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+
+export function encodeSyncCursor({ namespace, record_id: recordId }) {
+  return Buffer.from(JSON.stringify([namespace, recordId])).toString('base64url');
+}
+
+export function decodeSyncCursor(cursor) {
+  let decoded;
+  try {
+    if (typeof cursor !== 'string' || cursor.length > 512 || !/^[A-Za-z0-9_-]+$/.test(cursor)) {
+      throw new Error('shape');
+    }
+    decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+  } catch {
+    throw new ValidationError('Sync page cursor is invalid');
+  }
+  if (
+    !Array.isArray(decoded)
+    || decoded.length !== 2
+    || !SYNC_CURSOR_NAMESPACE.test(decoded[0] ?? '')
+    || !SYNC_CURSOR_RECORD.test(decoded[1] ?? '')
+    || encodeSyncCursor({ namespace: decoded[0], record_id: decoded[1] }) !== cursor
+  ) {
+    throw new ValidationError('Sync page cursor is invalid');
+  }
+  return { namespace: decoded[0], record_id: decoded[1] };
 }

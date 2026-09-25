@@ -195,6 +195,13 @@ last-write-wins. Operators inspect conflicts through:
 GET /v1/sync?namespace=<namespace>&record_id=<record>
 ```
 
+State is paged by record in `(namespace, record_id)` order: `limit` records
+(default 100, at most 200) or about 512 KiB of records, whichever comes first.
+A page always carries every current head of each record on it, so `status`
+and `conflicts` are never computed from part of a record. While
+`page.has_more` is true, pass `page.next_cursor` back as `cursor`. A record
+written behind the cursor during a pass appears on the next pass.
+
 A record with multiple heads reports `status: conflict`. Resolution is a new
 node-signed update whose vector includes all accepted dependencies and whose
 sorted `resolves` list contains every current head identifier. That resolution
