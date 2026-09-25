@@ -112,6 +112,8 @@
 
 **Mind independence transition-currentness checkpoint (2026-09-25):** Stacked draft PR #1861 binds a successful Mind Independence Review to exact current developmental-state and continuity digests, explicit review/state freshness windows, and freshly evidenced appeal state before a later transition may become requestable. Even `appeal_status: none` requires timestamped evidence. The adapter reports `requires_external_state_verification: true`, `state_verification_effect: none`, `ordinary_status_authority_path_required: true`, and `creates_status_transition: false`; it cannot activate Council voting, Genesis eligibility, governance, network, runtime, or execution authority.
 
+**Mind developmental-status checkpoint (2026-09-25):** Stacked draft PR #1862 defines an append-only monotonic developmental sequence `genesis -> dependent -> developing -> candidate-independent -> independent`. Stage transitions advance exactly once, bind the prior record, require canonical basis evidence, and never activate Council voting or Genesis eligibility. The final independence step must bind #1861 evidence for the exact current candidate-independent status record. Independent status has no backward transition in v0; quarantine, credential suspension, emergency restriction, and other safety mechanisms must remain separate rather than recreating dependency/guardian authority. All basis evidence remains externally verified and all live status mutation remains future work.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
