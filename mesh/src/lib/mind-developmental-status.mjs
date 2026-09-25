@@ -71,6 +71,8 @@ export function assessInitialMindDevelopmentalStatus(document){
     stage:document.stage,
     status_digest:digestObject(document),
     initial_status_candidate:true,
+    requires_external_basis_verification:true,
+    basis_verification_effect:'none',
     ordinary_status_authority_path_required:true,
     creates_status_transition:false,
     status_effect:'none',
@@ -176,6 +178,8 @@ export function assessMindDevelopmentalStatusTransition({
     reason:transitionRequestable
       ?'transition-requestable'
       :'independence-transition-evidence-not-requestable',
+    requires_external_basis_verification:true,
+    basis_verification_effect:'none',
     ordinary_status_authority_path_required:true,
     creates_status_transition:false,
     status_effect:'none',
