@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { digestObject } from '../src/lib/canonical.mjs';
 
 const D = char => char.repeat(64);
 
 function authority() {
-  return {
-    schema: 'axiom-machine-principal.v1',
+  const profile = {
     id: 'agent.currentness.1',
     type: 'agent',
     sponsor: 'owner.alice',
@@ -30,8 +30,12 @@ function authority() {
         max_response_bytes: 131_072
       },
       delegation: { allowed: false, max_depth: 0 }
-    },
-    authority_digest: D('b')
+    }
+  };
+  return {
+    schema: 'axiom-machine-principal.v1',
+    ...profile,
+    authority_digest: digestObject(profile)
   };
 }
 
@@ -71,7 +75,7 @@ function transition(overrides = {}) {
     predecessor_authority_digest: D('3'),
     successor_lifecycle_seq: 2,
     successor_status: 'narrowed',
-    successor_authority_digest: D('4'),
+    successor_authority_digest: authority().authority_digest,
     successor_authority: authority(),
     command_id: 'machine_cmd_' + D('7'),
     command_digest: D('8'),
@@ -97,7 +101,7 @@ function projection(overrides = {}) {
     lifecycle_head_event_id: 'evt_machine_currentness_2',
     lifecycle_head_event_hash: D('a'),
     lifecycle_head_digest: D('b'),
-    effective_authority_digest: D('4'),
+    effective_authority_digest: authority().authority_digest,
     effective_authority: authority(),
     grid_chain_seq: 42,
     grid_chain_head: D('c'),
