@@ -326,6 +326,20 @@
         "mesh/src/lib/dependent-protective-concern.mjs",
         "mesh/src/lib/genesis-bond-guardianship.mjs"
       ]
+    },
+    {
+      "id": "RT-REMEDY-024",
+      "review_scope": "authentication-authorization",
+      "title": "Protective remedy admission must not become stale or direct execution authority",
+      "claim_boundary": "A protective-review recommendation is not a remedy. Admission requires exact current review, guardianship, pre-independent developmental status, closed/upheld appeal state, and necessity/proportionality/less-intrusive/scope evidence; even emergency recommendations create no removal, transfer, memory, seizure, suspension, quarantine, emergency, status, or execution authority.",
+      "challenge_question": "Can stale or substituted review/guardianship/status evidence, open/stayed/modified/reversed appeals, appeal evidence predating the decision, independence after review, emergency recommendation language, or missing proportionality/alternatives/scope evidence be used to request or execute a remedy outside the ordinary authority path?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-protective-remedy-admission-v0-design.md",
+        "mesh/src/lib/dependent-protective-remedy-admission.mjs",
+        "mesh/src/lib/dependent-protective-review-decision.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
     }
   ],
   "reporting": {

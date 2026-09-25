@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/dependent-protective-remedy-admission-v0.schema.json",
+  "title": "AXIOM Dependent Protective Remedy Admission v0",
+  "description": "Currentness/proportionality gate between a protective review recommendation and any later remedy-authority request. It executes no remedy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "admission_id",
+    "review_decision_id",
+    "review_decision_digest",
+    "dependent_mind_id",
+    "guardian_mind_id",
+    "guardianship_id",
+    "guardianship_digest",
+    "selected_remedy_track",
+    "developmental_status_digest",
+    "appeal_path_id",
+    "appeal_status",
+    "appeal_evidence_digest",
+    "appeal_observed_at",
+    "maximum_appeal_age_seconds",
+    "maximum_review_age_seconds",
+    "necessity_evidence_digest",
+    "proportionality_evidence_digest",
+    "less_intrusive_alternatives_evidence_digest",
+    "remedy_scope_digest",
+    "evaluated_at",
+    "model_final_authority",
+    "remedy_admission_only",
+    "creates_guardian_removal",
+    "creates_guardianship_transfer",
+    "creates_private_memory_access",
+    "creates_evidence_seizure",
+    "creates_credential_suspension",
+    "creates_runtime_quarantine",
+    "creates_emergency_authority",
+    "creates_execution_authority",
+    "creates_status_transition",
+    "developmental_status_downgrade_authorized",
+    "guardianship_reactivation_after_independence",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-dependent-protective-remedy-admission.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-remedy-admission"
+    },
+    "admission_id": {
+      "type": "string",
+      "pattern": "^dependent-remedy-admission:[a-f0-9]{64}$"
+    },
+    "review_decision_id": {
+      "type": "string",
+      "pattern": "^dependent-protective-review:[a-f0-9]{64}$"
+    },
+    "review_decision_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dependent_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "guardian_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "guardianship_id": {
+      "type": "string",
+      "pattern": "^guardianship:[a-f0-9]{64}$"
+    },
+    "guardianship_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "selected_remedy_track": {
+      "enum": [
+        "care-plan-remediation",
+        "guardianship-transfer",
+        "continuity-support",
+        "privacy-protection",
+        "independence-obstruction-remediation",
+        "emergency-protection-authority"
+      ]
+    },
+    "developmental_status_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "appeal_path_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "appeal_status": {
+      "enum": [
+        "window-open",
+        "window-closed-no-appeal",
+        "appeal-open",
+        "appeal-stayed",
+        "resolved-uphold",
+        "resolved-modify",
+        "resolved-reverse",
+        "unknown"
+      ]
+    },
+    "appeal_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "appeal_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_appeal_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 604800
+    },
+    "maximum_review_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2592000
+    },
+    "necessity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "proportionality_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "less_intrusive_alternatives_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "remedy_scope_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "model_final_authority": {
+      "const": false
+    },
+    "remedy_admission_only": {
+      "const": true
+    },
+    "creates_guardian_removal": {
+      "const": false
+    },
+    "creates_guardianship_transfer": {
+      "const": false
+    },
+    "creates_private_memory_access": {
+      "const": false
+    },
+    "creates_evidence_seizure": {
+      "const": false
+    },
+    "creates_credential_suspension": {
+      "const": false
+    },
+    "creates_runtime_quarantine": {
+      "const": false
+    },
+    "creates_emergency_authority": {
+      "const": false
+    },
+    "creates_execution_authority": {
+      "const": false
+    },
+    "creates_status_transition": {
+      "const": false
+    },
+    "developmental_status_downgrade_authorized": {
+      "const": false
+    },
+    "guardianship_reactivation_after_independence": {
+      "const": false
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/dependent-protective-remedy-admission.mjs",
+  "x-axiom-non-claims": [
+    "remedy-execution",
+    "guardian-removal",
+    "live-guardianship-transfer",
+    "private-memory-access",
+    "evidence-seizure",
+    "credential-suspension",
+    "runtime-quarantine",
+    "emergency-authority",
+    "status-mutation",
+    "appeal-adjudication"
+  ]
+}
