@@ -6,19 +6,19 @@ import test from 'node:test';
 const PARENT_BLOBS = Object.freeze({
   capabilities: 'fd34c4b1836654bb7eeb7dda0f8be748ee124db8',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
-  // the other paged collections (scalability audit S-10). No route, access
-  // rule or response schema changed.
-  gateway_contract: '612f1a9d0ec0af6d272165ee8438109d4e31851d',
+  // the other paged collections, including accounting journals (scalability
+  // audit S-10). No route, access rule or response schema changed.
+  gateway_contract: '60556683e559507985a528aeae516dccf22de853',
   // Updated deliberately for the online-sync head (signed, nonce-bound count
   // of an owner's sync bundle events on /internal/v1/events) and for keyset
-  // paging of sync state and the other collections (`cursor` and `limit`).
-  // The server still composes no SIEA store; the assertions below are
-  // unchanged.
-  grid_server: '2a4a5a5b0ebce7069b47957835d5ff162506a616',
+  // paging of sync state and the other collections, including accounting
+  // journals (`cursor` and `limit`). The server still composes no SIEA store;
+  // the assertions below are unchanged.
+  grid_server: '277723ab8e62b5ed5e59d4fa46e05578b3eaa97c',
   // Updated deliberately for core migration 11 (index-only: composite
-  // indexes for the paged collections, scalability audit S-11). No table or
-  // column changed.
-  core_migrations: 'ef5fbf579a85c50968f370a7b47f285a019f02ac'
+  // indexes for the paged collections and accounting journals, scalability
+  // audit S-11). No table or column changed.
+  core_migrations: '5e89468692f34851453eacf1e08f0af4acf53278'
 });
 
 async function gitBlobSha(relative) {

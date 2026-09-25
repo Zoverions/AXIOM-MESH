@@ -425,7 +425,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-accounting-ledger.v1",
       "required_response_fields": [

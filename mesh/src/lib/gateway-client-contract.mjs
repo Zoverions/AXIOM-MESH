@@ -49,9 +49,10 @@ const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 // Updated for optional `cursor` and `limit` query parameters on `sync.list`
-// and the other paged collections (keyset paging; scalability audit S-10).
+// and the other paged collections, including `accounting.get` journals
+// (keyset paging; scalability audit S-10).
 const EXPECTED_CONTRACT_DIGEST =
-  'd0b541519e4b89b3a25547c5c8ed26a985d52845819a81b7ac072d8259f04f89';
+  'd95887bdb8ebe50501fd0850cef797a25d71e58b0c5bac645a0d1267b15503c5';
 const EXPECTED_JSON_SCHEMA_DIGEST =
   '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
 

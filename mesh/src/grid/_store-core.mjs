@@ -1655,19 +1655,35 @@ export class GridStore {
     });
   }
 
-  listAccounting(owner) {
+  // With `limit`, journals are one keyset page in (created_at, journal_id)
+  // order (scalability audit S-10); accounts and balances stay whole. Without
+  // it every journal is returned, as exports require.
+  listAccounting(owner, { limit, after } = {}) {
     const accounts = this.db.prepare(`
       SELECT * FROM accounting_accounts WHERE owner = ? ORDER BY unit, account_id
     `).all(owner);
-    // Every entry of the owner's journals in one joined read, grouped here,
+    const keyset = keysetClause(after, {
+      sortColumn: 'created_at',
+      idColumn: 'journal_id',
+      descending: false
+    });
+    const pageClause = `
+      WHERE owner = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at, journal_id
+      ${limit === undefined ? '' : 'LIMIT ?'}`;
+    const pageParams = [
+      owner,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'journal limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ];
+    // Every entry of the page's journals in one joined read, grouped here,
     // rather than one query per journal (scalability audit S-11).
     const entriesByJournal = new Map();
     for (const entry of this.db.prepare(`
       SELECT e.* FROM accounting_entries e
-      JOIN accounting_journals j ON j.journal_id = e.journal_id
-      WHERE j.owner = ?
+      JOIN (SELECT journal_id FROM accounting_journals ${pageClause}) p ON p.journal_id = e.journal_id
       ORDER BY e.journal_id, e.line_no
-    `).all(owner)) {
+    `).all(...pageParams)) {
       const entries = entriesByJournal.get(entry.journal_id) ?? [];
       entries.push({
         ...entry,
@@ -1681,8 +1697,8 @@ export class GridStore {
       entriesByJournal.set(entry.journal_id, entries);
     }
     const journals = this.db.prepare(`
-      SELECT * FROM accounting_journals WHERE owner = ? ORDER BY created_at, journal_id
-    `).all(owner).map(row => {
+      SELECT * FROM accounting_journals ${pageClause}
+    `).all(...pageParams).map(row => {
       const journal = this.decodeProtectedRow(
         'accounting_journals',
         'journal_id',

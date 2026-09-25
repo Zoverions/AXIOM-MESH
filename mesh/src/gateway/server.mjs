@@ -474,8 +474,8 @@ export async function createGatewayService(config = meshConfig()) {
       traceId
     );
   });
-  router.add('GET', '/v1/accounting', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/accounting/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/accounting', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/accounting/${encodeURIComponent(principal.id)}?${pageQuery(url, 'accounting limit')}`,
     traceId
   ));
   router.add('GET', '/v1/imports', async ({ url, traceId, principal }) => gridGet(

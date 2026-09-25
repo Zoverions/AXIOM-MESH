@@ -278,6 +278,9 @@ const PAGED_COLLECTION_INDEXES_SQL = `
 
   CREATE INDEX IF NOT EXISTS backups_page_idx
   ON backups(principal, requested_at, backup_id);
+
+  CREATE INDEX IF NOT EXISTS accounting_journals_page_idx
+  ON accounting_journals(owner, created_at, journal_id);
 `;
 
 const MIGRATIONS = Object.freeze([

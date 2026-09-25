@@ -603,8 +603,17 @@ and with `has_more` forced false. The contract had also drifted:
 `consents.list` declared a `limit` the Gateway ignored, and `backups.list`
 declared none although the Gateway accepted one. Both now match.
 
-Still open: `node-discovery` (a ranked query result) and `accounting` (a
-composite of accounts, journals and balances) are not paged. Also open: the
+Follow-up (2026-09-25): `accounting` now pages its journals, the part
+that grows with activity, in `(created_at, journal_id)` order. Each page's
+entries are loaded in one joined query for that page's journals only.
+Accounts and balances are small per owner and stay whole on every page.
+Without `limit`, the store method still returns every journal, which is how
+exports read it. A test pages journals seven at a time and checks order,
+entries and whole balances. The contract gained `limit` and `cursor` on
+`accounting.get`, so its digest and blob pin were updated deliberately.
+
+Still open: `node-discovery` (a ranked query result) is not paged. Also
+open: the
 100-bundle list inside sync state, a separate fetch for one sync record
 larger than the budget, and a streaming contract for artifacts.
 
@@ -661,7 +670,8 @@ patterns removed; node schedules open.**
   Its composite indexes match each paged route's predicate followed by the
   page order, time then identifier: capsules, proposals, nodes, approvals
   by approver and by requester, consents by subject and by controller,
-  memory, imports, appeals, storage offers and backups. It also adds
+  memory, imports, appeals, storage offers, backups and accounting
+  journals by owner. It also adds
   `consents(subject, controller, status, expires_at)` for the consent check
   and `events(actor, seq)` for actor-filtered event pages.
 - **Query shapes.** Proposals now choose the page before joining votes.
@@ -671,8 +681,9 @@ patterns removed; node schedules open.**
 - **Tests.** `paged-query-plans.test.mjs` captures the SQL each paged store
   method runs, with and without a cursor, and fails on any full-table scan
   of a base table. It also checks that proposals are chosen through their
-  page index. It fails without migration 11 and against the previous
-  proposals query. The consent and accounting tests assert one read each
+  page index, and that a statement with `LIMIT` never sorts its whole
+  input with a temporary B-tree. It fails without migration 11, without
+  the accounting journal index, and against the previous proposals query. The consent and accounting tests assert one read each
   and fail against the per-item loops.
 - **Pins.** The pinned `core_migrations` blob and the SIEA migration test's
   core schema version (now 11) were updated deliberately.

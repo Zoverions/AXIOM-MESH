@@ -65,7 +65,7 @@ client.
 | `consents.list` | `GET /v1/consents` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `approvals.list` | `GET /v1/approvals` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `memory.list` | `GET /v1/memory` | owner or consented share | optional `owner`, `limit` (1-500; default 100) and `cursor` |
-| `accounting.get` | `GET /v1/accounting` | owner | none |
+| `accounting.get` | `GET /v1/accounting` | owner | optional `limit` (1-100; default 100) and `cursor`, paging journals |
 | `imports.list` | `GET /v1/imports` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `imports.get` | `GET /v1/imports/:id` | owner | `id` |
 | `appeals.list` | `GET /v1/appeals` | owner | optional `limit` (1-100; default 100) and `cursor` |

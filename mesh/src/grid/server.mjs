@@ -355,12 +355,16 @@ export async function createGridService(config = meshConfig()) {
       after: decodeCollectionCursor('memory', url.searchParams.get('cursor'))
     });
   });
-  router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
+  router.add('GET', '/internal/v1/accounting/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
       max: 160,
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     });
-    return store.listAccounting(owner);
+    let result;
+    const { items, page } = pagedCollection(url, 'journals', 'journal limit',
+      (limit, after) => (result = store.listAccounting(owner, { limit, after })).journals,
+      item => [item.created_at, item.journal_id]);
+    return { ...result, journals: items, page };
   });
   router.add('GET', '/internal/v1/imports/:principal', async ({ params, url }) => {
     const { items, page } = pagedCollection(url, 'imports', 'import limit',

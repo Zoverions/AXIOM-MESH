@@ -127,4 +127,25 @@ test('accounting loads every journal entry in one read, grouped and ordered (S-1
     assert.deepEqual(journal.entries.map(entry => entry.metadata_json), [{ line: 1 }, { line: 2 }]);
   }
   assert.equal(accounting.journals.some(journal => journal.journal_id === 'journal_other'), false);
+
+  // Paged, journals arrive once each in (created_at, journal_id) order, each
+  // with its own entries; accounts and balances stay whole on every page.
+  store.db.prepare = prepare;
+  const seen = [];
+  let after;
+  for (let pages = 0; pages < 20; pages += 1) {
+    const page = store.listAccounting(OWNER, { limit: 8, after });
+    const items = page.journals.slice(0, 7);
+    for (const journal of items) {
+      const index = Number(journal.journal_id.slice(-3));
+      assert.deepEqual(journal.entries.map(entry => entry.amount), [index + 1, -(index + 1)]);
+    }
+    assert.equal(page.accounts.length, 2);
+    assert.equal(page.balances.length, 2);
+    seen.push(...items.map(journal => journal.journal_id));
+    if (page.journals.length <= 7) break;
+    const last = items.at(-1);
+    after = { sort: last.created_at, id: last.journal_id };
+  }
+  assert.deepEqual(seen, Array.from({ length: journals }, (_, index) => `journal_${String(index).padStart(3, '0')}`));
 });

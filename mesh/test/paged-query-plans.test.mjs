@@ -10,7 +10,8 @@ import { GridStore } from '../src/grid/store.mjs';
 
 const BASE_TABLES = [
   'events', 'capsules', 'proposals', 'nodes', 'approvals', 'consents', 'memory_objects',
-  'imports', 'governance_appeals', 'storage_offers', 'backups', 'sync_heads'
+  'imports', 'governance_appeals', 'storage_offers', 'backups', 'sync_heads',
+  'accounting_journals', 'accounting_entries'
 ];
 const AFTER = { sort: '2026-01-01T00:00:00.000Z', id: 'x_0001' };
 
@@ -43,10 +44,16 @@ function countParameters(sql) {
 
 // A full scan of a base table: `SCAN <table>` without an index. An index
 // scan in page order (`SCAN t USING INDEX ...`) stops at the page limit.
-function fullScans(plan) {
-  return plan.filter(step => BASE_TABLES.some(table => (
-    new RegExp(`^SCAN ${table}(?! USING (COVERING )?INDEX)\\b`).test(step)
-  )));
+// In a paged (LIMIT) statement, a sort of the last ORDER BY term after an
+// index seek means the index lacks the identifier tie-break, so every row
+// after the cursor is sorted. Merges of already-limited branches report a
+// plain `USE TEMP B-TREE FOR ORDER BY`; unpaged whole lists may sort.
+function fullScans(plan, sql) {
+  const paged = /\bLIMIT\b/i.test(sql);
+  return plan.filter(step => (
+    BASE_TABLES.some(table => new RegExp(`^SCAN ${table}(?! USING (COVERING )?INDEX)\\b`).test(step))
+    || (paged && /USE TEMP B-TREE FOR LAST TERM OF ORDER BY/.test(step))
+  ));
 }
 
 test('paged Grid queries seek indexes and never scan a whole table (S-11)', async t => {
@@ -78,6 +85,7 @@ test('paged Grid queries seek indexes and never scan a whole table (S-11)', asyn
     appeals: after => store.listGovernanceAppeals(P, { limit: 101, after }),
     'storage offers': after => store.listStorageOffers(P, { limit: 101, after }),
     backups: after => store.listBackups(P, { limit: 101, after }),
+    'accounting journals': after => store.listAccounting(P, { limit: 101, after }),
     'sync state': () => store.listCausalSync(P, { limit: 100 })
   };
   for (const [name, call] of Object.entries(routes)) {
@@ -91,7 +99,7 @@ test('paged Grid queries seek indexes and never scan a whole table (S-11)', asyn
           assert.ok(plan.some(step => step.includes('proposals_page_idx')), `${name}: ${plan.join(' | ')}`);
         }
         assert.deepEqual(
-          fullScans(plan),
+          fullScans(plan, sql),
           [],
           `${name}${after ? ' (with cursor)' : ''} scans a whole table:\n${sql}\n${plan.join('\n')}`
         );
