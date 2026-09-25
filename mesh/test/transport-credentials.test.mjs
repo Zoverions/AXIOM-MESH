@@ -398,4 +398,20 @@ test('warm internal calls reuse one authenticated connection; a new credential g
   gatewayIdentity.transport = gatewayTransport;
   assert.equal((await signedFetch(gatewayIdentity, 'hypervisor', url)).caller, 'gateway');
   assert.equal(transportPoolStats().connections - swapped.connections, 1, 'no socket crosses generations');
+
+  // Rotating the audience's pinned certificate is also a new generation. A
+  // warm socket would skip the handshake, so it must not be reused: the call
+  // opens a new connection and the old pin's check refuses the server.
+  const warmAgain = transportPoolStats();
+  gatewayIdentity.transport = {
+    ...gatewayTransport,
+    peers: { ...gatewayTransport.peers, hypervisor: 'ab'.repeat(32) }
+  };
+  await assert.rejects(
+    () => signedFetch(gatewayIdentity, 'hypervisor', url),
+    /not the active peer identity/
+  );
+  const repinned = transportPoolStats();
+  assert.equal(repinned.connections - warmAgain.connections, 1, 'a new pin never reuses a socket');
+  assert.equal(repinned.drained_pools - warmAgain.drained_pools, 1);
 });

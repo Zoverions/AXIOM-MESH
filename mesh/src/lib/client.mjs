@@ -15,10 +15,15 @@ const MAX_REQUEST_TIMEOUT_MS = 300_000;
 // Keep-alive pools for mutually authenticated internal calls (scalability
 // audit S-04). Every hop used to open a new TCP and TLS 1.3 connection.
 // A pool serves one caller service, one audience and one origin under one
-// credential generation (the caller's certificate, key and trusted CA), so a
-// reused socket always carries the same authenticated identity the server
-// bound when it was opened. A new generation gets a new pool and the old one
-// drains: its idle sockets close and busy ones close when released.
+// credential generation: the caller's certificate, key and trusted CA, and
+// the pinned fingerprint of the audience's certificate. A reused socket skips
+// the TLS handshake and so every identity check, which is safe only because
+// the socket was opened under exactly this generation. A new generation gets
+// a new pool and the old one drains: its idle sockets close and busy ones
+// close when released.
+// The server identity check belongs to the pool, not the request: Node 22
+// never keeps a socket alive that was opened with a per-request
+// checkServerIdentity, and the check depends only on what the pool is keyed by.
 // Idle sockets close after 4 s, before the services' 5 s keep-alive timeout,
 // so a request is never written to a socket the server is closing.
 const TRANSPORT_POOL_LIMITS = Object.freeze({
@@ -31,7 +36,12 @@ const transportPoolCounters = { connections: 0, reused: 0, drained_pools: 0 };
 
 function transportAgent(transport, audience, target) {
   const scope = `${transport.service}\u0000${audience}\u0000${target.origin}`;
-  const generation = sha256(`${transport.cert}\u0000${transport.key}\u0000${transport.ca}`);
+  const generation = sha256([
+    transport.cert,
+    transport.key,
+    transport.ca,
+    transport.peers?.[audience] ?? ''
+  ].join('\u0000'));
   const existing = transportPools.get(scope);
   if (existing?.generation === generation) return existing.agent;
   if (existing) drainAgent(existing.agent);
@@ -40,7 +50,10 @@ function transportAgent(transport, audience, target) {
     maxSockets: TRANSPORT_POOL_LIMITS.maxSockets,
     maxFreeSockets: TRANSPORT_POOL_LIMITS.maxFreeSockets,
     timeout: TRANSPORT_POOL_LIMITS.idleTimeoutMs,
-    scheduling: 'lifo'
+    scheduling: 'lifo',
+    checkServerIdentity: (_hostname, peer) => (
+      verifyTransportServerIdentity(transport, audience, peer)
+    )
   });
   transportPools.set(scope, { generation, agent });
   return agent;
@@ -279,9 +292,6 @@ async function mutuallyAuthenticatedRequest({
       minVersion: 'TLSv1.3',
       maxVersion: 'TLSv1.3',
       servername: serviceDnsName(audience),
-      checkServerIdentity: (_hostname, peer) => (
-        verifyTransportServerIdentity(transport, audience, peer)
-      ),
       agent: transportAgent(transport, audience, target)
     }, response => {
       const chunks = [];
