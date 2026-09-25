@@ -16,6 +16,7 @@ import {
 } from '../src/lib/circle-core.mjs';
 import {
   assessCircleExportRetention,
+  circleExportRecordObservationsDigest,
   circleExportRetentionEvidenceDigest,
   deriveCircleExportRetentionEvidenceId,
   validateCircleExportRetentionEvidence
@@ -150,6 +151,20 @@ function fixture() {
     runtime_activation:false
   };
   const packageResult=validateCircleCorePackage(packageDocument);
+  const recordObservations=[
+    {
+      record_digest:digestObject(proposal),
+      evidence_ref:'observation:proposal-before-exit',
+      evidence_digest:'1'.repeat(64),
+      observed_at:'2026-09-24T10:00:00.000Z'
+    },
+    {
+      record_digest:digestObject(decision),
+      evidence_ref:'observation:decision-before-exit',
+      evidence_digest:'2'.repeat(64),
+      observed_at:'2026-09-25T10:30:00.000Z'
+    }
+  ];
   const evidence={
     schema:'axiom-circle-export-retention-evidence.v0',
     version:0,
@@ -164,7 +179,9 @@ function fixture() {
     membership_digest:digestObject(membership),
     snapshot_evidence_ref:'snapshot:circle-export-1',
     snapshot_evidence_digest:'e'.repeat(64),
+    record_observations_digest:circleExportRecordObservationsDigest(recordObservations),
     history_retention_only:true,
+    requires_external_record_evidence_verification:true,
     requires_disclosure_authorization:true,
     portable_authority:false,
     authority_effect:'none',
@@ -182,7 +199,7 @@ function fixture() {
     package_digest:packageResult.package_digest,
     charter_digest:packageResult.charter_digest
   };
-  return {packageDocument,evidence,snapshotEvidence};
+  return {packageDocument,evidence,snapshotEvidence,recordObservations};
 }
 
 function refresh(f,{refreshEvidenceId=true}={}) {
@@ -194,11 +211,21 @@ function refresh(f,{refreshEvidenceId=true}={}) {
   f.evidence.membership_digest=membership?digestObject(membership):f.evidence.membership_digest;
   f.snapshotEvidence.package_digest=checked.package_digest;
   f.snapshotEvidence.charter_digest=checked.charter_digest;
+  f.evidence.record_observations_digest=circleExportRecordObservationsDigest(f.recordObservations);
   if(refreshEvidenceId) f.evidence.evidence_id=deriveCircleExportRetentionEvidenceId(f.evidence);
 }
 
 function assess(f) {
   return assessCircleExportRetention(f);
+}
+
+function observe(f,record,observedAt,evidenceDigit='9') {
+  f.recordObservations.push({
+    record_digest:digestObject(record),
+    evidence_ref:'observation:'+record.schema+':'+f.recordObservations.length,
+    evidence_digest:evidenceDigit.repeat(64),
+    observed_at:observedAt
+  });
 }
 
 function addExit(f,effectiveAt='2026-09-25T11:00:00.000Z') {
@@ -227,6 +254,8 @@ test('active member history is eligible only for separate disclosure review',()=
   assert.equal(result.retention_state,'active-member-history');
   assert.equal(result.participation_cutoff_at,null);
   assert.equal(result.requires_disclosure_authorization,true);
+  assert.equal(result.requires_external_record_evidence_verification,true);
+  assert.equal(result.record_evidence_verification_effect,'none');
   assert.equal(result.portable_authority,false);
   assert.equal(result.authority_effect,'none');
   assert.equal(result.governance_effect,'none');
@@ -240,6 +269,7 @@ test('post-exit export may retain only records at or before the participation cu
   addExit(f);
   f.packageDocument.exports[0].included_record_digests.push(digestObject(f.packageDocument.exits[0]));
   f.packageDocument.exports[0].included_record_digests.sort();
+  observe(f,f.packageDocument.exits[0],'2026-09-25T11:00:00.000Z','3');
   refresh(f);
   const result=assess(f);
   assert.equal(result.eligible_for_disclosure_review,true);
@@ -261,6 +291,7 @@ test('post-exit records cannot be laundered into retained history',()=>{
   f.packageDocument.proposals.push(later);
   f.packageDocument.exports[0].included_record_digests.push(digestObject(later));
   f.packageDocument.exports[0].included_record_digests.sort();
+  observe(f,later,'2026-09-25T11:30:00.000Z','4');
   refresh(f);
   const result=assess(f);
   assert.equal(result.eligible_for_disclosure_review,false);
@@ -279,6 +310,7 @@ test('record created after export snapshot is rejected even for an active member
   f.packageDocument.proposals.push(future);
   f.packageDocument.exports[0].included_record_digests.push(digestObject(future));
   f.packageDocument.exports[0].included_record_digests.sort();
+  observe(f,future,'2026-09-25T12:30:00.000Z','5');
   refresh(f);
   const result=assess(f);
   assert.equal(result.eligible_for_disclosure_review,false);
@@ -289,6 +321,12 @@ test('unknown included digest fails closed',()=>{
   const f=fixture();
   f.packageDocument.exports[0].included_record_digests.push('c'.repeat(64));
   f.packageDocument.exports[0].included_record_digests.sort();
+  f.recordObservations.push({
+    record_digest:'c'.repeat(64),
+    evidence_ref:'observation:unknown',
+    evidence_digest:'6'.repeat(64),
+    observed_at:'2026-09-25T10:00:00.000Z'
+  });
   refresh(f);
   const result=assess(f);
   assert.equal(result.eligible_for_disclosure_review,false);
@@ -362,4 +400,41 @@ test('portable authority or hidden export effects remain structurally impossible
   const effect=fixture();
   effect.evidence.export_effect='create-bundle';
   assert.throws(()=>validateCircleExportRetentionEvidence(effect.evidence),/activation boundary/);
+});
+
+
+test('every included record requires exact historical observation evidence',()=>{
+  const f=fixture();
+  f.recordObservations=f.recordObservations.filter(item=>(
+    item.record_digest!==digestObject(f.packageDocument.decisions[0])
+  ));
+  refresh(f);
+  const result=assess(f);
+  assert.equal(result.eligible_for_disclosure_review,false);
+  assert.ok(result.reasons.includes(
+    'record-observation-missing:'+digestObject(f.packageDocument.decisions[0])
+  ));
+});
+
+test('record observation evidence is digest-bound and cannot be substituted',()=>{
+  const f=fixture();
+  f.evidence.record_observations_digest='7'.repeat(64);
+  f.evidence.evidence_id=deriveCircleExportRetentionEvidenceId(f.evidence);
+  assert.ok(assess(f).reasons.includes('record-observations-digest-mismatch'));
+
+  const ref=fixture();
+  ref.recordObservations[0].evidence_ref='observation:attacker';
+  assert.ok(assess(ref).reasons.includes('record-observations-digest-mismatch'));
+});
+
+test('post-exit export rejects an exact record version observed only after exit',()=>{
+  const f=fixture();
+  addExit(f);
+  f.recordObservations[0].observed_at='2026-09-25T11:01:00.000Z';
+  refresh(f);
+  const result=assess(f);
+  assert.equal(result.eligible_for_disclosure_review,false);
+  assert.ok(result.reasons.some(reason=>reason.startsWith(
+    'record-observed-after-participation-cutoff:'
+  )));
 });
