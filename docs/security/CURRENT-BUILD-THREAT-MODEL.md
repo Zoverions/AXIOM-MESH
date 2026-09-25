@@ -829,3 +829,30 @@ mind back into a dependent stage.
 The profile itself creates no guardianship mutation, private-memory access, execution
 authority, status transition, Council voting, Genesis eligibility, governance,
 network effect, or runtime activation.
+
+
+### Dependent Concern & Protective Review boundary
+
+The inert Dependent Concern & Protective Review v0 contract separates concern
+evidence from adjudication and from later protective authority. A dependent,
+independent advocate, independent reviewer, or authorized observer may submit bounded,
+content-addressed concern evidence tied to the exact Genesis Bond and active
+guardianship, but the record itself is explicitly unadjudicated.
+
+The primary risk is **concern-to-authority laundering**: severity labels, allegations,
+or emergency-language could be misused to justify guardian removal, private-memory
+inspection, credential suspension, developmental downgrade, isolation, or runtime
+intervention without the ordinary authority path. v0 therefore hard-codes no finding
+of abuse/rights violation, no guardian removal, no emergency action, no retaliation,
+no developmental downgrade, no guardianship reactivation after independence, and no
+memory/internal-state/impersonation/execution authority.
+
+Independent-role claims are also guarded. The guardian and dependent cannot relabel
+themselves as independent reviewers/observers, and an independent-advocate report must
+bind the exact care profile naming that advocate. Concern evidence and requested
+review types are canonicalized to avoid multiple IDs for equivalent evidence sets.
+
+Stale concern evidence remains historical evidence but is not requestable as current
+protective-review input. A protective review remains a later independent process;
+concern creation cannot mutate guardianship, developmental status, governance,
+authority, network, or runtime state.
