@@ -325,7 +325,10 @@ test('projection digest detects presentation tampering', () => {
   const projection = structuredClone(buildFoundersConsoleProjection({
     foundationDocument: foundation()
   }));
-  projection.founder_genesis.remaining_slots = 99;
+  [projection.council.seats[0], projection.council.seats[1]] = [
+    projection.council.seats[1],
+    projection.council.seats[0]
+  ];
 
   assert.throws(
     () => validateFoundersConsoleProjection(projection),
