@@ -88,6 +88,7 @@ export function assessInitialGuardianship({
     guardianship.previous_guardianship_digest!==null
     ||guardianship.state!=='active'
     ||guardianship.transition_reason!=='genesis'
+    ||guardianship.independence_status_digest!==null
   ){
     throw new ValidationError('Initial guardianship state is invalid');
   }
@@ -139,7 +140,15 @@ export function assessGuardianshipTransfer({
   requireTransferEvidence(candidateGuardianship);
   ensureTimeAdvances(currentGuardianship,candidateGuardianship);
 
-  return relationshipAssessment('guardianship-transfer-candidate',genesisBond,candidateGuardianship);
+  return Object.freeze({
+    ...relationshipAssessment('guardianship-transfer-candidate',genesisBond,candidateGuardianship),
+    requires_external_transfer_basis_verification:true,
+    transfer_basis_verification_effect:'none',
+    requires_external_dependent_interest_verification:true,
+    dependent_interest_verification_effect:'none',
+    requires_external_independent_review_verification:true,
+    independent_review_verification_effect:'none'
+  });
 }
 
 export function assessGuardianshipEndAtIndependence({
@@ -196,6 +205,8 @@ export function assessGuardianshipEndAtIndependence({
   return Object.freeze({
     ...relationshipAssessment('guardianship-end-at-independence-candidate',genesisBond,candidateGuardianship),
     independent_status_digest:digestObject(independentDevelopmentalStatus),
+    requires_external_independent_status_verification:true,
+    independent_status_verification_effect:'none',
     guardianship_reactivation_permitted:false
   });
 }
