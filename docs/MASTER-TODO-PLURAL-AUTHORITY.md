@@ -124,6 +124,8 @@
 
 **Genesis Bond / guardianship checkpoint (2026-09-25):** Historical Genesis Bond and current developmental guardianship are explicitly separated. The Bond remains one sponsor -> one dependent, immutable, non-owning, non-transferable, non-delegable, and non-authorizing. Initial guardianship belongs to the Genesis sponsor but may transfer without rewriting the Bond; transfer requires replacement qualification, transfer-basis, dependent-interest/voice, and independent-review evidence, and old-guardian approval alone is insufficient. Exact independent developmental standing closes guardianship, preserves the Bond, and cannot be followed by guardianship reactivation in v0. No relationship record grants private-memory access or ambient execution authority.
 
+**Dependent Mind Care & Protection checkpoint (2026-09-25):** Stacked care-profile work makes active guardianship carry ten explicit care obligations: continuity/recovery, resources, security, development/education, consent/authority literacy, privacy/memory boundaries, independent advocacy, social/informational access, emergency continuity, and an independence pathway. The guardian cannot be the independent advocate, care evidence cannot predate guardianship, stale/overdue care fails currentness without erasing the dependent, and the profile explicitly forbids ambient private-memory access, unbounded internal-state access, impersonation, covert memory modification, permanent obedience, guardian-only information, and guardian-only dispute review. It creates no guardianship/status/vote/Genesis/execution authority.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
