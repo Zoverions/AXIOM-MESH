@@ -792,15 +792,27 @@ open.**
   Generation stays synchronous, so the records come from one consistent read.
   Export preflight walks the same records to find scope errors, without
   holding them.
-- **Evidence.** A 25 MiB export is generated within 8 MiB of live memory,
-  measured in a child process from inside generation; the previous code
-  measures 58 MiB and fails. A scope error part-way leaves no bundle or
-  temporary file and the export pending. Tests fail without the temporary-file
-  cleanup, the final batch flush, or the preflight walk.
+- **Memory and accounting stream too.** The owner's memory objects are read
+  one row at a time; edges come from one joined read that keeps an edge only
+  when both ends are active objects the owner holds (the same rule as the
+  whole graph); a scoped export checks the objects it names before writing
+  any memory record. Accounting journals and their entries come from two
+  reads in the same order, merged, so one journal is held at a time. A test
+  compares every record against the previous whole-set export, across
+  inactive rows, another owner's rows, edges to inactive or foreign objects,
+  date windows and object scopes.
+- **Evidence.** A 25 MiB event export is generated within 8 MiB of live
+  memory, measured in a child process from inside generation; the previous
+  code measures 58 MiB and fails. A memory and accounting export stays near
+  1 MiB of live memory at both 300 and 1,200 objects (about 20 MiB of memory
+  text at 1,200); the previous code measures 52.8 MiB at 1,200 and fails, as
+  does whole-set accounting alone (9.6 MiB). A scope error part-way leaves no
+  bundle or temporary file and the export pending. Tests fail without the
+  temporary-file cleanup, the final batch flush, the preflight walk, the
+  active-endpoint join, the scoped edge filter, or the journal merge.
 - **Not yet streaming.** A recipient-encrypted export is still assembled in
   memory, because its envelope seals the bundle whole; its plaintext is never
-  written to disk. The owner's memory graph and accounting are read whole, as
-  before.
+  written to disk.
 
 Still open: a chunked recipient envelope, generation as a background job
 (S-14), a streaming bundle route (bundles are still read whole to serve, and

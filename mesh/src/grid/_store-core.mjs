@@ -1580,17 +1580,6 @@ export class GridStore {
     };
   }
 
-  // Every active memory object of an owner, unpaged. A personal export must
-  // be complete; the API's first page (100 objects) is not.
-  ownedMemoryGraph(owner) {
-    const objects = this.db.prepare(`
-      SELECT * FROM memory_objects
-      WHERE owner = ? AND status = 'active'
-      ORDER BY created_at, object_id
-    `).all(owner);
-    return this.memoryGraph(owner, owner, objects, false);
-  }
-
   memoryGraph(requester, owner, objects, truncated) {
     const visible = owner === requester
       ? objects
@@ -2876,13 +2865,14 @@ export class GridStore {
       `).iterate(principal, since, until)) yield { type: 'vote', data: row };
     }
     if (requestedTypes.has('memory')) {
-      const graph = this.ownedMemoryGraph(principal);
-      const selectedObjects = objectIds.size
-        ? graph.objects.filter(object => objectIds.has(object.object_id))
-        : graph.objects;
+      // Every active object the owner holds, one row at a time (not the API's
+      // first page, and not all at once). A scoped export names objects the
+      // owner must hold; that is checked before any memory record is written.
       if (objectIds.size) {
-        const visible = new Set(selectedObjects.map(object => object.object_id));
-        const missing = [...objectIds].filter(id => !visible.has(id));
+        const owned = this.db.prepare(`
+          SELECT 1 FROM memory_objects WHERE object_id = ? AND owner = ? AND status = 'active'
+        `);
+        const missing = [...objectIds].filter(id => !owned.get(id, principal));
         if (missing.length) throw new AxiomError(
           'export_scope_forbidden',
           'Object export scope includes an unknown or unowned object',
@@ -2890,34 +2880,75 @@ export class GridStore {
           { object_ids: missing }
         );
       }
-      const selectedIds = new Set(selectedObjects.map(object => object.object_id));
-      for (const object of selectedObjects) {
-        if (object.created_at >= since && object.created_at <= until) {
-          yield { type: 'memory_object', data: object };
-        }
+      for (const row of this.db.prepare(`
+        SELECT * FROM memory_objects
+        WHERE owner = ? AND status = 'active'
+        ORDER BY created_at, object_id
+      `).iterate(principal)) {
+        if (objectIds.size && !objectIds.has(row.object_id)) continue;
+        if (row.created_at < since || row.created_at > until) continue;
+        yield {
+          type: 'memory_object',
+          data: this.decodeProtectedRow('memory_objects', 'object_id', row, ['payload_json'])
+        };
       }
-      for (const edge of graph.edges) {
-        if (
-          (!objectIds.size || (selectedIds.has(edge.from_id) && selectedIds.has(edge.to_id)))
-          && edge.created_at >= since
-          && edge.created_at <= until
-        ) {
-          yield { type: 'memory_edge', data: edge };
-        }
+      // An edge is part of the owner's graph when both ends are active
+      // objects the owner holds.
+      for (const row of this.db.prepare(`
+        SELECT e.* FROM memory_edges e
+        JOIN memory_objects f ON f.object_id = e.from_id AND f.owner = e.owner AND f.status = 'active'
+        JOIN memory_objects t ON t.object_id = e.to_id AND t.owner = e.owner AND t.status = 'active'
+        WHERE e.owner = ? AND e.status = 'active'
+        ORDER BY e.created_at, e.edge_id
+      `).iterate(principal)) {
+        if (objectIds.size && !(objectIds.has(row.from_id) && objectIds.has(row.to_id))) continue;
+        if (row.created_at < since || row.created_at > until) continue;
+        yield {
+          type: 'memory_edge',
+          data: this.decodeProtectedRow('memory_edges', 'edge_id', row, ['metadata_json'])
+        };
       }
     }
     if (requestedTypes.has('accounting')) {
-      const accounting = this.listAccounting(principal);
-      for (const account of accounting.accounts) {
+      for (const account of this.db.prepare(`
+        SELECT * FROM accounting_accounts WHERE owner = ? ORDER BY unit, account_id
+      `).iterate(principal)) {
         if (account.created_at >= since && account.created_at <= until) {
           yield { type: 'account', data: account };
         }
       }
-      for (const journal of accounting.journals) {
-        if (journal.created_at >= since && journal.created_at <= until) {
-          yield { type: 'journal', data: journal };
+      // Journals and their entries come from two reads in the same order,
+      // merged, so one journal is held at a time.
+      const entries = this.db.prepare(`
+        SELECT e.* FROM accounting_entries e
+        JOIN accounting_journals j ON j.journal_id = e.journal_id
+        WHERE j.owner = ?
+        ORDER BY j.created_at, j.journal_id, e.line_no
+      `).iterate(principal);
+      let nextEntry = entries.next();
+      for (const row of this.db.prepare(`
+        SELECT * FROM accounting_journals WHERE owner = ? ORDER BY created_at, journal_id
+      `).iterate(principal)) {
+        const lines = [];
+        while (!nextEntry.done && nextEntry.value.journal_id === row.journal_id) {
+          const entry = nextEntry.value;
+          lines.push({
+            ...entry,
+            metadata_json: this.openJson(
+              'accounting_entries',
+              'metadata_json',
+              `${entry.journal_id}:${entry.line_no}`,
+              entry.metadata_json
+            )
+          });
+          nextEntry = entries.next();
         }
+        if (row.created_at < since || row.created_at > until) continue;
+        const journal = this.decodeProtectedRow('accounting_journals', 'journal_id', row, ['memo_json']);
+        journal.entries = lines;
+        yield { type: 'journal', data: journal };
       }
+      if (!nextEntry.done) entries.return?.();
     }
     if (requestedTypes.has('sync')) {
       for (const row of this.db.prepare(`
