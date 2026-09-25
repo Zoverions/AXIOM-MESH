@@ -101,6 +101,35 @@ test('inconsistent answers fail closed and drop the cache', async () => {
   assert.notEqual(await legacy(), one);
 });
 
+test('malformed overlays or policy bytes cannot replace an active deny with base policy', async () => {
+  const denied = overlay('deny-echo', 'system.echo');
+  let answer = { generation: generationOf([denied]), overlays: [denied] };
+  const asked = [];
+  const activePolicy = createActivePolicy({
+    basePolicy: base,
+    fetchOverlays: async ({ generation }) => {
+      asked.push(generation);
+      return answer;
+    }
+  });
+  assert.equal(decide(await activePolicy(), 'system.echo'), 'deny');
+
+  // An invalid collection must not look like an empty active overlay set.
+  answer = { generation: generationOf([]), overlays: { invalid: true } };
+  await assert.rejects(activePolicy(), error => error.code === 'policy_unavailable');
+
+  // A generation binds declared digests, so check that the policy bodies
+  // actually have those digests before using them for authorization.
+  answer = {
+    generation: generationOf([denied]),
+    overlays: [{ ...denied, policy_json: { version: 'substituted', actions: {} } }]
+  };
+  await assert.rejects(activePolicy(), error => error.code === 'policy_unavailable');
+  answer = { generation: generationOf([denied]), overlays: [denied] };
+  assert.equal(decide(await activePolicy(), 'system.echo'), 'deny');
+  assert.equal(asked.at(-1), null, 'a bad response drops the cached generation');
+});
+
 test('Grid names a generation that follows activation, rollback and expiry, without decrypting policies', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-policy-generation-'));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
