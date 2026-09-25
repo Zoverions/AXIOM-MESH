@@ -146,6 +146,10 @@
         },
         {
           "method": "GET",
+          "path": "/internal/v1/sync/:owner/updates/:id"
+        },
+        {
+          "method": "GET",
           "path": "/internal/v1/sync/:owner/bundles"
         },
         {

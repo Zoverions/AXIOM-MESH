@@ -5,21 +5,23 @@ import test from 'node:test';
 
 const PARENT_BLOBS = Object.freeze({
   // Updated deliberately: two capability summaries restate the route counts
-  // (32 Gateway, 43 network) after `sync_bundles.list`. No capability state,
-  // evidence path or activation changed.
-  capabilities: '6516d91537120a36da20c5bbfa896606b06ec83e',
+  // (33 Gateway, 44 network) after `sync_bundles.list` and
+  // `sync_updates.get`. No capability state, evidence path or activation
+  // changed.
+  capabilities: '3b1b64c86075d65746c6abe39873e775c881184e',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
   // the other paged collections, including accounting journals, and for the
-  // read-only `sync_bundles.list` route over the owner's own bundle summaries
-  // (scalability audit S-10). No existing route, access rule or response
-  // schema changed.
-  gateway_contract: '0287595b88109be83e10fb56db396b241c05b60b',
+  // read-only `sync_bundles.list` and `sync_updates.get` routes over the
+  // owner's own bundle summaries and sync updates (scalability audit S-10).
+  // No existing route, access rule or response schema changed.
+  gateway_contract: 'aa04d59fc8c16cba8cfee1668e52f0087bdee444',
   // Updated deliberately for the online-sync head (signed, nonce-bound count
   // of an owner's sync bundle events on /internal/v1/events) and for keyset
   // paging of sync state and the other collections, including accounting
-  // journals and bundle summaries (`cursor` and `limit`). The server still
-  // composes no SIEA store; the assertions below are unchanged.
-  grid_server: 'b4e33a2b9e47fcdfc0f4d815c2375caf33313dfd',
+  // journals and bundle summaries (`cursor` and `limit`), and single sync
+  // updates for heads too large for a page. The server still composes no
+  // SIEA store; the assertions below are unchanged.
+  grid_server: '0ddad5328000b1d86e22e7ff1c67380577d4725d',
   // Updated deliberately for core migration 11 (index-only: composite
   // indexes for the paged collections, accounting journals, node schedules
   // and sync bundles, scalability audit S-11). No table or column changed.

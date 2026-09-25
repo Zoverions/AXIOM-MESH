@@ -421,6 +421,18 @@ export async function createGridService(config = meshConfig()) {
     });
     return store.listCausalSync(owner, { namespace, recordId, cursor, limit });
   });
+  router.add('GET', '/internal/v1/sync/:owner/updates/:id', async ({ params }) => {
+    const owner = assertString(params.owner, 'owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const updateId = assertString(params.id, 'sync update id', {
+      min: 69,
+      max: 69,
+      pattern: /^sync_[a-f0-9]{64}$/
+    });
+    return store.getCausalSyncUpdate(owner, updateId);
+  });
   router.add('GET', '/internal/v1/sync/:owner/bundles', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
       max: 160,

@@ -532,6 +532,25 @@
       "response_media_type": "application/json"
     },
     {
+      "id": "sync_updates.get",
+      "method": "GET",
+      "path": "/v1/sync/updates/:id",
+      "access": "owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [
+        "id"
+      ],
+      "query_parameters": [],
+      "request_schema": null,
+      "response_schema": "axiom-causal-sync-update.v1",
+      "required_response_fields": [
+        "update_id",
+        "value_digest",
+        "value"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
       "id": "sync_bundles.list",
       "method": "GET",
       "path": "/v1/sync/bundles",

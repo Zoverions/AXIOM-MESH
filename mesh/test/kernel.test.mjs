@@ -1162,6 +1162,19 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     404
   );
   assert.equal(ownerIsolatedSyncRecord.error.code, 'sync_bundle_not_found');
+  // One update, with its value, for its owner only.
+  const headUpdateId = syncState.records[0].heads[0].update_id;
+  const syncUpdate = await api(gateway, token, `/v1/sync/updates/${headUpdateId}`);
+  assert.equal(syncUpdate.value.title, 'first offline value');
+  assert.equal(syncUpdate.value_digest, syncState.records[0].heads[0].value_digest);
+  assert.equal(
+    (await api(gateway, approverToken, `/v1/sync/updates/${headUpdateId}`, {}, 404)).error.code,
+    'sync_update_not_found'
+  );
+  assert.equal(
+    (await api(gateway, token, '/v1/sync/updates/not-an-update', {}, 400)).error.code,
+    'validation_error'
+  );
   // Every bundle summary is listed, paged and owner-isolated.
   const syncBundles = await api(gateway, token, '/v1/sync/bundles?limit=1');
   assert.deepEqual(syncBundles.bundles.map(item => item.bundle_digest), [firstSyncResult.bundle_digest]);

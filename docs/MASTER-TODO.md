@@ -88,7 +88,7 @@ explicitly opened.
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 32 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
+| UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 33 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
 | UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views; local social UI integration, onboarding/session/device/accessibility/package work remain |
 | UX-003 | In progress | Human authority explanations | Five bounded actions, stable outcomes/events, approval states, raw evidence, uncertainty recovery; broader authoritative consequential plan/execute + comprehension evidence pending |
 | UX-004 | In progress | Governed memory lifecycle | Owner create/list, three exact provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives; edge deletion/hard deletion/restore/bulk ingestion pending |
@@ -159,7 +159,7 @@ production activation decision.
 | NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
 | NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
 | NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
-| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 43-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 44-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
 
 ## P3 — controlled adapters and product ecosystem
 

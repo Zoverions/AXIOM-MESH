@@ -173,6 +173,49 @@ test('a full page of records plus a full bundle history stays under the response
   assert.equal(whole.truncated, false);
 });
 
+test('a record larger than a page is returned without its values, each fetched on its own', async t => {
+  const { store, put } = await fixture(t);
+  put('notes', 'record:small', [{ n: 1 }]);
+  // Five concurrent heads of about 200 KB: no page could hold them whole.
+  const values = Array.from({ length: 5 }, (_, n) => ({ n, large: String(n).repeat(200_000) }));
+  put('notes', 'record:wide', values);
+  put('notes', 'record:zz', [{ n: 2 }]);
+
+  const pages = [];
+  let cursor;
+  do {
+    const page = store.listCausalSync(OWNER, { limit: 200, cursor });
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 1_048_576, 'every page stays under the ceiling');
+    pages.push(page);
+    cursor = page.page.next_cursor ?? undefined;
+  } while (cursor);
+  const records = pages.flatMap(page => page.records);
+  assert.deepEqual(records.map(record => record.record_id), ['record:small', 'record:wide', 'record:zz']);
+
+  const wide = records.find(record => record.record_id === 'record:wide');
+  assert.equal(wide.status, 'conflict');
+  assert.equal(wide.heads.length, 5);
+  for (const head of wide.heads) {
+    assert.equal(head.value, null);
+    assert.equal(head.value_omitted, true);
+    assert.ok(head.value_bytes > 200_000);
+    assert.match(head.value_digest, /^[a-f0-9]{64}$/);
+  }
+  // Records that fit keep their values and gain no new fields.
+  const small = records.find(record => record.record_id === 'record:small');
+  assert.deepEqual(small.heads[0].value, { n: 1 });
+  assert.equal('value_omitted' in small.heads[0], false);
+
+  // Each omitted value is fetched on its own, for its owner only.
+  const fetched = wide.heads.map(head => store.getCausalSyncUpdate(OWNER, head.update_id));
+  assert.deepEqual(fetched.map(update => update.value).sort((a, b) => a.n - b.n), values);
+  assert.equal(fetched[0].record_id, 'record:wide');
+  assert.throws(
+    () => store.getCausalSyncUpdate('person:other', wide.heads[0].update_id),
+    error => error.code === 'sync_update_not_found'
+  );
+});
+
 test('records written while paging appear once if ahead of the cursor, never twice', async t => {
   const { store, put } = await fixture(t);
   for (let index = 0; index < 20; index += 1) put('notes', `record:${String(index * 10).padStart(4, '0')}`, [{ index }]);

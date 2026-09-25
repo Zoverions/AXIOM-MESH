@@ -2379,10 +2379,23 @@ export class GridStore {
       } else if (record.heads[0]?.operation === 'delete') {
         record.status = 'tombstoned';
       }
-      const recordBytes = Buffer.byteLength(JSON.stringify(record));
+      let recordBytes = Buffer.byteLength(JSON.stringify(record));
       if (records.length && pageBytes + recordBytes > SYNC_PAGE_BYTE_BUDGET) {
         hasMore = true;
         break;
+      }
+      if (recordBytes > SYNC_PAGE_BYTE_BUDGET) {
+        // One record larger than a whole page (several concurrent heads of
+        // up to 256 KiB each) would pass the 1 MiB response ceiling. Its
+        // heads keep every field but the value; each value is fetched on
+        // its own with GET /v1/sync/updates/:id and checked against
+        // value_digest.
+        for (const head of record.heads) {
+          head.value_bytes = Buffer.byteLength(JSON.stringify(head.value));
+          head.value = null;
+          head.value_omitted = true;
+        }
+        recordBytes = Buffer.byteLength(JSON.stringify(record));
       }
       records.push(record);
       pageBytes += recordBytes;
@@ -2428,6 +2441,41 @@ export class GridStore {
         next_cursor: hasMore && last ? encodeSyncCursor(last) : null
       },
       truncated: hasMore || bundlesCut || bundles.length === 100
+    };
+  }
+
+  /** One of the owner's sync updates, with its value (at most 256 KiB). */
+  getCausalSyncUpdate(owner, updateId) {
+    const row = this.db.prepare(`
+      SELECT * FROM sync_updates WHERE owner = ? AND update_id = ?
+    `).get(owner, updateId);
+    if (!row) {
+      throw new AxiomError('sync_update_not_found', 'Causal sync update was not found', 404);
+    }
+    const decoded = this.decodeProtectedRow(
+      'sync_updates',
+      'update_id',
+      row,
+      ['value_json', 'vector_json', 'resolves_json', 'signature_json']
+    );
+    return {
+      owner,
+      update_id: decoded.update_id,
+      bundle_digest: decoded.bundle_digest,
+      namespace: decoded.namespace,
+      record_id: decoded.record_id,
+      node_id: decoded.node_id,
+      operation: decoded.operation,
+      value_digest: decoded.value_digest,
+      value: decoded.value_json,
+      vector: decoded.vector_json,
+      resolves: decoded.resolves_json,
+      occurred_at: decoded.occurred_at,
+      received_at: decoded.received_at,
+      author_counter: decoded.author_counter,
+      public_key_digest: decoded.public_key_digest,
+      signature: decoded.signature_json,
+      status: decoded.status
     };
   }
 

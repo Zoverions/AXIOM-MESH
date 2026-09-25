@@ -630,9 +630,20 @@ Gateway-to-Grid allowlist (27 routes), their digests and the blob pins were
 updated deliberately. The kernel test lists bundles through real Gateway and
 Grid servers and checks owner isolation and cursor refusal.
 
-Still open: `node-discovery` (a ranked query result) is not paged. Also
-open: a separate fetch for one sync record larger than the budget, and a
-streaming contract for artifacts.
+Follow-up (2026-09-25): a record whose current heads alone exceed the page
+budget (several concurrent values of up to 256 KiB) was still returned
+whole, so its page could pass the 1 MiB ceiling and the owner could not
+read that record at all. Such a record now comes on its own page with every
+head field except the value (`value: null`, `value_omitted: true`,
+`value_bytes`), and `GET /v1/sync/updates/:id` returns one update with its
+value, for its owner only, to check against `value_digest`. Records that
+fit are unchanged. This adds a second read-only route: the contract is now
+33 routes, the Gateway-to-Grid allowlist 28 (44 in all). A test with five
+200 KB heads fails without the omission; the kernel test fetches an update
+through real servers and checks owner isolation.
+
+Still open: `node-discovery` (a ranked query result) is not paged, and
+artifacts have no streaming contract.
 
 Related defect fixed (2026-09-25): personal exports read memory through the
 paged API method, so an export silently held only the first 100 memory

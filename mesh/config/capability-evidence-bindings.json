@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "707697ff94238fb1f5b1fedbfcbe0cf41a3bc2258cb8935c28e9ca9ec3142609",
+  "registry_digest": "bfe36f61f9fbe81c05f4cd318d3e5b52838b9d34a2ab540041816b83770289a7",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -228,7 +228,7 @@
       "test": "current service network policy is exact, default-deny, and segmented",
       "assertions": [
         "assert.equal(result.default_action, 'deny');",
-        "assert.equal(result.routes, 43);"
+        "assert.equal(result.routes, 44);"
       ]
     },
     {
@@ -295,7 +295,7 @@
       "path": "mesh/test/gateway-client-contract.test.mjs",
       "test": "current Gateway client contract is exact and covers every authenticated route",
       "assertions": [
-        "assert.equal(result.routes, 32);",
+        "assert.equal(result.routes, 33);",
         "assert.equal(result.direct_service_access, false);"
       ]
     },

@@ -202,6 +202,12 @@ and `conflicts` are never computed from part of a record. While
 `page.has_more` is true, pass `page.next_cursor` back as `cursor`. A record
 written behind the cursor during a pass appears on the next pass.
 
+A record whose heads alone exceed the page budget (several concurrent heads
+of up to 256 KiB each) is returned on its own page with every head field
+except the value: those heads carry `value: null`, `value_omitted: true` and
+`value_bytes`. Fetch each value with `GET /v1/sync/updates/<update_id>` and
+check it against the head's `value_digest`.
+
 Each page also lists the owner's newest bundle summaries: at most 100, and at
 most about 256 KiB of them, so that a full page stays under the 1 MiB internal
 response ceiling. `truncated` is true when either list was cut. List every

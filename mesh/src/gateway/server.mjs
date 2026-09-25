@@ -524,6 +524,17 @@ export async function createGatewayService(config = meshConfig()) {
       traceId
     );
   });
+  router.add('GET', '/v1/sync/updates/:id', async ({ params, traceId, principal }) => {
+    const updateId = assertString(params.id, 'sync update id', {
+      min: 69,
+      max: 69,
+      pattern: /^sync_[a-f0-9]{64}$/
+    });
+    return gridGet(
+      `/internal/v1/sync/${encodeURIComponent(principal.id)}/updates/${updateId}`,
+      traceId
+    );
+  });
   router.add('GET', '/v1/sync/bundles', async ({ url, traceId, principal }) => gridGet(
     `/internal/v1/sync/${encodeURIComponent(principal.id)}/bundles?${pageQuery(url, 'sync bundle limit')}`,
     traceId
