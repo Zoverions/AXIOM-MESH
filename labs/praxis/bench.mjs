@@ -14,7 +14,8 @@
 // CPU time is measured across a bounded repeated parse batch spanning at least
 // BENCHMARK_MIN_CPU_MICROS, so platforms with coarse process CPU accounting
 // still produce accurate evidence; the per-parse value is normalized by the
-// run count. CPU time is used only for the scaling
+// run count. A batch that reaches the run ceiling below that floor yields no
+// evidence (null), which the scaling check refuses. CPU time is used only for the scaling
 // ratio so unrelated runner scheduling cannot turn a linear parse into a false
 // superlinear signal; the existing absolute parse/format wall-clock budgets
 // remain unchanged.
@@ -68,7 +69,11 @@ export function measureCpuPerRun(fn, { cpuUsage = process.cpuUsage } = {}) {
     nextBatch *= 2;
   }
 
-  return cpuMicros > 0 ? (cpuMicros / 1000) / runs : 0;
+  // Below the floor (the run ceiling came first) or non-finite, the reading
+  // is not evidence: return null rather than a usable-looking number, so a
+  // runner that cannot meet the floor stays visibly insufficient.
+  if (!Number.isFinite(cpuMicros) || cpuMicros < BENCHMARK_MIN_CPU_MICROS) return null;
+  return (cpuMicros / 1000) / runs;
 }
 
 function measure(fn, { requireCpuEvidence = false } = {}) {
@@ -127,21 +132,32 @@ export const BUDGETS = {
   maxScalingRatio: 20
 };
 
+const isFiniteNonNegative = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+const isFinitePositive = (value) => isFiniteNonNegative(value) && value > 0;
+
 export function checkBudgets(results) {
   const failures = [];
   const byLabel = new Map(results.map((r) => [r.label, r]));
   const small = byLabel.get('synthetic-1k');
   const large = byLabel.get('synthetic-10k');
   if (large) {
-    if (large.parseMs > BUDGETS.maxParseMs10k) {
+    // A missing or non-finite wall time compares false against any budget,
+    // so it must fail on its own rather than pass silently.
+    if (!isFiniteNonNegative(large.parseMs)) {
+      failures.push('10k-line parse wall time is missing or invalid');
+    } else if (large.parseMs > BUDGETS.maxParseMs10k) {
       failures.push(`10k-line parse took ${large.parseMs}ms (budget ${BUDGETS.maxParseMs10k}ms)`);
     }
-    if (large.formatMs > BUDGETS.maxFormatMs10k) {
+    if (!isFiniteNonNegative(large.formatMs)) {
+      failures.push('10k-line format wall time is missing or invalid');
+    } else if (large.formatMs > BUDGETS.maxFormatMs10k) {
       failures.push(`10k-line format took ${large.formatMs}ms (budget ${BUDGETS.maxFormatMs10k}ms)`);
     }
   }
   if (small && large) {
-    if (!(small.parseCpuMs > 0) || !(large.parseCpuMs >= 0)) {
+    // Both operands must be finite positive CPU evidence: null (insufficient
+    // samples), zero, Infinity or NaN would make the ratio meaningless.
+    if (!isFinitePositive(small.parseCpuMs) || !isFinitePositive(large.parseCpuMs)) {
       failures.push('parse CPU timing is missing or invalid for scaling check');
     } else {
       const ratio = large.parseCpuMs / small.parseCpuMs;

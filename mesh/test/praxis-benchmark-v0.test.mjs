@@ -84,3 +84,50 @@ test('CPU measurement stays accurate when process CPU time advances in coarse st
     }
   }
 });
+
+test('CPU evidence below the floor or non-finite is unavailable, never certified', () => {
+  const exactClock = costMicros => {
+    let elapsed = 0;
+    const cpuUsage = start => (start
+      ? { user: elapsed - start.user, system: 0 }
+      : { user: elapsed, system: 0 });
+    return measureCpuPerRun(() => { elapsed += costMicros; }, { cpuUsage });
+  };
+  // 80 runs at 1,000 us reach only 80,000 us: the ceiling came first.
+  assert.equal(exactClock(1_000), null);
+  // 80 runs at 1,250 us reach the 100,000 us floor exactly.
+  assert.equal(exactClock(1_250), 1.25);
+  assert.equal(exactClock(30_000), 30);
+  const broken = value => measureCpuPerRun(() => {}, {
+    cpuUsage: start => (start ? { user: value, system: 0 } : { user: 0, system: 0 })
+  });
+  assert.equal(broken(Number.NaN), null);
+  assert.equal(broken(Number.POSITIVE_INFINITY), null);
+  assert.equal(broken(0), null);
+});
+
+test('scaling and wall-clock guards reject every invalid measurement', () => {
+  const valid = () => [
+    { label: 'synthetic-1k', parseMs: 1, parseCpuMs: 10, formatMs: 1 },
+    { label: 'synthetic-10k', parseMs: 4000, parseCpuMs: 190, formatMs: 4000 }
+  ];
+  assert.deepEqual(checkBudgets(valid()), []);
+  const failsWith = (mutate, text) => {
+    const results = valid();
+    mutate(results);
+    const failures = checkBudgets(results);
+    assert.ok(failures.some(failure => failure.includes(text)), `${text}: ${JSON.stringify(results)}`);
+  };
+  for (const value of [null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, '10']) {
+    failsWith(results => { results[0].parseCpuMs = value; }, 'CPU timing is missing or invalid');
+    failsWith(results => { results[1].parseCpuMs = value; }, 'CPU timing is missing or invalid');
+  }
+  for (const value of [undefined, null, -1, Number.NaN, Number.POSITIVE_INFINITY, '10']) {
+    failsWith(results => { results[1].parseMs = value; }, '10k-line parse wall time is missing or invalid');
+    failsWith(results => { results[1].formatMs = value; }, '10k-line format wall time is missing or invalid');
+  }
+  // Budgets themselves are unchanged.
+  failsWith(results => { results[1].parseMs = 5001; }, '10k-line parse took');
+  failsWith(results => { results[1].formatMs = 5001; }, '10k-line format took');
+  failsWith(results => { results[1].parseCpuMs = 201; }, 'parse CPU scaling ratio');
+});
