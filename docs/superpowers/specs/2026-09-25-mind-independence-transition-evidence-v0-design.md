@@ -80,7 +80,18 @@ A positive result may set:
 
 `transition_requestable: true`
 
-This is a requestability/evidence statement only.
+This is a requestability/evidence statement only. As with Circle decision-to-request
+evidence, the adapter binds exact externally supplied current-state evidence but does
+not authenticate that evidence by itself. The assessment therefore explicitly reports:
+
+- `requires_external_state_verification: true`;
+- `state_verification_effect: none`;
+- `ordinary_status_authority_path_required: true`;
+- `creates_status_transition: false`.
+
+A future status authority path must independently verify the bound current-state
+evidence and re-evaluate current policy before any mutation.
+
 
 It MUST still state:
 
