@@ -149,12 +149,13 @@ while code owns authority composition.
 The eligibility package binds:
 
 - evaluation time;
+- responsibility-profile evidence observation time;
 - identity evidence observation time;
 - Genesis-history observation time;
 - standing observation time;
 - explicit maximum evidence age.
 
-Stale or future-dated identity/history/standing evidence fails closed.
+Stale or future-dated responsibility/identity/history/standing/continuity evidence fails closed.
 
 ## Output
 
