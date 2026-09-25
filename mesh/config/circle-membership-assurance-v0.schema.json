@@ -57,7 +57,7 @@
       "$ref": "#/$defs/digest"
     },
     "role_ids": {
-      "$ref": "#/$defs/idArrayNonEmpty"
+      "$ref": "#/$defs/idArray"
     },
     "device_policy": {
       "type": "object",
@@ -100,7 +100,7 @@
       ]
     },
     "required_consent_receipt_refs": {
-      "$ref": "#/$defs/idArrayNonEmpty"
+      "$ref": "#/$defs/idArray"
     },
     "evidence_refs": {
       "$ref": "#/$defs/refArrayNonEmpty"
@@ -145,15 +145,6 @@
     },
     "idArray": {
       "type": "array",
-      "maxItems": 64,
-      "uniqueItems": true,
-      "items": {
-        "$ref": "#/$defs/id"
-      }
-    },
-    "idArrayNonEmpty": {
-      "type": "array",
-      "minItems": 1,
       "maxItems": 64,
       "uniqueItems": true,
       "items": {
