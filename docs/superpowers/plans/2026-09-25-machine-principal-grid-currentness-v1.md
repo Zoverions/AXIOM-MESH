@@ -621,6 +621,7 @@ git commit -m "feat(grid): expose authenticated machine currentness routes"
     - `machine.principal.lifecycle.mutate`
   - Gateway-injected `input.resolved_machine_root` for those actions only
   - no new public route
+  - Stage C ends with ordinary machine execution still root-only; lifecycle initialization/mutation is reachable so retained heads can be established before Stage D enforcement
 
 - [ ] **Step 1: Write RED authorization tests**
 
@@ -776,6 +777,17 @@ git commit -m "feat(auth): authorize machine lifecycle mutations"
 ```
 
 ---
+
+## Stage D precondition: initialization runway
+
+Before Task 5 is promoted beyond development/test:
+
+- Stage C must already be merged.
+- Every configured production-candidate machine principal intended to remain usable must have an explicit successful `machine.principal.lifecycle.initialize` record whose root digest matches the current registry.
+- A preflight report must enumerate configured machine principal ids and Grid lifecycle ids and fail if the sets differ or any root digest mismatches.
+- Development/e2e fixtures must initialize lifecycle through the same public human intent path; tests must not call Grid storage methods directly to bypass the authority path.
+
+There is no silent auto-initialization fallback.
 
 ## Task 5: Bind current lifecycle state into machine capability issuance
 
