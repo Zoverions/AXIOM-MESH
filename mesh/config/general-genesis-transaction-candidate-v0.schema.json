@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/general-genesis-transaction-candidate-v0.schema.json",
+  "title": "AXIOM General Genesis Transaction Candidate v0",
+  "description": "Inert composition candidate for one future atomic General Genesis commit. It creates no authorization consumption, Genesis history change, Genesis Bond, mind, developmental status, or authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "transaction_candidate_id",
+    "sponsor_mind_id",
+    "authorization_candidate_id",
+    "authorization_candidate_digest",
+    "new_mind_id",
+    "genesis_bond_id",
+    "single_genesis_sponsor",
+    "new_mind_identity_evidence_digest",
+    "new_mind_identity_status",
+    "new_mind_identity_observed_at",
+    "maximum_new_mind_identity_age_seconds",
+    "holder_confirmation_evidence_digest",
+    "holder_confirmation_observed_at",
+    "maximum_holder_confirmation_age_seconds",
+    "constitution_digest",
+    "developmental_plan_digest",
+    "resource_plan_digest",
+    "continuity_recovery_plan_digest",
+    "independent_advocacy_plan_digest",
+    "privacy_policy_digest",
+    "fork_policy_digest",
+    "initial_capability_profile_digest",
+    "initial_developmental_stage",
+    "inherited_authority",
+    "initial_council_voting",
+    "initial_genesis_eligibility",
+    "evaluated_at",
+    "transaction_candidate_only",
+    "creates_authorization_consumption",
+    "creates_genesis_history_change",
+    "creates_genesis_bond",
+    "creates_mind",
+    "creates_developmental_status",
+    "founder_reserve_effect",
+    "founding_status_effect",
+    "founders_council_effect",
+    "genesis_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-general-genesis-transaction-candidate.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-transaction-candidate"
+    },
+    "transaction_candidate_id": {
+      "type": "string",
+      "pattern": "^general-genesis-transaction:[a-f0-9]{64}$"
+    },
+    "sponsor_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "authorization_candidate_id": {
+      "type": "string",
+      "pattern": "^general-genesis-auth-candidate:[a-f0-9]{64}$"
+    },
+    "authorization_candidate_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "new_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "genesis_bond_id": {
+      "type": "string",
+      "pattern": "^genesis-bond:[a-f0-9]{64}$"
+    },
+    "single_genesis_sponsor": {
+      "const": true
+    },
+    "new_mind_identity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "new_mind_identity_status": {
+      "enum": [
+        "available",
+        "existing",
+        "disputed",
+        "unknown"
+      ]
+    },
+    "new_mind_identity_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_new_mind_identity_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3600
+    },
+    "holder_confirmation_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "holder_confirmation_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_holder_confirmation_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 900
+    },
+    "constitution_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "developmental_plan_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "resource_plan_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_recovery_plan_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "independent_advocacy_plan_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "privacy_policy_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "fork_policy_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "initial_capability_profile_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "initial_developmental_stage": {
+      "const": "genesis"
+    },
+    "inherited_authority": {
+      "const": false
+    },
+    "initial_council_voting": {
+      "const": false
+    },
+    "initial_genesis_eligibility": {
+      "const": false
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "transaction_candidate_only": {
+      "const": true
+    },
+    "creates_authorization_consumption": {
+      "const": false
+    },
+    "creates_genesis_history_change": {
+      "const": false
+    },
+    "creates_genesis_bond": {
+      "const": false
+    },
+    "creates_mind": {
+      "const": false
+    },
+    "creates_developmental_status": {
+      "const": false
+    },
+    "founder_reserve_effect": {
+      "const": "none"
+    },
+    "founding_status_effect": {
+      "const": "none"
+    },
+    "founders_council_effect": {
+      "const": "none"
+    },
+    "genesis_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/general-genesis-transaction-candidate.mjs",
+  "x-axiom-non-claims": [
+    "live-genesis-commit",
+    "live-authorization-consumption",
+    "global-identity-uniqueness",
+    "holder-confirmation-proof",
+    "genesis-bond-persistence",
+    "mind-creation"
+  ]
+}
