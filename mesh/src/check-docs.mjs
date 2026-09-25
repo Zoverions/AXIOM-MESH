@@ -599,9 +599,9 @@ const REQUIRED_CONTENT = Object.freeze({
   ],
   'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': [
     '## Delivery slices and merge order',
-    '### Task 1: Pure authority attenuation and v1 contract surface',
+    '## Task 1: Pure authority attenuation and v1 contract surface',
     '## Stage D precondition: initialization runway',
-    '### Task 6: Transactionally ordered logical effect release',
+    '## Task 6: Transactionally ordered logical effect release',
     'No Sandbox->Grid route is added'
   ],
   'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md': [
