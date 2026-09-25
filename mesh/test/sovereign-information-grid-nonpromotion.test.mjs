@@ -6,7 +6,10 @@ import test from 'node:test';
 const PARENT_BLOBS = Object.freeze({
   capabilities: 'fd34c4b1836654bb7eeb7dda0f8be748ee124db8',
   gateway_contract: '2a9bb5c18fe07fa875be770a2a303d401e5919f1',
-  grid_server: '2ba84e3995c760a615f59f1c35c79e7a6a4e83b7',
+  // Updated deliberately for the online-sync head (signed, nonce-bound count
+  // of an owner's sync bundle events on /internal/v1/events). The server
+  // still composes no SIEA store; the assertions below are unchanged.
+  grid_server: 'b20868aaacd4f48097f0f834975e4914c750d8e7',
   core_migrations: '36514febba8d6420b165f19c9032d3510253a521'
 });
 

@@ -286,8 +286,15 @@ export async function createGatewayService(config = meshConfig()) {
       min: 1,
       max: 500
     });
+    // A nonce asks the Grid to sign the caller's sync head, so an online sync
+    // client can detect bundle events withheld between the Grid and itself.
+    const nonce = url.searchParams.get('nonce');
+    if (nonce !== null && !/^[A-Za-z0-9_-]{16,128}$/.test(nonce)) {
+      throw new AxiomError('invalid_nonce', 'Sync head nonce is invalid', 400);
+    }
     return gridGet(
-      `/internal/v1/events?actor=${encodeURIComponent(actor)}&after=${after}&limit=${limit}`,
+      `/internal/v1/events?actor=${encodeURIComponent(actor)}&after=${after}&limit=${limit}`
+        + (nonce === null ? '' : `&nonce=${nonce}`),
       traceId
     );
   });

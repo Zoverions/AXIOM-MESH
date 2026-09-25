@@ -233,6 +233,24 @@ gaps because unrelated principals share the source Grid log. Every returned
 event must still be strictly increasing and independently signed. A malformed
 event stops the batch before its cursor is committed.
 
+Because those gaps are normal, sequence numbers alone cannot show that a
+bundle event was left out. Each poll therefore sends a fresh nonce, and the
+source Grid signs, with that nonce, how many `sync.bundle.applied` events the
+owner's history holds and the latest one's sequence and hash. The relay
+compares that sync head with the events its cursor has passed:
+
+- a head beyond the cursor on a page that ended the feed, or
+- a count or latest hash different from those the relay has counted
+
+means the source withheld bundle events. Polling then fails with
+`online_sync_source_incomplete`, is blocked at once rather than retried, and
+applying queued bundles from that direction is refused until an operator has
+investigated the source Gateway and reset the direction. A head that is not
+signed by a pinned source Grid key or not bound to the request nonce is
+treated as invalid evidence. State written before sync heads existed has no
+count; the first head seen once the relay is caught up becomes its baseline,
+so omissions before the upgrade are not detected.
+
 ## Rollback and incident handling
 
 To disable exchange, stop the relay process or scheduler. This removes no Grid

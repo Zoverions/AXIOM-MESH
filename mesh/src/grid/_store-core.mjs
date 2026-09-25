@@ -1292,6 +1292,26 @@ export class GridStore {
     return rows.map(row => this.decodeEventRow(row));
   }
 
+  /**
+   * How many causal sync bundles this owner's history holds, and the latest
+   * one's position. Signed by the Grid and bound to a caller nonce, it lets
+   * an online sync client detect a source that withholds bundle events.
+   */
+  syncHead(actor) {
+    const row = this.db.prepare(`
+      SELECT COUNT(*) AS count, MAX(seq) AS last_seq FROM events
+      WHERE actor = ? AND kind = 'sync.bundle.applied'
+    `).get(actor);
+    const lastSeq = Number(row.last_seq ?? 0);
+    return {
+      sync_event_count: Number(row.count),
+      last_sync_seq: lastSeq,
+      last_sync_event_hash: lastSeq
+        ? this.db.prepare('SELECT event_hash FROM events WHERE seq = ?').get(lastSeq).event_hash
+        : null
+    };
+  }
+
   listCapsules({ limit } = {}) {
     const rows = limit === undefined
       ? this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC').all()

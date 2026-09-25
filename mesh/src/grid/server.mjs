@@ -28,6 +28,8 @@ import {
   authorizeInboundServiceRequest
 } from '../lib/service-network-policy.mjs';
 
+const SYNC_HEAD_NONCE = /^[A-Za-z0-9_-]{16,128}$/;
+
 export async function createGridService(config = meshConfig()) {
   await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
   const runtimeLock = await acquireGridRuntimeLock(config.dataDir);
@@ -190,8 +192,9 @@ export async function createGridService(config = meshConfig()) {
 
   router.add('GET', '/internal/v1/status', async () => store.getStatus());
   router.add('GET', '/internal/v1/verify-chain', async () => store.verifyChain());
-  router.add('GET', '/internal/v1/events', async ({ url }) => ({
-    events: store.listEvents({
+  router.add('GET', '/internal/v1/events', async ({ url }) => {
+    const actor = url.searchParams.get('actor') ?? undefined;
+    const events = store.listEvents({
       after: integerQuery(url.searchParams.get('after'), 0, {
         label: 'events after',
         min: 0,
@@ -202,9 +205,23 @@ export async function createGridService(config = meshConfig()) {
         min: 1,
         max: 500
       }),
-      actor: url.searchParams.get('actor') ?? undefined
-    })
-  }));
+      actor
+    });
+    const nonce = url.searchParams.get('nonce');
+    if (!actor || nonce === null) return { events };
+    if (!SYNC_HEAD_NONCE.test(nonce)) {
+      throw new AxiomError('invalid_nonce', 'Sync head nonce is invalid', 400);
+    }
+    // Read in the same synchronous turn as the events, so both describe one
+    // moment of the single-writer log.
+    const body = {
+      format: 'axiom-sync-head.v1',
+      owner: actor,
+      ...store.syncHead(actor),
+      nonce
+    };
+    return { events, sync_head: { body, signature: identity.signObject(body) } };
+  });
   router.add('GET', '/internal/v1/social/remote-review/:owner', async ({ params }) => {
     const owner = assertString(params.owner, 'remote social review owner', {
       max: 160,
