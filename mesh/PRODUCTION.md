@@ -374,6 +374,14 @@ data-key rotation/rollback. Do not remove quarantine until independent-media
 copy, retention, restore, destruction authorization, and change records are
 complete.
 
+Streaming backups (`axiom-grid-backup.v2`) are built but off by default. With
+`AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2` on the Grid, the snapshot is
+a chunked protected artifact (`snapshot.axc`), sealed, verified and restored
+1 MiB at a time, so memory no longer grows with the database. Verification,
+restore and retention handle both formats. Data-key rotation cannot rewrap a
+streaming backup yet and refuses to start while one exists, so leave this
+off wherever data-key rotation is expected.
+
 Use the disposable lifecycle drill:
 
 ```bash

@@ -1262,6 +1262,13 @@ async function discoverBackupArtifact({
     join(directory, MANIFEST_FILE),
     MAX_MANIFEST_BYTES
   )).toString('utf8'));
+  if (manifest?.format === 'axiom-grid-backup.v2') {
+    // Streaming (chunked) backups cannot be rewrapped yet: fail closed
+    // before any artifact is touched (scalability audit S-13).
+    throw new ValidationError(
+      `Backup ${expectedBackupId} is a streaming (axiom-grid-backup.v2) backup, which data-key rotation cannot rewrap yet`
+    );
+  }
   if (
     manifest?.format !== 'axiom-grid-backup.v1'
     || manifest.snapshot?.name !== 'snapshot.axb'

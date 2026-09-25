@@ -799,6 +799,37 @@ Peak memory therefore grows by multiples of database size.
 - Backup load does not violate intent SLOs beyond the declared maintenance
   budget.
 
+**Remediation status (2026-09-25): streaming format built, off by default;
+rotation support open.**
+
+- **Format.** `axiom-grid-backup.v2` stores the snapshot as a chunked
+  protected artifact (`mesh/src/lib/chunked-artifact.mjs`): records of
+  1 MiB plaintext, each AES-256-GCM under a per-artifact key derived with
+  HKDF-SHA256 from the data-protection key, a random salt and the backup
+  context. Each chunk's associated data binds the format, context, index and
+  a final flag, and every chunk but the last must be full. The signed manifest
+  binds the ciphertext and plaintext digests, sizes, chunk count and salt.
+- **Streaming.** The SQLite backup copy is sealed from file to file.
+  Verification checks the signature and digests, decrypts chunk by chunk into
+  a candidate file, and verifies the evidence chain on a copy, so the
+  candidate stays byte-identical to the signed digest. Restore copies that
+  candidate beside the database and renames it into place.
+- **Evidence.** Tests cover flipped bytes, a middle chunk marked final,
+  swapped, replayed and omitted chunks, trailing bytes, a chunk spliced from
+  another backup, and the wrong context, key or metadata; each fails closed
+  and leaves no partial plaintext. Sealing and opening a 48 MiB artifact
+  holds under 16 MiB of live memory, measured in a child process; a variant
+  that keeps every chunk measures 50 MiB and fails. Backup tests restore
+  byte-exactly, refuse a tampered snapshot or re-signed manifest without
+  touching the live database, and plan retention across v1 and v2 backups.
+- **Opt-in.** `AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2`. The default
+  stays v1 because data-key rotation re-encrypts backups in memory and
+  cannot rewrap a chunked snapshot yet; it refuses to start while one exists.
+
+Still open: streaming data-key rotation for chunked backups (then v2 by
+default), background maintenance with a bounded I/O rate, and the same
+treatment for exports (S-12).
+
 ### S-14 — Long-running artifact work is performed inline with commit requests
 
 **Severity:** High  
