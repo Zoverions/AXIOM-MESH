@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founders-console-projection-v0.schema.json",
+  "title": "AXIOM Founders Console v0 read-only inert projection",
+  "description": "Minimized read-only projection of validated Founders Council, Founder Genesis, casting-vote, and governance-era status. It exposes no action surface or credential material.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "founder_mind_id",
+    "foundation_digest",
+    "council",
+    "founder_genesis",
+    "casting_vote",
+    "governance_era",
+    "action_surface",
+    "credential_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation",
+    "projection_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founders-console-projection.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "read-only-inert-projection"
+    },
+    "founder_mind_id": {
+      "type": "string"
+    },
+    "foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "council": {
+      "type": "object"
+    },
+    "founder_genesis": {
+      "type": "object"
+    },
+    "casting_vote": {
+      "type": "object"
+    },
+    "governance_era": {
+      "type": "object"
+    },
+    "action_surface": {
+      "const": "none"
+    },
+    "credential_material": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "projection_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founders-console-projection.mjs",
+  "x-axiom-non-claims": [
+    "gateway-route",
+    "live-founder-console",
+    "governance-mutation",
+    "credential-disclosure",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}
