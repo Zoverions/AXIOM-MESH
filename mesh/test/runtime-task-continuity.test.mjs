@@ -215,10 +215,12 @@ test('handoff cannot reuse source grant and independent child grant requires del
 test('closed causal graph requires exact references, one root, and no cycles',async()=>{
   const {source,child}=await handoffPair();
   const valid=verifyClosedTaskCausalGraph([child,source]);
+  const reordered=verifyClosedTaskCausalGraph([source,child]);
   assert.equal(valid.valid,true);
   assert.equal(valid.tasks,2);
   assert.equal(valid.causal_graphs,1);
   assert.equal(valid.authority_transfer,false);
+  assert.equal(valid.graph_digest,reordered.graph_digest);
 
   const missing=structuredClone(child);
   missing.parent_task_id='task:missing';
