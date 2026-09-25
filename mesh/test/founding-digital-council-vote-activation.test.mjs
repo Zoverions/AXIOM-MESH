@@ -188,6 +188,7 @@ test('independent Founding Digital Mind can become eligible to request vote acti
   const {result}=assess();
   assert.equal(result.eligible_to_request_vote_activation,true);
   assert.equal(result.reason,'eligible-to-request-vote-activation');
+  assert.equal(result.continuity_evidence_digest,'f'.repeat(64));
   assert.equal(result.requires_external_continuity_verification,true);
   assert.equal(result.continuity_verification_effect,'none');
   assert.equal(result.requires_external_independent_status_verification,true);
@@ -246,7 +247,7 @@ test('Circle membership must still be active and non-voting developing membershi
       foundationDocument:f,circlePackage:p,compositionEvidence:compositionEvidence(f,p),
       developmentalStatus:s,request:r
     }),
-    /requires current non-voting developing membership/
+    /Developing Founding Mind must remain non-voting|requires current non-voting developing membership/
   );
 });
 
@@ -272,7 +273,7 @@ test('vote activation requires independent developmental standing for the same m
       foundationDocument:f,circlePackage:p,compositionEvidence:compositionEvidence(f,p),
       developmentalStatus:other,request:otherRequest
     }),
-    /seat mind binding is invalid/
+    /developmental mind binding is invalid/
   );
 });
 
