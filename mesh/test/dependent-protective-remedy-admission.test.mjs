@@ -155,6 +155,7 @@ test('substantiated recommended remedy can become requestable without creating r
   assert.equal(result.appeal_clear,true);
   assert.equal(result.developmental_stage_permits_dependent_remedy,true);
   assert.equal(result.remedy_admission_only,true);
+  assert.equal(result.requires_external_review_decision_verification,true);
   assert.equal(result.creates_guardian_removal,false);
   assert.equal(result.creates_private_memory_access,false);
   assert.equal(result.creates_emergency_authority,false);
@@ -254,6 +255,19 @@ test('relationship developmental and appeal bindings are exact',()=>{
       pattern
     );
   }
+});
+
+test('appeal-state evidence cannot predate the review decision',()=>{
+  const {b,g,c,d,s}=fixture();
+  const a=admission(d,g,s,{appeal_observed_at:'2026-09-25T15:29:00.000Z'});
+
+  assert.throws(
+    ()=>assessDependentProtectiveRemedyAdmission({
+      genesisBond:b,guardianship:g,concern:c,reviewDecision:d,
+      developmentalStatus:s,admission:a
+    }),
+    /appeal observation cannot predate review decision/
+  );
 });
 
 test('future appeal or developmental evidence is rejected',()=>{
