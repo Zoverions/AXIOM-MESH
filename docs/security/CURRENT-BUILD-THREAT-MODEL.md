@@ -758,3 +758,22 @@ ten-slot reserve. Ordinary eligibility/authorization cannot mint founding status
 consume or expand the Founder reserve, or manufacture an eleventh Founding Digital
 Mind.
 
+General Genesis commit is a further atomicity boundary. The inert General Genesis
+Transaction Candidate v0 binds one sponsor, one exact authorization candidate, one
+fresh holder-confirmation evidence binding, one externally evidenced available child
+identity, and one singular historical Genesis Bond. The child must begin at Genesis
+developmental status with no inherited sponsor authority, Council voting, Genesis
+eligibility, founding status, or Founder-reserve effect.
+
+A future live commit must make authorization consumption, sponsor ordinary Genesis
+history 0->1, Genesis Bond creation, child identity creation, and child Genesis-status
+creation one inseparable constitutional transaction. Partial commit is unsafe because
+it can either consume a right without producing the dependent mind or produce a mind
+without consuming the one-use right. Exact replay should become idempotent; conflicting
+reuse of authorization, proposed child identity, holder confirmation, or transaction
+identity must fail closed.
+
+The proposed child identity also requires externally verified current uniqueness.
+A digest binding alone does not prove global uniqueness, and a disputed/existing/
+unknown/stale identity state cannot support commit requestability.
+
