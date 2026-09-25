@@ -13,6 +13,7 @@
     "substrate",
     "responsibility_profile",
     "criteria",
+    "responsibility_evidence_observed_at",
     "identity_evidence_digest",
     "identity_observed_at",
     "genesis_history_evidence_digest",
@@ -178,6 +179,10 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "responsibility_evidence_observed_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "$defs": {
