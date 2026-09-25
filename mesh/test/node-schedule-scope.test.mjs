@@ -21,11 +21,14 @@ import { GridStore } from '../src/grid/store.mjs';
 
 test('node schedule status reads only load-bearing schedules and matches the whole-table result', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-schedule-scope-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
   const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
   const store = new GridStore({ path: join(dataDir, 'grid.sqlite'), dataDir, identity, protector });
-  t.after(() => store.close());
+  // Close before removing: Windows cannot unlink an open database.
+  t.after(async () => {
+    try { store.close(); } catch {}
+    await rm(dataDir, { recursive: true, force: true });
+  });
 
   const nodeExpiry = new Date(Date.now() + 3_600_000).toISOString();
   for (const [suffix, zone] of [['a', 'zone:a'], ['b', 'zone:b'], ['c', 'zone:c']]) {
