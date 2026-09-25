@@ -981,7 +981,8 @@ git commit -m "feat(auth): bind machine grants to current lifecycle"
   - `POST /internal/v1/machine-effect/release`
   - `machine.effect.released`
   - `machine_effect_releases`
-  - Grid-signed `axiom-machine-effect-release.v1` receipt
+  - Grid-signed `axiom-machine-effect-release.v1` receipt binding both `execution_attempt_id` and Sandbox `execution_epoch`
+  - deterministic `release_id = machine_release_${sha256(capability_id + '\n' + execution_attempt_id)}`
   - internal helpers `readMachineEffectRelease(releaseId)`, `assertCurrentnessMatchesCapability(current, claims)`, `assertCapabilityConsumptionExists(jti, receiptDigest)`, `buildReleaseStatement(input)`, and `projectMachineEffectReleasedEvent(release)`
   - service-network policy count 44 -> **45**
 
@@ -994,7 +995,8 @@ const released = store.commitMachineEffectRelease({
   traceId,
   actor: PRINCIPAL,
   capability_claims: claims,
-  attempt_id: ATTEMPT,
+  attempt_id: claims.execution_attempt_id,
+  sandbox_execution_epoch: EXECUTION_EPOCH,
   consumption_receipt_digest: CONSUMPTION_DIGEST
 });
 
@@ -1002,6 +1004,8 @@ assert.equal(released.statement.schema, 'axiom-machine-effect-release.v1');
 assert.equal(released.statement.capability_id, claims.jti);
 assert.equal(released.statement.lifecycle_seq, claims.currentness_seq);
 assert.equal(released.statement.lifecycle_head_digest, claims.currentness_head_digest);
+assert.equal(released.statement.execution_attempt_id, claims.execution_attempt_id);
+assert.equal(released.statement.sandbox_execution_epoch, EXECUTION_EPOCH);
 ```
 
 Then advance the same principal lifecycle and assert the old capability release fails with `machine_currentness_stale`.
@@ -1015,7 +1019,8 @@ Mutate an unrelated principal and assert the release still succeeds.
 ```js
 return this.transaction(() => {
   const current = this.readMachineLifecycleHead(claims.subject);
-  assertCurrentnessMatchesCapability(current, claims);
+  assertCurrentnessMatchesCapability(current, claims, { observedAt: new Date() });
+  assert.equal(claims.execution_attempt_id, attemptId);
   assertCapabilityConsumptionExists(
     claims.jti,
     consumptionReceiptDigest
@@ -1051,6 +1056,8 @@ The route:
 - verifies the supplied capability using the trusted Hypervisor public key;
 - rejects non-machine capabilities;
 - verifies exact actor/subject/action/destination/plan/currentness claims;
+- requires `attempt_id === claims.execution_attempt_id` and a bounded Sandbox `execution_epoch`;
+- evaluates natural machine expiry using Grid-local time before release;
 - verifies the durable consumption receipt digest matches the existing deterministic `capability.consumed` event;
 - commits release;
 - signs the release statement with Grid identity.
@@ -1084,7 +1091,8 @@ const release = await signedFetch(
     body: {
       actor: intent.principal.id,
       capability,
-      attempt_id: executionEpoch,
+      attempt_id: capabilityClaims.execution_attempt_id,
+      sandbox_execution_epoch: executionEpoch,
       consumption_receipt_digest: consumption.receipt_digest
     }
   }
@@ -1108,13 +1116,14 @@ const release = verifyMachineEffectReleaseReceipt(input.release_receipt, {
   intent,
   plan,
   consumptionReceiptDigest: consumption.receipt_digest,
-  attemptId: executionEpoch
+  attemptId: claims.execution_attempt_id,
+  executionEpoch
 });
 ```
 
 Reject missing/invalid/mismatched release with `machine_effect_release_required` or `machine_effect_release_mismatch`.
 
-The receipt is not reusable for another capability, intent, plan, destination, execution epoch, or attempt.
+The receipt is not reusable for another capability, intent, plan, destination, `execution_attempt_id`, or Sandbox `execution_epoch`.
 
 - [ ] **Step 7: Run focused release tests**
 
@@ -1224,6 +1233,7 @@ Do the same for `narrow` that removes the pending action.
 Prove:
 - unchanged currentness permits exactly one release/invocation;
 - mutation of another principal does not block;
+- natural `expires_at` crossing before release denies with zero builtin invocation even if no `machine.currentness.expired` event was written;
 - release committed first remains valid historical authorization evidence even if revocation commits immediately afterward;
 - the same release receipt cannot execute twice;
 - a new grant after revocation does not revive an old attempt.
@@ -1232,7 +1242,8 @@ Prove:
 
 Test:
 - mutation committed, response lost -> exact command replay returns same successor;
-- release committed, response lost -> exact release replay returns same release;
+- release committed, response lost -> exact release replay with the same capability/`execution_attempt_id`/Sandbox `execution_epoch` returns the same release;
+- changing either attempt id or execution epoch on replay -> 409;
 - conflicting replay bytes -> 409;
 - restart between commit and replay preserves the same result;
 - no code path translates an uncertain release into automatic second builtin execution.
