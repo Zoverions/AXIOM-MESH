@@ -29,6 +29,23 @@ Two routes, both `POST` with a JSON body of `{ request, payload }`:
   node applies it, checking every update as if it had arrived alone, and
   answers `axiom-circle-sync-receipt.v0` with a summary and its new heads.
 
+Every answer carries a node statement (`axiom-circle-node-statement.v0`),
+signed with the serving member's Circle key. It binds:
+
+- the Circle's genesis digest and the operation;
+- the digest of the exact request it answers;
+- the digest of the exact answer (bundle or summary, and the node's heads);
+- the time it was issued.
+
+The caller checks the bindings before using an answer, so an answer changed
+in transit, or one written for another request, is refused before anything
+applies. It checks the signature after applying a pull, because the bundle
+may be what introduces the node's key. A node key the caller still cannot
+place leaves the answer unattributed. Its updates still apply, since each
+verifies on its own. A statement signed under the node's name with another
+key is refused. The node's latest verified statement is kept with the
+caller's encrypted state and shown by `status`.
+
 A sync with one peer pulls until the node's bundle is complete, then offers
 until the node has everything. A round that makes no progress stops the sync
 instead of looping, and a sync has at most 64 rounds. Offer lets a member
@@ -60,17 +77,25 @@ or rotated key, and a stranger are refused. A request is refused before its
 nonce is recorded, so a refused request cannot burn a member's nonce, and an
 unauthenticated one costs a signature check, not a view.
 
+Each Circle key has a request budget of 120 requests, refilled at 2 per
+second. The budget is checked after authentication, so a stranger cannot
+spend a member's budget. A request over budget is refused before its nonce is
+recorded, so it can be retried unchanged.
+
 Refusals: `401 unauthenticated`, `401 stale`, `401 payload_mismatch`,
 `403 not_a_member`, `404 unknown_circle`, `409 replayed`,
-`400 wrong_operation` or `malformed`, `413` when a request exceeds about
-1.1 MB, `503 busy` when replay protection is full.
+`429 rate_limited`, `400 wrong_operation` or `malformed`, `413` when a
+request exceeds about 1.1 MB, `503 busy` when replay protection is full.
 
 ## What the transport does not protect
 
-- **Withholding.** Responses are not signed. Every update in them is verified
-  on receipt, so a node can withhold updates but cannot forge or alter them.
-  Syncing with several members' nodes narrows withholding. The per-key hash
-  chains make gaps inside a log visible.
+- **Withholding is attributable, not prevented.** A node can still leave
+  updates out of what it serves. Its signed statements record what it
+  claimed to hold (its heads) and when, so a member holding a newer update
+  from that node's own log, or seeing another node serve more, has signed
+  evidence. Nothing compares statements automatically yet. Syncing with
+  several members' nodes narrows withholding, and the per-key hash chains
+  make gaps inside a log visible.
 - **Read access is membership, not role.** Any member in standing, or anyone
   endorsed to join, can read the whole Circle. There is no per-record
   disclosure yet.
@@ -171,6 +196,19 @@ path must be absolute:
 - The HTTP layer answers only its two routes, `POST` and JSON only, and
   bounds request size.
 - Accepted updates survive a later failure in the same peer sync.
+- Every answer is a node statement for exactly its request and answer:
+  - an answer with an update withheld in transit is refused before anything
+    applies;
+  - a genuine answer to another request is refused;
+  - a statement signed under the node's name with another key is refused;
+  - an unplaceable node key leaves the answer unattributed while its updates
+    apply.
+
+  The latest verified statement is kept in the encrypted state.
+- Each key's budget is its own:
+  - strangers never touch a member's budget;
+  - an over-budget request is answered once the bucket refills, with the same
+    nonce.
 
 Each of these fails when its protection is removed:
 
@@ -185,7 +223,14 @@ Each of these fails when its protection is removed:
 - recording the nonce only after authentication;
 - the `enabled` gate;
 - the state lock;
-- persisting an offer.
+- persisting an offer;
+- the statement's answer binding;
+- the statement's request binding;
+- the statement signature check;
+- checking the bindings before applying;
+- the request budget;
+- spending the budget before recording the nonce;
+- keeping the latest statement.
 
 ## Before activation
 
@@ -194,6 +239,8 @@ running it anywhere beyond a test is an activation decision. Open questions
 before that decision:
 
 - per-record disclosure;
-- rate limits per member;
-- whether to sign responses, so withholding can be attributed;
+- comparing statements across nodes to flag withholding automatically;
 - a registry entry under the capability lifecycle.
+
+Per-member rate limits and signed answers, which were earlier on this list,
+are now built (above).

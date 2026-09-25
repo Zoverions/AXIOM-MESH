@@ -31,6 +31,9 @@ const MAX_STATE_BYTES = 64 * 1024 * 1024;
 const MAX_PEERS = 16;
 const REPLAY_CAPACITY = 10_000;
 const pendingSaves = new WeakMap();
+// The latest verified node statement from each peer, kept with the replica
+// as evidence of what that node served (circle-transport.mjs).
+const peerStatements = new WeakMap();
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const HOSTNAME = /^[A-Za-z0-9.:-]{1,253}$/;
 
@@ -112,6 +115,12 @@ export async function openCirclePeerReplica(runtime) {
     || !Array.isArray(state.updates)
   ) throw new ValidationError('Circle peer state is invalid');
   // Every stored update is checked again as if it had just arrived.
+  if (state.statements !== undefined) {
+    if (!Array.isArray(state.statements) || state.statements.length > MAX_PEERS * 4) {
+      throw new ValidationError('Circle peer state statements are invalid');
+    }
+    peerStatements.set(replica, new Map(state.statements.map(item => [item.origin, item.statement])));
+  }
   for (const update of state.updates) {
     const result = replica.receive(update);
     if (result.status === 'rejected') throw new ValidationError(`Circle peer state holds an invalid update: ${result.code}`);
@@ -127,7 +136,10 @@ export function saveCirclePeerReplica(runtime, replica) {
     const sealed = runtime.protector.seal({
       schema: CIRCLE_PEER_STATE_SCHEMA,
       genesis_digest: runtime.genesis_digest,
-      updates: replica.exportUpdates()
+      updates: replica.exportUpdates(),
+      statements: [...(peerStatements.get(replica) ?? new Map())]
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .map(([origin, statement]) => ({ origin, statement }))
     }, stateContext(runtime.genesis_digest));
     await atomicReplace(runtime.config.state_file, `${sealed}\n`, 0o600);
   });
@@ -153,6 +165,14 @@ export async function syncCirclePeers(runtime, replica, {
         send: senderFor(peer),
         now
       });
+      if (result.last_statement) {
+        const kept = peerStatements.get(replica) ?? new Map();
+        kept.delete(peer.origin);
+        kept.set(peer.origin, result.last_statement);
+        // Bounded: origins dropped from the configuration age out.
+        while (kept.size > MAX_PEERS * 4) kept.delete(kept.keys().next().value);
+        peerStatements.set(replica, kept);
+      }
       results.push({ origin: peer.origin, status: 'synced', ...result });
     } catch (error) {
       if (!(error instanceof ValidationError) && !isNetworkError(error)) throw error;
@@ -190,6 +210,8 @@ export async function serveCirclePeer(runtime, { now = () => Date.now(), senderF
   try {
     const replica = await openCirclePeerReplica(runtime);
     server = createCircleSyncServer({
+      // Answers are signed with this member's Circle key.
+      signer: { principalId: runtime.principal_id, privateKey: runtime.private_key },
       replica,
       replayGuard: new ReplayGuard({ maxEntries: REPLAY_CAPACITY }),
       onChange: () => saveCirclePeerReplica(runtime, replica),
@@ -235,7 +257,18 @@ export async function serveCirclePeer(runtime, { now = () => Date.now(), senderF
 }
 
 export async function circlePeerStatus(runtime) {
-  return { genesis_digest: runtime.genesis_digest, status: summarize(await openCirclePeerReplica(runtime)) };
+  const replica = await openCirclePeerReplica(runtime);
+  return {
+    genesis_digest: runtime.genesis_digest,
+    status: summarize(replica),
+    statements: [...(peerStatements.get(replica) ?? new Map())].map(([origin, statement]) => ({
+      origin,
+      principal_id: statement.body.principal_id,
+      key_id: statement.body.key_id,
+      operation: statement.body.operation,
+      issued_at: statement.body.issued_at
+    }))
+  };
 }
 
 function summarize(replica) {

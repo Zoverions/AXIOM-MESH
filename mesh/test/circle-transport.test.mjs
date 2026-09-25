@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync, randomBytes } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, sign } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { canonicalJson, digestObject, sha256 } from '../src/lib/canonical.mjs';
 import {
   CIRCLE_CHARTER_SCHEMA,
   CIRCLE_EXIT_SCHEMA,
@@ -25,12 +25,14 @@ import {
   CIRCLE_OFFER_PATH,
   CIRCLE_PULL_PATH,
   CIRCLE_SYNC_MAX_REQUEST_BYTES,
+  CircleRateLimiter,
   createCircleSyncRequest,
   handleCircleSyncRequest,
   httpCircleSender,
   syncCirclePeer
 } from '../src/lib/circle-transport.mjs';
 import {
+  circlePeerStatus,
   loadCirclePeerRuntime,
   openCirclePeerReplica,
   runCirclePeerSync,
@@ -181,11 +183,29 @@ function replicaWith(...updateLists) {
 }
 
 // An in-process sender: the node's handler, as the HTTP layer would call it.
-function directSender(node, { now = NOW, replayGuard = new ReplayGuard({ maxEntries: 1_000 }), onChange } = {}) {
+const signerFor = name => ({ principalId: name, privateKey: keys[name].privateKey });
+
+// Re-signs an answer's node statement after the answer was changed, as an
+// honest node would have signed that answer (or a dishonest one, with
+// another key).
+function resign(answer, name) {
+  const { statement, ...rest } = answer;
+  const body = { ...statement.body, answer_digest: digestObject(rest) };
+  const canonical = canonicalJson(body);
+  return {
+    ...rest,
+    statement: {
+      body,
+      attestation: { algorithm: 'Ed25519', digest: sha256(canonical), signature: sign(null, Buffer.from(canonical), keys[name].privateKey).toString('base64url') }
+    }
+  };
+}
+
+function directSender(node, { as = 'alice', now = NOW, replayGuard = new ReplayGuard({ maxEntries: 1_000 }), onChange, rateLimiter } = {}) {
   return async (path, message) => {
     const operation = path === CIRCLE_PULL_PATH ? 'pull' : path === CIRCLE_OFFER_PATH ? 'offer' : 'none';
     // Round-trip through JSON, as on the wire.
-    const result = await handleCircleSyncRequest(node, operation, JSON.parse(JSON.stringify(message)), { now, replayGuard, onChange });
+    const result = await handleCircleSyncRequest(node, operation, JSON.parse(JSON.stringify(message)), { now, replayGuard, onChange, rateLimiter, signer: signerFor(as) });
     if (result.status !== 200) throw Object.assign(new Error(result.body.error.code), { status: result.status, code: result.body.error.code });
     return JSON.parse(JSON.stringify(result.body));
   };
@@ -221,14 +241,14 @@ test('members’ nodes converge over pull and offer, including a member who has 
 
   // Carol syncs with bob's node, not alice's: any member's node will do.
   const carolNode = replicaWith(carol);
-  await syncCirclePeer({ replica: carolNode, principalId: 'carol', privateKey: keys.carol.privateKey, send: directSender(bobNode), now: () => NOW });
-  await syncCirclePeer({ replica: aliceNode, principalId: 'alice', privateKey: keys.alice.privateKey, send: directSender(bobNode), now: () => NOW });
+  await syncCirclePeer({ replica: carolNode, principalId: 'carol', privateKey: keys.carol.privateKey, send: directSender(bobNode, { as: 'bob' }), now: () => NOW });
+  await syncCirclePeer({ replica: aliceNode, principalId: 'alice', privateKey: keys.alice.privateKey, send: directSender(bobNode, { as: 'bob' }), now: () => NOW });
   assert.deepEqual(aliceNode.heads(), carolNode.heads());
   assert.equal(view(aliceNode).package_digest, view(carolNode).package_digest);
   assert.equal(view(aliceNode).package.memberships.length, 3);
 
   // Nothing new: one pull, no offer.
-  const idle = await syncCirclePeer({ replica: carolNode, principalId: 'carol', privateKey: keys.carol.privateKey, send: directSender(bobNode), now: () => NOW });
+  const idle = await syncCirclePeer({ replica: carolNode, principalId: 'carol', privateKey: keys.carol.privateKey, send: directSender(bobNode, { as: 'bob' }), now: () => NOW });
   assert.equal(idle.rounds, 1);
   assert.equal(idle.pulled.accepted + idle.offered.accepted, 0);
 });
@@ -238,7 +258,7 @@ test('a node answers only established keys of members in standing or endorsed to
   const node = replicaWith(alice, bob, carol);
   const guard = new ReplayGuard({ maxEntries: 1_000 });
   const heads = new CircleReplica({ genesis }).heads();
-  const call = (operation, message, now = NOW) => handleCircleSyncRequest(node, operation, message, { now, replayGuard: guard });
+  const call = (operation, message, now = NOW) => handleCircleSyncRequest(node, operation, message, { now, replayGuard: guard, signer: signerFor('alice') });
   const code = async (...args) => {
     const result = await call(...args);
     return [result.status, result.body.error?.code ?? 'ok'];
@@ -289,6 +309,76 @@ test('a node answers only established keys of members in standing or endorsed to
   assert.deepEqual(node.heads(), before);
 });
 
+test('every answer is a node statement signed for exactly that request and answer', async () => {
+  const { alice, bob } = logs();
+  const aliceNode = replicaWith(alice, bob);
+  const honest = directSender(aliceNode);
+  const sync = (replica, send) => syncCirclePeer({ replica, principalId: 'bob', privateKey: keys.bob.privateKey, send, now: () => NOW });
+
+  const bobNode = replicaWith(bob);
+  const result = await sync(bobNode, honest);
+  assert.equal(result.statements.unattributed, 0);
+  assert.equal(result.statements.verified, result.rounds);
+  const statement = result.last_statement.body;
+  assert.equal(statement.schema, 'axiom-circle-node-statement.v0');
+  assert.equal(statement.principal_id, 'alice');
+  assert.equal(statement.key_id, circleKeyId(keys.alice.publicKey));
+  assert.equal(statement.genesis_digest, circleGenesisDigest(genesis));
+
+  // Changed in transit (the last update withheld): refused before anything
+  // applies, though every remaining update would verify on its own.
+  const dropped = replicaWith(bob);
+  await assert.rejects(sync(dropped, async (path, message) => {
+    const answer = await honest(path, message);
+    return { ...answer, bundle: { ...answer.bundle, updates: answer.bundle.updates.slice(0, -1) } };
+  }), /does not match this request and answer/);
+  assert.equal(dropped.heads().heads.length, 0);
+
+  // A genuine answer to another request (an earlier exchange, replayed).
+  const earlier = await honest(CIRCLE_PULL_PATH, createCircleSyncRequest({
+    genesisDigest: aliceNode.genesisDigest, operation: 'pull', payload: new CircleReplica({ genesis }).heads(),
+    principalId: 'bob', privateKey: keys.bob.privateKey, now: NOW
+  }));
+  await assert.rejects(sync(replicaWith(bob), async () => earlier), /does not match this request and answer/);
+
+  // Signed under alice's name with another member's key.
+  await assert.rejects(sync(replicaWith(bob), async (path, message) => resign(await honest(path, message), 'bob')), /signature is invalid/);
+
+  // A node key the member cannot place: unattributed, but the updates,
+  // which verify themselves, still apply.
+  const unplaced = replicaWith(bob);
+  const stranger = await sync(unplaced, directSender(aliceNode, { as: 'mallory' }));
+  assert.equal(stranger.statements.verified, 0);
+  assert.equal(stranger.statements.unattributed, stranger.rounds);
+  assert.equal(stranger.last_statement, null);
+  assert.deepEqual(unplaced.heads(), aliceNode.heads());
+});
+
+test('each key has a request budget, spent only by authenticated members', async () => {
+  const { alice, bob, carol } = logs();
+  const node = replicaWith(alice, bob, carol);
+  const heads = new CircleReplica({ genesis }).heads();
+  const guard = new ReplayGuard({ maxEntries: 1_000 });
+  const limiter = new CircleRateLimiter({ capacity: 2, refillPerSecond: 1 });
+  const call = async (as, { now = NOW, nonce } = {}) => {
+    const result = await handleCircleSyncRequest(node, 'pull', request('pull', heads, { as, now, nonce }), {
+      now, replayGuard: guard, rateLimiter: limiter, signer: signerFor('alice')
+    });
+    return [result.status, result.body.error?.code ?? 'ok'];
+  };
+  // Strangers are refused before any budget is touched.
+  for (let index = 0; index < 5; index += 1) assert.deepEqual(await call('mallory'), [401, 'unauthenticated']);
+  assert.deepEqual(await call('bob'), [200, 'ok']);
+  assert.deepEqual(await call('bob'), [200, 'ok']);
+  const nonce = randomBytes(18).toString('base64url');
+  assert.deepEqual(await call('bob', { nonce }), [429, 'rate_limited']);
+  // Carol's budget is her own.
+  assert.deepEqual(await call('carol'), [200, 'ok']);
+  // The refused request recorded no nonce: once the bucket refills, the same
+  // request is answered.
+  assert.deepEqual(await call('bob', { nonce, now: NOW + 1_000 }), [200, 'ok']);
+});
+
 test('former members and revoked keys are refused', async () => {
   const { alice, bob, carol } = logs();
   append(carol, 'carol', [['exit', exitOf('carol', '2026-08-20T18:00:00.000Z')]]);
@@ -305,7 +395,7 @@ test('former members and revoked keys are refused', async () => {
   const guard = new ReplayGuard({ maxEntries: 1_000 });
   const heads = new CircleReplica({ genesis }).heads();
   const status = async (as, now = NOW) => {
-    const result = await handleCircleSyncRequest(node, 'pull', request('pull', heads, { as, now }), { now, replayGuard: guard });
+    const result = await handleCircleSyncRequest(node, 'pull', request('pull', heads, { as, now }), { now, replayGuard: guard, signer: signerFor('alice') });
     return [result.status, result.body.error?.code ?? 'ok'];
   };
   assert.deepEqual(await status('alice'), [200, 'ok']);
@@ -387,6 +477,12 @@ test('two peer nodes sync over HTTPS with a pinned CA, and keep their state encr
   assert.equal(JSON.parse(lines[0]).peers[0].status, 'synced');
   assert.deepEqual(node.replica.heads(), (await openCirclePeerReplica(bobRuntime)).heads());
 
+  // Bob keeps alice's node's latest signed statement with his state.
+  const status = await circlePeerStatus(bobRuntime);
+  assert.equal(status.statements.length, 1);
+  assert.equal(status.statements[0].principal_id, 'alice');
+  assert.equal(status.statements[0].key_id, circleKeyId(keys.alice.publicKey));
+
   // Both nodes' state survives a restart, sealed under their own keys.
   const reopened = await openCirclePeerReplica(aliceRuntime);
   assert.deepEqual(reopened.heads(), node.replica.heads());
@@ -426,7 +522,8 @@ test('accepted pull updates survive a later peer failure', async t => {
         const response = await directSender(node)(path, message);
         // A real large Circle produces a partial bundle. The second read
         // fails after its first batch has already changed the local replica.
-        return { ...response, bundle: { ...response.bundle, complete: false } };
+        // The node signs the answer it actually served.
+        return resign({ ...response, bundle: { ...response.bundle, complete: false } }, 'alice');
       }
       throw Object.assign(new Error('peer disconnected'), { code: 'ECONNRESET' });
     }
