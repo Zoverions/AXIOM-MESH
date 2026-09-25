@@ -480,6 +480,17 @@ git commit -m "feat(grid): persist machine currentness lifecycle"
 - Create: `mesh/test/machine-currentness-grid-routes.test.mjs`
 - Modify: `mesh/test/service-network-policy.test.mjs`
 - Modify: `mesh/src/check-service-network-policy.mjs`
+- Modify: `README.md`
+- Modify: `mesh/PRODUCTION.md`
+- Modify: `docs/PRODUCTION-GRADE.md`
+- Modify: `docs/rebuild/PRODUCT-DEFINITION.md`
+- Modify: `docs/PROJECT-STATUS-2026.md`
+- Modify: `docs/MASTER-TODO.md`
+- Modify: `docs/ROADMAP.md`
+- Modify: `docs/PRODUCTION-READINESS-TRACKER.md`
+- Modify: `docs/releases/0.12.0-dev.3.md`
+- Modify: `docs/rebuild/SOURCE-TRACEABILITY.md`
+- Modify: `docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md`
 
 **Interfaces:**
 - Consumes: Task 2 store methods.
@@ -562,6 +573,8 @@ Add exactly two Hypervisor -> Grid routes:
 
 Expected route count after Task 3: **44**.
 
+Update every current-build numeric service-network claim required by `verifyComputedDocumentationClaims()` from the measured validator output in the same commit. Also update `docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md` to list the two new Hypervisor->Grid routes. Run `npm --prefix mesh run docs:check` before the Stage B PR is considered green.
+
 Do not add Gateway->Grid or Sandbox->Grid routes.
 
 - [ ] **Step 5: Run focused route/network tests**
@@ -576,7 +589,14 @@ Expected: PASS and exact route count 44.
 - [ ] **Step 6: Commit Task 3**
 
 ```bash
-git add   mesh/src/grid/machine-currentness-routes.mjs   mesh/src/grid/server.mjs   mesh/config/service-network-policy.json   mesh/src/check-service-network-policy.mjs   mesh/test/machine-currentness-grid-routes.test.mjs   mesh/test/service-network-policy.test.mjs
+git add mesh/src/grid/machine-currentness-routes.mjs mesh/src/grid/server.mjs \
+  mesh/config/service-network-policy.json mesh/src/check-service-network-policy.mjs \
+  mesh/test/machine-currentness-grid-routes.test.mjs mesh/test/service-network-policy.test.mjs \
+  README.md mesh/PRODUCTION.md docs/PRODUCTION-GRADE.md \
+  docs/rebuild/PRODUCT-DEFINITION.md docs/PROJECT-STATUS-2026.md \
+  docs/MASTER-TODO.md docs/ROADMAP.md docs/PRODUCTION-READINESS-TRACKER.md \
+  docs/releases/0.12.0-dev.3.md docs/rebuild/SOURCE-TRACEABILITY.md \
+  docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md
 git commit -m "feat(grid): expose authenticated machine currentness routes"
 ```
 
