@@ -353,7 +353,7 @@ export function assessResearchReproductionBinding(
     throw new ValidationError('Research reproduction claimed pass requires an attempt and expected/observed outputs');
   }
   if (operation.reference_output_digests.length > 0 &&
-      evidence.attempt_count > 0 &&
+      (evidence.attempt_count > 0 || evidence.expected_output_digests.length > 0) &&
       !sameDigestSet(evidence.expected_output_digests, operation.reference_output_digests)) {
     throw new ValidationError('Research reproduction reference output digest binding mismatch');
   }

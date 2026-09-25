@@ -206,16 +206,38 @@ test('HTTP expiry denial does not imply completed handler work was rolled back',
   assert.equal(f.guard.concurrency.size, 0);
 });
 
-test('HTTP controlled error remains communicable after lifetime ends', { timeout: 5000 }, async t => {
-  const f = await fixture(t, { handler: () => { throw new AxiomError('fixture_denied', 'Fixture refused', 403); } });
+test('HTTP expired machine suppresses application controlled-error details', { timeout: 5000 }, async t => {
+  const f = await fixture(t, {
+    handler: () => {
+      throw new AxiomError(
+        'fixture_denied',
+        `Fixture refused with sensitive marker ${MARKER}`,
+        403,
+        { marker: MARKER }
+      );
+    }
+  });
   const pending = f.request();
   await f.entered;
   f.setTime(EXPIRY);
   f.release();
   const response = await pending;
+  assertExpiryDenial(response);
+  assert.ok(!response.body.includes('fixture_denied'));
+  assert.equal(f.guard.concurrency.size, 0);
+});
+
+test('HTTP unexpired machine still receives controlled application errors', { timeout: 5000 }, async t => {
+  const f = await fixture(t, {
+    handler: () => { throw new AxiomError('fixture_denied', 'Fixture refused', 403); }
+  });
+  const pending = f.request();
+  await f.entered;
+  f.setTime(EXPIRY - 1);
+  f.release();
+  const response = await pending;
   assert.equal(response.status, 403);
   assert.equal(JSON.parse(response.body).error.code, 'fixture_denied');
-  assert.ok(!response.body.includes(MARKER));
   assert.equal(f.guard.concurrency.size, 0);
 });
 
