@@ -22,6 +22,7 @@
     "record_observations_digest",
     "history_retention_only",
     "requires_disclosure_authorization",
+    "requires_external_snapshot_verification",
     "requires_external_record_evidence_verification",
     "portable_authority",
     "authority_effect",
@@ -101,6 +102,9 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "requires_external_snapshot_verification": {
+      "const": true
     }
   },
   "$defs": {
