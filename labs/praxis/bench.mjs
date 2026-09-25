@@ -119,21 +119,41 @@ export const BUDGETS = {
   maxScalingRatio: 20
 };
 
+// Standard-budget verification requires exactly one synthetic-1k and one
+// synthetic-10k result. Missing or duplicate required rows cannot prove a pass.
+// Other corpus labels remain informational. Supplied CPU samples must be finite
+// and positive; wall samples must be finite and nonnegative.
 export function checkBudgets(results) {
   const failures = [];
   const byLabel = new Map(results.map((r) => [r.label, r]));
+  for (const label of ['synthetic-1k', 'synthetic-10k']) {
+    let matches = 0;
+    for (const row of results) {
+      if (row.label === label) matches += 1;
+    }
+    if (matches === 0) {
+      failures.push(`missing required benchmark evidence for ${label}`);
+    } else if (matches > 1) {
+      failures.push(`duplicate required benchmark evidence for ${label}`);
+    }
+  }
   const small = byLabel.get('synthetic-1k');
   const large = byLabel.get('synthetic-10k');
   if (large) {
-    if (large.parseMs > BUDGETS.maxParseMs10k) {
+    if (!Number.isFinite(large.parseMs) || large.parseMs < 0) {
+      failures.push('10k-line parse wall timing is missing or invalid');
+    } else if (large.parseMs > BUDGETS.maxParseMs10k) {
       failures.push(`10k-line parse took ${large.parseMs}ms (budget ${BUDGETS.maxParseMs10k}ms)`);
     }
-    if (large.formatMs > BUDGETS.maxFormatMs10k) {
+    if (!Number.isFinite(large.formatMs) || large.formatMs < 0) {
+      failures.push('10k-line format wall timing is missing or invalid');
+    } else if (large.formatMs > BUDGETS.maxFormatMs10k) {
       failures.push(`10k-line format took ${large.formatMs}ms (budget ${BUDGETS.maxFormatMs10k}ms)`);
     }
   }
   if (small && large) {
-    if (!(small.parseCpuMs > 0) || !(large.parseCpuMs >= 0)) {
+    if (!Number.isFinite(small.parseCpuMs) || small.parseCpuMs <= 0 ||
+        !Number.isFinite(large.parseCpuMs) || large.parseCpuMs <= 0) {
       failures.push('parse CPU timing is missing or invalid for scaling check');
     } else {
       const ratio = large.parseCpuMs / small.parseCpuMs;
