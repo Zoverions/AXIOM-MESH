@@ -312,6 +312,20 @@
         "mesh/src/lib/dependent-mind-care-profile.mjs",
         "mesh/src/lib/genesis-bond-guardianship.mjs"
       ]
+    },
+    {
+      "id": "RT-REVIEW-023",
+      "review_scope": "authentication-authorization",
+      "title": "Protective review findings must not become forged outcomes or remedy authority",
+      "claim_boundary": "A protective-review decision is independent institutional evidence only. Reviewer identities must be unique/conflict-free and exclude guardian/dependent/direct-party reviewers; the strict-majority panel outcome is recomputed deterministically; due-process and appeal evidence are mandatory; even a substantiated finding creates no removal, transfer, memory access, seizure, suspension, quarantine, emergency, status, or execution authority.",
+      "challenge_question": "Can reviewer duplication/reordering, guardian/dependent/direct-party panel capture, conflict hiding, forged panel outcome, missing response/voice/advocacy/appeal evidence, model final authority, critical-severity concern context, or recommendation language be used to turn review evidence into direct remedy execution, developmental downgrade, or guardianship reactivation?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-protective-review-decision-v0-design.md",
+        "mesh/src/lib/dependent-protective-review-decision.mjs",
+        "mesh/src/lib/dependent-protective-concern.mjs",
+        "mesh/src/lib/genesis-bond-guardianship.mjs"
+      ]
     }
   ],
   "reporting": {
