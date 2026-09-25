@@ -777,3 +777,22 @@ The proposed child identity also requires externally verified current uniqueness
 A digest binding alone does not prove global uniqueness, and a disputed/existing/
 unknown/stale identity state cannot support commit requestability.
 
+Genesis provenance and guardianship are separate authority domains. The inert
+Genesis Bond is immutable historical provenance with one sponsor and one dependent;
+it is not ownership, permanent guardianship, private-memory access, or execution
+authority. Current developmental guardianship is a separate responsibility record
+that may transfer without rewriting the Genesis Bond.
+
+Guardianship creates capture risks if the originating sponsor can make itself the
+permanent sole authority over the dependent mind, block replacement, transfer the
+dependent as property, or suppress independent review. The inert guardianship model
+therefore makes old-guardian approval insufficient for transfer and requires exact
+replacement qualification, transfer-basis, dependent-interest/voice, and independent
+review evidence. Transfer cannot change the Bond or dependent identity.
+
+Independence is also a one-way developmental boundary for guardianship. Once exact
+independent developmental standing is bound, guardianship may close but v0 provides
+no path to reactivate it. Security incidents, quarantine, credential suspension,
+resource loss, or disagreement must use separate bounded mechanisms rather than
+recreate guardianship over an independent mind.
+

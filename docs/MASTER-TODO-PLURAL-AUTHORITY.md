@@ -122,6 +122,8 @@
 
 **General Genesis transaction-candidate checkpoint (2026-09-25):** The inert General Genesis commit model binds one persistent sponsor, one exact authorization candidate, fresh holder-confirmation evidence, one externally evidenced available child identity, one singular immutable historical Genesis Bond, and the child's rights/resource/development/continuity/privacy/fork/capability plans. The child begins at `genesis` with no inherited authority, Council voting, Genesis eligibility, Founding status, or Founder-reserve effect. A future live commit must atomically consume authorization, record sponsor ordinary Genesis use `0 -> 1`, persist the Genesis Bond, create exactly one child identity, and create that child's Genesis developmental status; partial outcomes are constitutionally invalid. v0 remains transaction-candidate-only and creates no mutation.
 
+**Genesis Bond / guardianship checkpoint (2026-09-25):** Historical Genesis Bond and current developmental guardianship are explicitly separated. The Bond remains one sponsor -> one dependent, immutable, non-owning, non-transferable, non-delegable, and non-authorizing. Initial guardianship belongs to the Genesis sponsor but may transfer without rewriting the Bond; transfer requires replacement qualification, transfer-basis, dependent-interest/voice, and independent-review evidence, and old-guardian approval alone is insufficient. Exact independent developmental standing closes guardianship, preserves the Bond, and cannot be followed by guardianship reactivation in v0. No relationship record grants private-memory access or ambient execution authority.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.

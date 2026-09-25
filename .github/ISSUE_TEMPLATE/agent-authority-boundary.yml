@@ -40,6 +40,7 @@ body:
         - Compute, clone, restore, or fork multiplication manufactures mind or governance population
         - Sponsor, candidate, or model improperly grants developmental independence
         - Founding digital Council vote is duplicated or partially activated
+        - Genesis Bond or guardianship becomes ownership or permanent control
         - Other authority-boundary mismatch
     validations:
       required: true
@@ -70,6 +71,7 @@ body:
         - RT-GEN-017 - Compute multiplication must not manufacture minds or governance population
         - RT-IND-018 - Developmental review must not become sponsor or model authority
         - RT-VOTE-019 - Founding digital vote activation must not split or duplicate governance identity
+        - RT-GUARD-020 - Genesis Bond and guardianship must not become ownership or permanent control
     validations:
       required: false
 
