@@ -61,7 +61,8 @@ remedy admission.
 
 Open, stayed, reversed, unknown, or still-open appeal windows fail closed.
 
-Every appeal state requires exact evidence and an observation timestamp.
+Every appeal state requires exact evidence and an observation timestamp. The appeal
+observation cannot predate the review decision whose appeal state it describes.
 
 ## Relationship currentness
 
@@ -156,6 +157,8 @@ Even a positive admission MUST state:
 
 - `eligible_to_request_protective_remedy_authority: true`;
 - `remedy_admission_only: true`;
+- `requires_external_review_decision_verification: true`;
+- `review_decision_verification_effect: none`;
 - `requires_external_appeal_verification: true`;
 - `requires_external_relationship_verification: true`;
 - `requires_external_developmental_status_verification: true`;
