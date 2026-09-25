@@ -414,6 +414,14 @@ test('stored non-active membership remains visibly negative without requiring an
     const f=fixture();
     f.packageDocument.memberships[0].status=status;
     f.packageDocument.memberships[0].status_effective_at='2026-09-25T10:00:00.000Z';
+    // Circle Core correctly rejects proposals/tasks/decisions that rely on a
+    // principal no longer marked active. Remove unrelated records so this test
+    // isolates the human projection of an already-valid non-active membership.
+    f.packageDocument.proposals=[];
+    f.packageDocument.tasks=[];
+    f.packageDocument.decisions=[];
+    f.packageDocument.appeals=[];
+    f.packageDocument.exports=[];
     const result=project(f);
     assert.equal(result.memberships[0].current_state,status);
     assert.ok(result.warnings.includes('membership-not-active:membership.owner.1:'+status));
