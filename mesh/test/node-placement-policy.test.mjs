@@ -81,9 +81,10 @@ test('hard locality wins over a faster cheaper public provider', () => {
     energy_millijoules:1
   });
   const result = evaluateNodePlacements(policy(), [publicNode, local], { evaluatedAt:NOW });
-  assert.equal(result.selected_node_id, 'node.local');
+  assert.equal(result.preferred_candidate_node_id, 'node.local');
   assert.equal(result.eligible.length, 1);
   assert.ok(result.rejected.find(item => item.node_id === 'node.public').reasons.includes('locality-denied'));
+  assert.equal(result.placement_effect, 'none');
   assert.equal(result.grants_authority, false);
 });
 
@@ -102,7 +103,7 @@ test('soft preference order applies only after eligibility', () => {
   });
   const result = evaluateNodePlacements(latencyFirst, [local, publicNode], { evaluatedAt:NOW });
   assert.equal(result.eligible.length, 2);
-  assert.equal(result.selected_node_id, 'node.public');
+  assert.equal(result.preferred_candidate_node_id, 'node.public');
 });
 
 test('stale, un-attested, wrong-residency and over-budget candidates fail closed', () => {
@@ -114,7 +115,7 @@ test('stale, un-attested, wrong-residency and over-budget candidates fail closed
     candidate('node.expensive', { cost:{currency:'CAD',minor_units:500} })
   ];
   const result = evaluateNodePlacements(policy(), candidates, { evaluatedAt:NOW });
-  assert.equal(result.selected_node_id, null);
+  assert.equal(result.preferred_candidate_node_id, null);
   assert.ok(result.rejected.find(item => item.node_id === 'node.stale').reasons.includes('observation-not-current'));
   assert.ok(result.rejected.find(item => item.node_id === 'node.unattested').reasons.includes('attestation-required'));
   assert.ok(result.rejected.find(item => item.node_id === 'node.declared-only').reasons.includes('evidence-level-insufficient'));
@@ -129,5 +130,5 @@ test('candidate ordering is stable under input permutation', () => {
   const first = evaluateNodePlacements(value, [b,a], { evaluatedAt:NOW });
   const second = evaluateNodePlacements(value, [a,b], { evaluatedAt:NOW });
   assert.deepEqual(first, second);
-  assert.equal(first.selected_node_id, 'node.a');
+  assert.equal(first.preferred_candidate_node_id, 'node.a');
 });
