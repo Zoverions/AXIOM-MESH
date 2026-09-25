@@ -179,9 +179,20 @@ test('guardian cannot claim dependent advocate reviewer or observer independence
     const c=concern(b,g,{reporter:g.guardian_mind_id,role});
     assert.throws(
       ()=>assessDependentProtectiveConcern({genesisBond:b,guardianship:g,concern:c}),
-      /Guardian cannot claim an independent concern reporter role/
+      /Guardian or dependent cannot claim an independent concern reporter role/
     );
   }
+
+  const dependentAsReviewer=concern(b,g,{
+    reporter:g.dependent_mind_id,
+    role:'independent-reviewer'
+  });
+  assert.throws(
+    ()=>assessDependentProtectiveConcern({
+      genesisBond:b,guardianship:g,concern:dependentAsReviewer
+    }),
+    /Guardian or dependent cannot claim an independent concern reporter role/
+  );
 });
 
 test('dependent reporter role must bind exact dependent',()=>{
@@ -190,6 +201,22 @@ test('dependent reporter role must bind exact dependent',()=>{
   assert.throws(
     ()=>assessDependentProtectiveConcern({genesisBond:b,guardianship:g,concern:c}),
     /Dependent reporter role must bind exact dependent/
+  );
+});
+
+test('independent advocate role requires an exact care-profile binding',()=>{
+  const b=bond();
+  const g=guardianship(b);
+  const c=concern(b,g,{
+    reporter:'human.advocate.1',
+    role:'independent-advocate'
+  });
+
+  assert.throws(
+    ()=>assessDependentProtectiveConcern({
+      genesisBond:b,guardianship:g,concern:c
+    }),
+    /requires exact care-profile binding/
   );
 });
 
@@ -249,6 +276,10 @@ test('concern requires evidence and canonical non-empty requested review types',
   let c=concern(b,g);
   c.evidence_digests=[];
   assert.throws(()=>deriveProtectiveConcernId(c),/Protective concern evidence is invalid/);
+
+  c=concern(b,g);
+  c.evidence_digests=['b'.repeat(64),'a'.repeat(64)];
+  assert.throws(()=>deriveProtectiveConcernId(c),/Protective concern evidence must be sorted/);
 
   c=concern(b,g);
   c.requested_review_types=[];
