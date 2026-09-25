@@ -379,9 +379,18 @@ export async function createGridService(config = meshConfig()) {
     });
     return store.getImport(params.id, principal);
   });
-  router.add('GET', '/internal/v1/policy-overlays', async () => ({
-    overlays: store.listActivePolicyOverlays()
-  }));
+  // S-15: with `generation`, a caller that already holds the overlay set in
+  // force gets only the generation back; nothing is decrypted or sent.
+  router.add('GET', '/internal/v1/policy-overlays', async ({ url }) => {
+    const known = url.searchParams.get('generation');
+    if (known !== null && !/^[a-f0-9]{64}$/.test(known)) {
+      throw new ValidationError('Policy overlay generation is invalid');
+    }
+    const now = new Date().toISOString();
+    const generation = store.policyOverlayGeneration(now);
+    if (known === generation) return { generation, unchanged: true };
+    return { generation, overlays: store.listActivePolicyOverlays(now) };
+  });
   router.add('GET', '/internal/v1/appeals/:principal', async ({ params, url }) => {
     const { items, page } = pagedCollection(url, 'appeals', 'appeal limit',
       (limit, after) => store.listGovernanceAppeals(params.principal, { limit, after }),

@@ -20,10 +20,12 @@ const PARENT_BLOBS = Object.freeze({
   // of an owner's sync bundle events on /internal/v1/events) and for keyset
   // paging of sync state and the other collections, including accounting
   // journals and bundle summaries (`cursor` and `limit`), and single sync
-  // updates for heads too large for a page, and a `cursor` passed to node
-  // discovery. The server still composes no SIEA store; the assertions
-  // below are unchanged.
-  grid_server: '94f4128165b797b4552fd8e718c34751f154a0c8',
+  // updates for heads too large for a page, a `cursor` passed to node
+  // discovery, and the policy overlay generation (a Hypervisor holding the
+  // current generation gets only the generation back; scalability audit
+  // S-15). The server still composes no SIEA store; the assertions below
+  // are unchanged.
+  grid_server: '76171a88ccac9c1f11b04c0101a8339e6544833a',
   // Updated deliberately for core migration 11 (index-only: composite
   // indexes for the paged collections, accounting journals, node schedules
   // and sync bundles, scalability audit S-11). No table or column changed.

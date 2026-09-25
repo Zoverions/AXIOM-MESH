@@ -960,6 +960,50 @@ potentially merged on each request.
   collapse.
 - Crash tests prove no authorized effect lacks a terminal or recoverable state.
 
+**Remediation status (2026-09-25): policy overlays are cached by generation;
+the rest is open.**
+
+- **Generation.** Grid names the overlay set in force with a generation: the
+  digest of its ordered `[overlay_id, policy_digest]` list, read from plain
+  columns without decrypting any policy. It changes whenever an overlay
+  activates, is rolled back or expires, since expiry is part of the query.
+- **Conditional fetch.** The Hypervisor sends the generation it holds.
+  - When Grid's matches, Grid answers with the generation alone, and the
+    Hypervisor reuses the engine it built for exactly that generation.
+    Nothing is decrypted, sent or merged.
+  - Otherwise Grid sends the overlays. They must hash to the generation it
+    names.
+  - An inconsistent answer fails closed (`503 policy_unavailable`) and drops
+    the cache.
+- **Deliberate deviation.** The Hypervisor still asks Grid on every intent.
+  A cache that skipped the question would keep a revoked or expired overlay,
+  or miss a new one, until invalidated, and policy must take effect on the
+  very next intent. The saving is the decryption, transfer and merge, not
+  the round trip. Removing the round trip needs a pushed, signed generation
+  change, which does not exist yet.
+- **Evidence.**
+  - Unit tests cover the cache:
+    - reuse while unchanged;
+    - rebuild on activation;
+    - fallback to the base policy on rollback;
+    - one question to Grid per call;
+    - refusal of an "unchanged" answer for another generation, and of
+      overlays that do not match their generation;
+    - no caching against a Grid that names no generation.
+  - A store test checks that the generation follows activation, rollback and
+    expiry, names exactly the overlays served, and decrypts nothing.
+  - The four-service kernel test exercises the cache through real services:
+    an activated overlay denies the next intent, a rollback restores it, and
+    an expiry restores it.
+  - Mutation checks: the tests fail when the cache skips the question, when
+    an "unchanged" answer for another generation is accepted, when
+    mismatched overlays are accepted, when the generation ignores expiry,
+    and (kernel) when Grid answers "unchanged" regardless.
+
+Still open: group commit of accepted and terminal events, a bounded
+execution queue with overload responses, separate latency targets, and
+crash tests for terminal states.
+
 ### S-16 — Current capacity evidence is a smoke baseline, not a scale test
 
 **Severity:** High for promotion claims  

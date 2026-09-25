@@ -245,6 +245,78 @@ function hasScope(scopes, required) {
   return scopes.includes('*') || scopes.includes(required);
 }
 
+export const POLICY_OVERLAY_GENERATION_SCHEMA = 'axiom-policy-overlay-generation.v1';
+
+/**
+ * The generation of the policy overlay set in force: its ordered list of
+ * [overlay_id, policy_digest] (scalability audit S-15). Grid and Hypervisor
+ * compute it the same way, so the Hypervisor can check that the overlays it
+ * receives are the generation Grid names.
+ */
+export function policyOverlayGenerationDigest(overlays) {
+  return digestObject({ schema: POLICY_OVERLAY_GENERATION_SCHEMA, overlays });
+}
+
+/**
+ * The Hypervisor's view of the policy in force: its base policy merged with
+ * Grid's active overlays, rebuilt only when Grid's overlay generation
+ * changes (scalability audit S-15).
+ *
+ * `fetchOverlays({ generation, ...context })` asks Grid on every call, with
+ * the generation already held (or null) and whatever context the caller
+ * passes (a trace id), so an overlay
+ * that activates, is rolled back or expires takes effect on the very next
+ * intent. Grid answers `{ generation, unchanged: true }` when the caller
+ * already holds that generation, or `{ generation, overlays }`. The overlays
+ * must hash to the generation Grid names, and a cached engine is returned
+ * only for the exact generation it was built from; anything inconsistent
+ * fails closed and drops the cache. A Grid that names no generation is
+ * served as before, without caching.
+ */
+export function createActivePolicy({ basePolicy, fetchOverlays }) {
+  let cached = null;
+  const unavailable = message => Object.assign(new Error(message), {
+    code: 'policy_unavailable',
+    status: 503
+  });
+  return async function activePolicy(context = {}) {
+    const response = await fetchOverlays({ ...context, generation: cached?.generation ?? null });
+    if (response?.unchanged === true) {
+      if (!cached || response.generation !== cached.generation) {
+        cached = null;
+        throw unavailable('Policy overlay generation is inconsistent');
+      }
+      return cached.engine;
+    }
+    const overlays = Array.isArray(response?.overlays) ? response.overlays : [];
+    const generation = policyOverlayGenerationDigest(overlays.map(overlay => [overlay.overlay_id, overlay.policy_digest]));
+    if (response?.generation !== undefined && response.generation !== generation) {
+      cached = null;
+      throw unavailable('Policy overlays do not match their generation');
+    }
+    const engine = overlays.length ? withOverlays(basePolicy, overlays) : basePolicy;
+    cached = response?.generation === undefined ? null : { generation, engine };
+    return engine;
+  };
+}
+
+function withOverlays(basePolicy, overlays) {
+  const merged = mergeDenyDominantPolicy([
+    basePolicy.policy,
+    ...overlays.map(overlay => overlay.policy_json)
+  ]);
+  return new PolicyEngine(merged, {
+    layers: [
+      ...basePolicy.layers,
+      ...overlays.map((overlay, index) => ({
+        order: basePolicy.layers.length + index,
+        version: overlay.policy_json.version,
+        digest: overlay.policy_digest
+      }))
+    ]
+  });
+}
+
 export class PolicyEngine {
   constructor(policy, { layers } = {}) {
     const metadata = MERGED_POLICY_METADATA.get(policy);

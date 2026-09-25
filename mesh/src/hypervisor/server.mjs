@@ -28,7 +28,7 @@ import {
   serviceSnapshotsFromReport,
   ServiceTelemetry
 } from '../lib/observability.mjs';
-import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
+import { createActivePolicy, loadPolicyStack } from '../lib/policy.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
   machinePrincipalAuthorityFacts,
@@ -102,23 +102,22 @@ export async function createHypervisorService(config = meshConfig()) {
     );
   }
 
+  // Scalability audit S-15: rebuilt only when Grid's overlay generation
+  // changes; Grid is still asked on every intent (lib/policy.mjs).
+  const cachedActivePolicy = createActivePolicy({
+    basePolicy,
+    fetchOverlays: async ({ generation, traceId }) => gridGet(
+      `/internal/v1/policy-overlays${generation ? `?generation=${generation}` : ''}`,
+      traceId
+    )
+  });
   async function activePolicy(traceId) {
-    const response = await gridGet('/internal/v1/policy-overlays', traceId);
-    if (!response.overlays?.length) return basePolicy;
-    const merged = mergeDenyDominantPolicy([
-      basePolicy.policy,
-      ...response.overlays.map(overlay => overlay.policy_json)
-    ]);
-    return new PolicyEngine(merged, {
-      layers: [
-        ...basePolicy.layers,
-        ...response.overlays.map((overlay, index) => ({
-          order: basePolicy.layers.length + index,
-          version: overlay.policy_json.version,
-          digest: overlay.policy_digest
-        }))
-      ]
-    });
+    try {
+      return await cachedActivePolicy({ traceId });
+    } catch (error) {
+      if (error?.code === 'policy_unavailable') throw new AxiomError('policy_unavailable', error.message, 503);
+      throw error;
+    }
   }
 
   async function currentOperations(traceId = newId('trace')) {

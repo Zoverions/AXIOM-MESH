@@ -41,7 +41,7 @@ import {
   writeMaterializationAnchor
 } from './materialization-anchor.mjs';
 import { validateImportBundle } from '../lib/importer.mjs';
-import { validateAuthorityReducingPolicy } from '../lib/policy.mjs';
+import { policyOverlayGenerationDigest, validateAuthorityReducingPolicy } from '../lib/policy.mjs';
 import {
   verifyNodeAdmission,
   verifyNodeRenewal,
@@ -1433,6 +1433,20 @@ export class GridStore {
     this.db.prepare(`
       UPDATE proposals SET status = 'active', activated_at = ? WHERE proposal_id = ?
     `).run(occurredAt, proposalId);
+  }
+
+  // Scalability audit S-15: the identity of the policy overlay set in force
+  // at `now` (which overlays, in activation order, with which digest), read
+  // from plain columns without decrypting any policy. It changes whenever an
+  // overlay activates, is rolled back or expires, so a caller holding the
+  // same generation holds the same effective policy.
+  policyOverlayGeneration(now = new Date().toISOString()) {
+    const overlays = this.db.prepare(`
+      SELECT overlay_id, policy_digest FROM policy_overlays
+      WHERE status = 'active' AND (expires_at IS NULL OR expires_at > ?)
+      ORDER BY activated_at, overlay_id
+    `).all(now).map(row => [row.overlay_id, row.policy_digest]);
+    return policyOverlayGenerationDigest(overlays);
   }
 
   listActivePolicyOverlays(now = new Date().toISOString()) {
