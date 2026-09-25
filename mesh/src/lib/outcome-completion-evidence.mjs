@@ -60,6 +60,11 @@ export function evaluateOutcomeCompletion(outcome, completion) {
   if (completion.outcome_id !== outcome.outcome_id) throw new ValidationError('Completion outcome_id does not match Outcome');
   const expectedDigest = outcomeDigest(outcome);
   if (completion.outcome_digest !== expectedDigest) throw new ValidationError('Completion outcome_digest does not match exact Outcome');
+  const observedAt = canonicalDate(completion.observed_at, 'observed_at');
+  const outcomeUpdatedAt = canonicalDate(outcome.updated_at, 'Outcome updated_at');
+  if (observedAt < outcomeUpdatedAt) {
+    throw new ValidationError('Completion observed_at cannot precede Outcome updated_at');
+  }
 
   if (completion.acceptance_results.length !== outcome.acceptance_criteria.length) {
     throw new ValidationError('Completion acceptance_results do not cover every Outcome criterion');
@@ -79,6 +84,7 @@ export function evaluateOutcomeCompletion(outcome, completion) {
   ) throw new ValidationError('Completion task_results do not cover exact Outcome task_ids');
 
   const reasons = [];
+  if (outcome.completion_state !== 'completed-verified') reasons.push('outcome-state-not-verified');
   for (const item of completion.acceptance_results) {
     if (item.state !== 'passed') reasons.push('criterion-not-passed:' + item.criterion_index);
     if (item.state === 'passed' && item.evidence_refs.length === 0) reasons.push('criterion-evidence-missing:' + item.criterion_index);
