@@ -119,11 +119,24 @@ export const BUDGETS = {
   maxScalingRatio: 20
 };
 
-// Supplied CPU samples must be finite and positive; wall samples must be
-// finite and nonnegative. Invalid numbers are not evidence of staying in budget.
+// Standard-budget verification requires exactly one synthetic-1k and one
+// synthetic-10k result. Missing or duplicate required rows cannot prove a pass.
+// Other corpus labels remain informational. Supplied CPU samples must be finite
+// and positive; wall samples must be finite and nonnegative.
 export function checkBudgets(results) {
   const failures = [];
   const byLabel = new Map(results.map((r) => [r.label, r]));
+  for (const label of ['synthetic-1k', 'synthetic-10k']) {
+    let matches = 0;
+    for (const row of results) {
+      if (row.label === label) matches += 1;
+    }
+    if (matches === 0) {
+      failures.push(`missing required benchmark evidence for ${label}`);
+    } else if (matches > 1) {
+      failures.push(`duplicate required benchmark evidence for ${label}`);
+    }
+  }
   const small = byLabel.get('synthetic-1k');
   const large = byLabel.get('synthetic-10k');
   if (large) {
