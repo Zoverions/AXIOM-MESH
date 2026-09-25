@@ -24,6 +24,7 @@ function policy(overrides = {}) {
     required_runtime_ids:['runtime.local'],
     required_model_refs:['model.local'],
     required_tool_refs:['tool.files'],
+    minimum_evidence_level:'measured',
     minimum_security_level:2,
     require_attestation:true,
     max_latency_ms:100,
@@ -48,6 +49,8 @@ function candidate(node_id, overrides = {}) {
     runtime_ids:['runtime.local'],
     model_refs:['model.local'],
     tool_refs:['tool.files'],
+    evidence_level:'verified',
+    evidence_refs:['evidence:node-profile.1'],
     security_level:3,
     attested:true,
     latency_ms:40,
@@ -106,6 +109,7 @@ test('stale, un-attested, wrong-residency and over-budget candidates fail closed
   const candidates = [
     candidate('node.stale', { expires_at:'2026-09-24T12:00:00.000Z' }),
     candidate('node.unattested', { attested:false }),
+    candidate('node.declared-only', { evidence_level:'declared' }),
     candidate('node.wrong-region', { residency_region:'US-EAST' }),
     candidate('node.expensive', { cost:{currency:'CAD',minor_units:500} })
   ];
@@ -113,6 +117,7 @@ test('stale, un-attested, wrong-residency and over-budget candidates fail closed
   assert.equal(result.selected_node_id, null);
   assert.ok(result.rejected.find(item => item.node_id === 'node.stale').reasons.includes('observation-not-current'));
   assert.ok(result.rejected.find(item => item.node_id === 'node.unattested').reasons.includes('attestation-required'));
+  assert.ok(result.rejected.find(item => item.node_id === 'node.declared-only').reasons.includes('evidence-level-insufficient'));
   assert.ok(result.rejected.find(item => item.node_id === 'node.wrong-region').reasons.includes('residency-denied'));
   assert.ok(result.rejected.find(item => item.node_id === 'node.expensive').reasons.includes('cost-exceeds-limit'));
 });
