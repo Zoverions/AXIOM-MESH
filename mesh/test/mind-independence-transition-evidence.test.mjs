@@ -82,7 +82,8 @@ function evidence(reviewDocument, overrides = {}) {
     continuity_status: 'clear',
     appeal_path_id: reviewDocument.appeal_path_id,
     appeal_status: 'none',
-    appeal_evidence_digest: null,
+    appeal_evidence_digest: 'f'.repeat(64),
+    appeal_observed_at: '2026-09-25T14:25:00.000Z',
     maximum_review_age_seconds: 3600,
     maximum_state_observation_age_seconds: 600,
     evaluated_at: '2026-09-25T14:30:00.000Z',
@@ -107,6 +108,7 @@ test('fresh successful review can make an independence transition requestable wi
   assert.equal(result.developmental_state_evidence_matches, true);
   assert.equal(result.continuity_evidence_matches, true);
   assert.equal(result.continuity_clear, true);
+  assert.equal(result.appeal_current, true);
   assert.equal(result.appeal_clear, true);
   assert.equal(result.transition_requestable, true);
   assert.equal(result.reason, 'transition-requestable');
@@ -231,6 +233,18 @@ test('continuity dispute, stale state, or unknown state blocks transition reques
   }
 });
 
+test('appeal observation freshness is required', () => {
+  const r = review();
+  const result = assessMindIndependenceTransitionEvidence(
+    r,
+    evidence(r, { appeal_observed_at: '2026-09-25T14:00:00.000Z' })
+  );
+
+  assert.equal(result.appeal_current, false);
+  assert.equal(result.transition_requestable, false);
+  assert.equal(result.reason, 'appeal-observation-stale');
+});
+
 test('appeal currentness controls transition requestability', () => {
   const r = review();
 
@@ -256,23 +270,23 @@ test('appeal currentness controls transition requestability', () => {
   assert.equal(upheld.transition_requestable, true);
 });
 
-test('non-none appeal state requires evidence and none cannot smuggle appeal evidence', () => {
+test('every appeal state requires exact evidence, including no-open-appeal', () => {
   const r = review();
 
   assert.throws(
     () => assessMindIndependenceTransitionEvidence(
       r,
-      evidence(r, { appeal_status: 'open' })
+      evidence(r, { appeal_evidence_digest: null })
     ),
-    /requires exact appeal evidence/
+    /activation boundary/
   );
 
   assert.throws(
     () => assessMindIndependenceTransitionEvidence(
       r,
-      evidence(r, { appeal_evidence_digest: 'f'.repeat(64) })
+      evidence(r, { appeal_evidence_digest: 'not-a-digest' })
     ),
-    /cannot claim appeal evidence/
+    /activation boundary/
   );
 });
 
