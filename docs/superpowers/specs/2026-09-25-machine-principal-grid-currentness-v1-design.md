@@ -166,6 +166,44 @@ The lifecycle authority must be proven to be a same-principal attenuation of
 
 No field absent from the attenuation relation is allowed to drift.
 
+## 5.4 Fixed v1 contract identifiers
+
+The implementation plan must preserve these exact identifiers unless a later
+design revision explicitly changes them:
+
+- mutation authorization schema:
+  `axiom-machine-principal-mutation-authorization.v1`;
+- lifecycle transition schema:
+  `axiom-machine-principal-lifecycle-transition.v1`;
+- currentness projection schema:
+  `axiom-machine-principal-currentness-projection.v1`;
+- logical effect-release schema:
+  `axiom-machine-effect-release.v1`;
+- lifecycle events:
+  `machine.currentness.initialized`,
+  `machine.currentness.narrowed`,
+  `machine.currentness.revoked`,
+  `machine.currentness.compromised`,
+  `machine.currentness.expired`;
+- logical release event:
+  `machine.effect.released`;
+- materialized tables:
+  `machine_principal_lifecycle_heads`,
+  `machine_principal_mutation_commands`,
+  `machine_effect_releases`;
+- internal read route:
+  `GET /internal/v1/machine-currentness/:principal_id`;
+- internal mutation route:
+  `POST /internal/v1/machine-currentness/mutate`;
+- internal release route:
+  `POST /internal/v1/machine-effect/release`;
+- human-facing policy actions:
+  `machine.principal.lifecycle.initialize` and
+  `machine.principal.lifecycle.mutate`.
+
+These names are part of the v1 design contract so the implementation plan does
+not invent parallel spellings or duplicate state surfaces.
+
 ## 6. Lifecycle state model
 
 ### 6.1 States
@@ -261,7 +299,7 @@ There is no generic `authority-update` transition in v1.
 Lifecycle mutation is an administrative effect and must enter through ordinary
 AXIOM authentication and deny-dominant policy.
 
-The intended path is:
+The fixed v1 path is:
 
 ```text
 authenticated human
@@ -272,7 +310,8 @@ authenticated human
   -> Grid transaction
 ```
 
-There is no public Grid mutation route.
+`POST /internal/v1/machine-currentness/mutate` is Hypervisor-authenticated and
+internal-only. There is no public Grid mutation route.
 
 Machine principals cannot mutate machine lifecycle state in v1.
 
@@ -324,7 +363,8 @@ v1 mutation kinds:
 `command_id` is unique in Grid materialized state.
 
 An exact replay with the same command digest returns the already committed
-successor evidence without creating another lifecycle transition.
+successor transition projection from `machine_principal_mutation_commands`
+without creating another lifecycle event.
 
 The same `command_id` with different bytes fails closed.
 
@@ -351,12 +391,13 @@ They do not create a replacement authority digest.
 
 The implementation should use ordinary Grid events plus materialized state.
 
-A concrete implementation may choose exact event names during planning, but the
-contract requires the following semantic records:
+The v1 implementation uses the fixed schema, event, route, and table identifiers
+listed in §5.4. The records below define their required semantics:
 
-### 10.1 Lifecycle transition event
+### 10.1 Lifecycle transition events
 
-Every transition records:
+Each `machine.currentness.*` transition carries
+`axiom-machine-principal-lifecycle-transition.v1` and records:
 
 - principal id/type;
 - root authority digest;
@@ -375,7 +416,7 @@ Every transition records:
 
 ### 10.2 Materialized lifecycle head
 
-One row per machine principal provides:
+One row per machine principal in `machine_principal_lifecycle_heads` provides:
 
 - root authority digest;
 - current status;
@@ -388,7 +429,7 @@ One row per machine principal provides:
 
 ### 10.3 Mutation replay record
 
-Grid must retain enough durable materialized state to distinguish:
+`machine_principal_mutation_commands` must durably retain enough state to distinguish:
 
 - first successful command;
 - exact replay;
@@ -401,8 +442,9 @@ recoverable as an exact replay, not become a second transition.
 
 ## 11. Currentness query
 
-A signed internal Grid read returns the authoritative retained machine lifecycle
-projection.
+`GET /internal/v1/machine-currentness/:principal_id` returns the authoritative
+retained machine lifecycle projection over the authenticated internal service
+channel.
 
 The projection must bind:
 
@@ -451,7 +493,7 @@ The first promoted race is #1445.
 Immediately before the first consequential builtin effect, Sandbox must ask
 Grid to order one logical effect release against current lifecycle state.
 
-The Grid operation must, in one ordered transaction:
+`POST /internal/v1/machine-effect/release` must, in one ordered Grid transaction:
 
 1. resolve the current lifecycle row;
 2. verify root digest;
@@ -641,28 +683,34 @@ Positive controls:
 
 ### Stage A — inert contracts
 
-Add pure normalized attenuation contracts and schemas only.
+Add pure normalized attenuation contracts and the four fixed v1 schemas from
+§5.4 only.
 
 No Grid migration, route, capability, or runtime call site.
 
 ### Stage B — Grid storage/currentness
 
-Add lifecycle event validation, materialized state, replay handling, and
-authenticated read projection.
+Add the five fixed `machine.currentness.*` lifecycle events, the
+`machine_principal_lifecycle_heads` and
+`machine_principal_mutation_commands` materializations, replay handling, and
+the authenticated currentness read projection.
 
 Still no execution integration.
 
 ### Stage C — authorized mutation source (#1443)
 
-Add the human-authorized Hypervisor -> Grid mutation path and deterministic
-mutation tests.
+Add policy actions `machine.principal.lifecycle.initialize` and
+`machine.principal.lifecycle.mutate`, the human-authorized Hypervisor -> Grid
+mutation path, and deterministic mutation tests.
 
 No effect path consumes it yet.
 
 ### Stage D — effect race (#1445)
 
-Bind capability issuance to lifecycle head and add atomic logical effect release
-against the current retained head.
+Bind capability issuance to lifecycle head and add
+`POST /internal/v1/machine-effect/release`,
+`machine_effect_releases`, and `machine.effect.released` for atomic logical
+effect release against the current retained head.
 
 Keep capability promotion unchanged until the full matrix and review complete.
 
@@ -768,8 +816,9 @@ The implementation must preserve all of these:
 
 ## 22. Documentation impact
 
-An implementation stage that changes runtime behavior must update, as
-applicable:
+Every Stage C or Stage D implementation PR must review and update each of these
+files when its current statement would otherwise become stale; the PR must state
+explicitly when no textual change is required:
 
 - `docs/security/CURRENT-BUILD-THREAT-MODEL.md`;
 - `docs/rebuild/REQUIREMENTS.md`;
