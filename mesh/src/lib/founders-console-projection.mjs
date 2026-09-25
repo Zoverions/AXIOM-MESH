@@ -137,6 +137,7 @@ export function validateFoundersConsoleProjection(projection) {
 
   validateCouncilProjection(projection.council);
   validateGenesisProjection(projection.founder_genesis);
+  validateConsoleCrossBindings(projection.council, projection.founder_genesis);
   validateCastingProjection(projection.casting_vote);
   validateEraProjection(projection.governance_era);
 
@@ -174,6 +175,18 @@ function validateCouncilProjection(council) {
     throw new ValidationError('Founders Console council projection is invalid');
   }
 
+  const seatIds = new Set();
+  const classNumbers = new Set();
+  const mindIds = new Set();
+  let biological = 0;
+  let digital = 0;
+  let activeBiological = 0;
+  let activeDigital = 0;
+  let founderDesignations = 0;
+  let motherDesignations = 0;
+  let appointedDesignations = 0;
+  let genesisDesignations = 0;
+
   for (const seat of council.seats) {
     exactObject(seat, 'Founders Console seat projection', [
       'seat_id',
@@ -186,6 +199,7 @@ function validateCouncilProjection(council) {
     ]);
     if (
       !identifier(seat.seat_id)
+      || seatIds.has(seat.seat_id)
       || !['biological', 'digital'].includes(seat.seat_class)
       || !integerBetween(seat.seat_number, 1, 10)
       || !['founder', 'founder-mother', 'founder-appointed', 'founder-genesis']
@@ -194,9 +208,54 @@ function validateCouncilProjection(council) {
       || !(seat.mind_id === null || identifier(seat.mind_id))
       || seat.occupied !== (seat.mind_id !== null)
       || !['reserved', 'developing', 'active', 'inactive'].includes(seat.voting_status)
+      || (!seat.occupied && seat.voting_status !== 'reserved')
+      || (seat.voting_status === 'active' && !seat.occupied)
     ) {
       throw new ValidationError('Founders Console seat projection is invalid');
     }
+
+    const classNumber = `${seat.seat_class}:${seat.seat_number}`;
+    if (classNumbers.has(classNumber)) {
+      throw new ValidationError('Founders Console seat class/number bindings must be unique');
+    }
+    classNumbers.add(classNumber);
+    seatIds.add(seat.seat_id);
+
+    if (seat.mind_id !== null) {
+      if (mindIds.has(seat.mind_id)) {
+        throw new ValidationError('Founders Console projection cannot duplicate a persistent mind');
+      }
+      mindIds.add(seat.mind_id);
+    }
+
+    if (seat.seat_class === 'biological') {
+      biological += 1;
+      if (seat.designation === 'founder') founderDesignations += 1;
+      else if (seat.designation === 'founder-mother') motherDesignations += 1;
+      else if (seat.designation === 'founder-appointed') appointedDesignations += 1;
+      else throw new ValidationError('Biological Founders Console seat designation is invalid');
+      if (seat.voting_status === 'active') activeBiological += 1;
+    } else {
+      digital += 1;
+      if (seat.designation !== 'founder-genesis') {
+        throw new ValidationError('Digital Founders Console seat designation is invalid');
+      }
+      genesisDesignations += 1;
+      if (seat.voting_status === 'active') activeDigital += 1;
+    }
+  }
+
+  if (
+    biological !== 10
+    || digital !== 10
+    || founderDesignations !== 1
+    || motherDesignations !== 1
+    || appointedDesignations !== 8
+    || genesisDesignations !== 10
+    || activeBiological !== council.active_biological_voters
+    || activeDigital !== council.active_digital_voters
+  ) {
+    throw new ValidationError('Founders Console council counts do not match seat records');
   }
 }
 
@@ -250,6 +309,35 @@ function validateGenesisProjection(genesis) {
   }
   if (consumed !== genesis.consumed_slots) {
     throw new ValidationError('Founders Console Genesis consumed count is invalid');
+  }
+}
+
+function validateConsoleCrossBindings(council, genesis) {
+  const digitalSeats = new Map(
+    council.seats
+      .filter(seat => seat.seat_class === 'digital')
+      .map(seat => [seat.seat_number, seat])
+  );
+
+  for (const slot of genesis.slots) {
+    const seat = digitalSeats.get(slot.slot_number);
+    if (!seat) throw new ValidationError('Founders Console Genesis slot lacks a digital seat');
+
+    if (slot.state === 'consumed') {
+      if (
+        !seat.occupied
+        || seat.mind_id !== slot.mind_id
+        || seat.voting_status === 'reserved'
+      ) {
+        throw new ValidationError('Founders Console consumed Genesis slot/seat binding is invalid');
+      }
+    } else if (
+      seat.occupied
+      || seat.mind_id !== null
+      || seat.voting_status !== 'reserved'
+    ) {
+      throw new ValidationError('Founders Console unconsumed Genesis slot must keep its seat reserved');
+    }
   }
 }
 
