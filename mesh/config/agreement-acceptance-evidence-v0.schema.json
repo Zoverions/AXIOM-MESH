@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agreement-acceptance-evidence-v0.schema.json",
+  "title": "AXIOM Agreement Acceptance Evidence v0",
+  "description": "Inert evidence binding one agreement party to one immutable consent-grant statement and its evidence. It does not issue consent or make an agreement enforceable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "acceptance_id",
+    "agreement_id",
+    "body_digest",
+    "principal_id",
+    "consent_id",
+    "consent_grant_statement_digest",
+    "consent_grant_evidence_ref",
+    "consent_grant_evidence_digest",
+    "observed_at",
+    "evidence_refs",
+    "authority_effect",
+    "enforcement_effect",
+    "consent_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-agreement-acceptance-evidence.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-acceptance-evidence"
+    },
+    "acceptance_id": {
+      "type": "string",
+      "pattern": "^acceptance:[a-f0-9]{64}$"
+    },
+    "agreement_id": {
+      "type": "string",
+      "pattern": "^agreement:[a-f0-9]{64}$"
+    },
+    "body_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "consent_id": {
+      "$ref": "#/$defs/id"
+    },
+    "consent_grant_statement_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "consent_grant_evidence_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "consent_grant_evidence_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "observed_at": {
+      "$ref": "#/$defs/date"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "enforcement_effect": {
+      "const": "none"
+    },
+    "consent_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d{3}Z$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/agreement-record.mjs",
+  "x-axiom-non-claims": [
+    "consent-issuance",
+    "consent-signature-verification",
+    "consent-revocation",
+    "legal-enforceability",
+    "authority-grant",
+    "execution",
+    "network-effect",
+    "runtime-activation"
+  ]
+}
