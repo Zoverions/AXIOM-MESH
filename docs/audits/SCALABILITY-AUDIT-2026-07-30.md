@@ -789,22 +789,30 @@ open.**
   temporary file in batches of about 64 KiB while it is hashed, then
   renamed into place. The bundle is byte-identical to the previous joined
   serialization, so `axiom-export.v1` and its verifiers are unchanged.
-  Generation stays synchronous, so the records come from one consistent read.
+  Generation stays synchronous within the Grid process; it does not establish
+  a database snapshot across separate connections or processes.
   Export preflight walks the same records to find scope errors, without
   holding them.
 - **Evidence.** A 25 MiB export is generated within 8 MiB of live memory,
-  measured in a child process from inside generation; the previous code
-  measures 58 MiB and fails. A scope error part-way leaves no bundle or
+  measured for event records in a child process from inside generation; the
+  previous code measures 58 MiB and fails. Independent memory-object and
+  accounting-journal probes now reject whole-collection materialization:
+  600 records with about 19 MiB of payload text exceeded 24 MiB of retained
+  memory before their first record on the prior implementation. A scope error
+  part-way leaves no bundle or
   temporary file and the export pending. Tests fail without the temporary-file
   cleanup, the final batch flush, or the preflight walk.
 - **Not yet streaming.** A recipient-encrypted export is still assembled in
   memory, because its envelope seals the bundle whole; its plaintext is never
-  written to disk. The owner's memory graph and accounting are read whole, as
-  before.
+  written to disk. Memory objects/eligible edges and accounting journals now
+  stream with bounded per-journal entries; explicit selector and capsule-ID
+  sets still grow with their requested scope, and capsule export tracks seen
+  identifiers.
 
 Still open: a chunked recipient envelope, generation as a background job
 (S-14), a streaming bundle route (bundles are still read whole to serve, and
-Gateway forwarding caps responses at 1 MiB), and resumable exports.
+Gateway forwarding caps responses at 1 MiB), resumable exports, and a read
+snapshot across concurrent database writers.
 
 ### S-13 — Backup and restore read the complete database into memory
 

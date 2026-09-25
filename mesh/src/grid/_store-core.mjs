@@ -2876,48 +2876,97 @@ export class GridStore {
       `).iterate(principal, since, until)) yield { type: 'vote', data: row };
     }
     if (requestedTypes.has('memory')) {
-      const graph = this.ownedMemoryGraph(principal);
-      const selectedObjects = objectIds.size
-        ? graph.objects.filter(object => objectIds.has(object.object_id))
-        : graph.objects;
-      if (objectIds.size) {
-        const visible = new Set(selectedObjects.map(object => object.object_id));
-        const missing = [...objectIds].filter(id => !visible.has(id));
-        if (missing.length) throw new AxiomError(
+      // Iterate the full owned set without materializing the decrypted graph.
+      // Only explicit selectors need a retained membership set.
+      const missing = new Set(objectIds);
+      for (const row of this.db.prepare(`
+        SELECT * FROM memory_objects
+        WHERE owner = ? AND status = 'active'
+        ORDER BY created_at, object_id
+      `).iterate(principal)) {
+        if (objectIds.size && !objectIds.has(row.object_id)) continue;
+        missing.delete(row.object_id);
+        if (row.created_at >= since && row.created_at <= until) {
+          yield {
+            type: 'memory_object',
+            data: this.decodeProtectedRow('memory_objects', 'object_id', row, ['payload_json'])
+          };
+        }
+      }
+      if (missing.size) throw new AxiomError(
           'export_scope_forbidden',
           'Object export scope includes an unknown or unowned object',
           403,
-          { object_ids: missing }
+          { object_ids: [...missing] }
         );
-      }
-      const selectedIds = new Set(selectedObjects.map(object => object.object_id));
-      for (const object of selectedObjects) {
-        if (object.created_at >= since && object.created_at <= until) {
-          yield { type: 'memory_object', data: object };
-        }
-      }
-      for (const edge of graph.edges) {
+      // The joins preserve the old graph rule: only edges whose endpoints
+      // are active objects owned by this principal can be exported.
+      for (const edge of this.db.prepare(`
+        SELECT e.* FROM memory_edges e
+        JOIN memory_objects source ON source.object_id = e.from_id
+          AND source.owner = ? AND source.status = 'active'
+        JOIN memory_objects target ON target.object_id = e.to_id
+          AND target.owner = ? AND target.status = 'active'
+        WHERE e.owner = ? AND e.status = 'active'
+        ORDER BY e.created_at, e.edge_id
+      `).iterate(principal, principal, principal)) {
         if (
-          (!objectIds.size || (selectedIds.has(edge.from_id) && selectedIds.has(edge.to_id)))
+          (!objectIds.size || (objectIds.has(edge.from_id) && objectIds.has(edge.to_id)))
           && edge.created_at >= since
           && edge.created_at <= until
         ) {
-          yield { type: 'memory_edge', data: edge };
+          yield {
+            type: 'memory_edge',
+            data: this.decodeProtectedRow('memory_edges', 'edge_id', edge, ['metadata_json'])
+          };
         }
       }
     }
     if (requestedTypes.has('accounting')) {
-      const accounting = this.listAccounting(principal);
-      for (const account of accounting.accounts) {
+      for (const account of this.db.prepare(`
+        SELECT * FROM accounting_accounts
+        WHERE owner = ? ORDER BY unit, account_id
+      `).iterate(principal)) {
         if (account.created_at >= since && account.created_at <= until) {
           yield { type: 'account', data: account };
         }
       }
-      for (const journal of accounting.journals) {
-        if (journal.created_at >= since && journal.created_at <= until) {
-          yield { type: 'journal', data: journal };
+      // Join once and retain at most one journal's entries. The supported
+      // journal validator limits entries to 256; the export no longer builds
+      // an array of every decoded journal and every account.
+      let journal;
+      for (const row of this.db.prepare(`
+        SELECT j.*, e.line_no AS entry_line_no, e.account_id AS entry_account_id,
+          e.amount AS entry_amount, e.metadata_json AS entry_metadata_json
+        FROM accounting_journals j
+        LEFT JOIN accounting_entries e ON e.journal_id = j.journal_id
+        WHERE j.owner = ? AND j.created_at >= ? AND j.created_at <= ?
+        ORDER BY j.created_at, j.journal_id, e.line_no
+      `).iterate(principal, since, until)) {
+        if (journal?.journal_id !== row.journal_id) {
+          if (journal) yield { type: 'journal', data: journal };
+          journal = this.decodeProtectedRow('accounting_journals', 'journal_id', {
+            journal_id: row.journal_id,
+            owner: row.owner,
+            unit: row.unit,
+            reference: row.reference,
+            memo_json: row.memo_json,
+            created_at: row.created_at
+          }, ['memo_json']);
+          journal.entries = [];
         }
+        if (row.entry_line_no !== null) journal.entries.push({
+          journal_id: row.journal_id,
+          line_no: row.entry_line_no,
+          account_id: row.entry_account_id,
+          amount: row.entry_amount,
+          metadata_json: this.openJson(
+            'accounting_entries', 'metadata_json',
+            `${row.journal_id}:${row.entry_line_no}`, row.entry_metadata_json
+          )
+        });
       }
+      if (journal) yield { type: 'journal', data: journal };
     }
     if (requestedTypes.has('sync')) {
       for (const row of this.db.prepare(`
