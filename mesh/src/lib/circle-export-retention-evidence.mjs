@@ -34,7 +34,8 @@ export function validateCircleExportRetentionEvidence(document){
     'exporter_principal_id','circle_package_digest','export_record_digest','membership_digest',
     'snapshot_evidence_ref','snapshot_evidence_digest','record_observations_digest',
     'history_retention_only','requires_disclosure_authorization',
-    'requires_external_record_evidence_verification','portable_authority',
+    'requires_external_snapshot_verification','requires_external_record_evidence_verification',
+    'portable_authority',
     'authority_effect','governance_effect','export_effect','network_effect','runtime_activation'
   ]);
   if(
@@ -43,6 +44,7 @@ export function validateCircleExportRetentionEvidence(document){
     ||document.status!=='inert-retention-evidence'
     ||document.history_retention_only!==true
     ||document.requires_disclosure_authorization!==true
+    ||document.requires_external_snapshot_verification!==true
     ||document.requires_external_record_evidence_verification!==true
     ||document.portable_authority!==false
     ||document.authority_effect!=='none'
@@ -77,6 +79,7 @@ export function validateCircleExportRetentionEvidence(document){
     evidence_digest:digestObject(document),
     history_retention_only:true,
     requires_disclosure_authorization:true,
+    requires_external_snapshot_verification:true,
     requires_external_record_evidence_verification:true,
     portable_authority:false,
     authority_effect:'none',
@@ -253,6 +256,8 @@ export function assessCircleExportRetention({
     evidence_digest:digestObject(evidence),
     package_digest:packageResult.package_digest,
     record_observations_digest:circleExportRecordObservationsDigest(observations),
+    requires_external_snapshot_verification:true,
+    snapshot_verification_effect:'none',
     requires_external_record_evidence_verification:true,
     record_evidence_verification_effect:'none',
     requires_disclosure_authorization:true,
