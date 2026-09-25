@@ -103,7 +103,7 @@
     "date": {
       "type": "string",
       "format": "date-time",
-      "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d{3}Z$"
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
     }
   },
   "x-axiom-semantic-validator": "mesh/src/lib/agreement-record.mjs",
