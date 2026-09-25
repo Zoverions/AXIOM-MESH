@@ -109,7 +109,8 @@ export function evaluateNodePlacements(policy, candidates, { evaluatedAt } = {})
       node_id:item.candidate.node_id,
       reasons:Object.freeze([...item.reasons])
     }))),
-    selected_node_id:eligible[0]?.candidate.node_id ?? null,
+    preferred_candidate_node_id:eligible[0]?.candidate.node_id ?? null,
+    placement_effect:'none',
     grants_authority:false,
     execution_effect:'none',
     runtime_activation:false
