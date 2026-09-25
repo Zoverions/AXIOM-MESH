@@ -63,7 +63,7 @@ export function evaluateTaskContinuity(policy,state){
 
   if(reasons.length)return decision('stop-denied',reasons);
   if(policy.mode==='stop-on-loss')return decision('stop-denied',['policy-stop-on-loss']);
-  if(policy.mode==='queue-until-reconnect')return decision('pause-queue',['await-reconnect']);
+  if(policy.mode==='queue-until-reconnect')return decision('queue-eligible',['await-reconnect']);
 
   if(state.execution_location!=='owner-local')reasons.push('remote-execution-denied');
   if(!['owner-local','none'].includes(state.provider_location))reasons.push('remote-provider-denied');
@@ -71,7 +71,7 @@ export function evaluateTaskContinuity(policy,state){
   subset(state.requested_capabilities,policy.allowed_local_capabilities,'capability-not-allowed',reasons);
   subset(state.requested_data_classes,policy.allowed_data_classes,'data-class-not-allowed',reasons);
   if(reasons.length)return decision('stop-denied',reasons);
-  return decision('continue-local-cognition',['effect-ceiling:none']);
+  return decision('local-cognition-eligible',['effect-ceiling:none']);
 }
 
 function decision(action,reasons){
@@ -80,6 +80,7 @@ function decision(action,reasons){
     continuity_action:action,
     reasons:Object.freeze([...reasons]),
     effect_ceiling:'none',
+    continuity_effect:'none',
     authority_effect:'none',
     execution_effect:'none',
     runtime_activation:false
