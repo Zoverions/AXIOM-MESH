@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/mind-continuity-evidence-v0.schema.json",
+  "title": "AXIOM Mind Continuity Evidence v0 inert contract",
+  "description": "Non-authorizing continuity evidence for restore, parallel-instance, and divergent-fork events. No event automatically creates population or governance identity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "event_id",
+    "mind_id",
+    "event_kind",
+    "source_identity_digest",
+    "source_state_digest",
+    "candidate_state_digest",
+    "simultaneous_active_claims",
+    "divergence_declared",
+    "separate_standing_requested",
+    "observed_at",
+    "population_effect",
+    "governance_identity_effect",
+    "authority_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-mind-continuity-evidence.v0"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "event_kind": {
+      "enum": [
+        "restore",
+        "parallel-instance",
+        "divergent-fork"
+      ]
+    },
+    "source_identity_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_state_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "candidate_state_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "simultaneous_active_claims": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 64
+    },
+    "divergence_declared": {
+      "type": "boolean"
+    },
+    "separate_standing_requested": {
+      "type": "boolean"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "population_effect": {
+      "const": "none"
+    },
+    "governance_identity_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/mind-continuity-evidence.mjs",
+  "x-axiom-non-claims": [
+    "personhood-determination",
+    "automatic-continuity-recognition",
+    "automatic-fork-personhood",
+    "population-increase",
+    "governance-identity-creation",
+    "runtime-authority"
+  ]
+}
