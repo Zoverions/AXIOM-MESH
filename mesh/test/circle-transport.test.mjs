@@ -32,6 +32,12 @@ import {
   syncCirclePeer
 } from '../src/lib/circle-transport.mjs';
 import {
+  detectCircleWithholding,
+  verifyCircleNodeEvidence,
+  verifyCircleWithholdingFinding
+} from '../src/lib/circle-withholding.mjs';
+import {
+  circlePeerFindings,
   circlePeerStatus,
   loadCirclePeerRuntime,
   openCirclePeerReplica,
@@ -188,9 +194,9 @@ const signerFor = name => ({ principalId: name, privateKey: keys[name].privateKe
 // Re-signs an answer's node statement after the answer was changed, as an
 // honest node would have signed that answer (or a dishonest one, with
 // another key).
-function resign(answer, name) {
+function resign(answer, name, override = {}) {
   const { statement, ...rest } = answer;
-  const body = { ...statement.body, answer_digest: digestObject(rest) };
+  const body = { ...statement.body, answer_digest: digestObject(rest), ...override };
   const canonical = canonicalJson(body);
   return {
     ...rest,
@@ -341,6 +347,11 @@ test('every answer is a node statement signed for exactly that request and answe
   }));
   await assert.rejects(sync(replicaWith(bob), async () => earlier), /does not match this request and answer/);
 
+  // Signed by the node, but claiming heads other than the ones it sent.
+  await assert.rejects(sync(replicaWith(bob), async (path, message) => resign(await honest(path, message), 'alice', {
+    heads_digest: digestObject(new CircleReplica({ genesis }).heads())
+  })), /does not match this request and answer/);
+
   // Signed under alice's name with another member's key.
   await assert.rejects(sync(replicaWith(bob), async (path, message) => resign(await honest(path, message), 'bob')), /signature is invalid/);
 
@@ -377,6 +388,100 @@ test('each key has a request budget, spent only by authenticated members', async
   // The refused request recorded no nonce: once the bucket refills, the same
   // request is answered.
   assert.deepEqual(await call('bob', { nonce, now: NOW + 1_000 }), [200, 'ok']);
+});
+
+// A node's signed evidence ({ statement, heads }) from one pull by bob.
+async function pullEvidence(node, { as = 'alice', now = NOW } = {}) {
+  const answer = await directSender(node, { as, now })(CIRCLE_PULL_PATH, createCircleSyncRequest({
+    genesisDigest: node.genesisDigest, operation: 'pull', payload: new CircleReplica({ genesis }).heads(),
+    principalId: 'bob', privateKey: keys.bob.privateKey, now
+  }));
+  return { statement: answer.statement, heads: answer.heads };
+}
+
+test('a node whose signed heads contradict its own earlier statement or its own updates is found out', async () => {
+  const { alice, bob } = logs();
+  const member = replicaWith(alice, bob);
+  const honest = replicaWith(alice, bob);
+  // The same node later serving from a rolled-back replica: alice's log cut
+  // to its first three updates.
+  const rolledBack = replicaWith(alice.slice(0, 3), bob);
+
+  const first = await pullEvidence(honest);
+  assert.equal(verifyCircleNodeEvidence(member, first).principal_id, 'alice');
+  assert.deepEqual(detectCircleWithholding({ replica: member, current: first }), [], 'an honest node gives no finding');
+
+  const later = await pullEvidence(rolledBack, { now: NOW + 60_000 });
+  const findings = detectCircleWithholding({ replica: member, previous: first, current: later });
+  assert.deepEqual(findings.map(item => item.kind).sort(), ['heads_regressed', 'own_update_withheld']);
+  const regressed = findings.find(item => item.kind === 'heads_regressed');
+  assert.deepEqual([regressed.author, regressed.earlier_counter, regressed.later_counter], ['alice', alice.length, 3]);
+  const withheld = findings.find(item => item.kind === 'own_update_withheld');
+  assert.deepEqual([withheld.author, withheld.claimed_counter, withheld.withheld_counter], ['alice', 3, 4]);
+
+  // Anyone holding the Circle can check each finding from its own evidence.
+  const checker = replicaWith(alice, bob);
+  for (const item of findings) assert.equal(verifyCircleWithholdingFinding(checker, JSON.parse(JSON.stringify(item))), true);
+  assert.throws(() => verifyCircleWithholdingFinding(checker, { ...regressed, later_counter: 5 }), /does not hold/);
+  assert.throws(() => verifyCircleWithholdingFinding(checker, { ...withheld, withheld_counter: 3 }), /does not hold/);
+  // Heads other than the ones signed are not evidence.
+  assert.throws(() => verifyCircleNodeEvidence(checker, { ...later, heads: first.heads }), /evidence is invalid/);
+  assert.throws(() => verifyCircleNodeEvidence(checker, { ...later, statement: resign({ ...later, schema: 'x' }, 'bob').statement }),
+    /evidence is invalid|cannot be verified/);
+
+  // Order matters: a statement signed earlier that claims less, even if it
+  // arrives later, shows what the node held then, not a regression.
+  const older = await pullEvidence(rolledBack, { now: NOW - 60_000 });
+  const olderFindings = detectCircleWithholding({ replica: member, previous: first, current: older });
+  assert.ok(!olderFindings.some(item => item.kind === 'heads_regressed'));
+  assert.deepEqual(detectCircleWithholding({ replica: member, previous: later, current: first }), []);
+});
+
+test('an update the node dated after its statement is not withholding', async () => {
+  const { alice, bob } = logs();
+  const member = replicaWith(alice, bob);
+  // Alice's first two updates are endorsements at 12:00:30; her invitations
+  // start at 12:01. A statement at 12:00:45 holding only the endorsements
+  // withholds nothing she had authored by then.
+  const early = replicaWith(alice.slice(0, 2));
+  const at = Date.parse('2026-08-20T12:00:45.000Z');
+  const evidence = await pullEvidence(early, { now: at });
+  assert.deepEqual(detectCircleWithholding({ replica: member, current: evidence }), []);
+  // The same heads signed after her invitations were dated do withhold.
+  const late = await pullEvidence(early, { now: Date.parse('2026-08-20T12:01:30.000Z') });
+  const [finding] = detectCircleWithholding({ replica: member, current: late });
+  assert.deepEqual([finding.kind, finding.claimed_counter, finding.withheld_counter], ['own_update_withheld', 2, 3]);
+});
+
+test('the peer records withholding findings once, with evidence that verifies from its state', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-circle-peer-findings-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const { alice, bob } = logs();
+  const files = await peerFiles(root, 'bob', { principal: 'bob', peers: [{ origin: 'http://127.0.0.1:9' }] });
+  const runtime = await loadCirclePeerRuntime(files.configFile, { allowInsecureLoopback: true });
+  await seed(runtime, bob);
+  const honest = replicaWith(alice, bob);
+  const sync = (sender, now) => runCirclePeerSync(runtime, { now: () => now, senderFor: () => sender });
+
+  const first = await sync(directSender(honest, { now: NOW }), NOW);
+  assert.equal(first.peers[0].status, 'synced');
+  assert.equal(first.peers[0].findings, 0);
+
+  // Then the node serves rolled-back heads. Its pull statement withholds;
+  // its offer receipt, after bob sends the missing updates, does not.
+  const rolledBack = () => replicaWith(alice.slice(0, 3), bob);
+  const stale = async (path, message) => directSender(rolledBack(), { now: NOW + 60_000 })(path, message);
+  const second = await sync(stale, NOW + 60_000);
+  assert.equal(second.peers[0].status, 'synced');
+  assert.equal(second.peers[0].findings, 2);
+  // Seen again, the same facts are not recorded twice.
+  const third = await sync(async (path, message) => directSender(rolledBack(), { now: NOW + 90_000 })(path, message), NOW + 90_000);
+  assert.equal(third.peers[0].findings, 0);
+
+  const status = await circlePeerStatus(runtime);
+  assert.deepEqual(status.findings.map(item => item.kind).sort(), ['heads_regressed', 'own_update_withheld']);
+  const { replica, findings } = await circlePeerFindings(runtime);
+  for (const item of findings) assert.equal(verifyCircleWithholdingFinding(replica, item.finding), true);
 });
 
 test('former members and revoked keys are refused', async () => {

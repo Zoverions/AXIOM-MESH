@@ -37,7 +37,8 @@ import { CIRCLE_BUNDLE_MAX_BYTES } from './circle-exchange.mjs';
  * exact answer (bundle or summary, and the node's heads) and the time. The
  * updates themselves are verified on receipt (circle-exchange.mjs), so a
  * node cannot forge them; the statement makes what a node chose to serve
- * attributable, so withholding leaves signed evidence rather than silence.
+ * attributable, so withholding leaves signed evidence rather than silence
+ * (circle-withholding.mjs turns contradictions in it into findings).
  * A caller checks the bindings before applying an answer and the signature
  * after (the bundle may carry the node's own key endorsement); an answer
  * signed by a key the caller still cannot place is kept as unattributed.
@@ -283,9 +284,16 @@ export async function syncCirclePeer({
   const offered = { accepted: 0, duplicate: 0, pending: 0, equivocation: 0, rejected: 0 };
   const statements = { verified: 0, unattributed: 0 };
   let lastStatement = null;
-  const record = checked => {
+  // Every verified statement with the heads it signed, in order: each is a
+  // separate claim (a pull's heads are what the node served before this
+  // member's offer), so withholding checks look at all of them.
+  const evidence = [];
+  const record = (checked, answerBody) => {
     statements[checked.status] += 1;
-    if (checked.status === 'verified') lastStatement = checked.statement;
+    if (checked.status === 'verified') {
+      lastStatement = checked.statement;
+      evidence.push(Object.freeze({ statement: checked.statement, heads: answerBody.heads }));
+    }
   };
   let rounds = 0;
   let nodeHeads = null;
@@ -301,7 +309,7 @@ export async function syncCirclePeer({
     // bundle may introduce the node's own key.
     checkStatementBindings(response, request.request.body);
     const summary = replica.receiveBundle(response.bundle);
-    record(checkStatementSignature(replica, response));
+    record(checkStatementSignature(replica, response), response);
     add(pulled, summary);
     nodeHeads = response.heads;
     if (summary.complete) break;
@@ -323,7 +331,7 @@ export async function syncCirclePeer({
     const receipt = await send(CIRCLE_OFFER_PATH, request);
     assertAnswer(receipt, CIRCLE_SYNC_RECEIPT_SCHEMA, replica.genesisDigest, ['summary', 'heads']);
     checkStatementBindings(receipt, request.request.body);
-    record(checkStatementSignature(replica, receipt));
+    record(checkStatementSignature(replica, receipt), receipt);
     add(offered, receipt.summary);
     nodeHeads = receipt.heads;
     if (bundle.complete) break;
@@ -334,7 +342,8 @@ export async function syncCirclePeer({
     pulled: Object.freeze(pulled),
     offered: Object.freeze(offered),
     statements: Object.freeze(statements),
-    last_statement: lastStatement
+    last_statement: lastStatement,
+    evidence: Object.freeze(evidence)
   });
 }
 
@@ -507,6 +516,9 @@ function withStatement(answerBody, { signer, requestBody, now }) {
     key_id: circleKeyId(signer.privateKey),
     request_digest: digestObject(requestBody),
     answer_digest: digestObject(answerBody),
+    // The heads again on their own, so the statement and the heads alone
+    // (without the bundle) are evidence of what the node claimed to hold.
+    heads_digest: digestObject(answerBody.heads),
     issued_at: new Date(now).toISOString()
   });
   return Object.freeze({ ...answerBody, statement: signed(body, signer.privateKey) });
@@ -520,7 +532,7 @@ function checkStatementBindings(answerBody, requestBody) {
     !isPlainObject(statement)
     || !sameKeys(statement, ['body', 'attestation'])
     || !isPlainObject(body)
-    || !sameKeys(body, ['schema', 'genesis_digest', 'operation', 'principal_id', 'key_id', 'request_digest', 'answer_digest', 'issued_at'])
+    || !sameKeys(body, ['schema', 'genesis_digest', 'operation', 'principal_id', 'key_id', 'request_digest', 'answer_digest', 'heads_digest', 'issued_at'])
     || body.schema !== CIRCLE_NODE_STATEMENT_SCHEMA
     || !IDENTIFIER.test(body.principal_id ?? '')
     || !DIGEST.test(body.key_id ?? '')
@@ -532,6 +544,7 @@ function checkStatementBindings(answerBody, requestBody) {
     || body.operation !== requestBody.operation
     || body.request_digest !== digestObject(requestBody)
     || body.answer_digest !== digestObject(rest)
+    || body.heads_digest !== digestObject(rest.heads)
   ) throw new ValidationError('Circle node statement does not match this request and answer');
 }
 

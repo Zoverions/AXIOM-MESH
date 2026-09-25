@@ -307,6 +307,21 @@ export class CircleReplica {
   }
 
   /**
+   * The accepted updates of one key log after `counter`, in order, with the
+   * time each record claims. Withholding checks use it to find updates a
+   * node authored before a moment at which it claimed not to hold them.
+   */
+  authoredAfter({ author, keyId, counter }) {
+    const log = this.logs.get(pairKey(author, keyId)) ?? [];
+    return log.slice(counter).map(item => Object.freeze({
+      counter: item.body.counter,
+      digest: item.digest,
+      recorded_at: RECORD_TYPES[item.body.record_type].time(item.body.record),
+      update: item.update
+    }));
+  }
+
+  /**
    * The public key announced for (principal, key id) by an accepted update
    * or the genesis, or null. Announcement only means a signature can be
    * checked; memberKey decides whether the key counts.

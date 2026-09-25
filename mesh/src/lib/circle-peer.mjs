@@ -7,6 +7,7 @@ import { ReplayGuard } from './identity.mjs';
 import { DataProtector } from './protector.mjs';
 import { CircleReplica } from './circle-exchange.mjs';
 import { circleKeyId } from './circle-keys.mjs';
+import { detectCircleWithholding } from './circle-withholding.mjs';
 import {
   circlePeerOrigin,
   createCircleSyncServer,
@@ -31,9 +32,12 @@ const MAX_STATE_BYTES = 64 * 1024 * 1024;
 const MAX_PEERS = 16;
 const REPLAY_CAPACITY = 10_000;
 const pendingSaves = new WeakMap();
-// The latest verified node statement from each peer, kept with the replica
-// as evidence of what that node served (circle-transport.mjs).
-const peerStatements = new WeakMap();
+// The latest verified node evidence (statement and the heads it signed)
+// from each peer, and the withholding findings drawn from it, kept with the
+// replica (circle-transport.mjs, circle-withholding.mjs).
+const peerEvidence = new WeakMap();
+const peerFindings = new WeakMap();
+const MAX_FINDINGS = 256;
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const HOSTNAME = /^[A-Za-z0-9.:-]{1,253}$/;
 
@@ -115,11 +119,17 @@ export async function openCirclePeerReplica(runtime) {
     || !Array.isArray(state.updates)
   ) throw new ValidationError('Circle peer state is invalid');
   // Every stored update is checked again as if it had just arrived.
-  if (state.statements !== undefined) {
-    if (!Array.isArray(state.statements) || state.statements.length > MAX_PEERS * 4) {
-      throw new ValidationError('Circle peer state statements are invalid');
+  if (state.evidence !== undefined) {
+    if (!Array.isArray(state.evidence) || state.evidence.length > MAX_PEERS * 4) {
+      throw new ValidationError('Circle peer state evidence is invalid');
     }
-    peerStatements.set(replica, new Map(state.statements.map(item => [item.origin, item.statement])));
+    peerEvidence.set(replica, new Map(state.evidence.map(item => [item.origin, { statement: item.statement, heads: item.heads }])));
+  }
+  if (state.findings !== undefined) {
+    if (!Array.isArray(state.findings) || state.findings.length > MAX_FINDINGS) {
+      throw new ValidationError('Circle peer state findings are invalid');
+    }
+    peerFindings.set(replica, [...state.findings]);
   }
   for (const update of state.updates) {
     const result = replica.receive(update);
@@ -137,9 +147,10 @@ export function saveCirclePeerReplica(runtime, replica) {
       schema: CIRCLE_PEER_STATE_SCHEMA,
       genesis_digest: runtime.genesis_digest,
       updates: replica.exportUpdates(),
-      statements: [...(peerStatements.get(replica) ?? new Map())]
+      evidence: [...(peerEvidence.get(replica) ?? new Map())]
         .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-        .map(([origin, statement]) => ({ origin, statement }))
+        .map(([origin, evidence]) => ({ origin, statement: evidence.statement, heads: evidence.heads })),
+      findings: peerFindings.get(replica) ?? []
     }, stateContext(runtime.genesis_digest));
     await atomicReplace(runtime.config.state_file, `${sealed}\n`, 0o600);
   });
@@ -165,15 +176,22 @@ export async function syncCirclePeers(runtime, replica, {
         send: senderFor(peer),
         now
       });
-      if (result.last_statement) {
-        const kept = peerStatements.get(replica) ?? new Map();
+      const found = [];
+      const kept = peerEvidence.get(replica) ?? new Map();
+      // What this node's signatures contradict, statement by statement:
+      // against its previous evidence and the updates held from its own logs.
+      for (const current of result.evidence) {
+        found.push(...recordFindings(replica, peer.origin, detectCircleWithholding({
+          replica, previous: kept.get(peer.origin) ?? null, current
+        })));
         kept.delete(peer.origin);
-        kept.set(peer.origin, result.last_statement);
-        // Bounded: origins dropped from the configuration age out.
-        while (kept.size > MAX_PEERS * 4) kept.delete(kept.keys().next().value);
-        peerStatements.set(replica, kept);
+        kept.set(peer.origin, current);
       }
-      results.push({ origin: peer.origin, status: 'synced', ...result });
+      // Bounded: origins dropped from the configuration age out.
+      while (kept.size > MAX_PEERS * 4) kept.delete(kept.keys().next().value);
+      peerEvidence.set(replica, kept);
+      const { evidence: _evidence, ...summary } = result;
+      results.push({ origin: peer.origin, status: 'synced', ...summary, findings: found.length });
     } catch (error) {
       if (!(error instanceof ValidationError) && !isNetworkError(error)) throw error;
       results.push({ origin: peer.origin, status: 'failed', code: error.code ?? 'error', message: error.message });
@@ -261,14 +279,53 @@ export async function circlePeerStatus(runtime) {
   return {
     genesis_digest: runtime.genesis_digest,
     status: summarize(replica),
-    statements: [...(peerStatements.get(replica) ?? new Map())].map(([origin, statement]) => ({
+    statements: [...(peerEvidence.get(replica) ?? new Map())].map(([origin, { statement }]) => ({
       origin,
       principal_id: statement.body.principal_id,
       key_id: statement.body.key_id,
       operation: statement.body.operation,
       issued_at: statement.body.issued_at
+    })),
+    findings: (peerFindings.get(replica) ?? []).map(item => ({
+      origin: item.origin,
+      kind: item.finding.kind,
+      author: item.finding.author,
+      key_id: item.finding.key_id,
+      ...(item.finding.kind === 'heads_regressed'
+        ? { earlier_counter: item.finding.earlier_counter, later_counter: item.finding.later_counter }
+        : { claimed_counter: item.finding.claimed_counter, withheld_counter: item.finding.withheld_counter })
     }))
   };
+}
+
+/** Every recorded finding, with its evidence, for independent verification. */
+export async function circlePeerFindings(runtime) {
+  const replica = await openCirclePeerReplica(runtime);
+  return { replica, findings: [...(peerFindings.get(replica) ?? [])] };
+}
+
+// Appends new findings, once each, keeping the most recent MAX_FINDINGS.
+function recordFindings(replica, origin, findings) {
+  const list = peerFindings.get(replica) ?? [];
+  const seen = new Set(list.map(item => findingKey(item.finding)));
+  const added = [];
+  for (const finding of findings) {
+    const key = findingKey(finding);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    added.push({ origin, finding });
+  }
+  const next = [...list, ...added].slice(-MAX_FINDINGS);
+  peerFindings.set(replica, next);
+  return added;
+}
+
+// One finding per fact: the first evidence of it is enough, so the same
+// withholding seen on every later sync is not recorded again.
+function findingKey(finding) {
+  return finding.kind === 'heads_regressed'
+    ? ['heads_regressed', finding.author, finding.key_id, finding.earlier_counter, finding.later_counter].join('\u0000')
+    : ['own_update_withheld', finding.author, finding.key_id, finding.withheld_counter].join('\u0000');
 }
 
 function summarize(replica) {

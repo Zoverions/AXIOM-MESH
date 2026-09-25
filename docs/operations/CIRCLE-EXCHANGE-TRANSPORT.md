@@ -35,6 +35,8 @@ signed with the serving member's Circle key. It binds:
 - the Circle's genesis digest and the operation;
 - the digest of the exact request it answers;
 - the digest of the exact answer (bundle or summary, and the node's heads);
+- the digest of the node's heads on their own, so the statement and the heads
+  are evidence without the bundle;
 - the time it was issued.
 
 The caller checks the bindings before using an answer, so an answer changed
@@ -45,6 +47,25 @@ place leaves the answer unattributed. Its updates still apply, since each
 verifies on its own. A statement signed under the node's name with another
 key is refused. The node's latest verified statement is kept with the
 caller's encrypted state and shown by `status`.
+
+### Withholding findings
+
+After each sync, the caller checks every verified statement from that node,
+in order, for claims the node's own signatures contradict
+(`mesh/src/lib/circle-withholding.mjs`):
+
+- `heads_regressed`: a statement claims less of a key log than an earlier
+  statement from the same node did. The two statements are the evidence. A
+  statement signed earlier that arrives later is not a regression.
+- `own_update_withheld`: a statement omits an update from the node's own log
+  that the node dated no later than the statement. The statement and that
+  update, both signed by the node, are the evidence.
+
+Each fact is recorded once, up to 256 findings. They are kept in the
+encrypted state and listed by `status`. `verifyCircleWithholdingFinding`
+re-derives a finding from its own evidence, for anyone holding the Circle.
+A finding is evidence for people to act on. It changes no standing, excludes
+nothing from the view, and triggers nothing.
 
 A sync with one peer pulls until the node's bundle is complete, then offers
 until the node has everything. A round that makes no progress stops the sync
@@ -89,13 +110,12 @@ request exceeds about 1.1 MB, `503 busy` when replay protection is full.
 
 ## What the transport does not protect
 
-- **Withholding is attributable, not prevented.** A node can still leave
-  updates out of what it serves. Its signed statements record what it
-  claimed to hold (its heads) and when, so a member holding a newer update
-  from that node's own log, or seeing another node serve more, has signed
-  evidence. Nothing compares statements automatically yet. Syncing with
-  several members' nodes narrows withholding, and the per-key hash chains
-  make gaps inside a log visible.
+- **Withholding is detected only where the node contradicts itself.** A node
+  can still leave out other members' updates it has received, since nothing
+  signed says when it received them. Findings cover a node rolling back its
+  own claims, and a node hiding its own dated updates. Syncing with several
+  members' nodes narrows the rest, and the per-key hash chains make gaps
+  inside a log visible.
 - **Read access is membership, not role.** Any member in standing, or anyone
   endorsed to join, can read the whole Circle. There is no per-record
   disclosure yet.
@@ -204,7 +224,18 @@ path must be absolute:
   - an unplaceable node key leaves the answer unattributed while its updates
     apply.
 
-  The latest verified statement is kept in the encrypted state.
+  The latest verified statement is kept in the encrypted state. A statement
+  whose heads digest differs from the heads it came with is refused.
+- Withholding findings:
+  - an honest node gives none;
+  - a node serving rolled-back heads gives both kinds, and each re-verifies
+    from its evidence alone;
+  - a tampered finding, or heads other than the signed ones, is refused;
+  - an older statement claiming less is not a regression;
+  - an update the node dated after its statement is not withholding;
+  - the peer records each fact once, from every statement in a sync (a
+    pull's withholding is not hidden by the offer receipt after it), and the
+    findings verify from its saved state.
 - Each key's budget is its own:
   - strangers never touch a member's budget;
   - an over-budget request is answered once the bucket refills, with the same
@@ -230,7 +261,14 @@ Each of these fails when its protection is removed:
 - checking the bindings before applying;
 - the request budget;
 - spending the budget before recording the nonce;
-- keeping the latest statement.
+- keeping the latest statement;
+- the regression check;
+- the own-update check;
+- the record-time boundary;
+- binding evidence to its signed heads, at receipt and on verification;
+- the time order of statements;
+- recording each finding once;
+- checking every statement in a sync, not only the last.
 
 ## Before activation
 
@@ -239,8 +277,8 @@ running it anywhere beyond a test is an activation decision. Open questions
 before that decision:
 
 - per-record disclosure;
-- comparing statements across nodes to flag withholding automatically;
+- what a Circle does with a withholding finding (it is evidence only);
 - a registry entry under the capability lifecycle.
 
-Per-member rate limits and signed answers, which were earlier on this list,
-are now built (above).
+Per-member rate limits, signed answers and withholding findings, which were
+earlier on this list, are now built (above).
