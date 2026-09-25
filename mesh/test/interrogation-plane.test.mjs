@@ -126,6 +126,31 @@ test('Interrogation Plane separates conceptual authority sequence from network t
   );
 });
 
+test('Interrogation Plane exposes exact service segment membership for topology diagnosis', () => {
+  const input = fixture();
+  input.serviceNetworkPolicy.network_segments.reverse();
+  input.serviceNetworkPolicy.network_segments[0].members.reverse();
+  const originalSegments = structuredClone(input.serviceNetworkPolicy.network_segments);
+  const report = buildInterrogationPlane(input);
+
+  assert.deepEqual(report.network.segments, [
+    { id: 'gateway-hypervisor', members: ['gateway', 'hypervisor'] },
+    { id: 'hypervisor-sandbox', members: ['hypervisor', 'sandbox'] }
+  ]);
+  assert.equal(report.posture.execution_authority, 'none');
+  assert.deepEqual(input.serviceNetworkPolicy.network_segments, originalSegments);
+});
+
+test('Interrogation Plane refuses malformed segment membership instead of emitting a partial topology', () => {
+  const input = fixture();
+  input.serviceNetworkPolicy.network_segments[0].members = 'gateway';
+
+  assert.throws(
+    () => buildInterrogationPlane(input),
+    error => error instanceof ValidationError && error.message.includes('segment members')
+  );
+});
+
 test('Interrogation Plane fails closed when implemented capability has no exact binding', () => {
   const input = fixture();
   input.evidenceBindings.bindings = [];

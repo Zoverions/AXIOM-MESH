@@ -82,6 +82,12 @@ Each `network_flow` edge contains its source, destination, route count, and exac
 method/path pairs. These edges are marked `network_edge: true` and
 `conceptual: false`.
 
+The `network.segments` projection lists each declared policy segment and its
+member services. This lets an operator identify the policy segment for an
+allowed flow without inferring it from the source digest. Segment membership
+describes the verified repository policy; it does not prove a live deployment's
+network isolation or create another allowed flow.
+
 The current service policy is still required to be default-deny. The
 Interrogation Plane must never invent a network edge to make the diagram resemble
 the conceptual authority sequence.

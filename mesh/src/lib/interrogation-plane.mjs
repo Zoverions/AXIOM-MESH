@@ -43,6 +43,17 @@ export function buildInterrogationPlane({
   const capabilities = requireArray(capabilityRegistry.capabilities, 'capabilityRegistry.capabilities');
   const bindings = requireArray(evidenceBindings.bindings, 'evidenceBindings.bindings');
   const flows = requireArray(serviceNetworkPolicy.flows, 'serviceNetworkPolicy.flows');
+  const segments = requireArray(serviceNetworkPolicy.network_segments, 'service network segments')
+    .map(segment => {
+      requireRecord(segment, 'service network segment');
+      return {
+        id: requireString(segment.id, 'service network segment id'),
+        members: requireArray(segment.members, 'service network segment members')
+          .map(member => requireString(member, 'service network segment member'))
+          .sort()
+      };
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
   const verificationState = normalizeVerification(verification);
 
   const bindingByCapability = new Map();
@@ -233,7 +244,8 @@ export function buildInterrogationPlane({
     },
     network: {
       default_action: serviceNetworkPolicy.default_action,
-      public_ingress: serviceNetworkPolicy.public_ingress
+      public_ingress: serviceNetworkPolicy.public_ingress,
+      segments
     },
     attention,
     nodes,
