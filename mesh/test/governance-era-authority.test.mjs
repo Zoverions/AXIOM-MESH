@@ -158,6 +158,27 @@ test('satisfied transition gates require exact evidence digests', () => {
   );
 });
 
+test('terminal polycentric era is representable without an impossible successor', () => {
+  const document = fixture();
+  document.current_era = 'polycentric-society';
+  document.transition = null;
+
+  const result = validateGovernanceEraAuthorityPackage(document);
+
+  assert.equal(result.current_era, 'polycentric-society');
+  assert.equal(result.transition, null);
+});
+
+test('non-terminal eras cannot omit their required successor transition', () => {
+  const document = fixture();
+  document.transition = null;
+
+  assert.throws(
+    () => validateGovernanceEraAuthorityPackage(document),
+    /Only the terminal governance era may omit a transition/
+  );
+});
+
 test('era-bound authority expires fail-closed after its maximum era', () => {
   const record = authority();
 
