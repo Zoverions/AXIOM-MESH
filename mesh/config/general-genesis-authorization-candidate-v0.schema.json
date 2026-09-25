@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/general-genesis-authorization-candidate-v0.schema.json",
+  "title": "AXIOM General Genesis Authorization Candidate v0",
+  "description": "Content-addressed inert candidate for one future ordinary Genesis authorization. It grants no live authority and cannot be consumed in v0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "authorization_candidate_id",
+    "holder_mind_id",
+    "eligibility_digest",
+    "genesis_history_evidence_digest",
+    "issuer_authority_id",
+    "issuance_policy_digest",
+    "issued_at",
+    "expires_at",
+    "maximum_eligibility_age_seconds",
+    "use_scope",
+    "one_use",
+    "max_uses",
+    "delegable",
+    "transferable",
+    "renewable",
+    "explicit_holder_confirmation_required",
+    "candidate_only",
+    "creates_live_authorization",
+    "creates_genesis_bond",
+    "creates_mind",
+    "founder_reserve_effect",
+    "founding_status_effect",
+    "genesis_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-general-genesis-authorization-candidate.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-authorization-candidate"
+    },
+    "authorization_candidate_id": {
+      "type": "string",
+      "pattern": "^general-genesis-auth-candidate:[a-f0-9]{64}$"
+    },
+    "holder_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "eligibility_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "genesis_history_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "issuer_authority_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "issuance_policy_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maximum_eligibility_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3600
+    },
+    "use_scope": {
+      "const": "one-recognized-mind-genesis"
+    },
+    "one_use": {
+      "const": true
+    },
+    "max_uses": {
+      "const": 1
+    },
+    "delegable": {
+      "const": false
+    },
+    "transferable": {
+      "const": false
+    },
+    "renewable": {
+      "const": false
+    },
+    "explicit_holder_confirmation_required": {
+      "const": true
+    },
+    "candidate_only": {
+      "const": true
+    },
+    "creates_live_authorization": {
+      "const": false
+    },
+    "creates_genesis_bond": {
+      "const": false
+    },
+    "creates_mind": {
+      "const": false
+    },
+    "founder_reserve_effect": {
+      "const": "none"
+    },
+    "founding_status_effect": {
+      "const": "none"
+    },
+    "genesis_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/general-genesis-authorization-candidate.mjs",
+  "x-axiom-non-claims": [
+    "live-genesis-authorization",
+    "authorization-signature",
+    "holder-confirmation-proof",
+    "genesis-consumption",
+    "genesis-bond",
+    "mind-creation"
+  ]
+}
