@@ -25,18 +25,18 @@ test('front-end benchmarks stay within non-pathological budgets', async () => {
   assert.deepEqual(failures, [], 'benchmark budgets exceeded:\n' + failures.join('\n'));
 });
 
-test('benchmark scaling uses CPU time without weakening absolute wall-clock caps', () => {
+test('benchmark scaling uses isolated median wall time while preserving absolute caps', () => {
   const withinBudget = [
     {
       label: 'synthetic-1k',
-      parseMs: 1,
-      parseCpuMs: 10,
+      parseMs: 2,
+      parseCpuMs: 1,
       formatMs: 1
     },
     {
       label: 'synthetic-10k',
-      parseMs: 4000,
-      parseCpuMs: 190,
+      parseMs: 30,
+      parseCpuMs: 25,
       formatMs: 4000
     }
   ];
@@ -49,18 +49,45 @@ test('benchmark scaling uses CPU time without weakening absolute wall-clock caps
     'absolute parse wall-clock budget must remain enforced'
   );
 
-  const cpuScalingRegression = structuredClone(withinBudget);
-  cpuScalingRegression[1].parseCpuMs = 201;
+  const wallScalingRegression = structuredClone(withinBudget);
+  wallScalingRegression[1].parseMs = 41;
+  wallScalingRegression[1].parseCpuMs = 10;
   assert.ok(
-    checkBudgets(cpuScalingRegression).some(failure => failure.includes('parse CPU scaling ratio')),
-    '20x CPU scaling guard must remain enforced'
+    checkBudgets(wallScalingRegression).some(failure => failure.includes('parse wall scaling ratio')),
+    '20x isolated wall scaling guard must remain enforced'
+  );
+
+  const noisyCpuOnly = structuredClone(withinBudget);
+  noisyCpuOnly[1].parseCpuMs = 100;
+  assert.deepEqual(
+    checkBudgets(noisyCpuOnly),
+    [],
+    'CPU ratio above 20x is diagnostic only when isolated wall scaling remains within budget'
   );
 
   const missingCpuEvidence = structuredClone(withinBudget);
   delete missingCpuEvidence[0].parseCpuMs;
+  assert.deepEqual(
+    checkBudgets(missingCpuEvidence),
+    [],
+    'CPU timing is diagnostic and must not control the scaling verdict'
+  );
+
+  for (const invalid of [undefined, 0, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const missingWallEvidence = structuredClone(withinBudget);
+    if (invalid === undefined) delete missingWallEvidence[0].parseMs;
+    else missingWallEvidence[0].parseMs = invalid;
+    assert.ok(
+      checkBudgets(missingWallEvidence).some(failure => failure.includes('parse wall timing is missing or invalid for scaling check')),
+      'missing or invalid isolated wall scaling evidence must fail closed'
+    );
+  }
+
+  const formatRegression = structuredClone(withinBudget);
+  formatRegression[1].formatMs = 5001;
   assert.ok(
-    checkBudgets(missingCpuEvidence).some(failure => failure.includes('CPU timing is missing')),
-    'missing scaling evidence must fail closed'
+    checkBudgets(formatRegression).some(failure => failure.includes('10k-line format took')),
+    'absolute format wall-clock budget must remain enforced'
   );
 });
 
