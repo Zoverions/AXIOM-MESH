@@ -151,8 +151,11 @@ export const BUDGETS = {
 
 // Standard-budget verification requires exactly one synthetic-1k and one
 // synthetic-10k result. Missing or duplicate required rows cannot prove a pass.
-// Other corpus labels remain informational. Supplied CPU samples must be finite
-// and positive; wall samples must be finite and nonnegative.
+// Other corpus labels remain informational. The isolated benchmark process uses
+// median wall parse time for the 1k -> 10k scaling verdict. Process CPU remains
+// diagnostic because repeated protected runs showed platform-specific accounting
+// variance on the short 1k workload even when isolated median wall scaling was
+// stable. Required wall scaling evidence must be finite and strictly positive.
 export function checkBudgets(results) {
   const failures = [];
   const byLabel = new Map(results.map((r) => [r.label, r]));
@@ -182,13 +185,13 @@ export function checkBudgets(results) {
     }
   }
   if (small && large) {
-    if (!Number.isFinite(small.parseCpuMs) || small.parseCpuMs <= 0 ||
-        !Number.isFinite(large.parseCpuMs) || large.parseCpuMs <= 0) {
-      failures.push('parse CPU timing is missing or invalid for scaling check');
+    if (!Number.isFinite(small.parseMs) || small.parseMs <= 0 ||
+        !Number.isFinite(large.parseMs) || large.parseMs <= 0) {
+      failures.push('parse wall timing is missing or invalid for scaling check');
     } else {
-      const ratio = large.parseCpuMs / small.parseCpuMs;
+      const ratio = large.parseMs / small.parseMs;
       if (ratio > BUDGETS.maxScalingRatio) {
-        failures.push(`parse CPU scaling ratio 1k->10k is ${ratio.toFixed(1)}x (budget ${BUDGETS.maxScalingRatio}x)`);
+        failures.push(`parse wall scaling ratio 1k->10k is ${ratio.toFixed(1)}x (budget ${BUDGETS.maxScalingRatio}x)`);
       }
     }
   }
