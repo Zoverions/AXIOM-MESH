@@ -1075,7 +1075,16 @@ Expected: PASS and service-network route count 45.
 - [ ] **Step 8: Commit Task 6**
 
 ```bash
-git add   mesh/src/grid/machine-effect-release-route.mjs   mesh/src/lib/machine-effect-release.mjs   mesh/src/grid/server.mjs   mesh/src/grid/_store-core.mjs   mesh/config/service-network-policy.json   mesh/src/check-service-network-policy.mjs   mesh/src/hypervisor/server.mjs   mesh/src/sandbox/server.mjs   mesh/test/machine-effect-release.test.mjs   mesh/test/machine-effect-release-route.test.mjs
+git add mesh/src/grid/machine-effect-release-route.mjs mesh/src/lib/machine-effect-release.mjs \
+  mesh/src/grid/server.mjs mesh/src/grid/_store-core.mjs \
+  mesh/config/service-network-policy.json mesh/src/check-service-network-policy.mjs \
+  mesh/src/hypervisor/server.mjs mesh/src/sandbox/server.mjs \
+  mesh/test/machine-effect-release.test.mjs mesh/test/machine-effect-release-route.test.mjs \
+  README.md mesh/PRODUCTION.md docs/PRODUCTION-GRADE.md \
+  docs/rebuild/PRODUCT-DEFINITION.md docs/PROJECT-STATUS-2026.md \
+  docs/MASTER-TODO.md docs/ROADMAP.md docs/PRODUCTION-READINESS-TRACKER.md \
+  docs/releases/0.12.0-dev.3.md docs/rebuild/SOURCE-TRACEABILITY.md \
+  docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md
 git commit -m "feat(auth): order machine effect release against currentness"
 ```
 
@@ -1238,7 +1247,7 @@ Do **not** mark the capability registry as newly implemented unless a separate p
 
 - [ ] **Step 4: Update network-policy documentation from measured validator output**
 
-On this plan's baseline, the count changes 42 -> 45. Run the validator and use its actual count rather than hand-editing unsupported numbers.
+By Stage D, the count changes 42 -> 44 in Task 3 and 44 -> 45 in Task 6. Run the validator and use its actual count rather than hand-editing unsupported numbers.
 
 ```bash
 node mesh/src/check-service-network-policy.mjs
@@ -1318,7 +1327,7 @@ git commit -m "docs(auth): reconcile machine currentness runtime boundary"
 ### Spec coverage
 
 - Static root authority ceiling: Tasks 1, 4, 5.
-- Grid-only mutable lifecycle authority: Tasks 2, 3.
+- Grid-only mutable lifecycle authority: Tasks 2, 3; replay/release tables are event-derived materialized state.
 - True attenuation proof: Task 1.
 - Human-authorized mutation path: Task 4.
 - Durable replay/idempotency and competing successors: Task 2.
@@ -1328,13 +1337,13 @@ git commit -m "docs(auth): reconcile machine currentness runtime boundary"
 - Deterministic revoke/narrow race: Task 7.
 - Crash/uncertainty semantics: Tasks 2, 6, 7.
 - #1840 future disclosure separation: Global constraints and Task 8 documentation.
-- Documentation/promotion boundaries: Task 8.
+- Documentation/promotion boundaries: Tasks 3, 6, and 8 so intermediate stage PRs remain canonical-doc green.
 
 No spec requirement is intentionally left without an implementation or verification task.
 
 ### Placeholder scan
 
-The plan contains no TBD/FIXME/placeholder implementation instructions. Every created interface is named above before later tasks consume it.
+No placeholder implementation instructions remain. Every created interface is named above before later tasks consume it.
 
 ### Type/interface consistency
 
