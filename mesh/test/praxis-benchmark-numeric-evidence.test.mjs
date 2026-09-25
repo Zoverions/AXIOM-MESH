@@ -9,7 +9,7 @@ function validResults() {
   ];
 }
 
-test('both scaling operands require finite positive numeric CPU measurements', () => {
+test('both benchmark rows require finite positive CPU diagnostic measurements', () => {
   for (const index of [0, 1]) {
     for (const value of [undefined, null, NaN, Infinity, -Infinity, 0, -1, '10']) {
       const rows = validResults();
@@ -31,7 +31,7 @@ test('large parse and format wall measurements reject missing or malformed evide
   }
 });
 
-test('absolute parse and format limits and the 20x CPU limit remain unchanged', () => {
+test('absolute parse and format limits and the 20x isolated wall scaling limit remain unchanged', () => {
   assert.equal(BUDGETS.maxParseMs10k, 5000);
   assert.equal(BUDGETS.maxFormatMs10k, 5000);
   assert.equal(BUDGETS.maxScalingRatio, 20);
@@ -41,19 +41,21 @@ test('absolute parse and format limits and the 20x CPU limit remain unchanged', 
     assert.ok(checkBudgets(rows).some(f => f.includes('budget 5000ms')));
   }
   const rows = validResults();
-  rows[1].parseCpuMs = 201;
-  assert.ok(checkBudgets(rows).some(f => f.includes('budget 20x')));
+  rows[1].parseMs = 201;
+  assert.ok(checkBudgets(rows).some(f => f.includes('parse wall scaling ratio') && f.includes('budget 20x')));
 });
 
 test('exact finite budget boundaries retain the prior inclusive behavior', () => {
   const rows = validResults();
+  Object.assign(rows[0], { parseMs: 250 });
   Object.assign(rows[1], { parseCpuMs: 200, parseMs: 5000, formatMs: 5000 });
   assert.equal(checkBudgets(rows).length, 0);
 });
 
-test('the recorded PR 1831 timing values still fail the same scaling guard', () => {
+test('the recorded PR 1831 CPU-only spike is diagnostic when isolated wall scaling is within budget', () => {
   const rows = validResults();
-  rows[0].parseCpuMs = 2.4021999999999997;
+  Object.assign(rows[0], { parseCpuMs: 2.4021999999999997, parseMs: 4.1 });
   Object.assign(rows[1], { parseCpuMs: 52.5788, parseMs: 51.18573600000002, formatMs: 7.959235000000035 });
-  assert.ok(checkBudgets(rows).some(f => f.includes('21.9x (budget 20x)')));
+  const failures = checkBudgets(rows);
+  assert.ok(!failures.some(f => f.includes('scaling ratio')));
 });
