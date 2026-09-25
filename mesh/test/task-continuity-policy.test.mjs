@@ -30,8 +30,9 @@ test('bounded local cognition may continue during provider loss without effect a
   const p=policy();
   assert.equal(validateTaskContinuityPolicy(p).policy_digest,taskContinuityPolicyDigest(p));
   const result=evaluateTaskContinuity(p,state());
-  assert.equal(result.continuity_action,'continue-local-cognition');
+  assert.equal(result.continuity_action,'local-cognition-eligible');
   assert.equal(result.effect_ceiling,'none');
+  assert.equal(result.continuity_effect,'none');
   assert.equal(result.authority_effect,'none');
 });
 
@@ -61,7 +62,7 @@ test('revocation, budget loss and excessive outage duration stop continuation',(
 
 test('queue mode preserves work without executing it',()=>{
   const result=evaluateTaskContinuity(policy({mode:'queue-until-reconnect'}),state());
-  assert.equal(result.continuity_action,'pause-queue');
+  assert.equal(result.continuity_action,'queue-eligible');
   assert.equal(result.execution_effect,'none');
   assert.deepEqual(result.reasons,['await-reconnect']);
 });
