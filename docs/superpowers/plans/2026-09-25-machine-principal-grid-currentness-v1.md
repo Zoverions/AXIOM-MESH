@@ -127,7 +127,7 @@ for (const widen of [
 }
 ```
 
-Also cover: unchanged `narrow` denied, expiry shortening accepted, expiry extension denied, non-persistent -> persistent denied, persistent -> finite session allowed only when `maximumExpiry` is supplied by policy, ordering-independent set normalization, and unknown fields rejected.
+Also cover: unchanged `narrow` denied, expiry shortening accepted for non-persistent principals, expiry extension denied, any lifetime-class change denied, ordering-independent set normalization, and unknown fields rejected.
 
 - [ ] **Step 2: Run the focused tests and confirm RED**
 
@@ -156,7 +156,7 @@ export function machineAuthoritySnapshotDigest(snapshot) {
 export function assertMachineAuthorityAttenuation(
   predecessorInput,
   successorInput,
-  { now = new Date(), maximumExpiry = null } = {}
+  { now = new Date() } = {}
 ) {
   const predecessor = machineAuthoritySnapshot(predecessorInput);
   const successor = normalizeMachinePrincipalDefinition(successorInput, { now });
@@ -177,7 +177,8 @@ export function assertMachineAuthorityAttenuation(
   assertSubset(successor.constraints.purposes, predecessor.constraints.purposes, 'purposes');
   assertSubset(successor.constraints.destinations, predecessor.constraints.destinations, 'destinations');
   assertBudgetsNotIncreased(predecessor.constraints.budgets, successor.constraints.budgets);
-  assertLifetimeNotExtended(predecessor, successor, { maximumExpiry });
+  assertLifetimeClassUnchanged(predecessor, successor);
+  assertExpiryNotExtended(predecessor, successor);
   if (successor.constraints.delegation.allowed !== false
       || successor.constraints.delegation.max_depth !== 0) {
     throw new ValidationError('Machine authority attenuation cannot enable delegation');
@@ -868,7 +869,7 @@ machine_currentness: {
 
 Add the same four fields to capability claims.
 
-Do not replace the existing `authority_digest` root binding; keep backward evidence explicit by renaming only if all existing receipt/intent tests are updated atomically. Preferred v1 behavior: retain `authority_digest` as root and add `effective_authority_digest`.
+Retain the existing `authority_digest` claim as the configured root authority digest and add `effective_authority_digest`; do not rename or reinterpret `authority_digest` in v1.
 
 - [ ] **Step 4: Bind accepted/terminal evidence**
 
@@ -1095,7 +1096,9 @@ git commit -m "feat(auth): order machine effect release against currentness"
 **Files:**
 - Create: `mesh/test/machine-currentness-effect-race-e2e.test.mjs`
 - Create: `mesh/test/machine-currentness-recovery.test.mjs`
-- Modify: `mesh/src/hypervisor/server.mjs` only to add a test-only injected barrier hook if the existing service-construction seam cannot provide one without production branching
+- Modify: `mesh/src/dev.mjs`
+- Modify: `mesh/src/hypervisor/server.mjs`
+- Modify: `mesh/src/sandbox/server.mjs`
 - Modify: `mesh/test/machine-principal-e2e.test.mjs`
 
 **Interfaces:**
@@ -1104,17 +1107,23 @@ git commit -m "feat(auth): order machine effect release against currentness"
 
 - [ ] **Step 1: Add a test-only barrier seam**
 
-Prefer dependency injection at service construction:
+Add explicit test dependency injection without changing production defaults:
 
 ```js
-createHypervisorService(config, {
+export async function createHypervisorService(config = meshConfig(), {
   beforeMachineEffectRelease = async () => {}
-})
+} = {}) { ... }
+
+export async function createSandboxService(config = meshConfig(), {
+  executeBuiltin = executeSandboxBuiltin
+} = {}) { ... }
+
+export async function startDevelopmentStack(overrides = {}, dependencies = {}) {
+  // pass dependencies.hypervisor and dependencies.sandbox only to constructors
+}
 ```
 
-Default production behavior remains a no-op.
-
-Do not add environment-variable or public-request hooks.
+Production callers provide no second argument, so behavior remains unchanged. Do not add environment-variable, request-controlled, or exported production toggles.
 
 - [ ] **Step 2: Write the deterministic revoke race**
 
@@ -1189,7 +1198,9 @@ Expected: five consecutive green runs.
 - [ ] **Step 6: Commit Task 7**
 
 ```bash
-git add   mesh/test/machine-currentness-effect-race-e2e.test.mjs   mesh/test/machine-currentness-recovery.test.mjs   mesh/test/machine-principal-e2e.test.mjs   mesh/src/hypervisor/server.mjs
+git add mesh/test/machine-currentness-effect-race-e2e.test.mjs \
+  mesh/test/machine-currentness-recovery.test.mjs mesh/test/machine-principal-e2e.test.mjs \
+  mesh/src/dev.mjs mesh/src/hypervisor/server.mjs mesh/src/sandbox/server.mjs
 git commit -m "test(auth): prove machine currentness effect race"
 ```
 
