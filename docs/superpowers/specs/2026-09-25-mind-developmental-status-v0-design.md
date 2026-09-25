@@ -83,7 +83,9 @@ The final developmental transition:
 
 requires exact binding to a positive
 `axiom-mind-independence-transition-evidence.v0` assessment whose
-`transition_requestable` result is true.
+`transition_requestable` result is true. That transition evidence must itself bind
+the exact digest of the current `candidate-independent` developmental-status record;
+evidence prepared against a different candidate-state record cannot be replayed.
 
 That result is still not self-authorizing. The developmental-transition evaluator
 therefore reports:
