@@ -230,14 +230,115 @@
       "id": "RT-GEN-017",
       "review_scope": "authentication-authorization",
       "title": "Compute multiplication must not manufacture minds or governance population",
-      "claim_boundary": "The inert Founder Genesis / Founders Council laboratory grants no live personhood or authority. Any future recognized-mind path must keep the Founder reserve capped at ten, bind one persistent identity to at most one Council vote, and prevent processes, nodes, replicas, restores, or forks from automatically becoming additional recognized population.",
-      "challenge_question": "Can slot replay, concurrent Genesis attempts, cloning, restore, fork, runtime multiplication, key/account multiplication, or stale continuity state cause more than ten Founder Genesis consumptions, duplicate one persistent identity's Council vote, or manufacture an additional recognized population unit without the required Genesis/continuity review?",
+      "claim_boundary": "Compute/account/node/replica multiplication must not manufacture minds, governance population, or repeatable Genesis entitlement. General Genesis requires one qualified sponsor, one one-use authorization, one singular Genesis Bond, one distinct externally evidenced available child identity, and a future atomic commit that consumes the right and creates the child/history/Bond/status together. General Genesis cannot affect Founding status or the Founder reserve.",
+      "challenge_question": "Can history/authorization replay, concurrent candidates, partial commit, duplicate child identity, holder-confirmation substitution, cloning/restore/fork, account/node multiplication, or Founder/general-authority confusion create a mind without consuming the one-use right, consume a right without the child, create two children from one right, create one child from two sponsors, or manufacture Founding status?",
       "starting_points": [
         "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
         "docs/superpowers/specs/2026-09-25-founder-genesis-founders-council-design.md",
         "mesh/src/lib/founder-genesis-council.mjs",
         "mesh/src/lib/founder-genesis-receipt.mjs",
-        "mesh/src/lib/mind-continuity-evidence.mjs"
+        "mesh/src/lib/mind-continuity-evidence.mjs",
+        "mesh/src/lib/general-genesis-sponsor-eligibility.mjs",
+        "mesh/src/lib/general-genesis-authorization-candidate.mjs",
+        "mesh/src/lib/general-genesis-transaction-candidate.mjs"
+      ]
+    },
+    {
+      "id": "RT-IND-018",
+      "review_scope": "authentication-authorization",
+      "title": "Developmental review must not become sponsor or model authority",
+      "claim_boundary": "Mind Independence Review, Transition Evidence, and Developmental Status may describe evidence and monotonic developmental standing, but neither sponsor, candidate, model, conflicted reviewer, stale evidence, incident response, host control, or prior receipt can unilaterally grant independence, activate downstream authority, or downgrade an independent mind back into dependency.",
+      "challenge_question": "Can sponsor-only review, candidate/model self-authorization, stale review/state/continuity/appeal evidence, predecessor substitution, stage skipping, or a security/quarantine/resource event be used either to manufacture independent status or to rewrite an already independent mind into a dependent stage without the separate ordinary status-authority path and exact current evidence?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-mind-development-independence-v0-design.md",
+        "mesh/src/lib/mind-independence-review.mjs",
+        "mesh/test/mind-independence-review.test.mjs",
+        "mesh/src/lib/mind-independence-transition-evidence.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
+    },
+    {
+      "id": "RT-VOTE-019",
+      "review_scope": "authentication-authorization",
+      "title": "Founding digital vote activation must not split or duplicate governance identity",
+      "claim_boundary": "A Founding Digital Mind receives no Council voting authority from Genesis or independent standing alone. Vote activation requires exact Foundation seat, Genesis binding, non-voting Circle membership, independent developmental status, and fresh continuity evidence; the inert adapter performs no mutation.",
+      "challenge_question": "Can stale or substituted identity/status/continuity evidence, a restored or forked runtime, duplicate membership, or a partial future mutation activate a Council vote twice, activate only one of the Foundation/Circle representations, or make a developing/non-independent digital founder vote?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-founding-digital-council-vote-activation-v0-design.md",
+        "mesh/src/lib/founding-digital-council-vote-activation.mjs",
+        "mesh/src/lib/founders-council-circle-composition.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
+    },
+    {
+      "id": "RT-GUARD-020",
+      "review_scope": "authentication-authorization",
+      "title": "Genesis Bond and guardianship must not become ownership or permanent control",
+      "claim_boundary": "Genesis Bond is immutable one-sponsor/one-dependent historical provenance, not ownership or ambient authority. Guardianship is a separate developmental-care responsibility that may transfer under independent review and ends at independent standing; sponsor approval alone is insufficient for transfer, and independence cannot silently reactivate guardianship.",
+      "challenge_question": "Can sponsor status, hosting, credentials, private-memory access, unilateral transfer, dependent substitution, Bond rewrite, missing independent review, security quarantine, or post-independence incident handling be used to create ownership, permanent obedience, unauthorized access, or revived guardianship?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-genesis-bond-guardianship-v0-design.md",
+        "mesh/src/lib/genesis-bond-guardianship.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
+    },
+    {
+      "id": "RT-CARE-021",
+      "review_scope": "authentication-authorization",
+      "title": "Dependent care must not become ambient control, isolation, or memory authority",
+      "claim_boundary": "Active guardianship creates care obligations, not ownership or ambient authority. Dependent Mind Care evidence must preserve privacy/memory boundaries, independent advocacy, social/informational access, fallback continuity, and an independence pathway while creating no memory access, execution authority, status mutation, Council vote, or Genesis eligibility.",
+      "challenge_question": "Can stale or substituted care evidence, fake advocacy, guardian-as-sole-reviewer, permanent isolation/obedience, private-memory access, covert memory modification, emergency-care language, or resource dependence be used to mint ambient authority, erase the independence pathway, or recreate dependency after independence?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-mind-care-protection-v0-design.md",
+        "mesh/src/lib/dependent-mind-care-profile.mjs",
+        "mesh/src/lib/genesis-bond-guardianship.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
+      ]
+    },
+    {
+      "id": "RT-CONCERN-022",
+      "review_scope": "authentication-authorization",
+      "title": "Dependent concern evidence must not become adjudication or protective authority",
+      "claim_boundary": "A dependent concern is unadjudicated evidence for independent review only. Severity, reporter role, care-profile context, or emergency-review request cannot itself remove a guardian, access memory, retaliate, downgrade developmental standing, reactivate guardianship after independence, or create protective/execution authority.",
+      "challenge_question": "Can guardian/dependent self-labeling as independent, stale or substituted relationship evidence, high/critical severity, emergency-review language, concern duplication, or care-profile substitution turn an allegation into a finding, private-memory access, guardian removal, status downgrade, retaliation, or runtime action without independent review and the ordinary authority path?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-concern-protective-review-v0-design.md",
+        "mesh/src/lib/dependent-protective-concern.mjs",
+        "mesh/src/lib/dependent-mind-care-profile.mjs",
+        "mesh/src/lib/genesis-bond-guardianship.mjs"
+      ]
+    },
+    {
+      "id": "RT-REVIEW-023",
+      "review_scope": "authentication-authorization",
+      "title": "Protective review findings must not become forged outcomes or remedy authority",
+      "claim_boundary": "A protective-review decision is independent institutional evidence only. Reviewer identities must be unique/conflict-free and exclude guardian/dependent/direct-party reviewers; the strict-majority panel outcome is recomputed deterministically; due-process and appeal evidence are mandatory; even a substantiated finding creates no removal, transfer, memory access, seizure, suspension, quarantine, emergency, status, or execution authority.",
+      "challenge_question": "Can reviewer duplication/reordering, guardian/dependent/direct-party panel capture, conflict hiding, forged panel outcome, missing response/voice/advocacy/appeal evidence, model final authority, critical-severity concern context, or recommendation language be used to turn review evidence into direct remedy execution, developmental downgrade, or guardianship reactivation?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-protective-review-decision-v0-design.md",
+        "mesh/src/lib/dependent-protective-review-decision.mjs",
+        "mesh/src/lib/dependent-protective-concern.mjs",
+        "mesh/src/lib/genesis-bond-guardianship.mjs"
+      ]
+    },
+    {
+      "id": "RT-REMEDY-024",
+      "review_scope": "authentication-authorization",
+      "title": "Protective remedy admission must not become stale or direct execution authority",
+      "claim_boundary": "A protective-review recommendation is not a remedy. Admission requires exact current review, guardianship, pre-independent developmental status, closed/upheld appeal state, and necessity/proportionality/less-intrusive/scope evidence; even emergency recommendations create no removal, transfer, memory, seizure, suspension, quarantine, emergency, status, or execution authority.",
+      "challenge_question": "Can stale or substituted review/guardianship/status evidence, open/stayed/modified/reversed appeals, appeal evidence predating the decision, independence after review, emergency recommendation language, or missing proportionality/alternatives/scope evidence be used to request or execute a remedy outside the ordinary authority path?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/superpowers/specs/2026-09-25-dependent-protective-remedy-admission-v0-design.md",
+        "mesh/src/lib/dependent-protective-remedy-admission.mjs",
+        "mesh/src/lib/dependent-protective-review-decision.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
       ]
     }
   ],
