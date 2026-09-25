@@ -888,3 +888,35 @@ opportunity and due process.
 Protective findings cannot authorize developmental-status downgrade or guardianship
 reactivation after independence. Any later remedy must separately establish current
 authority, appeal state, proportional scope, and execution evidence.
+
+
+### Dependent Protective Remedy Admission boundary
+
+The inert Dependent Protective Remedy Admission v0 contract separates a review
+recommendation from the later authority needed to perform any consequential remedy.
+Admission requires a substantiated or partially substantiated review outcome, an exact
+recommended remedy track, the exact unchanged active guardianship, the dependent's
+exact current pre-independent developmental-status record, current appeal evidence,
+review currentness, and explicit necessity/proportionality/less-intrusive-alternative/
+scope evidence.
+
+The main risk is **recommendation-to-execution laundering**. A recommendation,
+including `emergency-protection-authority`, is not execution authority. The admission
+record cannot remove/transfer a guardian, inspect memory, seize evidence, suspend
+credentials, quarantine runtime, create emergency powers, or alter developmental
+status. All such effects remain separate future authority paths.
+
+A second risk is **stale adjudication**. A review can become invalid for current action
+after guardianship transfer, independence, appeal, reversal/modification, or simple
+age. Remedy admission therefore binds the exact reviewed guardianship, exact current
+developmental status, and fresh appeal state. Appeal observation cannot predate the
+review decision. Open, stayed, modified, reversed, unknown, or still-open appeal
+windows fail closed.
+
+A third risk is **protective regression**. Once the dependent is independent, this
+dependent-guardianship remedy path closes. Protective evidence cannot reactivate
+guardianship or downgrade developmental standing.
+
+The admission layer remains requestability evidence only and explicitly requires
+external verification of the review decision, appeal state, relationship,
+developmental status, and proportionality evidence before any later authority path.
