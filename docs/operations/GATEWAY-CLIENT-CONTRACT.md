@@ -121,12 +121,40 @@ routes are reads. Its request schema permits exactly:
 An idempotency key is mandatory, 16 to 160 characters, and limited to letters,
 digits, underscore, period, colon, and hyphen. The same principal and key derive
 the same intent identifier. Reusing a key with a different effective request
-returns `idempotency_conflict`. Reusing it with the same request returns the
-same success fields as the first response plus `idempotent_replay: true`.
+returns `idempotency_conflict`. An identical retry that remains eligible under
+the server's authentication, admission, and response checks returns the same
+success fields as the first response plus `idempotent_replay: true`. A recorded
+success does not waive those checks.
 
 The client never retries an effect automatically. An application that retries
 after an ambiguous transport failure must reuse the original key and retain the
 user-visible pending state until the result is known.
+
+**Response-lifetime validation candidate (#1840).** The code/test candidate
+`621fb05b69e493b78048b19796b6788aea0872f7` adds a declared-lifetime recheck in
+`MachineIngressGuard.enforceResponse`. An expired constrained machine principal
+is denied at application-response inspection with `machine_principal_expired`
+(HTTP 401), instead of receiving the application result. Source-slice tests cover
+JSON, explicit-status JSON, buffers, empty buffers, and no-content responses
+through both implicit and explicit authentication hooks. This is candidate
+behavior, not a claim that the full Gateway/service stack has been validated
+or a deployed system upgraded.
+
+A response-expiry denial does not establish that previously admitted work was
+rolled back or never committed. Preserve the original intent identifier and
+idempotency key, and keep the outcome pending/uncertain until it is resolved.
+Any subsequent retry or owner/audit read must pass its own applicable server
+checks under valid credentials. Do not silently create a new intent/key, rerun
+the effect, or infer renewed authority from a historical receipt.
+
+The client retains its existing structured unknown-code behavior for
+`machine_principal_expired`: preserve the code, status, and trace identifier,
+suppress unreviewed message/details, and mark the error non-retryable. This
+candidate does not add a stable client error code or automatic retry policy.
+It checks the declared lifetime only; live revocation refresh, trusted time,
+atomic authorization/disclosure ordering, rollback, and worker termination
+remain separate requirements. Required-runtime and full-repository checks are
+still gates; exploratory testing on Node 22.16.0 is below the supported floor.
 
 Example with an application-owned same-origin request function:
 
