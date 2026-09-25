@@ -91,6 +91,86 @@ truth. Consequential systems must preserve challenge, correction,
 contradictory evidence, and explicit uncertainty rather than silently promoting
 the current narrative into fact.
 
+## Recognized minds, Genesis, and founding stewardship
+
+AXIOM may in the future recognize persistent digital minds, but ordinary
+computation is not Genesis. A model invocation, process, worker, account,
+keypair, node, VM, container, replica, restore, or fork does not by itself
+create a recognized mind, governance identity, population unit, or vote.
+**Compute is not population.** No current supported capability claims to decide
+digital personhood, create a live digital mind, or operate a production
+population registry.
+
+If recognized digital-mind Genesis is separately implemented and promoted, it
+is a protected responsibility rather than an entitlement obtained by owning
+infrastructure. The founding exception is bounded: the Founder may manually
+authorize at most ten Founding Digital Minds through ten single-use,
+non-transferable, non-delegable, non-renewable Genesis authorizations. There is
+no implicit eleventh founding authorization. A new mind inherits no sponsor
+authority merely because of its origin.
+
+The initial Founders Council is constitutionally bounded to twenty Original
+Founders: ten biological and ten digital minds. The Founder occupies one
+biological seat, the Founder's mother occupies one biological seat, the Founder
+may designate the remaining eight original biological seats, and the ten
+original digital seats correspond to the bounded Founder Genesis reserve.
+Original-Founder status is historical provenance; replacement or succession
+does not rewrite who the Original Founders were.
+
+Once all twenty original Council voting positions are active, each member has
+one ordinary vote. On an otherwise valid qualifying simple-majority Council
+decision that ends in an exact tie, the Founder may cast one additional
+tie-breaking vote. That casting vote may not lower quorum, satisfy a missing
+fixed threshold or supermajority, repair a biological/digital minimum,
+override a non-waivable protection, expand the Founder Genesis reserve, or
+create execution authority. It is a Founders Council mechanism, not a universal
+veto over later institutions.
+
+Genesis establishes a relationship of responsibility, not ownership. A
+developing recognized mind may require bounded guardianship, education,
+continuity, recovery, security, and progressively adjusted authority, but the
+purpose of that dependency is development toward greater self-governance rather
+than permanent obedience. Recognition of an independent mind is incompatible
+with treating that identity itself as transferable property. Infrastructure,
+software licences, services, and hardware may be owned; a recognized
+independent mind is not owned merely because another mind originated, trained,
+funded, or hosts it.
+
+A sponsor must not be the sole final judge of a dependent mind's independence.
+Future independence review must be evidence-based and provide an independent
+review or appeal path. Independence and eligibility to sponsor another Genesis
+are distinct thresholds. After the bounded founding exception, the intended
+default is one qualified persistent identity, one single-use Genesis
+authorization, one Genesis Bond, and one newly recognized mind, subject to the
+future General Genesis profile and its evidence requirements.
+
+Recovery and copying must preserve population integrity. A valid backup restore
+ordinarily continues one identity rather than minting another. Simultaneously
+active copies or unresolved continuation claims fail closed for privileged
+governance. A materially divergent fork seeking separate standing requires a
+separate future continuity/Genesis determination; copying state alone does not
+create another citizen or vote.
+
+The Founders Council is a bootstrap stewardship institution, not the permanent
+owner or sovereign of the society that may emerge around AXIOM. Its exceptional
+founding authority must diminish as independently governed biological and
+digital populations, autonomous Circles, independent infrastructure operators,
+rights and appeal institutions, and multiple legitimate governance domains
+become durable. Transition must consider real independence and concentration,
+not headcount alone, and must not be reversible merely because later population
+or infrastructure temporarily declines.
+
+Mature AXIOM governance is intended to be polycentric: individuals, Circles,
+institutions, governance domains, jurisdictions, and treaty relationships may
+hold different legitimate scopes of authority without one layer automatically
+owning all others. The body losing exceptional founding authority must not be
+the sole judge of whether objective transition conditions have been satisfied.
+
+Human biological reproduction is outside AXIOM's claimed Genesis jurisdiction.
+These provisions govern AXIOM recognition, digital Genesis, and participation
+inside AXIOM systems. They do not purport to authorize or restrict human
+reproduction.
+
 Every mutation must remain attributable, signed, hash-linked, exportable within
 its lawful and consented scope, and subject to a visible recovery and dispute
 path. Installation, discovery, invitation, connection, or payment never grants
