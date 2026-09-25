@@ -54,6 +54,10 @@ Reviewers cannot be:
 v0 requires at least three reviewers and at least three valid independent reviewer
 attestations.
 
+Reviewer attestations are canonically ordered by persistent reviewer identity so
+equivalent panels cannot produce different content-addressed decision IDs solely
+through array reordering.
+
 A model may assist reviewers or summarize evidence but:
 
 `model_final_authority: false`
