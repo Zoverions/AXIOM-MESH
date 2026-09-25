@@ -12,6 +12,7 @@ import {
 } from '../src/lib/circle-core.mjs';
 import { createCircleBallot } from '../src/lib/circle-ballots.mjs';
 import {
+  CIRCLE_CHARTER_AMENDMENT_SCHEMA,
   CircleReplica,
   circleGenesisDigest,
   createCircleGenesis,
@@ -536,13 +537,13 @@ test('a revoked key is void beyond its last valid update, however its records ar
       schema: 'axiom-circle-appeal.v0',
       appeal_id: 'appeal.forged',
       circle_id: genesis.circle.circle_id,
-      target_type: 'proposal',
-      target_id: 'proposal.calendar',
+      target_type: 'membership',
+      target_id: 'membership.carol',
       filed_by: 'bob',
+      reason: 'Forged with a stolen key.',
       filed_at: '2026-08-21T09:30:00.000Z',
       status: 'open',
       resolved_at: null,
-      reason_code: 'forged',
       authority_effect: 'none'
     }]
   ];
@@ -606,6 +607,194 @@ test('administrators revoking each other back to the start is reported, and both
   assert.equal(view.package.proposals.length, 0);
 });
 
+const AMENDED_AT = '2026-08-23T00:00:00.000Z';
+
+function charterV2(genesis, overrides = {}) {
+  return {
+    ...structuredClone(genesis.charter),
+    version: 2,
+    supersedes_digest: digestObject(genesis.charter),
+    effective_from: AMENDED_AT,
+    // The reviewer role is dropped; approval now needs 70%.
+    roles: genesis.charter.roles.filter(role => role.role_id !== 'reviewer'),
+    decision_rule: { ...genesis.charter.decision_rule, approval_basis_points: 7000 },
+    ...overrides
+  };
+}
+
+function amendmentProposal(genesis, charter, id = 'proposal.charter-v2') {
+  return {
+    ...proposal(genesis, 'alice', id),
+    title: 'Adopt charter version 2',
+    summary: 'Drop the reviewer role and raise the approval threshold. Nothing is executed.',
+    created_at: '2026-08-20T13:30:00.000Z',
+    evidence_refs: [`circle-charter:${digestObject(charter)}`]
+  };
+}
+
+function amendment(genesis, charter, { by = 'bob', at = '2026-08-22T18:00:00.000Z', proposalId = 'proposal.charter-v2' } = {}) {
+  return {
+    schema: CIRCLE_CHARTER_AMENDMENT_SCHEMA,
+    circle_id: genesis.circle.circle_id,
+    proposal_id: proposalId,
+    charter,
+    published_by: by,
+    published_at: at,
+    authority_effect: 'none'
+  };
+}
+
+function charterBallot(principal, choice, charter, id, castAt, genesis) {
+  return createCircleBallot({
+    circleId: genesis.circle.circle_id,
+    proposalId: id,
+    charterDigest: digestObject(charter),
+    principalId: principal,
+    choice,
+    castAt,
+    privateKey: keys[principal].privateKey
+  });
+}
+
+function amendedScript(genesis, v2 = charterV2(genesis), { votes = ['approve', 'approve', 'reject'], extra = [] } = {}) {
+  const [alice, bob, carol] = votes;
+  return [
+    ...standardScript(genesis),
+    ['alice', 'proposal', amendmentProposal(genesis, v2)],
+    ['alice', 'ballot', charterBallot('alice', alice, genesis.charter, 'proposal.charter-v2', '2026-08-21T12:30:00.000Z', genesis)],
+    ['bob', 'ballot', charterBallot('bob', bob, genesis.charter, 'proposal.charter-v2', '2026-08-21T12:30:00.000Z', genesis)],
+    ['carol', 'ballot', charterBallot('carol', carol, genesis.charter, 'proposal.charter-v2', '2026-08-21T12:30:00.000Z', genesis)],
+    ...extra
+  ];
+}
+
+test('an accepted amendment opens a new charter period; members carry over and open proposals lapse', () => {
+  const genesis = genesisFor();
+  const v2 = charterV2(genesis);
+  const later = {
+    ...proposal(genesis, 'bob', 'proposal.under-v2'),
+    charter_digest: digestObject(v2),
+    created_at: '2026-08-24T10:00:00.000Z',
+    closes_at: '2026-08-26T10:00:00.000Z'
+  };
+  const script = amendedScript(genesis, v2, {
+    extra: [
+      ['bob', 'key_endorsement', null],
+      // Still open under charter 1 when charter 2 takes effect: lapses.
+      ['carol', 'proposal', { ...proposal(genesis, 'carol', 'proposal.late'), created_at: '2026-08-22T20:00:00.000Z', closes_at: '2026-08-23T12:00:00.000Z' }],
+      ['bob', 'amendment', null],
+      ['bob', 'proposal', later],
+      ['alice', 'ballot', charterBallot('alice', 'approve', v2, 'proposal.under-v2', '2026-08-25T10:00:00.000Z', genesis)],
+      ['bob', 'ballot', charterBallot('bob', 'approve', v2, 'proposal.under-v2', '2026-08-25T10:00:00.000Z', genesis)],
+      // Bound to the superseded charter after the change: excluded.
+      ['carol', 'proposal', { ...proposal(genesis, 'carol', 'proposal.stale'), created_at: '2026-08-24T12:00:00.000Z', closes_at: '2026-08-26T12:00:00.000Z' }],
+      // Bob leaves under charter 2, naming his carried membership.
+      ['bob', 'exit', {
+        schema: 'axiom-circle-exit.v0',
+        exit_id: 'exit.bob.v2',
+        circle_id: genesis.circle.circle_id,
+        membership_id: 'membership.bob:v2',
+        principal_id: 'bob',
+        initiated_by: 'bob',
+        kind: 'voluntary-exit',
+        effective_at: '2026-08-26T12:00:00.000Z',
+        reason_code: 'moving-on',
+        future_obligation_effect: 'ends-except-explicit-post-exit-rules',
+        history_rewrite: false,
+        authority_effect: 'none'
+      }]
+    ].filter(([, type]) => type !== 'key_endorsement')
+      .map(step => (step[1] === 'amendment' ? ['bob', 'charter_amendment', amendment(genesis, v2)] : step))
+  });
+  const logs = logsFor(genesis, script);
+  const asOf = '2026-08-27T00:00:00.000Z';
+  const views = [1, 6, 19].map(seed => replicaWith(genesis, interleave(logs, seed)).view({ asOf }));
+  assert.equal(new Set(views.map(view => view.epochs.map(epoch => epoch.package_digest).join())).size, 1);
+  const [view] = views;
+  assert.deepEqual(view.excluded.map(item => item.reason), ['Circle proposal is invalid']);
+
+  assert.deepEqual(
+    view.epochs.map(epoch => [epoch.charter_version, epoch.effective_from, epoch.ended_at]),
+    [[1, genesis.circle.created_at, AMENDED_AT], [2, AMENDED_AT, null]]
+  );
+  assert.deepEqual(view.epochs[0].lapsed_proposals, ['proposal.late']);
+  assert.equal(view.epochs[0].package.decisions.find(item => item.proposal_id === 'proposal.charter-v2').outcome, 'accepted');
+
+  assert.equal(view.package.charter.version, 2);
+  assert.deepEqual(
+    view.package.memberships.map(item => [item.membership_id, item.role_ids]),
+    [['membership.alice:v2', ['steward']], ['membership.bob:v2', ['member']], ['membership.carol:v2', ['member']], ['membership.dana:v2', []]]
+  );
+  // Decided under charter 2's rule, by the carried members.
+  const decided = view.package.decisions.find(item => item.proposal_id === 'proposal.under-v2');
+  assert.equal(decided.outcome, 'accepted');
+  assert.equal(decided.charter_digest, digestObject(v2));
+  assert.equal(view.package.exits[0].membership_id, 'membership.bob:v2');
+  assert.equal(view.pending_amendment, null);
+
+  // A member-chosen identifier that looks carried cannot collide with one.
+  const lookalike = [
+    ...script,
+    ['alice', 'invitation', { ...invitation(genesis, 'mallory', 'member'), invitation_id: 'invite.bob:v2' }],
+    ['alice', 'key_endorsement', endorsement(genesis, 'mallory')],
+    ['mallory', 'membership', { ...membership(genesis, 'mallory', 'member'), membership_id: 'membership.bob:v2', invitation_id: 'invite.bob:v2' }]
+  ];
+  const lookalikeView = replicaWith(genesis, interleave(logsFor(genesis, lookalike), 2)).view({ asOf });
+  const carriedIds = lookalikeView.package.memberships.map(item => item.membership_id);
+  assert.equal(new Set(carriedIds).size, 5);
+  assert.ok(carriedIds.includes('membership.bob:v2:v2'));
+
+  const before = replicaWith(genesis, interleave(logs, 1)).view({ asOf: '2026-08-22T20:00:00.000Z' });
+  assert.equal(before.epochs.length, 1);
+  assert.deepEqual(before.pending_amendment, {
+    proposal_id: 'proposal.charter-v2',
+    charter_digest: digestObject(v2),
+    effective_from: AMENDED_AT
+  });
+});
+
+test('a charter amendment takes effect only through an accepted, unappealed decision on its exact text', () => {
+  const genesis = genesisFor();
+  const v2 = charterV2(genesis);
+  const reasonsFor = (script, asOf = '2026-08-24T00:00:00.000Z') => {
+    const view = replicaWith(genesis, interleave(logsFor(genesis, script), 4)).view({ asOf });
+    return { view, reasons: view.excluded.map(item => item.reason).join('\n') };
+  };
+  const cases = [
+    ['a different text', amendedScript(genesis, v2, { extra: [['bob', 'charter_amendment', amendment(genesis, charterV2(genesis, { decision_rule: { ...genesis.charter.decision_rule, approval_basis_points: 8000 } }))]] }), /did not bind this charter text/],
+    ['a rejected proposal', amendedScript(genesis, v2, { votes: ['approve', 'reject', 'reject'], extra: [['bob', 'charter_amendment', amendment(genesis, v2)]] }), /was not accepted/],
+    ['before the vote closes', amendedScript(genesis, v2, { extra: [['bob', 'charter_amendment', amendment(genesis, v2, { at: '2026-08-22T12:00:00.000Z' })]] }), /was not accepted/],
+    ['a skipped version', amendedScript(genesis, charterV2(genesis, { version: 3 }), { extra: [['bob', 'charter_amendment', amendment(genesis, charterV2(genesis, { version: 3 }))]] }), /must supersede the charter in force/],
+    ['a backdated start', amendedScript(genesis, charterV2(genesis, { effective_from: '2026-08-22T17:00:00.000Z' }), { extra: [['bob', 'charter_amendment', amendment(genesis, charterV2(genesis, { effective_from: '2026-08-22T17:00:00.000Z' }))]] }), /cannot take effect before it is published/],
+    ['execution authority', amendedScript(genesis, charterV2(genesis, { execution_authority: true }), { extra: [['bob', 'charter_amendment', amendment(genesis, charterV2(genesis, { execution_authority: true }))]] }), /Circle charter/],
+    ['a second amendment', amendedScript(genesis, v2, { extra: [
+      ['bob', 'charter_amendment', amendment(genesis, v2)],
+      ['carol', 'charter_amendment', amendment(genesis, v2, { by: 'carol', at: '2026-08-22T19:00:00.000Z' })]
+    ] }), /already adopted and waiting/],
+    ['an open appeal', amendedScript(genesis, v2, { extra: [
+      ['carol', 'appeal', {
+        schema: 'axiom-circle-appeal.v0',
+        appeal_id: 'appeal.charter',
+        circle_id: genesis.circle.circle_id,
+        target_type: 'decision',
+        target_id: 'decision:proposal.charter-v2',
+        filed_by: 'carol',
+        reason: 'The amendment removes the reviewer role without consulting reviewers.',
+        filed_at: '2026-08-22T14:00:00.000Z',
+        status: 'open',
+        resolved_at: null,
+        authority_effect: 'none'
+      }],
+      ['bob', 'charter_amendment', amendment(genesis, v2)]
+    ] }), /is under appeal/]
+  ];
+  for (const [name, script, reason] of cases) {
+    const { view, reasons } = reasonsFor(script);
+    assert.match(reasons, reason, name);
+    if (name !== 'a second amendment') assert.equal(view.epochs.length, 1, name);
+  }
+});
+
 test('Circle Exchange v0 schema preserves the inert boundary', async () => {
   const { readFile } = await import('node:fs/promises');
   const schema = JSON.parse(await readFile(new URL('../config/circle-exchange-v0.schema.json', import.meta.url), 'utf8'));
@@ -621,7 +810,7 @@ test('Circle Exchange v0 schema preserves the inert boundary', async () => {
   const [update] = logsFor(genesis, standardScript(genesis).slice(0, 1))[logName('alice')];
   assert.deepEqual(Object.keys(update.body).sort(), [...schema.properties.body.required].sort());
   assert.deepEqual(Object.keys(schema.properties.body.properties).sort(), [...schema.properties.body.required].sort());
-  for (const type of ['key_endorsement', 'key_rotation', 'key_revocation']) {
+  for (const type of ['key_endorsement', 'key_rotation', 'key_revocation', 'charter_amendment']) {
     assert.ok(schema.properties.body.properties.record_type.enum.includes(type), type);
   }
 });

@@ -62,6 +62,16 @@ import {
  * back to before either revocation), every revocation seen is applied and
  * the view reports key_revocation_conflict for people to resolve.
  *
+ * Charter amendment: a proposal binds the text of a new charter version
+ * (`circle-charter:<digest>` in its evidence_refs). Once its ballot-derived
+ * decision is accepted and not under appeal, any member may publish the
+ * text; it must supersede the charter in force and take effect no earlier
+ * than it is published. From its effective_from the Circle continues as a
+ * new Core package under the new charter (an epoch): each membership in
+ * standing is carried over with the roles the new charter still defines,
+ * as a derived invitation and membership, and proposals still open under
+ * the old charter lapse, since their ballots bind the old charter.
+ *
  * Nothing here grants authority, executes an effect, opens a network
  * connection, or changes the Grid's causal sync.
  */
@@ -77,6 +87,7 @@ const MAX_UPDATES = 4096;
 const MAX_PENDING = 1024;
 const MAX_REVOCATION_ROUNDS = 16;
 const KEY_RECORD_TYPES = new Set(['key_endorsement', 'key_rotation', 'key_revocation']);
+export const CIRCLE_CHARTER_AMENDMENT_SCHEMA = 'axiom-circle-charter-amendment.v0';
 
 const RECORD_TYPES = Object.freeze({
   invitation: { collection: 'invitations', author: r => r.issued_by, time: r => r.issued_at },
@@ -89,7 +100,8 @@ const RECORD_TYPES = Object.freeze({
   ballot: { collection: null, author: r => r?.body?.principal_id, time: r => r?.body?.cast_at },
   key_endorsement: { collection: null, author: r => r.endorsed_by, time: r => r.endorsed_at },
   key_rotation: { collection: null, author: r => r.principal_id, time: r => r.rotated_at },
-  key_revocation: { collection: null, author: r => r.revoked_by, time: r => r.revoked_at }
+  key_revocation: { collection: null, author: r => r.revoked_by, time: r => r.revoked_at },
+  charter_amendment: { collection: null, author: r => r.published_by, time: r => r.published_at }
 });
 
 export function createCircleGenesis({ circle, charter, creatorKey }) {
@@ -193,6 +205,14 @@ export class CircleReplica {
     const kind = RECORD_TYPES[body.record_type];
     if (kind.author && kind.author(body.record) !== body.author) {
       return rejected('authorship', `${body.author} cannot publish a ${body.record_type} naming someone else`);
+    }
+    if (body.record_type === 'charter_amendment') {
+      try {
+        validateAmendmentShape(body.record, this.genesis.circle.circle_id);
+      } catch (error) {
+        if (!(error instanceof ValidationError)) throw error;
+        return rejected('malformed', error.message);
+      }
     }
     let introduced = null;
     if (KEY_RECORD_TYPES.has(body.record_type)) {
@@ -347,59 +367,18 @@ export class CircleReplica {
       voids = next;
     }
 
-    const { document, excluded, ballots, keys } = derived;
-    const tallies = [];
-    for (const proposal of [...document.proposals].sort((a, b) => (a.proposal_id < b.proposal_id ? -1 : 1))) {
-      if (new Date(proposal.closes_at) > cutoff) continue;
-      const forProposal = ballots
-        .filter(item => item.ballot.body.proposal_id === proposal.proposal_id)
-        .sort((left, right) => (left.order < right.order ? -1 : left.order > right.order ? 1 : 0));
-      // Each voter's ballot is checked against the key that signed the
-      // update carrying it; for duplicates, the one the tally sees first.
-      const voterKeys = {};
-      for (const item of forProposal) {
-        voterKeys[item.ballot.body.principal_id] ??= item.publicKey;
-      }
-      const ballotsForProposal = forProposal.map(item => item.ballot);
-      const tally = tallyCircleProposal({
-        document,
-        proposalId: proposal.proposal_id,
-        ballots: ballotsForProposal,
-        voterKeys,
-        decidedAt: proposal.closes_at
-      });
-      document.decisions.push({
-        schema: CIRCLE_DECISION_SCHEMA,
-        decision_id: `decision:${proposal.proposal_id}`,
-        circle_id: document.circle.circle_id,
-        proposal_id: proposal.proposal_id,
-        charter_digest: digestObject(document.charter),
-        outcome: tally.outcome,
-        decided_at: proposal.closes_at,
-        participant_receipts: [...tally.receipts],
-        finality: 'circle-local-accepted',
-        runtime_authority: false,
-        authority_effect: 'none'
-      });
-      // Self-check: the derived decision must verify strictly against the
-      // ballots it counted.
-      const counted = new Set(tally.receipts);
-      verifyCircleDecision({
-        document,
-        decisionId: `decision:${proposal.proposal_id}`,
-        ballots: ballotsForProposal.filter(item => counted.has(digestObject(item.body))),
-        voterKeys
-      });
-      tallies.push(tally);
-    }
-    const result = validateCircleCorePackage(document);
-
+    const { epochs, excluded, keys, tallies, pending } = derived;
+    const current = epochs.at(-1);
     return Object.freeze({
       schema: CIRCLE_VIEW_SCHEMA,
       genesis_digest: this.genesisDigest,
       as_of: cutoff.toISOString(),
-      package: document,
-      package_digest: result.package_digest,
+      // The Circle under the charter in force at asOf.
+      package: current.package,
+      package_digest: current.package_digest,
+      // Every charter period so far, oldest first.
+      epochs: Object.freeze(epochs),
+      pending_amendment: pending,
       tallies: Object.freeze(tallies),
       keys: Object.freeze(keys),
       key_revocation_conflict: conflict,
@@ -409,7 +388,7 @@ export class CircleReplica {
     });
   }
 
-  derive(entries, voids, rotationCuts) {
+  derive(entries, voids, rotationCuts, cutoff) {
     const creator = this.genesis.circle.created_by;
     const keys = new Map([[this.genesis.creator_key.key_id, {
       principal: creator,
@@ -418,15 +397,32 @@ export class CircleReplica {
       status: 'active'
     }]]);
     const active = new Map([[creator, this.genesis.creator_key.key_id]]);
-    let document = emptyPackage(this.genesis);
     const excluded = [];
-    const ballots = [];
     const revocations = [];
+    const tallies = [];
+    const epochs = [];
+    let epoch = newEpoch({ document: emptyPackage(this.genesis) }, this.genesis.circle.created_at);
+
+    // Brings the Circle forward to `at`: decides proposals as they close, and
+    // opens the next charter period when an adopted amendment takes effect.
+    const advance = at => {
+      for (;;) {
+        const boundary = epoch.pending && epoch.pending.charter.effective_from <= at
+          ? epoch.pending.charter.effective_from
+          : null;
+        closeDue(epoch, boundary ?? at, tallies);
+        if (!boundary) return;
+        epochs.push(finishEpoch(epoch, boundary));
+        epoch = newEpoch(carryOver(this.genesis.circle, epoch, boundary), boundary);
+      }
+    };
+
     for (const entry of entries) {
+      advance(entry.time);
       try {
         const key = signingKey(entry, keys, voids, rotationCuts);
         if (entry.type === 'ballot') {
-          ballots.push({
+          epoch.ballots.push({
             ballot: entry.record,
             publicKey: key.publicKey,
             order: `${entry.record?.body?.cast_at ?? ''}\u0000${safeReceipt(entry.record)}`
@@ -434,23 +430,37 @@ export class CircleReplica {
           continue;
         }
         if (KEY_RECORD_TYPES.has(entry.type)) {
-          applyKeyRecord(document, entry, { keys, active, revocations, announced: this.announced });
+          applyKeyRecord(epoch.document, entry, { keys, active, revocations, announced: this.announced });
           continue;
         }
-        authorize(document, entry);
-        const candidate = structuredClone(document);
+        if (entry.type === 'charter_amendment') {
+          adoptAmendment(this.genesis.circle, epoch, entry);
+          continue;
+        }
+        authorize(epoch.document, entry);
+        const candidate = structuredClone(epoch.document);
         candidate[RECORD_TYPES[entry.type].collection].push(entry.record);
         validateCircleCorePackage(candidate);
-        document = candidate;
+        epoch.document = candidate;
       } catch (error) {
         if (!(error instanceof ValidationError)) throw error;
         excluded.push({ digest: entry.digest, reason: error.message });
       }
     }
+    advance(cutoff.toISOString());
+    const pending = epoch.pending
+      ? Object.freeze({
+        proposal_id: epoch.pending.proposalId,
+        charter_digest: digestObject(epoch.pending.charter),
+        effective_from: epoch.pending.charter.effective_from
+      })
+      : null;
+    epochs.push(finishEpoch(epoch, null));
     return {
-      document,
+      epochs,
+      pending,
       excluded,
-      ballots,
+      tallies,
       revocations,
       keys: [...keys.entries()]
         .map(([keyId, key]) => Object.freeze({
@@ -465,6 +475,203 @@ export class CircleReplica {
               : left.key_id < right.key_id ? -1 : 1
         ))
     };
+  }
+}
+
+function newEpoch({ document, origins = { memberships: new Map(), invitations: new Map() } }, startedAt) {
+  return { document, origins, startedAt, ballots: [], decided: new Set(), pending: null };
+}
+
+// Derives the decision of every proposal in this charter period that has
+// closed by `at`, from the ballots cast before it closed.
+function closeDue(epoch, at, tallies) {
+  const due = epoch.document.proposals
+    .filter(proposal => !epoch.decided.has(proposal.proposal_id) && proposal.closes_at <= at)
+    .sort((left, right) => (
+      left.closes_at < right.closes_at ? -1 : left.closes_at > right.closes_at ? 1
+        : left.proposal_id < right.proposal_id ? -1 : 1
+    ));
+  for (const proposal of due) {
+    epoch.decided.add(proposal.proposal_id);
+    const document = epoch.document;
+    const forProposal = epoch.ballots
+      .filter(item => item.ballot?.body?.proposal_id === proposal.proposal_id)
+      .sort((left, right) => (left.order < right.order ? -1 : left.order > right.order ? 1 : 0));
+    // Each voter's ballot is checked against the key that signed the update
+    // carrying it; for duplicates, the one the tally sees first.
+    const voterKeys = {};
+    for (const item of forProposal) {
+      voterKeys[item.ballot.body.principal_id] ??= item.publicKey;
+    }
+    const ballots = forProposal.map(item => item.ballot);
+    const tally = tallyCircleProposal({
+      document,
+      proposalId: proposal.proposal_id,
+      ballots,
+      voterKeys,
+      decidedAt: proposal.closes_at
+    });
+    document.decisions.push({
+      schema: CIRCLE_DECISION_SCHEMA,
+      decision_id: `decision:${proposal.proposal_id}`,
+      circle_id: document.circle.circle_id,
+      proposal_id: proposal.proposal_id,
+      charter_digest: digestObject(document.charter),
+      outcome: tally.outcome,
+      decided_at: proposal.closes_at,
+      participant_receipts: [...tally.receipts],
+      finality: 'circle-local-accepted',
+      runtime_authority: false,
+      authority_effect: 'none'
+    });
+    // Self-check: the derived decision must verify strictly against the
+    // ballots it counted.
+    const counted = new Set(tally.receipts);
+    verifyCircleDecision({
+      document,
+      decisionId: `decision:${proposal.proposal_id}`,
+      ballots: ballots.filter(item => counted.has(digestObject(item.body))),
+      voterKeys
+    });
+    tallies.push(tally);
+  }
+}
+
+function finishEpoch(epoch, endedAt) {
+  const result = validateCircleCorePackage(epoch.document);
+  return Object.freeze({
+    charter_digest: result.charter_digest,
+    charter_version: epoch.document.charter.version,
+    effective_from: epoch.startedAt,
+    ended_at: endedAt,
+    package: epoch.document,
+    package_digest: result.package_digest,
+    // Proposals still open when the charter changed: their ballots bind the
+    // old charter, so they are never decided.
+    lapsed_proposals: Object.freeze(endedAt === null ? [] : epoch.document.proposals
+      .filter(proposal => !epoch.decided.has(proposal.proposal_id))
+      .map(proposal => proposal.proposal_id)
+      .sort())
+  });
+}
+
+// The first package under a new charter: every membership in standing at
+// `at` continues, with the roles the new charter still defines, through a
+// derived invitation and membership bound to the new charter.
+function carryOver(circle, epoch, at) {
+  const previous = epoch.document;
+  const charter = epoch.pending.charter;
+  const document = emptyPackage({ circle, charter });
+  const charterDigest = digestObject(charter);
+  const roles = new Set(charter.roles.map(role => role.role_id));
+  const standing = circleStanding(previous);
+  const moment = new Date(at);
+  const expires = new Date(moment.valueOf() + 1_000).toISOString();
+  const origins = { memberships: new Map(), invitations: new Map() };
+  // A carried record keeps its first identifier with the charter version
+  // appended. Identifiers are unique within a period, so on any collision or
+  // overflow the previous identifier's digest is used instead.
+  const carry = (collection, previousId) => {
+    const origin = epoch.origins[collection].get(previousId) ?? previousId;
+    let id = `${origin}:v${charter.version}`;
+    if (id.length > 160 || origins[collection].has(id)) {
+      id = `carried:${sha256(previousId).slice(0, 32)}:v${charter.version}`;
+    }
+    origins[collection].set(id, origin);
+    return id;
+  };
+  const principals = [...new Set(previous.memberships.map(item => item.principal_id))].sort();
+  for (const principal of principals) {
+    const membership = standing.principalMembershipAt(principal, moment);
+    if (!membership) continue;
+    const invitation = previous.invitations.find(item => item.invitation_id === membership.invitation_id);
+    const membershipId = carry('memberships', membership.membership_id);
+    const invitationId = carry('invitations', membership.invitation_id);
+    const roleIds = membership.role_ids.filter(role => roles.has(role));
+    document.invitations.push({
+      schema: invitation.schema,
+      invitation_id: invitationId,
+      circle_id: circle.circle_id,
+      invited_principal: principal,
+      membership_class: invitation.membership_class,
+      role_ids: roleIds,
+      issued_by: circle.created_by,
+      issued_at: at,
+      expires_at: expires,
+      charter_digest: charterDigest,
+      one_use: true,
+      authority_effect: 'none'
+    });
+    document.memberships.push({
+      ...membership,
+      membership_id: membershipId,
+      invitation_id: invitationId,
+      role_ids: roleIds,
+      accepted_at: at,
+      status: 'active',
+      status_effective_at: at
+    });
+  }
+  validateCircleCorePackage(document);
+  return { document, origins };
+}
+
+function adoptAmendment(circle, epoch, entry) {
+  const record = entry.record;
+  const document = epoch.document;
+  const current = document.charter;
+  if (epoch.pending) {
+    throw new ValidationError('A charter amendment is already adopted and waiting to take effect');
+  }
+  if (entry.author !== circle.created_by && !circleStanding(document).principalAt(entry.author, new Date(entry.time))) {
+    throw new ValidationError(`${entry.author} was not a member when publishing this charter amendment`);
+  }
+  const next = record.charter;
+  if (
+    next?.circle_id !== current.circle_id
+    || next.version !== current.version + 1
+    || next.supersedes_digest !== digestObject(current)
+  ) throw new ValidationError('A charter amendment must supersede the charter in force');
+  if (next.effective_from < entry.time) {
+    throw new ValidationError('A charter amendment cannot take effect before it is published');
+  }
+  validateCircleCorePackage(emptyPackage({ circle, charter: next }));
+  const proposal = document.proposals.find(item => item.proposal_id === record.proposal_id);
+  if (!proposal) throw new ValidationError('A charter amendment must name a proposal under the charter in force');
+  if (!proposal.evidence_refs.includes(`circle-charter:${digestObject(next)}`)) {
+    throw new ValidationError(`Proposal ${proposal.proposal_id} did not bind this charter text`);
+  }
+  const decision = document.decisions.find(item => item.proposal_id === proposal.proposal_id);
+  if (!decision || decision.outcome !== 'accepted') {
+    throw new ValidationError(`Proposal ${proposal.proposal_id} was not accepted`);
+  }
+  if (document.appeals.some(appeal => (
+    appeal.target_type === 'decision'
+    && appeal.target_id === decision.decision_id
+    && (appeal.status === 'open' || appeal.status === 'accepted')
+  ))) throw new ValidationError(`The decision on ${proposal.proposal_id} is under appeal`);
+  epoch.pending = { charter: structuredClone(next), proposalId: proposal.proposal_id };
+}
+
+function validateAmendmentShape(record, circleId) {
+  exactObject(record, 'Circle charter amendment', [
+    'schema', 'circle_id', 'proposal_id', 'charter', 'published_by', 'published_at', 'authority_effect'
+  ]);
+  if (
+    record.schema !== CIRCLE_CHARTER_AMENDMENT_SCHEMA
+    || record.circle_id !== circleId
+    || !IDENTIFIER.test(record.proposal_id ?? '')
+    || !IDENTIFIER.test(record.published_by ?? '')
+    || record.authority_effect !== 'none'
+    || record.charter === null
+    || typeof record.charter !== 'object'
+    || Array.isArray(record.charter)
+  ) throw new ValidationError('Circle charter amendment is invalid');
+  for (const [name, value] of [['published_at', record.published_at], ['effective_from', record.charter.effective_from]]) {
+    const parsed = new Date(value);
+    if (typeof value !== 'string' || Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== value) {
+      throw new ValidationError(`Circle charter amendment ${name} must be a canonical ISO timestamp`);
+    }
   }
 }
 
