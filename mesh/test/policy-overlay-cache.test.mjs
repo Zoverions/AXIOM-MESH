@@ -103,11 +103,14 @@ test('inconsistent answers fail closed and drop the cache', async () => {
 
 test('Grid names a generation that follows activation, rollback and expiry, without decrypting policies', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-policy-generation-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
   const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
   const store = new GridStore({ path: join(dataDir, 'grid.sqlite'), dataDir, identity, protector });
-  t.after(() => store.close());
+  // One hook, in order: Windows cannot remove an open database file.
+  t.after(async () => {
+    try { store.close(); } catch {}
+    await rm(dataDir, { recursive: true, force: true });
+  });
   const insert = (item, { activatedAt, expiresAt = null }) => store.db.prepare(`
     INSERT INTO policy_overlays(overlay_id, proposal_id, source_type, policy_digest, policy_json, status, activated_at, expires_at)
     VALUES (?, NULL, 'governance', ?, ?, 'active', ?, ?)

@@ -356,11 +356,14 @@ test('Grid rejects node-key Sybils and preserves auditable schedule degradation'
 
 async function discoveryStore(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-node-discovery-paging-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
   const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
   const store = new GridStore({ path: join(dataDir, 'grid.sqlite'), dataDir, identity, protector });
-  t.after(() => store.close());
+  // One hook, in order: Windows cannot remove an open database file.
+  t.after(async () => {
+    try { store.close(); } catch {}
+    await rm(dataDir, { recursive: true, force: true });
+  });
   const insert = store.db.prepare(`
     INSERT INTO nodes(node_id, public_key_digest, security_profile, capabilities_json, software_digest,
       expires_at, status, registered_at, owner, public_key_json, admission_digest, discovery_json)
