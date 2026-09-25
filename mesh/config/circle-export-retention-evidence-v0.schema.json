@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-export-retention-evidence-v0.schema.json",
+  "title": "AXIOM Circle Export Retention Evidence v0",
+  "description": "Inert evidence that one existing Circle export record names exact Circle records eligible for later disclosure review as historical retention. It does not authorize disclosure, create a bundle, carry portable authority, or create governance/execution/network/runtime effects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "evidence_id",
+    "circle_id",
+    "export_id",
+    "membership_id",
+    "exporter_principal_id",
+    "circle_package_digest",
+    "export_record_digest",
+    "membership_digest",
+    "snapshot_evidence_ref",
+    "snapshot_evidence_digest",
+    "record_observations_digest",
+    "history_retention_only",
+    "requires_disclosure_authorization",
+    "requires_external_record_evidence_verification",
+    "portable_authority",
+    "authority_effect",
+    "governance_effect",
+    "export_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-circle-export-retention-evidence.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-retention-evidence"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^circle-export-retention:[a-f0-9]{64}$"
+    },
+    "circle_id": {
+      "$ref": "#/$defs/id"
+    },
+    "export_id": {
+      "$ref": "#/$defs/id"
+    },
+    "membership_id": {
+      "$ref": "#/$defs/id"
+    },
+    "exporter_principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "circle_package_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "export_record_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "membership_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "snapshot_evidence_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "snapshot_evidence_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "record_observations_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "history_retention_only": {
+      "const": true
+    },
+    "requires_disclosure_authorization": {
+      "const": true
+    },
+    "requires_external_record_evidence_verification": {
+      "const": true
+    },
+    "portable_authority": {
+      "const": false
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "export_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-export-retention-evidence.mjs",
+  "x-axiom-non-claims": [
+    "disclosure-authorization",
+    "bundle-creation",
+    "recipient-authorization",
+    "portable-authority",
+    "membership-authority",
+    "governance-authority",
+    "execution-authority",
+    "network-activation",
+    "runtime-activation"
+  ]
+}
