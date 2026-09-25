@@ -114,6 +114,8 @@
 
 **Mind developmental-status checkpoint (2026-09-25):** Stacked draft PR #1862 defines an append-only monotonic developmental sequence `genesis -> dependent -> developing -> candidate-independent -> independent`. Stage transitions advance exactly once, bind the prior record, require canonical basis evidence, and never activate Council voting or Genesis eligibility. The final independence step must bind #1861 evidence for the exact current candidate-independent status record. Independent status has no backward transition in v0; quarantine, credential suspension, emergency restriction, and other safety mechanisms must remain separate rather than recreating dependency/guardian authority. All basis evidence remains externally verified and all live status mutation remains future work.
 
+**Founding Digital Mind Council-vote activation checkpoint (2026-09-25):** Stacked draft work requires an exact Genesis-bound digital founding seat still marked `developing`, the exact active non-voting `founders-council.developing` Circle membership, an exact independent developmental-status record, and fresh clear continuity evidence before vote activation is even requestable. Genesis and independence never auto-mint a Council vote. The adapter creates neither Foundation nor Circle mutation and explicitly creates no vote authority. Any future live activation must prevent split-state Foundation/Circle authority and duplicate votes under copy/restore/fork ambiguity.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
