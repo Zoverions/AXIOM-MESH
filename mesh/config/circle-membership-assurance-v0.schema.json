@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-membership-assurance-v0.schema.json",
+  "title": "AXIOM Circle Membership Assurance v0",
+  "description": "Inert assurance binding an existing Circle Core membership to exact membership/charter/role state, finite device policy, consent evidence and expiry. It never creates, reactivates or authorizes membership, governance or execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "assurance_id",
+    "circle_id",
+    "membership_id",
+    "principal_id",
+    "membership_digest",
+    "charter_digest",
+    "role_ids",
+    "device_policy",
+    "required_consent_receipt_refs",
+    "evidence_refs",
+    "valid_from",
+    "expires_at",
+    "contains_secret_material",
+    "authority_effect",
+    "governance_effect",
+    "execution_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-circle-membership-assurance.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-assurance-laboratory"
+    },
+    "assurance_id": {
+      "$ref": "#/$defs/id"
+    },
+    "circle_id": {
+      "$ref": "#/$defs/id"
+    },
+    "membership_id": {
+      "$ref": "#/$defs/id"
+    },
+    "principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "membership_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "charter_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "role_ids": {
+      "$ref": "#/$defs/idArrayNonEmpty"
+    },
+    "device_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "device_refs"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "required",
+            "optional"
+          ]
+        },
+        "device_refs": {
+          "$ref": "#/$defs/idArray"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "required"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "device_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "required_consent_receipt_refs": {
+      "$ref": "#/$defs/idArrayNonEmpty"
+    },
+    "evidence_refs": {
+      "$ref": "#/$defs/refArrayNonEmpty"
+    },
+    "valid_from": {
+      "$ref": "#/$defs/date"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/date"
+    },
+    "contains_secret_material": {
+      "const": false
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "idArrayNonEmpty": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "refArrayNonEmpty": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-membership-assurance.mjs",
+  "x-axiom-non-claims": [
+    "membership-creation",
+    "membership-reactivation",
+    "device-registration",
+    "device-currentness-proof",
+    "consent-issuance",
+    "consent-revocation",
+    "consent-signature-verification",
+    "role-grant",
+    "governance-authority",
+    "execution-authority",
+    "network-activation",
+    "runtime-activation"
+  ]
+}
