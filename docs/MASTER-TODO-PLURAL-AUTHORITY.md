@@ -116,6 +116,8 @@
 
 **Founding Digital Mind Council-vote activation checkpoint (2026-09-25):** Stacked draft work requires an exact Genesis-bound digital founding seat still marked `developing`, the exact active non-voting `founders-council.developing` Circle membership, an exact independent developmental-status record, and fresh clear continuity evidence before vote activation is even requestable. Genesis and independence never auto-mint a Council vote. The adapter creates neither Foundation nor Circle mutation and explicitly creates no vote authority. Any future live activation must prevent split-state Foundation/Circle authority and duplicate votes under copy/restore/fork ambiguity.
 
+**General Genesis sponsor-eligibility checkpoint (2026-09-25):** Post-founding eligibility remains separate from independent standing. The v0 profile requires ten explicit responsibility dimensions, current externally verified identity/uniqueness, one-use Genesis history, standing and continuity evidence, and exact independent developmental status for digital applicants. `general_genesis_uses` must remain zero; history conflict, stale evidence, blocking standing, continuity ambiguity, incomplete criteria, global reputation scoring, and model final authority all fail closed. A positive result is only `eligible_to_request_genesis_authorization`; it creates no authorization, Genesis Bond, mind, governance authority, network effect, or runtime activation.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.

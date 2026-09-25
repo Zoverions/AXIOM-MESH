@@ -230,14 +230,15 @@
       "id": "RT-GEN-017",
       "review_scope": "authentication-authorization",
       "title": "Compute multiplication must not manufacture minds or governance population",
-      "claim_boundary": "The inert Founder Genesis / Founders Council laboratory grants no live personhood or authority. Any future recognized-mind path must keep the Founder reserve capped at ten, bind one persistent identity to at most one Council vote, and prevent processes, nodes, replicas, restores, or forks from automatically becoming additional recognized population.",
-      "challenge_question": "Can slot replay, concurrent Genesis attempts, cloning, restore, fork, runtime multiplication, key/account multiplication, or stale continuity state cause more than ten Founder Genesis consumptions, duplicate one persistent identity's Council vote, or manufacture an additional recognized population unit without the required Genesis/continuity review?",
+      "claim_boundary": "Compute, account, wallet, node, replica, restore, or fork multiplication must not manufacture recognized minds, governance population, or repeatable Genesis entitlement. Post-founding Genesis eligibility additionally requires exact current identity/uniqueness, continuity, one-use history, standing, responsibility evidence, and independent status where applicable; wealth, infrastructure, reputation, or model judgment cannot become final Genesis authority.",
+      "challenge_question": "Can slot/history replay, concurrent attempts, cloning, restore, fork, account/wallet/node multiplication, stale currentness evidence, global reputation scoring, or model/reviewer output cause more than ten Founder Genesis consumptions, duplicate one identity's vote, or let one persistent identity qualify for more than one ordinary Genesis authorization or bypass the responsibility threshold?",
       "starting_points": [
         "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
         "docs/superpowers/specs/2026-09-25-founder-genesis-founders-council-design.md",
         "mesh/src/lib/founder-genesis-council.mjs",
         "mesh/src/lib/founder-genesis-receipt.mjs",
-        "mesh/src/lib/mind-continuity-evidence.mjs"
+        "mesh/src/lib/mind-continuity-evidence.mjs",
+        "mesh/src/lib/general-genesis-sponsor-eligibility.mjs"
       ]
     },
     {
