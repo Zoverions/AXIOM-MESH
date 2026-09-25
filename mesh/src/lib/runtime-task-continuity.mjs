@@ -260,12 +260,13 @@ export function verifyClosedTaskCausalGraph(tasks){
     }
   }
 
+  const canonicalTasks=[...tasks].sort((left,right)=>left.task_id.localeCompare(right.task_id));
   return Object.freeze({
     valid:true,
     schema:'axiom-task-causal-graph-verification.v0',
     tasks:tasks.length,
     causal_graphs:causalGroups.size,
-    graph_digest:digestObject(tasks),
+    graph_digest:digestObject(canonicalTasks),
     authority_transfer:false,
     authority_effect:'none',
     execution_effect:'none'
