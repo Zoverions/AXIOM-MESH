@@ -15,7 +15,10 @@ const PARENT_BLOBS = Object.freeze({
   // The server still composes no SIEA store; the assertions below are
   // unchanged.
   grid_server: '2a4a5a5b0ebce7069b47957835d5ff162506a616',
-  core_migrations: '36514febba8d6420b165f19c9032d3510253a521'
+  // Updated deliberately for core migration 11 (index-only: composite
+  // indexes for the paged collections, scalability audit S-11). No table or
+  // column changed.
+  core_migrations: 'ef5fbf579a85c50968f370a7b47f285a019f02ac'
 });
 
 async function gitBlobSha(relative) {

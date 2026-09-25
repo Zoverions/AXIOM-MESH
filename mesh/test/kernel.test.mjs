@@ -379,7 +379,7 @@ test('Grid migration ledger is checksum verified and fails closed on drift', asy
   let store = new GridStore({ path: dbPath, dataDir, identity, protector });
   assert.deepEqual(
     store.db.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map(row => row.version),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   );
   store.db.prepare("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 2").run();
   store.close();
@@ -389,7 +389,7 @@ test('Grid migration ledger is checksum verified and fails closed on drift', asy
   );
 });
 
-test('schema 8 state migrates through scheduling schema 10 without evidence loss', async t => {
+test('schema 8 state migrates through scheduling schema 10 and index schema 11 without evidence loss', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-migration-eight-'));
   t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
@@ -421,13 +421,13 @@ test('schema 8 state migrates through scheduling schema 10 without evidence loss
     DROP TABLE sync_updates;
     DROP TABLE sync_bundles;
     DROP TABLE node_schedules;
-    DELETE FROM schema_migrations WHERE version IN (9, 10);
+    DELETE FROM schema_migrations WHERE version IN (9, 10, 11);
     UPDATE meta SET value = '8' WHERE key = 'schema_version';
   `);
   schemaEight.close();
 
   store = new GridStore({ path: dbPath, dataDir, identity, protector });
-  assert.equal(store.getStatus().schema_version, 10);
+  assert.equal(store.getStatus().schema_version, 11);
   assert.equal(store.getIntent('intent_migration_eight').status, 'accepted');
   assert.equal(store.verifyChain().head, evidenceHead);
   assert.deepEqual(

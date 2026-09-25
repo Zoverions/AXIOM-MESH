@@ -649,30 +649,38 @@ Representative problems include:
   routes.
 - Query latency grows with page size, not total unrelated tenant data.
 
-**Remediation status (2026-09-25): two N+1 patterns removed; indexes await a
-schema decision.** Two patterns needed no schema change and are fixed:
+**Remediation status (2026-09-25): paged queries index-backed; two N+1
+patterns removed; node schedules open.**
 
 - **Memory disclosure.** Consent was checked with one full scan of
   `consents` per memory object. A reader's active consents are now read
-  once per page and turned into an allow-set. A test with 60 objects
-  asserts one consent read and exact visibility, including revoked and
-  expired consents. It fails against the per-object check.
+  once per page and turned into an allow-set.
 - **Accounting.** Journal entries were loaded with one query per journal.
-  They are now loaded in one joined query and grouped in memory. A test
-  with 30 journals asserts one read, line order and owner isolation. It
-  fails against the per-journal loop.
+  They are now loaded in one joined query and grouped in memory.
+- **Indexes.** Core migration 11 is index-only; no table or column changes.
+  Its composite indexes match each paged route's predicate followed by the
+  page order, time then identifier: capsules, proposals, nodes, approvals
+  by approver and by requester, consents by subject and by controller,
+  memory, imports, appeals, storage offers and backups. It also adds
+  `consents(subject, controller, status, expires_at)` for the consent check
+  and `events(actor, seq)` for actor-filtered event pages.
+- **Query shapes.** Proposals now choose the page before joining votes.
+  Approvals and consents seek each role's index up to the page size and
+  merge the two with `UNION`, instead of sorting every row the principal
+  ever touched.
+- **Tests.** `paged-query-plans.test.mjs` captures the SQL each paged store
+  method runs, with and without a cursor, and fails on any full-table scan
+  of a base table. It also checks that proposals are chosen through their
+  page index. It fails without migration 11 and against the previous
+  proposals query. The consent and accounting tests assert one read each
+  and fail against the per-item loops.
+- **Pins.** The pinned `core_migrations` blob and the SIEA migration test's
+  core schema version (now 11) were updated deliberately.
 
-`EXPLAIN QUERY PLAN` on the paged queries (S-10) shows full-table scans for
-`capsules`, `nodes`, `approvals`, `consents` and `storage_offers`, and for
-the consent lookup itself. Several others sort after an index seek because
-their indexes lack the identifier tie-break. The fix is composite indexes
-matching each keyset: (predicate, time, identifier), plus `events(actor,
-seq)` for actor-filtered event pages. That is a new core migration (schema
-version 11), which also moves the pinned `core_migrations` blob and the
-SIEA migration test's schema-version assertion. It is left for an explicit
-schema decision. Node schedule status is computed against every schedule
+Node schedule status is computed against every schedule
 (`effectiveScheduleStatus`), so scoping that read is a design change and is
-also open.
+still open. So are query-plan fixtures for the non-paged routes and
+rows-examined evidence in scale drills.
 
 ### S-12 — Export creation is fully materialized in memory
 

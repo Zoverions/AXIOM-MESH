@@ -107,7 +107,7 @@ test('ordinary SocialGridStore does not create or activate remote social staging
     await rm(setup.root, { recursive: true, force: true });
   });
 
-  assert.equal(setup.store.getStatus().schema_version, 10);
+  assert.equal(setup.store.getStatus().schema_version, 11);
   assert.equal(setup.store.getStatus().social_schema_version, 1);
   assert.equal(setup.store.db.prepare(`
     SELECT 1 FROM sqlite_master
@@ -128,7 +128,7 @@ test('opt-in RemoteSocialGridStore creates a separate review-only schema after l
   });
 
   const status = setup.store.getStatus();
-  assert.equal(status.schema_version, 10);
+  assert.equal(status.schema_version, 11);
   assert.equal(status.social_schema_version, 1);
   assert.equal(status.remote_social_schema_version, 1);
   assert.equal(status.remote_social_runtime, 'review-staging-laboratory');

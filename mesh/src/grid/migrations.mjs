@@ -232,6 +232,54 @@ const NODE_SCHEDULING_SQL = `
   ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
 ${NODE_SCHEDULING_TABLES_SQL}`;
 
+// Composite indexes for the keyset-paged collections (scalability audit
+// S-10/S-11): each matches its route's predicate followed by the page order
+// (time, then identifier), so a page is an index seek, not a table scan and
+// sort. Index-only: no table or column changes.
+const PAGED_COLLECTION_INDEXES_SQL = `
+  CREATE INDEX IF NOT EXISTS events_actor_seq_idx
+  ON events(actor, seq);
+
+  CREATE INDEX IF NOT EXISTS capsules_page_idx
+  ON capsules(registered_at, digest);
+
+  CREATE INDEX IF NOT EXISTS proposals_page_idx
+  ON proposals(created_at, proposal_id);
+
+  CREATE INDEX IF NOT EXISTS nodes_page_idx
+  ON nodes(registered_at, node_id);
+
+  CREATE INDEX IF NOT EXISTS approvals_approver_page_idx
+  ON approvals(approver, created_at, approval_id);
+
+  CREATE INDEX IF NOT EXISTS approvals_requester_page_idx
+  ON approvals(requester, created_at, approval_id);
+
+  CREATE INDEX IF NOT EXISTS consents_subject_page_idx
+  ON consents(subject, created_at, consent_id);
+
+  CREATE INDEX IF NOT EXISTS consents_controller_page_idx
+  ON consents(controller, created_at, consent_id);
+
+  CREATE INDEX IF NOT EXISTS consents_grant_idx
+  ON consents(subject, controller, status, expires_at);
+
+  CREATE INDEX IF NOT EXISTS memory_objects_page_idx
+  ON memory_objects(owner, status, created_at, object_id);
+
+  CREATE INDEX IF NOT EXISTS imports_page_idx
+  ON imports(principal, staged_at, import_id);
+
+  CREATE INDEX IF NOT EXISTS governance_appeals_page_idx
+  ON governance_appeals(appellant, created_at, appeal_id);
+
+  CREATE INDEX IF NOT EXISTS storage_offers_page_idx
+  ON storage_offers(owner, created_at, offer_id);
+
+  CREATE INDEX IF NOT EXISTS backups_page_idx
+  ON backups(principal, requested_at, backup_id);
+`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -340,6 +388,14 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
         ['discovery_json', 'TEXT']
       ]);
       db.exec(NODE_SCHEDULING_TABLES_SQL);
+    }
+  },
+  {
+    version: 11,
+    name: 'paged-collection-indexes',
+    source: PAGED_COLLECTION_INDEXES_SQL,
+    up(db) {
+      db.exec(PAGED_COLLECTION_INDEXES_SQL);
     }
   }
 ]);

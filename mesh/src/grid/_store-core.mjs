@@ -1333,7 +1333,9 @@ export class GridStore {
     const safeLimit = limit === undefined
       ? null
       : boundedInteger(limit, 'proposal list limit', 1, COLLECTION_PAGE_MAX + 1);
-    const keyset = keysetClause(after, { sortColumn: 'p.created_at', idColumn: 'p.proposal_id' });
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'proposal_id' });
+    // The page of proposals is chosen first, through proposals_page_idx; only
+    // its votes are then joined and summed.
     const sql = `
       SELECT
         p.*,
@@ -1341,12 +1343,15 @@ export class GridStore {
         COALESCE(SUM(CASE WHEN v.chamber = 'human' AND v.choice = 'against' THEN v.weight ELSE 0 END), 0) AS human_against,
         COALESCE(SUM(CASE WHEN v.chamber = 'agent' AND v.choice = 'for' THEN v.weight ELSE 0 END), 0) AS agent_for,
         COALESCE(SUM(CASE WHEN v.chamber = 'agent' AND v.choice = 'against' THEN v.weight ELSE 0 END), 0) AS agent_against
-      FROM proposals p
+      FROM (
+        SELECT * FROM proposals
+        ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+        ORDER BY created_at DESC, proposal_id DESC
+        ${safeLimit === null ? '' : 'LIMIT ?'}
+      ) p
       LEFT JOIN votes v ON v.proposal_id = p.proposal_id
-      ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
       GROUP BY p.proposal_id
       ORDER BY p.created_at DESC, p.proposal_id DESC
-      ${safeLimit === null ? '' : 'LIMIT ?'}
     `;
     const rows = this.db.prepare(sql).all(
       ...keyset.params,
@@ -1463,18 +1468,26 @@ export class GridStore {
   // listConsents, which must see every receipt.
   pageConsents(principal, { limit, after } = {}) {
     const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'consent_id' });
+    const safeLimit = boundedInteger(limit, 'consent limit', 1, COLLECTION_PAGE_MAX + 1);
+    const branch = column => `
+      SELECT * FROM (
+        SELECT consent_id, subject, controller, purpose, scopes_json, expires_at,
+               status, created_at, revoked_at
+        FROM consents
+        WHERE ${column} = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+        ORDER BY created_at DESC, consent_id DESC
+        LIMIT ?
+      )`;
     return this.db.prepare(`
-      SELECT consent_id, subject, controller, purpose, scopes_json, expires_at,
-             status, created_at, revoked_at
-      FROM consents
-      WHERE (subject = ? OR controller = ?) ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ${branch('subject')}
+      UNION
+      ${branch('controller')}
       ORDER BY created_at DESC, consent_id DESC
       LIMIT ?
     `).all(
-      principal,
-      principal,
-      ...keyset.params,
-      boundedInteger(limit, 'consent limit', 1, COLLECTION_PAGE_MAX + 1)
+      principal, ...keyset.params, safeLimit,
+      principal, ...keyset.params, safeLimit,
+      safeLimit
     ).map(
       row => this.decodeProtectedRow('consents', 'consent_id', row, ['scopes_json'])
     );
@@ -1483,12 +1496,26 @@ export class GridStore {
   listApprovals(principal, { limit = 100, after } = {}) {
     const safeLimit = boundedInteger(limit, 'approval limit', 1, COLLECTION_PAGE_MAX + 1);
     const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'approval_id' });
+    // One index seek per role, each bounded by the page, merged: sorting
+    // every approval the principal ever touched is avoided.
+    const branch = column => `
+      SELECT * FROM (
+        SELECT * FROM approvals
+        WHERE ${column} = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+        ORDER BY created_at DESC, approval_id DESC
+        LIMIT ?
+      )`;
     const rows = this.db.prepare(`
-      SELECT * FROM approvals
-      WHERE (approver = ? OR requester = ?) ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ${branch('approver')}
+      UNION
+      ${branch('requester')}
       ORDER BY created_at DESC, approval_id DESC
       LIMIT ?
-    `).all(principal, principal, ...keyset.params, safeLimit + 1);
+    `).all(
+      principal, ...keyset.params, safeLimit + 1,
+      principal, ...keyset.params, safeLimit + 1,
+      safeLimit + 1
+    );
     const truncated = rows.length > safeLimit;
     if (truncated) rows.pop();
     return { approvals: rows, truncated };
