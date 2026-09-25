@@ -12,6 +12,7 @@ test('Circle Export Retention Evidence v0 is closed, retention-only, and non-aut
   assert.equal(schema.properties.schema.const,'axiom-circle-export-retention-evidence.v0');
   assert.equal(schema.properties.history_retention_only.const,true);
   assert.equal(schema.properties.requires_disclosure_authorization.const,true);
+  assert.equal(schema.properties.requires_external_snapshot_verification.const,true);
   assert.equal(schema.properties.requires_external_record_evidence_verification.const,true);
   assert.equal(schema.properties.record_observations_digest.pattern,'^[a-f0-9]{64}
   assert.equal(schema.properties.portable_authority.const,false);
