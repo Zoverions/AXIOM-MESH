@@ -11,9 +11,10 @@
 // Budgets encode "non-pathological": the front end must stay roughly linear,
 // so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
 // caps keep CI honest. Measurements use a short warm-up and median wall samples.
-// CPU time is measured across a bounded repeated parse batch so platforms with
-// coarse process CPU accounting still produce usable evidence; the per-parse
-// value is normalized by the run count. CPU time is used only for the scaling
+// CPU time is measured across a bounded repeated parse batch spanning at least
+// BENCHMARK_MIN_CPU_MICROS, so platforms with coarse process CPU accounting
+// still produce accurate evidence; the per-parse value is normalized by the
+// run count. CPU time is used only for the scaling
 // ratio so unrelated runner scheduling cannot turn a linear parse into a false
 // superlinear signal; the existing absolute parse/format wall-clock budgets
 // remain unchanged.
@@ -42,8 +43,15 @@ function median(values) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-function measureCpuPerRun(fn) {
-  const cpuStart = process.cpuUsage();
+// Process CPU time advances in coarse steps on some platforms (about 15.6 ms
+// on Windows). Stopping at the first non-zero reading let one step stand for
+// an arbitrary number of short runs, under-measuring the 1k corpus by up to
+// half and doubling the apparent 1k->10k ratio. Accumulating at least this
+// much CPU time bounds that quantization error to about one step in six.
+export const BENCHMARK_MIN_CPU_MICROS = 100_000;
+
+export function measureCpuPerRun(fn, { cpuUsage = process.cpuUsage } = {}) {
+  const cpuStart = cpuUsage();
   let runs = 0;
   let nextBatch = BENCHMARK_SAMPLES;
   let cpuMicros = 0;
@@ -53,9 +61,9 @@ function measureCpuPerRun(fn) {
     for (let i = 0; i < batch; i++) fn();
     runs += batch;
 
-    const cpu = process.cpuUsage(cpuStart);
+    const cpu = cpuUsage(cpuStart);
     cpuMicros = cpu.user + cpu.system;
-    if (cpuMicros > 0) break;
+    if (cpuMicros >= BENCHMARK_MIN_CPU_MICROS) break;
 
     nextBatch *= 2;
   }

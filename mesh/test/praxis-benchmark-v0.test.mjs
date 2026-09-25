@@ -6,6 +6,7 @@ import {
   runBenchmarks,
   checkBudgets,
   formatReport,
+  measureCpuPerRun,
   syntheticProgram
 } from '../../labs/praxis/bench.mjs';
 
@@ -60,4 +61,26 @@ test('benchmark scaling uses CPU time without weakening absolute wall-clock caps
     checkBudgets(missingCpuEvidence).some(failure => failure.includes('CPU timing is missing')),
     'missing scaling evidence must fail closed'
   );
+});
+
+test('CPU measurement stays accurate when process CPU time advances in coarse steps', () => {
+  // Windows reports process CPU time in ~15.6 ms steps. A 1k-line parse costs
+  // a few milliseconds, so stopping at the first non-zero reading let one step
+  // stand for many runs and inflated the 1k->10k ratio in CI.
+  const STEP = 15_625;
+  for (const costMicros of [2_700, 31_000]) {
+    for (let phase = 0; phase < STEP; phase += 625) {
+      let elapsed = phase;
+      const read = () => Math.floor(elapsed / STEP) * STEP;
+      const cpuUsage = start => (start
+        ? { user: read() - start.user, system: 0 }
+        : { user: read(), system: 0 });
+      const measured = measureCpuPerRun(() => { elapsed += costMicros; }, { cpuUsage }) * 1000;
+      const error = Math.abs(measured - costMicros) / costMicros;
+      assert.ok(
+        error <= 0.2,
+        `cost ${costMicros}us at phase ${phase}us measured as ${measured.toFixed(0)}us`
+      );
+    }
+  }
 });
