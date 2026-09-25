@@ -6,6 +6,7 @@ function policy(overrides={}){
   return {
     schema:'axiom-task-continuity-policy.v0',version:0,status:'inert-contract-laboratory',
     continuity_id:'continuity.demo.1',outcome_id:'outcome.demo.1',task_id:'task.demo.1',
+    outcome_digest:'a'.repeat(64),task_digest:'b'.repeat(64),
     authority_snapshot_ref:'authority.snapshot.1',budget_ref:'budget.snapshot.1',
     mode:'local-cognition-degraded',max_degraded_duration_ms:3600000,
     allowed_local_capabilities:['model.local','files.read'],
@@ -16,7 +17,8 @@ function policy(overrides={}){
 function state(overrides={}){
   return {
     network_state:'provider-unavailable',degraded_since:'2026-09-24T11:30:00.000Z',
-    assessed_at:'2026-09-24T12:00:00.000Z',authority_snapshot_ref:'authority.snapshot.1',
+    assessed_at:'2026-09-24T12:00:00.000Z',outcome_digest:'a'.repeat(64),task_digest:'b'.repeat(64),
+    authority_snapshot_ref:'authority.snapshot.1',
     authority_current:true,budget_ref:'budget.snapshot.1',budget_current:true,
     execution_location:'owner-local',provider_location:'owner-local',
     requested_capabilities:['model.local','files.read'],requested_data_classes:['owner-private'],
@@ -78,4 +80,22 @@ test('undeclared local capability or data class stops degraded continuation',()=
   const data=evaluateTaskContinuity(policy(),state({requested_data_classes:['owner-private','health-private']}));
   assert.equal(data.continuity_action,'stop-denied');
   assert.ok(data.reasons.includes('data-class-not-allowed:health-private'));
+});
+
+test('stale outcome or task binding cannot continue through a partition',()=>{
+  const staleOutcome=evaluateTaskContinuity(policy(),state({outcome_digest:'c'.repeat(64)}));
+  assert.equal(staleOutcome.continuity_action,'stop-denied');
+  assert.ok(staleOutcome.reasons.includes('outcome-digest-mismatch'));
+
+  const staleTask=evaluateTaskContinuity(policy(),state({task_digest:'d'.repeat(64)}));
+  assert.equal(staleTask.continuity_action,'stop-denied');
+  assert.ok(staleTask.reasons.includes('task-digest-mismatch'));
+});
+
+test('online return still fails closed when current authority is gone',()=>{
+  const result=evaluateTaskContinuity(policy(),state({
+    network_state:'online',degraded_since:null,authority_current:false
+  }));
+  assert.equal(result.continuity_action,'stop-denied');
+  assert.ok(result.reasons.includes('authority-not-current'));
 });
