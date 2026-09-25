@@ -1,4 +1,4 @@
-import { digestObject, ValidationError } from './canonical.mjs';
+import { digestObject, sha256, ValidationError } from './canonical.mjs';
 
 export const COMMAND_INTAKE_SCHEMA='axiom-command-intake.v0';
 
@@ -11,7 +11,7 @@ export function validateCommandIntake(document){
   exactObject(document,'Command intake',[
     'schema','version','status','command_id','channel_kind','channel_instance_ref',
     'channel_binding_ref','claimed_principal_id','content_digest','content_type',
-    'normalized_text','data_classes','received_at','expires_at','nonce',
+    'normalized_text','normalized_text_digest','data_classes','received_at','expires_at','nonce',
     'authentication_evidence_refs','channel_identity_authority','grants_authority',
     'execution_effect','runtime_activation'
   ]);
@@ -30,6 +30,10 @@ export function validateCommandIntake(document){
   digest(document.content_digest,'content_digest');
   if(!CONTENT_TYPES.has(document.content_type))throw new ValidationError('content_type is invalid');
   text(document.normalized_text,'normalized_text',1,12000);
+  digest(document.normalized_text_digest,'normalized_text_digest');
+  if(sha256(document.normalized_text)!==document.normalized_text_digest){
+    throw new ValidationError('normalized_text_digest does not match normalized_text');
+  }
   textArray(document.data_classes,'data_classes',64,512);
   const received=canonicalDate(document.received_at,'received_at');
   const expires=canonicalDate(document.expires_at,'expires_at');
@@ -48,10 +52,12 @@ export function commandIntakeDigest(document){validateCommandIntake(document);re
 export function assessCommandIntake(document,current){
   validateCommandIntake(document);
   exactObject(current,'Command intake current state',[
-    'resolved_principal_id','channel_binding_ref','channel_binding_current',
+    'resolved_principal_id','channel_kind','channel_instance_ref','channel_binding_ref','channel_binding_current',
     'authentication_current','replay_seen','assessed_at'
   ]);
   id(current.resolved_principal_id,'resolved_principal_id');
+  if(!CHANNELS.has(current.channel_kind))throw new ValidationError('current channel_kind is invalid');
+  id(current.channel_instance_ref,'current channel_instance_ref');
   id(current.channel_binding_ref,'current channel_binding_ref');
   if(typeof current.channel_binding_current!=='boolean'||typeof current.authentication_current!=='boolean'||typeof current.replay_seen!=='boolean'){
     throw new ValidationError('Command intake currentness flags must be boolean');
@@ -62,6 +68,8 @@ export function assessCommandIntake(document,current){
   const reasons=[];
   if(assessed<received)reasons.push('assessed-before-receipt');
   if(assessed>=expires)reasons.push('command-expired');
+  if(current.channel_kind!==document.channel_kind)reasons.push('channel-kind-mismatch');
+  if(current.channel_instance_ref!==document.channel_instance_ref)reasons.push('channel-instance-mismatch');
   if(current.channel_binding_ref!==document.channel_binding_ref)reasons.push('channel-binding-mismatch');
   if(current.channel_binding_current!==true)reasons.push('channel-binding-not-current');
   if(current.authentication_current!==true)reasons.push('authentication-not-current');
