@@ -264,6 +264,10 @@ test('developing Founding Mind cannot receive a Council voter role', () => {
   const membership = packageDocument.memberships.find(
     item => item.principal_id === 'digital.founder.1'
   );
+  const invitation = packageDocument.invitations.find(
+    item => item.invitation_id === membership.invitation_id
+  );
+  invitation.role_ids = [FOUNDERS_COUNCIL_VOTER_ROLE];
   membership.role_ids = [FOUNDERS_COUNCIL_VOTER_ROLE];
 
   assert.throws(
@@ -307,6 +311,10 @@ test('active founding seat must carry the exact voter role', () => {
   const founderMembership = packageDocument.memberships.find(
     item => item.principal_id === foundationDocument.founder_mind_id
   );
+  const founderInvitation = packageDocument.invitations.find(
+    item => item.invitation_id === founderMembership.invitation_id
+  );
+  founderInvitation.role_ids = [FOUNDERS_COUNCIL_DEVELOPING_ROLE];
   founderMembership.role_ids = [FOUNDERS_COUNCIL_DEVELOPING_ROLE];
 
   assert.throws(
