@@ -36,6 +36,7 @@ function eligibility({
       criterion_id:criterionId,status:'demonstrated',
       evidence_digests:[(index+1).toString(16).padStart(64,'0')]
     })),
+    responsibility_evidence_observed_at:'2026-09-25T14:25:00.000Z',
     identity_evidence_digest:'a'.repeat(64),
     identity_observed_at:'2026-09-25T14:25:00.000Z',
     genesis_history_evidence_digest:'b'.repeat(64),
@@ -63,6 +64,7 @@ test('qualified independent digital mind can become eligible to request one Gene
 
   assert.equal(result.eligible_to_request_genesis_authorization,true);
   assert.equal(result.general_genesis_unused,true);
+  assert.equal(result.responsibility_evidence_current,true);
   assert.equal(result.independent_status_valid,true);
   assert.equal(result.requires_external_identity_verification,true);
   assert.equal(result.requires_external_history_verification,true);
@@ -187,6 +189,20 @@ test('continuity dispute or stale/unknown continuity blocks duplicate-parent man
     assert.equal(result.eligible_to_request_genesis_authorization,false);
     assert.equal(result.reason,'continuity-'+continuityStatus);
   }
+});
+
+test('responsibility readiness evidence must be fresh',()=>{
+  const document=eligibility({
+    overrides:{
+      responsibility_evidence_observed_at:'2026-09-25T13:00:00.000Z',
+      maximum_evidence_age_seconds:600
+    }
+  });
+  const result=assessGeneralGenesisSponsorEligibility({
+    eligibilityDocument:document,developmentalStatus:independentStatus()
+  });
+  assert.equal(result.eligible_to_request_genesis_authorization,false);
+  assert.equal(result.reason,'responsibility-evidence-stale');
 });
 
 test('identity history standing and continuity evidence must be fresh and not future-dated',()=>{
