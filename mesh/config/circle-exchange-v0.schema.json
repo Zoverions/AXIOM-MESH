@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-exchange-v0.schema.json",
+  "title": "AXIOM Circle Exchange Update v0",
+  "description": "One signed entry in a Circle member's own hash-linked log, bound to the Circle's genesis. Authorship, contiguity, equivocation, authority rules and the deterministic Circle view are enforced by mesh/src/lib/circle-exchange.mjs. Exchange grants no authority, executes nothing and opens no network connection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["body", "attestation"],
+  "properties": {
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "genesis_digest", "author", "counter", "prev_digest", "record_type", "record"],
+      "properties": {
+        "schema": { "const": "axiom-circle-update.v0" },
+        "genesis_digest": { "$ref": "#/$defs/digest" },
+        "author": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "counter": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "prev_digest": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }] },
+        "record_type": { "enum": ["invitation", "membership", "proposal", "task", "appeal", "exit", "export", "ballot"] },
+        "record": { "type": "object" }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "digest", "signature"],
+      "properties": {
+        "algorithm": { "const": "Ed25519" },
+        "digest": { "$ref": "#/$defs/digest" },
+        "signature": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-exchange.mjs"
+}

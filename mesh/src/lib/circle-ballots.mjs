@@ -72,9 +72,79 @@ export function verifyCircleDecision({ document, decisionId, ballots, voterKeys 
   const decision = document.decisions.find(item => item.decision_id === decisionId);
   if (!decision) throw new ValidationError(`Circle decision ${decisionId} does not exist`);
   const proposal = document.proposals.find(item => item.proposal_id === decision.proposal_id);
+  const result = countBallots({
+    document,
+    standing,
+    proposal,
+    ballots,
+    voterKeys,
+    decidedAt: new Date(decision.decided_at),
+    strict: true
+  });
+  if (decision.outcome !== result.outcome) {
+    throw new ValidationError(
+      `Decision ${decision.decision_id} records '${decision.outcome}' but its ballots give '${result.outcome}'`
+    );
+  }
+  const recorded = [...decision.participant_receipts].sort();
+  if (canonicalJson(result.receipts) !== canonicalJson(recorded)) {
+    throw new ValidationError(
+      `Decision ${decision.decision_id} participant_receipts do not match the ballots counted`
+    );
+  }
+  return tallyRecord(document, proposal, result, decision.decision_id);
+}
+
+/**
+ * Tallies a proposal from whatever ballots were received, as of `decidedAt`.
+ *
+ * Used where ballots arrive from many members (Circle exchange): an invalid,
+ * late, forged or duplicate ballot is skipped and reported instead of
+ * voiding the count. Ballots are considered in (cast_at, receipt) order, so a
+ * member's earliest valid ballot counts and the result does not depend on
+ * arrival order.
+ */
+export function tallyCircleProposal({ document, proposalId, ballots, voterKeys, decidedAt }) {
+  const standing = circleStanding(document);
+  const proposal = document.proposals.find(item => item.proposal_id === proposalId);
+  if (!proposal) throw new ValidationError(`Circle proposal ${proposalId} does not exist`);
+  const result = countBallots({
+    document,
+    standing,
+    proposal,
+    ballots,
+    voterKeys,
+    decidedAt: new Date(decidedAt),
+    strict: false
+  });
+  return Object.freeze({
+    ...tallyRecord(document, proposal, result, null),
+    rejected: Object.freeze(result.rejected)
+  });
+}
+
+function tallyRecord(document, proposal, result, decisionId) {
+  return Object.freeze({
+    schema: CIRCLE_TALLY_SCHEMA,
+    circle_id: document.circle.circle_id,
+    decision_id: decisionId,
+    proposal_id: proposal.proposal_id,
+    charter_digest: digestObject(document.charter),
+    electorate: result.electorate,
+    approve: result.tally.approve,
+    reject: result.tally.reject,
+    abstain: result.tally.abstain,
+    quorum_met: result.quorumMet,
+    approved: result.approved,
+    outcome: result.outcome,
+    receipts: Object.freeze(result.receipts),
+    authority_effect: 'none'
+  });
+}
+
+function countBallots({ document, standing, proposal, ballots, voterKeys, decidedAt, strict }) {
   const charterDigest = digestObject(document.charter);
   const rule = document.charter.decision_rule;
-
   const voteRoles = new Set(
     document.charter.roles
       .filter(role => role.declared_modes.includes('vote'))
@@ -87,7 +157,6 @@ export function verifyCircleDecision({ document, decisionId, ballots, voterKeys 
 
   const opened = new Date(proposal.created_at);
   const closes = new Date(proposal.closes_at);
-  const decided = new Date(decision.decided_at);
   const electorate = new Set(
     [...new Set(document.memberships.map(item => item.principal_id))]
       .filter(principalId => canVote(principalId, opened))
@@ -97,43 +166,57 @@ export function verifyCircleDecision({ document, decisionId, ballots, voterKeys 
     throw new ValidationError(`Circle ballots must be an array of at most ${MAX_BALLOTS}`);
   }
   const keys = normalizeVoterKeys(voterKeys);
+  const ordered = strict
+    ? ballots
+    : [...ballots].sort((left, right) => {
+        const a = `${left?.body?.cast_at ?? ''}\u0000${safeReceipt(left)}`;
+        const b = `${right?.body?.cast_at ?? ''}\u0000${safeReceipt(right)}`;
+        return a < b ? -1 : a > b ? 1 : 0;
+      });
+
   const counted = new Map();
   const seatByKey = new Map();
   const tally = { approve: 0, reject: 0, abstain: 0 };
-  for (const ballot of ballots) {
-    exactObject(ballot, 'Circle ballot', ['body', 'attestation']);
-    const body = validateBallotBody(ballot.body);
-    const principal = body.principal_id;
-    if (
-      body.circle_id !== document.circle.circle_id
-      || body.proposal_id !== proposal.proposal_id
-      || body.charter_digest !== charterDigest
-    ) throw new ValidationError(`Ballot from ${principal} is not bound to this proposal and charter`);
-    const cast = new Date(body.cast_at);
-    if (cast < opened || cast >= closes || cast > decided) {
-      throw new ValidationError(`Ballot from ${principal} was cast outside the voting window`);
+  const rejected = [];
+  for (const ballot of ordered) {
+    try {
+      exactObject(ballot, 'Circle ballot', ['body', 'attestation']);
+      const body = validateBallotBody(ballot.body);
+      const principal = body.principal_id;
+      if (
+        body.circle_id !== document.circle.circle_id
+        || body.proposal_id !== proposal.proposal_id
+        || body.charter_digest !== charterDigest
+      ) throw new ValidationError(`Ballot from ${principal} is not bound to this proposal and charter`);
+      const cast = new Date(body.cast_at);
+      if (cast < opened || cast >= closes || cast > decidedAt) {
+        throw new ValidationError(`Ballot from ${principal} was cast outside the voting window`);
+      }
+      if (!electorate.has(principal)) {
+        throw new ValidationError(`${principal} could not vote when the proposal opened`);
+      }
+      if (!canVote(principal, cast)) {
+        throw new ValidationError(`${principal} could not vote when the ballot was cast`);
+      }
+      if (counted.has(principal)) {
+        throw new ValidationError(`${principal} cast more than one ballot`);
+      }
+      const key = keys.get(principal);
+      if (!key) throw new ValidationError(`No voter key is known for ${principal}`);
+      const seat = seatByKey.get(key.fingerprint);
+      if (seat !== undefined && seat !== principal) {
+        throw new ValidationError('One key cannot vote for more than one member');
+      }
+      if (!verifyObjectSignature(body, ballot.attestation, key.publicKey)) {
+        throw new ValidationError(`Ballot signature from ${principal} is invalid`);
+      }
+      seatByKey.set(key.fingerprint, principal);
+      counted.set(principal, circleBallotReceipt(ballot));
+      tally[body.choice] += 1;
+    } catch (error) {
+      if (strict || !(error instanceof ValidationError)) throw error;
+      rejected.push({ receipt: safeReceipt(ballot), reason: error.message });
     }
-    if (!electorate.has(principal)) {
-      throw new ValidationError(`${principal} could not vote when the proposal opened`);
-    }
-    if (!canVote(principal, cast)) {
-      throw new ValidationError(`${principal} could not vote when the ballot was cast`);
-    }
-    if (counted.has(principal)) {
-      throw new ValidationError(`${principal} cast more than one ballot`);
-    }
-    const key = keys.get(principal);
-    if (!key) throw new ValidationError(`No voter key is known for ${principal}`);
-    const seat = seatByKey.get(key.fingerprint);
-    if (seat !== undefined && seat !== principal) {
-      throw new ValidationError('One key cannot vote for more than one member');
-    }
-    if (!verifyObjectSignature(body, ballot.attestation, key.publicKey)) {
-      throw new ValidationError(`Ballot signature from ${principal} is invalid`);
-    }
-    seatByKey.set(key.fingerprint, principal);
-    counted.set(principal, circleBallotReceipt(ballot));
-    tally[body.choice] += 1;
   }
 
   const decisive = tally.approve + tally.reject;
@@ -144,36 +227,23 @@ export function verifyCircleDecision({ document, decisionId, ballots, voterKeys 
   const outcome = proposal.status === 'withdrawn'
     ? 'withdrawn'
     : !quorumMet ? 'no-quorum' : approved ? 'accepted' : 'rejected';
-  if (decision.outcome !== outcome) {
-    throw new ValidationError(
-      `Decision ${decision.decision_id} records '${decision.outcome}' but its ballots give '${outcome}'`
-    );
-  }
-
-  const receipts = [...counted.values()].sort();
-  const recorded = [...decision.participant_receipts].sort();
-  if (canonicalJson(receipts) !== canonicalJson(recorded)) {
-    throw new ValidationError(
-      `Decision ${decision.decision_id} participant_receipts do not match the ballots counted`
-    );
-  }
-
-  return Object.freeze({
-    schema: CIRCLE_TALLY_SCHEMA,
-    circle_id: document.circle.circle_id,
-    decision_id: decision.decision_id,
-    proposal_id: proposal.proposal_id,
-    charter_digest: charterDigest,
+  return {
     electorate: electorate.size,
-    approve: tally.approve,
-    reject: tally.reject,
-    abstain: tally.abstain,
-    quorum_met: quorumMet,
+    tally,
+    quorumMet,
     approved,
     outcome,
-    receipts: Object.freeze(receipts),
-    authority_effect: 'none'
-  });
+    receipts: [...counted.values()].sort(),
+    rejected
+  };
+}
+
+function safeReceipt(ballot) {
+  try {
+    return circleBallotReceipt(ballot);
+  } catch {
+    return null;
+  }
 }
 
 function validateBallotBody(body) {
