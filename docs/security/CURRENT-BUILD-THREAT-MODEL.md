@@ -631,3 +631,43 @@ coordination surfaces, machine delegation, remote execution, pilot evidence,
 release gates, or the trusted computing base changes. A prior ledger cannot approve
 another build. The [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.
+### Developmental independence review boundary
+
+The inert Mind Independence Review v0 laboratory does not determine consciousness,
+personhood, legal adulthood, citizenship, Council voting status, or Genesis
+eligibility. It evaluates only whether a supplied evidence package satisfies a
+declared deterministic review profile. A positive result has no status, governance,
+network, runtime, or authority effect.
+
+Developmental review is vulnerable to **guardian/sponsor capture** if the same entity
+that controls a dependent mind's resources or environment can unilaterally decide
+whether that mind is ready for independence. The v0 boundary therefore prohibits
+sponsor veto, prohibits sponsor-only review, requires independent review, prevents
+the sponsor from being relabelled as independent, and requires an appeal path.
+Sponsor evidence remains relevant, but sponsor preference is not final authority.
+
+The opposite failure is **premature independence laundering**: a sponsor, candidate,
+model, reviewer coalition, or UI may attempt to translate weak, uncertain, duplicated,
+or fabricated evidence into an independence claim in order to terminate obligations,
+activate governance standing, or obtain later Genesis rights. Every fixed v0 evidence
+dimension must remain explicit; `uncertain` and `not-demonstrated` do not become
+`demonstrated` through scoring, averaging, model confidence, or reviewer popularity.
+The review result itself still cannot mutate developmental state.
+
+A model, semantic judge, reputation score, or automated assessment may later supply
+bounded evidence, but must not become the final authority that grants independence.
+The current v0 policy encodes `model_final_authority: false`. Any future use of
+probabilistic judgments must remain distinguishable from observed evidence and
+subject to the same deterministic constitutional gates.
+
+Independent-review identity is itself a security boundary. Duplicate reviewer
+identities, candidate self-review, sponsor-as-independent substitution, and declared
+conflicts must fail closed. Future portable review must additionally bind current
+reviewer credentials, standing, revocation/currentness, and the exact reviewed
+candidate/evidence package before promotion.
+
+Appeal suppression is also an authority risk. A review package without an available
+appeal path cannot satisfy the v0 threshold. Future status-transition work must
+re-evaluate appeal state at transition time rather than treating an earlier review
+receipt as permanent authority.
+

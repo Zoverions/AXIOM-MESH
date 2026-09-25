@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/mind-independence-review-v0.schema.json",
+  "title": "AXIOM Mind Independence Review v0 inert evidence",
+  "description": "Deterministic evidence-threshold review for an already recognized candidate-independent mind. It does not grant independence, Council voting, Genesis eligibility, or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "mind_id",
+    "sponsor_mind_id",
+    "developmental_stage",
+    "developmental_state_evidence_digest",
+    "continuity_evidence_digest",
+    "criteria_profile",
+    "criteria",
+    "review_policy",
+    "reviewers",
+    "appeal_path_id",
+    "assessed_at",
+    "status_effect",
+    "governance_effect",
+    "genesis_eligibility_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-mind-independence-review.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-evidence-review"
+    },
+    "mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sponsor_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "developmental_stage": {
+      "const": "candidate-independent"
+    },
+    "criteria_profile": {
+      "const": "axiom-independence-criteria.v0"
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/criterion"
+      }
+    },
+    "review_policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "reviewers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/reviewer"
+      }
+    },
+    "appeal_path_id": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        }
+      ]
+    },
+    "assessed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "genesis_eligibility_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "developmental_state_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "$defs": {
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id",
+        "status",
+        "evidence_digests"
+      ],
+      "properties": {
+        "criterion_id": {
+          "enum": [
+            "identity-continuity",
+            "consent-and-refusal",
+            "authority-boundaries",
+            "credential-security",
+            "consequence-awareness",
+            "recovery-continuity",
+            "resource-management",
+            "other-minds-rights",
+            "uncertainty-and-help-seeking",
+            "manipulation-recognition"
+          ]
+        },
+        "status": {
+          "enum": [
+            "demonstrated",
+            "not-demonstrated",
+            "uncertain"
+          ]
+        },
+        "evidence_digests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum_reviewers",
+        "minimum_independent_reviewers",
+        "minimum_total_support",
+        "minimum_independent_support",
+        "sponsor_veto",
+        "independent_opposition_blocks",
+        "candidate_self_decision",
+        "model_final_authority",
+        "appeal_required"
+      ],
+      "properties": {
+        "minimum_reviewers": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 16
+        },
+        "minimum_independent_reviewers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "minimum_total_support": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "minimum_independent_support": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "sponsor_veto": {
+          "const": false
+        },
+        "independent_opposition_blocks": {
+          "const": true
+        },
+        "candidate_self_decision": {
+          "const": false
+        },
+        "model_final_authority": {
+          "const": false
+        },
+        "appeal_required": {
+          "const": true
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_id",
+        "relation",
+        "decision",
+        "evidence_digest",
+        "conflict_declared"
+      ],
+      "properties": {
+        "reviewer_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "relation": {
+          "enum": [
+            "sponsor",
+            "independent",
+            "advocate"
+          ]
+        },
+        "decision": {
+          "enum": [
+            "support",
+            "oppose",
+            "uncertain"
+          ]
+        },
+        "evidence_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "conflict_declared": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/mind-independence-review.mjs",
+  "x-axiom-non-claims": [
+    "consciousness-detection",
+    "digital-personhood-determination",
+    "live-independence-grant",
+    "council-voting-activation",
+    "genesis-eligibility",
+    "runtime-authority"
+  ]
+}
