@@ -2387,17 +2387,33 @@ export class GridStore {
       records.push(record);
       pageBytes += recordBytes;
     }
-    const bundles = this.db.prepare(`
+    // The newest bundle summaries ride along on every page under their own
+    // byte budget. A full summary lists up to 128 update identifiers (about
+    // 9.7 KB), so 100 of them next to a full page of records would pass the
+    // 1 MiB internal response ceiling. A cut list reports `truncated`.
+    const bundles = [];
+    let bundleBytes = 0;
+    let bundlesCut = false;
+    for (const row of this.db.prepare(`
       SELECT * FROM sync_bundles
       WHERE owner = ?
       ORDER BY received_at DESC
       LIMIT 100
-    `).all(owner).map(row => this.decodeProtectedRow(
-      'sync_bundles',
-      'bundle_digest',
-      row,
-      ['result_json']
-    ));
+    `).all(owner)) {
+      const bundle = this.decodeProtectedRow(
+        'sync_bundles',
+        'bundle_digest',
+        row,
+        ['result_json']
+      );
+      const size = Buffer.byteLength(JSON.stringify(bundle));
+      if (bundleBytes + size > SYNC_BUNDLE_BYTE_BUDGET) {
+        bundlesCut = true;
+        break;
+      }
+      bundles.push(bundle);
+      bundleBytes += size;
+    }
     const last = records.at(-1);
     return {
       owner,
@@ -2411,7 +2427,7 @@ export class GridStore {
         has_more: hasMore,
         next_cursor: hasMore && last ? encodeSyncCursor(last) : null
       },
-      truncated: hasMore || bundles.length === 100
+      truncated: hasMore || bundlesCut || bundles.length === 100
     };
   }
 
@@ -3396,6 +3412,7 @@ async function atomicWrite(path, content, mode) {
 export const SYNC_PAGE_DEFAULT_RECORDS = 100;
 export const SYNC_PAGE_MAX_RECORDS = 200;
 export const SYNC_PAGE_BYTE_BUDGET = 512 * 1024;
+export const SYNC_BUNDLE_BYTE_BUDGET = 256 * 1024;
 const SYNC_CURSOR_NAMESPACE = /^[a-z][a-z0-9.-]{0,127}$/;
 const SYNC_CURSOR_RECORD = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 

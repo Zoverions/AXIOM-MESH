@@ -7,7 +7,7 @@ import test from 'node:test';
 import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { GridStore } from '../src/grid/store.mjs';
-import { SYNC_PAGE_BYTE_BUDGET, encodeSyncCursor } from '../src/grid/_store-core.mjs';
+import { SYNC_BUNDLE_BYTE_BUDGET, SYNC_PAGE_BYTE_BUDGET, encodeSyncCursor } from '../src/grid/_store-core.mjs';
 
 const OWNER = 'person:paging';
 
@@ -124,6 +124,53 @@ test('a sync page stops at its byte budget, whatever the record limit', async t 
   assert.ok(Buffer.byteLength(JSON.stringify(page.records)) <= SYNC_PAGE_BYTE_BUDGET);
   assert.ok(Buffer.byteLength(JSON.stringify(page)) < 1_048_576, 'under the internal response ceiling');
   assert.equal(pageThrough(store, { limit: 200 }).length, 12);
+});
+
+test('a full page of records plus a full bundle history stays under the response ceiling', async t => {
+  const { store, put } = await fixture(t);
+  const large = 'x'.repeat(200_000);
+  for (let index = 0; index < 12; index += 1) put('files', `blob:${index}`, [{ large }]);
+  // 100 maximum-size bundle summaries: 128 update identifiers each.
+  for (let index = 0; index < 100; index += 1) {
+    const digest = index.toString(16).padStart(64, 'c');
+    const summary = {
+      accepted: 128,
+      superseded: 0,
+      conflicts: 0,
+      resolved: 0,
+      update_ids: Array.from({ length: 128 }, (_, n) => `sync_${(index * 1_000 + n).toString(16).padStart(64, '0')}`)
+    };
+    store.db.prepare(`
+      INSERT INTO sync_bundles(bundle_digest, owner, source_node_id, update_count, result_json, received_at)
+      VALUES (?, ?, 'node:paging', 128, ?, ?)
+    `).run(
+      digest,
+      OWNER,
+      store.protectJson('sync_bundles', 'result_json', digest, summary),
+      `2026-09-25T01:${String(Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}.000Z`
+    );
+  }
+
+  const page = store.listCausalSync(OWNER, { limit: 200 });
+  assert.ok(Buffer.byteLength(JSON.stringify(page)) < 1_048_576, 'under the internal response ceiling');
+  assert.ok(Buffer.byteLength(JSON.stringify(page.bundles)) <= SYNC_BUNDLE_BYTE_BUDGET);
+  assert.ok(page.bundles.length > 0 && page.bundles.length < 100);
+  // A cut bundle list reports truncation even on a page with no more records.
+  const single = store.listCausalSync(OWNER, { recordId: 'blob:0' });
+  assert.equal(single.page.has_more, false);
+  assert.ok(single.bundles.length < 100);
+  assert.equal(single.truncated, true);
+  // Newest first, with no gap: the cut drops only the oldest.
+  const received = page.bundles.map(bundle => bundle.received_at);
+  assert.deepEqual(received, [...received].sort().reverse());
+  assert.equal(received[0], '2026-09-25T01:01:39.000Z');
+
+  // A short history is returned whole and does not by itself truncate.
+  const small = await fixture(t);
+  small.put('notes', 'record:1', [{ n: 1 }]);
+  const whole = small.store.listCausalSync(OWNER, {});
+  assert.equal(whole.bundles.length, 1);
+  assert.equal(whole.truncated, false);
 });
 
 test('records written while paging appear once if ahead of the cursor, never twice', async t => {

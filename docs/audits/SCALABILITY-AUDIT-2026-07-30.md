@@ -612,10 +612,18 @@ exports read it. A test pages journals seven at a time and checks order,
 entries and whole balances. The contract gained `limit` and `cursor` on
 `accounting.get`, so its digest and blob pin were updated deliberately.
 
+Related defect fixed (2026-09-25): every sync page also carried the owner's
+100 newest bundle summaries, outside the page's byte budget. A summary lists
+up to 128 update identifiers, so 100 of them came to about 975 KB, and next
+to a full page of records the response passed the 1 MiB internal ceiling.
+The list now has its own 256 KiB budget, newest first, and a cut sets
+`truncated`. A test with a full page and 100 maximum-size summaries fails
+without the budget, and without the flag on a page with no more records.
+
 Still open: `node-discovery` (a ranked query result) is not paged. Also
-open: the
-100-bundle list inside sync state, a separate fetch for one sync record
-larger than the budget, and a streaming contract for artifacts.
+open: paging the bundle list inside sync state (older bundles are reachable
+only by digest), a separate fetch for one sync record larger than the
+budget, and a streaming contract for artifacts.
 
 Related defect fixed (2026-09-25): personal exports read memory through the
 paged API method, so an export silently held only the first 100 memory
