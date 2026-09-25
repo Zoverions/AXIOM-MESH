@@ -72,6 +72,8 @@ export function assessMindIndependenceReview(document) {
     review_digest: digestObject(document),
     mind_id: document.mind_id,
     sponsor_mind_id: document.sponsor_mind_id,
+    developmental_state_evidence_digest: document.developmental_state_evidence_digest,
+    continuity_evidence_digest: document.continuity_evidence_digest,
     criteria_profile: document.criteria_profile,
     demonstrated_criteria:
       REQUIRED_INDEPENDENCE_CRITERIA.length - incompleteCriteria.length,
@@ -106,6 +108,8 @@ export function validateMindIndependenceReview(document) {
     'mind_id',
     'sponsor_mind_id',
     'developmental_stage',
+    'developmental_state_evidence_digest',
+    'continuity_evidence_digest',
     'criteria_profile',
     'criteria',
     'review_policy',
@@ -128,6 +132,8 @@ export function validateMindIndependenceReview(document) {
     || !id(document.sponsor_mind_id)
     || document.mind_id === document.sponsor_mind_id
     || document.developmental_stage !== 'candidate-independent'
+    || !digest(document.developmental_state_evidence_digest)
+    || !digest(document.continuity_evidence_digest)
     || document.criteria_profile !== INDEPENDENCE_CRITERIA_PROFILE
     || document.status_effect !== 'none'
     || document.governance_effect !== 'none'
