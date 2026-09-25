@@ -450,6 +450,33 @@ proxy unless the ingress trust contract defines the actual client identity.
 - Proxy identity spoofing is rejected.
 - Load shedding protects Grid and Hypervisor before queue collapse.
 
+**Remediation status (2026-09-25): single-node limits hardened; replication,
+persistence and overload admission open.** The guarantee is now explicit, in
+code comments and in this entry. Limits are per Gateway process and reset on
+restart. The address bucket is keyed only by the connection's peer address.
+`X-Forwarded-For`, `X-Real-IP` and `Forwarded` are never consulted, so a
+client cannot choose its bucket; a test sends forged headers and is still
+limited. Behind a proxy, every client shares the proxy's bucket until a
+trusted-proxy contract exists. Two gaps are fixed:
+
+- An IPv6 host controls at least a /64, but buckets were keyed by the full
+  address. One host could hold a bucket per address, spend a fresh budget
+  on each, and fill the 10,000-key address table. That would lock out every
+  new client, since a full table refuses new keys. IPv6 is now keyed by /64,
+  and IPv4-mapped addresses, in dotted or hex form, as plain IPv4.
+- A full limiter scanned every bucket for a refilled one on each new key:
+  193 µs at 10,000 keys and 938 µs at 100,000. A min-heap on the time each
+  bucket will be full again now finds one in under 1 µs. Behaviour is
+  unchanged: only a fully refilled bucket is evicted, so eviction never
+  grants extra allowance, and while every bucket is still refilling a new
+  key is refused.
+
+The tests fail with full-address keys, with the scanning limiter, and without
+the heap rebuild. Still open: the same effective limit across replicated
+Gateways (sticky routing or a rate-limit authority), a trusted-proxy
+contract, persisting or recording limit resets across restarts, and overload
+admission control separate from abuse limits.
+
 ### S-09 — Synchronous SQLite work blocks the Grid event loop and centralizes all writes
 
 **Severity:** High  
