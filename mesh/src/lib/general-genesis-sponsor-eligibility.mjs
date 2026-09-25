@@ -171,6 +171,7 @@ export function assessGeneralGenesisSponsorEligibility({
     independent_status_valid:independentStatusValid,
     independent_status_digest:independentStatusDigest,
     eligible_to_request_genesis_authorization:eligible,
+    eligibility_is_structural_pending_external_verification:true,
     reason,
     requires_external_identity_verification:true,
     identity_verification_effect:'none',
