@@ -34,6 +34,7 @@ export const ATTESTATION_KIND_VERIFIERS = Object.freeze({
 });
 
 const NULLIFIER_RE = /^sha256:[a-f0-9]{64}$/;
+const MERGE_TARGET_RE = /^pr:[1-9][0-9]{0,19}@sha256:[a-f0-9]{64}$/;
 // A result's shape is not proof that it passed this module's verifier.
 // This private brand only marks results returned by verifyAttestation.
 const verifiedAttestationResults = new WeakSet();
@@ -77,8 +78,11 @@ export function attestationBody(attestation) {
   if (typeof subject !== 'string' || subject.length === 0) {
     throw attestationError('PRAXIS_ATTESTATION_MALFORMED', 'attestation subject is invalid');
   }
-  if (typeof mergeTarget !== 'string' || mergeTarget.trim().length === 0) {
-    throw attestationError('PRAXIS_ATTESTATION_MALFORMED', 'attestation merge_target is invalid');
+  if (typeof mergeTarget !== 'string' || !MERGE_TARGET_RE.test(mergeTarget)) {
+    throw attestationError(
+      'PRAXIS_ATTESTATION_MALFORMED',
+      'attestation merge_target must bind one numeric PR to one lowercase SHA-256 digest'
+    );
   }
   if (!Object.hasOwn(ATTESTATION_KIND_VERIFIERS, kind)) {
     throw attestationError(
@@ -336,8 +340,8 @@ export function attestationSetDigest(digests, { mergeTarget } = {}) {
     throw new TypeError('attestationSetDigest requires a non-empty digest array');
   }
   const sorted = [...digests].map(String).sort();
-  if (typeof mergeTarget !== 'string' || mergeTarget.trim().length === 0) {
-    throw new TypeError('attestationSetDigest mergeTarget must be a non-empty string');
+  if (typeof mergeTarget !== 'string' || !MERGE_TARGET_RE.test(mergeTarget)) {
+    throw new TypeError('attestationSetDigest mergeTarget must bind one numeric PR to one lowercase SHA-256 digest');
   }
   return 'sha256:' + digestPraxis({
     schema: 'mesh-attestation-set.v0',
@@ -354,8 +358,11 @@ export function assertAttestationExecutionBinding(verifiedResults, { mergeTarget
   if (!Array.isArray(verifiedResults) || verifiedResults.length === 0) {
     throw attestationError('PRAXIS_ATTESTATION_PLAN_MISMATCH', 'no execution attestations were verified');
   }
-  if (typeof mergeTarget !== 'string' || mergeTarget.trim().length === 0) {
-    throw attestationError('PRAXIS_ATTESTATION_TARGET_MISMATCH', 'permitted merge target is invalid');
+  if (typeof mergeTarget !== 'string' || !MERGE_TARGET_RE.test(mergeTarget)) {
+    throw attestationError(
+      'PRAXIS_ATTESTATION_TARGET_MISMATCH',
+      'permitted merge target must bind one numeric PR to one lowercase SHA-256 digest'
+    );
   }
   const digests = verifiedResults.map(result => {
     if (!result || !isPlainObject(result.evidence) || typeof result.digest !== 'string' || !NULLIFIER_RE.test(result.digest)) {
