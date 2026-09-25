@@ -131,6 +131,7 @@ export function assessFoundingDigitalCouncilVoteActivation({
     foundation_digest:foundation.package_digest,
     circle_package_digest:composition.circle_package_digest,
     independent_status_digest:digestObject(developmentalStatus),
+    continuity_evidence_digest:request.continuity_evidence_digest,
     continuity_current:continuityCurrent,
     continuity_age_seconds:continuityAgeSeconds,
     continuity_clear:continuityClear,
