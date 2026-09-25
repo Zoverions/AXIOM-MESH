@@ -17,7 +17,9 @@ const ROLE_MODES = new Set(['propose','deliberate','evidence','vote','approve','
 
 export async function loadBuiltInCircleTemplates() {
   const path = new URL('../../config/circle-templates-v0.json', import.meta.url);
-  return validateCircleTemplateCatalog(JSON.parse(await readFile(path, 'utf8')));
+  const document = JSON.parse(await readFile(path, 'utf8'));
+  validateCircleTemplateCatalog(document);
+  return document;
 }
 
 export function validateCircleTemplateCatalog(document) {
@@ -109,9 +111,11 @@ export function instantiateCircleTemplate(template, input) {
   exactObject(input, 'Circle template instantiation', [
     'circle_id','name','purpose','created_by','created_at','trust_anchor_id'
   ]);
-  id(input.circle_id);
-  id(input.created_by);
-  id(input.trust_anchor_id);
+  if (
+    !id(input.circle_id)
+    || !id(input.created_by)
+    || !id(input.trust_anchor_id)
+  ) throw new ValidationError('Circle template instantiation identifiers are invalid');
   if (!text(input.name, 1, 160) || !text(input.purpose, 1, 1000)) {
     throw new ValidationError('Circle template instantiation text is invalid');
   }
