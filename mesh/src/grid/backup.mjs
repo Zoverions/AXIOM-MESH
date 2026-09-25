@@ -25,14 +25,18 @@ import {
 } from '../lib/chunked-artifact.mjs';
 import { loadGridVerificationKeys } from './store.mjs';
 
-const BACKUP_FORMAT = 'axiom-grid-backup.v1';
+// The single-envelope format. Still verified, restored and rotated; new
+// backups use it only when AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v1
+// (for example, to restore on a build that predates v2).
+export const ENVELOPE_BACKUP_FORMAT = 'axiom-grid-backup.v1';
+const BACKUP_FORMAT = ENVELOPE_BACKUP_FORMAT;
 const BACKUP_FILE = 'snapshot.axb';
-// Streaming format (scalability audit S-13): the snapshot is a chunked
-// protected artifact, so backup, verification and restore hold a bounded
-// amount of memory whatever the database size. Data-key rotation rewraps it
-// chunk by chunk under a signed rewrap record. Opt-in with
-// AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2.
+// Streaming format (scalability audit S-13), the default: the snapshot is a
+// chunked protected artifact, so backup, verification and restore hold a
+// bounded amount of memory whatever the database size. Data-key rotation
+// rewraps it chunk by chunk under a signed rewrap record.
 export const STREAMING_BACKUP_FORMAT = 'axiom-grid-backup.v2';
+export const DEFAULT_BACKUP_FORMAT = STREAMING_BACKUP_FORMAT;
 const STREAMING_BACKUP_FILE = 'snapshot.axc';
 const BACKUP_FORMATS = new Set([BACKUP_FORMAT, STREAMING_BACKUP_FORMAT]);
 const MANIFEST_FILE = 'manifest.json';
@@ -48,7 +52,7 @@ export async function createGridBackup({
   protector,
   backupId,
   traceId,
-  format = process.env.AXIOM_GRID_BACKUP_FORMAT || BACKUP_FORMAT
+  format = process.env.AXIOM_GRID_BACKUP_FORMAT || DEFAULT_BACKUP_FORMAT
 }) {
   if (!store || !identity || !protector) throw new ValidationError('Grid backup dependencies are missing');
   if (!ID.test(backupId ?? '')) throw new ValidationError('Backup id is invalid');

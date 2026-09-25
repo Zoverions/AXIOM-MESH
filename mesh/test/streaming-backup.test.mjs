@@ -225,3 +225,31 @@ test('an unknown backup format is refused', async t => {
   const f = await fixture(t);
   await assert.rejects(backup(f, 'backup_bad_format', 'axiom-grid-backup.v3'), /format is unsupported/);
 });
+
+test('streaming backups are the default; the envelope format stays selectable', async t => {
+  const f = await fixture(t);
+  const previous = process.env.AXIOM_GRID_BACKUP_FORMAT;
+  t.after(() => {
+    if (previous === undefined) delete process.env.AXIOM_GRID_BACKUP_FORMAT;
+    else process.env.AXIOM_GRID_BACKUP_FORMAT = previous;
+  });
+  delete process.env.AXIOM_GRID_BACKUP_FORMAT;
+  const { manifest: byDefault } = await backup(f, 'backup_default_format');
+  assert.equal(byDefault.format, STREAMING_BACKUP_FORMAT);
+  assert.equal(byDefault.snapshot.name, 'snapshot.axc');
+
+  process.env.AXIOM_GRID_BACKUP_FORMAT = 'axiom-grid-backup.v1';
+  const { manifest: envelope } = await backup(f, 'backup_envelope_format');
+  assert.equal(envelope.format, 'axiom-grid-backup.v1');
+  assert.equal(envelope.snapshot.name, 'snapshot.axb');
+  for (const id of ['backup_default_format', 'backup_envelope_format']) {
+    const verified = await verifyGridBackupArtifact({
+      manifestPath: join(f.dataDir, 'backups', id, 'manifest.json'),
+      dataDir: f.dataDir, identity: f.identity, protector: f.protector
+    });
+    assert.equal(verified.valid, true, id);
+  }
+
+  process.env.AXIOM_GRID_BACKUP_FORMAT = 'axiom-grid-backup.v9';
+  await assert.rejects(backup(f, 'backup_unknown_env_format'), /format is unsupported/);
+});

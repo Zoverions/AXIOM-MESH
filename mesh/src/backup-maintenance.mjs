@@ -554,8 +554,7 @@ export async function loadBackupInventory({
       backupId: entry.name,
       dataDir: root,
       identity,
-      protector,
-      artifactRelativePath: `backups/${entry.name}/snapshot.axb`
+      protector
     }));
   }
   return inventory.sort(compareNewestFirst);
@@ -589,13 +588,17 @@ async function descriptorForBackupDirectory({
     manifest.created_at,
     `Backup ${backupId} created_at`
   );
+  // Rotation records bind the snapshot's logical path, which is where it
+  // lives in the inventory whatever its format; a relocated backup passes
+  // that path explicitly.
   const verified = await verifyGridBackupArtifact({
     manifestPath,
     dataDir,
     identity,
     protector,
     expectedDatabaseDigest: manifest.database?.sha256,
-    artifactRelativePath
+    artifactRelativePath: artifactRelativePath
+      ?? `backups/${backupId}/${snapshotFileName(manifest)}`
   });
   return validateDescriptor({
     backup_id: backupId,

@@ -123,6 +123,15 @@ work must not be treated as closure of startup scalability.
   That writer is inside the Grid process and already holds the signing key,
   yet it is still a narrowing of a pinned guarantee, so enabling it is a
   maintainer decision under the capability lifecycle.
+- *Decision (2026-09-25): stay disabled.* The substrate's promise is that
+  evidence fails closed; replay on every start is what makes a session-time
+  edit through the Grid's own connection visible after restart. At the
+  measured scale the anchors save about 0.9 s of a 3.0 s start, and the
+  remaining cost is checkpoint-bounded rather than history-bound, so the
+  saving does not justify narrowing that guarantee. Revisit if startup
+  replay becomes the dominant recovery cost, with a design that also covers
+  the Grid's own connection (for example, anchoring a digest the Grid cannot
+  produce without replaying).
 - *Measured* (20,000 events, worst case where every event adds a row): full
   replay 1,041 ms against an anchor check of 188 ms; total startup 3.7 s
   (original) → 3.0 s (default, with S-02) → 2.1 s (anchors enabled). The
@@ -825,7 +834,7 @@ Peak memory therefore grows by multiples of database size.
 - Backup load does not violate intent SLOs beyond the declared maintenance
   budget.
 
-**Remediation status (2026-09-25): streaming format built, off by default;
+**Remediation status (2026-09-25): streaming format is the default;
 data-key rotation supports it.**
 
 - **Format.** `axiom-grid-backup.v2` stores the snapshot as a chunked
@@ -857,12 +866,17 @@ data-key rotation supports it.**
   forged or discontinuous record, re-signed or not, is refused. Tests fail
   without the column re-encryption, the chunk continuity rule, following the
   history on open, and with the snapshot rotated as one envelope.
-- **Opt-in.** `AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2`. Rotation still
+- **Default.** New backups use v2. `AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v1`
+  still writes the single-envelope format, and existing v1 backups verify,
+  restore and rotate as before. Making v2 the default surfaced one defect,
+  now fixed: the retention inventory named every snapshot `snapshot.axb`
+  when checking rewrap records, so a rotated v2 backup failed retention
+  planning. The recovery drill now runs the default format. Rotation still
   stages each rewrapped artifact and the live database in memory, so a
   snapshot above 512 MiB cannot be rotated.
 
-Still open: making v2 the default, streaming rotation of the live database
-and staged artifacts, and background maintenance with a bounded I/O rate.
+Still open: streaming rotation of the live database and staged artifacts,
+and background maintenance with a bounded I/O rate.
 Exports (S-12) now generate plaintext bundles by streaming.
 
 ### S-14 — Long-running artifact work is performed inline with commit requests

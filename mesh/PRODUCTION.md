@@ -374,14 +374,16 @@ data-key rotation/rollback. Do not remove quarantine until independent-media
 copy, retention, restore, destruction authorization, and change records are
 complete.
 
-Streaming backups (`axiom-grid-backup.v2`) are built but off by default. With
-`AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v2` on the Grid, the snapshot is
-a chunked protected artifact (`snapshot.axc`), sealed, verified and restored
+Grid backups stream by default (`axiom-grid-backup.v2`): the snapshot is a
+chunked protected artifact (`snapshot.axc`), sealed, verified and restored
 1 MiB at a time, so memory no longer grows with the database. Verification,
-restore, retention, data-key rotation and rollback handle both formats.
-Rotation rewraps a streaming snapshot chunk by chunk under a signed rewrap
-record, but still stages each rewrapped artifact (and the live database) in
-memory, so a snapshot above 512 MiB cannot be rotated yet.
+restore, retention, data-key rotation, rollback and the recovery drill handle
+both formats. Rotation rewraps a streaming snapshot chunk by chunk under a
+signed rewrap record, but still stages each rewrapped artifact (and the live
+database) in memory, so a snapshot above 512 MiB cannot be rotated yet.
+`AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v1` writes the older
+single-envelope format, for example to restore on a build that predates v2;
+existing v1 backups keep working either way.
 
 Use the disposable lifecycle drill:
 

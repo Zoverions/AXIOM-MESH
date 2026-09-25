@@ -583,7 +583,11 @@ test('encrypted Grid backups verify, exclude live restore, preserve rollback, an
     identity,
     protector,
     backupId,
-    traceId: 'trace_backup_complete'
+    traceId: 'trace_backup_complete',
+    // The single-envelope format, still supported, and the only one the
+    // in-memory verifier reads; streaming backups are covered in
+    // streaming-backup.test.mjs and by the default below.
+    format: 'axiom-grid-backup.v1'
   });
   const manifestPath = join(dataDir, 'backups', backupId, 'manifest.json');
   const snapshotPath = join(dataDir, 'backups', backupId, 'snapshot.axb');
@@ -1840,7 +1844,9 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     input: {}
   });
   assert.equal(backup.status, 'completed');
-  assert.equal(backup.backup_manifest.format, 'axiom-grid-backup.v1');
+  // Streaming backups are the default (scalability audit S-13).
+  assert.equal(backup.backup_manifest.format, 'axiom-grid-backup.v2');
+  assert.equal(backup.backup_manifest.snapshot.name, 'snapshot.axc');
   assert.match(backup.backup_manifest.database.sha256, /^[a-f0-9]{64}$/);
   const backups = await api(gateway, token, '/v1/backups');
   assert.equal(backups.backups[0].backup_id, backup.backup_id);
