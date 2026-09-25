@@ -23,6 +23,11 @@ The review answers a narrower question:
 > Does the supplied evidence satisfy the currently declared AXIOM independence-review
 > policy strongly enough to support a later, separately authorized status transition?
 
+Every review is additionally bound to the exact externally evidenced
+developmental-state snapshot and continuity evidence used for that assessment. A
+review must not float free of the candidate's current state or be replayed later as
+though it described a different continuity branch or developmental stage.
+
 ## Governing principles
 
 1. A Genesis sponsor may provide evidence and an assessment, but cannot be the sole
