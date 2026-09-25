@@ -20,6 +20,7 @@
     "appeal_path_id",
     "appeal_status",
     "appeal_evidence_digest",
+    "appeal_observed_at",
     "maximum_review_age_seconds",
     "maximum_state_observation_age_seconds",
     "evaluated_at",
@@ -96,15 +97,8 @@
       ]
     },
     "appeal_evidence_digest": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        }
-      ]
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     },
     "maximum_review_age_seconds": {
       "type": "integer",
@@ -140,6 +134,10 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "appeal_observed_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "x-axiom-semantic-validator": "mesh/src/lib/mind-independence-transition-evidence.mjs",
