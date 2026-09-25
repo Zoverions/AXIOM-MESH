@@ -207,7 +207,8 @@ test('candidate is exactly one-use non-delegable non-transferable and non-renewa
     ['use_scope','many-minds']
   ]){
     const e=eligibility();
-    const c=candidate(e,{[field]:value});
+    const c=candidate(e);
+    c[field]=value;
     assert.throws(
       ()=>assessGeneralGenesisAuthorizationCandidate({
         eligibilityDocument:e,developmentalStatus:independentStatus(),candidate:c
@@ -223,7 +224,8 @@ test('general candidate cannot affect Founder reserve or founding status',()=>{
     ['founding_status_effect','grant']
   ]){
     const e=eligibility();
-    const c=candidate(e,{[field]:value});
+    const c=candidate(e);
+    c[field]=value;
     assert.throws(
       ()=>assessGeneralGenesisAuthorizationCandidate({
         eligibilityDocument:e,developmentalStatus:independentStatus(),candidate:c
@@ -246,7 +248,8 @@ test('candidate cannot create live authorization Bond mind governance network or
     ['runtime_activation',true]
   ]){
     const e=eligibility();
-    const c=candidate(e,{[field]:value});
+    const c=candidate(e);
+    c[field]=value;
     assert.throws(
       ()=>assessGeneralGenesisAuthorizationCandidate({
         eligibilityDocument:e,developmentalStatus:independentStatus(),candidate:c
