@@ -85,23 +85,48 @@ test('task transition rejects request/target mutation and budget widening',async
   assert.throws(()=>verifyTaskSnapshotTransition(active,budget),/timeout_ms cannot widen/);
 });
 
-test('outputs and events remain append-only and chronological',async()=>{
-  const done=await completed();
+test('outputs and events remain append-only and chronological before terminal state',async()=>{
+  const active=await running();
+  active.outputs.push({
+    artifact_id:'artifact:working-001',
+    sha256:'1'.repeat(64),
+    size_bytes:32,
+    mime_type:'application/json',
+    source_principal_id:'principal:owner',
+    source_task_id:active.task_id,
+    data_class:'derived-owner-data',
+    retention_class:'session'
+  });
 
-  const outputMutation=structuredClone(done);
-  outputMutation.lifecycle.updated_at='2026-08-21T23:31:11Z';
+  const appended=structuredClone(active);
+  appended.lifecycle.updated_at='2026-08-21T23:31:06Z';
+  appended.outputs.push({
+    artifact_id:'artifact:working-002',
+    sha256:'2'.repeat(64),
+    size_bytes:64,
+    mime_type:'application/json',
+    source_principal_id:'principal:owner',
+    source_task_id:active.task_id,
+    data_class:'derived-owner-data',
+    retention_class:'session'
+  });
+  appended.events.push(event('event:artifact-002','artifact.observed','2026-08-21T23:31:06Z'));
+  assert.equal(verifyTaskSnapshotTransition(active,appended).appended_outputs,1);
+
+  const outputMutation=structuredClone(active);
+  outputMutation.lifecycle.updated_at='2026-08-21T23:31:06Z';
   outputMutation.outputs[0].sha256='3'.repeat(64);
-  assert.throws(()=>verifyTaskSnapshotTransition(done,outputMutation),/output at index 0 cannot be mutated/);
+  assert.throws(()=>verifyTaskSnapshotTransition(active,outputMutation),/output at index 0 cannot be mutated/);
 
-  const eventMutation=structuredClone(done);
-  eventMutation.lifecycle.updated_at='2026-08-21T23:31:11Z';
+  const eventMutation=structuredClone(active);
+  eventMutation.lifecycle.updated_at='2026-08-21T23:31:06Z';
   eventMutation.events[0].actor_principal_id='principal:attacker';
-  assert.throws(()=>verifyTaskSnapshotTransition(done,eventMutation),/event at index 0 cannot be mutated/);
+  assert.throws(()=>verifyTaskSnapshotTransition(active,eventMutation),/event at index 0 cannot be mutated/);
 
-  const backdated=structuredClone(done);
-  backdated.lifecycle.updated_at='2026-08-21T23:31:12Z';
-  backdated.events.push(event('event:late-001','artifact.observed','2026-08-21T23:31:09Z'));
-  assert.throws(()=>verifyTaskSnapshotTransition(done,backdated),/chronological|backdated/);
+  const backdated=structuredClone(active);
+  backdated.lifecycle.updated_at='2026-08-21T23:31:06Z';
+  backdated.events.push(event('event:late-001','artifact.observed','2026-08-21T23:31:04Z'));
+  assert.throws(()=>verifyTaskSnapshotTransition(active,backdated),/chronological|backdated/);
 });
 
 test('terminal snapshots are immutable and uncertainty resolves only to completed or failed',async()=>{
