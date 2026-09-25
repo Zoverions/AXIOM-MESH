@@ -40,23 +40,34 @@ export function assessMindIndependenceTransitionEvidence(reviewDocument, evidenc
     evidence.continuity_observed_at,
     'continuity observed_at'
   );
+  const appealObservedAt = timestamp(
+    evidence.appeal_observed_at,
+    'appeal observed_at'
+  );
 
   if (assessedAt > evaluatedAt) {
     throw new ValidationError('Independence review cannot be future-dated at transition evaluation');
   }
-  if (developmentalObservedAt > evaluatedAt || continuityObservedAt > evaluatedAt) {
+  if (
+    developmentalObservedAt > evaluatedAt
+    || continuityObservedAt > evaluatedAt
+    || appealObservedAt > evaluatedAt
+  ) {
     throw new ValidationError('Transition state observation cannot be future-dated');
   }
 
   const reviewAgeSeconds = ageSeconds(assessedAt, evaluatedAt);
   const developmentalAgeSeconds = ageSeconds(developmentalObservedAt, evaluatedAt);
   const continuityAgeSeconds = ageSeconds(continuityObservedAt, evaluatedAt);
+  const appealAgeSeconds = ageSeconds(appealObservedAt, evaluatedAt);
 
   const reviewCurrent = reviewAgeSeconds <= evidence.maximum_review_age_seconds;
   const developmentalStateCurrent =
     developmentalAgeSeconds <= evidence.maximum_state_observation_age_seconds;
   const continuityCurrent =
     continuityAgeSeconds <= evidence.maximum_state_observation_age_seconds;
+  const appealCurrent =
+    appealAgeSeconds <= evidence.maximum_state_observation_age_seconds;
 
   const stageMatches =
     evidence.current_developmental_stage === 'candidate-independent';
@@ -97,6 +108,9 @@ export function assessMindIndependenceTransitionEvidence(reviewDocument, evidenc
   } else if (!continuityClear) {
     transitionRequestable = false;
     reason = `continuity-${evidence.continuity_status}`;
+  } else if (!appealCurrent) {
+    transitionRequestable = false;
+    reason = 'appeal-observation-stale';
   } else if (!appealClear) {
     transitionRequestable = false;
     reason = `appeal-${evidence.appeal_status}`;
@@ -119,6 +133,8 @@ export function assessMindIndependenceTransitionEvidence(reviewDocument, evidenc
     continuity_current: continuityCurrent,
     continuity_age_seconds: continuityAgeSeconds,
     continuity_clear: continuityClear,
+    appeal_current: appealCurrent,
+    appeal_age_seconds: appealAgeSeconds,
     appeal_clear: appealClear,
     transition_requestable: transitionRequestable,
     reason,
@@ -148,6 +164,7 @@ export function validateTransitionEvidence(evidence) {
     'appeal_path_id',
     'appeal_status',
     'appeal_evidence_digest',
+    'appeal_observed_at',
     'maximum_review_age_seconds',
     'maximum_state_observation_age_seconds',
     'evaluated_at',
@@ -174,6 +191,7 @@ export function validateTransitionEvidence(evidence) {
     || !CONTINUITY_STATUSES.has(evidence.continuity_status)
     || !id(evidence.appeal_path_id)
     || !APPEAL_STATUSES.has(evidence.appeal_status)
+    || !digest(evidence.appeal_evidence_digest)
     || !integerBetween(evidence.maximum_review_age_seconds, 1, 2592000)
     || !integerBetween(evidence.maximum_state_observation_age_seconds, 1, 604800)
     || evidence.status_effect !== 'none'
@@ -189,15 +207,8 @@ export function validateTransitionEvidence(evidence) {
 
   timestamp(evidence.developmental_state_observed_at, 'developmental state observed_at');
   timestamp(evidence.continuity_observed_at, 'continuity observed_at');
+  timestamp(evidence.appeal_observed_at, 'appeal observed_at');
   timestamp(evidence.evaluated_at, 'transition evaluated_at');
-
-  if (evidence.appeal_status === 'none') {
-    if (evidence.appeal_evidence_digest !== null) {
-      throw new ValidationError('No-appeal transition evidence cannot claim appeal evidence');
-    }
-  } else if (!digest(evidence.appeal_evidence_digest)) {
-    throw new ValidationError('Appeal transition state requires exact appeal evidence');
-  }
 
   return evidence;
 }
