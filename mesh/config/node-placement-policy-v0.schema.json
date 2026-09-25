@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/node-placement-policy-v0.schema.json",
+  "title": "AXIOM Node Placement Policy v0",
+  "description": "Inert eligibility-first placement policy. It filters and orders already-described node candidates but grants no admission, scheduling, execution, network, provider or model authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "placement_id",
+    "outcome_id",
+    "task_id",
+    "requested_egress_class",
+    "locality_policy",
+    "required_residency_regions",
+    "required_capabilities",
+    "required_runtime_ids",
+    "required_model_refs",
+    "required_tool_refs",
+    "minimum_security_level",
+    "require_attestation",
+    "max_latency_ms",
+    "max_cost",
+    "max_energy_millijoules",
+    "optimization_currency",
+    "preference_order",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-node-placement-policy.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "placement_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "outcome_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "task_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "requested_egress_class": {
+      "enum": [
+        "none",
+        "owner-lan",
+        "owner-vpn",
+        "managed-private",
+        "public-provider"
+      ]
+    },
+    "locality_policy": {
+      "enum": [
+        "owner-local-only",
+        "private-network-allowed",
+        "public-provider-allowed"
+      ]
+    },
+    "required_residency_regions": {
+      "$ref": "#/$defs/textArray"
+    },
+    "required_capabilities": {
+      "$ref": "#/$defs/idArray"
+    },
+    "required_runtime_ids": {
+      "$ref": "#/$defs/idArray"
+    },
+    "required_model_refs": {
+      "$ref": "#/$defs/idArray"
+    },
+    "required_tool_refs": {
+      "$ref": "#/$defs/idArray"
+    },
+    "minimum_security_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "require_attestation": {
+      "type": "boolean"
+    },
+    "max_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "max_cost": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "max_minor_units"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "max_minor_units": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      ]
+    },
+    "max_energy_millijoules": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "optimization_currency": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z]{3}$"
+    },
+    "preference_order": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "locality",
+          "trust",
+          "latency",
+          "cost",
+          "energy"
+        ]
+      }
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/node-placement-policy.mjs",
+  "x-axiom-non-claims": [
+    "node-admission",
+    "schedule-creation",
+    "execution-authority",
+    "provider-authority",
+    "model-authority",
+    "network-activation",
+    "semantic-preference-inference"
+  ]
+}
