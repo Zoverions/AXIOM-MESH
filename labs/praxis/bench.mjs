@@ -12,7 +12,9 @@
 // so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
 // caps keep CI honest. Measurements use a short warm-up and median wall samples.
 // CPU time is measured across multiple independent bounded parse batches so a
-// single GC/JIT/accounting outlier cannot determine the scaling ratio. Each
+// single GC/JIT/accounting outlier cannot determine the scaling ratio. Normal
+// batches target comparable source volume rather than equal parse counts: small
+// corpora run more parses per batch, while large corpora run fewer. Each
 // nonzero batch is normalized per parse and the median is used. Coarse zero
 // readings may increase the next batch size, but at least three nonzero samples
 // are required; otherwise timing evidence fails closed as 0. CPU time is used
@@ -30,8 +32,11 @@ const BENCHMARK_WARMUPS = 1;
 const BENCHMARK_SAMPLES = 5;
 const BENCHMARK_CPU_TARGET_SAMPLES = 5;
 const BENCHMARK_CPU_MIN_SAMPLES = 3;
-const BENCHMARK_CPU_BASE_RUNS = 5;
 const BENCHMARK_MAX_CPU_RUNS = 80;
+const BENCHMARK_CPU_TARGET_SOURCE_UNITS = 500_000;
+const BENCHMARK_CPU_MAX_BASE_RUNS = Math.floor(
+  BENCHMARK_MAX_CPU_RUNS / BENCHMARK_CPU_TARGET_SAMPLES
+);
 
 export function syntheticProgram(lines) {
   let src = '';
@@ -46,10 +51,24 @@ function median(values) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-function measureCpuPerRun(fn) {
+export function benchmarkCpuRunsPerSample(sourceUnits) {
+  if (!Number.isInteger(sourceUnits) || sourceUnits < 0) {
+    throw new TypeError('benchmark source size must be a non-negative integer');
+  }
+  const normalizedUnits = Math.max(sourceUnits, 1);
+  return Math.max(
+    1,
+    Math.min(
+      BENCHMARK_CPU_MAX_BASE_RUNS,
+      Math.ceil(BENCHMARK_CPU_TARGET_SOURCE_UNITS / normalizedUnits)
+    )
+  );
+}
+
+function measureCpuPerRun(fn, { baseRuns }) {
   const samples = [];
   let runs = 0;
-  let nextBatch = BENCHMARK_CPU_BASE_RUNS;
+  let nextBatch = baseRuns;
 
   while (samples.length < BENCHMARK_CPU_TARGET_SAMPLES && runs < BENCHMARK_MAX_CPU_RUNS) {
     const batch = Math.min(nextBatch, BENCHMARK_MAX_CPU_RUNS - runs);
@@ -61,7 +80,7 @@ function measureCpuPerRun(fn) {
     const cpuMicros = cpu.user + cpu.system;
     if (cpuMicros > 0) {
       samples.push((cpuMicros / 1000) / batch);
-      nextBatch = BENCHMARK_CPU_BASE_RUNS;
+      nextBatch = baseRuns;
     } else {
       nextBatch *= 2;
     }
@@ -70,7 +89,10 @@ function measureCpuPerRun(fn) {
   return samples.length >= BENCHMARK_CPU_MIN_SAMPLES ? median(samples) : 0;
 }
 
-function measure(fn, { requireCpuEvidence = false } = {}) {
+function measure(fn, {
+  requireCpuEvidence = false,
+  cpuRunsPerSample = BENCHMARK_CPU_MAX_BASE_RUNS
+} = {}) {
   for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
 
   const wallSamples = [];
@@ -83,7 +105,7 @@ function measure(fn, { requireCpuEvidence = false } = {}) {
 
   return {
     ms: median(wallSamples),
-    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn) : null,
+    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn, { baseRuns: cpuRunsPerSample }) : null,
     result
   };
 }
@@ -92,7 +114,8 @@ export function benchmarkSource(label, source) {
   const lines = source.split('\n').length;
   const bytes = source.length;
   const lexed = measure(() => lex(source));
-  const parsed = measure(() => parse(source), { requireCpuEvidence: true });
+  const cpuRunsPerSample = benchmarkCpuRunsPerSample(bytes);
+  const parsed = measure(() => parse(source), { requireCpuEvidence: true, cpuRunsPerSample });
   const formatted = measure(() => formatProgram(parsed.result));
   let compileMs = null;
   try {
@@ -126,21 +149,41 @@ export const BUDGETS = {
   maxScalingRatio: 20
 };
 
+// Standard-budget verification requires exactly one synthetic-1k and one
+// synthetic-10k result. Missing or duplicate required rows cannot prove a pass.
+// Other corpus labels remain informational. Supplied CPU samples must be finite
+// and positive; wall samples must be finite and nonnegative.
 export function checkBudgets(results) {
   const failures = [];
   const byLabel = new Map(results.map((r) => [r.label, r]));
+  for (const label of ['synthetic-1k', 'synthetic-10k']) {
+    let matches = 0;
+    for (const row of results) {
+      if (row.label === label) matches += 1;
+    }
+    if (matches === 0) {
+      failures.push(`missing required benchmark evidence for ${label}`);
+    } else if (matches > 1) {
+      failures.push(`duplicate required benchmark evidence for ${label}`);
+    }
+  }
   const small = byLabel.get('synthetic-1k');
   const large = byLabel.get('synthetic-10k');
   if (large) {
-    if (large.parseMs > BUDGETS.maxParseMs10k) {
+    if (!Number.isFinite(large.parseMs) || large.parseMs < 0) {
+      failures.push('10k-line parse wall timing is missing or invalid');
+    } else if (large.parseMs > BUDGETS.maxParseMs10k) {
       failures.push(`10k-line parse took ${large.parseMs}ms (budget ${BUDGETS.maxParseMs10k}ms)`);
     }
-    if (large.formatMs > BUDGETS.maxFormatMs10k) {
+    if (!Number.isFinite(large.formatMs) || large.formatMs < 0) {
+      failures.push('10k-line format wall timing is missing or invalid');
+    } else if (large.formatMs > BUDGETS.maxFormatMs10k) {
       failures.push(`10k-line format took ${large.formatMs}ms (budget ${BUDGETS.maxFormatMs10k}ms)`);
     }
   }
   if (small && large) {
-    if (!(small.parseCpuMs > 0) || !(large.parseCpuMs >= 0)) {
+    if (!Number.isFinite(small.parseCpuMs) || small.parseCpuMs <= 0 ||
+        !Number.isFinite(large.parseCpuMs) || large.parseCpuMs <= 0) {
       failures.push('parse CPU timing is missing or invalid for scaling check');
     } else {
       const ratio = large.parseCpuMs / small.parseCpuMs;
@@ -151,7 +194,6 @@ export function checkBudgets(results) {
   }
   return failures;
 }
-
 export function formatReport(results) {
   const header = 'label           lines    bytes  lex(ms) parse(ms) parseCPU(ms) format(ms) compile(ms)';
   const rows = results.map((r) =>

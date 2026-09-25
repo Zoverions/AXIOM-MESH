@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import { startDevelopmentStack } from '../src/dev.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import { canonicalJson, sha256 } from '../src/lib/canonical.mjs';
 import {
   activationGovernanceAction,
@@ -265,7 +265,8 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
   const clock = t.mock.timers;
 
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-remediation-e2e-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('intent remediation e2e');
+  const basePort = portLease.base_port;
   const tokens = {
     operator: `operator-${crypto.randomUUID()}-${'o'.repeat(20)}`,
     approver: `approver-${crypto.randomUUID()}-${'a'.repeat(20)}`,
@@ -302,8 +303,12 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     }
   });
   t.after(async () => {
-    await stack.stop();
-    await rm(dataDir, { recursive: true, force: true });
+    try {
+      await stack.stop();
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
   });
   const gateway = `http://127.0.0.1:${basePort}`;
 
@@ -435,24 +440,3 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
   assert.equal(stillPending.intent_remediation_state.execution_authorized, false);
 });
 
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new Error('Unable to reserve remediation e2e port block');
-}
