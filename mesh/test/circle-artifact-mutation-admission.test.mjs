@@ -228,7 +228,12 @@ test('stale-parent concurrent edit remains visible as conflict rather than last-
     expires_at:'2026-09-24T12:06:00.000Z'
   };
   const result=assessCircleArtifactMutation({
-    ...f,previousArtifact:previous,candidateArtifact:concurrent,admission,authorizationCurrent:auth
+    ...f,
+    membershipCurrent:{...f.membershipCurrent,assessed_at:'2026-09-24T12:01:00.000Z'},
+    previousArtifact:previous,
+    candidateArtifact:concurrent,
+    admission,
+    authorizationCurrent:auth
   });
   assert.equal(result.eligible_for_revision_admission,true);
   assert.equal(result.candidate_state,'conflict');
