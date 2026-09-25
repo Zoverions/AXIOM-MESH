@@ -203,6 +203,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'agent-skills/axiom-authority-auditor/SKILL.md',
   'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
   'labs/rust-trust-core/EXPERIMENT.md',
+  'labs/ephemeral-gpu-inference/EXPERIMENT.md',
   'mesh/README.md',
   'mesh/PRODUCTION.md',
   'apps/axiom-one/feed-contract/README.md'
