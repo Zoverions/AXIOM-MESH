@@ -38,6 +38,10 @@ const STATIC_ASSETS = new Map([
   ['/mesh/config/gateway-client-contract.json', {
     path: join(REPOSITORY_ROOT, 'mesh', 'config', 'gateway-client-contract.json'),
     contentType: 'application/json; charset=utf-8'
+  }],
+  ['/mesh/config/circle-templates-v0.json', {
+    path: join(REPOSITORY_ROOT, 'mesh', 'config', 'circle-templates-v0.json'),
+    contentType: 'application/json; charset=utf-8'
   }]
 ]);
 

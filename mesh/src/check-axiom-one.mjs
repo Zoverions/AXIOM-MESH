@@ -5,6 +5,7 @@ import { canonicalJson, digestObject, sha256, ValidationError } from './lib/cano
 import { MESH_ROOT } from './lib/config.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 import { validateHumanContract } from '../../apps/axiom-one/presentation.mjs';
+import { validateCircleTemplateCatalog } from './lib/circle-templates.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const APP_ROOT = join(REPOSITORY_ROOT, 'apps', 'axiom-one');
@@ -12,6 +13,7 @@ const EXPECTED_SURFACES = Object.freeze([
   'overview',
   'ask',
   'social',
+  'circles',
   'approvals',
   'vault',
   'receipts',
@@ -110,7 +112,8 @@ export async function checkAxiomOnePreview() {
     iconMaskable192,
     iconMaskable512,
     screenshotWide,
-    screenshotNarrow
+    screenshotNarrow,
+    circleTemplates
   ] = await Promise.all([
     readJson('app-policy.json'),
     readJson('human-contract.json'),
@@ -128,10 +131,12 @@ export async function checkAxiomOnePreview() {
     readBinary('icons/icon-maskable-192.png'),
     readBinary('icons/icon-maskable-512.png'),
     readBinary('screenshots/screenshot-wide.png'),
-    readBinary('screenshots/screenshot-narrow.png')
+    readBinary('screenshots/screenshot-narrow.png'),
+    readMeshConfigJson('circle-templates-v0.json')
   ]);
   validatePolicy(policy);
   validateExplanations(policy, humanContract);
+  validateCircleTemplateCatalog(circleTemplates);
   validateManifest(manifest);
   validateAssets({ index, app, presentation, localOrganize, styles, worker, server, icon });
   validatePng(icon192, 'icons/icon-192.png', 192, 192);
@@ -160,6 +165,7 @@ export async function checkAxiomOnePreview() {
     explained_gateway_errors: Object.keys(humanContract.gateway_outcomes).length,
     explained_event_kinds: Object.keys(humanContract.event_kinds).length,
     explained_actions: Object.keys(humanContract.actions).length,
+    circle_templates: circleTemplates.templates.length,
     memory_lifecycle_status: policy.memory_lifecycle.status,
     provenance_relations: policy.memory_lifecycle.provenance_relations.length,
     self_links: policy.memory_lifecycle.self_links,
@@ -184,6 +190,7 @@ export async function checkAxiomOnePreview() {
       icon_maskable_512_png: sha256(iconMaskable512),
       screenshot_wide_png: sha256(screenshotWide),
       screenshot_narrow_png: sha256(screenshotNarrow),
+      circle_templates: digestObject(circleTemplates),
       manifest: digestObject(manifest)
     })
   };
@@ -424,7 +431,8 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     'id="main-content"',
     'aria-live="polite"',
     'Experimental local preview',
-    'data-route="social"'
+    'data-route="social"',
+    'data-route="circles"'
   ];
   if (requiredIndex.some(marker => !index.includes(marker))) {
     throw new ValidationError('AXIOM One document semantics are incomplete');
@@ -507,6 +515,18 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
   if (socialMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One owner-local Social surface is incomplete');
   }
+  const circleTemplateMarkers = [
+    "fetch('/mesh/config/circle-templates-v0.json'",
+    "catalog.schema !== 'axiom-circle-template-catalog.v0'",
+    "template.execution_authority !== false",
+    "template.membership_authority !== false",
+    "header('Circle templates'",
+    'Templates only'
+  ];
+  if (circleTemplateMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One Circle template surface is incomplete');
+  }
+
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
     || !worker.includes('!SHELL_ASSETS.includes(url.pathname)')
@@ -531,6 +551,8 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     || !worker.includes("'/presentation.mjs'")
     || !worker.includes("'/human-contract.json'")
     || !worker.includes("'/local-organize.mjs'")
+    || !server.includes("'/mesh/config/circle-templates-v0.json'")
+    || !worker.includes("'/mesh/config/circle-templates-v0.json'")
   ) throw new ValidationError('AXIOM One public explanation assets are not exact');
   const pwaAssets = [
     '/icons/icon-192.png',
@@ -582,6 +604,10 @@ function readBinary(name) {
 
 async function readJson(name) {
   return JSON.parse(await readText(name));
+}
+
+async function readMeshConfigJson(name) {
+  return JSON.parse(await readFile(join(MESH_ROOT, 'config', name), 'utf8'));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
