@@ -22,6 +22,8 @@ function review(overrides = {}) {
     mind_id: 'digital.founder.1',
     sponsor_mind_id: 'human.founder',
     developmental_stage: 'candidate-independent',
+    developmental_state_evidence_digest: 'd'.repeat(64),
+    continuity_evidence_digest: 'e'.repeat(64),
     criteria_profile: INDEPENDENCE_CRITERIA_PROFILE,
     criteria,
     review_policy: {
@@ -80,6 +82,26 @@ test('complete evidence can satisfy the review threshold without granting indepe
   assert.equal(result.status_effect, 'none');
   assert.equal(result.authority_effect, 'none');
   assert.equal(result.runtime_activation, false);
+});
+
+test('review must bind exact developmental-state and continuity evidence', () => {
+  const malformedState = review();
+  malformedState.developmental_state_evidence_digest = 'not-a-digest';
+  assert.throws(
+    () => assessMindIndependenceReview(malformedState),
+    /activation boundary/
+  );
+
+  const malformedContinuity = review();
+  malformedContinuity.continuity_evidence_digest = 'not-a-digest';
+  assert.throws(
+    () => assessMindIndependenceReview(malformedContinuity),
+    /activation boundary/
+  );
+
+  const result = assessMindIndependenceReview(review());
+  assert.equal(result.developmental_state_evidence_digest, 'd'.repeat(64));
+  assert.equal(result.continuity_evidence_digest, 'e'.repeat(64));
 });
 
 test('sponsor-only review cannot satisfy the independent-review threshold', () => {
