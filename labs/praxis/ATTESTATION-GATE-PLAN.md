@@ -53,14 +53,19 @@ Design rules (borrowed from tonight's session):
   signed attestation carries the same PR and pinned head target; the
   coordinator checks equality across the set, and the policy checks each
   evidence target against the OpenGate operation argument.
-- **Nullifiers against replay** — one `nullifier` per attestation, spent on
-  first verification; reuse fails closed (`PRAXIS_ATTESTATION_REPLAY`).
+- **Nullifiers against replay** — one `nullifier` per attestation. When a
+  registry is supplied, successful verification spends the nullifier and
+  reuse fails closed (`PRAXIS_ATTESTATION_REPLAY`). Without a registry,
+  verification is stateless; the authority-boundary coordinator must supply
+  replay state. The default registry is in-memory and durability is caller-owned.
 - **Explicit non-claims (B5 zero-claim pattern)** — `non_claims` is REQUIRED
-  and non-empty. An attestation that does not say what it does *not* claim is
-  malformed. The verifier additionally enforces caller-required non-claims
-  (e.g. a review attestation must carry `provider_identity`,
-  `live_output_truth`, `budget_enforcement`, `signer_custody` in non_claims —
-  widening fails closed before signature verification, mirroring B5).
+  and non-empty. Structural validation rejects a missing or malformed list
+  before signature verification. Caller-required membership is checked after
+  signature, signer-role, and freshness checks, but before any optional
+  nullifier spending or successful return. For example, a caller may require
+  `provider_identity`, `live_output_truth`, `budget_enforcement`, and
+  `signer_custody` in non_claims. Both rejection paths fail closed; neither
+  establishes the truth of the attestation's claims or grants authority.
 - **Fulfillment-gated actions** — the gate opens only when the policy's
   premises over the verified claim sets all hold; there is no partial credit.
 
