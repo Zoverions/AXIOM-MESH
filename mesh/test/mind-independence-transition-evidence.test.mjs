@@ -112,6 +112,10 @@ test('fresh successful review can make an independence transition requestable wi
   assert.equal(result.appeal_clear, true);
   assert.equal(result.transition_requestable, true);
   assert.equal(result.reason, 'transition-requestable');
+  assert.equal(result.requires_external_state_verification, true);
+  assert.equal(result.state_verification_effect, 'none');
+  assert.equal(result.ordinary_status_authority_path_required, true);
+  assert.equal(result.creates_status_transition, false);
   assert.equal(result.status_effect, 'none');
   assert.equal(result.council_voting_effect, 'none');
   assert.equal(result.genesis_eligibility_effect, 'none');
