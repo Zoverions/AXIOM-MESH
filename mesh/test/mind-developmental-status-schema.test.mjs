@@ -24,4 +24,12 @@ test('Mind Developmental Status v0 schema is monotonic-state evidence only',asyn
     schema['x-axiom-semantic-validator'],
     'mesh/src/lib/mind-developmental-status.mjs'
   );
+  assert.deepEqual(schema['x-axiom-non-claims'], [
+    'live-developmental-status',
+    'automatic-independence',
+    'council-voting-activation',
+    'genesis-eligibility',
+    'runtime-authority',
+    'automatic-execution'
+  ]);
 });
