@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { digestObject } from '../src/lib/canonical.mjs';
+import { digestObject, sha256 } from '../src/lib/canonical.mjs';
 
 const D = char => char.repeat(64);
 
@@ -59,7 +59,7 @@ function mutationAuthorization(overrides = {}) {
     issued_at: '2026-09-25T17:00:00.000Z',
     effective_at: '2026-09-25T17:00:00.000Z',
     expires_at: '2026-09-25T17:00:30.000Z',
-    command_id: 'machine_cmd_' + D('7'),
+    command_id: 'machine_cmd_' + sha256('intent_' + D('6')),
     ...overrides
   };
 }
@@ -77,7 +77,7 @@ function transition(overrides = {}) {
     successor_status: 'narrowed',
     successor_authority_digest: authority().authority_digest,
     successor_authority: authority(),
-    command_id: 'machine_cmd_' + D('7'),
+    command_id: 'machine_cmd_' + sha256('intent_' + D('6')),
     command_digest: D('8'),
     mutation_authorization_digest: D('9'),
     actor_id: 'owner.alice',
@@ -178,7 +178,10 @@ test('mutation authorization normalizer preserves exact signed mutation bindings
   assert.equal(normalized.transition_kind, 'narrow');
   assert.equal(normalized.policy_version, '2026-08-16.1');
   assert.equal(normalized.policy_digest, D('5'));
-  assert.equal(normalized.command_id, 'machine_cmd_' + D('7'));
+  assert.equal(
+    normalized.command_id,
+    'machine_cmd_' + sha256(normalized.intent_id)
+  );
   assert.ok(Object.isFrozen(normalized));
 });
 
