@@ -16,7 +16,9 @@ function envelope(overrides={}){
 function current(overrides={}){
  return {
   assessed_at:'2026-09-24T12:01:00.000Z',expected_channel_binding_ref:'channel.binding.1',
-  channel_binding_current:true,authenticated_principal_current:true,replay_nonce_seen:false,...overrides
+  channel_binding_current:true,authenticated_principal_ref:'human.owner',
+  authentication_evidence_ref:'evidence:session.1',
+  authenticated_principal_current:true,replay_nonce_seen:false,...overrides
  };
 }
 
@@ -48,7 +50,9 @@ test('stale binding, replay and principal mismatch fail closed',()=>{
 
 test('channel possession without authenticated principal is not eligible intake',()=>{
  const value=envelope({claimed_principal_ref:'human.owner',authenticated_principal_ref:null,authentication_evidence_ref:null});
- const result=evaluateCommandIntake(value,current({authenticated_principal_current:false}));
+ const result=evaluateCommandIntake(value,current({
+   authenticated_principal_ref:null,authentication_evidence_ref:null,authenticated_principal_current:false
+ }));
  assert.equal(result.intake_eligible,false);
  assert.ok(result.reasons.includes('principal-not-authenticated'));
 });
@@ -56,4 +60,27 @@ test('channel possession without authenticated principal is not eligible intake'
 test('expired command is rejected even if the channel remains paired',()=>{
  const result=evaluateCommandIntake(envelope(),current({assessed_at:'2026-09-24T12:05:00.000Z'}));
  assert.equal(result.intake_eligible,false);assert.ok(result.reasons.includes('command-expired'));
+});
+
+test('forged authenticated principal or evidence cannot borrow a current session',()=>{
+ const forgedPrincipal=evaluateCommandIntake(
+   envelope({authenticated_principal_ref:'human.other',claimed_principal_ref:'human.other'}),
+   current()
+ );
+ assert.equal(forgedPrincipal.intake_eligible,false);
+ assert.ok(forgedPrincipal.reasons.includes('authenticated-principal-mismatch'));
+
+ const forgedEvidence=evaluateCommandIntake(
+   envelope({authentication_evidence_ref:'evidence:other-session'}),
+   current()
+ );
+ assert.equal(forgedEvidence.intake_eligible,false);
+ assert.ok(forgedEvidence.reasons.includes('authentication-evidence-mismatch'));
+});
+
+test('future-dated command is not yet eligible',()=>{
+ const value=envelope({received_at:'2026-09-24T12:02:00.000Z',expires_at:'2026-09-24T12:06:00.000Z'});
+ const result=evaluateCommandIntake(value,current());
+ assert.equal(result.intake_eligible,false);
+ assert.ok(result.reasons.includes('command-not-yet-valid'));
 });
