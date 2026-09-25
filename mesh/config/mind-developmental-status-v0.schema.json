@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/mind-developmental-status-v0.schema.json",
+  "title": "AXIOM Mind Developmental Status v0 inert record",
+  "description": "Append-only monotonic developmental-status evidence. It does not mutate live status, Council voting, Genesis eligibility, governance, or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "mind_id",
+    "stage",
+    "previous_status_digest",
+    "effective_at",
+    "basis_evidence_digests",
+    "history_rewrite",
+    "status_effect",
+    "council_voting_effect",
+    "genesis_eligibility_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-mind-developmental-status.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-status-record"
+    },
+    "mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "stage": {
+      "enum": [
+        "genesis",
+        "dependent",
+        "developing",
+        "candidate-independent",
+        "independent"
+      ]
+    },
+    "previous_status_digest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "basis_evidence_digests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "history_rewrite": {
+      "const": false
+    },
+    "status_effect": {
+      "const": "none"
+    },
+    "council_voting_effect": {
+      "const": "none"
+    },
+    "genesis_eligibility_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/mind-developmental-status.mjs",
+  "x-axiom-non-claims": [
+    "live-developmental-status",
+    "automatic-independence",
+    "council-voting-activation",
+    "genesis-eligibility",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

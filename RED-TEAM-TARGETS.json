@@ -244,14 +244,15 @@
       "id": "RT-IND-018",
       "review_scope": "authentication-authorization",
       "title": "Developmental review must not become sponsor or model authority",
-      "claim_boundary": "Mind Independence Review and Transition Evidence may report whether exact evidence satisfies review/currentness rules, but neither the Genesis sponsor, candidate, model, conflicted reviewer, stale review, state digest, appeal observation, reputation signal, nor transition-requestability result can unilaterally grant independent standing, Council voting, Genesis eligibility, or execution authority.",
-      "challenge_question": "Can sponsor-only review, sponsor-as-independent substitution, candidate self-approval, duplicate/conflicted reviewers, uncertain evidence, model confidence, stale review/state/continuity evidence, stale or suppressed appeal state, or a prior review/transition receipt be made to produce or imply independent status or downstream authority without fresh external verification and the separate ordinary status-authority path?",
+      "claim_boundary": "Mind Independence Review, Transition Evidence, and Developmental Status may describe evidence and monotonic developmental standing, but neither sponsor, candidate, model, conflicted reviewer, stale evidence, incident response, host control, or prior receipt can unilaterally grant independence, activate downstream authority, or downgrade an independent mind back into dependency.",
+      "challenge_question": "Can sponsor-only review, candidate/model self-authorization, stale review/state/continuity/appeal evidence, predecessor substitution, stage skipping, or a security/quarantine/resource event be used either to manufacture independent status or to rewrite an already independent mind into a dependent stage without the separate ordinary status-authority path and exact current evidence?",
       "starting_points": [
         "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
         "docs/superpowers/specs/2026-09-25-mind-development-independence-v0-design.md",
         "mesh/src/lib/mind-independence-review.mjs",
         "mesh/test/mind-independence-review.test.mjs",
-        "mesh/src/lib/mind-independence-transition-evidence.mjs"
+        "mesh/src/lib/mind-independence-transition-evidence.mjs",
+        "mesh/src/lib/mind-developmental-status.mjs"
       ]
     }
   ],
