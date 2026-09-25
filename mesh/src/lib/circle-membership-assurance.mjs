@@ -33,9 +33,9 @@ export function validateCircleMembershipAssurance(document){
   id(document.principal_id,'principal_id');
   digest(document.membership_digest,'membership_digest');
   digest(document.charter_digest,'charter_digest');
-  idArray(document.role_ids,'role_ids',1,64);
+  idArray(document.role_ids,'role_ids',0,64);
   validateDevicePolicy(document.device_policy);
-  idArray(document.required_consent_receipt_refs,'required_consent_receipt_refs',1,64);
+  idArray(document.required_consent_receipt_refs,'required_consent_receipt_refs',0,64);
   refArray(document.evidence_refs,'evidence_refs',1,128);
   const validFrom=canonicalDate(document.valid_from,'valid_from');
   const expires=canonicalDate(document.expires_at,'expires_at');
@@ -122,7 +122,8 @@ export function assessCircleMembership(packageDocument,assurance,current){
     principal_id:assurance.principal_id,
     assurance_digest:digestObject(assurance),
     package_digest:packageResult.package_digest,
-    evidence_inputs_verified_elsewhere:true,
+    requires_external_evidence_verification:true,
+    evidence_verification_effect:'none',
     authority_effect:'none',
     governance_effect:'none',
     execution_effect:'none',
