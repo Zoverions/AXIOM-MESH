@@ -271,7 +271,7 @@ git commit -m "feat(auth): add machine currentness v1 contracts"
   - migration **11** `machine-principal-grid-currentness-v1`
   - `GridStore.getMachineCurrentness(principalId)`
   - `GridStore.commitMachineCurrentnessMutation({ traceId, actor, authorization, transition })`
-  - durable exact replay through `machine_principal_mutation_commands`
+  - durable exact replay through event-derived `machine_principal_mutation_commands`
 
 - [ ] **Step 1: Assert the migration baseline before editing**
 
@@ -376,6 +376,10 @@ Add protected-column mappings for:
 - `machine_principal_lifecycle_heads.effective_authority_json`
 - `machine_principal_mutation_commands.result_json`
 
+Add all three new materialized tables to the materialized-state rebuild/reset
+list. Full event replay must reconstruct lifecycle heads, mutation command
+replay state, and effect releases from signed Grid events.
+
 Do not store bearer tokens or raw capability tokens in these tables.
 
 - [ ] **Step 5: Refactor event append without changing semantics**
@@ -422,19 +426,21 @@ return this.transaction(() => {
   verifyExpectedPredecessor(current, command, next);
   verifyRootAndTransition(current, command, next);
 
-  const [event] = this.appendEventsInTransaction({
+  this.appendEventsInTransaction({
     traceId,
     actor,
     events: [projectLifecycleEvent(next, command)]
   });
 
-  const result = this.getMachineCurrentness(next.principal_id);
-  this.insertMachineMutationCommand(command, event, result);
-  return result;
+  return this.getMachineCurrentness(next.principal_id);
 });
 ```
 
-`applyMaterializedEvent()` handles only the five fixed `machine.currentness.*` events and enforces sequence/predecessor/root/status invariants again at materialization time.
+`applyMaterializedEvent()` handles only the five fixed `machine.currentness.*`
+events and enforces sequence/predecessor/root/status invariants again at
+materialization time. The same event materialization inserts
+`machine_principal_mutation_commands`; do **not** side-write the replay table
+after event append. That keeps full-chain rebuild authoritative.
 
 - [ ] **Step 7: Prove one-winner concurrency**
 
