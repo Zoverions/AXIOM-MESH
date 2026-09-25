@@ -42,19 +42,25 @@ export function evaluateCommandIntake(document,current){
   validateCommandIntakeEnvelope(document);
   exactObject(current,'Command intake current state',[
     'assessed_at','expected_channel_binding_ref','channel_binding_current',
+    'authenticated_principal_ref','authentication_evidence_ref',
     'authenticated_principal_current','replay_nonce_seen'
   ]);
   const assessed=canonicalDate(current.assessed_at,'assessed_at');
   id(current.expected_channel_binding_ref,'expected_channel_binding_ref');
+  nullableId(current.authenticated_principal_ref,'authenticated_principal_ref');
+  nullableRef(current.authentication_evidence_ref,'authentication_evidence_ref');
   if(typeof current.channel_binding_current!=='boolean'||typeof current.authenticated_principal_current!=='boolean'||typeof current.replay_nonce_seen!=='boolean'){
     throw new ValidationError('Command intake currentness/replay flags must be boolean');
   }
   const reasons=[];
+  if(assessed<canonicalDate(document.received_at,'received_at'))reasons.push('command-not-yet-valid');
   if(assessed>=canonicalDate(document.expires_at,'expires_at'))reasons.push('command-expired');
   if(document.channel_binding_ref!==current.expected_channel_binding_ref)reasons.push('channel-binding-mismatch');
   if(current.channel_binding_current!==true)reasons.push('channel-binding-not-current');
   if(current.replay_nonce_seen)reasons.push('replay-detected');
   if(document.authenticated_principal_ref===null)reasons.push('principal-not-authenticated');
+  if(document.authenticated_principal_ref!==current.authenticated_principal_ref)reasons.push('authenticated-principal-mismatch');
+  if(document.authentication_evidence_ref!==current.authentication_evidence_ref)reasons.push('authentication-evidence-mismatch');
   if(document.authenticated_principal_ref!==null&&current.authenticated_principal_current!==true)reasons.push('principal-authentication-not-current');
   if(
     document.claimed_principal_ref!==null&&document.authenticated_principal_ref!==null
