@@ -185,6 +185,11 @@ export function checkBudgets(results) {
     }
   }
   if (small && large) {
+    if (!Number.isFinite(small.parseCpuMs) || small.parseCpuMs <= 0 ||
+        !Number.isFinite(large.parseCpuMs) || large.parseCpuMs <= 0) {
+      failures.push('parse CPU timing is missing or invalid');
+    }
+
     if (!Number.isFinite(small.parseMs) || small.parseMs <= 0 ||
         !Number.isFinite(large.parseMs) || large.parseMs <= 0) {
       failures.push('parse wall timing is missing or invalid for scaling check');
