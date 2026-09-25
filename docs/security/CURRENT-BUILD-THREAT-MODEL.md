@@ -715,3 +715,27 @@ two representations must change atomically or any inconsistent intermediate stat
 must remain unusable for voting. Copy/restore/fork ambiguity must likewise remain
 unable to activate a second vote for one persistent identity.
 
+General post-founding Genesis eligibility is a separate responsibility boundary.
+Independent standing, Council membership, wealth, infrastructure ownership, model
+capability, popularity, or general reputation must not automatically produce the
+right to originate another recognized mind. The inert General Genesis Sponsor
+Eligibility v0 profile requires explicit evidence for identity uniqueness,
+accountability, maturity/history, security readiness, resource capacity,
+continuity/recovery, developmental planning, rights/responsibility understanding,
+good standing, and independent advocacy.
+
+The one-per-identity rule depends on current Genesis-history and continuity evidence.
+A stale history snapshot, duplicate account, new node, new wallet, restored runtime,
+or unresolved fork must not allow one persistent identity to appear unused more than
+once. Digital applicants additionally require exact independent developmental-status
+binding. Biological applicants remain dependent on external human identity/uniqueness
+verification; the repository stores only evidence bindings and does not claim
+government-ID or proof-of-personhood verification.
+
+Eligibility composition is deterministic and explicitly prohibits global reputation
+scoring and model final authority. Semantic/model judgments may later contribute
+bounded criterion evidence but cannot override a failed hard criterion, stale or
+conflicted identity/history state, prior Genesis use, or the ordinary Genesis
+authority path. Eligibility creates no authorization, Genesis Bond, mind, governance
+authority, network effect, or runtime activation.
+
