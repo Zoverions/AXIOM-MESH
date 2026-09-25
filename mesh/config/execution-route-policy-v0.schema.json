@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/execution-route-policy-v0.schema.json",
+  "title": "AXIOM Execution Route Policy v0",
+  "description": "Inert, non-authorizing policy for selecting among already-described execution routes. Selection never grants authority or performs an effect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema","version","status","route_id","outcome_id","task_id","operation_digest",
+    "authority_snapshot_ref","required_capabilities","allowed_data_classes","allowed_methods",
+    "currentness","grants_authority","execution_effect","runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-execution-route-policy.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-contract-laboratory" },
+    "route_id": { "$ref": "#/$defs/identifier" },
+    "outcome_id": { "$ref": "#/$defs/identifier" },
+    "task_id": { "$ref": "#/$defs/identifier" },
+    "operation_digest": { "$ref": "#/$defs/digest" },
+    "authority_snapshot_ref": { "$ref": "#/$defs/identifier" },
+    "required_capabilities": { "$ref": "#/$defs/idArray" },
+    "allowed_data_classes": { "$ref": "#/$defs/textArray" },
+    "allowed_methods": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["native-api","mcp-tool","cli","accessibility-ui","visual-computer-use"]
+      }
+    },
+    "currentness": { "$ref": "#/$defs/currentness" },
+    "grants_authority": { "const": false },
+    "execution_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked_at","expires_at"],
+      "properties": {
+        "checked_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/execution-continuity.mjs",
+  "x-axiom-non-claims": [
+    "execution-authority","effect-authorization","tool-permission","gui-permission",
+    "provider-authority","network-activation","runtime-activation"
+  ]
+}
