@@ -176,6 +176,8 @@ Examples include source control, mail, calendars, databases, browsers, storage, 
 
 Credentials are purpose-bound references and must not become ambient model context.
 
+The source-only fixed-recipient webhook sender (`mesh/src/channel-webhook-adapter.mjs`) is an ADAPTER-001 transport experiment. It sends bounded text to one operator-fixed HTTPS destination with an operator-supplied bearer credential, timeout, disabled redirects, and bounded responses. An injected transport and in-memory idempotency map are operator-owned test/configuration hooks; the latter has no restart durability. A request is dispatched only after its in-memory idempotency reservation is confirmed, and a transport result must be a real `Response`. Pre-dispatch cancellation leaves the key reusable. Any ambiguous post-dispatch outcome stays `uncertain`; HTTP 2xx says only that the endpoint accepted a request. Its `confirmed_recipient_id` is a caller assertion, not verified human confirmation. Receipts contain no text, credential, or URL and explicitly state that Mesh authority and recipient delivery were not verified. The sender is not connected to `channel.send`, whose production policy still denies. Durable Grid outbox, one-use Mesh authorization, real recipient confirmation, egress/DNS restriction, private credential custody, abuse/retention controls, and independent end-to-end evidence remain separate gates before activation or `PROMO-01` promotion.
+
 ### Protocol adapters
 
 MCP, A2A, ActivityPub, webhooks, and future protocols are transport/interoperability profiles. Protocol discovery never becomes permission.
@@ -236,6 +238,30 @@ Those labels collapse unlike claims and can become misleading when evidence chan
 - capability/production promotion remains owned by the capability registry and readiness/release process.
 
 No derived or overlay label becomes authority.
+
+### Offline catalogue candidate assessment v0
+
+`mesh/src/lib/runtime-connector-catalog-assessment.mjs` provides a pure
+assessment over the existing draft catalog-entry contract. It binds a candidate
+to its canonical digest, rejects a changed entry under the same ID and version,
+and reports additions/removals in requested access separately from provenance,
+adapter-contract, orchestration, assurance, lifecycle, and non-claim changes.
+A comparison must refer to the same subject and integration class. A different
+entry ID must name the prior entry as its exact supersession target.
+The caller must provide `expectedPriorDigest` when comparing a prior entry;
+the assessor rejects a missing or mismatched digest. The caller must obtain
+that digest from an independently trusted record. Matching a caller-provided
+digest cannot authenticate its provenance. The returned assessment is deeply
+frozen so its nested diffs and reasons cannot be altered in place.
+
+Every result is `quarantined_inert` and `unverified`. Missing or stale declared
+assurance produces review reasons, while malformed contracts and identity
+substitution are rejected. A declared source, artifact/SBOM digest, observer
+result, or freshness interval is not independent verification of that fact.
+The assessment performs no fetch, signature check, installation, activation,
+storage mutation, credential access, or network effect. The catalog-entry v1
+contract remains a draft; this assessment does not promote
+`capsules.marketplace` or grant permission to execute a listed integration.
 
 ## Certification, curation, and authorization
 
@@ -410,6 +436,14 @@ The lifecycle contract deliberately rejects ambiguous combinations:
 An artifact is a typed, digest-bound output or input with source identity, schema/MIME metadata, size, custody/retention class, and explicit sensitivity/data classification where applicable.
 
 A handoff creates a new task owned by the receiving execution context. It does not transfer more authority than the receiver independently possesses or receives through a separately valid attenuation-only delegation.
+
+### P5 executable continuity verifier
+
+The first executable P5 continuity slice is `mesh/src/lib/runtime-task-continuity.mjs`. It consumes the already byte-pinned `axiom-task-artifact-handoff.v1` snapshots and adds cross-snapshot/graph semantics without modifying the frozen contract bytes.
+
+It verifies immutable task identity, requester, request, exact catalog/runtime/adapter target and inputs; monotonic grant/delegation references plus attenuation-only budgets; legal lifecycle movement; append-only output artifacts and chronological events; non-backdated cancellation/event additions; unresolved uncertainty until explicit completed/failed reconciliation; exact child-bound handoff-event evidence; invariant AXIOM action/capability; handoff purpose/destination/data/budget attenuation; source-grant non-reuse without claiming delegation attenuation; and closed acyclic causal graphs with exactly one root per causal workflow.
+
+The verifier is deliberately **not** a task store, polling loop, queue, executor, delegation issuer, grant issuer, external-effect reconciler, or authority path. A valid transition or handoff remains coordination/evidence only. Persistence, bounded observation/polling, effect-aware cancellation, full resource accounting, and live runtime handoff remain later P5/P6 gates.
 
 ## Delegation and worker spawning
 

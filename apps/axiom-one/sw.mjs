@@ -1,4 +1,4 @@
-const CACHE_NAME = 'axiom-one-shell-v5';
+const CACHE_NAME = 'axiom-one-shell-v6';
 const SHELL_ASSETS = Object.freeze([
   '/',
   '/index.html',
@@ -16,7 +16,8 @@ const SHELL_ASSETS = Object.freeze([
   '/screenshots/screenshot-wide.png',
   '/screenshots/screenshot-narrow.png',
   '/vendor/axiom-client.mjs',
-  '/mesh/config/gateway-client-contract.json'
+  '/mesh/config/gateway-client-contract.json',
+  '/mesh/config/circle-templates-v0.json'
 ]);
 
 self.addEventListener('install', event => {

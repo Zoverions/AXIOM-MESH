@@ -48,6 +48,8 @@ These are active/draft lines with different historical bases. Before implementat
 
 ## Priority 1 — Deployment & Capability Engine v0
 
+See the [current-base convergence decisions](architecture/DEPLOYMENT-ENGINE-V0-CONVERGENCE.md) before implementing this priority; the note inventories landed contracts and unresolved binding choices without promoting a capability.
+
 - [ ] Consume accepted `axiom-resource-envelope.v0` and `axiom-resource-observation.v0` semantics from #1402; do not create duplicates.
 - [ ] Consume applicable host-sovereignty evidence from #1456; local willingness remains independent of remote selection.
 - [ ] Consume capability-surface/runtime/provider identities by reference and digest rather than re-declaring them.

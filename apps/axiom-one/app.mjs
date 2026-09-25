@@ -9,6 +9,7 @@ const ROUTES = new Set([
   'overview',
   'ask',
   'social',
+  'circles',
   'approvals',
   'vault',
   'receipts',
@@ -106,7 +107,7 @@ async function renderRoute() {
   }
   setViewBusy(true, `Loading ${state.route}`);
   try {
-    if (!state.client && state.route !== 'share') {
+    if (!state.client && !['share', 'circles'].includes(state.route)) {
       renderDisconnected();
       return;
     }
@@ -114,6 +115,7 @@ async function renderRoute() {
       overview: renderOverview,
       ask: renderAsk,
       social: renderSocial,
+      circles: renderCircles,
       approvals: renderApprovals,
       vault: renderVault,
       receipts: renderReceipts,
@@ -424,6 +426,56 @@ async function renderSocial() {
       metricCard('Truncated', response.corpus?.truncated ? 'Yes' : 'No', 'Publication limit: 100')
     ]),
     rawDetails('Raw owner-local Social snapshot', response)
+  );
+}
+
+async function renderCircles() {
+  const catalog = await loadCircleTemplateCatalog();
+  const templates = catalog.templates;
+  const cards = templates.map(template => {
+    const roles = template.roles.map(role => role.label).join(' · ');
+    const quorum = template.decision_rule.quorum_basis_points / 100;
+    const approval = template.decision_rule.approval_basis_points / 100;
+    return element('article', { className: 'card full' }, [
+      element('span', { className: 'badge good', text: 'Template only · no authority' }),
+      element('h2', { text: template.label }),
+      element('p', { text: template.description }),
+      element('dl', { className: 'fact-list' }, [
+        element('dt', { text: 'Kind' }),
+        element('dd', { text: template.circle_kind }),
+        element('dt', { text: 'Participation' }),
+        element('dd', { text: template.participation_model }),
+        element('dt', { text: 'Roles' }),
+        element('dd', { text: roles }),
+        element('dt', { text: 'Decision starting point' }),
+        element('dd', { text: `${quorum}% quorum · ${approval}% approval` }),
+        element('dt', { text: 'Default disclosure' }),
+        element('dd', { text: template.default_disclosure_class }),
+        element('dt', { text: 'Protection floor' }),
+        element('dd', { text: 'Raise-only' })
+      ]),
+      rawDetails('Inspect exact inert template', template)
+    ]);
+  });
+
+  view.replaceChildren(
+    header('Circle templates',
+      'Browse reusable starting structures for future Circles. These local templates contain roles and decision defaults only; they do not create a Circle, invite anyone, assign membership, or grant execution authority.'),
+    grid([
+      metricCard('Templates', String(templates.length), 'Built-in inert starting points'),
+      card('Membership', 'None. A template never creates an invitation, member, role assignment, or delegation.', {
+        badge: ['Not enabled', 'pending']
+      }),
+      card('Execution authority', 'None. Template, role, decision, and membership authority fields are fixed closed.', {
+        badge: ['No authority', 'good']
+      })
+    ]),
+    notice('These are planning presets, not live Circle instances. Create/join/invite/governance controls remain unavailable until their separately reviewed runtime and human-authority paths exist.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'circle-templates-heading' } }, [
+      element('h2', { text: 'Built-in starting points', attrs: { id: 'circle-templates-heading' } }),
+      ...cards
+    ]),
+    rawDetails('Raw Circle template catalog', catalog)
   );
 }
 
@@ -1060,14 +1112,14 @@ async function renderReceipts() {
 
 async function renderShare() {
   view.replaceChildren(
-    header('Share and Circles',
-      'These surfaces are visible so the boundary is clear; they are not enabled by this preview.'),
+    header('Share',
+      'Sharing remains visible so the boundary is clear; it is not enabled by this preview.'),
     grid([
       card('Selective sharing', 'Pending owner-scope, consent, expiry, revocation, export, and deletion tests before a sharing control is enabled.', {
         badge: ['Unavailable', 'pending']
       }),
-      card('AXIOM Circles', 'Pending invitation, device, membership, role, removal, conflict, and cross-Circle denial evidence.', {
-        badge: ['Unavailable', 'pending']
+      card('AXIOM Circles', 'Inert templates are available in the Circles section. Live creation, invitation, membership, governance, removal, conflict handling, and cross-Circle effects remain unavailable.', {
+        badge: ['Templates only', 'pending']
       }),
       card('Remote recipients', 'No remote account, public federation, platform identity, or background transfer is configured.', {
         badge: ['No egress', 'good']
@@ -1299,6 +1351,154 @@ function setViewBusy(busy, label = 'Loading') {
   if (busy && !view.childElementCount) {
     view.replaceChildren(element('div', { className: 'loading', text: label }));
   }
+}
+
+async function loadCircleTemplateCatalog() {
+  const response = await fetch('/mesh/config/circle-templates-v0.json', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'error'
+  });
+  if (!response.ok || response.redirected) {
+    throw new Error('AXIOM One Circle template catalog is unavailable');
+  }
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > 262_144) {
+    throw new Error('AXIOM One Circle template catalog is too large');
+  }
+  let catalog;
+  try {
+    catalog = JSON.parse(text);
+  } catch {
+    throw new Error('AXIOM One Circle template catalog is invalid');
+  }
+  validateCircleTemplateCatalog(catalog);
+  return catalog;
+}
+
+function validateCircleTemplateCatalog(catalog) {
+  const catalogKeys = [
+    'schema', 'version', 'status', 'templates',
+    'authority_effect', 'network_effect', 'runtime_activation'
+  ];
+  if (
+    !exactRecordKeys(catalog, catalogKeys)
+    || catalog.schema !== 'axiom-circle-template-catalog.v0'
+    || catalog.version !== 0
+    || catalog.status !== 'inert-template-library'
+    || catalog.authority_effect !== 'none'
+    || catalog.network_effect !== 'none'
+    || catalog.runtime_activation !== false
+    || !Array.isArray(catalog.templates)
+    || catalog.templates.length < 1
+    || catalog.templates.length > 64
+  ) throw new Error('AXIOM One Circle template catalog boundary is invalid');
+
+  const circleKinds = new Set([
+    'family-coordination', 'project-team', 'research-group',
+    'creator-collective', 'community-group'
+  ]);
+  const participationModels = new Set(['voluntary', 'contractual']);
+  const disclosureClasses = new Set(['public-safe', 'member-private']);
+  const roleModes = new Set([
+    'propose', 'deliberate', 'evidence', 'vote',
+    'approve', 'review', 'appeal', 'observe'
+  ]);
+  const templateKeys = [
+    'schema', 'template_id', 'label', 'description', 'circle_kind',
+    'participation_model', 'roles', 'decision_rule', 'appeal_enabled',
+    'member_exit_enabled', 'default_disclosure_class', 'policy_floor',
+    'execution_authority', 'membership_authority', 'authority_effect',
+    'network_effect', 'runtime_activation'
+  ];
+  const roleKeys = ['role_id', 'label', 'declared_modes', 'execution_authority'];
+  const decisionKeys = [
+    'quorum_basis_points',
+    'approval_basis_points',
+    'abstention_counts_toward_quorum'
+  ];
+
+  const templateIds = new Set();
+  for (const template of catalog.templates) {
+    if (
+      !exactRecordKeys(template, templateKeys)
+      || template.schema !== 'axiom-circle-template.v0'
+      || !validCircleIdentifier(template.template_id)
+      || templateIds.has(template.template_id)
+      || typeof template.label !== 'string'
+      || !template.label.length
+      || template.label.length > 160
+      || typeof template.description !== 'string'
+      || !template.description.length
+      || template.description.length > 1200
+      || !circleKinds.has(template.circle_kind)
+      || !participationModels.has(template.participation_model)
+      || !Array.isArray(template.roles)
+      || template.roles.length < 1
+      || template.roles.length > 32
+      || !exactRecordKeys(template.decision_rule, decisionKeys)
+      || template.appeal_enabled !== true
+      || template.member_exit_enabled !== true
+      || !disclosureClasses.has(template.default_disclosure_class)
+      || template.policy_floor !== 'raise-only'
+      || template.execution_authority !== false
+      || template.membership_authority !== false
+      || template.authority_effect !== 'none'
+      || template.network_effect !== 'none'
+      || template.runtime_activation !== false
+    ) throw new Error('AXIOM One Circle template is invalid');
+    templateIds.add(template.template_id);
+
+    const roleIds = new Set();
+    for (const role of template.roles) {
+      if (
+        !exactRecordKeys(role, roleKeys)
+        || !validCircleIdentifier(role.role_id)
+        || roleIds.has(role.role_id)
+        || typeof role.label !== 'string'
+        || !role.label.length
+        || role.label.length > 120
+        || !Array.isArray(role.declared_modes)
+        || role.declared_modes.length < 1
+        || role.declared_modes.length > 16
+        || new Set(role.declared_modes).size !== role.declared_modes.length
+        || role.declared_modes.some(mode => !roleModes.has(mode))
+        || role.execution_authority !== false
+      ) throw new Error('AXIOM One Circle template role is invalid');
+      roleIds.add(role.role_id);
+    }
+
+    for (const value of [
+      template.decision_rule.quorum_basis_points,
+      template.decision_rule.approval_basis_points
+    ]) {
+      if (!Number.isInteger(value) || value < 0 || value > 10_000) {
+        throw new Error('AXIOM One Circle template decision rule is invalid');
+      }
+    }
+    if (typeof template.decision_rule.abstention_counts_toward_quorum !== 'boolean') {
+      throw new Error('AXIOM One Circle template decision rule is invalid');
+    }
+  }
+}
+
+function exactRecordKeys(value, keys) {
+  if (!plainRecord(value)) return false;
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length
+    && actual.every((key, index) => key === expected[index]);
+}
+
+function validCircleIdentifier(value) {
+  return typeof value === 'string'
+    && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(value);
+}
+
+function plainRecord(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 async function loadHumanContract() {

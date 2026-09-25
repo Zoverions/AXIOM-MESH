@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import { startDevelopmentStack } from '../src/dev.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import { LOCAL_CONTEXT_CANDIDATE_SCHEMA } from '../src/lib/context-claim-resolution.mjs';
 import { createLocalContextSemanticTrust } from '../src/lib/context-semantic-trust.mjs';
 import {
@@ -54,28 +54,6 @@ function state(claimId) {
   return createLocalContextSemanticStateRecord(value, trust);
 }
 
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new Error('Unable to reserve four adjacent local test ports');
-}
-
 async function api(base, token, path, {
   method = 'GET',
   body,
@@ -98,7 +76,8 @@ async function api(base, token, path, {
 
 async function fixture(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-context-semantic-native-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('context semantic native ingestion test');
+  const basePort = portLease.base_port;
   const token = `operator-${'o'.repeat(40)}`;
   const overrides = {
     dataDir,
@@ -128,6 +107,7 @@ async function fixture(t) {
     try {
       await stack.stop();
     } finally {
+      await portLease.release();
       await rm(dataDir, { recursive: true, force: true });
     }
   });

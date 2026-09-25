@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/command-intake-v0.schema.json",
+  "title": "AXIOM Command Intake v0",
+  "description": "Inert channel-neutral command envelope. A channel, pairing, claimed identity, transcription, or authentication artifact never grants execution authority; current principal resolution remains separate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "command_id",
+    "channel_kind",
+    "channel_instance_ref",
+    "channel_binding_ref",
+    "claimed_principal_id",
+    "content_digest",
+    "content_type",
+    "normalized_text",
+    "normalized_text_digest",
+    "data_classes",
+    "received_at",
+    "expires_at",
+    "nonce",
+    "authentication_evidence_refs",
+    "channel_identity_authority",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-command-intake.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-intake-laboratory"
+    },
+    "command_id": {
+      "$ref": "#/$defs/id"
+    },
+    "channel_kind": {
+      "enum": [
+        "web",
+        "voice",
+        "messaging",
+        "cli",
+        "wearable",
+        "device",
+        "api",
+        "runtime"
+      ]
+    },
+    "channel_instance_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "channel_binding_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "claimed_principal_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/id"
+        }
+      ]
+    },
+    "content_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "content_type": {
+      "enum": [
+        "text",
+        "transcript",
+        "structured-command"
+      ]
+    },
+    "normalized_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 12000
+    },
+    "data_classes": {
+      "$ref": "#/$defs/textArray"
+    },
+    "received_at": {
+      "$ref": "#/$defs/date"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/date"
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256
+    },
+    "authentication_evidence_refs": {
+      "$ref": "#/$defs/refArray"
+    },
+    "channel_identity_authority": {
+      "const": false
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "normalized_text_digest": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "refArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/command-intake.mjs",
+  "x-axiom-non-claims": [
+    "channel-identity-proof",
+    "pairing-authority",
+    "execution-authority",
+    "intent-authorization",
+    "voice-consent-proof",
+    "runtime-activation"
+  ]
+}

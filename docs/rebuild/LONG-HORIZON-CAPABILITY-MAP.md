@@ -77,15 +77,15 @@ These labels are planning labels only. They are not valid substitutes for regist
 
 | Capability | Planning state | Existing foundation | Remaining work |
 |---|---|---|---|
-| Invitation and membership | planned | Identity, consent, node records | Circle identities, device membership, expiry, revocation |
+| Invitation and membership | specified-next; Circle Core v0 + inert membership assurance | Identity, consent, node records, Circle Core invitation/membership | Runtime persistence/admission, device registration/currentness source integration, consent source integration, expiry/revocation application and human workflow |
 | Versioned Circle charters | specified-next | Local governance records and policy overlays | Charter schema, amendment, activation, rollback, comprehension |
 | Scoped roles and delegation | specified-next | Capability grants and governance records | Portable delegation chain, term, succession, separation of duties |
-| Shared proposals and commitments | planned | Local proposals and causal exchange | Multi-node proposal lifecycle and conflict semantics |
+| Shared proposals and commitments | in progress; inert shared-artifact + historical commitment admission | Circle Core proposals/tasks + Canonical Shared Artifact causal/conflict model + membership assurance + generic Agreement Record | Durable multi-node proposal/artifact/commitment lifecycle, present-currentness views, Circle-specific approval records, selective exchange, export/exit and human conflict resolution |
 | Circle assurance policy | specified-next | Layered deny-dominant policy | Maximum-floor composition across member and Circle policy |
 | Circle appeals and remedies | planned | Appeal records | Multi-party appeal, stay, review, correction and exit |
 | Selective sharing | planned | Memory disclosure, export and causal sync | Human sharing product, recipient policy, revocation limits |
 | Circle evidence timeline | planned | Grid evidence chain | Cross-node verified timeline and missing-evidence explanation |
-| Circle exit and continuity | planned | Export/import, revocation, backup | Data ownership, withdrawal, successor roles and continuity |
+| Circle exit and continuity | in progress; inert export-retention evidence | Circle Core exit/export + snapshot and historical record evidence | Separately authorized portable bundle construction, import/recovery, successor roles, currentness UX and live withdrawal/continuity workflow |
 | Circle pilot | blocked | Human shell and sharing roadmap | Bounded real participants, consent, usability, security review |
 
 ## Layer 3 — Institutional governance

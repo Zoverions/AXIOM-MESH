@@ -490,9 +490,21 @@ state, or deployment path depends on it.
 
 ## Reproducibility
 
+The front-end benchmark remains laboratory evidence, not a hardware score or
+production SLO. Wall-clock parse/format checks use a median of five samples and
+retain the 5,000 ms absolute ceilings. Parse scaling uses process CPU time from
+up to five independent normalized batches. Normal batch size is derived from
+source length so the 1k and 10k corpora process comparable source volume per CPU
+sample instead of equal parse counts; each base batch is capped at 16 parses.
+A zero CPU reading may increase only the next bounded batch. The sampler never
+exceeds 80 parse runs and requires at least three nonzero CPU samples; otherwise
+it returns missing timing evidence so the existing fail-closed budget check
+rejects the scaling result. The 1k -> 10k CPU ceiling remains 20x.
+
 Run the focused tests through the existing Mesh test harness:
 
 ```bash
+node --test mesh/test/praxis-benchmark-v0.test.mjs
 node --test mesh/test/praxis-language-v0.test.mjs
 node --test mesh/test/praxis-conformance-v0.test.mjs
 node --test mesh/test/praxis-adversarial-ir-v0.test.mjs
