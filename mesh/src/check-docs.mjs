@@ -176,6 +176,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-15-bounded-decision-intelligence-v0.md',
   'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md',
   'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md',
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -596,6 +597,13 @@ const REQUIRED_CONTENT = Object.freeze({
     'grants_authority: false',
     'execution_effect: none'
   ],
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': [
+    '## Delivery slices and merge order',
+    '### Task 1: Pure authority attenuation and v1 contract surface',
+    '## Stage D precondition: initialization runway',
+    '### Task 6: Transactionally ordered logical effect release',
+    'No Sandbox->Grid route is added'
+  ],
   'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md': [
     '## Fail-closed licence profile',
     'model training: denied',
@@ -837,6 +845,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
   'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md': 15_000,
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': 20_000,
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
