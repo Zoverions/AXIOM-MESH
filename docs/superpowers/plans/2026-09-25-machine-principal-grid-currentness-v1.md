@@ -64,20 +64,24 @@ intentional initialization runway for Stage D.
 ## Task 1: Pure authority attenuation and v1 contract surface
 
 **Files:**
+- Modify: `mesh/src/lib/machine-principal.mjs`
 - Create: `mesh/src/lib/machine-principal-attenuation.mjs`
 - Create: `mesh/src/lib/machine-principal-currentness.mjs`
 - Create: `mesh/config/machine-principal-mutation-authorization-v1.schema.json`
 - Create: `mesh/config/machine-principal-lifecycle-transition-v1.schema.json`
 - Create: `mesh/config/machine-principal-currentness-projection-v1.schema.json`
 - Create: `mesh/config/machine-effect-release-v1.schema.json`
+- Modify: `mesh/test/machine-principal.test.mjs`
 - Create: `mesh/test/machine-principal-attenuation.test.mjs`
 - Create: `mesh/test/machine-principal-currentness-contracts.test.mjs`
 - Create: `mesh/test/machine-principal-currentness-schema.test.mjs`
 
 **Interfaces:**
-- Consumes: `normalizeMachinePrincipalDefinition(principal)` and `digestObject(value)`.
+- Consumes: existing `normalizeMachinePrincipalDefinition(principal)` and `digestObject(value)`.
 - Produces:
+  - `normalizeMachinePrincipalAuthoritySnapshot(principal) -> strict normalized authority facts without current-time liveness enforcement`
   - `machineAuthoritySnapshot(principal) -> normalized full authority object`
+  - `assertMachineAuthorityTimeActive(snapshot, now) -> snapshot or machine_principal_expired denial`
   - `assertMachineAuthorityAttenuation(predecessor, successor, { now }) -> normalized successor`
   - `machineAuthoritySnapshotDigest(snapshot) -> 64-char hex digest`
   - `resolveEffectiveMachinePrincipal(rootPrincipal, currentness) -> { effective_principal, currentness_binding }`
@@ -128,7 +132,7 @@ for (const widen of [
 }
 ```
 
-Also cover: unchanged `narrow` denied, expiry shortening accepted for non-persistent principals, expiry extension denied, any lifetime-class change denied, ordering-independent set normalization, and unknown fields rejected.
+Also cover: unchanged `narrow` denied, expiry shortening accepted for non-persistent principals, expiry extension denied, any lifetime-class change denied, ordering-independent set normalization, unknown fields rejected, and an historically expired snapshot still normalizes for audit/replay while `assertMachineAuthorityTimeActive(snapshot, observedAt)` denies it.
 
 - [ ] **Step 2: Run the focused tests and confirm RED**
 
@@ -146,8 +150,7 @@ Implement exact exports:
 
 ```js
 export function machineAuthoritySnapshot(principal) {
-  const normalized = normalizeMachinePrincipalDefinition(principal);
-  return structuredClone(normalized);
+  return structuredClone(normalizeMachinePrincipalAuthoritySnapshot(principal));
 }
 
 export function machineAuthoritySnapshotDigest(snapshot) {
@@ -160,7 +163,8 @@ export function assertMachineAuthorityAttenuation(
   { now = new Date() } = {}
 ) {
   const predecessor = machineAuthoritySnapshot(predecessorInput);
-  const successor = normalizeMachinePrincipalDefinition(successorInput, { now });
+  const successor = normalizeMachinePrincipalAuthoritySnapshot(successorInput);
+  assertMachineAuthorityTimeActive(successor, now);
 
   assertSame(predecessor.id, successor.id, 'principal id');
   assertSame(predecessor.type, successor.type, 'principal type');
@@ -191,7 +195,7 @@ export function assertMachineAuthorityAttenuation(
 }
 ```
 
-Use explicit exact-key validation helpers; do not use truthy/falsy shortcuts for optional expiry.
+Refactor `machine-principal.mjs` so `normalizeMachinePrincipalDefinition()` keeps its current admission behavior (non-persistent expiry must be future at normalization time), while new `normalizeMachinePrincipalAuthoritySnapshot()` validates the same canonical shape/digest but treats expiry as historical data. Liveness is checked only by `assertMachineAuthorityTimeActive(snapshot, now)`. Use explicit exact-key validation helpers; do not use truthy/falsy shortcuts for optional expiry.
 
 - [ ] **Step 4: Write RED contract/schema tests**
 
