@@ -29,6 +29,7 @@ import {
   ServiceTelemetry
 } from '../lib/observability.mjs';
 import { createActivePolicy, loadPolicyStack } from '../lib/policy.mjs';
+import { ExecutionGate } from '../lib/execution-gate.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
   machinePrincipalAuthorityFacts,
@@ -102,6 +103,13 @@ export async function createHypervisorService(config = meshConfig()) {
     );
   }
 
+  const intentGate = new ExecutionGate({
+    // A stable, retryable Gateway code; the reason says why.
+    code: 'dependency_unavailable',
+    message: 'The Hypervisor is at capacity; retry later',
+    details: { service: 'hypervisor' },
+    ...config.intentGate
+  });
   // Scalability audit S-15: rebuilt only when Grid's overlay generation
   // changes; Grid is still asked on every intent (lib/policy.mjs).
   const cachedActivePolicy = createActivePolicy({
@@ -172,7 +180,12 @@ export async function createHypervisorService(config = meshConfig()) {
     });
   });
 
-  router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {
+  // Scalability audit S-15: a bounded execution queue in front of intent
+  // handling. Beyond it the Hypervisor answers 503 dependency_unavailable
+  // (reason queue_full or queue_timeout) with a retry hint, before any
+  // evidence is written, so saturation is an explicit answer and every
+  // intent that starts reaches its terminal state.
+  router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => intentGate.run(async () => {
     const intent = normalizeIntent(parseJsonBody(body));
     const policy = await activePolicy(traceId);
     let decision = policy.evaluate({
@@ -532,7 +545,7 @@ export async function createHypervisorService(config = meshConfig()) {
       }
       throw error;
     }
-  });
+  }));
 
   const server = createServiceServer({
     name: 'hypervisor',
@@ -567,6 +580,7 @@ export async function createHypervisorService(config = meshConfig()) {
     identity,
     policy: basePolicy,
     telemetry,
+    intentGate,
     operations: currentOperations,
     async start() {
       return listen(server, { host: config.hosts.internal, port: config.ports.hypervisor });

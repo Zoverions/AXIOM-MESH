@@ -960,8 +960,8 @@ potentially merged on each request.
   collapse.
 - Crash tests prove no authorized effect lacks a terminal or recoverable state.
 
-**Remediation status (2026-09-25): policy overlays are cached by generation;
-the rest is open.**
+**Remediation status (2026-09-25): policy overlays are cached by generation,
+and intent admission is bounded; the rest is open.**
 
 - **Generation.** Grid names the overlay set in force with a generation: the
   digest of its ordered `[overlay_id, policy_digest]` list, read from plain
@@ -1000,9 +1000,47 @@ the rest is open.**
     mismatched overlays are accepted, when the generation ignores expiry,
     and (kernel) when Grid answers "unchanged" regardless.
 
-Still open: group commit of accepted and terminal events, a bounded
-execution queue with overload responses, separate latency targets, and
-crash tests for terminal states.
+- **Bounded admission.** The Hypervisor runs at most 32 intents at once
+  (`AXIOM_HYPERVISOR_MAX_CONCURRENT_INTENTS`). Up to 64 more
+  (`AXIOM_HYPERVISOR_MAX_QUEUED_INTENTS`) wait, first come, first served, for
+  at most 2 seconds each (`AXIOM_HYPERVISOR_INTENT_QUEUE_TIMEOUT_MS`).
+  - Beyond that, the intent is refused at once with
+    `503 dependency_unavailable`. The details name the service
+    (`hypervisor`), the reason (`queue_full` or `queue_timeout`) and
+    `retry_after_seconds`.
+  - The code is an existing stable, retryable code in the Gateway client
+    contract, so the contract is unchanged and clients already retry it.
+  - The gate stands before any evidence is written. A refused intent leaves
+    nothing behind, and the same request with the same idempotency key
+    succeeds once there is room. Every intent that starts runs to its own
+    terminal state as before.
+  - Code: `mesh/src/lib/execution-gate.mjs`.
+- **Evidence for admission.** `mesh/test/execution-gate.test.mjs`:
+  - first-come, first-served order;
+  - immediate refusal when the queue is full;
+  - refusal after the wait bound, with the task never run and its place
+    given up;
+  - a failing task frees its slot;
+  - invalid bounds are refused;
+  - through the four services, a saturated Hypervisor refuses an intent
+    with the retryable code before recording anything, and the retry with
+    the same key completes.
+
+  Mutation checks: the tests fail when the route bypasses the gate, when
+  either bound is off by one, when a timed-out task keeps its place, when
+  the order is last-in first-out, when a finished task keeps its slot, when
+  a started task can still time out, and when the reason or details are
+  dropped.
+
+Still open:
+
+- accepted/pending/completed API semantics for actions that need not
+  complete in one HTTP request (admission is bounded, but every admitted
+  intent still completes within its request);
+- queue depth in the operations report;
+- group commit of accepted and terminal events;
+- separate latency targets;
+- crash tests for terminal states.
 
 ### S-16 — Current capacity evidence is a smoke baseline, not a scale test
 
