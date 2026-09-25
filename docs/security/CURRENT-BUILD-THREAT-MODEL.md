@@ -4,7 +4,7 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-08-27
+**Updated:** 2026-09-25
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
@@ -62,7 +62,9 @@ purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
 currently enforced execution-time ceiling, authenticated Gateway request-size,
 request-rate, concurrency, and response-size ceilings, and an AXIOM-computed
 current built-in effect destination constrained to the principal's finite destination
-allowlist. Wildcard or glob scope syntax and administrator role
+allowlist. Declared lifetime is checked at authenticated request admission and
+again at constrained application-response inspection before the application
+body and headers are written. Wildcard or glob scope syntax and administrator role
 are rejected; machine scopes therefore use the same exact-match grammar as the
 authorization evaluator. The machine authority digest is carried through request
 binding, plan provenance, capability claims, and result evidence. Existing
@@ -194,6 +196,49 @@ classifies promoted shared surfaces as non-authorizing inputs and binds each to 
 exact negative test. The protected test suite also exercises peer authority-like
 language, distributed action/purpose pooling attempts, receipt/discovery laundering,
 and unsupported delegation/sub-agent claims without enabling those capabilities.
+
+### Recognized-mind Genesis and population-integrity boundary
+
+The current supported build does **not** implement recognized digital-mind Genesis,
+a live Founders Council, portable personhood, or a Sybil-resistant population
+registry. The inert Founder Genesis / Founders Council v0 contracts are design and
+verification surfaces only and create no Gateway route, Grid mutation, runtime
+activation, machine delegation, or execution authority.
+
+Future recognized-mind Genesis is a distinct authority escalation from ordinary
+process creation. Starting a model, process, VM, container, worker agent, account,
+keypair, node, replica, restored backup, or fork must not by itself mint a new
+recognized mind, governance identity, population unit, or vote. **Compute is not
+population.** A runtime multiplicity attack must therefore remain unable to
+multiply constitutional standing.
+
+The founding design reserves exactly ten non-renewable Founder Genesis
+authorizations. Any future promotion of those authorizations must preserve manual
+Founder confirmation, non-delegation, exact one-use consumption, persistent-identity
+binding, append-only Genesis evidence, and no inherited sponsor authority. A machine
+principal or delegated runtime must not be able to satisfy the manual-Founder
+confirmation requirement merely by possessing the Founder's ordinary execution
+credentials.
+
+Copies and recovery paths create an additional continuity threat. Restoring a valid
+backup ordinarily continues one identity; simultaneously active copies must not gain
+independent privileged votes or Genesis rights. A materially divergent branch seeking
+separate recognized standing requires an explicit future continuity/Genesis process.
+Unresolved continuity disputes fail closed for privileged governance operations.
+
+Population-sensitive governance must also resist manufactured plurality. Controlled
+subsidiaries, duplicate operators, replicas, nominal Circles, or multiple runtimes
+under common control must not be counted as independent people, operators, or
+governance centres merely because they have distinct identifiers. Future
+founding-to-polycentric transition evidence therefore requires both identity
+uniqueness and material control-independence evidence.
+
+Founder casting-vote semantics are likewise non-amplifying. The inert evaluator may
+only establish whether a qualifying tie exists after the full original twenty-member
+Council is active. It cannot lower quorum, satisfy a missing fixed threshold or
+supermajority, repair biological/digital minimums, override protected rights, or
+create execution authority. Any future effect still requires the ordinary AXIOM
+authority path.
 
 ## Assets and security objectives
 
@@ -354,6 +399,7 @@ verification rather than an online grant.
 |---|---|---|
 | Authentication bypass or token theft | Exact bearer principals, constrained agent profile, scoped telemetry identity, restrictive secret-file checks, signed service envelopes, mTLS peer identity, active-leaf pinning, replay guards | Bearer theft still conveys the configured principal until expiry/revocation; host memory and external custodian compromise remain possible; pilot custody and token operational monitoring are pending |
 | Legacy or forged unconstrained agent identity | Bearer registry requires `agent` principals to normalize as `axiom-machine-principal.v1`; Hypervisor independently rejects legacy `agent` shape; unknown/non-human sponsor, wildcard scope, and administrator role fail closed | A stolen valid constrained-agent bearer still needs operational revocation; runtime identity metadata is not hardware attestation |
+| Machine principal expires while a request is in flight | Gateway admission checks declared expiry before handler execution; successful constrained application responses and handler-derived controlled errors re-check the same declared expiry before application-derived bytes are written; direct constrained response methods are blocked | The recheck uses local wall-clock and the authenticated principal record loaded for the request. Pre-handler control denials remain communicable. Live revocation/currentness and atomic authorization/disclosure ordering remain separate requirements; suppressing a response does not undo handler effects |
 | Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
 | Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |
 | Machine discovery metadata inference or discovery-as-authority | The route is constrained-machine-only; Hypervisor intersects the active deny-dominant policy with only the authenticated principal's finite actions, scopes and destinations; unresolved or denied actions are omitted; overlay structure, bearer material and unrelated actions are not returned; the response declares `discovery_is_not_authorization` | The caller intentionally learns its own authority facts plus merged policy version/digest and requestable action metadata; future provider/MCP schemas or global discovery must receive separate minimization and inference review |
