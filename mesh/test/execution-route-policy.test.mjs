@@ -71,3 +71,11 @@ test('C2/C3 consequential routing cannot drop postcondition or reconciliation',(
   assert.throws(()=>validateExecutionRoutePolicy(policy({postcondition_required:false})),/requires postcondition and reconciliation/);
   assert.throws(()=>validateExecutionRoutePolicy(policy({reconciliation_required:false})),/requires postcondition and reconciliation/);
 });
+
+test('available route outranks a degraded peer of the same kind',()=>{
+  const result=evaluateExecutionRoutes(policy(),[
+    candidate('route.a-degraded','structured-api',{availability:'degraded'}),
+    candidate('route.z-available','structured-api',{availability:'available'})
+  ],{evaluatedAt:NOW});
+  assert.equal(result.preferred_route_candidate_id,'route.z-available');
+});
