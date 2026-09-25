@@ -155,6 +155,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
   'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md',
   'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md',
+  'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md',
   'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
   'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
@@ -175,6 +176,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-15-bounded-decision-intelligence-v0.md',
   'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md',
   'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md',
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
@@ -596,6 +598,13 @@ const REQUIRED_CONTENT = Object.freeze({
     'grants_authority: false',
     'execution_effect: none'
   ],
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': [
+    '## Delivery slices and merge order',
+    '## Task 1: Pure authority attenuation and v1 contract surface',
+    '## Stage D precondition: initialization runway',
+    '## Task 6: Transactionally ordered logical effect release',
+    'No Sandbox->Grid route is added'
+  ],
   'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md': [
     '## Fail-closed licence profile',
     'model training: denied',
@@ -613,6 +622,13 @@ const REQUIRED_CONTENT = Object.freeze({
     '## 6. Validation and fail-closed behavior',
     '## 9. First executable slice',
     '## 10. Promotion boundary and non-claims'
+  ],
+  'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md': [
+    'The configured machine principal is the immutable root authority ceiling',
+    'Grid becomes the sole durable authority domain for mutable machine lifecycle',
+    'machine.principal.lifecycle.mutate',
+    'machine.effect.released',
+    'currentness evidence is non-authorizing'
   ],
   'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': [
     '## Gate 0 — exact candidate inventory',
@@ -838,6 +854,8 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 7_000,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
+  'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md': 15_000,
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': 20_000,
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
