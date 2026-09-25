@@ -30,6 +30,7 @@ const MAX_CONFIG_BYTES = 64 * 1024;
 const MAX_STATE_BYTES = 64 * 1024 * 1024;
 const MAX_PEERS = 16;
 const REPLAY_CAPACITY = 10_000;
+const pendingSaves = new WeakMap();
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const HOSTNAME = /^[A-Za-z0-9.:-]{1,253}$/;
 
@@ -118,13 +119,20 @@ export async function openCirclePeerReplica(runtime) {
   return replica;
 }
 
-export async function saveCirclePeerReplica(runtime, replica) {
-  const sealed = runtime.protector.seal({
-    schema: CIRCLE_PEER_STATE_SCHEMA,
-    genesis_digest: runtime.genesis_digest,
-    updates: replica.exportUpdates()
-  }, stateContext(runtime.genesis_digest));
-  await atomicReplace(runtime.config.state_file, `${sealed}\n`, 0o600);
+export function saveCirclePeerReplica(runtime, replica) {
+  // Incoming offers and outbound syncs can save the same live replica at
+  // once. Serialize the snapshots as well as the renames, so an older save
+  // cannot replace a newer state file after the newer save has completed.
+  const save = (pendingSaves.get(runtime) ?? Promise.resolve()).catch(() => {}).then(async () => {
+    const sealed = runtime.protector.seal({
+      schema: CIRCLE_PEER_STATE_SCHEMA,
+      genesis_digest: runtime.genesis_digest,
+      updates: replica.exportUpdates()
+    }, stateContext(runtime.genesis_digest));
+    await atomicReplace(runtime.config.state_file, `${sealed}\n`, 0o600);
+  });
+  pendingSaves.set(runtime, save);
+  return save;
 }
 
 /**
@@ -145,11 +153,14 @@ export async function syncCirclePeers(runtime, replica, {
         send: senderFor(peer),
         now
       });
-      await saveCirclePeerReplica(runtime, replica);
       results.push({ origin: peer.origin, status: 'synced', ...result });
     } catch (error) {
       if (!(error instanceof ValidationError) && !isNetworkError(error)) throw error;
       results.push({ origin: peer.origin, status: 'failed', code: error.code ?? 'error', message: error.message });
+    } finally {
+      // A pull may have accepted updates before a later round failed. Keep
+      // that progress durable even when this peer is reported as failed.
+      await saveCirclePeerReplica(runtime, replica);
     }
   }
   return results;

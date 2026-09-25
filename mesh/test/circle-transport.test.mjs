@@ -408,6 +408,34 @@ test('two peer nodes sync over HTTPS with a pinned CA, and keep their state encr
   await assert.rejects(runCirclePeerSync(aliceRuntime), /in use by another process/);
 });
 
+test('accepted pull updates survive a later peer failure', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-circle-peer-partial-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const { alice } = logs();
+  const node = replicaWith(alice);
+  const files = await peerFiles(root, 'bob', {
+    principal: 'bob',
+    peers: [{ origin: 'http://127.0.0.1:9' }]
+  });
+  const runtime = await loadCirclePeerRuntime(files.configFile, { allowInsecureLoopback: true });
+  let pulls = 0;
+  const result = await runCirclePeerSync(runtime, {
+    now: () => NOW,
+    senderFor: () => async (path, message) => {
+      if (++pulls === 1) {
+        const response = await directSender(node)(path, message);
+        // A real large Circle produces a partial bundle. The second read
+        // fails after its first batch has already changed the local replica.
+        return { ...response, bundle: { ...response.bundle, complete: false } };
+      }
+      throw Object.assign(new Error('peer disconnected'), { code: 'ECONNRESET' });
+    }
+  });
+  assert.equal(result.peers[0].status, 'failed');
+  assert.ok(result.status.updates > 0);
+  assert.deepEqual((await openCirclePeerReplica(runtime)).heads(), node.heads());
+});
+
 test('the transport is off unless configured on, and never plain HTTP from the command', async t => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-circle-peer-config-'));
   t.after(() => rm(root, { recursive: true, force: true }));

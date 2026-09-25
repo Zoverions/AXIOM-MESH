@@ -133,7 +133,11 @@ path must be absolute:
   certificate identity when the origin is an address.
 - One process owns the state at a time: `serve` holds a lock beside the
   state file, so a concurrent `sync` is refused instead of overwriting
-  updates the server accepted.
+  updates the server accepted. Saves within that process are serialized, so
+  an older snapshot cannot finish after and replace a newer one.
+- If a peer disconnects after a pull has accepted updates, the node saves
+  those updates before reporting the peer as failed. A later sync can resume
+  from the persisted heads.
 
 ## Evidence
 
@@ -166,6 +170,7 @@ path must be absolute:
   - a group-readable key.
 - The HTTP layer answers only its two routes, `POST` and JSON only, and
   bounds request size.
+- Accepted updates survive a later failure in the same peer sync.
 
 Each of these fails when its protection is removed:
 
