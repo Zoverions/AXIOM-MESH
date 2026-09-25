@@ -8,6 +8,7 @@ const EGRESS = new Set(['none','owner-lan','owner-vpn','managed-private','public
 const LOCALITY_POLICIES = new Set(['owner-local-only','private-network-allowed','public-provider-allowed']);
 const LOCALITIES = new Set(['owner-local','owner-private-remote','managed-private','public-provider']);
 const OBSERVATION_STATES = new Set(['current','stale','unknown']);
+const EVIDENCE_LEVELS = new Map([['declared',0],['measured',1],['verified',2]]);
 const PREFERENCES = new Set(['locality','trust','latency','cost','energy']);
 const LOCALITY_RANK = new Map([
   ['owner-local',0],
@@ -21,7 +22,7 @@ export function validateNodePlacementPolicy(document) {
     'schema','version','status','placement_id','outcome_id','task_id',
     'requested_egress_class','locality_policy','required_residency_regions',
     'required_capabilities','required_runtime_ids','required_model_refs','required_tool_refs',
-    'minimum_security_level','require_attestation','max_latency_ms','max_cost',
+    'minimum_evidence_level','minimum_security_level','require_attestation','max_latency_ms','max_cost',
     'max_energy_millijoules','optimization_currency','preference_order',
     'grants_authority','execution_effect','runtime_activation'
   ]);
@@ -44,6 +45,7 @@ export function validateNodePlacementPolicy(document) {
   idArray(document.required_runtime_ids, 'required_runtime_ids', 128);
   idArray(document.required_model_refs, 'required_model_refs', 128);
   idArray(document.required_tool_refs, 'required_tool_refs', 128);
+  if (!EVIDENCE_LEVELS.has(document.minimum_evidence_level)) throw new ValidationError('minimum_evidence_level is invalid');
   integer(document.minimum_security_level, 'minimum_security_level', 0, 3);
   if (typeof document.require_attestation !== 'boolean') throw new ValidationError('require_attestation must be boolean');
   nullableInteger(document.max_latency_ms, 'max_latency_ms', 0);
@@ -133,6 +135,9 @@ function evaluateCandidate(policy, candidate, instant) {
   subsetReasons(policy.required_runtime_ids, candidate.runtime_ids, 'runtime-missing', reasons);
   subsetReasons(policy.required_model_refs, candidate.model_refs, 'model-missing', reasons);
   subsetReasons(policy.required_tool_refs, candidate.tool_refs, 'tool-missing', reasons);
+  if (EVIDENCE_LEVELS.get(candidate.evidence_level) < EVIDENCE_LEVELS.get(policy.minimum_evidence_level)) {
+    reasons.push('evidence-level-insufficient');
+  }
   if (candidate.security_level < policy.minimum_security_level) reasons.push('security-level-insufficient');
   if (policy.require_attestation && candidate.attested !== true) reasons.push('attestation-required');
 
@@ -201,7 +206,7 @@ function localityAllowed(policy, locality) {
 function validateCandidate(candidate) {
   exactObject(candidate, 'Node placement candidate', [
     'node_id','locality','residency_region','supported_egress_classes','capabilities',
-    'runtime_ids','model_refs','tool_refs','security_level','attested','latency_ms',
+    'runtime_ids','model_refs','tool_refs','evidence_level','evidence_refs','security_level','attested','latency_ms',
     'cost','energy_millijoules','observation_state','observed_at','expires_at'
   ]);
   id(candidate.node_id, 'candidate node_id');
@@ -212,6 +217,9 @@ function validateCandidate(candidate) {
   idArray(candidate.runtime_ids, 'candidate runtime_ids', 128);
   idArray(candidate.model_refs, 'candidate model_refs', 128);
   idArray(candidate.tool_refs, 'candidate tool_refs', 128);
+  if (!EVIDENCE_LEVELS.has(candidate.evidence_level)) throw new ValidationError('candidate evidence_level is invalid');
+  textArray(candidate.evidence_refs, 'candidate evidence_refs', 128, 512);
+  if (candidate.evidence_refs.length < 1) throw new ValidationError('candidate evidence_refs must not be empty');
   integer(candidate.security_level, 'candidate security_level', 0, 3);
   if (typeof candidate.attested !== 'boolean') throw new ValidationError('candidate attested must be boolean');
   nullableInteger(candidate.latency_ms, 'candidate latency_ms', 0);
