@@ -35,7 +35,14 @@
       ]
     },
     "transition": {
-      "$ref": "#/$defs/transition"
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/transition"
+        }
+      ]
     },
     "authority_records": {
       "type": "array",
