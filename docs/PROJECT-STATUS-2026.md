@@ -400,10 +400,10 @@ Pack, inference router, compute dispatcher, identity presentation, payment
 mandate, or settlement adapter has been implemented or added to the capability
 registry.
 
-## Mesh-notarized agreements (DESIGN-ONLY)
+## Mesh-notarized agreements (inert v0 contract candidate)
 
 The [mesh-notarized agreements specification](architecture/MESH-NOTARIZED-AGREEMENTS.md)
-(`0.1.0-draft.1`) defines a machine-verifiable record format for mutual
+(`0.1.0-draft.1`, now reconciled to prepared inert v0 contracts) defines a machine-verifiable record format for mutual
 commitments between principals: hash-chained ordering, honest `recorded_at`
 claims, digest-bound party identities, and metadata kept separate from private
 content. Notarization is evidence, not enforcement: it proves an agreement was

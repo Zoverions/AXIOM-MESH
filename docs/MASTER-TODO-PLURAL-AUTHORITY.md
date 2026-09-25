@@ -119,6 +119,10 @@
 - [ ] Complete security and privacy review.
 - [ ] Do not include public authority, payroll, treasury, coercive eligibility, or regulated decisions in the first pilot.
 
+**CIRCLE-002 shared-object checkpoint (2026-09-24):** Canonical Shared Artifact v0 already keeps stale-parent concurrent edits as explicit multiple heads and requires complete conflict resolution. The first Circle-specific composition adds only a pure admission verifier for one appended revision: exact Circle authority-domain binding, current membership assurance, immutable prior revisions/owner/domain/sharing, exact external authorization-evidence binding, and zero artifact/governance/execution/network effect. It does not persist or apply a revision. Commitments, Circle-specific approvals, live causal exchange, export/exit retention and human conflict-resolution workflows remain open.
+
+**CIRCLE-002 historical commitment checkpoint (2026-09-24):** The generic Agreement Record v0 remains Circle-neutral. The Circle adapter binds one exact agreement/digest to one exact historical Circle Core package/charter digest plus independently evidenced historical membership-assurance/context bindings for every agreement party at `agreement.recorded_at`. Later consent or membership revocation does not rewrite a historically valid record, but currentness remains separate. The adapter validates evidence shape and exact bindings only; historical snapshot/evidence authenticity remains separately verified and no agreement/Circle record grants enforcement or execution authority.
+
 ## Priority 9 — Institutional authority model
 
 - [ ] Define institution identity and charter.
