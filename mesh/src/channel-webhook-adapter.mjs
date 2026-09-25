@@ -98,6 +98,9 @@ export function createFixedRecipientWebhookSender(rawConfig, {
   if (typeof fetchImpl !== 'function' || !(state instanceof Map)) {
     throw new ValidationError('webhook sender requires fetch function and in-memory Map');
   }
+  if (MAP_SIZE_GETTER.call(state) > MAX_IDEMPOTENCY_ENTRIES) {
+    throw new ValidationError('webhook idempotency state exceeds capacity');
+  }
 
   async function dispatch(command, signal) {
     if (signal?.aborted) return attemptReceipt(command, 'cancelled_before_dispatch');
@@ -204,6 +207,10 @@ export function createFixedRecipientWebhookSender(rawConfig, {
       } catch {
         if (Map.prototype.get.call(state, key) === entry) Map.prototype.delete.call(state, key);
         throw new ValidationError('webhook idempotency state unavailable');
+      }
+      if (MAP_SIZE_GETTER.call(state) > MAX_IDEMPOTENCY_ENTRIES) {
+        if (Map.prototype.get.call(state, key) === entry) Map.prototype.delete.call(state, key);
+        throw new ValidationError('webhook idempotency state capacity exhausted');
       }
       void promise.then(receipt => {
         if (receipt.state === 'cancelled_before_dispatch' && Map.prototype.get.call(state, key) === entry) {
