@@ -21,4 +21,7 @@ test('Circle Decision Request Evidence v0 schema is closed and cannot mint ordin
   assert.equal(schema.properties.network_effect.const,'none');
   assert.equal(schema.properties.runtime_activation.const,false);
   assert.equal(schema['x-axiom-semantic-validator'],'mesh/src/lib/circle-decision-request-evidence.mjs');
+  const utcPattern=new RegExp(schema.$defs.date.pattern);
+  assert.equal(utcPattern.test('2026-09-25T12:00:00.000Z'),true);
+  assert.equal(utcPattern.test('2026-09-25T12:00:00Z'),false);
 });
