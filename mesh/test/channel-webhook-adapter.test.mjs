@@ -201,6 +201,61 @@ test('abort after dispatch is uncertain and does not retry the same key', async 
   assert.equal(calls, 1);
 });
 
+test('idempotency capacity fails closed without evicting prior effect keys', async () => {
+  const state = new Map();
+  for (let index = 0; index < 4_999; index += 1) {
+    state.set(`synthetic-retained-${index}`, Object.freeze({ retained: true }));
+  }
+  let calls = 0;
+  const sender = createFixedRecipientWebhookSender(CONFIG, {
+    state,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('', { status: 202 });
+    }
+  });
+
+  const first = await sender.send(command());
+  assert.equal(state.size, 5_000);
+  await assert.rejects(
+    sender.send(command({ idempotency_key: 'delivery:fixed-room:overflow-0001' })),
+    /idempotency state capacity exhausted/
+  );
+  assert.equal(state.size, 5_000);
+  assert.deepEqual(await sender.send(command()), first);
+  assert.equal(calls, 1);
+});
+
+test('pre-dispatch cancellation releases a bounded idempotency slot', async () => {
+  const state = new Map();
+  for (let index = 0; index < 4_999; index += 1) {
+    state.set(`synthetic-retained-${index}`, Object.freeze({ retained: true }));
+  }
+  let calls = 0;
+  const sender = createFixedRecipientWebhookSender(CONFIG, {
+    state,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('', { status: 202 });
+    }
+  });
+  const controller = new AbortController();
+  const pending = sender.send(command({ idempotency_key: 'delivery:fixed-room:cancelled-0001' }), {
+    signal: controller.signal
+  });
+  controller.abort();
+
+  const cancelled = await pending;
+  assert.equal(cancelled.state, 'cancelled_before_dispatch');
+  await Promise.resolve();
+  assert.equal(state.size, 4_999);
+
+  const accepted = await sender.send(command({ idempotency_key: 'delivery:fixed-room:after-cancel-0001' }));
+  assert.equal(accepted.state, 'accepted_by_endpoint');
+  assert.equal(state.size, 5_000);
+  assert.equal(calls, 1);
+});
+
 test('a dispatched request reaches only a loopback test receiver', async t => {
   const received = [];
   const server = createServer(async (request, response) => {
