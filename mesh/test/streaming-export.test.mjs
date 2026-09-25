@@ -251,8 +251,8 @@ test('memory and accounting export memory does not grow with the record count', 
   const dir = await mkdtemp(join(tmpdir(), 'axiom-streaming-export-graph-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const src = name => JSON.stringify(new URL(`../src/${name}`, import.meta.url).href);
-  const probe = async objects => {
-    const workDir = join(dir, `n${objects}`);
+  const probe = async (objects, { retain = false } = {}) => {
+    const workDir = join(dir, `n${objects}${retain ? '-retained' : ''}`);
     const script = `
       import { randomBytes } from 'node:crypto';
       import { mkdir } from 'node:fs/promises';
@@ -292,21 +292,30 @@ test('memory and accounting export memory does not grow with the record count', 
         peak = Math.max(peak, (now.arrayBuffers - base.arrayBuffers) + (now.heapUsed - base.heapUsed));
       };
       let count = 0;
+      // The negative control keeps every record, as a materialized export would.
+      const retained = [];
       for (const record of store.exportRecords(owner, { types: ['memory', 'accounting'] })) {
+        if (${retain}) retained.push(record);
         if (++count % 64 === 1) sample();
       }
       sample();
       store.close();
       console.log(JSON.stringify({ peak, count }));
     `;
-    const scriptPath = join(dir, `probe-${objects}.mjs`);
+    const scriptPath = join(dir, `probe-${objects}${retain ? '-retained' : ''}.mjs`);
     await writeFile(scriptPath, script);
     const { stdout } = await run(process.execPath, ['--expose-gc', scriptPath], { maxBuffer: 1024 * 1024 });
     return JSON.parse(stdout.trim().split('\n').at(-1));
   };
   const small = await probe(300);
   const large = await probe(1200);
-  t.diagnostic(`peak live memory: ${(small.peak / 1048576).toFixed(2)} MiB at 300 objects, ${(large.peak / 1048576).toFixed(2)} MiB at 1,200`);
+  // Negative control: the same probe, holding every record as the whole-set
+  // export did, must exceed the ceiling on every platform, or the probe
+  // cannot tell streaming from materializing.
+  const materialized = await probe(1200, { retain: true });
+  t.diagnostic(`peak live memory: ${(small.peak / 1048576).toFixed(2)} MiB at 300 objects, ${(large.peak / 1048576).toFixed(2)} MiB at 1,200, ${(materialized.peak / 1048576).toFixed(2)} MiB when every record is kept`);
+  assert.ok(materialized.peak > 16 * 1024 * 1024,
+    `the probe must detect a materialized export (measured ${(materialized.peak / 1048576).toFixed(1)} MiB)`);
   // Objects, edges, one account and journals.
   assert.equal(large.count, 1200 + 1199 + 1 + 1200);
   // About 20 MiB of memory text in the larger export; the first record used
