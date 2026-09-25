@@ -85,7 +85,7 @@ These labels are planning labels only. They are not valid substitutes for regist
 | Circle appeals and remedies | planned | Appeal records | Multi-party appeal, stay, review, correction and exit |
 | Selective sharing | planned | Memory disclosure, export and causal sync | Human sharing product, recipient policy, revocation limits |
 | Circle evidence timeline | planned | Grid evidence chain | Cross-node verified timeline and missing-evidence explanation |
-| Circle exit and continuity | planned | Export/import, revocation, backup | Data ownership, withdrawal, successor roles and continuity |
+| Circle exit and continuity | in progress; inert export-retention evidence | Circle Core exit/export + snapshot and historical record evidence | Separately authorized portable bundle construction, import/recovery, successor roles, currentness UX and live withdrawal/continuity workflow |
 | Circle pilot | blocked | Human shell and sharing roadmap | Bounded real participants, consent, usability, security review |
 
 ## Layer 3 — Institutional governance
