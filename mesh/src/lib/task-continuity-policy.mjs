@@ -3,6 +3,7 @@ import { digestObject, ValidationError } from './canonical.mjs';
 export const TASK_CONTINUITY_POLICY_SCHEMA = 'axiom-task-continuity-policy.v0';
 
 const ID=/^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$/;
+const DIGEST=/^[a-f0-9]{64}$/;
 const MODES=new Set(['stop-on-loss','local-cognition-degraded','queue-until-reconnect']);
 const NETWORK_STATES=new Set(['online','provider-unavailable','mesh-partitioned','offline']);
 const LOCATIONS=new Set(['owner-local','remote']);
@@ -11,7 +12,7 @@ const EFFECTS=new Set(["none","read-external","write-external","publish-external
 
 export function validateTaskContinuityPolicy(document){
   exactObject(document,'Task continuity policy',[
-    'schema','version','status','continuity_id','outcome_id','task_id',
+    'schema','version','status','continuity_id','outcome_id','task_id','outcome_digest','task_digest',
     'authority_snapshot_ref','budget_ref','mode','max_degraded_duration_ms',
     'allowed_local_capabilities','allowed_data_classes','expires_at',
     'grants_authority','execution_effect','runtime_activation'
@@ -22,6 +23,7 @@ export function validateTaskContinuityPolicy(document){
     ||document.execution_effect!=='none'||document.runtime_activation!==false
   )throw new ValidationError('Task continuity policy activation boundary is invalid');
   id(document.continuity_id,'continuity_id');id(document.outcome_id,'outcome_id');id(document.task_id,'task_id');
+  digest(document.outcome_digest,'outcome_digest');digest(document.task_digest,'task_digest');
   id(document.authority_snapshot_ref,'authority_snapshot_ref');id(document.budget_ref,'budget_ref');
   if(!MODES.has(document.mode))throw new ValidationError('continuity mode is invalid');
   integer(document.max_degraded_duration_ms,'max_degraded_duration_ms',0,604800000);
@@ -39,13 +41,16 @@ export function evaluateTaskContinuity(policy,state){
   const assessed=canonicalDate(state.assessed_at,'assessed_at');
   const reasons=[];
   if(assessed>=canonicalDate(policy.expires_at,'policy expires_at'))reasons.push('continuity-policy-expired');
+  if(state.outcome_digest!==policy.outcome_digest)reasons.push('outcome-digest-mismatch');
+  if(state.task_digest!==policy.task_digest)reasons.push('task-digest-mismatch');
   if(state.authority_snapshot_ref!==policy.authority_snapshot_ref)reasons.push('authority-snapshot-mismatch');
   if(state.authority_current!==true)reasons.push('authority-not-current');
   if(state.budget_ref!==policy.budget_ref)reasons.push('budget-ref-mismatch');
   if(state.budget_current!==true)reasons.push('budget-not-current');
 
   if(state.network_state==='online'){
-    return decision('normal-path-required',reasons.length?reasons:['degraded-continuity-not-required']);
+    if(reasons.length)return decision('stop-denied',reasons);
+    return decision('normal-path-required',['degraded-continuity-not-required']);
   }
 
   if(state.degraded_since===null){
@@ -83,13 +88,14 @@ function decision(action,reasons){
 
 function validateState(state){
   exactObject(state,'Task continuity state',[
-    'network_state','degraded_since','assessed_at','authority_snapshot_ref','authority_current',
+    'network_state','degraded_since','assessed_at','outcome_digest','task_digest','authority_snapshot_ref','authority_current',
     'budget_ref','budget_current','execution_location','provider_location',
     'requested_capabilities','requested_data_classes','requested_effect'
   ]);
   if(!NETWORK_STATES.has(state.network_state))throw new ValidationError('network_state is invalid');
   if(state.degraded_since!==null)canonicalDate(state.degraded_since,'degraded_since');
   canonicalDate(state.assessed_at,'assessed_at');
+  digest(state.outcome_digest,'outcome_digest');digest(state.task_digest,'task_digest');
   id(state.authority_snapshot_ref,'authority_snapshot_ref');
   if(typeof state.authority_current!=='boolean')throw new ValidationError('authority_current must be boolean');
   id(state.budget_ref,'budget_ref');
@@ -103,6 +109,7 @@ function validateState(state){
 function subset(actual,allowed,prefix,reasons){const set=new Set(allowed);for(const item of actual)if(!set.has(item))reasons.push(prefix+':'+item);}
 function exactObject(value,label,fields){if(!value||typeof value!=='object'||Array.isArray(value))throw new ValidationError(label+' must be an object');const a=Object.keys(value).sort().join(',');const e=[...fields].sort().join(',');if(a!==e)throw new ValidationError(label+' fields are invalid');}
 function id(value,label){if(typeof value!=='string'||!ID.test(value))throw new ValidationError(label+' is invalid');}
+function digest(value,label){if(typeof value!=='string'||!DIGEST.test(value))throw new ValidationError(label+' must be a lowercase sha256 digest');}
 function idArray(value,label,max){if(!Array.isArray(value)||value.length>max)throw new ValidationError(label+' is invalid');const s=new Set();for(const item of value){id(item,label+' item');if(s.has(item))throw new ValidationError(label+' contains duplicate values');s.add(item);}}
 function textArray(value,label,max,itemMax){if(!Array.isArray(value)||value.length>max)throw new ValidationError(label+' is invalid');const s=new Set();for(const item of value){if(typeof item!=='string'||item.length<1||item.length>itemMax)throw new ValidationError(label+' item is invalid');if(s.has(item))throw new ValidationError(label+' contains duplicate values');s.add(item);}}
 function integer(value,label,min,max){if(!Number.isSafeInteger(value)||value<min||value>max)throw new ValidationError(label+' is invalid');}
