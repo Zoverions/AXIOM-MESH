@@ -38,6 +38,10 @@ const STATIC_ASSETS = new Map([
   ['/mesh/config/gateway-client-contract.json', {
     path: join(REPOSITORY_ROOT, 'mesh', 'config', 'gateway-client-contract.json'),
     contentType: 'application/json; charset=utf-8'
+  }],
+  ['/mesh/src/lib/local-organize-text.mjs', {
+    path: join(REPOSITORY_ROOT, 'mesh', 'src', 'lib', 'local-organize-text.mjs'),
+    contentType: 'text/javascript; charset=utf-8'
   }]
 ]);
 
@@ -372,7 +376,7 @@ function securityHeaders(headers) {
       "font-src 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "img-src 'self'",
+      "img-src 'self' data:",
       "manifest-src 'self'",
       "object-src 'none'",
       "script-src 'self'",

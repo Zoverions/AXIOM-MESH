@@ -1,8 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
   <title id="title">AXIOM One</title>
-  <desc id="description">An interlocking local mesh mark.</desc>
-  <rect width="512" height="512" rx="112" fill="#08111f"/>
-  <circle cx="256" cy="256" r="150" fill="none" stroke="#72e1c2" stroke-width="28"/>
-  <path d="M152 302 256 122l104 180H152Z" fill="none" stroke="#f5c96a" stroke-linejoin="round" stroke-width="28"/>
-  <circle cx="256" cy="256" r="38" fill="#e9f5ff"/>
+  <desc id="description">AXIOM One product mark: a gold compass star inside a thin ring with a small star chart, over a serif wordmark, on near-black.</desc>
+  <rect width="512" height="512" rx="112" fill="#0b0a08"/>
+  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="#d8b36a" stroke-opacity="0.28" stroke-width="3"/>
+  <g stroke="#d8b36a" stroke-opacity="0.55" stroke-width="2">
+    <line x1="120" y1="96" x2="196" y2="72"/>
+    <line x1="196" y1="72" x2="268" y2="112"/>
+    <line x1="268" y1="112" x2="352" y2="80"/>
+    <line x1="352" y1="80" x2="404" y2="128"/>
+  </g>
+  <g fill="#f5ead6">
+    <circle cx="120" cy="96" r="5"/>
+    <circle cx="196" cy="72" r="4"/>
+    <circle cx="268" cy="112" r="6"/>
+    <circle cx="352" cy="80" r="4"/>
+    <circle cx="404" cy="128" r="5"/>
+  </g>
+  <circle cx="256" cy="238" r="104" fill="none" stroke="#d8b36a" stroke-width="7"/>
+  <path d="M256 158 L276 218 L336 238 L276 258 L256 318 L236 258 L176 238 L236 218 Z" fill="#d8b36a"/>
+  <circle cx="256" cy="238" r="10" fill="#0b0a08"/>
+  <text x="256" y="414" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="58" letter-spacing="16" fill="#d8b36a">AXIOM</text>
+  <text x="256" y="458" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="26" letter-spacing="24" fill="#9a8f7c">ONE</text>
 </svg>
