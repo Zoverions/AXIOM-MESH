@@ -265,7 +265,9 @@ test('exit effective before recording invalidates historical Circle participatio
     future_obligation_effect:'ends-except-explicit-post-exit-rules',
     history_rewrite:false,authority_effect:'none'
   });
-  f.admission.historical_circle_package_digest=validateCircleCorePackage(f.historicalCirclePackage).package_digest;
+  const historical=validateCircleCorePackage(f.historicalCirclePackage);
+  f.admission.historical_circle_package_digest=historical.package_digest;
+  f.historicalCircleSnapshotEvidence.package_digest=historical.package_digest;
   f.admission.admission_id=deriveCircleCommitmentAdmissionId(f.admission);
   const result=assessCircleCommitmentAdmission(f);
   assert.equal(result.historical_circle_commitment_admissible,false);
