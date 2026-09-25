@@ -37,7 +37,8 @@ const expectedTargetIds = [
   'RT-GEN-017',
   'RT-IND-018',
   'RT-VOTE-019',
-  'RT-GUARD-020'
+  'RT-GUARD-020',
+  'RT-CARE-021'
 ];
 
 async function text(path) {
