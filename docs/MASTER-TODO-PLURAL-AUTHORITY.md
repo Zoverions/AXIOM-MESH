@@ -126,6 +126,8 @@
 
 **Dependent Mind Care & Protection checkpoint (2026-09-25):** Stacked care-profile work makes active guardianship carry ten explicit care obligations: continuity/recovery, resources, security, development/education, consent/authority literacy, privacy/memory boundaries, independent advocacy, social/informational access, emergency continuity, and an independence pathway. The guardian cannot be the independent advocate, care evidence cannot predate guardianship, stale/overdue care fails currentness without erasing the dependent, and the profile explicitly forbids ambient private-memory access, unbounded internal-state access, impersonation, covert memory modification, permanent obedience, guardian-only information, and guardian-only dispute review. It creates no guardianship/status/vote/Genesis/execution authority.
 
+**Dependent concern / protective-review checkpoint (2026-09-25):** Stacked concern work creates a content-addressed, explicitly unadjudicated path for a dependent, care-profile-bound independent advocate, independent reviewer, or authorized observer to request independent protective review. Guardian/dependent self-labeling as independent is rejected; concern evidence/review types are canonical; stale evidence becomes non-requestable. Severity or emergency-review language creates no abuse finding, rights-violation finding, guardian removal, retaliation, developmental downgrade, guardianship reactivation, memory/internal-state access, impersonation, protective action, execution authority, or runtime effect.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
