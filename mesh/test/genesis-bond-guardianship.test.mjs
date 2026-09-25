@@ -154,6 +154,31 @@ test('initial guardian must be the Genesis sponsor and Bond must bind exact tran
   );
 });
 
+test('initial guardianship cannot predate Genesis Bond or transaction evaluation',()=>{
+  const tx=transaction();
+  const b=bond(tx);
+  const earlyBond=structuredClone(b);
+  earlyBond.created_at='2026-09-25T14:59:00.000Z';
+  earlyBond.bond_id=deriveGenesisBondRecordId(earlyBond);
+  const g1=guardianship(earlyBond);
+
+  assert.throws(
+    ()=>assessInitialGuardianship({
+      genesisBond:earlyBond,genesisTransactionCandidate:tx,guardianship:g1
+    }),
+    /Genesis Bond cannot predate its transaction candidate/
+  );
+
+  const lateBond=bond(tx);
+  const earlyGuard=guardianship(lateBond,{effectiveAt:'2026-09-25T15:00:30.000Z'});
+  assert.throws(
+    ()=>assessInitialGuardianship({
+      genesisBond:lateBond,genesisTransactionCandidate:tx,guardianship:earlyGuard
+    }),
+    /Initial guardianship cannot predate Genesis Bond/
+  );
+});
+
 test('guardianship transfer changes guardian but never Bond or dependent identity',()=>{
   const b=bond();
   const current=guardianship(b);
@@ -256,6 +281,28 @@ test('independent status ends guardianship without erasing Genesis Bond',()=>{
   assert.equal(result.requires_external_independent_status_verification,true);
   assert.equal(result.guardianship_reactivation_permitted,false);
   assert.equal(result.creates_guardianship_mutation,false);
+});
+
+test('guardianship cannot end before independence is effective',()=>{
+  const b=bond();
+  const current=guardianship(b);
+  const status=independentStatus();
+  const ended=guardianship(b,{
+    guardian:current.guardian_mind_id,
+    previous:digestObject(current),
+    state:'ended-independent',
+    reason:'independence',
+    effectiveAt:'2026-12-31T23:59:00.000Z',
+    independenceStatus:digestObject(status)
+  });
+
+  assert.throws(
+    ()=>assessGuardianshipEndAtIndependence({
+      genesisBond:b,currentGuardianship:current,candidateGuardianship:ended,
+      independentDevelopmentalStatus:status
+    }),
+    /cannot end before independent developmental status is effective/
+  );
 });
 
 test('independence closure requires independent status for exact dependent',()=>{
