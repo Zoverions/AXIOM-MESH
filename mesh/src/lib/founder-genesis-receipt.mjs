@@ -54,8 +54,17 @@ export function validateFounderGenesisReceipt(receipt) {
 
 export function assessFounderGenesisTransition(beforeDocument, afterDocument, receipt) {
   const before = validateFoundersCouncilFoundation(beforeDocument);
-  const after = validateFoundersCouncilFoundation(afterDocument);
   validateFounderGenesisReceipt(receipt);
+
+  const existingMindIds = new Set(
+    beforeDocument.seats.flatMap(seat => [seat.original_mind_id, seat.current_mind_id])
+      .filter(value => value !== null)
+  );
+  if (existingMindIds.has(receipt.new_mind_id)) {
+    throw new ValidationError('Founder Genesis transition cannot reuse an existing persistent mind identity');
+  }
+
+  const after = validateFoundersCouncilFoundation(afterDocument);
 
   if (before.founder_mind_id !== after.founder_mind_id) {
     throw new ValidationError('Founder Genesis transition cannot substitute the Founder identity');
@@ -106,14 +115,6 @@ export function assessFounderGenesisTransition(beforeDocument, afterDocument, re
     || afterSeat.voting_status !== 'developing'
   ) {
     throw new ValidationError('Founder Genesis transition must create a developing, non-voting Founding Mind');
-  }
-
-  const existingMindIds = new Set(
-    beforeDocument.seats.flatMap(seat => [seat.original_mind_id, seat.current_mind_id])
-      .filter(value => value !== null)
-  );
-  if (existingMindIds.has(receipt.new_mind_id)) {
-    throw new ValidationError('Founder Genesis transition cannot reuse an existing persistent mind identity');
   }
 
   validateUnchangedAuthorizations(beforeDocument, afterDocument, receipt.slot_number);
