@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-commitment-admission-v0.schema.json",
+  "title": "AXIOM Circle Commitment Admission v0",
+  "description": "Inert evidence binding one generic Agreement Record to an exact historical Circle snapshot and historical membership evidence for all agreement parties. It grants no Circle, agreement, governance, enforcement, execution, payment, settlement, network or runtime authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "admission_id",
+    "circle_id",
+    "charter_digest_at_recording",
+    "agreement_id",
+    "agreement_digest",
+    "historical_circle_package_digest",
+    "historical_circle_snapshot_evidence_ref",
+    "historical_circle_snapshot_evidence_digest",
+    "recorded_at",
+    "party_bindings",
+    "authority_effect",
+    "governance_effect",
+    "enforcement_effect",
+    "execution_effect",
+    "payment_effect",
+    "settlement_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-circle-commitment-admission.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-circle-commitment-admission"
+    },
+    "admission_id": {
+      "type": "string",
+      "pattern": "^circle-commitment:[a-f0-9]{64}$"
+    },
+    "circle_id": {
+      "$ref": "#/$defs/id"
+    },
+    "charter_digest_at_recording": {
+      "$ref": "#/$defs/digest"
+    },
+    "agreement_id": {
+      "type": "string",
+      "pattern": "^agreement:[a-f0-9]{64}$"
+    },
+    "agreement_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "historical_circle_package_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "recorded_at": {
+      "$ref": "#/$defs/date"
+    },
+    "party_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/partyBinding"
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "enforcement_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "payment_effect": {
+      "const": "none"
+    },
+    "settlement_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "historical_circle_snapshot_evidence_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "historical_circle_snapshot_evidence_digest": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "partyBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principal_id",
+        "membership_assurance_digest",
+        "membership_context_digest",
+        "membership_context_evidence_ref",
+        "membership_context_evidence_digest"
+      ],
+      "properties": {
+        "principal_id": {
+          "$ref": "#/$defs/id"
+        },
+        "membership_assurance_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "membership_context_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "membership_context_evidence_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "membership_context_evidence_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-commitment-admission.mjs",
+  "x-axiom-non-claims": [
+    "circle-membership-creation",
+    "circle-governance-authority",
+    "agreement-enforcement",
+    "legal-validity",
+    "execution-authority",
+    "payment",
+    "settlement",
+    "network-effect",
+    "historical-snapshot-authenticity",
+    "runtime-activation"
+  ]
+}

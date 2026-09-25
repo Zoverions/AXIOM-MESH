@@ -140,3 +140,31 @@ permutation-stable lineage digest.
 A future Circle adapter may require current Circle membership and charter
 bindings around the generic agreement record. Circle-specific authority is not
 part of the generic agreement contract.
+
+### Observation coverage for historical and present conclusions
+
+The conditional historical conclusion requires each supplied consent observation
+to cover the recording instant without coming from the future:
+`agreement.recorded_at <= observation.observed_at <= assessedAt`.
+An earlier observation cannot establish whether consent was revoked before the
+agreement was recorded. A future observation cannot establish a result at an
+earlier assessment time. Assessment before recording denies both the aggregate
+historical result and each party's historical result.
+
+Present currentness remains stricter: the observation must be at exactly
+`assessedAt`, with matching grant terms and active, unexpired, unrevoked consent.
+An observation after recording but before assessment may support the historical
+conclusion without proving present currentness. Later revocation or expiry does
+not rewrite a historical conclusion supported by temporally consistent evidence.
+
+A materialized observation cannot precede the consent record's `created_at`, or
+its `revoked_at` when it already reports revocation. Contradictory chronology is
+rejected rather than treated as a future scheduled change.
+
+These comparisons validate supplied evidence only. They do not authenticate a
+snapshot, verify signatures or completeness, prove absolute time, or issue any
+authority. Independent Grid evidence verification remains required. Regression
+coverage is in `mesh/test/agreement-observation-window.test.mjs`; serialized UTC
+pattern coverage across the four related contracts is in
+`mesh/test/commitment-timestamp-patterns.test.mjs`. Calendar validity remains a
+semantic-validator responsibility in addition to JSON Schema timestamp shape.

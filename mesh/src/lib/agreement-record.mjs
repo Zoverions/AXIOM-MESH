@@ -253,6 +253,7 @@ export function assessAgreementEvidence({
     const acceptance=acceptanceByPrincipal.get(principal);
     const partyRecorded=[];
     const partyCurrent=[];
+    if(assessmentPredatesAgreement)partyRecorded.push('assessment-predates-agreement');
     if(!acceptance){
       partyRecorded.push('acceptance-missing');
       recordedReasons.push('acceptance-missing:'+principal);
@@ -303,7 +304,15 @@ export function assessAgreementEvidence({
         partyRecorded.push('current-consent-record-missing-for-history-check');
         partyCurrent.push('current-consent-missing');
       }else{
-        if(canonicalDate(observation.observed_at,'current consent observed_at')!==assessed){
+        const consentObservedAt=canonicalDate(observation.observed_at,'current consent observed_at');
+        // Historical coverage and present currentness are different questions.
+        if(consentObservedAt<agreementRecordedAt){
+          partyRecorded.push('consent-observation-predates-recording');
+        }
+        if(consentObservedAt>assessed){
+          partyRecorded.push('consent-observation-after-assessment');
+        }
+        if(consentObservedAt!==assessed){
           partyCurrent.push('current-consent-observation-time-mismatch');
         }
         const current=observation.record;
@@ -404,10 +413,16 @@ function validateCurrentConsentObservation(value){
   exactObject(value,'Current consent observation',[
     'observed_at','evidence_ref','evidence_digest','record'
   ]);
-  canonicalDate(value.observed_at,'current consent observation observed_at');
+  const observed=canonicalDate(value.observed_at,'current consent observation observed_at');
   id(value.evidence_ref,'current consent observation evidence_ref');
   digest(value.evidence_digest,'current consent observation evidence_digest');
   const record=validateCurrentConsentRecord(value.record);
+  if(canonicalDate(record.created_at,'current consent created_at')>observed){
+    throw new ValidationError('Current consent observation cannot precede record created_at');
+  }
+  if(record.revoked_at!==null&&canonicalDate(record.revoked_at,'current consent revoked_at')>observed){
+    throw new ValidationError('Current consent observation cannot precede record revoked_at');
+  }
   return Object.freeze({
     observed_at:value.observed_at,
     evidence_ref:value.evidence_ref,
