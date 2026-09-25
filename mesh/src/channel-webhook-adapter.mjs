@@ -5,6 +5,8 @@ const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:-]{15,159}$/;
 const BEARER = /^[A-Za-z0-9._~+/-]+={0,2}$/;
 const MAX_MESSAGE_BYTES = 8_192;
 const MAX_RESPONSE_BYTES = 4_096;
+const MAX_IDEMPOTENCY_ENTRIES = 5_000;
+const MAP_SIZE_GETTER = Object.getOwnPropertyDescriptor(Map.prototype, 'size').get;
 
 function exactFields(value, fields, name) {
   const object = assertPlainObject(value, name);
@@ -74,6 +76,9 @@ async function discardBoundedResponse(response) {
  * The injected transport and in-memory idempotency state are operator-owned
  * test/configuration hooks, not inputs to a production authorization route.
  * Idempotency state does not survive a restart.
+ * Effect-attempted terminal reservations are retained for the process lifetime.
+ * New unique keys fail closed when this bounded state is full; the sender never
+ * evicts a possibly-effectful key merely to make room.
  */
 export function createFixedRecipientWebhookSender(rawConfig, {
   fetchImpl = globalThis.fetch,
@@ -92,6 +97,9 @@ export function createFixedRecipientWebhookSender(rawConfig, {
   const timeoutMs = config.timeout_ms;
   if (typeof fetchImpl !== 'function' || !(state instanceof Map)) {
     throw new ValidationError('webhook sender requires fetch function and in-memory Map');
+  }
+  if (MAP_SIZE_GETTER.call(state) > MAX_IDEMPOTENCY_ENTRIES) {
+    throw new ValidationError('webhook idempotency state exceeds capacity');
   }
 
   async function dispatch(command, signal) {
@@ -179,6 +187,9 @@ export function createFixedRecipientWebhookSender(rawConfig, {
         return prior.promise;
       }
       if (signal?.aborted) return attemptReceipt(normalized, 'cancelled_before_dispatch');
+      if (MAP_SIZE_GETTER.call(state) >= MAX_IDEMPOTENCY_ENTRIES) {
+        throw new ValidationError('webhook idempotency state capacity exhausted');
+      }
       let resolveAttempt;
       let rejectAttempt;
       const promise = new Promise((resolve, reject) => {
@@ -196,6 +207,10 @@ export function createFixedRecipientWebhookSender(rawConfig, {
       } catch {
         if (Map.prototype.get.call(state, key) === entry) Map.prototype.delete.call(state, key);
         throw new ValidationError('webhook idempotency state unavailable');
+      }
+      if (MAP_SIZE_GETTER.call(state) > MAX_IDEMPOTENCY_ENTRIES) {
+        if (Map.prototype.get.call(state, key) === entry) Map.prototype.delete.call(state, key);
+        throw new ValidationError('webhook idempotency state capacity exhausted');
       }
       void promise.then(receipt => {
         if (receipt.state === 'cancelled_before_dispatch' && Map.prototype.get.call(state, key) === entry) {
