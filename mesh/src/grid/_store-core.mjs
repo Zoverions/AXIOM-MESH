@@ -2397,7 +2397,7 @@ export class GridStore {
     for (const row of this.db.prepare(`
       SELECT * FROM sync_bundles
       WHERE owner = ?
-      ORDER BY received_at DESC
+      ORDER BY received_at DESC, bundle_digest DESC
       LIMIT 100
     `).all(owner)) {
       const bundle = this.decodeProtectedRow(
@@ -2429,6 +2429,22 @@ export class GridStore {
       },
       truncated: hasMore || bundlesCut || bundles.length === 100
     };
+  }
+
+  // Every bundle summary, newest first, one keyset page at a time (S-10).
+  // Sync state carries only the newest that fit its budget.
+  listCausalSyncBundles(owner, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'received_at', idColumn: 'bundle_digest' });
+    return this.db.prepare(`
+      SELECT * FROM sync_bundles
+      WHERE owner = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY received_at DESC, bundle_digest DESC
+      LIMIT ?
+    `).all(
+      owner,
+      ...keyset.params,
+      boundedInteger(limit, 'sync bundle limit', 1, COLLECTION_PAGE_MAX + 1)
+    ).map(row => this.decodeProtectedRow('sync_bundles', 'bundle_digest', row, ['result_json']));
   }
 
   getCausalSyncBundle(owner, bundleDigest) {

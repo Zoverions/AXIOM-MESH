@@ -22,7 +22,7 @@ If confirmation, grant, or budget is missing, the path fails closed with a reada
 
 ## Required kernel surfaces
 
-- Versioned Gateway client contract (31 authenticated routes; relative-only application targets; no direct Grid/Hypervisor/Sandbox target from the browser app).
+- Versioned Gateway client contract (32 authenticated routes; relative-only application targets; no direct Grid/Hypervisor/Sandbox target from the browser app).
 - Owner-scoped Vault create/list, provenance links, tombstone, selective export as already bounded in PROJECT-STATUS / `apps/axiom-one/`.
 - Deny-dominant policy, confirmation, and short-lived capability consumption before Sandbox execution.
 - One provider adapter outside the kernel, bound to named provider, model, data scope, purpose, budget, timeout, cancel, retention, and result receipt (AI-001).

@@ -18,7 +18,7 @@ Its runtime validator and authorizer are
 The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
-fallback. The active policy contains 10 grouped flows and 42 exact route
+fallback. The active policy contains 10 grouped flows and 43 exact route
 permissions, including bounded supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -283,7 +283,7 @@ This milestone does not claim:
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 42-route application graph, the reference four-unit
+an exact machine-readable 43-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
 network edges, the remote-social addition remains a Gateway-only bounded

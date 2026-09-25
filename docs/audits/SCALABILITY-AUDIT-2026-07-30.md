@@ -620,10 +620,19 @@ The list now has its own 256 KiB budget, newest first, and a cut sets
 `truncated`. A test with a full page and 100 maximum-size summaries fails
 without the budget, and without the flag on a page with no more records.
 
+Follow-up (2026-09-25): every bundle summary is now reachable through
+`GET /v1/sync/bundles`, newest first, keyset-paged like the other
+collections (`limit` up to 100, `cursor`), backed by
+`sync_bundles(owner, received_at, bundle_digest)` in migration 11. Sync
+state keeps its budgeted newest summaries. This adds one read-only
+owner-scoped route, so the Gateway contract (now 32 routes), the
+Gateway-to-Grid allowlist (27 routes), their digests and the blob pins were
+updated deliberately. The kernel test lists bundles through real Gateway and
+Grid servers and checks owner isolation and cursor refusal.
+
 Still open: `node-discovery` (a ranked query result) is not paged. Also
-open: paging the bundle list inside sync state (older bundles are reachable
-only by digest), a separate fetch for one sync record larger than the
-budget, and a streaming contract for artifacts.
+open: a separate fetch for one sync record larger than the budget, and a
+streaming contract for artifacts.
 
 Related defect fixed (2026-09-25): personal exports read memory through the
 paged API method, so an export silently held only the first 100 memory
@@ -679,7 +688,8 @@ patterns removed; node schedule reads scoped.**
   page order, time then identifier: capsules, proposals, nodes, approvals
   by approver and by requester, consents by subject and by controller,
   memory, imports, appeals, storage offers, backups, accounting
-  journals by owner, and node schedules by requester. It also adds
+  journals by owner, node schedules by requester, and sync bundles by
+  owner. It also adds
   `consents(subject, controller, status, expires_at)` for the consent check
   and `events(actor, seq)` for actor-filtered event pages.
 - **Query shapes.** Proposals now choose the page before joining votes.

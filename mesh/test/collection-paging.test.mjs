@@ -86,13 +86,18 @@ test('previously unbounded collections page completely, in order, ties included 
       offer_id: `offer_${n}`, owner: ME, status: 'active', created_at: at,
       expires_at: '2999-01-01T00:00:00.000Z'
     }, { regions_json: [], signature_json: {} });
+    const digest = n.padStart(64, 'b');
+    insert('sync_bundles', digest, {
+      bundle_digest: digest, owner: ME, received_at: at
+    }, { result_json: { accepted: 1 } });
   }
 
   const collections = [
     ['consents', (limit, after) => store.pageConsents(ME, { limit, after }), item => [item.created_at, item.consent_id]],
     ['appeals', (limit, after) => store.listGovernanceAppeals(ME, { limit, after }), item => [item.created_at, item.appeal_id]],
     ['imports', (limit, after) => store.listImports(ME, { limit, after }), item => [item.staged_at, item.import_id]],
-    ['storage_offers', (limit, after) => store.listStorageOffers(ME, { limit, after }), item => [item.created_at, item.offer_id]]
+    ['storage_offers', (limit, after) => store.listStorageOffers(ME, { limit, after }), item => [item.created_at, item.offer_id]],
+    ['sync_bundles', (limit, after) => store.listCausalSyncBundles(ME, { limit, after }), item => [item.received_at, item.bundle_digest]]
   ];
   for (const [collection, fetch, key] of collections) {
     for (const limit of [1, 7, COLLECTION_PAGE_MAX]) {

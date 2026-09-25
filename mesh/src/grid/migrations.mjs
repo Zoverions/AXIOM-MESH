@@ -284,6 +284,9 @@ const PAGED_COLLECTION_INDEXES_SQL = `
 
   CREATE INDEX IF NOT EXISTS node_schedules_page_idx
   ON node_schedules(requester, created_at, schedule_id);
+
+  CREATE INDEX IF NOT EXISTS sync_bundles_page_idx
+  ON sync_bundles(owner, received_at, bundle_digest);
 `;
 
 const MIGRATIONS = Object.freeze([

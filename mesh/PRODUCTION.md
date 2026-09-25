@@ -145,7 +145,7 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes exactly 42 currently allowed internal
+policy additionally authorizes exactly 43 currently allowed internal
 method/path permissions at both sending and receiving services and derives
 inbound mTLS peer allowlists. The additional governed Education permission is
 Hypervisor-to-Grid `POST /internal/v1/education/learner-progress`; it does not

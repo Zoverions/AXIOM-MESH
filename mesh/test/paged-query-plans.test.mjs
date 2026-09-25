@@ -11,7 +11,7 @@ import { GridStore } from '../src/grid/store.mjs';
 const BASE_TABLES = [
   'events', 'capsules', 'proposals', 'nodes', 'approvals', 'consents', 'memory_objects',
   'imports', 'governance_appeals', 'storage_offers', 'backups', 'sync_heads',
-  'accounting_journals', 'accounting_entries', 'node_schedules'
+  'accounting_journals', 'accounting_entries', 'node_schedules', 'sync_bundles'
 ];
 const AFTER = { sort: '2026-01-01T00:00:00.000Z', id: 'x_0001' };
 
@@ -87,6 +87,7 @@ test('paged Grid queries seek indexes and never scan a whole table (S-11)', asyn
     backups: after => store.listBackups(P, { limit: 101, after }),
     'accounting journals': after => store.listAccounting(P, { limit: 101, after }),
     'node schedules': after => store.listNodeSchedules(P, { limit: 101, after }),
+    'sync bundles': after => store.listCausalSyncBundles(P, { limit: 101, after }),
     // Status reads: the load-bearing schedules, the nodes a page is placed
     // on, and the active schedules a quarantine degrades.
     'schedule load': () => store.loadBearingSchedules(AFTER.sort),

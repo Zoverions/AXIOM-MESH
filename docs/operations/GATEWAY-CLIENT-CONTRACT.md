@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 31 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 32 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -71,6 +71,7 @@ client.
 | `appeals.list` | `GET /v1/appeals` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `storage_offers.list` | `GET /v1/storage-offers` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id`, `limit` (1-200; default 100) and `cursor` |
+| `sync_bundles.list` | `GET /v1/sync/bundles` | owner | optional `limit` (1-100; default 100) and `cursor`, newest first |
 | `sync_bundles.get` | `GET /v1/sync/bundles/:digest` | owner | `digest` |
 | `backups.list` | `GET /v1/backups` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `backups.get` | `GET /v1/backups/:id` | owner | `id` |
@@ -227,7 +228,7 @@ identifier.
 
 The test suite proves:
 
-- exact 31-route and JSON Schema inventory;
+- exact 32-route and JSON Schema inventory;
 - relative-only target construction and rejection of unlisted inputs;
 - request schema and idempotency enforcement;
 - first-response and idempotent-replay compatibility;

@@ -1160,6 +1160,15 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     404
   );
   assert.equal(ownerIsolatedSyncRecord.error.code, 'sync_bundle_not_found');
+  // Every bundle summary is listed, paged and owner-isolated.
+  const syncBundles = await api(gateway, token, '/v1/sync/bundles?limit=1');
+  assert.deepEqual(syncBundles.bundles.map(item => item.bundle_digest), [firstSyncResult.bundle_digest]);
+  assert.deepEqual(syncBundles.page, { limit: 1, has_more: false, next_cursor: null });
+  assert.equal((await api(gateway, approverToken, '/v1/sync/bundles')).bundles.length, 0);
+  assert.equal(
+    (await api(gateway, token, '/v1/sync/bundles?cursor=not*a*cursor', {}, 400)).error.code,
+    'validation_error'
+  );
 
   const peerKeys = generateKeyPairSync('ed25519');
   const peerPublicKey = peerKeys.publicKey.export({ type: 'spki', format: 'pem' });

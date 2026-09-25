@@ -204,8 +204,10 @@ written behind the cursor during a pass appears on the next pass.
 
 Each page also lists the owner's newest bundle summaries: at most 100, and at
 most about 256 KiB of them, so that a full page stays under the 1 MiB internal
-response ceiling. `truncated` is true when either list was cut. Fetch any
-bundle by digest with `GET /v1/sync/bundles/<digest>`.
+response ceiling. `truncated` is true when either list was cut. List every
+bundle summary, newest first, with `GET /v1/sync/bundles` (`limit` up to 100
+and `cursor`, as for the other paged collections), and fetch one by digest
+with `GET /v1/sync/bundles/<digest>`.
 
 A record with multiple heads reports `status: conflict`. Resolution is a new
 node-signed update whose vector includes all accepted dependencies and whose

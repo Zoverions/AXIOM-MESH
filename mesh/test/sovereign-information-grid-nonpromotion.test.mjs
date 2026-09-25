@@ -4,21 +4,26 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const PARENT_BLOBS = Object.freeze({
-  capabilities: 'fd34c4b1836654bb7eeb7dda0f8be748ee124db8',
+  // Updated deliberately: two capability summaries restate the route counts
+  // (32 Gateway, 43 network) after `sync_bundles.list`. No capability state,
+  // evidence path or activation changed.
+  capabilities: '6516d91537120a36da20c5bbfa896606b06ec83e',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
-  // the other paged collections, including accounting journals (scalability
-  // audit S-10). No route, access rule or response schema changed.
-  gateway_contract: '60556683e559507985a528aeae516dccf22de853',
+  // the other paged collections, including accounting journals, and for the
+  // read-only `sync_bundles.list` route over the owner's own bundle summaries
+  // (scalability audit S-10). No existing route, access rule or response
+  // schema changed.
+  gateway_contract: '0287595b88109be83e10fb56db396b241c05b60b',
   // Updated deliberately for the online-sync head (signed, nonce-bound count
   // of an owner's sync bundle events on /internal/v1/events) and for keyset
   // paging of sync state and the other collections, including accounting
-  // journals (`cursor` and `limit`). The server still composes no SIEA store;
-  // the assertions below are unchanged.
-  grid_server: '277723ab8e62b5ed5e59d4fa46e05578b3eaa97c',
+  // journals and bundle summaries (`cursor` and `limit`). The server still
+  // composes no SIEA store; the assertions below are unchanged.
+  grid_server: 'b4e33a2b9e47fcdfc0f4d815c2375caf33313dfd',
   // Updated deliberately for core migration 11 (index-only: composite
-  // indexes for the paged collections, accounting journals and node
-  // schedules, scalability audit S-11). No table or column changed.
-  core_migrations: 'f470d2c900692ed8ed41f6e79b1c4721013029cf'
+  // indexes for the paged collections, accounting journals, node schedules
+  // and sync bundles, scalability audit S-11). No table or column changed.
+  core_migrations: 'ad4e0902dbbdd5a0070a1ef373b9af181884ef0c'
 });
 
 async function gitBlobSha(relative) {
