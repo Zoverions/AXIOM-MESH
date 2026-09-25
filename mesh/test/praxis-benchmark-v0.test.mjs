@@ -67,10 +67,9 @@ test('benchmark scaling uses isolated median wall time while preserving absolute
 
   const missingCpuEvidence = structuredClone(withinBudget);
   delete missingCpuEvidence[0].parseCpuMs;
-  assert.deepEqual(
-    checkBudgets(missingCpuEvidence),
-    [],
-    'CPU timing is diagnostic and must not control the scaling verdict'
+  assert.ok(
+    checkBudgets(missingCpuEvidence).some(failure => failure.includes('CPU timing is missing or invalid')),
+    'CPU timing remains required diagnostic evidence even though it does not control the scaling ratio'
   );
 
   for (const invalid of [undefined, 0, Number.NaN, Number.POSITIVE_INFINITY]) {
