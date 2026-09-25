@@ -236,6 +236,14 @@ They change no current capability status.
   boundary checks;
 - extend the experimental loopback-only `apps/axiom-one/` PWA foundation into
   a reviewed local human product outside the trusted zero-dependency kernel;
+- prioritize **Social Discovery / Feed** as the first daily-use AXIOM One
+  entry surface after current-Mesh parity: preserve a chronological baseline,
+  keep hard visibility/admission policy ahead of ranking, let the user select
+  and adjust declared ranking objectives, expose machine-readable
+  "why am I seeing this?" provenance, and keep semantic/model judgments
+  evidence-only; ranking may change local display order but may not grant
+  authority, moderate content, override visibility policy, fetch the network,
+  or imply federation;
 - integrate the owner-local social actor/persona/publication surface and the
   owner-only read-only remote-review inspection surface into AXIOM One only
   after their kernel contracts are separately verified; present them truthfully
