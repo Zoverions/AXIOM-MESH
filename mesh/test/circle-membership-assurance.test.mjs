@@ -152,7 +152,8 @@ test('valid membership assurance remains participation evidence, not authority',
   const result=assessCircleMembership(packageDocument,assurance,current);
   assert.equal(result.eligible_to_participate,true);
   assert.deepEqual(result.reasons,[]);
-  assert.equal(result.evidence_inputs_verified_elsewhere,true);
+  assert.equal(result.requires_external_evidence_verification,true);
+  assert.equal(result.evidence_verification_effect,'none');
   assert.equal(result.authority_effect,'none');
   assert.equal(result.governance_effect,'none');
   assert.equal(result.execution_effect,'none');
@@ -278,4 +279,16 @@ test('required device policy is structurally finite',()=>{
   const f=fixture();
   f.assurance.device_policy={mode:'required',device_refs:[]};
   assert.throws(()=>validateCircleMembershipAssurance(f.assurance),/needs at least one device_ref/);
+});
+
+test('empty role and separate-consent sets remain representable when Circle policy allows them',()=>{
+  const f=fixture();
+  f.packageDocument.invitations[0].role_ids=[];
+  f.packageDocument.memberships[0].role_ids=[];
+  f.assurance.role_ids=[];
+  f.assurance.membership_digest=digestObject(f.packageDocument.memberships[0]);
+  f.assurance.required_consent_receipt_refs=[];
+  f.current.verified_current_consent_receipt_refs=[];
+  const result=assessCircleMembership(f.packageDocument,f.assurance,f.current);
+  assert.equal(result.eligible_to_participate,true);
 });
