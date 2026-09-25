@@ -20,6 +20,7 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
+import { COLLECTION_PAGE_MAX, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
 import { runMigrations } from './migrations.mjs';
 import {
   anchorsEnabled,
@@ -1312,21 +1313,27 @@ export class GridStore {
     };
   }
 
-  listCapsules({ limit } = {}) {
-    const rows = limit === undefined
-      ? this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC').all()
-      : this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC LIMIT ?').all(
-          boundedInteger(limit, 'capsule list limit', 1, 100)
-        );
+  listCapsules({ limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'registered_at', idColumn: 'digest' });
+    const rows = this.db.prepare(`
+      SELECT * FROM capsules
+      ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+      ORDER BY registered_at DESC, digest DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'capsule list limit', 1, COLLECTION_PAGE_MAX + 1)])
+    );
     return rows.map(
       row => this.decodeProtectedRow('capsules', 'digest', row, ['manifest_json'])
     );
   }
 
-  listProposals({ limit } = {}) {
+  listProposals({ limit, after } = {}) {
     const safeLimit = limit === undefined
       ? null
-      : boundedInteger(limit, 'proposal list limit', 1, 100);
+      : boundedInteger(limit, 'proposal list limit', 1, COLLECTION_PAGE_MAX + 1);
+    const keyset = keysetClause(after, { sortColumn: 'p.created_at', idColumn: 'p.proposal_id' });
     const sql = `
       SELECT
         p.*,
@@ -1336,13 +1343,15 @@ export class GridStore {
         COALESCE(SUM(CASE WHEN v.chamber = 'agent' AND v.choice = 'against' THEN v.weight ELSE 0 END), 0) AS agent_against
       FROM proposals p
       LEFT JOIN votes v ON v.proposal_id = p.proposal_id
+      ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
       GROUP BY p.proposal_id
-      ORDER BY p.created_at DESC
+      ORDER BY p.created_at DESC, p.proposal_id DESC
       ${safeLimit === null ? '' : 'LIMIT ?'}
     `;
-    const rows = safeLimit === null
-      ? this.db.prepare(sql).all()
-      : this.db.prepare(sql).all(safeLimit);
+    const rows = this.db.prepare(sql).all(
+      ...keyset.params,
+      ...(safeLimit === null ? [] : [safeLimit])
+    );
     return rows.map(row => this.decodeProtectedRow(
       'proposals',
       'proposal_id',
@@ -1419,12 +1428,18 @@ export class GridStore {
     ));
   }
 
-  listGovernanceAppeals(principal) {
+  listGovernanceAppeals(principal, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'appeal_id' });
     return this.db.prepare(`
       SELECT * FROM governance_appeals
-      WHERE appellant = ?
-      ORDER BY created_at DESC
-    `).all(principal).map(row => this.decodeProtectedRow(
+      WHERE appellant = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, appeal_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      principal,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'appeal limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ).map(row => this.decodeProtectedRow(
       'governance_appeals',
       'appeal_id',
       row,
@@ -1444,14 +1459,36 @@ export class GridStore {
     );
   }
 
-  listApprovals(principal, { limit = 100 } = {}) {
-    const safeLimit = boundedInteger(limit, 'approval limit', 1, 100);
+  // One page of a principal's consents for the API. Consent checks use
+  // listConsents, which must see every receipt.
+  pageConsents(principal, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'consent_id' });
+    return this.db.prepare(`
+      SELECT consent_id, subject, controller, purpose, scopes_json, expires_at,
+             status, created_at, revoked_at
+      FROM consents
+      WHERE (subject = ? OR controller = ?) ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, consent_id DESC
+      LIMIT ?
+    `).all(
+      principal,
+      principal,
+      ...keyset.params,
+      boundedInteger(limit, 'consent limit', 1, COLLECTION_PAGE_MAX + 1)
+    ).map(
+      row => this.decodeProtectedRow('consents', 'consent_id', row, ['scopes_json'])
+    );
+  }
+
+  listApprovals(principal, { limit = 100, after } = {}) {
+    const safeLimit = boundedInteger(limit, 'approval limit', 1, COLLECTION_PAGE_MAX + 1);
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'approval_id' });
     const rows = this.db.prepare(`
       SELECT * FROM approvals
-      WHERE approver = ? OR requester = ?
-      ORDER BY created_at DESC
+      WHERE (approver = ? OR requester = ?) ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, approval_id DESC
       LIMIT ?
-    `).all(principal, principal, safeLimit + 1);
+    `).all(principal, principal, ...keyset.params, safeLimit + 1);
     const truncated = rows.length > safeLimit;
     if (truncated) rows.pop();
     return { approvals: rows, truncated };
@@ -1472,17 +1509,34 @@ export class GridStore {
     return row;
   }
 
-  listMemory(requester, owner = requester, { limit = 100 } = {}) {
+  listMemory(requester, owner = requester, { limit = 100, after } = {}) {
     const safeLimit = boundedInteger(limit, 'memory limit', 1, 500);
+    const keyset = keysetClause(after, {
+      sortColumn: 'created_at',
+      idColumn: 'object_id',
+      descending: false
+    });
     const objects = this.db.prepare(`
       SELECT * FROM memory_objects
-      WHERE owner = ? AND status = 'active'
+      WHERE owner = ? AND status = 'active' ${keyset.sql ? `AND ${keyset.sql}` : ''}
       ORDER BY created_at, object_id
       LIMIT ?
-    `).all(owner, safeLimit + 1);
+    `).all(owner, ...keyset.params, safeLimit + 1);
     const truncated = objects.length > safeLimit;
     if (truncated) objects.pop();
-    return this.memoryGraph(requester, owner, objects, truncated);
+    // The cursor follows the last object scanned, not the last one visible:
+    // objects the requester may not read still advance the page.
+    const last = objects.at(-1);
+    return {
+      ...this.memoryGraph(requester, owner, objects, truncated),
+      page: {
+        limit: safeLimit,
+        has_more: truncated,
+        next_cursor: truncated && last
+          ? encodeCollectionCursor('memory', last.created_at, last.object_id)
+          : null
+      }
+    };
   }
 
   // Every active memory object of an owner, unpaged. A personal export must
@@ -1683,10 +1737,18 @@ export class GridStore {
     `).run(p.import_id);
   }
 
-  listImports(principal) {
+  listImports(principal, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'staged_at', idColumn: 'import_id' });
     return this.db.prepare(`
-      SELECT * FROM imports WHERE principal = ? ORDER BY staged_at DESC
-    `).all(principal).map(row => this.decodeProtectedRow(
+      SELECT * FROM imports
+      WHERE principal = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY staged_at DESC, import_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      principal,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'import limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ).map(row => this.decodeProtectedRow(
       'imports',
       'import_id',
       row,
@@ -1721,8 +1783,8 @@ export class GridStore {
     return output;
   }
 
-  listNodes({ asOf = new Date().toISOString(), limit } = {}) {
-    return this.decodedNodes({ limit }).map(node => {
+  listNodes({ asOf = new Date().toISOString(), limit, after } = {}) {
+    return this.decodedNodes({ limit, after }).map(node => {
       if (node.status === 'active' && node.expires_at <= asOf) {
         node.status = 'expired';
       }
@@ -1765,12 +1827,22 @@ export class GridStore {
 
   listNodeSchedules(requester, {
     asOf = new Date().toISOString(),
-    limit = 100
+    limit = 100,
+    after
   } = {}) {
-    const safeLimit = boundedInteger(limit, 'node schedule limit', 1, 100);
+    const safeLimit = boundedInteger(limit, 'node schedule limit', 1, COLLECTION_PAGE_MAX + 1);
     const nodes = this.listNodes({ asOf });
     const schedules = this.decodedSchedules();
-    const owned = schedules.filter(schedule => schedule.requester === requester);
+    const owned = schedules
+      .filter(schedule => schedule.requester === requester)
+      .sort((left, right) => (
+        right.created_at.localeCompare(left.created_at)
+        || right.schedule_id.localeCompare(left.schedule_id)
+      ))
+      .filter(schedule => !after || (
+        schedule.created_at < after.sort
+        || (schedule.created_at === after.sort && schedule.schedule_id < after.id)
+      ));
     const truncated = owned.length > safeLimit;
     return {
       schedules: owned
@@ -1784,11 +1856,19 @@ export class GridStore {
     };
   }
 
-  listStorageOffers(owner) {
+  listStorageOffers(owner, { limit, after } = {}) {
     const now = new Date().toISOString();
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'offer_id' });
     return this.db.prepare(`
-      SELECT * FROM storage_offers WHERE owner = ? ORDER BY created_at DESC
-    `).all(owner).map(row => {
+      SELECT * FROM storage_offers
+      WHERE owner = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, offer_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      owner,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'storage offer limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ).map(row => {
       const decoded = this.decodeProtectedRow(
         'storage_offers',
         'offer_id',
@@ -1800,12 +1880,17 @@ export class GridStore {
     });
   }
 
-  decodedNodes({ limit } = {}) {
-    const rows = limit === undefined
-      ? this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC').all()
-      : this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC LIMIT ?').all(
-          boundedInteger(limit, 'node list limit', 1, 100)
-        );
+  decodedNodes({ limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'registered_at', idColumn: 'node_id' });
+    const rows = this.db.prepare(`
+      SELECT * FROM nodes
+      ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+      ORDER BY registered_at DESC, node_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'node list limit', 1, COLLECTION_PAGE_MAX + 1)])
+    );
     return rows.map(row => {
       const decoded = this.decodeProtectedRow(
         'nodes',
@@ -2250,12 +2335,15 @@ export class GridStore {
     );
   }
 
-  listBackups(principal, { limit = 100 } = {}) {
-    const safeLimit = boundedInteger(limit, 'backup limit', 1, 100);
+  listBackups(principal, { limit = 100, after } = {}) {
+    const safeLimit = boundedInteger(limit, 'backup limit', 1, COLLECTION_PAGE_MAX + 1);
+    const keyset = keysetClause(after, { sortColumn: 'requested_at', idColumn: 'backup_id' });
     const rows = this.db.prepare(`
-      SELECT * FROM backups WHERE principal = ? ORDER BY requested_at DESC
+      SELECT * FROM backups
+      WHERE principal = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY requested_at DESC, backup_id DESC
       LIMIT ?
-    `).all(principal, safeLimit + 1);
+    `).all(principal, ...keyset.params, safeLimit + 1);
     const truncated = rows.length > safeLimit;
     if (truncated) rows.pop();
     return {

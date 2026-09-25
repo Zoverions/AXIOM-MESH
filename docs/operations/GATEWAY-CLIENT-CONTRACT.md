@@ -57,26 +57,34 @@ client.
 | `events.list` | `GET /v1/events` | owner or `audit:read` | `actor`, `after`, `limit` |
 | `social.get` | `GET /v1/social` | owner | optional `publication_limit` (1-100; default 100) |
 | `social_remote_review.get` | `GET /v1/social/remote-review` | owner | none |
-| `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) |
-| `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) |
-| `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) |
+| `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) and `cursor` |
 | `nodes.discover` | `GET /v1/node-discovery` | `node:read` | capability, role, security, lease, and limit filters |
-| `node_schedules.list` | `GET /v1/node-schedules` | `node:read` | none |
-| `consents.list` | `GET /v1/consents` | owner | none |
-| `approvals.list` | `GET /v1/approvals` | owner | none |
-| `memory.list` | `GET /v1/memory` | owner or consented share | optional owner |
+| `node_schedules.list` | `GET /v1/node-schedules` | `node:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `consents.list` | `GET /v1/consents` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `approvals.list` | `GET /v1/approvals` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `memory.list` | `GET /v1/memory` | owner or consented share | optional `owner`, `limit` (1-500; default 100) and `cursor` |
 | `accounting.get` | `GET /v1/accounting` | owner | none |
-| `imports.list` | `GET /v1/imports` | owner | none |
+| `imports.list` | `GET /v1/imports` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `imports.get` | `GET /v1/imports/:id` | owner | `id` |
-| `appeals.list` | `GET /v1/appeals` | owner | none |
-| `storage_offers.list` | `GET /v1/storage-offers` | owner | none |
-| `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id`, `cursor`, `limit` |
+| `appeals.list` | `GET /v1/appeals` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `storage_offers.list` | `GET /v1/storage-offers` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id`, `limit` (1-200; default 100) and `cursor` |
 | `sync_bundles.get` | `GET /v1/sync/bundles/:digest` | owner | `digest` |
-| `backups.list` | `GET /v1/backups` | owner | none |
+| `backups.list` | `GET /v1/backups` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `backups.get` | `GET /v1/backups/:id` | owner | `id` |
 | `exports.get` | `GET /v1/exports/:id` | owner | `id` |
 | `export_bundles.get` | `GET /v1/exports/:id/bundle` | owner | `id` |
 | `audit.verify` | `GET /v1/audit/verify` | `audit:read` | none |
+
+Paged collections return a `page` object with `limit`, `has_more` and
+`next_cursor`. Pass `next_cursor` back as `cursor` until `has_more` is false.
+Items are ordered by time and then identifier, and a page starts strictly
+after the cursor. Under concurrent writes no item is returned twice, and an
+item written behind the cursor appears on the next pass. Cursors are opaque,
+accepted only in their canonical form, and valid only for the collection
+that issued them.
 
 `social.get` is deliberately owner-derived. The Gateway ignores any raw
 `owner=` query text and derives the snapshot owner only from the authenticated

@@ -5,15 +5,16 @@ import test from 'node:test';
 
 const PARENT_BLOBS = Object.freeze({
   capabilities: 'fd34c4b1836654bb7eeb7dda0f8be748ee124db8',
-  // Updated deliberately for optional `cursor` and `limit` on `sync.list`
-  // (record-aligned paging, scalability audit S-10). No route, access rule
-  // or response schema changed.
-  gateway_contract: 'de6dc1a891b57f54b5469be4f77486c1a23af269',
+  // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
+  // the other paged collections (scalability audit S-10). No route, access
+  // rule or response schema changed.
+  gateway_contract: '612f1a9d0ec0af6d272165ee8438109d4e31851d',
   // Updated deliberately for the online-sync head (signed, nonce-bound count
-  // of an owner's sync bundle events on /internal/v1/events) and for sync
-  // state paging (`cursor` and `limit` on /internal/v1/sync/:owner). The
-  // server still composes no SIEA store; the assertions below are unchanged.
-  grid_server: '92d9eccb1617cd04e0fe13da3fe5d8762189e3af',
+  // of an owner's sync bundle events on /internal/v1/events) and for keyset
+  // paging of sync state and the other collections (`cursor` and `limit`).
+  // The server still composes no SIEA store; the assertions below are
+  // unchanged.
+  grid_server: '2a4a5a5b0ebce7069b47957835d5ff162506a616',
   core_migrations: '36514febba8d6420b165f19c9032d3510253a521'
 });
 

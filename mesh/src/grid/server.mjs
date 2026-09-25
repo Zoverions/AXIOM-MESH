@@ -6,6 +6,7 @@ import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/ide
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
+import { COLLECTION_PAGE_MAX, collectionPage, decodeCollectionCursor } from '../lib/collection-page.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { registerEducationGridRoutes } from './education-routes.mjs';
 import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
@@ -274,33 +275,24 @@ export async function createGridService(config = meshConfig()) {
       kernelVersion: '0.12.0-dev.3'
     });
   });
-  router.add('GET', '/internal/v1/capsules', async ({ url }) => ({
-    capsules: store.listCapsules({
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'capsules limit',
-        min: 1,
-        max: 100
-      })
-    })
-  }));
-  router.add('GET', '/internal/v1/proposals', async ({ url }) => ({
-    proposals: store.listProposals({
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'proposals limit',
-        min: 1,
-        max: 100
-      })
-    })
-  }));
-  router.add('GET', '/internal/v1/nodes', async ({ url }) => ({
-    nodes: store.listNodes({
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'nodes limit',
-        min: 1,
-        max: 100
-      })
-    })
-  }));
+  router.add('GET', '/internal/v1/capsules', async ({ url }) => {
+    const { items, page } = pagedCollection(url, 'capsules', 'capsules limit',
+      (limit, after) => store.listCapsules({ limit, after }),
+      item => [item.registered_at, item.digest]);
+    return { capsules: items, page };
+  });
+  router.add('GET', '/internal/v1/proposals', async ({ url }) => {
+    const { items, page } = pagedCollection(url, 'proposals', 'proposals limit',
+      (limit, after) => store.listProposals({ limit, after }),
+      item => [item.created_at, item.proposal_id]);
+    return { proposals: items, page };
+  });
+  router.add('GET', '/internal/v1/nodes', async ({ url }) => {
+    const { items, page } = pagedCollection(url, 'nodes', 'nodes limit',
+      (limit, after) => store.listNodes({ limit, after }),
+      item => [item.registered_at, item.node_id]);
+    return { nodes: items, page };
+  });
   router.add('GET', '/internal/v1/node-discovery', async ({ url }) => {
     const discovery = store.discoverNodes({
       required_capabilities: url.searchParams.getAll('capability'),
@@ -323,26 +315,27 @@ export async function createGridService(config = meshConfig()) {
   router.add(
     'GET',
     '/internal/v1/node-schedules/:principal',
-    async ({ params, url }) => store.listNodeSchedules(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'node schedule limit',
-        min: 1,
-        max: 100
-      })
-    })
+    async ({ params, url }) => {
+      let result;
+      const { items, page } = pagedCollection(url, 'node_schedules', 'node schedule limit',
+        (limit, after) => (result = store.listNodeSchedules(params.principal, { limit, after })).schedules,
+        item => [item.created_at, item.schedule_id]);
+      return { ...result, schedules: items, truncated: page.has_more, page };
+    }
   );
-  router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
-    consents: store.listConsents(params.principal)
-  }));
-  router.add('GET', '/internal/v1/approvals/:principal', async ({ params, url }) => (
-    store.listApprovals(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'approval limit',
-        min: 1,
-        max: 100
-      })
-    })
-  ));
+  router.add('GET', '/internal/v1/consents/:principal', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'consents', 'consent limit',
+      (limit, after) => store.pageConsents(params.principal, { limit, after }),
+      item => [item.created_at, item.consent_id]);
+    return { consents: items, page };
+  });
+  router.add('GET', '/internal/v1/approvals/:principal', async ({ params, url }) => {
+    let result;
+    const { items, page } = pagedCollection(url, 'approvals', 'approval limit',
+      (limit, after) => (result = store.listApprovals(params.principal, { limit, after })).approvals,
+      item => [item.created_at, item.approval_id]);
+    return { ...result, approvals: items, truncated: page.has_more, page };
+  });
   router.add('GET', '/internal/v1/approval/:id', async ({ params }) => store.getApproval(params.id));
   router.add('GET', '/internal/v1/memory/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
@@ -358,7 +351,8 @@ export async function createGridService(config = meshConfig()) {
         label: 'memory limit',
         min: 1,
         max: 500
-      })
+      }),
+      after: decodeCollectionCursor('memory', url.searchParams.get('cursor'))
     });
   });
   router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
@@ -368,9 +362,12 @@ export async function createGridService(config = meshConfig()) {
     });
     return store.listAccounting(owner);
   });
-  router.add('GET', '/internal/v1/imports/:principal', async ({ params }) => ({
-    imports: store.listImports(params.principal)
-  }));
+  router.add('GET', '/internal/v1/imports/:principal', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'imports', 'import limit',
+      (limit, after) => store.listImports(params.principal, { limit, after }),
+      item => [item.staged_at, item.import_id]);
+    return { imports: items, page };
+  });
   router.add('GET', '/internal/v1/import/:id', async ({ params, url }) => {
     const principal = assertString(url.searchParams.get('principal'), 'principal', {
       max: 160,
@@ -381,12 +378,18 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/policy-overlays', async () => ({
     overlays: store.listActivePolicyOverlays()
   }));
-  router.add('GET', '/internal/v1/appeals/:principal', async ({ params }) => ({
-    appeals: store.listGovernanceAppeals(params.principal)
-  }));
-  router.add('GET', '/internal/v1/storage-offers/:owner', async ({ params }) => ({
-    offers: store.listStorageOffers(params.owner)
-  }));
+  router.add('GET', '/internal/v1/appeals/:principal', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'appeals', 'appeal limit',
+      (limit, after) => store.listGovernanceAppeals(params.principal, { limit, after }),
+      item => [item.created_at, item.appeal_id]);
+    return { appeals: items, page };
+  });
+  router.add('GET', '/internal/v1/storage-offers/:owner', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'storage_offers', 'storage offer limit',
+      (limit, after) => store.listStorageOffers(params.owner, { limit, after }),
+      item => [item.created_at, item.offer_id]);
+    return { offers: items, page };
+  });
   router.add('GET', '/internal/v1/sync/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
       max: 160,
@@ -430,15 +433,13 @@ export async function createGridService(config = meshConfig()) {
       return store.getCausalSyncBundle(owner, bundleDigest);
     }
   );
-  router.add('GET', '/internal/v1/backups/:principal', async ({ params, url }) => (
-    store.listBackups(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'backup limit',
-        min: 1,
-        max: 100
-      })
-    })
-  ));
+  router.add('GET', '/internal/v1/backups/:principal', async ({ params, url }) => {
+    let result;
+    const { items, page } = pagedCollection(url, 'backups', 'backup limit',
+      (limit, after) => (result = store.listBackups(params.principal, { limit, after })).backups,
+      item => [item.requested_at, item.backup_id]);
+    return { ...result, backups: items, truncated: page.has_more, page };
+  });
   router.add('GET', '/internal/v1/backup/:id', async ({ params, url }) => {
     const principal = assertString(url.searchParams.get('principal'), 'principal', {
       max: 160,
@@ -508,6 +509,18 @@ export async function createGridService(config = meshConfig()) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runServiceProcess(createGridService);
+}
+
+// One keyset page of a collection (scalability audit S-10): at most
+// COLLECTION_PAGE_MAX items, fetched as limit + 1 to learn whether more exist.
+function pagedCollection(url, collection, label, fetch, key) {
+  const limit = integerQuery(url.searchParams.get('limit'), COLLECTION_PAGE_MAX, {
+    label,
+    min: 1,
+    max: COLLECTION_PAGE_MAX
+  });
+  const after = decodeCollectionCursor(collection, url.searchParams.get('cursor'));
+  return collectionPage(fetch(limit + 1, after), { collection, limit, key });
 }
 
 function integerQuery(value, fallback, {

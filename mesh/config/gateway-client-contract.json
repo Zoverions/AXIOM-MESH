@@ -276,7 +276,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-capsule-list.v1",
@@ -293,7 +294,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-proposal-list.v1",
@@ -310,7 +312,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-node-list.v1",
@@ -349,7 +352,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-node-schedule-list.v1",
@@ -366,7 +370,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-consent-list.v1",
@@ -383,7 +388,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-approval-list.v1",
@@ -401,7 +407,8 @@
       "path_parameters": [],
       "query_parameters": [
         "owner",
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-memory-graph.v1",
@@ -434,7 +441,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-import-list.v1",
       "required_response_fields": [
@@ -468,7 +478,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-appeal-list.v1",
       "required_response_fields": [
@@ -483,7 +496,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-storage-offer-list.v1",
       "required_response_fields": [
@@ -538,7 +554,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-backup-list.v1",
       "required_response_fields": [

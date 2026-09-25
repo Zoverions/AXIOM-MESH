@@ -584,8 +584,28 @@ The tests fail with an inclusive cursor, without the byte budget, with
 This added two optional query parameters to the Gateway client contract, so
 its digest and the contract blob pin in
 `sovereign-information-grid-nonpromotion.test.mjs` were updated deliberately.
-Still open: cursors for the limited collections, bounds for the unbounded
-ones, the 100-bundle list inside sync state, a separate fetch for one record
+Follow-up (2026-09-25): every other list route except discovery and
+accounting now pages the same way. That covers `capsules`, `proposals`,
+`nodes`, `node-schedules`, `approvals`, `memory` and `backups`, which were
+limited but had no cursor. It also covers `consents`, `imports`, `appeals`
+and `storage-offers`, which were unbounded. Each is ordered by time and then
+identifier, so ties are total. A page holds at most 100 items (memory keeps
+its 500 maximum), and the route reads one extra item to set `has_more`.
+Responses add `page` (`limit`, `has_more`, `next_cursor`); existing fields
+are unchanged. Cursors are canonical-only and refused by any other
+collection. Memory cursors follow the last object scanned, not the last
+visible, so objects hidden from a consented reader still advance the page.
+Consent enforcement keeps reading every receipt through the unpaged
+`listConsents`. Tests page four collections with three items per timestamp
+at page sizes 1, 7 and 100: each item appears once, in order. They fail
+with a keyset that compares only the time column, with an inclusive keyset,
+and with `has_more` forced false. The contract had also drifted:
+`consents.list` declared a `limit` the Gateway ignored, and `backups.list`
+declared none although the Gateway accepted one. Both now match.
+
+Still open: `node-discovery` (a ranked query result) and `accounting` (a
+composite of accounts, journals and balances) are not paged. Also open: the
+100-bundle list inside sync state, a separate fetch for one sync record
 larger than the budget, and a streaming contract for artifacts.
 
 Related defect fixed (2026-09-25): personal exports read memory through the

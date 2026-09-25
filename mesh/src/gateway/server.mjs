@@ -30,6 +30,23 @@ import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const PAGE_CURSOR = /^[A-Za-z0-9_-]{1,512}$/;
+
+// `limit` and an opaque `cursor` for a paged collection. The Grid decodes
+// the cursor and applies its own default page size (scalability audit S-10).
+function pageQuery(url, label, max = 100) {
+  const query = new URLSearchParams();
+  const limit = url.searchParams.get('limit');
+  if (limit !== null) {
+    query.set('limit', String(boundedIntegerQuery(limit, 100, { label, min: 1, max })));
+  }
+  const cursor = url.searchParams.get('cursor');
+  if (cursor !== null) {
+    if (!PAGE_CURSOR.test(cursor)) throw new ValidationError('Page cursor is invalid');
+    query.set('cursor', cursor);
+  }
+  return query;
+}
 const SOCIAL_EVENT_PAGE = 500;
 const SOCIAL_EVENT_MAXIMUM = 5_000;
 
@@ -356,30 +373,15 @@ export async function createGatewayService(config = meshConfig()) {
 
   router.add('GET', '/v1/capsules', async ({ url, traceId, principal }) => {
     requireScope(principal, 'capsule:read');
-    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
-      label: 'capsules limit',
-      min: 1,
-      max: 100
-    });
-    return gridGet(`/internal/v1/capsules?limit=${limit}`, traceId);
+    return gridGet(`/internal/v1/capsules?${pageQuery(url, 'capsules limit')}`, traceId);
   });
   router.add('GET', '/v1/proposals', async ({ url, traceId, principal }) => {
     requireScope(principal, 'governance:read');
-    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
-      label: 'proposals limit',
-      min: 1,
-      max: 100
-    });
-    return gridGet(`/internal/v1/proposals?limit=${limit}`, traceId);
+    return gridGet(`/internal/v1/proposals?${pageQuery(url, 'proposals limit')}`, traceId);
   });
   router.add('GET', '/v1/nodes', async ({ url, traceId, principal }) => {
     requireScope(principal, 'node:read');
-    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
-      label: 'nodes limit',
-      min: 1,
-      max: 100
-    });
-    return gridGet(`/internal/v1/nodes?limit=${limit}`, traceId);
+    return gridGet(`/internal/v1/nodes?${pageQuery(url, 'nodes limit')}`, traceId);
   });
   router.add('GET', '/v1/node-discovery', async ({
     url,
@@ -447,48 +449,26 @@ export async function createGatewayService(config = meshConfig()) {
         403
       );
     }
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'node schedules limit',
-      min: 1,
-      max: 100
-    });
-    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
-      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}${query}`,
+      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}?${pageQuery(url, 'node schedules limit')}`,
       traceId
     );
   });
-  router.add('GET', '/v1/consents', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/consents/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/consents', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/consents/${encodeURIComponent(principal.id)}?${pageQuery(url, 'consents limit')}`,
     traceId
   ));
   router.add('GET', '/v1/approvals', async ({ url, traceId, principal }) => {
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'approvals limit',
-      min: 1,
-      max: 100
-    });
-    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
-      `/internal/v1/approvals/${encodeURIComponent(principal.id)}${query}`,
+      `/internal/v1/approvals/${encodeURIComponent(principal.id)}?${pageQuery(url, 'approvals limit')}`,
       traceId
     );
   });
   router.add('GET', '/v1/memory', async ({ url, traceId, principal }) => {
     const owner = url.searchParams.get('owner') ?? principal.id;
     if (!PRINCIPAL_ID.test(owner)) throw new ValidationError('Memory owner is invalid');
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'memory limit',
-      min: 1,
-      max: 500
-    });
-    const query = new URLSearchParams({
-      requester: principal.id,
-      ...(limit === null ? {} : { limit: String(limit) })
-    });
+    const query = pageQuery(url, 'memory limit', 500);
+    query.set('requester', principal.id);
     return gridGet(
       `/internal/v1/memory/${encodeURIComponent(owner)}?${query}`,
       traceId
@@ -498,20 +478,20 @@ export async function createGatewayService(config = meshConfig()) {
     `/internal/v1/accounting/${encodeURIComponent(principal.id)}`,
     traceId
   ));
-  router.add('GET', '/v1/imports', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/imports/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/imports', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/imports/${encodeURIComponent(principal.id)}?${pageQuery(url, 'imports limit')}`,
     traceId
   ));
   router.add('GET', '/v1/imports/:id', async ({ params, traceId, principal }) => gridGet(
     `/internal/v1/import/${encodeURIComponent(params.id)}?principal=${encodeURIComponent(principal.id)}`,
     traceId
   ));
-  router.add('GET', '/v1/appeals', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/appeals/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/appeals', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/appeals/${encodeURIComponent(principal.id)}?${pageQuery(url, 'appeals limit')}`,
     traceId
   ));
-  router.add('GET', '/v1/storage-offers', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/storage-offers/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/storage-offers', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/storage-offers/${encodeURIComponent(principal.id)}?${pageQuery(url, 'storage offers limit')}`,
     traceId
   ));
   router.add('GET', '/v1/sync', async ({ url, traceId, principal }) => {
@@ -561,15 +541,8 @@ export async function createGatewayService(config = meshConfig()) {
       );
   });
   router.add('GET', '/v1/backups', async ({ url, traceId, principal }) => {
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'backups limit',
-      min: 1,
-      max: 100
-    });
-    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
-      `/internal/v1/backups/${encodeURIComponent(principal.id)}${query}`,
+      `/internal/v1/backups/${encodeURIComponent(principal.id)}?${pageQuery(url, 'backups limit')}`,
       traceId
     );
   });
