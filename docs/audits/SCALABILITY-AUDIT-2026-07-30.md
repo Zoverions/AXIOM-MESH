@@ -393,6 +393,28 @@ small operator registry but is not a scalable identity plane.
 - Authentication work does not grow linearly with principal count.
 - Revocation and rotation remain fail closed and auditable.
 
+**Remediation status (2026-09-25): lookup remediated; identity-plane design
+open.** The registry was already keyed by each token's SHA-256 digest. Bearer
+resolution now does one lookup by the presented token's digest instead of a
+timing-safe comparison against every digest. Hits and misses take the same
+path: one hash and one lookup. The lookup compares digests, never tokens, and
+a caller cannot steer SHA-256 output toward a stored digest, so its timing
+reveals nothing about registered tokens. Measured per rejected token:
+
+| principals | before | after |
+|---|---|---|
+| 10 | 21 µs | 14 µs |
+| 1,000 | 319 µs | 12 µs |
+| 10,000 | 2.8 ms | 10 µs |
+
+Before, invalid tokens cost the Gateway CPU in proportion to the registry. A
+test resolves tokens against 5,000 principals through a map that counts
+every scan. It asserts no scans and exactly one lookup per request, and it
+fails against the previous loop. Still open: separating operator and service
+tokens from end-user identity, a versioned adapter contract for managed
+identity, and tenant-scoped revocation and rotation without loading the whole
+registry into each Gateway.
+
 ### S-08 — Rate limits are local, reset on restart, and diverge across replicas
 
 **Severity:** High before horizontal Gateway scale  
