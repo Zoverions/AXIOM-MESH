@@ -136,6 +136,14 @@ export function assessMindDevelopmentalStatusTransition({
     if(independenceAssessment.mind_id!==currentStatus.mind_id){
       throw new ValidationError('Independence transition evidence mind binding is invalid');
     }
+    if(
+      independenceTransitionEvidence.current_developmental_state_evidence_digest
+      !==digestObject(currentStatus)
+    ){
+      throw new ValidationError(
+        'Independence transition evidence does not bind the exact current developmental status'
+      );
+    }
 
     requiredIndependenceEvidenceDigest=digestObject(independenceTransitionEvidence);
     if(!candidateStatus.basis_evidence_digests.includes(requiredIndependenceEvidenceDigest)){
