@@ -33,4 +33,12 @@ test('General Genesis Sponsor Eligibility v0 is one-use requestability evidence 
     schema['x-axiom-semantic-validator'],
     'mesh/src/lib/general-genesis-sponsor-eligibility.mjs'
   );
+  assert.deepEqual(schema['x-axiom-non-claims'], [
+    'government-id-verification',
+    'portable-proof-of-personhood',
+    'live-genesis-authorization',
+    'live-genesis-bond',
+    'mind-creation',
+    'runtime-authority'
+  ]);
 });
