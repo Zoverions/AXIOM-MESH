@@ -312,6 +312,9 @@ test('memory and accounting export memory does not grow with the record count', 
   // About 20 MiB of memory text in the larger export; the first record used
   // to hold all of it.
   assert.ok(large.peak < 8 * 1024 * 1024, `peak ${(large.peak / 1048576).toFixed(1)} MiB for 1,200 objects`);
-  assert.ok(large.peak < small.peak + 2 * 1024 * 1024,
+  // 900 more objects add about 14 MiB of memory text. Holding them grows the
+  // peak by far more than this margin (the previous code: ~50 MiB); runner
+  // and collector noise stays within it (macOS Intel measured +2.2 MiB).
+  assert.ok(large.peak < small.peak + 4 * 1024 * 1024,
     `peak grew from ${(small.peak / 1048576).toFixed(1)} to ${(large.peak / 1048576).toFixed(1)} MiB with 4x the records`);
 });
