@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,6 +7,7 @@ import test from 'node:test';
 import { digestObject, sha256 } from '../src/lib/canonical.mjs';
 import { signedFetch } from '../src/lib/client.mjs';
 import { meshConfig } from '../src/lib/config.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import {
   buildCapabilityConsumptionStatement,
   capabilityConsumptionEventId,
@@ -177,7 +177,8 @@ test('Grid receipt contract binds exact capability claims and Sandbox process ep
 
 test('durable Grid consumption survives Sandbox and Grid restart and burns uncertain capabilities', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-capability-restart-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('capability consumption restart test');
+  const basePort = portLease.base_port;
   const config = meshConfig({
     dataDir,
     environment: 'test',
@@ -199,9 +200,13 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
   await grid.start();
   await sandbox.start();
   t.after(async () => {
-    await sandbox?.stop().catch(() => {});
-    await grid?.stop().catch(() => {});
-    await rm(dataDir, { recursive: true, force: true });
+    try {
+      await sandbox?.stop().catch(() => {});
+      await grid?.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
   });
 
   const traceId = 'trace_capability_restart_safe';
@@ -478,28 +483,3 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
   );
 });
 
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 42_000 + Math.floor(Math.random() * 10_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(
-        servers.map(server => new Promise(resolve => server.close(resolve)))
-      );
-      return base;
-    } catch {
-      await Promise.all(
-        servers.map(server => new Promise(resolve => server.close(resolve)))
-      );
-    }
-  }
-  throw new Error('Unable to reserve a local capability-test port block');
-}

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,6 +41,7 @@ import {
   verifyGridBackup
 } from '../src/grid/backup.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import { verifyExportBundle } from '../src/verify-export.mjs';
 import { validateCapabilityRegistry } from '../src/check-registry.mjs';
 import {
@@ -663,7 +663,8 @@ test('encrypted Grid backups verify, exclude live restore, preserve rollback, an
 
 test('full four-service path enforces auth, idempotency, consent, export, and audit', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-e2e-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('kernel four-service e2e');
+  const basePort = portLease.base_port;
   const operatorToken = `operator-${'o'.repeat(40)}`;
   const approverToken = `approver-${'a'.repeat(40)}`;
   const overrides = {
@@ -699,6 +700,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     try {
       await stack.stop();
     } finally {
+      await portLease.release();
       await rm(dataDir, { recursive: true, force: true });
     }
   });
@@ -2207,28 +2209,6 @@ function signedCausalBundle({
 async function waitUntil(isoTimestamp) {
   const delay = Math.max(0, new Date(isoTimestamp).valueOf() - Date.now() + 20);
   if (delay) await new Promise(resolve => setTimeout(resolve, delay));
-}
-
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new Error('Unable to reserve a local port block');
 }
 
 test('capsule manifest signature fixture is cryptographically sound', () => {
