@@ -28,4 +28,12 @@ test('Founding Digital Council Vote Activation v0 remains request-only and non-m
     schema['x-axiom-semantic-validator'],
     'mesh/src/lib/founding-digital-council-vote-activation.mjs'
   );
+  assert.deepEqual(schema['x-axiom-non-claims'], [
+    'live-council-vote-activation',
+    'circle-membership-mutation',
+    'foundation-mutation',
+    'vote-authority',
+    'runtime-authority',
+    'automatic-execution'
+  ]);
 });
