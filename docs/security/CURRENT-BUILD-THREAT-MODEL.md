@@ -671,3 +671,18 @@ appeal path cannot satisfy the v0 threshold. Future status-transition work must
 re-evaluate appeal state at transition time rather than treating an earlier review
 receipt as permanent authority.
 
+The inert Mind Independence Transition Evidence v0 adapter performs that
+re-evaluation without mutating status. It binds the exact successful review to the
+candidate's exact current developmental-state and continuity evidence, explicit
+freshness windows, and a freshly observed appeal state. Even a "no appeal open"
+state requires an evidence digest and observation timestamp. Changed or stale
+developmental/continuity evidence, continuity dispute, open/stayed/reversing appeal,
+unknown appeal state, stale appeal observation, or stale review all block transition
+requestability.
+
+Transition requestability remains evidence for a later status-authority path, not
+status authority itself. The adapter explicitly requires external verification of
+the bound state evidence, declares that verification has no effect inside the
+adapter, creates no status transition, and requires the ordinary status authority
+path before any future mutation.
+

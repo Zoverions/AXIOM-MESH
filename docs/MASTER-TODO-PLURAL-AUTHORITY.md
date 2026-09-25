@@ -110,6 +110,8 @@
 
 **Mind independence-review checkpoint (2026-09-25):** Stacked draft PR #1857 adds a deterministic evidence-only review for an already recognized candidate-independent digital mind. The fixed v0 profile covers identity continuity, consent/refusal, authority boundaries, credential security, consequence awareness, recovery, resource management, other minds' rights, uncertainty/help-seeking, and manipulation recognition. Sponsor-only review, candidate self-approval, sponsor-as-independent substitution, conflicted independent reviewers, hidden model final authority, sponsor veto, and missing appeal paths are fail-closed. A satisfied review creates no developmental-status, Council-vote, Genesis-eligibility, governance, network, or execution effect; a separately reviewed transition mechanism remains future work.
 
+**Mind independence transition-currentness checkpoint (2026-09-25):** Stacked draft PR #1861 binds a successful Mind Independence Review to exact current developmental-state and continuity digests, explicit review/state freshness windows, and freshly evidenced appeal state before a later transition may become requestable. Even `appeal_status: none` requires timestamped evidence. The adapter reports `requires_external_state_verification: true`, `state_verification_effect: none`, `ordinary_status_authority_path_required: true`, and `creates_status_transition: false`; it cannot activate Council voting, Genesis eligibility, governance, network, runtime, or execution authority.
+
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
