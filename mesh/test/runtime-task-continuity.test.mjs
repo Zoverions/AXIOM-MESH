@@ -103,13 +103,20 @@ test('outputs and events remain append-only and chronological',async()=>{
   assert.throws(()=>verifyTaskSnapshotTransition(done,backdated),/chronological|backdated/);
 });
 
-test('terminal tasks cannot reopen and uncertainty resolves only to completed or failed',async()=>{
+test('terminal snapshots are immutable and uncertainty resolves only to completed or failed',async()=>{
   const done=await completed();
+  assert.equal(verifyTaskSnapshotTransition(done,structuredClone(done)).valid,true);
+
   const reopened=structuredClone(done);
   reopened.lifecycle.state='running';
   reopened.lifecycle.updated_at='2026-08-21T23:31:11Z';
   delete reopened.lifecycle.terminal_receipt_id;
-  assert.throws(()=>verifyTaskSnapshotTransition(done,reopened),/completed -> running is invalid/);
+  assert.throws(()=>verifyTaskSnapshotTransition(done,reopened),/Terminal task snapshot is immutable/);
+
+  const appended=structuredClone(done);
+  appended.lifecycle.updated_at='2026-08-21T23:31:11Z';
+  appended.events.push(event('event:post-terminal','artifact.observed','2026-08-21T23:31:11Z'));
+  assert.throws(()=>verifyTaskSnapshotTransition(done,appended),/Terminal task snapshot is immutable/);
 
   const uncertain=await load(uncertainUrl);
   const resolved=structuredClone(uncertain);
