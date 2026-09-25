@@ -17,6 +17,7 @@
     "content_digest",
     "content_type",
     "normalized_text",
+    "normalized_text_digest",
     "data_classes",
     "received_at",
     "expires_at",
@@ -111,6 +112,9 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "normalized_text_digest": {
+      "$ref": "#/$defs/digest"
     }
   },
   "$defs": {
