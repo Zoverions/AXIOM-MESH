@@ -1082,7 +1082,16 @@ and intent admission is bounded; the rest is open.**
     intent accepted before every intent it is itself running, less the
     clock margin. Grid records `intent.failed` with `intent_interrupted` for
     each, as its principal, in pages. None of them had a Grid effect
-    committed. A retry with the same key then returns that terminal record.
+    committed. A retry with the same key then answers `409
+    intent_interrupted`.
+  - **Replays answer as the first request did.** The Gateway used to answer
+    a replayed denial or failure with `200` and the stored record, which
+    the client refused as an invalid response. A denial now replays its
+    code and HTTP status (which the Hypervisor now records). A failure
+    replays `409` with its code, except that a code the contract marks
+    retryable becomes `intent_failed`, since the same key can only repeat
+    it. An unfinished intent answers `409 intent_in_progress`. See
+    `docs/operations/GATEWAY-CLIENT-CONTRACT.md`.
   - **Cost.** Without an index on intent status, the sweep scans the intents
     table once per Hypervisor start; retries by id are primary-key reads.
     An index would need a core migration; it is deferred.
@@ -1095,15 +1104,22 @@ and intent admission is bounded; the rest is open.**
       acceptance, after capability consumption and after Sandbox execution.
       Each intent is left `accepted` with no write applied. A restarted
       Hypervisor closes all three as `intent_interrupted`, applies nothing,
-      and the same key returns the terminal record. An intent still running
-      is not closed, an ordinary failure after acceptance is recorded, and
-      an unsettled id is retried.
+      and the same key answers `409 intent_interrupted`, through the client
+      too. An intent still running is not closed and replays as
+      `intent_in_progress`; an ordinary failure after acceptance is
+      recorded; an unsettled id is retried. A denial replays its code and
+      status (`403 policy_denied`, `503 capability_unavailable`), and a
+      failure with a retryable code replays as `intent_failed`.
 
     Mutation checks: the tests fail without the terminal guard, or its
     principal or status check; when the sweep ignores its cutoff, by scan or
     by id; when intents are closed as another actor; when recovery ignores
     intents in flight, stops after one page, or settles only closed ids;
-    and without recording a failure after acceptance.
+    and without recording a failure after acceptance. For replays, they
+    fail when everything replays as a result, when a denial's status is
+    wrong or not recorded, when a failure replays a retryable code or as
+    `403`, when a failure is taken for an unfinished intent, and when the
+    replay or failure code is not marked.
 
 Still open:
 

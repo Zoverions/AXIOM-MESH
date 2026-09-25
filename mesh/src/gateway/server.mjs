@@ -26,6 +26,7 @@ import {
 } from '../lib/observability.mjs';
 import { createBearerAuthenticator } from '../lib/public-auth.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
+import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from '../lib/gateway-client-contract.mjs';
 import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
 
@@ -274,11 +275,7 @@ export async function createGatewayService(config = meshConfig()) {
           409
         );
       }
-      return {
-        ...existing,
-        ...existing.result_json,
-        idempotent_replay: true
-      };
+      return replayExistingIntent(existing);
     }
   });
 
@@ -691,6 +688,45 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+
+// A replay answers as the first request did: a completed intent with its
+// result, and a denied one with its error and status, marked as a replay. A
+// failure is final for its key, so it answers 409, and never with a code the
+// client would retry: that would repeat the same answer. An intent still
+// accepted is in progress, or was interrupted and will be closed.
+const REPLAY_ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
+const RETRYABLE_CODES = new Set(ACTIVE_GATEWAY_CLIENT_CONTRACT.error_contract.retryable_codes);
+function replayExistingIntent(existing) {
+  if (existing.status === 'completed') {
+    return {
+      ...existing,
+      ...existing.result_json,
+      idempotent_replay: true
+    };
+  }
+  const details = { intent_id: existing.intent_id, status: existing.status, idempotent_replay: true };
+  if (existing.status === 'denied' || existing.status === 'failed') {
+    const error = existing.error_json ?? {};
+    const recorded = REPLAY_ERROR_CODE.test(error.code ?? '') ? error.code : null;
+    const message = typeof error.message === 'string' ? error.message : 'The intent did not complete';
+    if (existing.status === 'denied') {
+      // Recorded since the status was kept; older denials: pending or not.
+      const status = Number.isSafeInteger(error.http_status) && error.http_status >= 400 && error.http_status <= 599
+        ? error.http_status
+        : (error.pending ? 409 : 403);
+      throw new AxiomError(recorded ?? 'policy_denied', message, status, details);
+    }
+    const code = recorded && !RETRYABLE_CODES.has(recorded) ? recorded : 'intent_failed';
+    throw new AxiomError(code, message, 409, { ...details, ...(recorded ? { failure_code: recorded } : {}) });
+  }
+  throw new AxiomError(
+    'intent_in_progress',
+    'This intent has not reached a terminal state; retry with the same key later',
+    409,
+    details
+  );
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -238,7 +238,9 @@ export async function createHypervisorService(config = meshConfig()) {
   async function crashPointForTest(lifecycle, point) {
     if (crashPoint?.point !== point) return;
     if (crashPoint.pause) return crashPoint.pause;
-    if (crashPoint.mode === 'fail') throw new AxiomError('injected_failure', `Injected failure ${point}`, 500);
+    if (crashPoint.mode === 'fail') {
+      throw new AxiomError(crashPoint.code ?? 'injected_failure', `Injected failure ${point}`, 500);
+    }
     lifecycle.crashed = true;
     throw new AxiomError('simulated_crash', `Simulated Hypervisor crash ${point}`, 500);
   }
@@ -397,17 +399,20 @@ export async function createHypervisorService(config = meshConfig()) {
     }]);
     await crashPointForTest(lifecycle, 'after_accepted');
     if (!decision.allow) {
+      const httpStatus = decision.http_status ?? (decision.pending ? 409 : 403);
+      // The status is kept so a replay with the same key answers as this did.
       const error = {
         code: decision.code,
         message: decision.reason,
-        ...(decision.pending ? { pending: true } : {})
+        ...(decision.pending ? { pending: true } : {}),
+        http_status: httpStatus
       };
       await commit(traceId, intent.principal.id, [{
         kind: 'intent.denied',
         subject: intent.intent_id,
         payload: { intent_id: intent.intent_id, error }
       }]);
-      throw new AxiomError(decision.code, decision.reason, decision.http_status ?? (decision.pending ? 409 : 403), {
+      throw new AxiomError(decision.code, decision.reason, httpStatus, {
         intent_id: intent.intent_id,
         risk: decision.risk,
         ...(decision.required_confirmations
@@ -424,7 +429,8 @@ export async function createHypervisorService(config = meshConfig()) {
       if (intent.approval_ids.length !== 1) {
         await denyIntent(commit, traceId, intent, {
           code: 'independent_approval_required',
-          message: 'This action requires one active approval from a different principal.'
+          message: 'This action requires one active approval from a different principal.',
+          http_status: 409
         });
         throw new AxiomError(
           'independent_approval_required',
@@ -452,7 +458,8 @@ export async function createHypervisorService(config = meshConfig()) {
       ) {
         await denyIntent(commit, traceId, intent, {
           code: 'approval_mismatch',
-          message: 'The supplied approval is not active and bound to this exact request.'
+          message: 'The supplied approval is not active and bound to this exact request.',
+          http_status: 403
         });
         throw new AxiomError(
           'approval_mismatch',
@@ -475,7 +482,8 @@ export async function createHypervisorService(config = meshConfig()) {
         if (error.code !== 'approval_unavailable') throw error;
         await denyIntent(commit, traceId, intent, {
           code: 'approval_unavailable',
-          message: 'The supplied approval was already consumed or expired.'
+          message: 'The supplied approval was already consumed or expired.',
+          http_status: 409
         });
         throw error;
       }
@@ -709,9 +717,9 @@ export async function createHypervisorService(config = meshConfig()) {
     recoverInterruptedIntents,
     settleUnsettledIntents,
     unsettledIntentIds,
-    setCrashPointForTest(point, { mode = 'crash', pause } = {}) {
+    setCrashPointForTest(point, { mode = 'crash', pause, code } = {}) {
       if (config.environment !== 'test') throw new Error('Crash points exist only in the test environment');
-      crashPoint = point ? { point, mode, pause } : null;
+      crashPoint = point ? { point, mode, pause, code } : null;
     },
     operations: currentOperations,
     async start() {

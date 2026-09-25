@@ -208,9 +208,8 @@ test('a Hypervisor stopped at any point leaves its intent recoverable, and recov
     const intent = await client.call('intents.get', { params: { id: intentId } });
     assert.equal(intent.status, 'failed', point);
     assert.equal(intent.error_json.code, 'intent_interrupted', point);
-    // The same request and key returns the terminal record; it does not run
-    // again. (Raw: the client's result schema does not describe a replayed
-    // failure, before and after this change.)
+    // The same request and key answers with the terminal error; it does not
+    // run again.
     const response = await fetch(`http://127.0.0.1:${basePort}/v1/intents`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'idempotency-key': key },
@@ -221,8 +220,15 @@ test('a Hypervisor stopped at any point leaves its intent recoverable, and recov
       })
     });
     const replay = await response.json();
-    assert.equal(replay.idempotent_replay, true, point);
-    assert.equal(replay.status, 'failed', point);
+    assert.equal(response.status, 409, point);
+    assert.equal(replay.error.code, 'intent_interrupted', point);
+    assert.deepEqual(replay.error.details, {
+      intent_id: intentId,
+      status: 'failed',
+      idempotent_replay: true,
+      failure_code: 'intent_interrupted'
+    }, point);
+    await assert.rejects(submit(key), error => error.code === 'intent_interrupted' && error.status === 409);
   }
   assert.equal(memoryObjects(), 0, 'recovery applied nothing');
   assert.deepEqual(await restarted.recoverInterruptedIntents(), [], 'a second sweep finds nothing');
@@ -239,10 +245,45 @@ test('a Hypervisor stopped at any point leaves its intent recoverable, and recov
   const running = submit('intent-recovery-in-flight');
   while (!grid.store.db.prepare("SELECT 1 FROM intents WHERE status = 'accepted'").get()) await tick();
   await tick();
+  // A replay while it runs says so, instead of a result it does not have.
+  await assert.rejects(submit('intent-recovery-in-flight'), error => error.code === 'intent_in_progress' && error.status === 409);
   assert.deepEqual(await restarted.recoverInterruptedIntents(), [], 'an intent in flight is not interrupted');
   release();
   assert.equal((await running).status, 'completed');
   restarted.setCrashPointForTest(null);
+
+  // A denied intent replays as the same denial.
+  const deny = () => client.call('intents.submit', {
+    body: { action: 'chain.submit', input: { transaction: '0x00' } },
+    idempotencyKey: 'intent-recovery-denied'
+  });
+  await assert.rejects(deny(), error => error.code === 'policy_denied' && error.status === 403 && !error.details?.idempotent_replay);
+  await assert.rejects(deny(), error => error.code === 'policy_denied' && error.status === 403 && error.details?.idempotent_replay === true);
+
+  // A denial with its own status replays with that status.
+  const unavailable = () => client.call('intents.submit', {
+    body: { action: 'ai.infer', input: { model: 'unconfigured' } },
+    idempotencyKey: 'intent-recovery-unavailable'
+  });
+  await assert.rejects(unavailable(), error => error.code === 'capability_unavailable' && error.status === 503);
+  await assert.rejects(unavailable(), error => error.code === 'capability_unavailable' && error.status === 503 && error.details?.idempotent_replay === true);
+
+  // A failure recorded with a retryable code does not replay as retryable:
+  // the same key would only ever repeat it.
+  restarted.setCrashPointForTest('after_accepted', { mode: 'fail', code: 'dependency_unavailable' });
+  await assert.rejects(submit('intent-recovery-retryable'), error => error.code === 'dependency_unavailable');
+  restarted.setCrashPointForTest(null);
+  await assert.rejects(submit('intent-recovery-retryable'), error => error.code === 'intent_failed' && error.status === 409 && error.retryable === false);
+  const rawRetryable = await fetch(`http://127.0.0.1:${basePort}/v1/intents`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'idempotency-key': 'intent-recovery-retryable' },
+    body: JSON.stringify({
+      action: 'memory.put',
+      input: { kind: 'note', content: { title: 'intent-recovery-retryable', text: 'written only if completed' } },
+      purpose: 'intent-recovery-test'
+    })
+  }).then(response => response.json());
+  assert.equal(rawRetryable.error.details.failure_code, 'dependency_unavailable');
 
   // An ordinary failure after acceptance still records a terminal state.
   restarted.setCrashPointForTest('after_accepted', { mode: 'fail' });

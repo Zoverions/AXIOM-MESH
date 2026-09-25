@@ -131,8 +131,28 @@ routes are reads. Its request schema permits exactly:
 An idempotency key is mandatory, 16 to 160 characters, and limited to letters,
 digits, underscore, period, colon, and hyphen. The same principal and key derive
 the same intent identifier. Reusing a key with a different effective request
-returns `idempotency_conflict`. Reusing it with the same request returns the
-same success fields as the first response plus `idempotent_replay: true`.
+returns `idempotency_conflict`. Reusing it with the same request answers as
+the first request did, without running it again:
+
+- a completed intent returns the same success fields plus
+  `idempotent_replay: true`;
+- a denied intent returns its error code and HTTP status again, with
+  details `intent_id`, `status` and `idempotent_replay: true`. (A denial
+  recorded before the status was kept answers `409` if it awaited
+  confirmation, otherwise `403`);
+- a failed intent answers `409`: its outcome is final for that key. The
+  code is the recorded failure code, such as `intent_interrupted` when the
+  Hypervisor stopped before the intent finished. A code the contract marks
+  retryable becomes `intent_failed`, because retrying the same key would
+  only repeat the answer. The details add `failure_code`;
+- an intent that has not finished answers `409 intent_in_progress`. Retry
+  later with the same key.
+
+Before, a replayed denial or failure answered `200` with the stored record,
+which the client refused as an invalid response. `intent_interrupted`,
+`intent_failed` and `intent_in_progress` are not stable codes, so the client
+presents them generically, without details, and does not mark them
+retryable.
 
 The client never retries an effect automatically. An application that retries
 after an ambiguous transport failure must reuse the original key and retain the
