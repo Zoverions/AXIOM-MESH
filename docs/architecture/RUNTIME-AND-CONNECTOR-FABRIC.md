@@ -437,6 +437,14 @@ An artifact is a typed, digest-bound output or input with source identity, schem
 
 A handoff creates a new task owned by the receiving execution context. It does not transfer more authority than the receiver independently possesses or receives through a separately valid attenuation-only delegation.
 
+### P5 executable continuity verifier
+
+The first executable P5 continuity slice is `mesh/src/lib/runtime-task-continuity.mjs`. It consumes the already byte-pinned `axiom-task-artifact-handoff.v1` snapshots and adds cross-snapshot/graph semantics without modifying the frozen contract bytes.
+
+It verifies immutable task identity, requester, request, exact catalog/runtime/adapter target and inputs; monotonic grant/delegation references plus attenuation-only budgets; legal lifecycle movement; append-only output artifacts and chronological events; non-backdated cancellation/event additions; unresolved uncertainty until explicit completed/failed reconciliation; handoff purpose/destination/data/budget attenuation; source-grant non-reuse without claiming delegation attenuation; and closed acyclic causal graphs with exactly one root per causal workflow.
+
+The verifier is deliberately **not** a task store, polling loop, queue, executor, delegation issuer, grant issuer, external-effect reconciler, or authority path. A valid transition or handoff remains coordination/evidence only. Persistence, bounded observation/polling, effect-aware cancellation, full resource accounting, and live runtime handoff remain later P5/P6 gates.
+
 ## Delegation and worker spawning
 
 External orchestrators frequently spawn child agents. AXIOM must distinguish **coordination** from **delegation**.
