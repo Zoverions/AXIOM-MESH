@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/machine-principal-currentness-projection-v1.schema.json",
+  "title": "AXIOM Machine Principal Currentness Projection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "principal_id",
+    "principal_type",
+    "root_authority_digest",
+    "retained_status",
+    "effective_status",
+    "lifecycle_seq",
+    "lifecycle_head_event_id",
+    "lifecycle_head_event_hash",
+    "lifecycle_head_digest",
+    "effective_authority_digest",
+    "effective_authority",
+    "grid_chain_seq",
+    "grid_chain_head",
+    "observed_at",
+    "authority_effect"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-machine-principal-currentness-projection.v1"
+    },
+    "principal_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "principal_type": {
+      "enum": [
+        "agent",
+        "service"
+      ]
+    },
+    "root_authority_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "retained_status": {
+      "enum": [
+        "active",
+        "narrowed",
+        "revoked",
+        "compromised",
+        "expired"
+      ]
+    },
+    "effective_status": {
+      "enum": [
+        "active",
+        "narrowed",
+        "revoked",
+        "compromised",
+        "expired"
+      ]
+    },
+    "lifecycle_seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lifecycle_head_event_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "lifecycle_head_event_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "lifecycle_head_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "effective_authority_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "effective_authority": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/machineAuthority"
+        }
+      ]
+    },
+    "grid_chain_seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "grid_chain_head": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "authority_effect": {
+      "const": "none"
+    }
+  },
+  "$defs": {
+    "machineAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "id",
+        "type",
+        "sponsor",
+        "roles",
+        "scopes",
+        "lifetime",
+        "runtime",
+        "constraints",
+        "authority_digest"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-machine-principal.v1"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "type": {
+          "enum": [
+            "agent",
+            "service"
+          ]
+        },
+        "sponsor": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "roles": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,159}$"
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          }
+        },
+        "lifetime": {
+          "enum": [
+            "persistent",
+            "session",
+            "ephemeral"
+          ]
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            },
+            "kind": {
+              "enum": [
+                "local-process",
+                "container",
+                "external-runtime"
+              ]
+            },
+            "software_digest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actions",
+            "purposes",
+            "destinations",
+            "budgets",
+            "delegation"
+          ],
+          "properties": {
+            "actions": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 128,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9.-]{1,127}$"
+              }
+            },
+            "purposes": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_.:-]{0,159}$"
+              }
+            },
+            "destinations": {
+              "type": "array",
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,255}$"
+              }
+            },
+            "budgets": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "max_requests_per_minute",
+                "max_concurrent_requests",
+                "max_execution_ms",
+                "max_request_bytes",
+                "max_response_bytes"
+              ],
+              "properties": {
+                "max_requests_per_minute": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "max_concurrent_requests": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 128
+                },
+                "max_execution_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 300000
+                },
+                "max_request_bytes": {
+                  "type": "integer",
+                  "minimum": 1024,
+                  "maximum": 10485760
+                },
+                "max_response_bytes": {
+                  "type": "integer",
+                  "minimum": 1024,
+                  "maximum": 20971520
+                }
+              }
+            },
+            "delegation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "allowed",
+                "max_depth"
+              ],
+              "properties": {
+                "allowed": {
+                  "const": false
+                },
+                "max_depth": {
+                  "const": 0
+                }
+              }
+            }
+          }
+        },
+        "authority_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/machine-principal-currentness.mjs",
+  "x-axiom-non-claims": [
+    "execution-authority",
+    "global-currentness",
+    "external-truth"
+  ]
+}
