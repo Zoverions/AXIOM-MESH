@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/general-genesis-sponsor-eligibility-v0.schema.json",
+  "title": "AXIOM General Genesis Sponsor Eligibility v0 inert evidence",
+  "description": "Deterministic post-founding eligibility evidence for requesting one single-use Genesis authorization. It does not verify identity by itself, grant authorization, create a Genesis Bond, or create a mind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "applicant_mind_id",
+    "substrate",
+    "responsibility_profile",
+    "criteria",
+    "identity_evidence_digest",
+    "identity_observed_at",
+    "genesis_history_evidence_digest",
+    "genesis_history_observed_at",
+    "genesis_history_status",
+    "general_genesis_uses",
+    "standing_evidence_digest",
+    "standing_observed_at",
+    "standing_status",
+    "continuity_evidence_digest",
+    "continuity_observed_at",
+    "continuity_status",
+    "independent_status_digest",
+    "maximum_evidence_age_seconds",
+    "evaluated_at",
+    "global_reputation_score_used",
+    "model_final_authority",
+    "creates_genesis_authorization",
+    "creates_genesis_bond",
+    "creates_mind",
+    "genesis_effect",
+    "governance_effect",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-general-genesis-sponsor-eligibility.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-eligibility-evidence"
+    },
+    "applicant_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "substrate": {
+      "enum": [
+        "biological",
+        "digital"
+      ]
+    },
+    "responsibility_profile": {
+      "const": "axiom-general-genesis-responsibility.v0"
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/criterion"
+      }
+    },
+    "identity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identity_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "genesis_history_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "genesis_history_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "genesis_history_status": {
+      "enum": [
+        "clear",
+        "disputed",
+        "unknown"
+      ]
+    },
+    "general_genesis_uses": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "standing_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "standing_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "standing_status": {
+      "enum": [
+        "clear",
+        "blocking",
+        "unknown"
+      ]
+    },
+    "continuity_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "continuity_observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "continuity_status": {
+      "enum": [
+        "clear",
+        "disputed",
+        "stale",
+        "unknown"
+      ]
+    },
+    "independent_status_digest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "maximum_evidence_age_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2592000
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "global_reputation_score_used": {
+      "const": false
+    },
+    "model_final_authority": {
+      "const": false
+    },
+    "creates_genesis_authorization": {
+      "const": false
+    },
+    "creates_genesis_bond": {
+      "const": false
+    },
+    "creates_mind": {
+      "const": false
+    },
+    "genesis_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id",
+        "status",
+        "evidence_digests"
+      ],
+      "properties": {
+        "criterion_id": {
+          "enum": [
+            "identity-uniqueness",
+            "accountability-root",
+            "maturity-history",
+            "security-readiness",
+            "resource-capacity",
+            "continuity-recovery-plan",
+            "development-plan",
+            "rights-responsibility-understanding",
+            "good-standing",
+            "independent-advocacy-plan"
+          ]
+        },
+        "status": {
+          "enum": [
+            "demonstrated",
+            "not-demonstrated",
+            "uncertain"
+          ]
+        },
+        "evidence_digests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/general-genesis-sponsor-eligibility.mjs",
+  "x-axiom-non-claims": [
+    "government-id-verification",
+    "portable-proof-of-personhood",
+    "live-genesis-authorization",
+    "live-genesis-bond",
+    "mind-creation",
+    "runtime-authority"
+  ]
+}
