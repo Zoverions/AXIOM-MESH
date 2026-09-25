@@ -165,6 +165,36 @@ test('uncertain or not-demonstrated criteria preserve incompleteness', () => {
   }
 });
 
+test('independent support threshold cannot be satisfied by sponsor or advocate support', () => {
+  const document = review();
+  document.reviewers[1].relation = 'advocate';
+  document.reviewers.push({
+    reviewer_id: 'human.independent.2',
+    relation: 'independent',
+    decision: 'uncertain',
+    evidence_digest: 'c'.repeat(64),
+    conflict_declared: false
+  });
+
+  const result = assessMindIndependenceReview(document);
+
+  assert.equal(result.independent_reviewer_count, 1);
+  assert.equal(result.supporting_independent_reviewer_count, 0);
+  assert.equal(result.support_threshold_satisfied, false);
+  assert.equal(result.evidence_threshold_satisfied, false);
+  assert.equal(result.result_state, 'independent-support-not-satisfied');
+});
+
+test('non-sponsor reviewer cannot claim the sponsor relation', () => {
+  const document = review();
+  document.reviewers[1].relation = 'sponsor';
+
+  assert.throws(
+    () => assessMindIndependenceReview(document),
+    /Sponsor reviewer role must bind the exact Genesis sponsor/
+  );
+});
+
 test('independent opposition blocks a positive review even when support thresholds are met', () => {
   const document = review();
   document.reviewers.push({
@@ -230,6 +260,16 @@ test('policy cannot grant sponsor veto, candidate self-decision, or model final 
       /review policy is invalid/
     );
   }
+});
+
+test('review rejects unknown fields rather than accepting hidden decision authority', () => {
+  const document = review();
+  document.hidden_independence_grant = true;
+
+  assert.throws(
+    () => assessMindIndependenceReview(document),
+    /fields are invalid/
+  );
 });
 
 test('review cannot directly create status, governance, Genesis eligibility, network, or authority effects', () => {
