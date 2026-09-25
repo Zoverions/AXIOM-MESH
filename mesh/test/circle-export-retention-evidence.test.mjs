@@ -181,6 +181,7 @@ function fixture() {
     snapshot_evidence_digest:'e'.repeat(64),
     record_observations_digest:circleExportRecordObservationsDigest(recordObservations),
     history_retention_only:true,
+    requires_external_snapshot_verification:true,
     requires_external_record_evidence_verification:true,
     requires_disclosure_authorization:true,
     portable_authority:false,
