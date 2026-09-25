@@ -128,3 +128,16 @@ test('completion evidence can never assert external truth or authority', () => {
   record.external_truth_claim = true;
   assert.throws(() => validateOutcomeCompletionEvidence(record), /activation\/truth boundary/);
 });
+
+test('completion cannot outrun Outcome state or chronology', () => {
+  const inProgress = outcome();
+  inProgress.completion_state = 'in-progress';
+  inProgress.evidence_refs = [];
+  const record = completion(inProgress);
+  assert.throws(() => evaluateOutcomeCompletion(inProgress, record), /outcome-state-not-verified/);
+
+  const source = outcome();
+  const tooEarly = completion(source);
+  tooEarly.observed_at = '2026-09-24T12:04:00.000Z';
+  assert.throws(() => evaluateOutcomeCompletion(source, tooEarly), /cannot precede Outcome updated_at/);
+});
