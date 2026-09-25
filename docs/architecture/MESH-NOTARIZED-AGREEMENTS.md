@@ -195,10 +195,22 @@ including ordering, and `status_digest` binds the complete resulting projection.
 Each party has separate membership and consent support states: `supported`,
 `not-supported`, or `unknown`. These labels describe support under the supplied
 inputs, not externally authenticated truth. Missing present evidence and stale
-consent observations remain unknown; they never borrow an older positive
-result. Expiry, revocation, an effective exit, or a failed membership condition
-cannot produce supported current participation. In the aggregate, a negative
-result dominates unknown evidence, and unknown evidence dominates success.
+positive observations remain unknown; they never borrow an older positive
+result. Explicit negative findings dominate uncertainty both per party and in
+the aggregate. A stale observation reporting revocation, expiry, or a binding
+mismatch remains `not-supported`, with the stale-evidence reason retained.
+When the present agreement bundle is supplied, expiry in its exact immutable
+party-bound consent grant remains negative even if its current observation is
+missing. No positive present consent is inferred from that grant.
+
+A current Circle snapshot can likewise establish an effective exit or inactive
+status for the exact historical membership even when supplemental member
+context is missing. That fallback is negative-only: an active label without
+context stays unknown, a future-dated exit or status is not treated as already
+effective, and a separately assessed new membership is not overridden by the
+old membership's exit. All findings still depend on independently verified
+snapshot authenticity and completeness. Unknown evidence dominates success;
+it never conceals an already established negative finding.
 
 A later exit or consent revocation does not mutate the retained historical
 input. Conversely, preserving history must not conceal contradictory evidence.

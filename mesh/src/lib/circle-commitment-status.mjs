@@ -6,6 +6,15 @@ import { assessCircleCommitmentAdmission, normalizeCircleMembershipContext } fro
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
+// Only absent/temporally incomplete evidence is uncertainty. Other assessor
+// findings remain negative even when an observation is also missing or stale.
+const CONSENT_UNCERTAINTY_REASONS = new Set([
+  'current-consent-missing',
+  'current-consent-observation-time-mismatch',
+  'current-consent-record-missing-for-history-check',
+  'consent-observation-predates-recording',
+  'consent-observation-after-assessment'
+]);
 
 /**
  * Read-only comparison of retained historical evidence and a separate present
@@ -85,6 +94,27 @@ export function assessCircleCommitmentStatus(raw){
       const record=supplied.packageDocument.memberships.find(item=>(
         item.membership_id===membershipId&&item.principal_id===old.principal_id
       ));
+      // A current snapshot may establish a negative for the exact historical
+      // membership without supplemental device/consent context. It cannot
+      // establish a positive, or override a separately assessed new membership.
+      if(!membershipByPrincipal.has(old.principal_id)){
+        const negative=[];
+        if(record&&record.status!=='active'
+          &&canonicalDate(record.status_effective_at,'current membership status time')<=assessed){
+          negative.push('membership-not-active:'+record.status);
+        }
+        for(const exit of supplied.packageDocument.exits){
+          if(exit.membership_id===membershipId&&exit.principal_id===old.principal_id
+            &&canonicalDate(exit.effective_at,'current exit effective_at')<=assessed){
+            negative.push('effective-exit:'+exit.kind);
+          }
+        }
+        if(negative.length){
+          membershipByPrincipal.set(old.principal_id,statusSupport('not-supported',[
+            ...negative,'current-membership-evidence-missing'
+          ]));
+        }
+      }
       if(record&&record.status!=='active'
         &&canonicalDate(record.status_effective_at,'current membership status time')<=recorded){
         reviewReasons.push(old.principal_id+':membership-inactive-before-recording');
@@ -114,13 +144,19 @@ export function assessCircleCommitmentStatus(raw){
     }
     const agreement=assessAgreementEvidence(supplied);
     for(const party of agreement.parties){
-      const missingOrStale=party.currentness_reasons.some(reason=>(
-        reason==='current-consent-missing'||reason==='current-consent-observation-time-mismatch'
+      const reasons=[...party.recorded_reasons,...party.currentness_reasons];
+      const acceptance=supplied.acceptances.find(item=>item.principal_id===party.principal_id);
+      const grant=supplied.consentGrantStatements.find(item=>(
+        item.consent_id===acceptance?.consent_id&&item.subject===party.principal_id
       ));
-      const state=missingOrStale?'unknown':party.currently_active?'supported':'not-supported';
-      consentByPrincipal.set(party.principal_id,statusSupport(state,[
-        ...party.recorded_reasons,...party.currentness_reasons
-      ]));
+      // The exact immutable grant already fixes expiry; an omitted current row
+      // cannot extend it. No positive currentness is borrowed from that grant.
+      if(grant&&canonicalDate(grant.expires_at,'consent grant expires_at')<=assessed){
+        reasons.push('current-consent-expired');
+      }
+      const negative=reasons.some(reason=>!CONSENT_UNCERTAINTY_REASONS.has(reason));
+      const state=negative?'not-supported':reasons.length?'unknown':party.currently_active?'supported':'not-supported';
+      consentByPrincipal.set(party.principal_id,statusSupport(state,reasons));
     }
     reviewReasons.push(...agreement.recorded_reasons.filter(reason=>(
       reason.endsWith(':consent-revoked-before-agreement-recorded')

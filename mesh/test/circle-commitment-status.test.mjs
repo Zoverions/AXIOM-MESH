@@ -374,3 +374,134 @@ test('current evidence order cannot change per-party decisions', () => {
   // Input digests intentionally bind exact supplied packets, including order.
   assert.notEqual(first.input_digest, second.input_digest);
 });
+
+// Mixed-evidence regression cases: definite negatives must not become unknown.
+test('stale revoked consent remains not-supported and retains both reasons', () => {
+  const f = fixture();
+  const observation = f.currentAgreementEvidenceInput.currentConsentObservations[0];
+  observation.observed_at = '2026-09-24T18:00:00.000Z';
+  Object.assign(observation.record, {status: 'revoked', revoked_at: observation.observed_at});
+  const historyBefore = digestObject(f.historicalInput);
+  const result = project(f);
+  const consent = result.current.parties[0].consent;
+  assert.equal(consent.status, 'not-supported');
+  assert.ok(consent.reasons.includes('current-consent-observation-time-mismatch'));
+  assert.ok(consent.reasons.includes('current-consent-revoked'));
+  assert.equal(result.current.support_status, 'not-supported');
+  assert.equal(result.historical.historical_circle_commitment_admissible, true);
+  assert.equal(result.historical_review_required, false);
+  assert.equal(digestObject(f.historicalInput), historyBefore);
+});
+
+test('stale expired consent remains not-supported rather than unknown', () => {
+  const f = fixture();
+  f.assessedAt = EXPIRES;
+  f.currentCircleEvidence = null;
+  f.currentAgreementEvidenceInput.assessedAt = EXPIRES;
+  const result = project(f);
+  assert.equal(result.current.parties[0].consent.status, 'not-supported');
+  assert.ok(result.current.parties[0].consent.reasons.includes('current-consent-expired'));
+  assert.ok(result.current.parties[0].consent.reasons.includes('current-consent-observation-time-mismatch'));
+  assert.equal(result.current.support_status, 'not-supported');
+});
+
+test('missing observation cannot conceal expiry in the exact immutable grant', () => {
+  const f = fixture();
+  f.assessedAt = EXPIRES;
+  f.currentCircleEvidence = null;
+  f.currentAgreementEvidenceInput.assessedAt = EXPIRES;
+  f.currentAgreementEvidenceInput.currentConsentObservations = [];
+  const result = project(f);
+  assert.ok(result.current.parties.every(row => row.consent.status === 'not-supported'));
+  assert.ok(result.current.parties[0].consent.reasons.includes('current-consent-expired'));
+  assert.ok(result.current.parties[0].consent.reasons.includes('current-consent-missing'));
+  assert.equal(result.current.support_status, 'not-supported');
+});
+
+test('stale consent with a mismatched binding is not downgraded to unknown', () => {
+  const f = fixture();
+  const observation = f.currentAgreementEvidenceInput.currentConsentObservations[0];
+  observation.observed_at = RECORDED;
+  observation.record.controller = 'service.other';
+  const consent = project(f).current.parties[0].consent;
+  assert.equal(consent.status, 'not-supported');
+  assert.ok(consent.reasons.includes('current-consent-binding-mismatch'));
+  assert.ok(consent.reasons.includes('current-consent-observation-time-mismatch'));
+});
+
+test('stale pre-recording revocation retains negative status and historical review', () => {
+  const f = fixture();
+  const observation = f.currentAgreementEvidenceInput.currentConsentObservations[0];
+  observation.observed_at = RECORDED;
+  Object.assign(observation.record, {status: 'revoked', revoked_at: '2026-09-24T11:59:00.000Z'});
+  const result = project(f);
+  assert.equal(result.current.parties[0].consent.status, 'not-supported');
+  assert.equal(result.historical_review_required, true);
+  assert.equal(result.historical.historical_circle_commitment_admissible, true);
+});
+
+for (const status of ['revoked', 'suspended', 'exited']) {
+  test(`current ${status} membership remains negative without supplemental context`, () => {
+    const f = fixture();
+    Object.assign(f.currentCircleEvidence.packageDocument.memberships[0], {status, status_effective_at: NOW});
+    f.currentCircleEvidence.partyMembershipEvidence.shift();
+    refreshCircle(f);
+    const result = project(f);
+    assert.equal(result.current.parties[0].membership.status, 'not-supported');
+    assert.ok(result.current.parties[0].membership.reasons.includes(`membership-not-active:${status}`));
+    assert.ok(result.current.parties[0].membership.reasons.includes('current-membership-evidence-missing'));
+    assert.equal(result.current.parties[1].membership.status, 'supported');
+  });
+}
+
+test('effective exit remains negative when supplemental member context is missing', () => {
+  const f = fixture(); addExit(f, NOW);
+  f.currentCircleEvidence.partyMembershipEvidence.shift();
+  const result = project(f);
+  assert.equal(result.current.parties[0].membership.status, 'not-supported');
+  assert.ok(result.current.parties[0].membership.reasons.includes('effective-exit:voluntary-exit'));
+  assert.equal(result.historical_review_required, false);
+});
+
+test('pre-recording exit remains negative without context and still requires review', () => {
+  const f = fixture(); addExit(f, '2026-09-24T11:59:00.000Z');
+  f.currentCircleEvidence.partyMembershipEvidence.shift();
+  const result = project(f);
+  assert.equal(result.current.parties[0].membership.status, 'not-supported');
+  assert.equal(result.historical_review_required, true);
+});
+
+test('future negative membership state cannot be inferred as presently effective', () => {
+  const f = fixture();
+  Object.assign(f.currentCircleEvidence.packageDocument.memberships[0], {
+    status: 'revoked', status_effective_at: '2026-09-26T12:00:00.000Z'
+  });
+  f.currentCircleEvidence.partyMembershipEvidence.shift();
+  refreshCircle(f);
+  const result = project(f);
+  assert.equal(result.current.parties[0].membership.status, 'unknown');
+  assert.equal(result.historical_review_required, false);
+});
+
+test('future exit without member context remains unknown rather than effective', () => {
+  const f = fixture(); addExit(f, '2026-09-26T12:00:00.000Z');
+  f.currentCircleEvidence.partyMembershipEvidence.shift();
+  assert.equal(project(f).current.parties[0].membership.status, 'unknown');
+});
+
+test('old membership exit cannot negate separately assessed active re-entry', () => {
+  const f = fixture(); addExit(f, NOW);
+  const pack = f.currentCircleEvidence.packageDocument;
+  const invitation = {...pack.invitations[0], invitation_id: 'invite.reentry', issued_at: NOW};
+  pack.invitations.push(invitation);
+  const member = {...pack.memberships[0], membership_id: 'membership.reentry',
+    invitation_id: invitation.invitation_id, accepted_at: NOW, status_effective_at: NOW};
+  pack.memberships.push(member);
+  const evidence = f.currentCircleEvidence.partyMembershipEvidence[0];
+  Object.assign(evidence.assurance, {membership_id: member.membership_id,
+    membership_digest: digestObject(member), valid_from: NOW});
+  refreshCircle(f);
+  const result = project(f);
+  assert.equal(result.current.parties[0].membership.status, 'supported');
+  assert.equal(result.historical_review_required, false);
+});
