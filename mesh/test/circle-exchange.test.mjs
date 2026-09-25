@@ -12,6 +12,7 @@ import {
 } from '../src/lib/circle-core.mjs';
 import { createCircleBallot } from '../src/lib/circle-ballots.mjs';
 import {
+  CIRCLE_BUNDLE_MAX_UPDATES,
   CIRCLE_CHARTER_AMENDMENT_SCHEMA,
   CircleReplica,
   circleGenesisDigest,
@@ -793,6 +794,113 @@ test('a charter amendment takes effect only through an accepted, unappealed deci
     assert.match(reasons, reason, name);
     if (name !== 'a second amendment') assert.equal(view.epochs.length, 1, name);
   }
+});
+
+/** Runs the heads-for-bundle exchange both ways until neither side learns anything. */
+function syncPair(left, right) {
+  let rounds = 0;
+  for (;;) {
+    rounds += 1;
+    assert.ok(rounds < 20, 'sync did not converge');
+    const toRight = right.receiveBundle(left.updatesFor(right.heads()));
+    const toLeft = left.receiveBundle(right.updatesFor(left.heads()));
+    const learned = toRight.accepted + toRight.equivocation + toLeft.accepted + toLeft.equivocation;
+    if (!learned && toRight.complete && toLeft.complete) return rounds;
+  }
+}
+
+test('two replicas holding different updates converge by exchanging heads and bundles', () => {
+  const genesis = genesisFor();
+  const all = interleave(logsFor(genesis, standardScript(genesis)), 8);
+  // Each side holds whole logs. The right side holds carol's and dana's
+  // updates before any endorsement of their keys, so they wait as pending
+  // until the left side's bundle brings alice's endorsements.
+  const authors = side => update => side.includes(update.body.author);
+  const left = replicaWith(genesis, all.filter(authors(['alice', 'bob'])));
+  const right = replicaWith(genesis, all.filter(authors(['bob', 'carol', 'dana'])));
+  assert.equal(right.pendingUpdates(), 6);
+  assert.notDeepEqual(left.heads(), right.heads());
+  syncPair(left, right);
+  assert.deepEqual(left.heads(), right.heads());
+  assert.equal(left.pendingUpdates(), 0);
+  assert.equal(right.pendingUpdates(), 0);
+  const whole = replicaWith(genesis, all).view({ asOf: AFTER_CLOSE });
+  assert.equal(left.view({ asOf: AFTER_CLOSE }).package_digest, whole.package_digest);
+  assert.equal(right.view({ asOf: AFTER_CLOSE }).package_digest, whole.package_digest);
+  // Nothing left to send once heads agree.
+  assert.equal(left.updatesFor(right.heads()).updates.length, 0);
+});
+
+test('bundles are bounded and the exchange repeats until complete', () => {
+  const genesis = genesisFor();
+  const script = standardScript(genesis);
+  for (let index = 0; index < CIRCLE_BUNDLE_MAX_UPDATES + 40; index += 1) {
+    script.push(['alice', 'invitation', {
+      ...invitation(genesis, `guest${index}`, 'member'),
+      invitation_id: `invite.guest.${index}`,
+      issued_at: '2026-08-20T12:02:00.000Z'
+    }]);
+  }
+  const source = replicaWith(genesis, interleave(logsFor(genesis, script), 1));
+  const empty = new CircleReplica({ genesis });
+  const first = source.updatesFor(empty.heads());
+  assert.equal(first.updates.length, CIRCLE_BUNDLE_MAX_UPDATES);
+  assert.equal(first.complete, false);
+  assert.equal(syncPair(source, empty) >= 2, true);
+  assert.deepEqual(empty.heads(), source.heads());
+});
+
+test('equivocation evidence and forks spread to replicas that have not seen them', () => {
+  const genesis = genesisFor();
+  const logs = logsFor(genesis, standardScript(genesis));
+  const bob = logs[logName('bob')];
+  const reject = createCircleUpdate({
+    genesis, author: 'bob', counter: 2, previous: bob[0],
+    recordType: 'ballot', record: ballot(genesis, 'bob', 'reject'), privateKey: keys.bob.privateKey
+  });
+  const base = interleave({ ...logs, [logName('bob')]: [bob[0]] }, 3);
+  const witness = replicaWith(genesis, [...base, bob[1], reject]);
+  assert.equal(witness.heads().equivocations.length, 1);
+
+  // A replica with neither of bob's second updates learns both.
+  const fresh = replicaWith(genesis, base);
+  syncPair(witness, fresh);
+  assert.deepEqual(fresh.heads().equivocations, witness.heads().equivocations);
+
+  // A replica that holds only the other fork learns of the conflict too.
+  const forked = replicaWith(genesis, [...base, reject]);
+  const honest = replicaWith(genesis, [...base, bob[1]]);
+  syncPair(honest, forked);
+  assert.deepEqual(honest.heads().equivocations, forked.heads().equivocations);
+  // Evidence already recorded is neither re-sent nor counted again.
+  assert.equal(honest.updatesFor(forked.heads()).updates.length, 0);
+  assert.equal(forked.receive(bob[1]).status, 'duplicate');
+  assert.equal(honest.view({ asOf: AFTER_CLOSE }).package_digest, witness.view({ asOf: AFTER_CLOSE }).package_digest);
+});
+
+test('a bundle is checked update by update, and foreign or malformed input is refused', () => {
+  const genesis = genesisFor();
+  const all = interleave(logsFor(genesis, standardScript(genesis)), 8);
+  const source = replicaWith(genesis, all);
+  const bundle = source.updatesFor(new CircleReplica({ genesis }).heads());
+  const tampered = structuredClone(bundle);
+  tampered.updates[0].body.record.issued_at = '2026-08-20T12:00:45.000Z';
+  const target = new CircleReplica({ genesis });
+  const summary = target.receiveBundle(tampered);
+  assert.equal(summary.rejected[0].code, 'signature');
+  assert.ok(summary.accepted + summary.pending > 0);
+
+  const other = genesisFor({ quorum: 7000 });
+  assert.throws(() => new CircleReplica({ genesis: other }).receiveBundle(bundle), /different Circle/);
+  assert.throws(() => source.updatesFor({ ...target.heads(), genesis_digest: 'f'.repeat(64) }), /different Circle/);
+  assert.throws(
+    () => source.updatesFor({ ...target.heads(), heads: [{ author: 'bob', key_id: 'x', counter: 1, digest: 'y' }] }),
+    /Circle head is invalid/
+  );
+  assert.throws(
+    () => target.receiveBundle({ ...bundle, updates: Array(CIRCLE_BUNDLE_MAX_UPDATES + 1).fill(bundle.updates[0]) }),
+    /bundle is invalid/
+  );
 });
 
 test('Circle Exchange v0 schema preserves the inert boundary', async () => {

@@ -72,6 +72,14 @@ import {
  * as a derived invitation and membership, and proposals still open under
  * the old charter lapse, since their ballots bind the old charter.
  *
+ * Sync between replicas is transport-neutral: one replica sends its heads,
+ * the other answers with a bounded bundle of what the first lacks
+ * (updatesFor), including the second update of any equivocation it has not
+ * recorded and, for a log the two hold different forks of, the update that
+ * reveals the fork. The first applies it (receiveBundle), checking every
+ * update as if received alone, and the exchange repeats until a bundle is
+ * complete and nothing new is learned.
+ *
  * Nothing here grants authority, executes an effect, opens a network
  * connection, or changes the Grid's causal sync.
  */
@@ -80,6 +88,9 @@ export const CIRCLE_GENESIS_SCHEMA = 'axiom-circle-genesis.v0';
 export const CIRCLE_UPDATE_SCHEMA = 'axiom-circle-update.v0';
 export const CIRCLE_HEADS_SCHEMA = 'axiom-circle-heads.v0';
 export const CIRCLE_VIEW_SCHEMA = 'axiom-circle-view.v0';
+export const CIRCLE_EXCHANGE_BUNDLE_SCHEMA = 'axiom-circle-exchange-bundle.v0';
+export const CIRCLE_BUNDLE_MAX_UPDATES = 512;
+export const CIRCLE_BUNDLE_MAX_BYTES = 900_000;
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -234,12 +245,17 @@ export class CircleReplica {
     const existing = log[body.counter - 1];
     if (existing) {
       const recorded = this.equivocations.get(pair);
+      if (recorded?.counter === body.counter && recorded.digests.includes(digest)) {
+        return { status: 'duplicate', digest };
+      }
       if (!recorded || body.counter < recorded.counter) {
         this.equivocations.set(pair, {
           author: body.author,
           key_id: body.key_id,
           counter: body.counter,
-          digests: [existing.digest, digest].sort()
+          digests: [existing.digest, digest].sort(),
+          // Kept so the evidence can be passed on to other replicas.
+          conflicting: update
         });
       }
       return { status: 'equivocation', digest, author: body.author, counter: body.counter };
@@ -301,8 +317,88 @@ export class CircleReplica {
           digest: log[log.length - 1].digest
         }))
         .sort(compareHeads)),
-      equivocations: Object.freeze([...this.equivocations.values()].sort(compareHeads))
+      equivocations: Object.freeze([...this.equivocations.values()]
+        .map(({ author, key_id, counter, digests }) => Object.freeze({ author, key_id, counter, digests }))
+        .sort(compareHeads))
     });
+  }
+
+  /**
+   * The updates a replica reporting `remoteHeads` lacks, in one bounded
+   * bundle: for each key log, what follows the remote's head (or, where the
+   * remote's head is not in this log, this log's update at that counter, so
+   * the remote detects the fork), and the second update of every
+   * equivocation the remote has not recorded. A bundle holds at most
+   * CIRCLE_BUNDLE_MAX_UPDATES updates and about CIRCLE_BUNDLE_MAX_BYTES;
+   * `complete` is false when more remain, so the exchange repeats.
+   * Transport-neutral: nothing here opens a connection.
+   */
+  updatesFor(remoteHeads) {
+    const remote = validateRemoteHeads(remoteHeads, this.genesisDigest);
+    const remoteLogs = new Map(remote.heads.map(head => [pairKey(head.author, head.key_id), head]));
+    const remoteEquivocations = new Set(remote.equivocations.map(item => `${pairKey(item.author, item.key_id)}\u0000${item.counter}`));
+    const candidates = [];
+    for (const pair of [...this.logs.keys()].sort()) {
+      const log = this.logs.get(pair);
+      const head = remoteLogs.get(pair);
+      let from = 0;
+      if (head) {
+        const ours = log[head.counter - 1];
+        if (ours && ours.digest !== head.digest) {
+          // The remote holds another fork of this log: send ours at that
+          // counter once, so it records the equivocation.
+          if (!remote.equivocations.some(item => pairKey(item.author, item.key_id) === pair)) {
+            candidates.push(ours.update);
+          }
+          continue;
+        }
+        from = head.counter;
+      }
+      for (const item of log.slice(from)) candidates.push(item.update);
+    }
+    for (const [pair, equivocation] of [...this.equivocations.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+      if (!remoteEquivocations.has(`${pair}\u0000${equivocation.counter}`)) candidates.push(equivocation.conflicting);
+    }
+
+    const updates = [];
+    let bytes = 0;
+    let complete = true;
+    for (const update of candidates) {
+      const size = Buffer.byteLength(canonicalJson(update));
+      if (updates.length >= CIRCLE_BUNDLE_MAX_UPDATES || (updates.length && bytes + size > CIRCLE_BUNDLE_MAX_BYTES)) {
+        complete = false;
+        break;
+      }
+      updates.push(update);
+      bytes += size;
+    }
+    return Object.freeze({
+      schema: CIRCLE_EXCHANGE_BUNDLE_SCHEMA,
+      genesis_digest: this.genesisDigest,
+      updates: Object.freeze(updates),
+      complete
+    });
+  }
+
+  /** Applies a bundle from another replica; every update is checked as if received alone. */
+  receiveBundle(bundle) {
+    exactObject(bundle, 'Circle exchange bundle', ['schema', 'genesis_digest', 'updates', 'complete']);
+    if (
+      bundle.schema !== CIRCLE_EXCHANGE_BUNDLE_SCHEMA
+      || !Array.isArray(bundle.updates)
+      || bundle.updates.length > CIRCLE_BUNDLE_MAX_UPDATES
+      || typeof bundle.complete !== 'boolean'
+    ) throw new ValidationError('Circle exchange bundle is invalid');
+    if (bundle.genesis_digest !== this.genesisDigest) {
+      throw new ValidationError('Circle exchange bundle belongs to a different Circle or charter');
+    }
+    const summary = { accepted: 0, duplicate: 0, pending: 0, equivocation: 0, rejected: [] };
+    for (const update of bundle.updates) {
+      const result = this.receive(update);
+      if (result.status === 'rejected') summary.rejected.push({ code: result.code, reason: result.reason });
+      else summary[result.status] += 1;
+    }
+    return Object.freeze({ ...summary, rejected: Object.freeze(summary.rejected), complete: bundle.complete });
   }
 
   /**
@@ -812,6 +908,33 @@ function authorize(document, entry) {
   if ((entry.type === 'task' || entry.type === 'export') && !standing.principalAt(entry.author, at)) {
     throw new ValidationError(`${entry.author} was not a member when publishing this ${entry.type}`);
   }
+}
+
+function validateRemoteHeads(value, genesisDigest) {
+  exactObject(value, 'Circle heads', ['schema', 'genesis_digest', 'heads', 'equivocations']);
+  if (value.schema !== CIRCLE_HEADS_SCHEMA) throw new ValidationError('Circle heads are invalid');
+  if (value.genesis_digest !== genesisDigest) {
+    throw new ValidationError('Circle heads belong to a different Circle or charter');
+  }
+  if (!Array.isArray(value.heads) || value.heads.length > MAX_UPDATES
+    || !Array.isArray(value.equivocations) || value.equivocations.length > MAX_UPDATES) {
+    throw new ValidationError('Circle heads are invalid');
+  }
+  for (const head of value.heads) {
+    exactObject(head, 'Circle head', ['author', 'key_id', 'counter', 'digest']);
+    if (
+      !IDENTIFIER.test(head.author ?? '') || !DIGEST.test(head.key_id ?? '') || !DIGEST.test(head.digest ?? '')
+      || !Number.isSafeInteger(head.counter) || head.counter < 1 || head.counter > MAX_UPDATES
+    ) throw new ValidationError('Circle head is invalid');
+  }
+  for (const item of value.equivocations) {
+    exactObject(item, 'Circle equivocation', ['author', 'key_id', 'counter', 'digests']);
+    if (
+      !IDENTIFIER.test(item.author ?? '') || !DIGEST.test(item.key_id ?? '')
+      || !Number.isSafeInteger(item.counter) || item.counter < 1 || item.counter > MAX_UPDATES
+    ) throw new ValidationError('Circle equivocation is invalid');
+  }
+  return value;
 }
 
 function validateGenesis(genesis) {
