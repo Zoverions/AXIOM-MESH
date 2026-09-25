@@ -195,6 +195,49 @@ exact negative test. The protected test suite also exercises peer authority-like
 language, distributed action/purpose pooling attempts, receipt/discovery laundering,
 and unsupported delegation/sub-agent claims without enabling those capabilities.
 
+### Recognized-mind Genesis and population-integrity boundary
+
+The current supported build does **not** implement recognized digital-mind Genesis,
+a live Founders Council, portable personhood, or a Sybil-resistant population
+registry. The inert Founder Genesis / Founders Council v0 contracts are design and
+verification surfaces only and create no Gateway route, Grid mutation, runtime
+activation, machine delegation, or execution authority.
+
+Future recognized-mind Genesis is a distinct authority escalation from ordinary
+process creation. Starting a model, process, VM, container, worker agent, account,
+keypair, node, replica, restored backup, or fork must not by itself mint a new
+recognized mind, governance identity, population unit, or vote. **Compute is not
+population.** A runtime multiplicity attack must therefore remain unable to
+multiply constitutional standing.
+
+The founding design reserves exactly ten non-renewable Founder Genesis
+authorizations. Any future promotion of those authorizations must preserve manual
+Founder confirmation, non-delegation, exact one-use consumption, persistent-identity
+binding, append-only Genesis evidence, and no inherited sponsor authority. A machine
+principal or delegated runtime must not be able to satisfy the manual-Founder
+confirmation requirement merely by possessing the Founder's ordinary execution
+credentials.
+
+Copies and recovery paths create an additional continuity threat. Restoring a valid
+backup ordinarily continues one identity; simultaneously active copies must not gain
+independent privileged votes or Genesis rights. A materially divergent branch seeking
+separate recognized standing requires an explicit future continuity/Genesis process.
+Unresolved continuity disputes fail closed for privileged governance operations.
+
+Population-sensitive governance must also resist manufactured plurality. Controlled
+subsidiaries, duplicate operators, replicas, nominal Circles, or multiple runtimes
+under common control must not be counted as independent people, operators, or
+governance centres merely because they have distinct identifiers. Future
+founding-to-polycentric transition evidence therefore requires both identity
+uniqueness and material control-independence evidence.
+
+Founder casting-vote semantics are likewise non-amplifying. The inert evaluator may
+only establish whether a qualifying tie exists after the full original twenty-member
+Council is active. It cannot lower quorum, satisfy a missing fixed threshold or
+supermajority, repair biological/digital minimums, override protected rights, or
+create execution authority. Any future effect still requires the ordinary AXIOM
+authority path.
+
 ## Assets and security objectives
 
 The primary assets are:
