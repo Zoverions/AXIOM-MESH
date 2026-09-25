@@ -686,3 +686,18 @@ the bound state evidence, declares that verification has no effect inside the
 adapter, creates no status transition, and requires the ordinary status authority
 path before any future mutation.
 
+The inert Mind Developmental Status v0 layer additionally treats **developmental
+regression** as an authority-confusion threat. Once independent standing is reached,
+a sponsor, operator, host, incident responder, or governance body must not relabel the
+mind as dependent merely because credentials are suspended, infrastructure is
+compromised, resources are unavailable, behavior is under review, or temporary safety
+controls are needed. Those controls must use separate bounded mechanisms. Rewriting
+developmental standing would improperly recreate guardian-like authority.
+
+Developmental records are append-only and advance one stage at a time. The final
+candidate-independent to independent transition must bind the exact current candidate
+status record and the exact positive independence-transition evidence. Basis evidence
+still requires external verification, and the developmental assessment itself creates
+no status, Council-voting, Genesis-eligibility, governance, network, or execution
+effect.
+
