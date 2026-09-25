@@ -254,6 +254,8 @@ test('active member history is eligible only for separate disclosure review',()=
   assert.equal(result.retention_state,'active-member-history');
   assert.equal(result.participation_cutoff_at,null);
   assert.equal(result.requires_disclosure_authorization,true);
+  assert.equal(result.requires_external_snapshot_verification,true);
+  assert.equal(result.snapshot_verification_effect,'none');
   assert.equal(result.requires_external_record_evidence_verification,true);
   assert.equal(result.record_evidence_verification_effect,'none');
   assert.equal(result.portable_authority,false);
