@@ -15,7 +15,8 @@
 // BENCHMARK_MIN_CPU_MICROS, so platforms with coarse process CPU accounting
 // still produce accurate evidence; the per-parse value is normalized by the
 // run count. A batch that reaches the run ceiling below that floor yields no
-// evidence (null), which the scaling check refuses. CPU time is used only for the scaling
+// evidence (null), which the scaling check refuses. The reported CPU time is
+// the minimum over BENCHMARK_CPU_ROUNDS such batches (see measureMinCpuPerRun). CPU time is used only for the scaling
 // ratio so unrelated runner scheduling cannot turn a linear parse into a false
 // superlinear signal; the existing absolute parse/format wall-clock budgets
 // remain unchanged.
@@ -76,6 +77,27 @@ export function measureCpuPerRun(fn, { cpuUsage = process.cpuUsage } = {}) {
   return (cpuMicros / 1000) / runs;
 }
 
+// The scaling check divides two separately measured CPU times. On a shared
+// runner (the kernel suite runs test files concurrently) contention inflates
+// the large corpus far more than the small one: its tokens and AST outgrow the
+// caches and the young generation. For identical code, single measurements
+// under six-way load on four cores gave 1k->10k ratios from 7x to 19.3x.
+// Noise only ever adds CPU time, so the minimum over a few rounds estimates
+// the uncontended cost; with five rounds the same load gave 11.3x to 16.3x.
+// Every round must meet the CPU floor on its own; any insufficient round
+// makes the whole measurement unavailable (null).
+export const BENCHMARK_CPU_ROUNDS = 5;
+
+export function measureMinCpuPerRun(fn, { rounds = BENCHMARK_CPU_ROUNDS, measureRound = measureCpuPerRun } = {}) {
+  let best = null;
+  for (let round = 0; round < rounds; round++) {
+    const value = measureRound(fn);
+    if (value === null) return null;
+    if (best === null || value < best) best = value;
+  }
+  return best;
+}
+
 function measure(fn, { requireCpuEvidence = false } = {}) {
   for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
 
@@ -89,7 +111,7 @@ function measure(fn, { requireCpuEvidence = false } = {}) {
 
   return {
     ms: median(wallSamples),
-    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn) : null,
+    cpuMs: requireCpuEvidence ? measureMinCpuPerRun(fn) : null,
     result
   };
 }

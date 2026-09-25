@@ -7,6 +7,8 @@ import {
   checkBudgets,
   formatReport,
   measureCpuPerRun,
+  measureMinCpuPerRun,
+  BENCHMARK_CPU_ROUNDS,
   syntheticProgram
 } from '../../labs/praxis/bench.mjs';
 
@@ -130,4 +132,21 @@ test('scaling and wall-clock guards reject every invalid measurement', () => {
   failsWith(results => { results[1].parseMs = 5001; }, '10k-line parse took');
   failsWith(results => { results[1].formatMs = 5001; }, '10k-line format took');
   failsWith(results => { results[1].parseCpuMs = 201; }, 'parse CPU scaling ratio');
+});
+
+test('scaling CPU time is the minimum over rounds, and any insufficient round voids it', () => {
+  const rounds = values => {
+    let call = 0;
+    return measureMinCpuPerRun(() => {}, { measureRound: () => values[call++] });
+  };
+  assert.equal(BENCHMARK_CPU_ROUNDS, 5);
+  // Contention only adds time: the least-disturbed round is the estimate.
+  assert.equal(rounds([52.6, 31.2, 29.9, 44.0, 30.4]), 29.9);
+  assert.equal(rounds([2.4, 2.4, 2.4, 2.4, 2.4]), 2.4);
+  // Evidence below the floor in any round is not averaged away.
+  assert.equal(rounds([30, 29, null, 31, 30]), null);
+  assert.equal(rounds([null, 29, 30, 31, 30]), null);
+  let calls = 0;
+  measureMinCpuPerRun(() => {}, { measureRound: () => { calls += 1; return 1; } });
+  assert.equal(calls, BENCHMARK_CPU_ROUNDS);
 });
