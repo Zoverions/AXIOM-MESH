@@ -32,9 +32,12 @@ v0 supports concern-origin roles:
 - `authorized-observer`.
 
 The current guardian is not an independent reviewer of a concern about itself.
+Likewise, the dependent must use the explicit `dependent` role rather than
+self-labeling as an independent reviewer/observer.
 
-A guardian may submit evidence or a response, but cannot unilaterally close the
-concern through this record.
+An `independent-advocate` report must bind the exact care profile that names that
+advocate. A guardian may submit evidence or a response elsewhere, but cannot
+unilaterally close the concern through this record.
 
 ## Concern classes
 
