@@ -12,6 +12,8 @@
     "continuity_id",
     "outcome_id",
     "task_id",
+    "outcome_digest",
+    "task_digest",
     "authority_snapshot_ref",
     "budget_ref",
     "mode",
@@ -77,6 +79,12 @@
     },
     "runtime_activation": {
       "const": false
+    },
+    "outcome_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "task_digest": {
+      "$ref": "#/$defs/digest"
     }
   },
   "$defs": {
@@ -105,6 +113,10 @@
         "minLength": 1,
         "maxLength": 512
       }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   },
   "x-axiom-semantic-validator": "mesh/src/lib/task-continuity-policy.mjs",
