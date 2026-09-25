@@ -33,6 +33,27 @@ export function verifyTaskSnapshotTransition(previous,current){
   validateTaskArtifactHandoff(previous);
   validateTaskArtifactHandoff(current);
 
+  if (TERMINAL.has(previous.lifecycle.state)) {
+    if (digestObject(previous) !== digestObject(current)) {
+      throw new ValidationError('Terminal task snapshot is immutable');
+    }
+    return Object.freeze({
+      valid:true,
+      schema:'axiom-task-snapshot-transition.v0',
+      task_id:current.task_id,
+      causal_id:current.causal_id,
+      previous_snapshot_digest:digestObject(previous),
+      current_snapshot_digest:digestObject(current),
+      previous_state:previous.lifecycle.state,
+      current_state:current.lifecycle.state,
+      appended_events:0,
+      appended_outputs:0,
+      authority_transfer:false,
+      authority_effect:'none',
+      execution_effect:'none'
+    });
+  }
+
   same(previous.task_id,current.task_id,'task_id');
   same(previous.causal_id,current.causal_id,'causal_id');
   sameOptional(previous.parent_task_id,current.parent_task_id,'parent_task_id');
