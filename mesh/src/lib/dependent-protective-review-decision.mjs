@@ -311,6 +311,14 @@ function validateReviewerPanel(reviewers){
     }
     seen.add(reviewer.reviewer_mind_id);
   }
+  const ordered=[...reviewers].sort((a,b)=>
+    a.reviewer_mind_id.localeCompare(b.reviewer_mind_id)
+  );
+  if(reviewers.some((reviewer,index)=>
+    reviewer.reviewer_mind_id!==ordered[index].reviewer_mind_id
+  )){
+    throw new ValidationError('Protective review reviewers must be sorted by identity');
+  }
 }
 
 function validateTracks(values){
