@@ -313,6 +313,8 @@ test('projection is deterministic read-only status with no authority or mutation
   assert.equal(result.creates_decision,false);
   assert.equal(result.resolves_conflict,false);
   assert.equal(result.creates_export,false);
+  assert.equal(result.requires_external_evidence_verification,true);
+  assert.equal(result.evidence_verification_effect,'none');
   assert.equal(digestObject(f),before);
   assert.equal(project(f).status_digest,result.status_digest);
 });
