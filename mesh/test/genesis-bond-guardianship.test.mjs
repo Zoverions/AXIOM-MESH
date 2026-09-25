@@ -3,7 +3,9 @@ import test from 'node:test';
 
 import { digestObject } from '../src/lib/canonical.mjs';
 import {
-  GENERAL_GENESIS_TRANSACTION_CANDIDATE_SCHEMA
+  GENERAL_GENESIS_TRANSACTION_CANDIDATE_SCHEMA,
+  deriveGeneralGenesisBondId,
+  deriveGeneralGenesisTransactionCandidateId
 } from '../src/lib/general-genesis-transaction-candidate.mjs';
 import { MIND_DEVELOPMENTAL_STATUS_SCHEMA } from '../src/lib/mind-developmental-status.mjs';
 import {
@@ -14,7 +16,7 @@ import {
 } from '../src/lib/genesis-bond-guardianship.mjs';
 
 function transaction(){
-  return {
+  const tx={
     schema:GENERAL_GENESIS_TRANSACTION_CANDIDATE_SCHEMA,version:0,
     status:'inert-transaction-candidate',
     transaction_candidate_id:'general-genesis-transaction:'+'1'.repeat(64),
@@ -44,6 +46,9 @@ function transaction(){
     founders_council_effect:'none',genesis_effect:'none',governance_effect:'none',
     authority_effect:'none',network_effect:'none',runtime_activation:false
   };
+  tx.genesis_bond_id=deriveGeneralGenesisBondId(tx);
+  tx.transaction_candidate_id=deriveGeneralGenesisTransactionCandidateId(tx);
+  return tx;
 }
 
 function bond(tx=transaction()){
@@ -170,6 +175,9 @@ test('guardianship transfer changes guardian but never Bond or dependent identit
   assert.equal(result.genesis_bond_id,b.bond_id);
   assert.equal(result.dependent_mind_id,b.dependent_mind_id);
   assert.equal(result.creates_guardianship_mutation,false);
+  assert.equal(result.requires_external_transfer_basis_verification,true);
+  assert.equal(result.requires_external_dependent_interest_verification,true);
+  assert.equal(result.requires_external_independent_review_verification,true);
 });
 
 test('old guardian approval alone is never sufficient for transfer',()=>{
@@ -245,6 +253,7 @@ test('independent status ends guardianship without erasing Genesis Bond',()=>{
 
   assert.equal(result.assessment_kind,'guardianship-end-at-independence-candidate');
   assert.equal(result.genesis_bond_id,b.bond_id);
+  assert.equal(result.requires_external_independent_status_verification,true);
   assert.equal(result.guardianship_reactivation_permitted,false);
   assert.equal(result.creates_guardianship_mutation,false);
 });
