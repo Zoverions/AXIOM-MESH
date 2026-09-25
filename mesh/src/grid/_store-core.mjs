@@ -1482,6 +1482,21 @@ export class GridStore {
     `).all(owner, safeLimit + 1);
     const truncated = objects.length > safeLimit;
     if (truncated) objects.pop();
+    return this.memoryGraph(requester, owner, objects, truncated);
+  }
+
+  // Every active memory object of an owner, unpaged. A personal export must
+  // be complete; the API's first page (100 objects) is not.
+  ownedMemoryGraph(owner) {
+    const objects = this.db.prepare(`
+      SELECT * FROM memory_objects
+      WHERE owner = ? AND status = 'active'
+      ORDER BY created_at, object_id
+    `).all(owner);
+    return this.memoryGraph(owner, owner, objects, false);
+  }
+
+  memoryGraph(requester, owner, objects, truncated) {
     const visible = owner === requester
       ? objects
       : objects.filter(row => this.hasMemoryConsent(owner, requester, row.object_id));
@@ -2551,7 +2566,7 @@ export class GridStore {
       `).all(principal, since, until)) records.push({ type: 'vote', data: row });
     }
     if (requestedTypes.has('memory')) {
-      const graph = this.listMemory(principal);
+      const graph = this.ownedMemoryGraph(principal);
       const selectedObjects = objectIds.size
         ? graph.objects.filter(object => objectIds.has(object.object_id))
         : graph.objects;

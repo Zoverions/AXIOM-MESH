@@ -588,6 +588,12 @@ Still open: cursors for the limited collections, bounds for the unbounded
 ones, the 100-bundle list inside sync state, a separate fetch for one record
 larger than the budget, and a streaming contract for artifacts.
 
+Related defect fixed (2026-09-25): personal exports read memory through the
+paged API method, so an export silently held only the first 100 memory
+objects. An export scoped to a later object failed as "unknown or unowned".
+Exports now read the owner's complete memory graph; a test with 150 objects
+fails against the paged call.
+
 ### S-11 — Query patterns contain missing indexes and N+1 work
 
 **Severity:** High  
