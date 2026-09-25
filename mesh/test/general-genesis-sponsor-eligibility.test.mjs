@@ -63,6 +63,7 @@ test('qualified independent digital mind can become eligible to request one Gene
   });
 
   assert.equal(result.eligible_to_request_genesis_authorization,true);
+  assert.equal(result.eligibility_is_structural_pending_external_verification,true);
   assert.equal(result.general_genesis_unused,true);
   assert.equal(result.responsibility_evidence_current,true);
   assert.equal(result.independent_status_valid,true);
