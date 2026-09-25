@@ -163,6 +163,8 @@ test('Founder casting vote is unavailable before all twenty original voters are 
   foundation.seats.find(seat => seat.seat_id === 'founders.digital.10').voting_status = 'developing';
 
   const input = assessment(foundation);
+  input.ballot_summary.digital_for = 4;
+  input.ballot_summary.digital_against = 4;
   const result = assessFounderCastingVote(foundation, input);
 
   assert.equal(result.full_original_council_active, false);
