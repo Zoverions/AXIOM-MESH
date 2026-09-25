@@ -649,6 +649,31 @@ Representative problems include:
   routes.
 - Query latency grows with page size, not total unrelated tenant data.
 
+**Remediation status (2026-09-25): two N+1 patterns removed; indexes await a
+schema decision.** Two patterns needed no schema change and are fixed:
+
+- **Memory disclosure.** Consent was checked with one full scan of
+  `consents` per memory object. A reader's active consents are now read
+  once per page and turned into an allow-set. A test with 60 objects
+  asserts one consent read and exact visibility, including revoked and
+  expired consents. It fails against the per-object check.
+- **Accounting.** Journal entries were loaded with one query per journal.
+  They are now loaded in one joined query and grouped in memory. A test
+  with 30 journals asserts one read, line order and owner isolation. It
+  fails against the per-journal loop.
+
+`EXPLAIN QUERY PLAN` on the paged queries (S-10) shows full-table scans for
+`capsules`, `nodes`, `approvals`, `consents` and `storage_offers`, and for
+the consent lookup itself. Several others sort after an index seek because
+their indexes lack the identifier tie-break. The fix is composite indexes
+matching each keyset: (predicate, time, identifier), plus `events(actor,
+seq)` for actor-filtered event pages. That is a new core migration (schema
+version 11), which also moves the pinned `core_migrations` blob and the
+SIEA migration test's schema-version assertion. It is left for an explicit
+schema decision. Node schedule status is computed against every schedule
+(`effectiveScheduleStatus`), so scoping that read is a design change and is
+also open.
+
 ### S-12 — Export creation is fully materialized in memory
 
 **Severity:** Critical for portability at scale  

@@ -1553,7 +1553,7 @@ export class GridStore {
   memoryGraph(requester, owner, objects, truncated) {
     const visible = owner === requester
       ? objects
-      : objects.filter(row => this.hasMemoryConsent(owner, requester, row.object_id));
+      : objects.filter(this.memoryConsentFilter(owner, requester));
     const visibleIds = new Set(visible.map(row => row.object_id));
     const decodedObjects = visible.map(row => this.decodeProtectedRow(
       'memory_objects',
@@ -1571,15 +1571,23 @@ export class GridStore {
     return { owner, objects: decodedObjects, edges, truncated };
   }
 
-  hasMemoryConsent(owner, controller, objectId) {
+  // Which of an owner's memory objects a controller may read, decided from
+  // one read of their active consents rather than one per object (scalability
+  // audit S-11): `memory:read` grants all, `memory:<id>:read` grants one.
+  memoryConsentFilter(owner, controller) {
     const rows = this.db.prepare(`
       SELECT consent_id, scopes_json FROM consents
       WHERE subject = ? AND controller = ? AND status = 'active' AND expires_at > ?
     `).all(owner, controller, new Date().toISOString());
-    return rows.some(row => {
-      const scopes = this.openJson('consents', 'scopes_json', row.consent_id, row.scopes_json);
-      return scopes.includes('memory:read') || scopes.includes(`memory:${objectId}:read`);
-    });
+    const scopes = new Set(rows.flatMap(row => (
+      this.openJson('consents', 'scopes_json', row.consent_id, row.scopes_json)
+    )));
+    if (scopes.has('memory:read')) return () => true;
+    return row => scopes.has(`memory:${row.object_id}:read`);
+  }
+
+  hasMemoryConsent(owner, controller, objectId) {
+    return this.memoryConsentFilter(owner, controller)({ object_id: objectId });
   }
 
   applyAccountingJournal(p, occurredAt) {
@@ -1624,6 +1632,27 @@ export class GridStore {
     const accounts = this.db.prepare(`
       SELECT * FROM accounting_accounts WHERE owner = ? ORDER BY unit, account_id
     `).all(owner);
+    // Every entry of the owner's journals in one joined read, grouped here,
+    // rather than one query per journal (scalability audit S-11).
+    const entriesByJournal = new Map();
+    for (const entry of this.db.prepare(`
+      SELECT e.* FROM accounting_entries e
+      JOIN accounting_journals j ON j.journal_id = e.journal_id
+      WHERE j.owner = ?
+      ORDER BY e.journal_id, e.line_no
+    `).all(owner)) {
+      const entries = entriesByJournal.get(entry.journal_id) ?? [];
+      entries.push({
+        ...entry,
+        metadata_json: this.openJson(
+          'accounting_entries',
+          'metadata_json',
+          `${entry.journal_id}:${entry.line_no}`,
+          entry.metadata_json
+        )
+      });
+      entriesByJournal.set(entry.journal_id, entries);
+    }
     const journals = this.db.prepare(`
       SELECT * FROM accounting_journals WHERE owner = ? ORDER BY created_at, journal_id
     `).all(owner).map(row => {
@@ -1633,17 +1662,7 @@ export class GridStore {
         row,
         ['memo_json']
       );
-      journal.entries = this.db.prepare(`
-        SELECT * FROM accounting_entries WHERE journal_id = ? ORDER BY line_no
-      `).all(row.journal_id).map(entry => ({
-        ...entry,
-        metadata_json: this.openJson(
-          'accounting_entries',
-          'metadata_json',
-          `${entry.journal_id}:${entry.line_no}`,
-          entry.metadata_json
-        )
-      }));
+      journal.entries = entriesByJournal.get(row.journal_id) ?? [];
       return journal;
     });
     const balances = this.db.prepare(`
