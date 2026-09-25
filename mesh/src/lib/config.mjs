@@ -80,6 +80,14 @@ export function meshConfig(overrides = {}) {
       queueTimeoutMs: overrides.intentGate?.queueTimeoutMs
         ?? envInteger('AXIOM_HYPERVISOR_INTENT_QUEUE_TIMEOUT_MS', 2_000, { min: 1, max: 60_000 })
     },
+    // Scalability audit S-15: when the Hypervisor closes intents a previous
+    // process left accepted. Unset fields derive from clockSkewSeconds.
+    intentRecovery: {
+      delayMs: overrides.intentRecovery?.delayMs,
+      intervalMs: overrides.intentRecovery?.intervalMs,
+      marginMs: overrides.intentRecovery?.marginMs,
+      pageSize: overrides.intentRecovery?.pageSize
+    },
     ports: {
       gateway: overrides.gatewayPort ?? envInteger('AXIOM_GATEWAY_PORT', 8080),
       hypervisor: overrides.hypervisorPort ?? envInteger('AXIOM_HYPERVISOR_PORT', 8081),

@@ -18,7 +18,7 @@ Its runtime validator and authorizer are
 The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
-fallback. The active policy contains 10 grouped flows and 44 exact route
+fallback. The active policy contains 10 grouped flows and 45 exact route
 permissions, including bounded supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -90,6 +90,10 @@ Education query/commit-support edge used by the Hypervisor learner-read path;
 it is not public ingress, general Grid access, provider activation, curriculum
 authority, or an alternate execution path. The Education result remains bound
 to the exact request/result digests and the surrounding authority checks.
+Scalability audit S-15 adds one more: `POST /internal/v1/intents/interrupted`,
+with which the Hypervisor closes intents a previous Hypervisor process left
+`accepted`, as `intent.failed` with `intent_interrupted`. It writes nothing
+else and only intents accepted before a past cutoff.
 Hypervisor alone may request Sandbox operations or execution. Grid and Sandbox
 have no application egress permissions.
 
@@ -283,7 +287,7 @@ This milestone does not claim:
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 44-route application graph, the reference four-unit
+an exact machine-readable 45-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
 network edges, the remote-social addition remains a Gateway-only bounded

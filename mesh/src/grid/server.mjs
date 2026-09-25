@@ -391,6 +391,25 @@ export async function createGridService(config = meshConfig()) {
     if (known === generation) return { generation, unchanged: true };
     return { generation, overlays: store.listActivePolicyOverlays(now) };
   });
+  // S-15: the Hypervisor closes intents its previous process left without a
+  // terminal state. The cutoff may not be in the future, so a live intent
+  // accepted after it is never touched.
+  router.add('POST', '/internal/v1/intents/interrupted', async ({ body, traceId, principal }) => {
+    if (principal.service !== 'hypervisor') {
+      throw new ValidationError('Only Hypervisor may close interrupted intents');
+    }
+    const input = assertPlainObject(parseJsonBody(body), 'interrupted intents');
+    const before = assertString(input.before, 'before', { max: 40 });
+    if (!(Date.parse(before) <= Date.now())) {
+      throw new ValidationError('Interrupted intent cutoff must be a past ISO timestamp');
+    }
+    return store.closeInterruptedIntents({
+      before,
+      intentIds: input.intent_ids ?? null,
+      ...(input.limit === undefined ? {} : { limit: input.limit }),
+      traceId
+    });
+  });
   router.add('GET', '/internal/v1/appeals/:principal', async ({ params, url }) => {
     const { items, page } = pagedCollection(url, 'appeals', 'appeal limit',
       (limit, after) => store.listGovernanceAppeals(params.principal, { limit, after }),

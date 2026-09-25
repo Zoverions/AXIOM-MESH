@@ -48,9 +48,11 @@ const EXPECTED_FLOW_IDS = Object.freeze([
 ]);
 // Updated deliberately for GET /internal/v1/sync/:owner/bundles and
 // GET /internal/v1/sync/:owner/updates/:id: the owner's paged bundle
-// summaries and single sync updates (scalability audit S-10).
+// summaries and single sync updates (scalability audit S-10); and for
+// POST /internal/v1/intents/interrupted, Hypervisor to Grid: closing
+// intents a previous Hypervisor process left accepted (audit S-15).
 const EXPECTED_POLICY_DIGEST =
-  'b0c349918ed645cda67027b1f122f1265a6638561dcddc746688f9ade161018a';
+  '2b8a488cf28187b119ed18784af071bbaa1263217fb052547bdb8578aadeb6ae';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
@@ -420,6 +422,8 @@ function validateExactCurrentRoutes(flows) {
       'GET /internal/v1/policy-overlays',
       'GET /internal/v1/approval/:id',
       'POST /internal/v1/commit',
+      // Audit S-15: closing intents a previous process left accepted.
+      'POST /internal/v1/intents/interrupted',
       'POST /internal/v1/education/learner-progress'
     ],
     'hypervisor-to-sandbox': [

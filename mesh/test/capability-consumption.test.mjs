@@ -476,8 +476,9 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
   );
   const routes = ACTIVE_SERVICE_NETWORK_POLICY.flows.flatMap(flow => flow.routes);
   // 44 since the unrelated Gateway-to-Grid bundle-list and sync-update
-  // routes (audit S-10).
-  assert.equal(routes.length, 44);
+  // routes (audit S-10); 45 since the unrelated Hypervisor-to-Grid route
+  // closing interrupted intents (audit S-15).
+  assert.equal(routes.length, 45);
   assert.equal(
     routes.some(route => route.path === '/internal/v1/capabilities/consume'),
     false

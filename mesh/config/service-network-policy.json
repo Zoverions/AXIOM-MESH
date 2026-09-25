@@ -201,6 +201,10 @@
         },
         {
           "method": "POST",
+          "path": "/internal/v1/intents/interrupted"
+        },
+        {
+          "method": "POST",
           "path": "/internal/v1/education/learner-progress"
         }
       ]

@@ -130,7 +130,7 @@ The production-candidate surface includes:
   non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 44-route application policy,
+  internal network segments, a default-deny 45-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and

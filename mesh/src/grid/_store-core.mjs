@@ -535,6 +535,7 @@ export class GridStore {
       const appended = [];
       for (const raw of events) {
         const event = normalizeEvent(raw);
+        if (TERMINAL_INTENT_EVENTS.has(event.kind)) this.requireAcceptedIntent(event.payload.intent_id, actor);
         seq += 1;
         const occurredAt = new Date().toISOString();
         const eventId = raw.event_id ?? newId('evt');
@@ -593,6 +594,85 @@ export class GridStore {
       }
       throw error;
     }
+  }
+
+  // An intent reaches exactly one terminal state, recorded by its own
+  // principal. Checked when appending only, so a log written before this
+  // rule still replays. Inside the commit transaction, a refused terminal
+  // event rolls back every event committed with it, including a mutation.
+  requireAcceptedIntent(intentId, actor) {
+    const row = this.db.prepare('SELECT principal, status FROM intents WHERE intent_id = ?').get(intentId);
+    if (!row) throw new AxiomError('intent_not_found', 'Intent was not found', 404);
+    if (row.principal !== actor) {
+      throw new ValidationError('An intent terminal event must be committed by its principal');
+    }
+    if (row.status !== 'accepted') {
+      throw new AxiomError('intent_not_accepted', 'Intent already reached a terminal state', 409, {
+        status: row.status
+      });
+    }
+  }
+
+  /**
+   * Closes intents that are still `accepted` but were accepted before
+   * `before` (audit S-15): their Hypervisor stopped before recording a
+   * terminal state. Each gets `intent.failed` with `intent_interrupted`,
+   * committed as its principal. A Grid effect is committed only together
+   * with `intent.completed`, so none of these intents applied one.
+   *
+   * With `intentIds`, only those intents are considered (a primary-key
+   * read), and `pending` lists those still accepted but not before the
+   * cutoff; without, every accepted intent is scanned, oldest first.
+   */
+  closeInterruptedIntents({ before, intentIds = null, limit = INTERRUPTED_INTENT_PAGE, traceId }) {
+    // Normalized, so it orders like the stored toISOString() times.
+    const cutoff = validDate(before);
+    if (!cutoff) throw new ValidationError('Interrupted intent cutoff must be an ISO timestamp');
+    const safeLimit = boundedInteger(limit, 'interrupted intent limit', 1, INTERRUPTED_INTENT_PAGE);
+    let rows;
+    const pending = [];
+    if (intentIds) {
+      if (!Array.isArray(intentIds) || intentIds.length > INTERRUPTED_INTENT_PAGE) {
+        throw new ValidationError(`Interrupted intent ids must be an array of at most ${INTERRUPTED_INTENT_PAGE}`);
+      }
+      const read = this.db.prepare(
+        "SELECT intent_id, principal, created_at FROM intents WHERE intent_id = ? AND status = 'accepted'"
+      );
+      rows = [];
+      for (const id of new Set(intentIds.map(item => assertString(item, 'intent id', { max: 160, pattern: ID })))) {
+        const row = read.get(id);
+        if (row && row.created_at < cutoff) rows.push(row);
+        else if (row) pending.push(id);
+      }
+    } else {
+      rows = this.db.prepare(`
+        SELECT intent_id, principal, created_at FROM intents
+        WHERE status = 'accepted' AND created_at < ?
+        ORDER BY created_at, intent_id
+        LIMIT ?
+      `).all(cutoff, safeLimit + 1);
+    }
+    const hasMore = !intentIds && rows.length > safeLimit;
+    const closed = [];
+    for (const row of rows.slice(0, safeLimit)) {
+      this.appendEvents({
+        traceId,
+        actor: row.principal,
+        events: [{
+          kind: 'intent.failed',
+          subject: row.intent_id,
+          payload: {
+            intent_id: row.intent_id,
+            error: {
+              code: 'intent_interrupted',
+              message: 'The Hypervisor stopped before this intent reached a terminal state; no Grid effect was committed for it.'
+            }
+          }
+        }]
+      });
+      closed.push({ intent_id: row.intent_id, principal: row.principal, accepted_at: row.created_at });
+    }
+    return { closed, has_more: hasMore, ...(intentIds ? { pending } : {}) };
   }
 
   preflightExportRequest(actor, rawEvent) {
@@ -3042,6 +3122,9 @@ export class GridStore {
     };
   }
 }
+
+const TERMINAL_INTENT_EVENTS = new Set(['intent.completed', 'intent.denied', 'intent.failed']);
+const INTERRUPTED_INTENT_PAGE = 100;
 
 function normalizeEvent(raw) {
   assertPlainObject(raw, 'event');

@@ -1057,6 +1057,53 @@ and intent admission is bounded; the rest is open.**
   source, when the snapshot or normalization drops the group, when the
   metrics are not rendered, and when the alert is removed or ignores a full
   queue.
+- **Terminal states survive a crash.** An intent is recorded `accepted`
+  before anything else, and its Grid effect is committed only together with
+  `intent.completed`. What was missing was a way to finish an intent whose
+  Hypervisor stopped in between: it stayed `accepted` forever, and a retry
+  with the same key kept returning `accepted`.
+  - **One terminal state, enforced by Grid.** A terminal event
+    (`completed`, `denied`, `failed`) must name an intent that is still
+    `accepted` and be committed by that intent's principal; otherwise it is
+    refused (`409 intent_not_accepted`). The check runs inside the commit,
+    so a refused completion rolls back the mutation committed with it. It
+    runs when appending only, so an existing log still replays. This also
+    fixes a defect: a completion whose response was lost would have been
+    followed by the failure path's `intent.failed`, overwriting the
+    completed result.
+  - **Every path records one.** The Hypervisor tracks each intent it runs.
+    Any error after acceptance records `intent.failed` with that error, not
+    only errors during execution; before, an approval lookup that failed,
+    for example, left the intent `accepted`. If that record cannot be
+    written, the id is kept (up to 1,024) and retried by id.
+  - **Recovery after a crash.** Once after start (after twice the clock
+    skew bound), the Hypervisor asks Grid
+    (`POST /internal/v1/intents/interrupted`, Hypervisor only) to close every
+    intent accepted before every intent it is itself running, less the
+    clock margin. Grid records `intent.failed` with `intent_interrupted` for
+    each, as its principal, in pages. None of them had a Grid effect
+    committed. A retry with the same key then returns that terminal record.
+  - **Cost.** Without an index on intent status, the sweep scans the intents
+    table once per Hypervisor start; retries by id are primary-key reads.
+    An index would need a core migration; it is deferred.
+  - **Evidence.** `mesh/test/intent-recovery.test.mjs`:
+    - a late completion is refused with its mutation rolled back; unknown
+      intents and other principals are refused; a pre-rule log replays;
+    - closing by cutoff and by id, paging, and leaving finished and newer
+      intents untouched;
+    - through the four services, the Hypervisor is stopped after
+      acceptance, after capability consumption and after Sandbox execution.
+      Each intent is left `accepted` with no write applied. A restarted
+      Hypervisor closes all three as `intent_interrupted`, applies nothing,
+      and the same key returns the terminal record. An intent still running
+      is not closed, an ordinary failure after acceptance is recorded, and
+      an unsettled id is retried.
+
+    Mutation checks: the tests fail without the terminal guard, or its
+    principal or status check; when the sweep ignores its cutoff, by scan or
+    by id; when intents are closed as another actor; when recovery ignores
+    intents in flight, stops after one page, or settles only closed ids;
+    and without recording a failure after acceptance.
 
 Still open:
 
@@ -1065,7 +1112,9 @@ Still open:
   intent still completes within its request);
 - group commit of accepted and terminal events;
 - separate latency targets;
-- crash tests for terminal states.
+- external effects: an adapter effect performed outside the Grid (the
+  repository-docs outbox) has its own `external.effect.prepared` and
+  `external.effect.completed` lifecycle, which this does not cover.
 
 ### S-16 — Current capacity evidence is a smoke baseline, not a scale test
 
