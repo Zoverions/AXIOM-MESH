@@ -280,6 +280,35 @@ test('projection rejects substituted casting-vote foundation binding', () => {
   );
 });
 
+test('projection validator rejects inconsistent Council / Genesis cross-bindings', () => {
+  const projection = structuredClone(buildFoundersConsoleProjection({
+    foundationDocument: foundation()
+  }));
+  const digitalSeat = projection.council.seats.find(
+    seat => seat.seat_class === 'digital' && seat.seat_number === 1
+  );
+  digitalSeat.mind_id = 'digital.substituted';
+  digitalSeat.occupied = true;
+
+  assert.throws(
+    () => validateFoundersConsoleProjection(projection),
+    /slot\/seat binding is invalid/
+  );
+});
+
+test('projection validator derives active voter totals from exact seat records', () => {
+  const projection = structuredClone(buildFoundersConsoleProjection({
+    foundationDocument: foundation()
+  }));
+  projection.council.active_digital_voters = 1;
+  projection.council.active_voters = 3;
+
+  assert.throws(
+    () => validateFoundersConsoleProjection(projection),
+    /counts do not match seat records/
+  );
+});
+
 test('projection validator rejects nested field smuggling even with a recomputable object', () => {
   const projection = structuredClone(buildFoundersConsoleProjection({
     foundationDocument: foundation()
