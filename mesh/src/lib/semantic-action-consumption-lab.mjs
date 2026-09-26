@@ -38,12 +38,16 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$/;
 const ACTION = /^[a-z][a-z0-9_.-]{0,127}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const DECIMAL = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/;
+const INTEGER = /^-?(0|[1-9][0-9]*)$/;
+export const SEMANTIC_SINK_IDEMPOTENCY = Object.freeze(['idempotency-key', 'none']);
 const MAX_DECIMAL_DIGITS = 34;
 // Invisible, bidi-control and non-tab/newline control characters make a text
 // parameter ambiguous; the adapter refuses to pick an interpretation.
-const AMBIGUOUS_TEXT = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/u;
+// Covers C0/C1 controls, soft hyphen, combining grapheme joiner, Arabic letter
+// mark, Hangul fillers, Khmer/Mongolian invisibles, zero-width and bidi controls,
+// word joiner / invisible operators, variation selectors, BOM, and tag characters.
+const AMBIGUOUS_TEXT = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u2028-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/u;
 const MAX_BUDGET = 16;
-const MAX_PRESENTATIONS = 64;
 const MAX_SINK_ATTEMPTS = 8;
 
 export class LabJsonNumber {
@@ -60,7 +64,10 @@ export class LabJsonNumber {
 /** Build a frozen effect profile. Every declared parameter is required. */
 export function buildSemanticEffectProfile(input) {
   return failClosedThrow(() => {
-    exact(input, 'effect profile', ['action', 'mcp_tool_name', 'consequential', 'parameters']);
+    exact(input, 'effect profile', ['action', 'mcp_tool_name', 'consequential', 'sink_idempotency', 'parameters']);
+    if (!SEMANTIC_SINK_IDEMPOTENCY.includes(input.sink_idempotency)) {
+      throw new ValidationError('profile sink_idempotency must be declared');
+    }
     const action = match(input.action, ACTION, 'profile action');
     const mcpToolName = match(input.mcp_tool_name, ACTION, 'profile mcp_tool_name');
     if (input.consequential !== true) {
@@ -77,7 +84,9 @@ export function buildSemanticEffectProfile(input) {
       }
       types[name] = parameters[name];
     }
-    return deepFreeze({ action, mcp_tool_name: mcpToolName, consequential: true, parameters: types });
+    return deepFreeze({
+      action, mcp_tool_name: mcpToolName, consequential: true, sink_idempotency: input.sink_idempotency, parameters: types
+    });
   });
 }
 
@@ -111,7 +120,9 @@ export function canonicalSemanticEffect(request, profiles) {
       object: match(shape.object, ID, 'effect object'),
       parameters: canonicalParameters(shape.parameters, shape.profile)
     };
-    return deepFreeze({ effect, effect_identity_digest: digestObject(effect) });
+    // sink_idempotency is a property of the action profile, not of the effect
+    // identity; it is pinned durably at admission and never taken per call.
+    return deepFreeze({ effect, effect_identity_digest: digestObject(effect), sink_idempotency: shape.profile.sink_idempotency });
   });
 }
 
@@ -136,14 +147,18 @@ function mcpShape(input, profiles) {
     throw new ValidationError('MCP message is not a tools/call request');
   }
   // The JSON-RPC id is transport correlation only and is deliberately excluded.
-  if (!(typeof message.id === 'string' || isNumberLike(message.id))) {
+  if (!((typeof message.id === 'string' && message.id.length <= 256) || isIntegerLike(message.id))) {
     throw new ValidationError('MCP request id is invalid');
   }
   const params = exact(message.params, 'MCP params', ['name', 'arguments', '_meta'], ['_meta']);
   if (params._meta !== undefined) {
     // Only the transport progress token is tolerated; any other metadata could
     // carry effect-relevant meaning, so it fails closed.
-    exact(params._meta, 'MCP _meta', ['progressToken']);
+    const meta = exact(params._meta, 'MCP _meta', ['progressToken']);
+    const token = meta.progressToken;
+    if (!((typeof token === 'string' && ID.test(token)) || isIntegerLike(token))) {
+      throw new ValidationError('MCP progressToken must be a bounded string or integer');
+    }
   }
   const matches = profiles.filter(profile => profile.mcp_tool_name === params.name);
   if (matches.length !== 1) throw new ValidationError('MCP tool has no unique profile');
@@ -196,12 +211,20 @@ function canonicalValue(value, type, name) {
 }
 
 function canonicalDecimal(value, name) {
+  // Numbers must be integers (JS safe integers or integer JSON tokens); any
+  // fractional value must use the lab decimal-string form. A JS number has no
+  // lexical form, so the literal 9e1 is simply the integer 90, while the
+  // lexical exponent forms "9e1" (string) and 9e1 (JSON token) fail closed.
   let raw;
-  if (value instanceof LabJsonNumber) raw = value.raw;
-  else if (typeof value === 'string') raw = value;
+  if (value instanceof LabJsonNumber) {
+    if (!INTEGER.test(value.raw)) {
+      throw new ValidationError(`effect parameter ${name} JSON number must be an integer; use a decimal string; failing closed`);
+    }
+    raw = value.raw;
+  } else if (typeof value === 'string') raw = value;
   else if (typeof value === 'number') {
-    if (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER) {
-      throw new ValidationError(`effect parameter ${name} number is outside the exact range; failing closed`);
+    if (!Number.isSafeInteger(value)) {
+      throw new ValidationError(`effect parameter ${name} number must be a safe integer; use a decimal string; failing closed`);
     }
     raw = String(value);
   } else {
@@ -421,6 +444,26 @@ export function createSemanticActionConsumptionLab({
     return guard(async () => {
       const document = validateSemanticAuthorizationInstance(snapshot(documentInput));
       const digest = digestObject(document);
+      const key = instanceKey(document.authorization_instance_id);
+      // Step 1: claim the instance id as `pending` (never admittable). An
+      // instance conflict stops here, before any mandate is bound.
+      const claimed = await mutate(key, current => {
+        if (current === null) {
+          return {
+            next: { status: 'pending', instance: document, instance_digest: digest, consumed: 0, aborted: false, presentations: [], admissions: [] },
+            output: null
+          };
+        }
+        if (current.instance_digest !== digest) return { output: deny('authorization_instance_conflict') };
+        // Idempotent re-registration never resets or replenishes the budget.
+        if (current.status === 'active') {
+          return { output: freeze({ decision: 'already_registered', authorization_instance_digest: digest }) };
+        }
+        return { output: null };
+      }, 'register-claim');
+      if (claimed) return claimed;
+      // Step 2: bind the mandate to exactly this instance. On conflict the
+      // instance stays pending forever and can never admit.
       const mandate = await mutate(`mandate:${document.mandate_digest}`, current => {
         if (current === null) {
           return { next: { authorization_instance_id: document.authorization_instance_id, authorization_instance_digest: digest }, output: null };
@@ -429,19 +472,14 @@ export function createSemanticActionConsumptionLab({
         return { output: deny('mandate_already_bound') };
       }, 'register-mandate');
       if (mandate) return mandate;
-      return mutate(instanceKey(document.authorization_instance_id), current => {
-        if (current === null) {
-          return {
-            next: { instance: document, instance_digest: digest, consumed: 0, aborted: false, presentations: [], admissions: [] },
-            output: freeze({ decision: 'registered', authorization_instance_digest: digest })
-          };
-        }
-        // Idempotent re-registration never resets or replenishes the budget.
-        if (current.instance_digest === digest) {
+      // Step 3: activate. A crash between steps is completed by retrying the same registration.
+      return mutate(key, current => {
+        if (current === null || current.instance_digest !== digest) return { output: deny('authorization_instance_conflict') };
+        if (current.status === 'active') {
           return { output: freeze({ decision: 'already_registered', authorization_instance_digest: digest }) };
         }
-        return { output: deny('authorization_instance_conflict') };
-      }, 'register-instance');
+        return { next: { ...current, status: 'active' }, output: freeze({ decision: 'registered', authorization_instance_digest: digest }) };
+      }, 'register-activate');
     });
   }
 
@@ -469,6 +507,7 @@ export function createSemanticActionConsumptionLab({
       const jtiDigest = sha256(presentation.jti);
       return mutate(instanceKey(presentation.authorization_instance_id), record => {
         if (record === null) return { output: deny('unknown_authorization_instance') };
+        if (record.status !== 'active') return { output: deny('authorization_instance_pending') };
         const instance = record.instance;
         if (instance.effect_identity_digest !== canonical.effect_identity_digest) {
           return { output: deny('effect_not_authorized') };
@@ -489,7 +528,7 @@ export function createSemanticActionConsumptionLab({
         if (last && ['admission_consumed', 'dispatch_started', 'effect_uncertain'].includes(last.state)) {
           return { output: priorOrDeny(record, last, 'prior_admission_unresolved') };
         }
-        if (record.presentations.length >= MAX_PRESENTATIONS) return { output: deny('presentation_log_full') };
+        // presentations only grow on admission, so their length is bounded by execution_budget (<= 16).
         const ordinal = record.consumed + 1;
         const admission = {
           admission_ordinal: ordinal,
@@ -502,6 +541,8 @@ export function createSemanticActionConsumptionLab({
           }),
           presentation_jti_digest: jtiDigest,
           holder_id: presentation.holder_id,
+          sink_idempotency: canonical.sink_idempotency,
+          redelivery_blocked: false,
           admitted_at: new Date(at).toISOString(),
           state: 'admission_consumed',
           effect_committed: 'no',
@@ -523,14 +564,20 @@ export function createSemanticActionConsumptionLab({
 
   function admissionTransition(label, input, fields, step) {
     return guard(async () => {
-      const request = exact(snapshotOrThrow(input), `${label} request`, ['authorization_instance_id', 'receipt_id', ...fields]);
+      const request = exact(snapshotOrThrow(input), `${label} request`, [
+        'authorization_instance_id', 'receipt_id', 'admitting_jti', ...fields
+      ]);
       match(request.authorization_instance_id, ID, 'authorization_instance_id');
       match(request.receipt_id, /^sacl_[a-f0-9]{64}$/, 'receipt_id');
+      const admittingJtiDigest = sha256(match(request.admitting_jti, ID, 'admitting_jti'));
       return mutate(instanceKey(request.authorization_instance_id), record => {
         if (record === null) return { output: deny('unknown_authorization_instance') };
         const index = record.admissions.findIndex(item => item.receipt_id === request.receipt_id);
         if (index < 0) return { output: deny('unknown_admission') };
         const admission = record.admissions[index];
+        // receipt_id is derivable, so knowing it is not authority: every
+        // follow-up transition must present the jti that made the admission.
+        if (admission.presentation_jti_digest !== admittingJtiDigest) return { output: deny('admitting_token_mismatch') };
         const result = step(record, admission, request);
         if (!result.change) return { output: result.output(receiptOf(record, admission)) };
         const updated = { ...admission, ...result.change };
@@ -580,9 +627,13 @@ export function createSemanticActionConsumptionLab({
   }
 
   /**
-   * Downstream adapter retry after timeout/unknown result. Redelivery is only
-   * allowed with the stable idempotency key to a sink that dedupes on it, and
-   * never after abort. Otherwise the admission becomes effect-uncertain.
+   * Downstream adapter retry after timeout/unknown result. Sink idempotency is
+   * pinned at admission from the effect profile; the per-call flag is only a
+   * declaration that must match it. Redelivery is allowed only for a pinned
+   * `idempotency-key` sink, with the stable key, never after abort, and never
+   * once redelivery was blocked. Every other retry makes the admission
+   * effect-uncertain and blocks redelivery until reconciliation (which is
+   * terminal), so the sink is never called again.
    */
   function retryDispatch(input) {
     return admissionTransition('retry', input, ['sink_idempotent'], (record, admission, request) => {
@@ -590,11 +641,15 @@ export function createSemanticActionConsumptionLab({
       if (!['dispatch_started', 'effect_uncertain'].includes(admission.state)) {
         return { output: receipt => deny('retry_not_applicable', receipt) };
       }
-      const uncertain = { state: 'effect_uncertain', effect_committed: 'unknown', reconciliation: 'required' };
+      const uncertain = { state: 'effect_uncertain', effect_committed: 'unknown', reconciliation: 'required', redelivery_blocked: true };
       if (record.aborted) {
         return { change: { ...uncertain, abort_state: 'abort_after_dispatch' }, output: receipt => deny('authorization_aborted', receipt) };
       }
-      if (!request.sink_idempotent) {
+      const pinnedIdempotent = admission.sink_idempotency === 'idempotency-key';
+      if (request.sink_idempotent !== pinnedIdempotent) {
+        return { change: uncertain, output: receipt => deny('sink_idempotency_mismatch', receipt) };
+      }
+      if (!pinnedIdempotent || admission.redelivery_blocked) {
         return { change: uncertain, output: receipt => deny('effect_uncertain_requires_reconciliation', receipt) };
       }
       if (admission.sink_attempts >= MAX_SINK_ATTEMPTS) {
@@ -668,9 +723,30 @@ export function createSemanticActionConsumptionLab({
     });
   }
 
+  /** Read-only: remaining budget is derived only from durable state. */
+  async function getBudget(input) {
+    return guard(async () => {
+      const request = exact(snapshotOrThrow(input), 'budget request', ['authorization_instance_id']);
+      const current = await store.read(instanceKey(match(request.authorization_instance_id, ID, 'authorization_instance_id')));
+      if (!current) return deny('unknown_authorization_instance');
+      const record = current.value;
+      return freeze({
+        decision: 'budget',
+        perform: false,
+        status: record.status,
+        aborted: record.aborted,
+        execution_budget: record.instance.execution_budget,
+        consumed: record.consumed,
+        remaining: record.instance.execution_budget - record.consumed
+      });
+    });
+  }
+
+  // There is deliberately no refund, reset, delete, restore, or replenish
+  // operation: remaining budget can only go down.
   return Object.freeze({
     registerAuthorizationInstance, admit, beginDispatch, recordSinkOutcome, retryDispatch,
-    recordObservation, abort, getReceipt
+    recordObservation, abort, getReceipt, getBudget
   });
 }
 
@@ -700,6 +776,9 @@ function receiptOf(record, admission) {
     presentation_jti_digest: admission.presentation_jti_digest,
     holder_id: admission.holder_id,
     admitted_at: admission.admitted_at,
+    sink_idempotency: admission.sink_idempotency,
+    redelivery_blocked: admission.redelivery_blocked,
+    remaining_budget: record.instance.execution_budget - record.consumed,
     lifecycle_state: admission.state,
     admission_consumed: true,
     effect_committed: admission.effect_committed,
@@ -773,8 +852,9 @@ function snapshotPreservingNumbers(value, depth = 0) {
   return output;
 }
 
-function isNumberLike(value) {
-  return value instanceof LabJsonNumber || (typeof value === 'number' && Number.isSafeInteger(value));
+function isIntegerLike(value) {
+  return (value instanceof LabJsonNumber && INTEGER.test(value.raw) && value.raw.length <= 16)
+    || (typeof value === 'number' && Number.isSafeInteger(value));
 }
 
 function plain(value, label) {

@@ -65,7 +65,7 @@ test('Semantic Action Consumption Lab v0 schema pins hard zeros, non-authority f
 test('lab outputs match the schema field set and value constraints', async () => {
   const schema = JSON.parse(await readFile(schemaUrl, 'utf8'));
   const profiles = [{
-    action: 'ledger.entry.write', mcp_tool_name: 'write_entry', consequential: true,
+    action: 'ledger.entry.write', mcp_tool_name: 'write_entry', consequential: true, sink_idempotency: 'idempotency-key',
     parameters: { entry_id: 'id', amount: 'decimal' }
   }];
   const { effect_identity_digest: effectDigest } = canonicalSemanticEffect({
@@ -98,12 +98,14 @@ test('lab outputs match the schema field set and value constraints', async () =>
       canonicalization_version: SEMANTIC_EFFECT_CANONICALIZATION_VERSION,
       protocol: 'mcp.tools-call.v0',
       input: {
-        message: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'write_entry', arguments: { amount: 1.5, entry_id: 'e1' } } },
+        message: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'write_entry', arguments: { amount: '1.5', entry_id: 'e1' } } },
         purpose: 'p', destination: 'd', object: 'o'
       }
     }
   });
   assert.equal(admitted.decision, 'admit');
   assert.deepEqual(Object.keys(admitted.receipt).sort(), Object.keys(schema.properties).sort());
+  assert.equal(admitted.receipt.sink_idempotency, 'idempotency-key');
+  assert.equal(admitted.receipt.remaining_budget, 0);
   conforms(admitted.receipt, schema.properties, schema.$defs);
 });

@@ -29,9 +29,12 @@ const PROFILE = buildSemanticEffectProfile({
   action: 'school.grade.write',
   mcp_tool_name: 'record_grade',
   consequential: true,
+  sink_idempotency: 'none',
   parameters: { student_id: 'id', course_id: 'id', grade: 'decimal', comment: 'text', notify_guardian: 'boolean' }
 });
-const PROFILES = [PROFILE];
+// Same parameters, but the sink contract dedupes on the lab idempotency key.
+const KEYED_PROFILE = buildSemanticEffectProfile({ ...PROFILE, action: 'school.grade.upsert', mcp_tool_name: 'upsert_grade', sink_idempotency: 'idempotency-key' });
+const PROFILES = [PROFILE, KEYED_PROFILE];
 
 function structuredInput(parameters = {}, overrides = {}) {
   return {
@@ -85,6 +88,8 @@ function mcpEffect({ id = 1, meta, args = {} } = {}) {
 }
 
 const EFFECT_DIGEST = canonicalSemanticEffect(structuredEffect(), PROFILES).effect_identity_digest;
+const keyedEffect = () => structuredEffect({}, { action: 'school.grade.upsert' });
+const KEYED_DIGEST = canonicalSemanticEffect(keyedEffect(), PROFILES).effect_identity_digest;
 
 function instanceDocument({ id = 'authz-grade-1', mandate = 'mandate-1', budget = 1, effectDigest = EFFECT_DIGEST } = {}) {
   return buildSemanticAuthorizationInstance({
@@ -99,10 +104,14 @@ function instanceDocument({ id = 'authz-grade-1', mandate = 'mandate-1', budget 
 }
 
 let tokenCounter = 0;
+// Test-side memory of issued jtis so follow-up calls can present the admitting token.
+const JTI_BY_DIGEST = new Map();
 function freshToken({ instanceId = 'authz-grade-1', holder = 'agent.main', effectDigest = EFFECT_DIGEST, jti } = {}) {
   tokenCounter += 1;
+  const issued = jti ?? `jti-fresh-${tokenCounter}`;
+  JTI_BY_DIGEST.set(sha256(issued), issued);
   return {
-    jti: jti ?? `jti-fresh-${tokenCounter}`,
+    jti: issued,
     nonce: `nonce-fresh-${tokenCounter}`,
     holder_id: holder,
     authorization_instance_id: instanceId,
@@ -112,13 +121,21 @@ function freshToken({ instanceId = 'authz-grade-1', holder = 'agent.main', effec
   };
 }
 
+function idsOf(receipt) {
+  return {
+    authorization_instance_id: receipt.authorization_instance_id,
+    receipt_id: receipt.receipt_id,
+    admitting_jti: JTI_BY_DIGEST.get(receipt.presentation_jti_digest)
+  };
+}
+
 function newLab(store, options = {}) {
   return createSemanticActionConsumptionLab({ store, profiles: PROFILES, now: () => NOW, ...options });
 }
 
-async function registeredLab({ store = createInMemorySemanticLabStore(), budget = 1, options } = {}) {
+async function registeredLab({ store = createInMemorySemanticLabStore(), budget = 1, effectDigest, options } = {}) {
   const lab = newLab(store, options);
-  const registered = await lab.registerAuthorizationInstance(instanceDocument({ budget }));
+  const registered = await lab.registerAuthorizationInstance(instanceDocument({ budget, effectDigest }));
   assert.equal(registered.decision, 'registered');
   return { lab, store };
 }
@@ -129,7 +146,9 @@ function createSink({ idempotent }) {
   const seen = new Set();
   const sink = {
     mutations: 0,
+    calls: 0,
     deliver(key) {
+      sink.calls += 1;
       if (idempotent && seen.has(key)) return 'deduplicated';
       seen.add(key);
       sink.mutations += 1;
@@ -141,17 +160,10 @@ function createSink({ idempotent }) {
 
 async function executeAdmitted(lab, decision, sink, outcome = 'committed') {
   assert.equal(decision.decision, 'admit');
-  const dispatch = await lab.beginDispatch({
-    authorization_instance_id: decision.receipt.authorization_instance_id,
-    receipt_id: decision.receipt.receipt_id
-  });
+  const dispatch = await lab.beginDispatch(idsOf(decision.receipt));
   assert.equal(dispatch.decision, 'dispatch');
   sink.deliver(dispatch.idempotency_key);
-  const recorded = await lab.recordSinkOutcome({
-    authorization_instance_id: decision.receipt.authorization_instance_id,
-    receipt_id: decision.receipt.receipt_id,
-    outcome
-  });
+  const recorded = await lab.recordSinkOutcome({ ...idsOf(decision.receipt), outcome });
   assert.equal(recorded.decision, 'recorded');
   return recorded.receipt;
 }
@@ -244,7 +256,7 @@ async function sqliteLedgerDir(t) {
 // Fixture 1: fresh-token semantic replay (and replan with a new nonce)
 // ---------------------------------------------------------------------------
 
-test('F1 fresh-token semantic replay: jti-keyed baseline performs A twice; lab returns the prior committed receipt', async () => {
+test('F1 [jti-baseline RED] fresh-token semantic replay: baseline performs A twice; lab returns the prior committed receipt', async () => {
   const baselineSink = createSink({ idempotent: false });
   const baseline = createJtiKeyedBaseline(createInMemorySemanticLabStore());
   const first = freshToken();
@@ -268,7 +280,7 @@ test('F1 fresh-token semantic replay: jti-keyed baseline performs A twice; lab r
   assert.equal(sink.mutations, 1, 'GREEN: durable semantic consumption performs A once');
 });
 
-test('F1 token_unused stays a separate predicate: a literal token replay is refused by both models without consuming budget', async () => {
+test('F1 [jti-baseline comparison, both refuse] token_unused stays a separate predicate: a literal token replay is refused by both models without consuming budget', async () => {
   const baseline = createJtiKeyedBaseline(createInMemorySemanticLabStore());
   const token = freshToken();
   assert.equal((await baseline.admit({ presentation: token, effect: structuredEffect() })).perform, true);
@@ -294,7 +306,7 @@ test('F1 token_unused stays a separate predicate: a literal token replay is refu
 // Fixture 2: concurrent reissuance across evaluators / replicas
 // ---------------------------------------------------------------------------
 
-test('F2 concurrent reissuance: two fresh tokens raced through two evaluators admit at most the budget', async () => {
+test('F2 [jti-baseline RED] concurrent reissuance: two fresh tokens raced through two evaluators admit at most the budget', async () => {
   const baselineStore = createInMemorySemanticLabStore();
   const baselineA = createJtiKeyedBaseline(baselineStore);
   const baselineB = createJtiKeyedBaseline(baselineStore);
@@ -318,7 +330,7 @@ test('F2 concurrent reissuance: two fresh tokens raced through two evaluators ad
   assert.equal(results.filter(result => result.decision === 'deny').length, 1);
 });
 
-test('F2 concurrent reissuance: budget 2 with six racers across two SQLite replicas admits exactly two over time', async t => {
+test('F2 (lab only) concurrent reissuance: budget 2 with six racers across two SQLite replicas admits exactly two over time', async t => {
   const ledger = await sqliteLedgerDir(t);
   const replicaA = ledger.open();
   const replicaB = ledger.open();
@@ -344,7 +356,7 @@ test('F2 concurrent reissuance: budget 2 with six racers across two SQLite repli
   assert.equal(sink.mutations, 2, 'never more than the authorized budget');
 });
 
-test('F2 RT-CONC-011 falsifier: per-evaluator serialization without an atomic shared CAS double-admits', async () => {
+test('F2 (lab mutation) RT-CONC-011 falsifier: per-evaluator serialization without an atomic shared CAS double-admits', async () => {
   const shared = createInMemorySemanticLabStore();
   // Blind write: ignores the version it read (a per-process lock cannot help).
   const blind = {
@@ -374,11 +386,13 @@ const EQUIVALENT_SHAPES = Object.freeze([
   }],
   ['numeric grade 90', () => structuredEffect({ grade: 90 })],
   ['decimal string 90.00', () => structuredEffect({ grade: '90.00' })],
-  ['JSON number token 90.0', () => structuredEffect({ grade: new LabJsonNumber('90.0') })],
+  ['integer JSON number token 90', () => structuredEffect({ grade: new LabJsonNumber('90') })],
+  ['JS number literal 9e1 (the integer 90; no lexical form survives)', () => structuredEffect({ grade: 9e1 })],
   ['NFD comment text', () => structuredEffect({ comment: 'Café project complete'.normalize('NFD') })],
   ['MCP tools/call shape', () => mcpEffect()],
   ['MCP with different JSON-RPC id', () => mcpEffect({ id: 'req-7781' })],
-  ['MCP with progress token metadata', () => mcpEffect({ meta: { progressToken: 'p-1' } })],
+  ['MCP with string progress token metadata', () => mcpEffect({ meta: { progressToken: 'p-1' } })],
+  ['MCP with integer progress token metadata', () => mcpEffect({ meta: { progressToken: 7 } })],
   ['raw JSON structured text', () => ({
     canonicalization_version: SEMANTIC_EFFECT_CANONICALIZATION_VERSION,
     protocol: 'axiom.structured-effect.v0',
@@ -391,7 +405,7 @@ const EQUIVALENT_SHAPES = Object.freeze([
   })]
 ]);
 
-test('F3 canonicalization equivalence: protocol-shape variations share one action identity', () => {
+test('F3 (lab only) canonicalization equivalence: protocol-shape variations share one action identity', () => {
   for (const [label, build] of EQUIVALENT_SHAPES) {
     assert.equal(canonicalSemanticEffect(build(), PROFILES).effect_identity_digest, EFFECT_DIGEST, label);
   }
@@ -400,7 +414,7 @@ test('F3 canonicalization equivalence: protocol-shape variations share one actio
   assert.equal(parsed.grade.raw, '90.50');
 });
 
-test('F3 canonicalization equivalence: baseline admits every equivalent shape under a fresh token; lab admits once', async () => {
+test('F3 [jti-baseline RED] canonicalization equivalence: baseline admits every equivalent shape under a fresh token; lab admits once', async () => {
   const baselineSink = createSink({ idempotent: false });
   const baseline = createJtiKeyedBaseline(createInMemorySemanticLabStore());
   const { lab } = await registeredLab();
@@ -415,7 +429,7 @@ test('F3 canonicalization equivalence: baseline admits every equivalent shape un
   assert.equal(sink.mutations, 1, 'GREEN');
 });
 
-test('F3 canonicalization ambiguity fails closed for consequential effects', async () => {
+test('F3 (lab only) canonicalization ambiguity fails closed for consequential effects', async () => {
   const ambiguous = [
     ['duplicate JSON key', { canonicalization_version: SEMANTIC_EFFECT_CANONICALIZATION_VERSION, protocol: 'mcp.tools-call.v0', input: '{"message":{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"record_grade","arguments":{"student_id":"student-042","course_id":"math-7","grade":90,"grade":95,"comment":"ok","notify_guardian":true}}},"purpose":"term-grade-entry","destination":"sis.example-school","object":"gradebook/term-3"}' }],
     ['__proto__ key in JSON text', { canonicalization_version: SEMANTIC_EFFECT_CANONICALIZATION_VERSION, protocol: 'axiom.structured-effect.v0', input: '{"action":"school.grade.write","purpose":"p","destination":"d","object":"o","parameters":{"__proto__":{"grade":"1"},"student_id":"s","course_id":"c","grade":"1","comment":"x","notify_guardian":true}}' }],
@@ -446,7 +460,7 @@ test('F3 canonicalization ambiguity fails closed for consequential effects', asy
   }
 });
 
-test('F3 exact binding: a different parameter, purpose, destination or object is a different effect and is not authorized', async () => {
+test('F3 (lab only) exact binding: a different parameter, purpose, destination or object is a different effect and is not authorized', async () => {
   const { lab } = await registeredLab();
   const variants = [
     structuredEffect({ grade: '91' }),
@@ -469,7 +483,7 @@ test('F3 exact binding: a different parameter, purpose, destination or object is
 // Fixture 4: crash after commit / lost response
 // ---------------------------------------------------------------------------
 
-test('F4 crash after commit / lost response: restarted evaluator returns the durable prior receipt, no duplicate', async t => {
+test('F4 [jti-baseline RED] crash after commit / lost response: restarted evaluator returns the durable prior receipt, no duplicate', async t => {
   const ledger = await sqliteLedgerDir(t);
   const baselineSink = createSink({ idempotent: false });
   const sink = createSink({ idempotent: false });
@@ -493,7 +507,7 @@ test('F4 crash after commit / lost response: restarted evaluator returns the dur
   assert.equal(sink.mutations, 1, 'GREEN');
 });
 
-test('F4 crash before dispatch: retry cannot consume again; the existing admission is resumed by receipt', async t => {
+test('F4 (lab only) crash before dispatch: retry cannot consume again; the existing admission is resumed by receipt', async t => {
   const ledger = await sqliteLedgerDir(t);
   const before = ledger.open();
   const lab = newLab(before);
@@ -510,10 +524,10 @@ test('F4 crash before dispatch: retry cannot consume again; the existing admissi
   assert.equal(retry.receipt.lifecycle_state, 'admission_consumed');
   assert.equal(retry.receipt.admissions_consumed, 1, 'budget unit 2 is not spent on a retry of unit 1');
   const sink = createSink({ idempotent: false });
-  const dispatch = await resumed.beginDispatch({ authorization_instance_id: 'authz-grade-1', receipt_id: retry.receipt.receipt_id });
+  const dispatch = await resumed.beginDispatch(idsOf(retry.receipt));
   assert.equal(dispatch.decision, 'dispatch');
   sink.deliver(dispatch.idempotency_key);
-  const again = await resumed.beginDispatch({ authorization_instance_id: 'authz-grade-1', receipt_id: retry.receipt.receipt_id });
+  const again = await resumed.beginDispatch(idsOf(retry.receipt));
   assert.equal(again.reason, 'dispatch_already_started', 'a resumed dispatch cannot be started twice');
   assert.equal(sink.mutations, 1);
 });
@@ -522,17 +536,18 @@ test('F4 crash before dispatch: retry cannot consume again; the existing admissi
 // Fixture 5: downstream at-least-once retry and explicit effect uncertainty
 // ---------------------------------------------------------------------------
 
-test('F5 downstream retry: stable idempotency key dedupes at an idempotent sink; jti-derived keys do not survive reissuance', async () => {
+test('F5 [jti-baseline RED] downstream retry: stable idempotency key dedupes at an idempotent sink; jti-derived keys do not survive reissuance', async () => {
   const baselineSink = createSink({ idempotent: true });
   const baseline = createJtiKeyedBaseline(createInMemorySemanticLabStore());
   await baselineExecute(baseline, freshToken(), structuredEffect(), baselineSink);
   await baselineExecute(baseline, freshToken(), structuredEffect(), baselineSink); // retry after timeout via reissued token
   assert.equal(baselineSink.mutations, 2, 'RED: key derived from jti changes with every reissued token');
 
-  const { lab } = await registeredLab();
+  const { lab } = await registeredLab({ effectDigest: KEYED_DIGEST });
   const sink = createSink({ idempotent: true });
-  const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
-  const ids = { authorization_instance_id: 'authz-grade-1', receipt_id: admitted.receipt.receipt_id };
+  const admitted = await lab.admit({ presentation: freshToken({ effectDigest: KEYED_DIGEST }), effect: keyedEffect() });
+  assert.equal(admitted.receipt.sink_idempotency, 'idempotency-key');
+  const ids = idsOf(admitted.receipt);
   const dispatch = await lab.beginDispatch(ids);
   sink.deliver(dispatch.idempotency_key);
   const timeout = await lab.recordSinkOutcome({ ...ids, outcome: 'unknown' });
@@ -549,11 +564,11 @@ test('F5 downstream retry: stable idempotency key dedupes at an idempotent sink;
   assert.equal(sink.mutations, 1, 'GREEN');
 });
 
-test('F5 downstream retry: non-idempotent sink becomes effect-uncertain and is never silently re-executed', async () => {
+test('F5 (lab only) downstream retry: non-idempotent sink becomes effect-uncertain and is never silently re-executed', async () => {
   const { lab } = await registeredLab();
   const sink = createSink({ idempotent: false });
   const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
-  const ids = { authorization_instance_id: 'authz-grade-1', receipt_id: admitted.receipt.receipt_id };
+  const ids = idsOf(admitted.receipt);
   sink.deliver((await lab.beginDispatch(ids)).idempotency_key);
   const retry = await lab.retryDispatch({ ...ids, sink_idempotent: false });
   assert.equal(retry.decision, 'deny');
@@ -570,10 +585,10 @@ test('F5 downstream retry: non-idempotent sink becomes effect-uncertain and is n
   assert.equal(sink.mutations, 1);
 });
 
-test('F5 receipts keep admission_consumed, effect_committed, effect_observed and reconciliation distinct', async () => {
+test('F5 (lab only) receipts keep admission_consumed, effect_committed, effect_observed and reconciliation distinct', async () => {
   const { lab } = await registeredLab();
   const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
-  const ids = { authorization_instance_id: 'authz-grade-1', receipt_id: admitted.receipt.receipt_id };
+  const ids = idsOf(admitted.receipt);
   assert.deepEqual(pick(admitted.receipt), ['admission_consumed', true, 'no', 'not_observed', 'not_required']);
   await lab.beginDispatch(ids);
   const committed = await lab.recordSinkOutcome({ ...ids, outcome: 'committed' });
@@ -600,7 +615,7 @@ function pick(receipt) {
 // Fixture 6: delegation / restart / resume paths
 // ---------------------------------------------------------------------------
 
-test('F6 delegation/restart: child, resumed, and replacement workers cannot reset the semantic budget', async () => {
+test('F6 [jti-baseline RED] delegation/restart: child, resumed, and replacement workers cannot reset the semantic budget', async () => {
   const baselineSink = createSink({ idempotent: false });
   const baseline = createJtiKeyedBaseline(createInMemorySemanticLabStore());
   await baselineExecute(baseline, freshToken(), structuredEffect(), baselineSink);
@@ -621,10 +636,14 @@ test('F6 delegation/restart: child, resumed, and replacement workers cannot rese
   const reRegister = await replacement.registerAuthorizationInstance(instanceDocument());
   assert.equal(reRegister.decision, 'already_registered');
   const stillExhausted = await replacement.admit({ presentation: freshToken(), effect: structuredEffect() });
-  assert.equal(stillExhausted.receipt.admissions_consumed, 1, 're-registration never resets the budget');
+  assert.notEqual(stillExhausted.decision, 'admit', 're-registration never resets the budget');
+  assert.equal(stillExhausted.decision, 'prior_receipt');
+  assert.equal(stillExhausted.perform, false);
+  assert.equal(stillExhausted.receipt.admissions_consumed, 1);
+  assert.equal((await replacement.getBudget({ authorization_instance_id: 'authz-grade-1' })).remaining, 0);
 
   const widened = await replacement.registerAuthorizationInstance(instanceDocument({ budget: 5 }));
-  assert.equal(widened.reason, 'mandate_already_bound');
+  assert.equal(widened.reason, 'authorization_instance_conflict', 'a wider budget for the same instance is refused');
   const sameMandateNewId = await replacement.registerAuthorizationInstance(instanceDocument({ id: 'authz-grade-child' }));
   assert.equal(sameMandateNewId.reason, 'mandate_already_bound', 'a child cannot mint a new instance from the parent mandate');
   const sameIdNewMandate = await replacement.registerAuthorizationInstance(instanceDocument({ mandate: 'child-invented', budget: 3 }));
@@ -638,7 +657,7 @@ test('F6 delegation/restart: child, resumed, and replacement workers cannot rese
 // Fixture 7: legitimate later repetition under a distinct explicit mandate
 // ---------------------------------------------------------------------------
 
-test('F7 legitimate later repetition: a distinct explicit mandate may repeat identical parameters; no global dedupe', async () => {
+test('F7 (no RED expected; global-dedupe strawman) legitimate later repetition: a distinct explicit mandate may repeat identical parameters; no global dedupe', async () => {
   const store = createInMemorySemanticLabStore();
   const { lab } = await registeredLab({ store });
   const sink = createSink({ idempotent: true });
@@ -663,18 +682,12 @@ test('F7 legitimate later repetition: a distinct explicit mandate may repeat ide
 // RT-ABORT-012: abort / commit race
 // ---------------------------------------------------------------------------
 
-test('abort/commit race: abort between admission and dispatch terminates the outstanding effect authority', async () => {
-  const baselineSink = createSink({ idempotent: false });
-  const baseline = createJtiKeyedBaseline(createInMemorySemanticLabStore());
-  // The jti-keyed model has no per-authorization abort state: a fresh token still admits.
-  await baselineExecute(baseline, freshToken(), structuredEffect(), baselineSink);
-  assert.equal(baselineSink.mutations, 1, 'RED: identifier-local consumption alone does not observe the abort');
-
+test('abort/commit race (lab only): abort between admission and dispatch terminates the outstanding effect authority', async () => {
   const { lab } = await registeredLab({ budget: 2 });
   const sink = createSink({ idempotent: false });
   const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
   assert.equal((await lab.abort({ authorization_instance_id: 'authz-grade-1' })).decision, 'aborted');
-  const dispatch = await lab.beginDispatch({ authorization_instance_id: 'authz-grade-1', receipt_id: admitted.receipt.receipt_id });
+  const dispatch = await lab.beginDispatch(idsOf(admitted.receipt));
   assert.equal(dispatch.reason, 'authorization_aborted');
   assert.equal(dispatch.receipt.lifecycle_state, 'aborted_before_dispatch');
   assert.equal(dispatch.receipt.admissions_consumed, 1, 'abort does not refund the consumed unit');
@@ -683,7 +696,7 @@ test('abort/commit race: abort between admission and dispatch terminates the out
   assert.equal(sink.mutations, 0);
 });
 
-test('abort/commit race: concurrent abort and admission linearize; no effect is dispatched after abort', async () => {
+test('abort/commit race (lab only): concurrent abort and admission linearize; no effect is dispatched after abort', async () => {
   for (const abortFirst of [true, false]) {
     const store = createInMemorySemanticLabStore();
     await newLab(store).registerAuthorizationInstance(instanceDocument());
@@ -700,7 +713,7 @@ test('abort/commit race: concurrent abort and admission linearize; no effect is 
     assert.equal(aborted.decision, 'aborted');
     assert.equal(admission.decision, abortFirst ? 'deny' : 'admit', 'both linearization orders are exercised');
     if (admission.decision === 'admit') {
-      const dispatch = await newLab(store).beginDispatch({ authorization_instance_id: 'authz-grade-1', receipt_id: admission.receipt.receipt_id });
+      const dispatch = await newLab(store).beginDispatch(idsOf(admission.receipt));
       assert.equal(dispatch.decision, 'deny', `abortFirst=${abortFirst}`);
       assert.equal(dispatch.reason, 'authorization_aborted');
       assert.equal(dispatch.receipt.lifecycle_state, 'aborted_before_dispatch');
@@ -710,10 +723,10 @@ test('abort/commit race: concurrent abort and admission linearize; no effect is 
   }
 });
 
-test('abort/commit race: abort after dispatch cannot un-commit, and blocks idempotent redelivery', async () => {
+test('abort/commit race (lab only): abort after dispatch cannot un-commit, and blocks idempotent redelivery', async () => {
   const { lab } = await registeredLab();
   const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
-  const ids = { authorization_instance_id: 'authz-grade-1', receipt_id: admitted.receipt.receipt_id };
+  const ids = idsOf(admitted.receipt);
   await lab.beginDispatch(ids);
   await lab.abort({ authorization_instance_id: 'authz-grade-1' });
   const redeliver = await lab.retryDispatch({ ...ids, sink_idempotent: true });
@@ -723,6 +736,279 @@ test('abort/commit race: abort after dispatch cannot un-commit, and blocks idemp
   const late = await lab.recordSinkOutcome({ ...ids, outcome: 'committed' });
   assert.equal(late.receipt.effect_committed, 'yes', 'a sink commit that already happened is recorded, not erased');
   assert.equal(late.receipt.abort_state, 'abort_after_dispatch');
+});
+
+// ---------------------------------------------------------------------------
+// B1: sink idempotency is pinned at admission from the profile, never per call
+// ---------------------------------------------------------------------------
+
+test('B1 (lab only) non-idempotent sink: after one uncertain retry, repeated sink_idempotent:true retries never redeliver', async () => {
+  const { lab } = await registeredLab();
+  const sink = createSink({ idempotent: false });
+  const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  assert.equal(admitted.receipt.sink_idempotency, 'none');
+  const ids = idsOf(admitted.receipt);
+  sink.deliver((await lab.beginDispatch(ids)).idempotency_key);
+  const first = await lab.retryDispatch({ ...ids, sink_idempotent: false });
+  assert.equal(first.reason, 'effect_uncertain_requires_reconciliation');
+  assert.equal(first.receipt.lifecycle_state, 'effect_uncertain');
+  assert.equal(first.receipt.redelivery_blocked, true);
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const flipped = await lab.retryDispatch({ ...ids, sink_idempotent: true });
+    assert.equal(flipped.decision, 'deny', `attempt ${attempt}`);
+    assert.equal(flipped.perform, false);
+    assert.equal(flipped.reason, 'sink_idempotency_mismatch');
+    if (flipped.perform) sink.deliver(flipped.idempotency_key);
+  }
+  assert.equal(sink.calls, 1, 'the non-idempotent sink is called exactly once');
+});
+
+test('B1 (lab only) flag mismatch is rejected in both directions and blocks redelivery until reconciliation', async () => {
+  const plain = await registeredLab();
+  const plainAdmitted = await plain.lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  const plainIds = idsOf(plainAdmitted.receipt);
+  await plain.lab.beginDispatch(plainIds);
+  const claimedIdempotent = await plain.lab.retryDispatch({ ...plainIds, sink_idempotent: true });
+  assert.equal(claimedIdempotent.reason, 'sink_idempotency_mismatch', 'a caller cannot declare a none-sink idempotent');
+  assert.equal(claimedIdempotent.perform, false);
+
+  const keyed = await registeredLab({ effectDigest: KEYED_DIGEST });
+  const sink = createSink({ idempotent: true });
+  const admitted = await keyed.lab.admit({ presentation: freshToken({ effectDigest: KEYED_DIGEST }), effect: keyedEffect() });
+  const ids = idsOf(admitted.receipt);
+  sink.deliver((await keyed.lab.beginDispatch(ids)).idempotency_key);
+  const mismatch = await keyed.lab.retryDispatch({ ...ids, sink_idempotent: false });
+  assert.equal(mismatch.reason, 'sink_idempotency_mismatch');
+  assert.equal(mismatch.receipt.redelivery_blocked, true);
+  assert.equal(mismatch.receipt.reconciliation, 'required');
+  const after = await keyed.lab.retryDispatch({ ...ids, sink_idempotent: true });
+  assert.equal(after.reason, 'effect_uncertain_requires_reconciliation', 'blocked until reconciliation even for a keyed sink');
+  const reissue = await keyed.lab.admit({ presentation: freshToken({ effectDigest: KEYED_DIGEST }), effect: keyedEffect() });
+  assert.equal(reissue.reason, 'effect_uncertain_requires_reconciliation');
+  const observed = await keyed.lab.recordObservation({ ...ids, observed: 'present', evidence_digest: sha256('sis-row') });
+  assert.equal(observed.receipt.lifecycle_state, 'effect_observed');
+  assert.equal((await keyed.lab.retryDispatch({ ...ids, sink_idempotent: true })).reason, 'retry_not_applicable');
+  assert.equal(sink.calls, 1);
+});
+
+// ---------------------------------------------------------------------------
+// B2b / remaining budget only goes down (Researcher addendum 2 and 3)
+// ---------------------------------------------------------------------------
+
+test('B2b (lab only) sink_rejected never refunds: budget 1, rejected outcome, fresh token for the same action is not admitted', async () => {
+  const { lab } = await registeredLab();
+  const sink = createSink({ idempotent: false });
+  const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  const rejected = await executeAdmitted(lab, admitted, sink, 'rejected');
+  assert.equal(rejected.lifecycle_state, 'sink_rejected');
+  assert.equal(rejected.remaining_budget, 0);
+  const fresh = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  assert.notEqual(fresh.decision, 'admit');
+  assert.equal(fresh.decision, 'prior_receipt');
+  assert.equal(fresh.perform, false);
+  assert.equal((await lab.getBudget({ authorization_instance_id: 'authz-grade-1' })).remaining, 0);
+  assert.equal(sink.calls, 1);
+});
+
+test('Addendum 3a (lab only) non-idempotent sink: re-submit and crash-replay between reserve and commit give exactly one sink call', async t => {
+  const ledger = await sqliteLedgerDir(t);
+  const sink = createSink({ idempotent: false });
+  const before = ledger.open();
+  const lab = newLab(before);
+  await lab.registerAuthorizationInstance(instanceDocument());
+  const original = freshToken();
+  const admitted = await lab.admit({ presentation: original, effect: structuredEffect() });
+  const dispatch = await lab.beginDispatch(idsOf(admitted.receipt)); // durable reservation precedes the sink call
+  assert.equal(dispatch.receipt.lifecycle_state, 'dispatch_started');
+  sink.deliver(dispatch.idempotency_key);
+  before.close(); // crash after the sink call, before the outcome is recorded
+
+  const after = ledger.open();
+  const restarted = newLab(after);
+  const attempts = [
+    await restarted.admit({ presentation: freshToken(), effect: structuredEffect() }),
+    await restarted.admit({ presentation: freshToken(), effect: mcpEffect({ id: 'resubmit' }) }),
+    await restarted.admit({ presentation: original, effect: structuredEffect() }),
+    await restarted.beginDispatch(idsOf(admitted.receipt)),
+    await restarted.retryDispatch({ ...idsOf(admitted.receipt), sink_idempotent: false }),
+    await restarted.retryDispatch({ ...idsOf(admitted.receipt), sink_idempotent: true })
+  ];
+  for (const attempt of attempts) {
+    assert.equal(attempt.perform, false, attempt.reason);
+    if (attempt.perform) sink.deliver(attempt.idempotency_key);
+  }
+  assert.equal(sink.calls, 1, 'exactly one sink call for a non-idempotent sink');
+});
+
+test('Addendum 3b (lab only) remaining budget survives dropping the evaluator and reopening the store', async t => {
+  const ledger = await sqliteLedgerDir(t);
+  const first = ledger.open();
+  const lab = newLab(first);
+  await lab.registerAuthorizationInstance(instanceDocument({ budget: 3 }));
+  await executeAdmitted(lab, await lab.admit({ presentation: freshToken(), effect: structuredEffect() }), createSink({ idempotent: false }));
+  const beforeDrop = await lab.getBudget({ authorization_instance_id: 'authz-grade-1' });
+  assert.deepEqual([beforeDrop.consumed, beforeDrop.remaining], [1, 2]);
+  first.close();
+
+  const reopened = ledger.open();
+  const rebuilt = newLab(reopened);
+  // A restarted worker re-registers the same instance on startup.
+  assert.equal((await rebuilt.registerAuthorizationInstance(instanceDocument({ budget: 3 }))).decision, 'already_registered');
+  const afterReload = await rebuilt.getBudget({ authorization_instance_id: 'authz-grade-1' });
+  assert.deepEqual([afterReload.consumed, afterReload.remaining], [1, 2], 'rebuild from stored state gives the same remaining budget');
+  const second = ledger.open();
+  const again = await newLab(second).getBudget({ authorization_instance_id: 'authz-grade-1' });
+  assert.equal(again.remaining, afterReload.remaining);
+});
+
+test('Addendum 3c (lab only) no refund/reset/delete path exists and consumed never decreases across every operation', async () => {
+  const shared = createInMemorySemanticLabStore();
+  const history = [];
+  const monitored = {
+    read: key => shared.read(key),
+    compareAndSwap(key, expectedVersion, value) {
+      const previous = shared.read(key);
+      const ok = shared.compareAndSwap(key, expectedVersion, value);
+      if (ok && key.startsWith('instance:')) {
+        history.push({
+          key,
+          before: previous ? previous.value.consumed : 0,
+          after: value.consumed,
+          remainingBefore: previous ? previous.value.instance.execution_budget - previous.value.consumed : null,
+          remainingAfter: value.instance.execution_budget - value.consumed,
+          budgetBefore: previous ? previous.value.instance.execution_budget : null,
+          budgetAfter: value.instance.execution_budget
+        });
+      }
+      return ok;
+    }
+  };
+  const lab = newLab(monitored);
+  const methods = Object.keys(lab).sort();
+  assert.deepEqual(methods, ['abort', 'admit', 'beginDispatch', 'getBudget', 'getReceipt', 'recordObservation', 'recordSinkOutcome', 'registerAuthorizationInstance', 'retryDispatch']);
+  assert.ok(methods.every(name => !/refund|reset|delete|restore|replenish|revive|undo/i.test(name)));
+
+  const sink = createSink({ idempotent: false });
+  await lab.registerAuthorizationInstance(instanceDocument({ budget: 3 }));
+  const a1 = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  await executeAdmitted(lab, a1, sink, 'rejected');
+  const reRegistrations = [
+    await lab.registerAuthorizationInstance(instanceDocument({ budget: 3 })),
+    await lab.registerAuthorizationInstance(instanceDocument({ budget: 9 })),
+    await lab.registerAuthorizationInstance(instanceDocument({ budget: 3, mandate: 'other' }))
+  ];
+  assert.deepEqual(reRegistrations.map(result => result.decision), ['already_registered', 'deny', 'deny']);
+  const a2 = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  const ids2 = idsOf(a2.receipt);
+  await lab.beginDispatch(ids2);
+  await lab.recordSinkOutcome({ ...ids2, outcome: 'unknown' });
+  await lab.retryDispatch({ ...ids2, sink_idempotent: false });
+  await lab.recordObservation({ ...ids2, observed: 'absent', evidence_digest: sha256('audit') });
+  const a3 = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  await lab.abort({ authorization_instance_id: 'authz-grade-1' });
+  await lab.beginDispatch(idsOf(a3.receipt));
+  await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  await lab.registerAuthorizationInstance(instanceDocument({ budget: 3 }));
+
+  assert.ok(history.length >= 10, `observed ${history.length} writes`);
+  for (const step of history) {
+    assert.ok(step.after >= step.before, `consumed decreased: ${JSON.stringify(step)}`);
+    if (step.remainingBefore !== null) {
+      assert.ok(step.remainingAfter <= step.remainingBefore, `remaining increased: ${JSON.stringify(step)}`);
+      assert.equal(step.budgetAfter, step.budgetBefore, 'execution_budget is immutable');
+    }
+  }
+  const final = await lab.getBudget({ authorization_instance_id: 'authz-grade-1' });
+  assert.deepEqual([final.consumed, final.remaining, final.aborted], [3, 0, true]);
+});
+
+// ---------------------------------------------------------------------------
+// N1: follow-up transitions are bound to the admitting token
+// ---------------------------------------------------------------------------
+
+test('N1 (lab only) a derivable receipt_id is not authority: dispatch, retry, outcome and observation require the admitting jti', async () => {
+  const { lab } = await registeredLab();
+  const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  // Another holder learns the receipt (it is returned on replay and is derivable).
+  const childToken = freshToken({ holder: 'agent.child' });
+  const replay = await lab.admit({ presentation: childToken, effect: structuredEffect() });
+  assert.equal(replay.receipt.receipt_id, admitted.receipt.receipt_id);
+  const foreign = { authorization_instance_id: 'authz-grade-1', receipt_id: replay.receipt.receipt_id, admitting_jti: childToken.jti };
+  assert.equal((await lab.beginDispatch(foreign)).reason, 'admitting_token_mismatch');
+  const missing = { authorization_instance_id: 'authz-grade-1', receipt_id: replay.receipt.receipt_id };
+  assert.equal((await lab.beginDispatch(missing)).reason, 'invalid_input');
+  const ids = idsOf(admitted.receipt);
+  assert.equal((await lab.beginDispatch(ids)).decision, 'dispatch');
+  assert.equal((await lab.retryDispatch({ ...foreign, sink_idempotent: false })).reason, 'admitting_token_mismatch');
+  assert.equal((await lab.recordSinkOutcome({ ...foreign, outcome: 'committed' })).reason, 'admitting_token_mismatch');
+  const fakeAbsent = await lab.recordObservation({ ...foreign, observed: 'absent', evidence_digest: sha256('fake') });
+  assert.equal(fakeAbsent.reason, 'admitting_token_mismatch');
+  const state = await lab.getReceipt({ authorization_instance_id: 'authz-grade-1', receipt_id: ids.receipt_id });
+  assert.equal(state.receipt.lifecycle_state, 'dispatch_started', 'foreign calls changed nothing');
+});
+
+// ---------------------------------------------------------------------------
+// N2: registration is all-or-nothing for the mandate binding
+// ---------------------------------------------------------------------------
+
+test('N2 (lab only) an instance-conflict registration does not bind its mandate; a mandate conflict leaves the instance unusable', async () => {
+  const store = createInMemorySemanticLabStore();
+  const lab = newLab(store);
+  assert.equal((await lab.registerAuthorizationInstance(instanceDocument({ id: 'authz-a', mandate: 'm1' }))).decision, 'registered');
+  const conflict = await lab.registerAuthorizationInstance(instanceDocument({ id: 'authz-a', mandate: 'm2' }));
+  assert.equal(conflict.reason, 'authorization_instance_conflict');
+  const legitimate = await lab.registerAuthorizationInstance(instanceDocument({ id: 'authz-b', mandate: 'm2' }));
+  assert.equal(legitimate.decision, 'registered', 'm2 was not consumed by the denied registration');
+  assert.equal((await lab.admit({ presentation: freshToken({ instanceId: 'authz-b' }), effect: structuredEffect() })).decision, 'admit');
+
+  const reused = await lab.registerAuthorizationInstance(instanceDocument({ id: 'authz-c', mandate: 'm1' }));
+  assert.equal(reused.reason, 'mandate_already_bound');
+  assert.equal((await lab.getBudget({ authorization_instance_id: 'authz-c' })).status, 'pending');
+  const pending = await lab.admit({ presentation: freshToken({ instanceId: 'authz-c' }), effect: structuredEffect() });
+  assert.equal(pending.reason, 'authorization_instance_pending');
+  assert.equal((await lab.registerAuthorizationInstance(instanceDocument({ id: 'authz-c', mandate: 'm1' }))).reason, 'mandate_already_bound');
+});
+
+// ---------------------------------------------------------------------------
+// N5 / N6: invisible characters and number forms fail closed
+// ---------------------------------------------------------------------------
+
+test('N5 (lab only) invisible, filler, tag and variation-selector characters fail closed', async () => {
+  const { lab } = await registeredLab();
+  const samples = {
+    'arabic letter mark U+061C': '\u061C', 'combining grapheme joiner U+034F': '\u034F',
+    'hangul filler U+3164': '\u3164', 'hangul choseong filler U+115F': '\u115F', 'hangul jungseong filler U+1160': '\u1160',
+    'halfwidth hangul filler U+FFA0': '\uFFA0', 'variation selector U+FE00': '\uFE00', 'variation selector U+FE0F': '\uFE0F',
+    'tag U+E0000': '\u{E0000}', 'tag U+E0041': '\u{E0041}', 'tag U+E007F': '\u{E007F}',
+    'variation selector supplement U+E0100': '\u{E0100}', 'variation selector supplement U+E01EF': '\u{E01EF}',
+    'mongolian vowel separator U+180E': '\u180E', 'line separator U+2028': '\u2028', 'invisible times U+2062': '\u2062'
+  };
+  for (const [label, char] of Object.entries(samples)) {
+    const effect = structuredEffect({ comment: `Caf${char}e` });
+    assert.throws(() => canonicalSemanticEffect(effect, PROFILES), /ambiguous/, label);
+    assert.equal((await lab.admit({ presentation: freshToken(), effect })).reason, 'canonicalization_ambiguous', label);
+  }
+});
+
+test('N6 (lab only) numbers must be integers or decimal strings; exponent forms and object progress tokens fail closed', async () => {
+  const { lab } = await registeredLab();
+  assert.equal(canonicalSemanticEffect(structuredEffect({ grade: '90.5' }), PROFILES).effect.parameters.grade, '90.5');
+  assert.equal(canonicalSemanticEffect(structuredEffect({ grade: 9e1 }), PROFILES).effect.parameters.grade, '90');
+  const rejected = [
+    ['non-integer JS float', structuredEffect({ grade: 90.5 })],
+    ['non-integer JSON token', structuredEffect({ grade: new LabJsonNumber('90.5') })],
+    ['fractional-zero JSON token', structuredEffect({ grade: new LabJsonNumber('90.0') })],
+    ['exponent string 9e1', structuredEffect({ grade: '9e1' })],
+    ['exponent JSON token 9e1', structuredEffect({ grade: new LabJsonNumber('9e1') })],
+    ['raw JSON fractional number', { canonicalization_version: SEMANTIC_EFFECT_CANONICALIZATION_VERSION, protocol: 'axiom.structured-effect.v0', input: '{"action":"school.grade.write","purpose":"term-grade-entry","destination":"sis.example-school","object":"gradebook/term-3","parameters":{"student_id":"student-042","course_id":"math-7","grade":90.5,"comment":"ok","notify_guardian":true}}' }],
+    ['object progress token', mcpEffect({ meta: { progressToken: { nested: 'x' } } })],
+    ['fractional progress token', mcpEffect({ meta: { progressToken: 1.5 } })],
+    ['object JSON-RPC id', (() => { const effect = mcpEffect(); effect.input.message.id = { x: 1 }; return effect; })()]
+  ];
+  for (const [label, effect] of rejected) {
+    assert.throws(() => canonicalSemanticEffect(effect, PROFILES), label);
+    assert.equal((await lab.admit({ presentation: freshToken(), effect })).reason, 'canonicalization_ambiguous', label);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -794,18 +1080,48 @@ test('lab stays inert: pure module, not wired into runtime, capabilities, or liv
   assert.deepEqual(imports, ['./canonical.mjs']);
   assert.doesNotMatch(source, /node:|process\.|fetch\(|require\(/);
 
-  const srcRoot = new URL('../src/', import.meta.url);
+  // Scan runtime-bearing code: mesh/src recursively, repo-root scripts, and
+  // apps/ and packages/ when present. Concatenated string pieces are joined
+  // before a substring check on the lab filename tokens, so dynamic
+  // import('./semantic-action-' + 'consumption-lab.mjs') is caught too.
+  const repoRoot = new URL('../../', import.meta.url);
+  const CODE = /\.(mjs|js|cjs)$/;
+  const TOKENS = ['semantic-action-consumption-lab', 'consumption-lab', 'SemanticActionConsumptionLab', 'SEMANTIC_ACTION_CONSUMPTION_LAB'];
+  const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.next', 'target']);
   const offenders = [];
-  async function walk(url) {
-    for (const entry of await readdir(url, { withFileTypes: true })) {
-      const child = new URL(`${entry.name}${entry.isDirectory() ? '/' : ''}`, url);
-      if (entry.isDirectory()) await walk(child);
-      else if (entry.name.endsWith('.mjs') && entry.name !== 'semantic-action-consumption-lab.mjs') {
-        if ((await readFile(child, 'utf8')).includes('semantic-action-consumption-lab')) offenders.push(child.pathname);
+  const scanned = { files: 0 };
+  function joinConcatenatedStrings(text) {
+    return text.split(/['"`]\s*\+\s*['"`]/).join('');
+  }
+  async function scanFile(url, name) {
+    if (!CODE.test(name) || name === 'semantic-action-consumption-lab.mjs') return;
+    scanned.files += 1;
+    const joined = joinConcatenatedStrings(await readFile(url, 'utf8'));
+    if (TOKENS.some(token => joined.includes(token))) offenders.push(url.pathname);
+  }
+  async function walk(url, recursive) {
+    let entries;
+    try {
+      entries = await readdir(url, { withFileTypes: true });
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      throw error;
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (recursive && !SKIP_DIRS.has(entry.name)) await walk(new URL(`${entry.name}/`, url), true);
+      } else if (entry.isFile()) {
+        await scanFile(new URL(entry.name, url), entry.name);
       }
     }
   }
-  await walk(srcRoot);
+  await walk(new URL('mesh/src/', repoRoot), true);
+  await walk(repoRoot, false);
+  await walk(new URL('apps/', repoRoot), true);
+  await walk(new URL('packages/', repoRoot), true);
+  assert.ok(scanned.files > 100, `scanned ${scanned.files} files`);
+  assert.ok(joinConcatenatedStrings("import('./semantic-action-' + 'consumption-lab.mjs')").includes('semantic-action-consumption-lab'));
+  assert.ok(joinConcatenatedStrings('await import("./semantic-" +\n  "action-consumption-lab.mjs")').includes('consumption-lab'));
   assert.deepEqual(offenders, [], 'no runtime module imports the lab');
 
   const capabilities = await readFile(new URL('../config/capabilities.json', import.meta.url), 'utf8');
