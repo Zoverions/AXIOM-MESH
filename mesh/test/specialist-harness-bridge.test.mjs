@@ -400,10 +400,10 @@ test('homoglyph, zero-width, __proto__ and constructor keys are rejected by clos
     });
     assert.throws(() => validateSpecialistHarnessBridge(nested), /ceiling_binding fields are invalid|forbidden mind or Genesis field/, JSON.stringify(key));
   }
-  const parsed = JSON.parse(JSON.stringify(bridge()).replace('{', '{"__proto__":{"grants_authority":true},'));
+  const parsed = JSON.parse(`{"__proto__":{"grants_authority":true},${JSON.stringify(bridge()).slice(1)}`);
   assert.equal(Object.hasOwn(parsed, '__proto__'), true);
   assert.throws(() => validateSpecialistHarnessBridge(parsed), /fields are invalid/);
-  const input2 = JSON.parse(JSON.stringify(input()).replace('{', '{"constructor":{},'));
+  const input2 = JSON.parse(`{"constructor":{},${JSON.stringify(input()).slice(1)}`);
   assert.throws(() => buildSpecialistHarnessBridge(input2), /fields are invalid/);
 });
 
