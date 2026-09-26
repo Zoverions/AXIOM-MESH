@@ -50,7 +50,7 @@ Education.
 
 | Concern | Governing source | Executable evidence | Current boundary |
 |---|---|---|---|
-| Product/capability claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | registry/status/check-registry | 50 capabilities: 31 implemented; other states remain explicit |
+| Product/capability claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | registry/status/check-registry | 51 capabilities: 31 implemented; other states remain explicit |
 | Source runtime | `mesh/config/setup.json`, package/lock files, Dockerfile/workflows | setup checks, protected CI, separate hosted-runtime/security CI | Node 22.23.2+ shared-host/source compatibility; exact hosted-production pin 22.23.2 or protected Node 24.14.0+; protected CI/.node-version 24.18.0; production image 24.19.0; Node 22 bundled npm 10.9.8+ or npm 11.x; unchanged private-credential, mutual-TLS, deny-egress, and promotion requirements; zero third-party npm dependencies |
 | Host installation targets | `mesh/config/install-targets.json`, `docs/operations/HOST-INSTALLATION-PROFILES.md` | productization contract tests + canonical docs checks | Source setup is implemented; personal/local and infrastructure fresh-host installers are specified P0/P0-P1 targets, not supported installers yet; installation grants no authority |
 | Application/downstream catalogue | `mesh/config/application-catalog.json`, `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` | productization contract tests + canonical docs checks | First-class application discovery and compatibility discipline only; independent releases and per-app adoption evidence remain separate |
@@ -58,7 +58,7 @@ Education.
 | Machine principals | machine principal normalization, principal registry, Gateway/Hypervisor/Sandbox enforcement | machine principal/e2e/concurrency/response/destination tests | Human-sponsored finite scopes/actions/purposes/destinations, runtime/expiry/non-delegation, execution-time/request-size/rate/concurrency/response-size ceilings; runtime digest is metadata, not attestation |
 | Machine discovery | Gateway `/v1/machine-discovery`, policy evaluator | discovery unit/e2e/client/network tests | Caller-specific requestability only; explicitly not authorization |
 | Machine receipts | Grid terminal-receipt builder + verifier | receipt unit/e2e/client/network tests | Owner-scoped digest-only Grid attestation; not arbitrary external-world truth |
-| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 31 authenticated Gateway routes are versioned; no direct internal-service target |
+| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 33 authenticated Gateway routes are versioned; no direct internal-service target |
 | Owner-local social surface | social actor/persona/publication intent runtime, Gateway `/v1/social` snapshot | component + real four-service write/read/isolation tests | One current local actor/custodian and one active persona/actor; A2 non-raw publication projection; owner-derived read; no federation/network distribution |
 | Remote social review inspection | `mesh/src/grid/remote-social-review-read-adapter.mjs`, Grid internal owner route, Gateway `/v1/social/remote-review` | read-adapter + exact-contract + real four-service owner/isolation/no-schema tests | Owner is derived only from authenticated principal; query overrides fail; minimized G5A projection only; accepted Grid remains `SocialGridStore`; no remote schema creation, mutation, staging, admission, Following, cleanup, transport, ranking, recommendation, federation, or authority effect |
 | Axiom Education Mesh substrate | Education learner-memory/record/provider contracts, Sandbox Education executor composition, Grid Education route, Hypervisor learner-read path | Education contract/unit/e2e/network-route tests | Governed learner append/self-read conformance substrate; learner self-read only; production Education actions/provider/curriculum/cross-subject authority remain unpromoted; independent Education repo must repin after Mesh merge |
@@ -67,7 +67,7 @@ Education.
 | Grid durability | Grid store/migrations/evidence/protection | restart/migration/tamper/wrong-key/backup/rotation tests | Encrypted single-Grid state, signed hash-linked evidence; no replicated consensus |
 | Grid continuity | continuity-anchor implementation + Grid verifier/operator flow | anchor creation/verification/negative tests | `axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR` proves current history equals/extends retained head through that sequence only |
 | Transport | transport runtime/provisioning | mTLS/rotation drills | TLS 1.3, Ed25519 leaves, identity checks, active-leaf pinning, signed caller binding, rollback |
-| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 42 exact routes, derived mTLS peers, four internal segments; Education adds one exact Hypervisor-to-Grid POST and no public ingress |
+| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 45 exact routes, derived mTLS peers, four internal segments; Education adds one exact Hypervisor-to-Grid POST and no public ingress |
 | Deployment topology | supervisor/production Compose/unit Compose | host/container/service-unit drills | Hardened single host; no multi-host/failover claim |
 | Providers | provider runtime/supervisor/reference adapter | provider tests/drill | Signed exact inventories/private startup generation; no vendor custody/live-refresh claim |
 | Agent Runtime Adapter v1 | `docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md`, v1 schema | contract verifier, negative tests, 28-case synthetic drill | Replaceable-runtime contract only; no external runtime loaded or certified |
@@ -85,7 +85,7 @@ Education.
 | Node scheduling | node registry/scheduler | scheduling tests/drill | Signed admission + deterministic reservations; no remote dispatch |
 | Causal exchange | online causal sync | two-real-stack partition/rejoin drill | Approved encrypted causal record transport; no federation/consensus |
 | Portability/consent | consent/export/import/encryption | kernel/e2e tests | Scoped signed export/staged foreign-provenance import |
-| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 31 Gateway routes, 42 network routes, capability counts, runtime-adapter lock, current narrative invariants |
+| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 33 Gateway routes, 45 network routes, capability counts, runtime-adapter lock, current narrative invariants |
 
 ## Repository-effect activation boundary
 

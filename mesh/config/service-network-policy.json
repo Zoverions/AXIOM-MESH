@@ -146,6 +146,14 @@
         },
         {
           "method": "GET",
+          "path": "/internal/v1/sync/:owner/updates/:id"
+        },
+        {
+          "method": "GET",
+          "path": "/internal/v1/sync/:owner/bundles"
+        },
+        {
+          "method": "GET",
           "path": "/internal/v1/sync/:owner/bundles/:digest"
         },
         {
@@ -190,6 +198,10 @@
         {
           "method": "POST",
           "path": "/internal/v1/commit"
+        },
+        {
+          "method": "POST",
+          "path": "/internal/v1/intents/interrupted"
         },
         {
           "method": "POST",

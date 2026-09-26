@@ -45,7 +45,7 @@ AXIOM-MESH is simultaneously:
    provenance-bound path observations.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
-establishes what is currently runnable. The registry tracks 50 capabilities,
+establishes what is currently runnable. The registry tracks 51 capabilities,
 of which 31 are marked implemented.
 
 The lifecycle is explicit: **built -> enabled -> exposed -> production-promoted
@@ -360,6 +360,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Independent service units](operations/INDEPENDENT-SERVICE-UNITS.md)
 - [Admitted-node discovery and scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
 - [Online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
+- [Circle exchange transport (laboratory, off by default)](operations/CIRCLE-EXCHANGE-TRANSPORT.md)
 - [Deployment-independent providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
 - [Pilot deployment dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md)
 - [Foundational execution pack — 2026-09](operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md)

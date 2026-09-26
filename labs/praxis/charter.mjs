@@ -527,6 +527,15 @@ function validateApprovalRequest({
   if (request.digest !== signatureBodyDigest(request.body)) {
     throw new PraxisRuntimeError('PRAXIS_QUORUM', 'approval request digest mismatch');
   }
+  // A request need not come from createApprovalRequest, so its expiry is
+  // checked here: a missing or non-numeric expires_at_ms never compares as
+  // expired and would yield an authority whose expiry is NaN, i.e. never.
+  if (
+    request.body?.schema !== 'praxis-approval-request.v0'
+    || !Number.isFinite(request.body.expires_at_ms)
+  ) {
+    throw new PraxisRuntimeError('PRAXIS_QUORUM', 'approval request is malformed');
+  }
   const expectedEvidence = evidenceMetadata.map(item => item.evidence_digest).sort();
   const actualEvidence = [...(request.body.evidence_digests ?? [])].sort();
   if (

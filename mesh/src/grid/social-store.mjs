@@ -11,6 +11,15 @@ import { validateSocialPublicationPersonaBinding } from '../lib/social-publicati
 import { runSocialMigrations } from './social-migrations.mjs';
 import { SOCIAL_PROTECTED_COLUMN_MAPPINGS } from './social-protection.mjs';
 
+/** Bump when social event-application logic changes (see materialization-anchor.mjs). */
+const SOCIAL_MATERIALIZER_VERSION = 1;
+const SOCIAL_MATERIALIZED_TABLES = Object.freeze([
+  'social_transitions',
+  'social_publications',
+  'publication_personas',
+  'actor_states'
+]);
+
 function boundedInteger(value, label, min, max) {
   if (!Number.isSafeInteger(value) || value < min || value > max) {
     throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
@@ -57,7 +66,12 @@ export class SocialGridStore extends GridStore {
     this.socialMigrations = runSocialMigrations(this.db);
     migrateProtectedMapping(this, SOCIAL_PROTECTED_COLUMN_MAPPINGS);
     this.socialReady = true;
-    this.rebuildSocialMaterializedState();
+    this.registerMaterializationLayer('social', {
+      layerVersion: SOCIAL_MATERIALIZER_VERSION,
+      schema: this.socialMigrations,
+      tables: SOCIAL_MATERIALIZED_TABLES
+    });
+    this.ensureMaterialized('social', () => this.rebuildSocialMaterializedState());
   }
 
   getStatus() {
@@ -81,10 +95,9 @@ export class SocialGridStore extends GridStore {
   }
 
   rebuildSocialMaterializedState() {
-    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
     this.transaction(() => {
       this.clearSocialMaterializedState();
-      for (const row of rows) {
+      for (const row of this.db.prepare('SELECT * FROM events ORDER BY seq').iterate()) {
         const event = this.decodeEventRow(row);
         if (Object.values(SOCIAL_GRID_EVENT_KINDS).includes(event.kind)) {
           this.applySocialMaterializedEvent(event);
@@ -94,12 +107,7 @@ export class SocialGridStore extends GridStore {
   }
 
   clearSocialMaterializedState() {
-    for (const table of [
-      'social_transitions',
-      'social_publications',
-      'publication_personas',
-      'actor_states'
-    ]) {
+    for (const table of SOCIAL_MATERIALIZED_TABLES) {
       this.db.exec(`DELETE FROM ${table}`);
     }
   }

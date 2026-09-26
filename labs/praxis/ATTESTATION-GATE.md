@@ -39,7 +39,14 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - **Nullifier spend lives at the authority boundary.** The coordinator that
   converts verified attestations into chartered evidence spends nullifiers
   from its registry. P0's default registry is in-memory; callers may inject a
-  durable store and are responsible for persisting spent digests. The
+  durable store and are responsible for persisting spent digests. Praxis
+  modules never touch the file system, so the durable store lives on the host
+  side: `mesh/src/lib/nullifier-store.mjs` (`openDurableNullifierStore`)
+  implements the registry's `has`/`set` as an append-only, hash-linked JSON
+  Lines file. Each spend is fsynced before it is acknowledged, a spend cut
+  short by a crash is dropped on open, any other edit fails closed, one
+  process holds it at a time, and a caller that records `head()` elsewhere
+  detects spends removed from the end. It is not wired to any service. The
   in-language `verify` re-check is intentionally stateless: it re-verifies
   authenticity, freshness, and non-claims without spending, so the program
   expresses what was checked while replay state stays with the host that owns it.
@@ -67,8 +74,9 @@ loop-emitted attestations (`mesh-attestation.v0`).
 - The synthetic host and its signing key remain trusted. A compromised or
   dishonest host could emit false observations; this implementation only
   prevents accidental laundering of an unverified result through the host
-  adapter. The P0.5 signed decision ledger is already landed; real-emitter
-  provenance, host-compromise handling, persistent replay state, and real-Grid
+  adapter. The P0.5 signed decision ledger is already landed, and a durable
+  nullifier store exists for a host to inject; real-emitter provenance,
+  host-compromise handling, a coordinator that owns that store, and real-Grid
   integration remain separately gated follow-up work.
 
 ## Evidence
@@ -79,12 +87,19 @@ loop-emitted attestations (`mesh-attestation.v0`).
   host-adapter corrections; the original two-patch draft passed 271/271.
 - Transport-boundary conformance: `attestation.mjs` classified inert, no
   network/fs/subprocess surface.
+- `mesh/test/praxis-nullifier-store.test.mjs` — a spent attestation stays
+  spent across a restart of the host; edits, removals, reorders, repeats,
+  renumbering and non-canonical lines fail closed; a torn final spend is
+  dropped; a recorded head detects removed spends; one process at a time,
+  with a dead process's lock taken over. 13 of 13 mutations fail it (fsync
+  itself is not exercised by a test).
 
 ## Next steps
 
 1. Real loop emitters producing `mesh-attestation.v0` (test runner,
    reviewer, CI) — operational layer.
-2. Persistent nullifier store owned by the coordinator.
+2. A coordinator that owns the durable nullifier store
+   (`mesh/src/lib/nullifier-store.mjs`, built) and records its head.
 3. Host-compromise and emitter-provenance threat handling before any real
    authority-bearing integration.
 4. Any real-Grid, merge, deploy, or other consequential integration requires a

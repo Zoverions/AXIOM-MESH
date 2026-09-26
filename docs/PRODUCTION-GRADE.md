@@ -29,7 +29,7 @@ personal/local and infrastructure fresh-host install profiles; those are
 priority targets and are not yet supported installers.
 
 The authenticated Gateway surface also has a versioned client contract covering
-all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
+all 33 authenticated Gateway routes and a zero-dependency same-origin client. It
 enforces exact route and input inventories, bounded timeouts and response size,
 cancellation, idempotent intent-result compatibility, explicit errors, and no
 direct access to internal services. A loopback-only AXIOM One PWA foundation
@@ -90,7 +90,7 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny 42-route policy permits only current internal
+readable default-deny 45-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
 mTLS peer allowlists. The 42nd reviewed permission is the bounded
 Hypervisor-to-Grid `POST /internal/v1/education/learner-progress` edge used by

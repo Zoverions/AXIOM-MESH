@@ -1,5 +1,5 @@
 import { createPublicKey, randomUUID } from 'node:crypto';
-import { mkdir, readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
@@ -9,7 +9,7 @@ import {
   recordPendingRecovery,
   releaseGridRuntimeLock,
   restoreGridBackup,
-  verifyGridBackup
+  verifyGridBackupArtifact
 } from './grid/backup.mjs';
 import { GridStore } from './grid/store.mjs';
 import { ValidationError, sha256 } from './lib/canonical.mjs';
@@ -67,27 +67,30 @@ export async function runRecoveryDrill({
     });
     const backupDurationMs = elapsedMilliseconds(backupStartedAt);
     const manifestPath = join(dataDir, 'backups', backupId, 'manifest.json');
-    const snapshotPath = join(dataDir, 'backups', backupId, 'snapshot.axb');
-    const protectedSnapshot = await readFile(snapshotPath);
-    const verifiedBackup = verifyGridBackup({
-      manifest,
-      protectedSnapshot,
-      gridPublicKey: identity.publicKey,
+    // The drill exercises the default backup format; the snapshot's name
+    // comes from the signed manifest.
+    const snapshotPath = join(dataDir, 'backups', backupId, manifest.snapshot.name);
+    const verifiedBackup = await verifyGridBackupArtifact({
+      manifestPath,
+      dataDir,
+      identity,
       protector,
       expectedDatabaseDigest: manifest.database.sha256
     });
 
+    const protectedSnapshot = await readFile(snapshotPath);
     const tamperedSnapshot = Buffer.from(protectedSnapshot);
     tamperedSnapshot[tamperedSnapshot.length - 2] ^= 1;
-    const tamperedSnapshotRejected = await rejectedBy(
-      () => verifyGridBackup({
-        manifest,
-        protectedSnapshot: tamperedSnapshot,
-        gridPublicKey: identity.publicKey,
-        protector
-      }),
-      error => /digest|byte count|authentication/.test(error.message)
-    );
+    await writeFile(snapshotPath, tamperedSnapshot);
+    let tamperedSnapshotRejected;
+    try {
+      tamperedSnapshotRejected = await rejectedBy(
+        () => verifyGridBackupArtifact({ manifestPath, dataDir, identity, protector }),
+        error => /digest|byte count|authentication|signed source metadata/.test(error.message)
+      );
+    } finally {
+      await writeFile(snapshotPath, protectedSnapshot);
+    }
 
     store.appendEvents({
       traceId: 'trace_recovery_drill_after_backup',

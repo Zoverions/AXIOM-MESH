@@ -379,7 +379,7 @@ test('Grid migration ledger is checksum verified and fails closed on drift', asy
   let store = new GridStore({ path: dbPath, dataDir, identity, protector });
   assert.deepEqual(
     store.db.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map(row => row.version),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   );
   store.db.prepare("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 2").run();
   store.close();
@@ -389,7 +389,7 @@ test('Grid migration ledger is checksum verified and fails closed on drift', asy
   );
 });
 
-test('schema 8 state migrates through scheduling schema 10 without evidence loss', async t => {
+test('schema 8 state migrates through scheduling schema 10 and index schema 11 without evidence loss', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-migration-eight-'));
   t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
@@ -421,13 +421,13 @@ test('schema 8 state migrates through scheduling schema 10 without evidence loss
     DROP TABLE sync_updates;
     DROP TABLE sync_bundles;
     DROP TABLE node_schedules;
-    DELETE FROM schema_migrations WHERE version IN (9, 10);
+    DELETE FROM schema_migrations WHERE version IN (9, 10, 11);
     UPDATE meta SET value = '8' WHERE key = 'schema_version';
   `);
   schemaEight.close();
 
   store = new GridStore({ path: dbPath, dataDir, identity, protector });
-  assert.equal(store.getStatus().schema_version, 10);
+  assert.equal(store.getStatus().schema_version, 11);
   assert.equal(store.getIntent('intent_migration_eight').status, 'accepted');
   assert.equal(store.verifyChain().head, evidenceHead);
   assert.deepEqual(
@@ -583,7 +583,11 @@ test('encrypted Grid backups verify, exclude live restore, preserve rollback, an
     identity,
     protector,
     backupId,
-    traceId: 'trace_backup_complete'
+    traceId: 'trace_backup_complete',
+    // The single-envelope format, still supported, and the only one the
+    // in-memory verifier reads; streaming backups are covered in
+    // streaming-backup.test.mjs and by the default below.
+    format: 'axiom-grid-backup.v1'
   });
   const manifestPath = join(dataDir, 'backups', backupId, 'manifest.json');
   const snapshotPath = join(dataDir, 'backups', backupId, 'snapshot.axb');
@@ -744,6 +748,11 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   );
   const metrics = await metricsResponse.text();
   assert.match(metrics, /axiom_service_ready\{service="grid"\} 1/);
+  // Replay protection evidence reaches the operator-facing metrics (S-06).
+  assert.match(metrics, /^axiom_transport_state\{service="grid",kind="replay_capacity"\} [1-9]\d*$/m);
+  // These tests run all four services in one process, so the process-wide
+  // counters include guards from other tests; only their presence is checked.
+  assert.match(metrics, /^axiom_transport_events_total\{service="hypervisor",kind="replay_saturated_total"\} \d+$/m);
   assert.doesNotMatch(metrics, /local-operator|independent-approver/);
 
   const idempotencyKey = `e2e-${crypto.randomUUID()}`;
@@ -1026,6 +1035,13 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     discovery.nodes.map(node => node.node_id),
     ['node:e2e']
   );
+  // Discovery pages (scalability audit S-10); the page is part of the signed
+  // answer, and a malformed cursor is refused.
+  assert.deepEqual(discovery.page, { limit: 100, has_more: false, next_cursor: null });
+  assert.equal(
+    (await api(gateway, token, '/v1/node-discovery?cursor=not*a*cursor', {}, 400)).error.code,
+    'validation_error'
+  );
   const discoveryStatement = structuredClone(discovery);
   delete discoveryStatement.attestation;
   const gridIdentity = stack.services.find(
@@ -1157,6 +1173,28 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     404
   );
   assert.equal(ownerIsolatedSyncRecord.error.code, 'sync_bundle_not_found');
+  // One update, with its value, for its owner only.
+  const headUpdateId = syncState.records[0].heads[0].update_id;
+  const syncUpdate = await api(gateway, token, `/v1/sync/updates/${headUpdateId}`);
+  assert.equal(syncUpdate.value.title, 'first offline value');
+  assert.equal(syncUpdate.value_digest, syncState.records[0].heads[0].value_digest);
+  assert.equal(
+    (await api(gateway, approverToken, `/v1/sync/updates/${headUpdateId}`, {}, 404)).error.code,
+    'sync_update_not_found'
+  );
+  assert.equal(
+    (await api(gateway, token, '/v1/sync/updates/not-an-update', {}, 400)).error.code,
+    'validation_error'
+  );
+  // Every bundle summary is listed, paged and owner-isolated.
+  const syncBundles = await api(gateway, token, '/v1/sync/bundles?limit=1');
+  assert.deepEqual(syncBundles.bundles.map(item => item.bundle_digest), [firstSyncResult.bundle_digest]);
+  assert.deepEqual(syncBundles.page, { limit: 1, has_more: false, next_cursor: null });
+  assert.equal((await api(gateway, approverToken, '/v1/sync/bundles')).bundles.length, 0);
+  assert.equal(
+    (await api(gateway, token, '/v1/sync/bundles?cursor=not*a*cursor', {}, 400)).error.code,
+    'validation_error'
+  );
 
   const peerKeys = generateKeyPairSync('ed25519');
   const peerPublicKey = peerKeys.publicKey.export({ type: 'spki', format: 'pem' });
@@ -1813,7 +1851,9 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     input: {}
   });
   assert.equal(backup.status, 'completed');
-  assert.equal(backup.backup_manifest.format, 'axiom-grid-backup.v1');
+  // Streaming backups are the default (scalability audit S-13).
+  assert.equal(backup.backup_manifest.format, 'axiom-grid-backup.v2');
+  assert.equal(backup.backup_manifest.snapshot.name, 'snapshot.axc');
   assert.match(backup.backup_manifest.database.sha256, /^[a-f0-9]{64}$/);
   const backups = await api(gateway, token, '/v1/backups');
   assert.equal(backups.backups[0].backup_id, backup.backup_id);

@@ -6,12 +6,14 @@ import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/ide
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
+import { COLLECTION_PAGE_MAX, collectionPage, decodeCollectionCursor } from '../lib/collection-page.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { registerEducationGridRoutes } from './education-routes.mjs';
 import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
+import { POLICY_GENERATION_RECEIPT_FORMAT } from '../lib/policy.mjs';
 import { createCapabilityConsumptionCommitter } from './capability-consumption-route.mjs';
 import {
   acquireGridRuntimeLock,
@@ -27,6 +29,8 @@ import {
   allowedInboundTransportPeers,
   authorizeInboundServiceRequest
 } from '../lib/service-network-policy.mjs';
+
+const SYNC_HEAD_NONCE = /^[A-Za-z0-9_-]{16,128}$/;
 
 export async function createGridService(config = meshConfig()) {
   await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
@@ -190,8 +194,9 @@ export async function createGridService(config = meshConfig()) {
 
   router.add('GET', '/internal/v1/status', async () => store.getStatus());
   router.add('GET', '/internal/v1/verify-chain', async () => store.verifyChain());
-  router.add('GET', '/internal/v1/events', async ({ url }) => ({
-    events: store.listEvents({
+  router.add('GET', '/internal/v1/events', async ({ url }) => {
+    const actor = url.searchParams.get('actor') ?? undefined;
+    const events = store.listEvents({
       after: integerQuery(url.searchParams.get('after'), 0, {
         label: 'events after',
         min: 0,
@@ -202,9 +207,23 @@ export async function createGridService(config = meshConfig()) {
         min: 1,
         max: 500
       }),
-      actor: url.searchParams.get('actor') ?? undefined
-    })
-  }));
+      actor
+    });
+    const nonce = url.searchParams.get('nonce');
+    if (!actor || nonce === null) return { events };
+    if (!SYNC_HEAD_NONCE.test(nonce)) {
+      throw new AxiomError('invalid_nonce', 'Sync head nonce is invalid', 400);
+    }
+    // Read in the same synchronous turn as the events, so both describe one
+    // moment of the single-writer log.
+    const body = {
+      format: 'axiom-sync-head.v1',
+      owner: actor,
+      ...store.syncHead(actor),
+      nonce
+    };
+    return { events, sync_head: { body, signature: identity.signObject(body) } };
+  });
   router.add('GET', '/internal/v1/social/remote-review/:owner', async ({ params }) => {
     const owner = assertString(params.owner, 'remote social review owner', {
       max: 160,
@@ -257,33 +276,24 @@ export async function createGridService(config = meshConfig()) {
       kernelVersion: '0.12.0-dev.3'
     });
   });
-  router.add('GET', '/internal/v1/capsules', async ({ url }) => ({
-    capsules: store.listCapsules({
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'capsules limit',
-        min: 1,
-        max: 100
-      })
-    })
-  }));
-  router.add('GET', '/internal/v1/proposals', async ({ url }) => ({
-    proposals: store.listProposals({
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'proposals limit',
-        min: 1,
-        max: 100
-      })
-    })
-  }));
-  router.add('GET', '/internal/v1/nodes', async ({ url }) => ({
-    nodes: store.listNodes({
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'nodes limit',
-        min: 1,
-        max: 100
-      })
-    })
-  }));
+  router.add('GET', '/internal/v1/capsules', async ({ url }) => {
+    const { items, page } = pagedCollection(url, 'capsules', 'capsules limit',
+      (limit, after) => store.listCapsules({ limit, after }),
+      item => [item.registered_at, item.digest]);
+    return { capsules: items, page };
+  });
+  router.add('GET', '/internal/v1/proposals', async ({ url }) => {
+    const { items, page } = pagedCollection(url, 'proposals', 'proposals limit',
+      (limit, after) => store.listProposals({ limit, after }),
+      item => [item.created_at, item.proposal_id]);
+    return { proposals: items, page };
+  });
+  router.add('GET', '/internal/v1/nodes', async ({ url }) => {
+    const { items, page } = pagedCollection(url, 'nodes', 'nodes limit',
+      (limit, after) => store.listNodes({ limit, after }),
+      item => [item.registered_at, item.node_id]);
+    return { nodes: items, page };
+  });
   router.add('GET', '/internal/v1/node-discovery', async ({ url }) => {
     const discovery = store.discoverNodes({
       required_capabilities: url.searchParams.getAll('capability'),
@@ -297,7 +307,7 @@ export async function createGridService(config = meshConfig()) {
         0
       ),
       limit: integerQuery(url.searchParams.get('limit'), 100)
-    });
+    }, { after: url.searchParams.get('cursor') ?? undefined });
     return {
       ...discovery,
       attestation: identity.signObject(discovery)
@@ -306,26 +316,27 @@ export async function createGridService(config = meshConfig()) {
   router.add(
     'GET',
     '/internal/v1/node-schedules/:principal',
-    async ({ params, url }) => store.listNodeSchedules(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'node schedule limit',
-        min: 1,
-        max: 100
-      })
-    })
+    async ({ params, url }) => {
+      let result;
+      const { items, page } = pagedCollection(url, 'node_schedules', 'node schedule limit',
+        (limit, after) => (result = store.listNodeSchedules(params.principal, { limit, after })).schedules,
+        item => [item.created_at, item.schedule_id]);
+      return { ...result, schedules: items, truncated: page.has_more, page };
+    }
   );
-  router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
-    consents: store.listConsents(params.principal)
-  }));
-  router.add('GET', '/internal/v1/approvals/:principal', async ({ params, url }) => (
-    store.listApprovals(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'approval limit',
-        min: 1,
-        max: 100
-      })
-    })
-  ));
+  router.add('GET', '/internal/v1/consents/:principal', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'consents', 'consent limit',
+      (limit, after) => store.pageConsents(params.principal, { limit, after }),
+      item => [item.created_at, item.consent_id]);
+    return { consents: items, page };
+  });
+  router.add('GET', '/internal/v1/approvals/:principal', async ({ params, url }) => {
+    let result;
+    const { items, page } = pagedCollection(url, 'approvals', 'approval limit',
+      (limit, after) => (result = store.listApprovals(params.principal, { limit, after })).approvals,
+      item => [item.created_at, item.approval_id]);
+    return { ...result, approvals: items, truncated: page.has_more, page };
+  });
   router.add('GET', '/internal/v1/approval/:id', async ({ params }) => store.getApproval(params.id));
   router.add('GET', '/internal/v1/memory/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
@@ -341,19 +352,27 @@ export async function createGridService(config = meshConfig()) {
         label: 'memory limit',
         min: 1,
         max: 500
-      })
+      }),
+      after: decodeCollectionCursor('memory', url.searchParams.get('cursor'))
     });
   });
-  router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
+  router.add('GET', '/internal/v1/accounting/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
       max: 160,
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     });
-    return store.listAccounting(owner);
+    let result;
+    const { items, page } = pagedCollection(url, 'journals', 'journal limit',
+      (limit, after) => (result = store.listAccounting(owner, { limit, after })).journals,
+      item => [item.created_at, item.journal_id]);
+    return { ...result, journals: items, page };
   });
-  router.add('GET', '/internal/v1/imports/:principal', async ({ params }) => ({
-    imports: store.listImports(params.principal)
-  }));
+  router.add('GET', '/internal/v1/imports/:principal', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'imports', 'import limit',
+      (limit, after) => store.listImports(params.principal, { limit, after }),
+      item => [item.staged_at, item.import_id]);
+    return { imports: items, page };
+  });
   router.add('GET', '/internal/v1/import/:id', async ({ params, url }) => {
     const principal = assertString(url.searchParams.get('principal'), 'principal', {
       max: 160,
@@ -361,15 +380,59 @@ export async function createGridService(config = meshConfig()) {
     });
     return store.getImport(params.id, principal);
   });
-  router.add('GET', '/internal/v1/policy-overlays', async () => ({
-    overlays: store.listActivePolicyOverlays()
-  }));
-  router.add('GET', '/internal/v1/appeals/:principal', async ({ params }) => ({
-    appeals: store.listGovernanceAppeals(params.principal)
-  }));
-  router.add('GET', '/internal/v1/storage-offers/:owner', async ({ params }) => ({
-    offers: store.listStorageOffers(params.owner)
-  }));
+  // S-15: with `generation`, a caller that already holds the overlay set in
+  // force gets only the generation back; nothing is decrypted or sent. With
+  // `nonce`, the answer carries a receipt signed with the Grid identity that
+  // names the generation in force for exactly that request.
+  router.add('GET', '/internal/v1/policy-overlays', async ({ url }) => {
+    const known = url.searchParams.get('generation');
+    if (known !== null && !/^[a-f0-9]{64}$/.test(known)) {
+      throw new ValidationError('Policy overlay generation is invalid');
+    }
+    const nonce = url.searchParams.get('nonce');
+    if (nonce !== null && !SYNC_HEAD_NONCE.test(nonce)) {
+      throw new AxiomError('invalid_nonce', 'Policy generation nonce is invalid', 400);
+    }
+    const now = new Date().toISOString();
+    const generation = store.policyOverlayGeneration(now);
+    const answer = known === generation
+      ? { generation, unchanged: true }
+      : { generation, overlays: store.listActivePolicyOverlays(now) };
+    if (nonce === null) return answer;
+    const body = { format: POLICY_GENERATION_RECEIPT_FORMAT, generation, as_of: now, nonce };
+    return { ...answer, receipt: { body, signature: identity.signObject(body) } };
+  });
+  // S-15: the Hypervisor closes intents its previous process left without a
+  // terminal state. The cutoff may not be in the future, so a live intent
+  // accepted after it is never touched.
+  router.add('POST', '/internal/v1/intents/interrupted', async ({ body, traceId, principal }) => {
+    if (principal.service !== 'hypervisor') {
+      throw new ValidationError('Only Hypervisor may close interrupted intents');
+    }
+    const input = assertPlainObject(parseJsonBody(body), 'interrupted intents');
+    const before = assertString(input.before, 'before', { max: 40 });
+    if (!(Date.parse(before) <= Date.now())) {
+      throw new ValidationError('Interrupted intent cutoff must be a past ISO timestamp');
+    }
+    return store.closeInterruptedIntents({
+      before,
+      intentIds: input.intent_ids ?? null,
+      ...(input.limit === undefined ? {} : { limit: input.limit }),
+      traceId
+    });
+  });
+  router.add('GET', '/internal/v1/appeals/:principal', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'appeals', 'appeal limit',
+      (limit, after) => store.listGovernanceAppeals(params.principal, { limit, after }),
+      item => [item.created_at, item.appeal_id]);
+    return { appeals: items, page };
+  });
+  router.add('GET', '/internal/v1/storage-offers/:owner', async ({ params, url }) => {
+    const { items, page } = pagedCollection(url, 'storage_offers', 'storage offer limit',
+      (limit, after) => store.listStorageOffers(params.owner, { limit, after }),
+      item => [item.created_at, item.offer_id]);
+    return { offers: items, page };
+  });
   router.add('GET', '/internal/v1/sync/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
       max: 160,
@@ -389,7 +452,35 @@ export async function createGridService(config = meshConfig()) {
         pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
       });
     }
-    return store.listCausalSync(owner, { namespace, recordId });
+    const cursor = url.searchParams.get('cursor') ?? undefined;
+    const limit = integerQuery(url.searchParams.get('limit'), 100, {
+      label: 'sync limit',
+      min: 1,
+      max: 200
+    });
+    return store.listCausalSync(owner, { namespace, recordId, cursor, limit });
+  });
+  router.add('GET', '/internal/v1/sync/:owner/updates/:id', async ({ params }) => {
+    const owner = assertString(params.owner, 'owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const updateId = assertString(params.id, 'sync update id', {
+      min: 69,
+      max: 69,
+      pattern: /^sync_[a-f0-9]{64}$/
+    });
+    return store.getCausalSyncUpdate(owner, updateId);
+  });
+  router.add('GET', '/internal/v1/sync/:owner/bundles', async ({ params, url }) => {
+    const owner = assertString(params.owner, 'owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const { items, page } = pagedCollection(url, 'sync_bundles', 'sync bundle limit',
+      (limit, after) => store.listCausalSyncBundles(owner, { limit, after }),
+      item => [item.received_at, item.bundle_digest]);
+    return { owner, bundles: items, page };
   });
   router.add(
     'GET',
@@ -407,15 +498,13 @@ export async function createGridService(config = meshConfig()) {
       return store.getCausalSyncBundle(owner, bundleDigest);
     }
   );
-  router.add('GET', '/internal/v1/backups/:principal', async ({ params, url }) => (
-    store.listBackups(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'backup limit',
-        min: 1,
-        max: 100
-      })
-    })
-  ));
+  router.add('GET', '/internal/v1/backups/:principal', async ({ params, url }) => {
+    let result;
+    const { items, page } = pagedCollection(url, 'backups', 'backup limit',
+      (limit, after) => (result = store.listBackups(params.principal, { limit, after })).backups,
+      item => [item.requested_at, item.backup_id]);
+    return { ...result, backups: items, truncated: page.has_more, page };
+  });
   router.add('GET', '/internal/v1/backup/:id', async ({ params, url }) => {
     const principal = assertString(url.searchParams.get('principal'), 'principal', {
       max: 160,
@@ -485,6 +574,18 @@ export async function createGridService(config = meshConfig()) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runServiceProcess(createGridService);
+}
+
+// One keyset page of a collection (scalability audit S-10): at most
+// COLLECTION_PAGE_MAX items, fetched as limit + 1 to learn whether more exist.
+function pagedCollection(url, collection, label, fetch, key) {
+  const limit = integerQuery(url.searchParams.get('limit'), COLLECTION_PAGE_MAX, {
+    label,
+    min: 1,
+    max: COLLECTION_PAGE_MAX
+  });
+  const after = decodeCollectionCursor(collection, url.searchParams.get('cursor'));
+  return collectionPage(fetch(limit + 1, after), { collection, limit, key });
 }
 
 function integerQuery(value, fallback, {

@@ -1,6 +1,13 @@
-import { createPublicKey } from 'node:crypto';
+import { createHash, createPublicKey } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import { lstat, readFile } from 'node:fs/promises';
-import { isAbsolute } from 'node:path';
+import { isAbsolute, join } from 'node:path';
+import {
+  CHUNKED_ARTIFACT_FORMAT,
+  openFileChunked,
+  sealFileChunked,
+  validateChunkedMetadata
+} from './chunked-artifact.mjs';
 import {
   ValidationError,
   canonicalJson,
@@ -12,6 +19,9 @@ const REWRAP_FORMAT = 'axiom-protected-artifact-rewrap.v1';
 const DIGEST = /^[a-f0-9]{64}$/;
 const ROTATION_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const MAX_ARTIFACT_BYTES = 512 * 1024 * 1024;
+// Chunked artifacts are never read whole, so they are not held to the
+// single-envelope limit.
+const MAX_CHUNKED_ARTIFACT_BYTES = Number.MAX_SAFE_INTEGER;
 const MAX_SIDECAR_BYTES = 4 * 1024 * 1024;
 const MAX_REWRAP_DEPTH = 64;
 const SIDECAR_SUFFIX = '.key-rotation.json';
@@ -195,6 +205,7 @@ export function verifyProtectedArtifactState({
   context,
   encoding,
   expectedPlaintext,
+  expectedChunked,
   verificationKeys
 }) {
   assertArtifactDescriptor({
@@ -202,9 +213,10 @@ export function verifyProtectedArtifactState({
     context,
     encoding,
     expected,
-    expectedPlaintext
+    expectedPlaintext,
+    expectedChunked
   });
-  assertMetadata(actual, 'actual artifact');
+  assertMetadata(actual, 'actual artifact', maxArtifactBytes(encoding));
   if (!rewrap) {
     if (!sameMetadata(actual, expected)) {
       throw new ValidationError(
@@ -220,6 +232,7 @@ export function verifyProtectedArtifactState({
     context,
     encoding,
     expectedPlaintext,
+    expectedChunked,
     verificationKeys,
     depth: 0
   });
@@ -257,6 +270,7 @@ function verifyRewrapNode({
   context,
   encoding,
   expectedPlaintext,
+  expectedChunked,
   verificationKeys,
   depth
 }) {
@@ -273,13 +287,20 @@ function verifyRewrapNode({
   ) {
     throw new ValidationError('Protected artifact rewrap metadata is invalid');
   }
-  assertMetadata(rewrap.source, 'rewrap source');
-  assertMetadata(rewrap.target, 'rewrap target');
+  const maxBytes = maxArtifactBytes(encoding);
+  assertMetadata(rewrap.source, 'rewrap source', maxBytes);
+  assertMetadata(rewrap.target, 'rewrap target', maxBytes);
   if (expectedPlaintext) {
-    assertMetadata(rewrap.plaintext?.source, 'rewrap plaintext source');
-    assertMetadata(rewrap.plaintext?.target, 'rewrap plaintext target');
+    assertMetadata(rewrap.plaintext?.source, 'rewrap plaintext source', maxBytes);
+    assertMetadata(rewrap.plaintext?.target, 'rewrap plaintext target', maxBytes);
   } else if (rewrap.plaintext !== undefined) {
     throw new ValidationError('Unexpected protected artifact plaintext metadata');
+  }
+  if (encoding === 'chunked') {
+    assertChunkParameters(rewrap.chunked?.source, 'rewrap chunk source');
+    assertChunkParameters(rewrap.chunked?.target, 'rewrap chunk target');
+  } else if (rewrap.chunked !== undefined) {
+    throw new ValidationError('Unexpected protected artifact chunk metadata');
   }
   const prior = rewrap.prior
     ? verifyRewrapNode({
@@ -289,14 +310,19 @@ function verifyRewrapNode({
       context,
       encoding,
       expectedPlaintext,
+      expectedChunked,
       verificationKeys,
       depth: depth + 1
     })
     : {
       target: expected,
       plaintext: expectedPlaintext,
+      chunked: expectedChunked ?? null,
       rotations: 0
     };
+  if (encoding === 'chunked' && !sameChunkParameters(rewrap.chunked.source, prior.chunked)) {
+    throw new ValidationError('Protected artifact chunk rewrap chain is discontinuous');
+  }
   if (!sameMetadata(rewrap.source, prior.target)) {
     throw new ValidationError('Protected artifact rewrap chain is discontinuous');
   }
@@ -350,6 +376,7 @@ function verifyRewrapNode({
   return {
     target: rewrap.target,
     plaintext: expectedPlaintext ? rewrap.plaintext.target : null,
+    chunked: encoding === 'chunked' ? rewrap.chunked.target : null,
     rotations: prior.rotations + 1
   };
 }
@@ -360,6 +387,7 @@ function assertRewrapInputs({
   encoding,
   expected,
   expectedPlaintext,
+  expectedChunked,
   sourceProtector,
   targetProtector,
   identity,
@@ -370,7 +398,8 @@ function assertRewrapInputs({
     context,
     encoding,
     expected,
-    expectedPlaintext
+    expectedPlaintext,
+    expectedChunked
   });
   if (!sourceProtector || !targetProtector || !identity) {
     throw new ValidationError('Protected artifact rewrap dependencies are missing');
@@ -385,7 +414,8 @@ function assertArtifactDescriptor({
   context,
   encoding,
   expected,
-  expectedPlaintext
+  expectedPlaintext,
+  expectedChunked
 }) {
   if (
     typeof relativePath !== 'string'
@@ -400,30 +430,258 @@ function assertArtifactDescriptor({
   if (typeof context !== 'string' || context.length < 1 || context.length > 512) {
     throw new ValidationError('Protected artifact context is invalid');
   }
-  if (!['bytes', 'json'].includes(encoding)) {
+  if (!['bytes', 'json', 'chunked'].includes(encoding)) {
     throw new ValidationError('Protected artifact encoding is invalid');
   }
-  assertMetadata(expected, 'expected artifact');
+  const maxBytes = maxArtifactBytes(encoding);
+  assertMetadata(expected, 'expected artifact', maxBytes);
+  if (encoding === 'chunked') {
+    if (!expectedPlaintext) {
+      throw new ValidationError('Chunked protected artifacts require plaintext metadata');
+    }
+    assertChunkParameters(expectedChunked, 'expected artifact chunk');
+  } else if (expectedChunked !== undefined) {
+    throw new ValidationError('Only chunked protected artifacts carry chunk metadata');
+  }
   if (expectedPlaintext) {
-    if (encoding !== 'bytes') {
+    if (encoding === 'json') {
       throw new ValidationError(
         'Protected artifact plaintext metadata requires byte encoding'
       );
     }
-    assertMetadata(expectedPlaintext, 'expected artifact plaintext');
+    assertMetadata(expectedPlaintext, 'expected artifact plaintext', maxBytes);
   }
+}
+
+function maxArtifactBytes(encoding) {
+  return encoding === 'chunked' ? MAX_CHUNKED_ARTIFACT_BYTES : MAX_ARTIFACT_BYTES;
 }
 
 function latestPlaintextMetadata(rewrap, expectedPlaintext) {
   return rewrap ? rewrap.plaintext.target : expectedPlaintext;
 }
 
-function assertMetadata(value, label) {
+function latestChunkParameters(rewrap, expectedChunked) {
+  return rewrap ? rewrap.chunked.target : expectedChunked;
+}
+
+// The per-artifact parameters a chunked artifact is opened with; the
+// digests and sizes come from the artifact metadata alongside them.
+function assertChunkParameters(value, label) {
+  if (
+    value === null
+    || typeof value !== 'object'
+    || Array.isArray(value)
+    || Object.keys(value).sort().join(',') !== 'chunk_bytes,chunks,salt'
+    || typeof value.salt !== 'string'
+    || !/^[A-Za-z0-9_-]{43}$/.test(value.salt)
+    || !Number.isSafeInteger(value.chunk_bytes)
+    || !Number.isSafeInteger(value.chunks)
+    || value.chunks < 1
+  ) {
+    throw new ValidationError(`${label} metadata is invalid`);
+  }
+}
+
+function sameChunkParameters(left, right) {
+  return Boolean(left && right)
+    && left.salt === right.salt
+    && left.chunk_bytes === right.chunk_bytes
+    && left.chunks === right.chunks;
+}
+
+function chunkedExpectation(artifact, plaintext, chunked) {
+  return validateChunkedMetadata({
+    format: CHUNKED_ARTIFACT_FORMAT,
+    algorithm: 'A256GCM',
+    kdf: 'HKDF-SHA256',
+    ...chunked,
+    bytes: artifact.bytes,
+    sha256: artifact.sha256,
+    plaintext: { bytes: plaintext.bytes, sha256: plaintext.sha256 }
+  });
+}
+
+/**
+ * Rewraps a chunked artifact under a new data-protection key without
+ * holding its plaintext in memory: the current state is verified against
+ * the signed rewrap history, the artifact is decrypted into `workDir`,
+ * `transformFile` may rewrite that plaintext file in place, and the result
+ * is sealed again chunk by chunk. The signed rewrap record binds the source
+ * and target ciphertext, plaintext and chunk parameters. The resealed bytes
+ * are returned for the caller's file transaction.
+ */
+export async function prepareChunkedArtifactRewrap({
+  artifactPath,
+  relativePath,
+  context,
+  expected,
+  expectedPlaintext,
+  expectedChunked,
+  sourceProtector,
+  targetProtector,
+  identity,
+  rotationId,
+  verificationKeys,
+  workDir,
+  transformFile
+}) {
+  assertRewrapInputs({
+    relativePath,
+    context,
+    encoding: 'chunked',
+    expected,
+    expectedPlaintext,
+    expectedChunked,
+    sourceProtector,
+    targetProtector,
+    identity,
+    rotationId
+  });
+  const prior = await readProtectedArtifactRewrap(artifactPath);
+  const current = await fileMetadata(artifactPath);
+  verifyProtectedArtifactState({
+    rewrap: prior,
+    expected,
+    actual: current,
+    relativePath,
+    context,
+    encoding: 'chunked',
+    expectedPlaintext,
+    expectedChunked,
+    verificationKeys
+  });
+  const sourcePlaintext = latestPlaintextMetadata(prior, expectedPlaintext);
+  const sourceChunked = latestChunkParameters(prior, expectedChunked);
+  const plainPath = join(workDir, 'chunked-rewrap.plain');
+  const sealedPath = join(workDir, 'chunked-rewrap.sealed');
+  await openFileChunked({
+    protector: sourceProtector,
+    sourcePath: artifactPath,
+    targetPath: plainPath,
+    context,
+    expected: chunkedExpectation(current, sourcePlaintext, sourceChunked)
+  });
+  const transformedPath = transformFile ? await transformFile(plainPath) : plainPath;
+  const sealed = await sealFileChunked({
+    protector: targetProtector,
+    sourcePath: transformedPath,
+    targetPath: sealedPath,
+    context,
+    chunkBytes: sourceChunked.chunk_bytes
+  });
+  const target = { bytes: sealed.bytes, sha256: sealed.sha256 };
+  const publicKeyPem = String(identity.publicKey.export({ type: 'spki', format: 'pem' }));
+  const unsigned = {
+    format: REWRAP_FORMAT,
+    schema_version: 1,
+    rotation_id: rotationId,
+    created_at: new Date().toISOString(),
+    artifact: { path: relativePath, context, encoding: 'chunked' },
+    source: current,
+    target,
+    plaintext: {
+      source: sourcePlaintext,
+      target: { bytes: sealed.plaintext.bytes, sha256: sealed.plaintext.sha256 }
+    },
+    chunked: {
+      source: sourceChunked,
+      target: { salt: sealed.salt, chunk_bytes: sealed.chunk_bytes, chunks: sealed.chunks }
+    },
+    prior,
+    signer: { service: 'grid', key_id: identity.keyId, public_key_pem: publicKeyPem }
+  };
+  const rewrap = { ...unsigned, attestation: identity.signObject(unsigned) };
+  verifyProtectedArtifactState({
+    rewrap,
+    expected,
+    actual: target,
+    relativePath,
+    context,
+    encoding: 'chunked',
+    expectedPlaintext,
+    expectedChunked,
+    verificationKeys
+  });
+  // Today's rotation stages every rewrapped artifact in memory.
+  if (sealed.bytes > MAX_ARTIFACT_BYTES) {
+    throw new ValidationError('Chunked artifact is too large to rewrap in memory');
+  }
+  const content = await readFile(sealedPath);
+  return {
+    artifact: content,
+    sidecar: Buffer.from(`${canonicalJson(rewrap)}\n`, 'utf8'),
+    sidecar_path: `${artifactPath}${SIDECAR_SUFFIX}`,
+    before: current,
+    after: target,
+    rewrap
+  };
+}
+
+/**
+ * Opens a chunked artifact at its current state: the signed rewrap history
+ * (if any) is verified against the file on disk, and the artifact is
+ * decrypted with its latest chunk parameters into `targetPath`.
+ */
+export async function openChunkedProtectedArtifact({
+  artifactPath,
+  relativePath,
+  context,
+  expected,
+  expectedPlaintext,
+  expectedChunked,
+  protector,
+  verificationKeys,
+  targetPath
+}) {
+  if (!protector) throw new ValidationError('Protected artifact protector is missing');
+  const rewrap = await readProtectedArtifactRewrap(artifactPath);
+  const current = await fileMetadata(artifactPath);
+  const state = verifyProtectedArtifactState({
+    rewrap,
+    expected,
+    actual: current,
+    relativePath,
+    context,
+    encoding: 'chunked',
+    expectedPlaintext,
+    expectedChunked,
+    verificationKeys
+  });
+  const plaintext = latestPlaintextMetadata(rewrap, expectedPlaintext);
+  await openFileChunked({
+    protector,
+    sourcePath: artifactPath,
+    targetPath,
+    context,
+    expected: chunkedExpectation(current, plaintext, latestChunkParameters(rewrap, expectedChunked))
+  });
+  return { rewrapped: state.rewrapped, rotations: state.rotations, plaintext_metadata: plaintext };
+}
+
+async function fileMetadata(path) {
+  const stat = await lstat(path);
+  if (stat.isSymbolicLink() || !stat.isFile()) {
+    throw new ValidationError('Protected artifact must be a regular file');
+  }
+  if (stat.size < 1 || stat.size > MAX_CHUNKED_ARTIFACT_BYTES) {
+    throw new ValidationError('Protected artifact has an invalid size');
+  }
+  const hash = createHash('sha256');
+  let bytes = 0;
+  for await (const chunk of createReadStream(path)) {
+    hash.update(chunk);
+    bytes += chunk.length;
+  }
+  return { bytes, sha256: hash.digest('hex') };
+}
+
+function assertMetadata(value, label, maxBytes = MAX_ARTIFACT_BYTES) {
   if (
     !value
     || !Number.isSafeInteger(value.bytes)
     || value.bytes < 1
-    || value.bytes > MAX_ARTIFACT_BYTES
+    || value.bytes > maxBytes
     || !DIGEST.test(value.sha256 ?? '')
   ) {
     throw new ValidationError(`${label} metadata is invalid`);

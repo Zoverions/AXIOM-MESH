@@ -8,6 +8,10 @@ import {
 } from '../lib/canonical.mjs';
 import { GridStore } from './store.mjs';
 import { runSovereignInformationMigrations } from './sovereign-information-migrations.mjs';
+
+/** Bump when sovereign-information event-application logic changes (see materialization-anchor.mjs). */
+const SIEA_MATERIALIZER_VERSION = 1;
+const SIEA_MATERIALIZED_TABLES = Object.freeze(['siea_objects']);
 import {
   assertIsoTimestamp,
   assertNoUnknownKeys,
@@ -145,7 +149,12 @@ export class SovereignInformationGridStore extends GridStore {
     this.sieaMigrations = runSovereignInformationMigrations(this.db);
     this.migrateSovereignInformationProtectedColumns();
     this.sieaReady = true;
-    this.rebuildSovereignInformationMaterializedState();
+    this.registerMaterializationLayer('siea', {
+      layerVersion: SIEA_MATERIALIZER_VERSION,
+      schema: this.sieaMigrations,
+      tables: SIEA_MATERIALIZED_TABLES
+    });
+    this.ensureMaterialized('siea', () => this.rebuildSovereignInformationMaterializedState());
   }
 
   constructor({ mutationVerifier, informationAccessDecisionVerifier, ...options }) {
@@ -197,10 +206,9 @@ export class SovereignInformationGridStore extends GridStore {
   }
 
   rebuildSovereignInformationMaterializedState() {
-    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
     this.transaction(() => {
       this.clearSovereignInformationMaterializedState();
-      for (const row of rows) {
+      for (const row of this.db.prepare('SELECT * FROM events ORDER BY seq').iterate()) {
         const event = this.decodeEventRow(row);
         if (EVENT_TO_KIND.has(event.kind) || event.kind === MANDATE_REVOKED_EVENT) {
           this.applyMaterializedEvent(event);

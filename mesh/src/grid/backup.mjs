@@ -17,11 +17,28 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
-import { openProtectedArtifact } from '../lib/protected-artifact.mjs';
+import { openChunkedProtectedArtifact, openProtectedArtifact } from '../lib/protected-artifact.mjs';
+import {
+  CHUNKED_ARTIFACT_FORMAT,
+  sealFileChunked,
+  validateChunkedMetadata
+} from '../lib/chunked-artifact.mjs';
 import { loadGridVerificationKeys } from './store.mjs';
 
-const BACKUP_FORMAT = 'axiom-grid-backup.v1';
+// The single-envelope format. Still verified, restored and rotated; new
+// backups use it only when AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v1
+// (for example, to restore on a build that predates v2).
+export const ENVELOPE_BACKUP_FORMAT = 'axiom-grid-backup.v1';
+const BACKUP_FORMAT = ENVELOPE_BACKUP_FORMAT;
 const BACKUP_FILE = 'snapshot.axb';
+// Streaming format (scalability audit S-13), the default: the snapshot is a
+// chunked protected artifact, so backup, verification and restore hold a
+// bounded amount of memory whatever the database size. Data-key rotation
+// rewraps it chunk by chunk under a signed rewrap record.
+export const STREAMING_BACKUP_FORMAT = 'axiom-grid-backup.v2';
+export const DEFAULT_BACKUP_FORMAT = STREAMING_BACKUP_FORMAT;
+const STREAMING_BACKUP_FILE = 'snapshot.axc';
+const BACKUP_FORMATS = new Set([BACKUP_FORMAT, STREAMING_BACKUP_FORMAT]);
 const MANIFEST_FILE = 'manifest.json';
 const LOCK_FILE = 'grid-runtime.lock';
 const RECOVERY_MARKER = 'pending-grid-recovery.json';
@@ -34,10 +51,12 @@ export async function createGridBackup({
   identity,
   protector,
   backupId,
-  traceId
+  traceId,
+  format = process.env.AXIOM_GRID_BACKUP_FORMAT || DEFAULT_BACKUP_FORMAT
 }) {
   if (!store || !identity || !protector) throw new ValidationError('Grid backup dependencies are missing');
   if (!ID.test(backupId ?? '')) throw new ValidationError('Backup id is invalid');
+  if (!BACKUP_FORMATS.has(format)) throw new ValidationError('Grid backup format is unsupported');
   const record = store.getBackupRecord(backupId);
   if (record.status === 'completed') return record.manifest_json;
   if (record.status !== 'pending') throw new AxiomError('backup_unavailable', 'Backup is not pending', 409);
@@ -52,15 +71,14 @@ export async function createGridBackup({
   );
   try {
     await sqliteBackup(store.db, temporaryDatabase, { rate: 64 });
-    const database = await readFile(temporaryDatabase);
     const status = store.getStatus();
     const protectionContext = `axiom:grid-backup:${backupId}`;
-    const protectedSnapshot = Buffer.from(protector.sealBytes(database, protectionContext));
-    const snapshotPath = join(directory, BACKUP_FILE);
-    await atomicWrite(snapshotPath, protectedSnapshot, 0o600);
+    const { snapshotPath, databaseMetadata, snapshotMetadata } = format === STREAMING_BACKUP_FORMAT
+      ? await sealStreamingSnapshot({ directory, temporaryDatabase, protector, protectionContext })
+      : await sealSnapshot({ directory, temporaryDatabase, protector, protectionContext });
 
     const unsigned = {
-      format: BACKUP_FORMAT,
+      format,
       schema_versions: {
         manifest: 1,
         database: status.schema_version,
@@ -71,20 +89,12 @@ export async function createGridBackup({
       created_at: new Date().toISOString(),
       database: {
         media_type: 'application/vnd.sqlite3',
-        bytes: database.length,
-        sha256: sha256(database),
+        ...databaseMetadata,
         schema_version: status.schema_version,
         evidence_events: status.last_seq,
         evidence_head: status.last_hash
       },
-      snapshot: {
-        name: BACKUP_FILE,
-        media_type: 'application/vnd.axiom.encrypted-sqlite',
-        bytes: protectedSnapshot.length,
-        sha256: sha256(protectedSnapshot),
-        protection: 'A256GCM',
-        context: protectionContext
-      },
+      snapshot: snapshotMetadata,
       recovery: {
         requires_stopped_grid: true,
         exact_database_digest_required: true,
@@ -112,6 +122,57 @@ export async function createGridBackup({
   } finally {
     await rm(temporaryDatabase, { force: true });
   }
+}
+
+async function sealSnapshot({ directory, temporaryDatabase, protector, protectionContext }) {
+  const database = await readFile(temporaryDatabase);
+  const protectedSnapshot = Buffer.from(protector.sealBytes(database, protectionContext));
+  const snapshotPath = join(directory, BACKUP_FILE);
+  await atomicWrite(snapshotPath, protectedSnapshot, 0o600);
+  return {
+    snapshotPath,
+    databaseMetadata: { bytes: database.length, sha256: sha256(database) },
+    snapshotMetadata: {
+      name: BACKUP_FILE,
+      media_type: 'application/vnd.axiom.encrypted-sqlite',
+      bytes: protectedSnapshot.length,
+      sha256: sha256(protectedSnapshot),
+      protection: 'A256GCM',
+      context: protectionContext
+    }
+  };
+}
+
+// Seals the SQLite copy chunk by chunk, from file to file.
+async function sealStreamingSnapshot({ directory, temporaryDatabase, protector, protectionContext }) {
+  const snapshotPath = join(directory, STREAMING_BACKUP_FILE);
+  const temporary = `${snapshotPath}.${process.pid}.${Date.now()}.tmp`;
+  const sealed = await sealFileChunked({
+    protector,
+    sourcePath: temporaryDatabase,
+    targetPath: temporary,
+    context: protectionContext
+  });
+  await rename(temporary, snapshotPath);
+  return {
+    snapshotPath,
+    databaseMetadata: { bytes: sealed.plaintext.bytes, sha256: sealed.plaintext.sha256 },
+    snapshotMetadata: {
+      name: STREAMING_BACKUP_FILE,
+      media_type: 'application/vnd.axiom.chunked-encrypted-sqlite',
+      bytes: sealed.bytes,
+      sha256: sealed.sha256,
+      protection: 'A256GCM',
+      chunked: {
+        format: sealed.format,
+        kdf: sealed.kdf,
+        salt: sealed.salt,
+        chunk_bytes: sealed.chunk_bytes,
+        chunks: sealed.chunks
+      },
+      context: protectionContext
+    }
+  };
 }
 
 export function verifyGridBackup({
@@ -151,9 +212,22 @@ export async function verifyGridBackupArtifact({
   identity,
   protector,
   expectedDatabaseDigest,
-  artifactRelativePath
+  artifactRelativePath,
+  keepDatabase = false
 }) {
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  if (manifest?.format === STREAMING_BACKUP_FORMAT) {
+    return verifyStreamingBackupArtifact({
+      manifest,
+      manifestPath,
+      dataDir,
+      identity,
+      protector,
+      expectedDatabaseDigest,
+      artifactRelativePath,
+      keepDatabase
+    });
+  }
   const snapshotName = manifest.snapshot?.name;
   if (snapshotName !== basename(snapshotName ?? '') || snapshotName !== BACKUP_FILE) {
     throw new ValidationError('Grid backup snapshot path is invalid');
@@ -226,6 +300,118 @@ export async function verifyGridBackupArtifact({
   };
 }
 
+/**
+ * Verifies a streaming backup without holding the database in memory: the
+ * signature and digests first, then the snapshot is decrypted chunk by chunk
+ * into a candidate file, and a copy of that candidate is opened to verify the
+ * evidence chain against the signed head. The candidate itself is never
+ * opened, so it stays byte-identical to the signed database digest. With
+ * `keepDatabase`, the caller takes ownership of `database_path` and its
+ * `database_directory`.
+ */
+async function verifyStreamingBackupArtifact({
+  manifest,
+  manifestPath,
+  dataDir,
+  identity,
+  protector,
+  expectedDatabaseDigest,
+  artifactRelativePath,
+  keepDatabase
+}) {
+  if (manifest.schema_versions?.manifest !== 1 || manifest.schema_versions?.evidence !== 1) {
+    throw new ValidationError('Unsupported Grid backup schema version');
+  }
+  if (!ID.test(manifest.backup_id ?? '')) throw new ValidationError('Grid backup id is invalid');
+  if (manifest.snapshot?.name !== STREAMING_BACKUP_FILE) {
+    throw new ValidationError('Grid backup snapshot path is invalid');
+  }
+  const verificationKeys = loadGridVerificationKeys(dataDir, identity);
+  const gridPublicKey = verificationKeys.get(manifest.attestation?.key_id);
+  if (!gridPublicKey) throw new ValidationError('Grid backup signer is not in the trusted key history');
+  const unsigned = structuredClone(manifest);
+  delete unsigned.attestation;
+  if (!verifyObjectSignature(unsigned, manifest.attestation, gridPublicKey)) {
+    throw new ValidationError('Grid backup attestation is invalid');
+  }
+  if (expectedDatabaseDigest !== undefined) {
+    if (!DIGEST.test(expectedDatabaseDigest)) throw new ValidationError('Expected database digest is invalid');
+    if (manifest.database?.sha256 !== expectedDatabaseDigest) {
+      throw new ValidationError('Grid backup does not match the exact expected database digest');
+    }
+  }
+  const chunked = manifest.snapshot.chunked ?? {};
+  // The snapshot as signed at backup time; a data-key rotation since then
+  // is followed through its signed rewrap history.
+  validateChunkedMetadata({
+    format: chunked.format,
+    algorithm: manifest.snapshot.protection,
+    kdf: chunked.kdf,
+    salt: chunked.salt,
+    chunk_bytes: chunked.chunk_bytes,
+    chunks: chunked.chunks,
+    bytes: manifest.snapshot.bytes,
+    sha256: manifest.snapshot.sha256,
+    plaintext: { bytes: manifest.database?.bytes, sha256: manifest.database?.sha256 }
+  });
+  if (chunked.format !== CHUNKED_ARTIFACT_FORMAT) throw new ValidationError('Grid backup snapshot format is invalid');
+  const snapshotPath = join(dirname(manifestPath), STREAMING_BACKUP_FILE);
+
+  const recoveryRoot = join(dataDir, 'recovery');
+  await mkdir(recoveryRoot, { recursive: true, mode: 0o700 });
+  const directory = await mkdtemp(join(recoveryRoot, 'verify-'));
+  const databasePath = join(directory, 'candidate.sqlite');
+  const validationPath = join(directory, 'grid.sqlite');
+  let chain;
+  let kept = false;
+  let opened;
+  try {
+    opened = await openChunkedProtectedArtifact({
+      artifactPath: snapshotPath,
+      relativePath: artifactRelativePath
+        ?? relative(dataDir, snapshotPath).replaceAll('\\', '/'),
+      context: manifest.snapshot.context,
+      expected: { bytes: manifest.snapshot.bytes, sha256: manifest.snapshot.sha256 },
+      expectedPlaintext: { bytes: manifest.database.bytes, sha256: manifest.database.sha256 },
+      expectedChunked: { salt: chunked.salt, chunk_bytes: chunked.chunk_bytes, chunks: chunked.chunks },
+      protector,
+      verificationKeys,
+      targetPath: databasePath
+    });
+    await copyFile(databasePath, validationPath);
+    const { GridStore } = await import('./store.mjs');
+    const candidate = new GridStore({ path: validationPath, dataDir, identity, protector });
+    try {
+      chain = candidate.verifyChain();
+    } finally {
+      candidate.close();
+    }
+    if (!chain.valid) throw new ValidationError(`Restored Grid evidence is invalid: ${chain.reason}`);
+    if (
+      chain.events !== manifest.database.evidence_events
+      || chain.head !== manifest.database.evidence_head
+    ) throw new ValidationError('Restored Grid evidence head does not match the signed manifest');
+    for (const suffix of ['', '-wal', '-shm']) await rm(`${validationPath}${suffix}`, { force: true });
+    kept = keepDatabase;
+  } finally {
+    if (!kept) await rm(directory, { recursive: true, force: true });
+  }
+  return {
+    valid: true,
+    backup_id: manifest.backup_id,
+    // After a data-key rotation the database's protected columns carry the
+    // new key, so its digest is the latest signed plaintext digest.
+    database_digest: opened.plaintext_metadata.sha256,
+    source_database_digest: manifest.database.sha256,
+    rewrapped: opened.rewrapped,
+    manifest,
+    manifest_path: manifestPath,
+    snapshot_path: snapshotPath,
+    evidence_chain: chain,
+    ...(kept ? { database_path: databasePath, database_directory: directory } : {})
+  };
+}
+
 function verifyGridBackupDatabase({
   manifest,
   database,
@@ -280,7 +466,8 @@ export async function restoreGridBackup({
     dataDir,
     identity,
     protector,
-    expectedDatabaseDigest
+    expectedDatabaseDigest,
+    keepDatabase: true
   });
 
   const { manifest } = verified;
@@ -296,7 +483,17 @@ export async function restoreGridBackup({
     await copyIfPresent(`${dbPath}${suffix}`, join(rollbackDirectory, `grid.sqlite${suffix}`));
   }
   const temporary = `${dbPath}.${process.pid}.${Date.now()}.restore`;
-  await writeFile(temporary, verified.database, { mode: 0o600, flag: 'wx' });
+  if (verified.database_path) {
+    // Streaming backup: the verified candidate is copied beside the database
+    // and renamed into place, never read into memory.
+    try {
+      await copyFile(verified.database_path, temporary);
+    } finally {
+      await rm(verified.database_directory, { recursive: true, force: true });
+    }
+  } else {
+    await writeFile(temporary, verified.database, { mode: 0o600, flag: 'wx' });
+  }
   await rename(temporary, dbPath);
   await Promise.all([
     rm(`${dbPath}-wal`, { force: true }),

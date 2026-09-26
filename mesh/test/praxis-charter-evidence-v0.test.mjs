@@ -18,6 +18,7 @@ import {
   verifyHostObservation,
   verifySyntheticCharter
 } from '../../labs/praxis/index.mjs';
+import { signatureBodyDigest } from '../../labs/praxis/crypto.mjs';
 
 const BASE = Date.parse('2026-09-18T12:00:00.000Z');
 const PREPARATION_DIGEST = 'sha256:' + 'c'.repeat(64);
@@ -762,4 +763,35 @@ test('evidence freshness is re-checked immediately before synthetic execution', 
   );
 
   assert.equal(executorCalls, 0);
+});
+
+test('an approval request without a numeric expiry cannot mint a quorum authority', async () => {
+  const evidence = [verifiedBuild()];
+  const valid = releaseRequest({ evidence, nonce: 'no-expiry' });
+  for (const expires of [undefined, String(BASE + 30_000), null]) {
+    const body = { ...valid.body };
+    if (expires === undefined) delete body.expires_at_ms;
+    else body.expires_at_ms = expires;
+    const request = { schema: valid.schema, body, digest: signatureBodyDigest(body) };
+    await assert.rejects(
+      () => createCharteredHostQuorum({
+        id: 'quorum:no-expiry',
+        charter,
+        trustedRootKeys: trustedRoots,
+        policyName: 'ProductionRelease',
+        operationDigest: DEPLOY_DIGEST,
+        evidence,
+        requester: 'ReleaseAgent',
+        request,
+        approvals: [
+          approval(request, 'Operator', operator.privateKey),
+          approval(request, 'Security', security.privateKey)
+        ],
+        advisors: allowAdvisor(),
+        now: BASE + 1_000
+      }),
+      error => error instanceof PraxisRuntimeError && /malformed/.test(error.message),
+      `expires_at_ms=${String(expires)}`
+    );
+  }
 });

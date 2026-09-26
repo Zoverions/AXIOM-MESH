@@ -174,11 +174,22 @@ test('H-8 Gateway collection and discovery integers use the canonical bounded va
   for (const marker of [
     "label: 'node discovery minimum_security_level'",
     "label: 'node discovery minimum_lease_seconds'",
-    "label: 'node discovery limit'",
-    "label: 'node schedules limit'",
-    "label: 'approvals limit'",
-    "label: 'memory limit'",
-    "label: 'backups limit'"
+    "label: 'node discovery limit'"
+  ]) {
+    assert.equal(source.includes(marker), true, `missing canonical validation marker: ${marker}`);
+  }
+  // Paged collections validate `limit` through pageQuery, which must itself
+  // use the canonical bounded validator (scalability audit S-10).
+  const pageQuery = source.slice(
+    source.indexOf('function pageQuery('),
+    source.indexOf('\n}\n', source.indexOf('function pageQuery('))
+  );
+  assert.match(pageQuery, /boundedIntegerQuery\(limit, 100, \{ label, min: 1, max \}\)/);
+  for (const marker of [
+    "pageQuery(url, 'node schedules limit')",
+    "pageQuery(url, 'approvals limit')",
+    "pageQuery(url, 'memory limit', 500)",
+    "pageQuery(url, 'backups limit')"
   ]) {
     assert.equal(source.includes(marker), true, `missing canonical validation marker: ${marker}`);
   }

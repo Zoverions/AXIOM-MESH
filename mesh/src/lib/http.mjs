@@ -531,12 +531,21 @@ function directWriteRejectingResponse(res) {
   });
 }
 
+// Token buckets keyed by caller. A bucket is evicted only once it has fully
+// refilled, when it is indistinguishable from a new one, so eviction never
+// grants extra allowance; with every bucket still refilling, a new key is
+// refused (fail closed). Buckets are ordered by the time they will be full
+// again in a min-heap, so finding an evictable bucket costs O(log n) instead
+// of a scan of every key (scalability audit S-08). Heap entries for buckets
+// that have since been used again are skipped lazily, and the heap is rebuilt
+// once stale entries outnumber live ones.
 export class TokenBucketLimiter {
   constructor({ capacity = 60, refillPerSecond = 1, maxKeys = 10_000 } = {}) {
     this.capacity = capacity;
     this.refillPerSecond = refillPerSecond;
     this.maxKeys = maxKeys;
     this.buckets = new Map();
+    this.fullHeap = [];
   }
 
   take(key, now = Date.now()) {
@@ -549,26 +558,76 @@ export class TokenBucketLimiter {
     }
     const elapsed = Math.max(0, (now - previous.at) / 1000);
     const available = Math.min(this.capacity, previous.tokens + elapsed * this.refillPerSecond);
-    this.buckets.delete(key);
-    if (available < 1) {
-      this.buckets.set(key, { tokens: available, at: now });
-      return false;
-    }
-    this.buckets.set(key, { tokens: available - 1, at: now });
-    return true;
+    const admitted = available >= 1;
+    this.setBucket(key, admitted ? available - 1 : available, now);
+    return admitted;
+  }
+
+  setBucket(key, tokens, at) {
+    const fullAt = tokens >= this.capacity
+      ? at
+      : this.refillPerSecond > 0
+        ? at + ((this.capacity - tokens) / this.refillPerSecond) * 1000
+        : Infinity;
+    const bucket = { tokens, at, fullAt };
+    this.buckets.set(key, bucket);
+    heapPush(this.fullHeap, { fullAt, key, bucket });
+    if (this.fullHeap.length > 2 * this.buckets.size + 64) this.rebuildHeap();
   }
 
   evictRefilledBucket(now) {
-    for (const [key, bucket] of this.buckets) {
-      const elapsed = Math.max(0, (now - bucket.at) / 1000);
-      const available = Math.min(
-        this.capacity,
-        bucket.tokens + elapsed * this.refillPerSecond
-      );
-      if (available < this.capacity) continue;
-      this.buckets.delete(key);
+    const heap = this.fullHeap;
+    while (heap.length) {
+      const top = heap[0];
+      if (this.buckets.get(top.key) !== top.bucket) {
+        heapPop(heap);
+        continue;
+      }
+      const elapsed = Math.max(0, (now - top.bucket.at) / 1000);
+      const available = Math.min(this.capacity, top.bucket.tokens + elapsed * this.refillPerSecond);
+      if (available < this.capacity) return false;
+      heapPop(heap);
+      this.buckets.delete(top.key);
       return true;
     }
     return false;
   }
+
+  rebuildHeap() {
+    this.fullHeap = [];
+    for (const [key, bucket] of this.buckets) {
+      heapPush(this.fullHeap, { fullAt: bucket.fullAt, key, bucket });
+    }
+  }
+}
+
+function heapPush(heap, entry) {
+  heap.push(entry);
+  let index = heap.length - 1;
+  while (index > 0) {
+    const parent = (index - 1) >> 1;
+    if (heap[parent].fullAt <= entry.fullAt) break;
+    heap[index] = heap[parent];
+    index = parent;
+  }
+  heap[index] = entry;
+}
+
+function heapPop(heap) {
+  const top = heap[0];
+  const last = heap.pop();
+  if (heap.length) {
+    let index = 0;
+    for (;;) {
+      const left = index * 2 + 1;
+      if (left >= heap.length) break;
+      const right = left + 1;
+      const child = right < heap.length && heap[right].fullAt < heap[left].fullAt ? right : left;
+      if (heap[child].fullAt >= last.fullAt) break;
+      heap[index] = heap[child];
+      index = child;
+    }
+    heap[index] = last;
+  }
+  return top;
 }

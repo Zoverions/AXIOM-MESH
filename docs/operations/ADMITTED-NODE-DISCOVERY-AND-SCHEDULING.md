@@ -47,6 +47,15 @@ accepts repeated `capability` and `role` parameters, plus
 canonical discovery object with its service identity. The public result
 contains the node signing-key digest, not the raw public key.
 
+Results are ranked by security level (highest first) and then node id in
+byte order, and paged: at most `limit` nodes (default 100, maximum 500) per
+answer. The signed answer carries `page` (`limit`, `has_more`,
+`next_cursor`); pass `cursor=<next_cursor>` with the same filters to read on.
+Every eligible node is reachable. A cursor is accepted only in its
+canonical form and only by discovery. The Grid filters status, lease and
+security level on plain columns and decodes only the rows a page needs, so a
+page costs the same however many nodes have expired or been quarantined.
+
 Example:
 
 ```text

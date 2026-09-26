@@ -81,8 +81,8 @@ function projectSupportedGridEvent(event) {
 }
 
 export class GridStore extends CheckpointGridStore {
-  verifyCheckpointHistory(history) {
-    const result = super.verifyCheckpointHistory(history);
+  verifyCheckpointHistory(history, from = null) {
+    const result = super.verifyCheckpointHistory(history, from);
     if (
       !result.valid
       && typeof result.reason === 'string'

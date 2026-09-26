@@ -26,10 +26,28 @@ import {
 } from '../lib/observability.mjs';
 import { createBearerAuthenticator } from '../lib/public-auth.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
+import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from '../lib/gateway-client-contract.mjs';
 import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const PAGE_CURSOR = /^[A-Za-z0-9_-]{1,512}$/;
+
+// `limit` and an opaque `cursor` for a paged collection. The Grid decodes
+// the cursor and applies its own default page size (scalability audit S-10).
+function pageQuery(url, label, max = 100) {
+  const query = new URLSearchParams();
+  const limit = url.searchParams.get('limit');
+  if (limit !== null) {
+    query.set('limit', String(boundedIntegerQuery(limit, 100, { label, min: 1, max })));
+  }
+  const cursor = url.searchParams.get('cursor');
+  if (cursor !== null) {
+    if (!PAGE_CURSOR.test(cursor)) throw new ValidationError('Page cursor is invalid');
+    query.set('cursor', cursor);
+  }
+  return query;
+}
 const SOCIAL_EVENT_PAGE = 500;
 const SOCIAL_EVENT_MAXIMUM = 5_000;
 
@@ -257,11 +275,7 @@ export async function createGatewayService(config = meshConfig()) {
           409
         );
       }
-      return {
-        ...existing,
-        ...existing.result_json,
-        idempotent_replay: true
-      };
+      return replayExistingIntent(existing);
     }
   });
 
@@ -286,8 +300,15 @@ export async function createGatewayService(config = meshConfig()) {
       min: 1,
       max: 500
     });
+    // A nonce asks the Grid to sign the caller's sync head, so an online sync
+    // client can detect bundle events withheld between the Grid and itself.
+    const nonce = url.searchParams.get('nonce');
+    if (nonce !== null && !/^[A-Za-z0-9_-]{16,128}$/.test(nonce)) {
+      throw new AxiomError('invalid_nonce', 'Sync head nonce is invalid', 400);
+    }
     return gridGet(
-      `/internal/v1/events?actor=${encodeURIComponent(actor)}&after=${after}&limit=${limit}`,
+      `/internal/v1/events?actor=${encodeURIComponent(actor)}&after=${after}&limit=${limit}`
+        + (nonce === null ? '' : `&nonce=${nonce}`),
       traceId
     );
   });
@@ -349,30 +370,15 @@ export async function createGatewayService(config = meshConfig()) {
 
   router.add('GET', '/v1/capsules', async ({ url, traceId, principal }) => {
     requireScope(principal, 'capsule:read');
-    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
-      label: 'capsules limit',
-      min: 1,
-      max: 100
-    });
-    return gridGet(`/internal/v1/capsules?limit=${limit}`, traceId);
+    return gridGet(`/internal/v1/capsules?${pageQuery(url, 'capsules limit')}`, traceId);
   });
   router.add('GET', '/v1/proposals', async ({ url, traceId, principal }) => {
     requireScope(principal, 'governance:read');
-    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
-      label: 'proposals limit',
-      min: 1,
-      max: 100
-    });
-    return gridGet(`/internal/v1/proposals?limit=${limit}`, traceId);
+    return gridGet(`/internal/v1/proposals?${pageQuery(url, 'proposals limit')}`, traceId);
   });
   router.add('GET', '/v1/nodes', async ({ url, traceId, principal }) => {
     requireScope(principal, 'node:read');
-    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
-      label: 'nodes limit',
-      min: 1,
-      max: 100
-    });
-    return gridGet(`/internal/v1/nodes?limit=${limit}`, traceId);
+    return gridGet(`/internal/v1/nodes?${pageQuery(url, 'nodes limit')}`, traceId);
   });
   router.add('GET', '/v1/node-discovery', async ({
     url,
@@ -425,6 +431,11 @@ export async function createGatewayService(config = meshConfig()) {
         { label: 'node discovery limit', min: 1, max: 500 }
       )));
     }
+    const discoveryCursor = url.searchParams.get('cursor');
+    if (discoveryCursor !== null) {
+      if (!PAGE_CURSOR.test(discoveryCursor)) throw new ValidationError('Page cursor is invalid');
+      query.set('cursor', discoveryCursor);
+    }
     const suffix = query.size ? `?${query}` : '';
     return gridGet(`/internal/v1/node-discovery${suffix}`, traceId);
   });
@@ -440,71 +451,49 @@ export async function createGatewayService(config = meshConfig()) {
         403
       );
     }
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'node schedules limit',
-      min: 1,
-      max: 100
-    });
-    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
-      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}${query}`,
+      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}?${pageQuery(url, 'node schedules limit')}`,
       traceId
     );
   });
-  router.add('GET', '/v1/consents', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/consents/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/consents', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/consents/${encodeURIComponent(principal.id)}?${pageQuery(url, 'consents limit')}`,
     traceId
   ));
   router.add('GET', '/v1/approvals', async ({ url, traceId, principal }) => {
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'approvals limit',
-      min: 1,
-      max: 100
-    });
-    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
-      `/internal/v1/approvals/${encodeURIComponent(principal.id)}${query}`,
+      `/internal/v1/approvals/${encodeURIComponent(principal.id)}?${pageQuery(url, 'approvals limit')}`,
       traceId
     );
   });
   router.add('GET', '/v1/memory', async ({ url, traceId, principal }) => {
     const owner = url.searchParams.get('owner') ?? principal.id;
     if (!PRINCIPAL_ID.test(owner)) throw new ValidationError('Memory owner is invalid');
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'memory limit',
-      min: 1,
-      max: 500
-    });
-    const query = new URLSearchParams({
-      requester: principal.id,
-      ...(limit === null ? {} : { limit: String(limit) })
-    });
+    const query = pageQuery(url, 'memory limit', 500);
+    query.set('requester', principal.id);
     return gridGet(
       `/internal/v1/memory/${encodeURIComponent(owner)}?${query}`,
       traceId
     );
   });
-  router.add('GET', '/v1/accounting', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/accounting/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/accounting', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/accounting/${encodeURIComponent(principal.id)}?${pageQuery(url, 'accounting limit')}`,
     traceId
   ));
-  router.add('GET', '/v1/imports', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/imports/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/imports', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/imports/${encodeURIComponent(principal.id)}?${pageQuery(url, 'imports limit')}`,
     traceId
   ));
   router.add('GET', '/v1/imports/:id', async ({ params, traceId, principal }) => gridGet(
     `/internal/v1/import/${encodeURIComponent(params.id)}?principal=${encodeURIComponent(principal.id)}`,
     traceId
   ));
-  router.add('GET', '/v1/appeals', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/appeals/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/appeals', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/appeals/${encodeURIComponent(principal.id)}?${pageQuery(url, 'appeals limit')}`,
     traceId
   ));
-  router.add('GET', '/v1/storage-offers', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/storage-offers/${encodeURIComponent(principal.id)}`,
+  router.add('GET', '/v1/storage-offers', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/storage-offers/${encodeURIComponent(principal.id)}?${pageQuery(url, 'storage offers limit')}`,
     traceId
   ));
   router.add('GET', '/v1/sync', async ({ url, traceId, principal }) => {
@@ -522,12 +511,36 @@ export async function createGatewayService(config = meshConfig()) {
       assertString(recordId, 'record_id', { max: 160, pattern: PRINCIPAL_ID });
       query.set('record_id', recordId);
     }
-    const suffix = query.size ? `?${query}` : '';
+    const cursor = url.searchParams.get('cursor');
+    if (cursor !== null) {
+      assertString(cursor, 'cursor', { max: 512, pattern: /^[A-Za-z0-9_-]+$/ });
+      query.set('cursor', cursor);
+    }
+    query.set('limit', String(boundedIntegerQuery(url.searchParams.get('limit'), 100, {
+      label: 'sync limit',
+      min: 1,
+      max: 200
+    })));
     return gridGet(
-      `/internal/v1/sync/${encodeURIComponent(principal.id)}${suffix}`,
+      `/internal/v1/sync/${encodeURIComponent(principal.id)}?${query}`,
       traceId
     );
   });
+  router.add('GET', '/v1/sync/updates/:id', async ({ params, traceId, principal }) => {
+    const updateId = assertString(params.id, 'sync update id', {
+      min: 69,
+      max: 69,
+      pattern: /^sync_[a-f0-9]{64}$/
+    });
+    return gridGet(
+      `/internal/v1/sync/${encodeURIComponent(principal.id)}/updates/${updateId}`,
+      traceId
+    );
+  });
+  router.add('GET', '/v1/sync/bundles', async ({ url, traceId, principal }) => gridGet(
+    `/internal/v1/sync/${encodeURIComponent(principal.id)}/bundles?${pageQuery(url, 'sync bundle limit')}`,
+    traceId
+  ));
   router.add('GET', '/v1/sync/bundles/:digest', async ({
     params,
     traceId,
@@ -545,15 +558,8 @@ export async function createGatewayService(config = meshConfig()) {
       );
   });
   router.add('GET', '/v1/backups', async ({ url, traceId, principal }) => {
-    const rawLimit = url.searchParams.get('limit');
-    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
-      label: 'backups limit',
-      min: 1,
-      max: 100
-    });
-    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
-      `/internal/v1/backups/${encodeURIComponent(principal.id)}${query}`,
+      `/internal/v1/backups/${encodeURIComponent(principal.id)}?${pageQuery(url, 'backups limit')}`,
       traceId
     );
   });
@@ -682,6 +688,45 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+
+// A replay answers as the first request did: a completed intent with its
+// result, and a denied one with its error and status, marked as a replay. A
+// failure is final for its key, so it answers 409, and never with a code the
+// client would retry: that would repeat the same answer. An intent still
+// accepted is in progress, or was interrupted and will be closed.
+const REPLAY_ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
+const RETRYABLE_CODES = new Set(ACTIVE_GATEWAY_CLIENT_CONTRACT.error_contract.retryable_codes);
+function replayExistingIntent(existing) {
+  if (existing.status === 'completed') {
+    return {
+      ...existing,
+      ...existing.result_json,
+      idempotent_replay: true
+    };
+  }
+  const details = { intent_id: existing.intent_id, status: existing.status, idempotent_replay: true };
+  if (existing.status === 'denied' || existing.status === 'failed') {
+    const error = existing.error_json ?? {};
+    const recorded = REPLAY_ERROR_CODE.test(error.code ?? '') ? error.code : null;
+    const message = typeof error.message === 'string' ? error.message : 'The intent did not complete';
+    if (existing.status === 'denied') {
+      // Recorded since the status was kept; older denials: pending or not.
+      const status = Number.isSafeInteger(error.http_status) && error.http_status >= 400 && error.http_status <= 599
+        ? error.http_status
+        : (error.pending ? 409 : 403);
+      throw new AxiomError(recorded ?? 'policy_denied', message, status, details);
+    }
+    const code = recorded && !RETRYABLE_CODES.has(recorded) ? recorded : 'intent_failed';
+    throw new AxiomError(code, message, 409, { ...details, ...(recorded ? { failure_code: recorded } : {}) });
+  }
+  throw new AxiomError(
+    'intent_in_progress',
+    'This intent has not reached a terminal state; retry with the same key later',
+    409,
+    details
+  );
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
