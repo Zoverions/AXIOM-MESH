@@ -958,6 +958,7 @@ export function createSemanticOperationProposal(input) {
   if (providerResult.ok !== true) {
     const failureReason = providerResult.failure_reason || 'provider-failure';
     const proposalId = `semantic_operation_proposal_${digestObject({
+      provider,
       operation_manifest_digest: operationManifestDigest,
       candidate_set_digest: candidateSetDigest,
       request_digest: requestDigest,

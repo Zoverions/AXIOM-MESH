@@ -241,6 +241,11 @@ decision.
   stays on the Operation plane and is never forced into #1588 probability
   observations; authority/assurance/currentness/execution remain none.
 - [`semantic-operation-proposal.v0` schema](architecture/contracts/semantic-operation-proposal.v0.schema.json)
+- [Operation Proposal Binding v0 (O1)](architecture/OPERATION-PROPOSAL-BINDING.md)
+  — pure #1628 O1 verifier that recomputes manifest, selection, candidate-set
+  and offer digests from original objects before binding a proposal; a binding
+  is evidence, never permission; all effects remain none.
+- [`operation-proposal-binding.v0` schema](architecture/contracts/operation-proposal-binding.v0.schema.json)
 - [Specialist Harness Bridge v0](architecture/SPECIALIST-HARNESS-BRIDGE.md)
   — inert, non-delegating #1610 C3 evidence/handoff binding of one bounded
   specialist harness to one task by digest; ceilings must fit inside an
