@@ -13,13 +13,13 @@
 // caps keep CI honest. Measurements use a short warm-up and median wall samples.
 // CPU time is measured across multiple independent bounded parse batches so a
 // single GC/JIT/accounting outlier cannot determine the scaling ratio. Normal
-// batches target comparable source volume rather than equal parse counts: small
-// corpora run more parses per batch, while large corpora run fewer. Each
-// nonzero batch is normalized per parse and the median is used. Coarse zero
-// readings may increase the next batch size, but at least three nonzero samples
-// are required; otherwise timing evidence fails closed as 0. CPU time is used
-// only for the scaling ratio, and the existing absolute parse/format wall-clock
-// budgets remain unchanged.
+// batches use the larger of a comparable-source-volume floor and enough parses
+// to target about 80 ms of the observed median wall work. Three independent
+// nonzero CPU samples are required. Coarse zero readings may grow only the next
+// bounded batch; exhausting the 80-run ceiling before three nonzero samples
+// fails closed as 0. Each nonzero batch is normalized per parse and the median
+// is used. CPU time is used only for the scaling ratio, and the existing
+// absolute parse/format wall-clock budgets remain unchanged.
 
 import { performance } from 'node:perf_hooks';
 
@@ -30,10 +30,10 @@ import { compile } from './compiler.mjs';
 
 const BENCHMARK_WARMUPS = 1;
 const BENCHMARK_SAMPLES = 5;
-const BENCHMARK_CPU_TARGET_SAMPLES = 5;
-const BENCHMARK_CPU_MIN_SAMPLES = 3;
+const BENCHMARK_CPU_TARGET_SAMPLES = 3;
 const BENCHMARK_MAX_CPU_RUNS = 80;
 const BENCHMARK_CPU_TARGET_SOURCE_UNITS = 500_000;
+const BENCHMARK_CPU_TARGET_WALL_MS = 80;
 const BENCHMARK_CPU_MAX_BASE_RUNS = Math.floor(
   BENCHMARK_MAX_CPU_RUNS / BENCHMARK_CPU_TARGET_SAMPLES
 );
@@ -51,21 +51,40 @@ function median(values) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-export function benchmarkCpuRunsPerSample(sourceUnits) {
+export function benchmarkCpuRunsPerSample(sourceUnits, parseWallMs) {
   if (!Number.isInteger(sourceUnits) || sourceUnits < 0) {
     throw new TypeError('benchmark source size must be a non-negative integer');
   }
+  if (!Number.isFinite(parseWallMs) || parseWallMs < 0) {
+    throw new TypeError('benchmark parse wall time must be a finite non-negative number');
+  }
+
   const normalizedUnits = Math.max(sourceUnits, 1);
+  const sourceVolumeRuns = Math.ceil(BENCHMARK_CPU_TARGET_SOURCE_UNITS / normalizedUnits);
+  const durationRuns = parseWallMs > 0
+    ? Math.ceil(BENCHMARK_CPU_TARGET_WALL_MS / parseWallMs)
+    : BENCHMARK_CPU_MAX_BASE_RUNS;
+
   return Math.max(
     1,
     Math.min(
       BENCHMARK_CPU_MAX_BASE_RUNS,
-      Math.ceil(BENCHMARK_CPU_TARGET_SOURCE_UNITS / normalizedUnits)
+      Math.max(sourceVolumeRuns, durationRuns)
     )
   );
 }
 
-function measureCpuPerRun(fn, { baseRuns }) {
+export function measureBenchmarkCpuPerRun(fn, { baseRuns }) {
+  if (
+    !Number.isInteger(baseRuns)
+    || baseRuns < 1
+    || baseRuns > BENCHMARK_CPU_MAX_BASE_RUNS
+  ) {
+    throw new TypeError(
+      `baseRuns must be an integer from 1 to ${BENCHMARK_CPU_MAX_BASE_RUNS}`
+    );
+  }
+
   const samples = [];
   let runs = 0;
   let nextBatch = baseRuns;
@@ -82,16 +101,16 @@ function measureCpuPerRun(fn, { baseRuns }) {
       samples.push((cpuMicros / 1000) / batch);
       nextBatch = baseRuns;
     } else {
-      nextBatch *= 2;
+      nextBatch = Math.min(nextBatch * 2, BENCHMARK_MAX_CPU_RUNS - runs);
     }
   }
 
-  return samples.length >= BENCHMARK_CPU_MIN_SAMPLES ? median(samples) : 0;
+  return samples.length === BENCHMARK_CPU_TARGET_SAMPLES ? median(samples) : 0;
 }
 
 function measure(fn, {
   requireCpuEvidence = false,
-  cpuRunsPerSample = BENCHMARK_CPU_MAX_BASE_RUNS
+  cpuSourceUnits = 0
 } = {}) {
   for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
 
@@ -103,9 +122,16 @@ function measure(fn, {
     wallSamples.push(performance.now() - wallStart);
   }
 
+  const wallMs = median(wallSamples);
+  const cpuRunsPerSample = requireCpuEvidence
+    ? benchmarkCpuRunsPerSample(cpuSourceUnits, wallMs)
+    : null;
+
   return {
-    ms: median(wallSamples),
-    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn, { baseRuns: cpuRunsPerSample }) : null,
+    ms: wallMs,
+    cpuMs: requireCpuEvidence
+      ? measureBenchmarkCpuPerRun(fn, { baseRuns: cpuRunsPerSample })
+      : null,
     result
   };
 }
@@ -114,8 +140,10 @@ export function benchmarkSource(label, source) {
   const lines = source.split('\n').length;
   const bytes = source.length;
   const lexed = measure(() => lex(source));
-  const cpuRunsPerSample = benchmarkCpuRunsPerSample(bytes);
-  const parsed = measure(() => parse(source), { requireCpuEvidence: true, cpuRunsPerSample });
+  const parsed = measure(() => parse(source), {
+    requireCpuEvidence: true,
+    cpuSourceUnits: bytes
+  });
   const formatted = measure(() => formatProgram(parsed.result));
   let compileMs = null;
   try {
