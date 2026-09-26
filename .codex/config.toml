@@ -1,0 +1,23 @@
+# Project-local developer tooling only.
+# These MCP servers provide debugging capability; they do not grant AXIOM runtime,
+# repository, merge, deployment, credential, network, or production authority.
+
+[mcp_servers.debugger]
+command = "npx"
+args = ["-y", "@debugmcp/mcp-debugger@0.24.2", "stdio"]
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+default_tools_approval_mode = "writes"
+env = { DEBUG_MCP_VARIABLE_ACCESS = "explicit", DEBUG_MCP_BP_ADDRESSING = "content" }
+
+[mcp_servers.chrome_devtools]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@1.9.0", "--headless=true", "--isolated=true", "--performance-crux=false", "--usage-statistics=false", "--redact-network-headers=true"]
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+default_tools_approval_mode = "writes"
+env = { CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS = "1" }
