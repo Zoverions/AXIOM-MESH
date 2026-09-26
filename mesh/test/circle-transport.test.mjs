@@ -799,7 +799,9 @@ test('a member publishes through their own node: records, a disclosure key, and 
   await assert.rejects(openCirclePeerContent(await loadCirclePeerRuntime(plain.configFile), sealed.digest), /no member.disclosure_key_file/);
   const signingAsDisclosure = await peerFiles(root, 'carol-wrong-key', { principal: 'carol', disclosureKey: { privateKey: keys.carol.privateKey } });
   await assert.rejects(loadCirclePeerRuntime(signingAsDisclosure.configFile), /must use X25519/);
-  await chmod(join(root, 'bob', 'disclosure.pem'), 0o644);
-  await assert.rejects(loadCirclePeerRuntime(bobFiles.configFile), /group or others/);
+  if (process.platform !== 'win32') {
+    await chmod(join(root, 'bob', 'disclosure.pem'), 0o644);
+    await assert.rejects(loadCirclePeerRuntime(bobFiles.configFile), /group or others/);
+  }
   await assert.rejects(cli('open', bobFiles.configFile), /Usage/);
 });
