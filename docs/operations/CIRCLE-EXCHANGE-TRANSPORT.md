@@ -362,9 +362,13 @@ running it anywhere beyond a test is an activation decision. Open questions
 before that decision:
 
 - what a Circle does with a withholding finding (it is evidence only);
-- a registry entry under the capability lifecycle;
 - whether any record kinds should be sealed by default.
 
 Per-member rate limits, signed answers, withholding findings and sealed
 content (per-record disclosure), which were earlier on this list, are now
 built (above).
+
+The capability registry lists this work as `circles.member-exchange` with
+status `experimental`: built and tested, with its evidence bound to the
+publishing test, but not enabled, exposed or production-promoted. Changing
+that status is the activation decision above.

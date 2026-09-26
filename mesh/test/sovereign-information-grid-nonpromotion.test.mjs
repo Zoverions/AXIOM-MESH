@@ -8,7 +8,10 @@ const PARENT_BLOBS = Object.freeze({
   // (33 Gateway, 44 network) after `sync_bundles.list` and
   // `sync_updates.get`. No capability state, evidence path or activation
   // changed.
-  capabilities: '3b1b64c86075d65746c6abe39873e775c881184e',
+  // Updated deliberately again for the `circles.member-exchange` entry,
+  // registered as `experimental` (built and tested, off by default, not
+  // enabled or exposed). No other capability changed.
+  capabilities: 'e3ff01d61d345326416f85a80fb191d81d0c2cfc',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
   // the other paged collections, including accounting journals, and for the
   // read-only `sync_bundles.list` and `sync_updates.get` routes over the

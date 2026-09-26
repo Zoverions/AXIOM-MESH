@@ -205,6 +205,21 @@
       ]
     },
     {
+      "id": "circles.member-exchange",
+      "family": "communications",
+      "status": "experimental",
+      "summary": "Laboratory Circle exchange between members' own nodes: per-member signed record logs derive one Circle view; an off-by-default authenticated peer transport returns signed node receipts, applies per-member rate limits and records withholding findings as evidence only; members publish X25519 disclosure keys and seal records to role-based audiences with a completeness check. It is not enabled, exposed, or production-promoted, and running it beyond tests is an activation decision.",
+      "surfaces": [
+        "npm:circle:peer"
+      ],
+      "evidence": [
+        "mesh/test/circle-exchange.test.mjs",
+        "mesh/test/circle-transport.test.mjs",
+        "mesh/test/circle-disclosure.test.mjs",
+        "docs/operations/CIRCLE-EXCHANGE-TRANSPORT.md"
+      ]
+    },
+    {
       "id": "nodes.discovery-scheduling",
       "family": "mesh",
       "status": "implemented",

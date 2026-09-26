@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-30`
-Registry digest: `bfe36f61f9fbe81c05f4cd318d3e5b52838b9d34a2ab540041816b83770289a7`
+Registry digest: `bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -12,7 +12,7 @@ Only **implemented** capabilities are runnable claims.
 
 - adapter_required: 9
 - disabled: 4
-- experimental: 4
+- experimental: 5
 - implemented: 31
 - specified: 2
 
@@ -43,6 +43,7 @@ Only **implemented** capabilities are runnable claims.
 | `identity.ssi` | identity | **specified** | DIDs, credentials, selective disclosure, reputation, and portable identity require an approved credential profile. |
 | `offline.causal-sync` | mesh | **implemented** | Independently verifiable admitted-node bundles use contiguous dependency-checked version vectors, replay and equivocation rejection, visible concurrent heads, and explicit complete conflict resolution. |
 | `online.causal-sync` | mesh | **implemented** | Pinned Grid-signed event streams transfer node-signed causal bundles between exact Gateway origins through encrypted ordered queues; destination application retains one-use independent approval, duplicate preflight, visible concurrent heads, and explicit all-head convergence without claiming replicated consensus. |
+| `circles.member-exchange` | communications | **experimental** | Laboratory Circle exchange between members' own nodes: per-member signed record logs derive one Circle view; an off-by-default authenticated peer transport returns signed node receipts, applies per-member rate limits and records withholding findings as evidence only; members publish X25519 disclosure keys and seal records to role-based audiences with a completeness check. It is not enabled, exposed, or production-promoted, and running it beyond tests is an activation decision. |
 | `nodes.discovery-scheduling` | mesh | **implemented** | Admitted-node v2 statements bind signed HTTPS origins, failure domains, roles, resource ceilings, and leases; authenticated discovery and policy-controlled deterministic scheduling enforce capability, security, capacity, concurrency, owner, domain, expiry, and quarantine constraints without claiming remote execution or federation. |
 | `storage.backup-restore` | storage | **implemented** | Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, signed policy-derived retention into recoverable quarantine, interruption recovery, and recurring restore evidence. |
 | `domains.education` | domains | **adapter_required** | Education runs as a strict-consent capsule; curriculum and learner systems are not part of the trusted kernel. |

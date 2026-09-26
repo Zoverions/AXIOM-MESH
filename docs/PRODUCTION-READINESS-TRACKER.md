@@ -22,7 +22,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Gate | Status | Evidence | Remaining action |
 |---|---|---|---|
 | Source integrity | Pass | Clean-room tree, source checksum, SBOM, provenance, exact zero-dependency locks | Maintain for every candidate/release |
-| Capability claims | Pass | Registry/generated status/claim markers; 50 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
+| Capability claims | Pass | Registry/generated status/claim markers; 51 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
 | Kernel tests | Pass | Protected Clean Kernel suite | Require on protected `main` |
 | Machine response-lifetime recheck (#1840) | Pass for declared-lifetime boundary | Request admission plus response inspection revalidate declared machine expiry; successful outputs and handler-derived controlled errors are suppressed after expiry | Preserve direct/HTTP regressions; this does not establish live revocation currentness, trusted time, atomic release, rollback, or worker termination |
 | Capability single-use durability | Pass for current kernel | Grid-backed consume-before-execute; deterministic per-JTI consume event; Grid-signed receipt; exact capability/claims/Sandbox-process-epoch binding; same-process replay guard; restart/crash/burn negative tests | Preserve at-most-once burn semantics across Grid/Sandbox changes; exactly-once external effects and automatic retry remain separate non-claims |

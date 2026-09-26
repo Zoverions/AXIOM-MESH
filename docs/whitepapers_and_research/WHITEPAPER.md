@@ -118,7 +118,7 @@ period while its activation path, custody, and external evidence are reviewed.
 
 The machine-readable capability registry classifies tracked capabilities as
 `implemented`, `experimental`, `specified`, `adapter_required`, or `disabled`.
-The current registry tracks **50 capabilities, including 31 implemented**.
+The current registry tracks **51 capabilities, including 31 implemented**.
 Only registry-backed `implemented` status is a current runnable capability
 claim.
 

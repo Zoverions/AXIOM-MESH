@@ -45,7 +45,7 @@ AXIOM-MESH is simultaneously:
    provenance-bound path observations.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
-establishes what is currently runnable. The registry tracks 50 capabilities,
+establishes what is currently runnable. The registry tracks 51 capabilities,
 of which 31 are marked implemented.
 
 The lifecycle is explicit: **built -> enabled -> exposed -> production-promoted

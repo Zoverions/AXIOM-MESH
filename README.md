@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bfe36f61f9fbe81c05f4cd318d3e5b52838b9d34a2ab540041816b83770289a7 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -84,7 +84,7 @@ authority for runnable capability status. Roadmap entries, demonstrations,
 laboratories, synthetic conformance, and built-but-production-unreachable source
 do not promote a capability beyond that registry.
 
-The current registry tracks 50 capabilities, of which 31 are marked
+The current registry tracks 51 capabilities, of which 31 are marked
 `implemented`.
 
 ### Implemented production-candidate kernel surface
