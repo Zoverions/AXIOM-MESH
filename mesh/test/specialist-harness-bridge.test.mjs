@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { autonomyEnvelopeDigest } from '../src/lib/autonomy-envelope.mjs';
+import { ValidationError } from '../src/lib/canonical.mjs';
 import { outcomeDigest, taskLifecycleDigest } from '../src/lib/agent-os-contracts.mjs';
 import { executionRoutePolicyDigest } from '../src/lib/execution-route-policy.mjs';
 import { taskContinuityPolicyDigest } from '../src/lib/task-continuity-policy.mjs';
 import {
+  SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER,
+  SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES,
   SPECIALIST_HARNESS_BRIDGE_SCHEMA,
   buildSpecialistHarnessBridge,
   specialistHarnessBridgeDigest,
@@ -348,3 +352,214 @@ test('wildcard ceilings are rejected structurally', () => {
   assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ data_classes: ['all'] })), /invalid/);
   assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ effect_classes: ['unknown'] })), /invalid value/);
 });
+
+const withRef = ref => withBridge(x => { x.adapter_binding.adapter_ref = ref; });
+const MIND_REF = /adapter_ref cannot be a mind identity or Genesis receipt/;
+const FORBIDDEN = /forbidden mind or Genesis field/;
+
+test('adapter_ref name guard rejects mind or Genesis tokens at any segment boundary', () => {
+  for (const ref of [
+    'x/genesis', 'x/mind', 'urn:mind:x', 'urn:genesis:x', 'did:mind:x', 'agent:mind:1',
+    'MIND', 'minds.pool', 'tool#mind', 'a_mind_b', 'agent.mind-1', 'mind1', 'agentMind',
+    'mindId', 'ABCMind', 'genesisX', 'genesis', 'x.GENESIS.y', 'founder_genesis', 'founder-genesis:slot.1',
+    'receipt.genesis-receipt.1', 'genesis_receipt'
+  ]) {
+    assert.throws(() => validateSpecialistHarnessBridge(withRef(ref)), MIND_REF, ref);
+  }
+});
+
+test('adapter_ref name guard keeps ordinary names that merely contain "mind"', () => {
+  for (const ref of [
+    'tool:code-review', 'skill:lint', 'reminder-bot', 'mastermind-tool', 'mindful.notes',
+    'mindx', 'harness.summarizer.1', 'remind:daily'
+  ]) {
+    assert.equal(validateSpecialistHarnessBridge(withRef(ref)).valid, true, ref);
+  }
+  const skill = buildSpecialistHarnessBridge(input({
+    adapter_binding: { ...input().adapter_binding, adapter_ref: 'skill:lint', adapter_kind: 'skill', skill_admission_digest: D('2') }
+  }));
+  assert.equal(validateSpecialistHarnessBridge(skill).valid, true);
+});
+
+test('camelCase and kebab-case mind or Genesis keys are rejected at every depth', () => {
+  for (const key of ['mindId', 'mindContinuation', 'mind-id', 'genesisReceipt', 'continuesMind', 'MIND', 'minds', 'x.mind']) {
+    assert.throws(() => validateSpecialistHarnessBridge({ ...bridge(), [key]: 'x' }), FORBIDDEN, key);
+    assert.throws(() => buildSpecialistHarnessBridge({ ...input(), [key]: 'x' }), FORBIDDEN, key);
+    const nested = withBridge(x => { x.data_binding[key] = 'x'; });
+    assert.throws(() => validateSpecialistHarnessBridge(nested), FORBIDDEN, key);
+  }
+});
+
+test('homoglyph, zero-width, __proto__ and constructor keys are rejected by closed objects', () => {
+  for (const key of ['m\u0456nd_id', 'mind\u200b_id', '\u200bbridge_id', 'bridge_id\u200d', '__proto__', 'constructor', 'prototype']) {
+    const top = { ...bridge() };
+    Object.defineProperty(top, key, { value: 'x', enumerable: true, configurable: true, writable: true });
+    assert.throws(() => validateSpecialistHarnessBridge(top), /fields are invalid|forbidden mind or Genesis field/, JSON.stringify(key));
+    const nested = withBridge(x => {
+      Object.defineProperty(x.ceiling_binding, key, { value: 'x', enumerable: true, configurable: true, writable: true });
+    });
+    assert.throws(() => validateSpecialistHarnessBridge(nested), /ceiling_binding fields are invalid|forbidden mind or Genesis field/, JSON.stringify(key));
+  }
+  const parsed = JSON.parse(`{"__proto__":{"grants_authority":true},${JSON.stringify(bridge()).slice(1)}`);
+  assert.equal(Object.hasOwn(parsed, '__proto__'), true);
+  assert.throws(() => validateSpecialistHarnessBridge(parsed), /fields are invalid/);
+  const input2 = JSON.parse(`{"constructor":{},${JSON.stringify(input()).slice(1)}`);
+  assert.throws(() => buildSpecialistHarnessBridge(input2), /fields are invalid/);
+});
+
+test('effect and consequence enums stay in parity with the Autonomy Envelope schema', () => {
+  const envelopeSchema = JSON.parse(readFileSync(new URL('../config/autonomy-envelope-v0.schema.json', import.meta.url), 'utf8'));
+  const bridgeSchema = JSON.parse(readFileSync(new URL('../config/specialist-harness-bridge-v0.schema.json', import.meta.url), 'utf8'));
+  const bridgeCeiling = bridgeSchema.properties.ceiling_binding.properties;
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES], envelopeSchema.properties.effect_classes.items.enum);
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER], envelopeSchema.properties.consequence_ceiling.enum);
+  assert.deepEqual(bridgeCeiling.effect_classes.items.enum, envelopeSchema.properties.effect_classes.items.enum);
+  assert.deepEqual(bridgeCeiling.consequence_ceiling.enum, envelopeSchema.properties.consequence_ceiling.enum);
+  for (const effect of SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES) {
+    assert.equal(validateSpecialistHarnessBridge(withCeiling({ effect_classes: [effect] })).valid, true, effect);
+  }
+  for (const level of SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER) {
+    assert.equal(validateSpecialistHarnessBridge(withCeiling({ consequence_ceiling: level })).valid, true, level);
+  }
+  assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ consequence_ceiling: 'C4' })), /consequence_ceiling is invalid/);
+});
+
+test('cyclic input fails closed with a ValidationError', () => {
+  const top = bridge();
+  top.self = top;
+  assert.throws(() => validateSpecialistHarnessBridge(top), ValidationError);
+  const nested = bridge();
+  nested.data_binding.loop = nested.data_binding;
+  assert.throws(() => validateSpecialistHarnessBridge(nested), err => err instanceof ValidationError && /cyclic/.test(err.message));
+  const cyclicInput = input();
+  cyclicInput.ceiling_binding.capability_ids.push(cyclicInput.ceiling_binding);
+  assert.throws(() => buildSpecialistHarnessBridge(cyclicInput), ValidationError);
+  const options = { references: {} };
+  options.references.outcome = options;
+  assert.throws(() => validateSpecialistHarnessBridge(bridge(), options), ValidationError);
+});
+
+test('throwing getters and proxies fail closed with a ValidationError', () => {
+  const boom = () => { throw new TypeError('boom'); };
+  const top = bridge();
+  Object.defineProperty(top, 'bridge_id', { get: boom, enumerable: true });
+  assert.throws(() => validateSpecialistHarnessBridge(top), err => err instanceof ValidationError && /failing closed/.test(err.message));
+  const nested = bridge();
+  Object.defineProperty(nested.ceiling_binding, 'max_cost', { get: boom, enumerable: true });
+  assert.throws(() => validateSpecialistHarnessBridge(nested), ValidationError);
+  const built = input();
+  Object.defineProperty(built, 'issued_at', { get: boom, enumerable: true });
+  assert.throws(() => buildSpecialistHarnessBridge(built), ValidationError);
+  const env = envelope();
+  Object.defineProperty(env, 'delegation_allowed', { get: boom, enumerable: true });
+  assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: env }), ValidationError);
+  const proxy = new Proxy(bridge(), { ownKeys: boom });
+  assert.throws(() => validateSpecialistHarnessBridge(proxy), ValidationError);
+  const options = {};
+  Object.defineProperty(options, 'now', { get: boom, enumerable: true });
+  assert.throws(() => validateSpecialistHarnessBridge(bridge(), options), ValidationError);
+});
+
+test('delegation_allowed missing, null, 0 or "false" is rejected before the envelope validator runs', () => {
+  for (const [label, mutate] of [
+    ['missing', e => { delete e.delegation_allowed; }],
+    ['null', e => { e.delegation_allowed = null; }],
+    ['0', e => { e.delegation_allowed = 0; }],
+    ['"false"', e => { e.delegation_allowed = 'false'; }]
+  ]) {
+    const e = envelope();
+    mutate(e);
+    let reached = false;
+    const schema = e.schema;
+    Object.defineProperty(e, 'schema', { get() { reached = true; return schema; }, enumerable: true });
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), /non-delegating/, label);
+    assert.equal(reached, false, `envelope validator must not be reached (${label})`);
+  }
+});
+
+test('non-canonical timestamps fail and the active_from boundary passes', () => {
+  for (const value of [
+    '2026-09-24T12:30:00.000+00:00', '2026-09-24T08:30:00.000-04:00', '2026-09-24T12:30:00Z',
+    '2026-09-24 12:30:00.000Z', '2026-09-24T12:30:00.000', '2026-02-30T12:30:00.000Z', '2026-09-24',
+    '', 'not-a-time', 1790253000000, null
+  ]) {
+    for (const field of ['issued_at', 'expires_at']) {
+      const b = withBridge(x => { x[field] = value; });
+      assert.throws(() => validateSpecialistHarnessBridge(b), /canonical ISO timestamp/, `${field}=${value}`);
+    }
+  }
+  const boundary = withBridge(x => { x.issued_at = '2026-09-24T12:00:00.000Z'; x.expires_at = '2026-09-25T12:00:00.000Z'; });
+  assert.equal(validateSpecialistHarnessBridge(boundary, { envelope: envelope() }).envelope_checked, true);
+  assert.equal(validateSpecialistHarnessBridge(boundary, { now: '2026-09-24T12:00:00.000Z' }).currentness_checked, true);
+});
+
+test('zero and negative-zero cost fail against an envelope that permits no cost', () => {
+  const e = envelope({ max_cost: null });
+  const zero = withCeiling({ autonomy_envelope_digest: autonomyEnvelopeDigest(e), max_cost: { currency: 'CAD', max_minor_units: 0 } });
+  assert.throws(() => validateSpecialistHarnessBridge(zero, { envelope: e }), /max_cost exceeds the envelope ceiling/);
+  const negativeZero = withCeiling({ autonomy_envelope_digest: autonomyEnvelopeDigest(e), max_cost: { currency: 'CAD', max_minor_units: -0 } });
+  assert.throws(() => validateSpecialistHarnessBridge(negativeZero, { envelope: e }), /max_cost/);
+  assert.throws(() => validateSpecialistHarnessBridge(negativeZero), /max_cost max_minor_units is invalid/);
+  for (const units of [-1, 0.5, '0', null, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ max_cost: { currency: 'CAD', max_minor_units: units } })), /max_minor_units is invalid/, String(units));
+  }
+});
+
+test('currency must be three uppercase letters', () => {
+  for (const currency of ['cad', 'Cad', 'CA', 'CADD', ' CAD', null, 124]) {
+    assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ max_cost: { currency, max_minor_units: 1 } })), /max_cost currency is invalid/, String(currency));
+  }
+});
+
+test('digest fields reject uppercase hex, prefixes and wrong lengths', () => {
+  for (const value of ['A'.repeat(64), `sha256:${'a'.repeat(64)}`, 'a'.repeat(63), 'a'.repeat(65), 'g'.repeat(64), '', 42]) {
+    for (const [section, field] of [
+      ['task_binding', 'outcome_digest'], ['ceiling_binding', 'autonomy_envelope_digest'],
+      ['adapter_binding', 'execution_route_policy_digest'], ['data_binding', 'data_projection_digest'],
+      ['handoff_binding', 'task_continuity_policy_digest'], ['provenance_binding', 'portable_delegation_grant_digest'],
+      ['provenance_binding', 'ai_execution_provenance_digest'], ['composition_binding', 'persistent_entity_bundle_digest']
+    ]) {
+      const b = withBridge(x => { x[section][field] = value; });
+      assert.throws(() => validateSpecialistHarnessBridge(b), /must be a lowercase sha256 digest/, `${field}=${value}`);
+    }
+  }
+  assert.throws(() => validateSpecialistHarnessBridge(bridge(), { expectedDigest: 'A'.repeat(64) }), /must be a lowercase sha256 digest/);
+});
+
+test('values exactly equal to every envelope ceiling pass', () => {
+  const e = envelope();
+  const b = withBridge(x => {
+    Object.assign(x.ceiling_binding, {
+      capability_ids: [...e.capability_ids], data_classes: [...e.data_classes], effect_classes: [...e.effect_classes],
+      consequence_ceiling: e.consequence_ceiling, max_execution_ms: e.max_execution_ms, max_cost: { ...e.max_cost }
+    });
+    x.issued_at = e.active_from;
+    x.expires_at = e.expires_at;
+  });
+  const result = validateSpecialistHarnessBridge(b, { envelope: e });
+  assert.equal(result.valid, true);
+  assert.equal(result.envelope_checked, true);
+  const free = envelope({ max_cost: { currency: 'CAD', max_minor_units: 0 } });
+  const freeBridge = withCeiling({ autonomy_envelope_digest: autonomyEnvelopeDigest(free), max_cost: { currency: 'CAD', max_minor_units: 0 } });
+  assert.equal(validateSpecialistHarnessBridge(freeBridge, { envelope: free }).envelope_checked, true);
+});
+
+test('without an envelope no ceiling is checked and envelope_checked is false', () => {
+  const wide = withCeiling({ capability_ids: ['files.write'], consequence_ceiling: 'C3', max_execution_ms: 300000 });
+  const result = validateSpecialistHarnessBridge(wide);
+  assert.equal(result.valid, true);
+  assert.equal(result.envelope_checked, false);
+  assert.throws(() => validateSpecialistHarnessBridge(wide, { envelope: envelope() }), /exceeds the envelope ceiling/);
+});
+
+for (const field of ['authority_effect', 'execution_effect', 'network_effect', 'delegation_effect', 'population_effect', 'governance_identity_effect', 'runtime_activation']) {
+  test(`hard zero ${field} null, missing or wrong type fails closed`, () => {
+    const wrongType = field === 'runtime_activation' ? ['false', 0, null, {}] : [false, 0, null, ['none'], 'None', 'none '];
+    for (const value of wrongType) {
+      const b = withBridge(x => { x[field] = value; });
+      assert.throws(() => validateSpecialistHarnessBridge(b), new RegExp(`hard zero ${field} is invalid`), JSON.stringify(value));
+    }
+    const missing = withBridge(x => { delete x[field]; });
+    assert.throws(() => validateSpecialistHarnessBridge(missing), /fields are invalid/);
+  });
+}

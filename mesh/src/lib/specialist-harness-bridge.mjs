@@ -14,14 +14,31 @@ export const SPECIALIST_HARNESS_BRIDGE_SCHEMA = 'axiom-specialist-harness-bridge
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CURRENCY = /^[A-Z]{3}$/;
-const EFFECTS = new Set(["none","read-external","write-external","publish-external","communication","financial","create-external-resource","delete-external-resource","physical"]);
-const CONSEQUENCE = Object.freeze(['C0','C1','C2','C3']);
+// autonomy-envelope.mjs does not export its enums or comparison helpers, so the
+// bridge keeps its own copies. Tests assert parity with the envelope schema enums.
+export const SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES = Object.freeze([
+  'none','read-external','write-external','publish-external','communication','financial',
+  'create-external-resource','delete-external-resource','physical'
+]);
+export const SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER = Object.freeze(['C0','C1','C2','C3']);
+const EFFECTS = new Set(SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES);
+const CONSEQUENCE = SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER;
 const ROUTE_CLASSES = new Set(['structured-api','mcp-tool','cli','semantic-ui','visual-computer-use']);
 const ADAPTER_KINDS = new Set(['tool-harness','skill','external-agent']);
 const OUTPUT_STATES = new Set(['pending','recorded']);
 // A bridge never binds, names, or continues a mind, and never carries a Founder Genesis receipt.
-const MIND_OR_GENESIS_FIELD = /(^|_)(mind|minds)(_|$)|genesis/i;
-const MIND_OR_GENESIS_REF = /^(mind|minds|genesis|founder[-_.:]?genesis)([-_.:#/]|$)|genesis[-_.:]?receipt/i;
+// Name guard (field names and adapter_ref): the value is split into word tokens at
+// every non-alphanumeric separator, camelCase boundary and letter/digit boundary.
+// Any `mind`/`minds` token is rejected wherever it sits (x/mind, urn:mind:x,
+// agent:mind:1, mindId, mind-id, masterMind), and `genesis` is rejected anywhere
+// (genesisX, founder-genesis, genesis-receipt). Whole words that merely contain
+// "mind" (reminder, mastermind, mindful) are not mind tokens and still pass.
+// This is a name guard only: the real guarantee is that every object is closed and
+// the contract has no mind slot at all.
+const GENESIS = /genesis/i;
+const MIND_TOKENS = new Set(['mind','minds']);
+const TOKEN_SEPARATOR = /[^A-Za-z0-9]+/;
+const TOKEN_BOUNDARY = /(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[A-Za-z])(?=[0-9])|(?<=[0-9])(?=[A-Za-z])/;
 
 const HARD_ZEROS = Object.freeze({
   authority_effect: 'none',
@@ -50,14 +67,34 @@ const REFERENCE_FIELDS = new Set([
  * header and hard zeros are pinned here and can never be supplied by callers.
  */
 export function buildSpecialistHarnessBridge(input, options = {}) {
-  rejectMindOrGenesisFields(input);
-  exactObject(input, 'Specialist harness bridge input', BODY_FIELDS);
-  const document = { ...HEADER, ...structuredClone(input), ...HARD_ZEROS };
-  validateSpecialistHarnessBridge(document, options);
-  return deepFreeze(document);
+  return failClosed(() => {
+    rejectMindOrGenesisFields(input);
+    exactObject(input, 'Specialist harness bridge input', BODY_FIELDS);
+    const document = { ...HEADER, ...structuredClone(input), ...HARD_ZEROS };
+    validateSpecialistHarnessBridge(document, options);
+    return deepFreeze(document);
+  });
 }
 
+/**
+ * Validate a bridge. Every failure, including cyclic input, throwing getters or
+ * proxies, surfaces as a ValidationError. Without `options.envelope` no ceiling
+ * is checked; consumers must require `envelope_checked === true`.
+ */
 export function validateSpecialistHarnessBridge(document, options = {}) {
+  return failClosed(() => validateUnsafe(document, options));
+}
+
+function failClosed(run) {
+  try {
+    return run();
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
+    throw new ValidationError('Specialist harness bridge input could not be read safely; failing closed');
+  }
+}
+
+function validateUnsafe(document, options) {
   validateOptions(options);
   rejectMindOrGenesisFields(document);
   exactObject(document, 'Specialist harness bridge', TOP_LEVEL_FIELDS);
@@ -167,7 +204,7 @@ function validateAdapterBinding(value, subject) {
     'skill_admission_digest','external_agent_ingress_digest'
   ]);
   id(value.adapter_ref, 'adapter_ref');
-  if (MIND_OR_GENESIS_REF.test(value.adapter_ref)) {
+  if (namesMindOrGenesis(value.adapter_ref)) {
     throw new ValidationError('adapter_ref cannot be a mind identity or Genesis receipt');
   }
   if (value.adapter_ref === subject) throw new ValidationError('adapter_ref cannot be the subject principal');
@@ -281,18 +318,31 @@ function validateOptions(options) {
   }
 }
 
-function rejectMindOrGenesisFields(value, path = '$') {
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => rejectMindOrGenesisFields(item, `${path}[${index}]`));
-    return;
-  }
-  if (!value || typeof value !== 'object') return;
-  for (const key of Object.keys(value)) {
-    if (MIND_OR_GENESIS_FIELD.test(key)) {
-      throw new ValidationError(`forbidden mind or Genesis field ${path}.${key}`);
+function namesMindOrGenesis(name) {
+  if (GENESIS.test(name)) return true;
+  for (const segment of name.split(TOKEN_SEPARATOR)) {
+    for (const token of segment.split(TOKEN_BOUNDARY)) {
+      if (MIND_TOKENS.has(token.toLowerCase())) return true;
     }
-    rejectMindOrGenesisFields(value[key], `${path}.${key}`);
   }
+  return false;
+}
+
+function rejectMindOrGenesisFields(value, path = '$', ancestors = new Set()) {
+  if (!value || typeof value !== 'object') return;
+  if (ancestors.has(value)) throw new ValidationError(`cyclic value at ${path}`);
+  ancestors.add(value);
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => rejectMindOrGenesisFields(item, `${path}[${index}]`, ancestors));
+  } else {
+    for (const key of Object.keys(value)) {
+      if (namesMindOrGenesis(key)) {
+        throw new ValidationError(`forbidden mind or Genesis field ${path}.${key}`);
+      }
+      rejectMindOrGenesisFields(value[key], `${path}.${key}`, ancestors);
+    }
+  }
+  ancestors.delete(value);
 }
 
 function subset(values, ceiling, label) {
@@ -321,5 +371,5 @@ function finiteText(value,label,max){if(typeof value!=='string'||value.length<1|
 function finiteIdArray(value,label,min,max){if(!Array.isArray(value)||value.length<min||value.length>max)throw new ValidationError(label+' is invalid');const s=new Set();for(const item of value){id(item,label+' item');if(item.includes('*')||item.toLowerCase()==='all'||item.toLowerCase()==='administrator')throw new ValidationError(label+' contains ambient authority syntax');if(s.has(item))throw new ValidationError(label+' contains duplicate values');s.add(item);}}
 function finiteTextArray(value,label,min,max,itemMax){if(!Array.isArray(value)||value.length<min||value.length>max)throw new ValidationError(label+' is invalid');const s=new Set();for(const item of value){finiteText(item,label+' item',itemMax);if(s.has(item))throw new ValidationError(label+' contains duplicate values');s.add(item);}}
 function enumArray(value,label,allowed,min,max){if(!Array.isArray(value)||value.length<min||value.length>max)throw new ValidationError(label+' is invalid');const s=new Set();for(const item of value){if(!allowed.has(item))throw new ValidationError(label+' contains invalid value');if(s.has(item))throw new ValidationError(label+' contains duplicate values');s.add(item);}}
-function integer(value,label,min,max){if(!Number.isSafeInteger(value)||value<min||value>max)throw new ValidationError(label+' is invalid');}
+function integer(value,label,min,max){if(!Number.isSafeInteger(value)||Object.is(value,-0)||value<min||value>max)throw new ValidationError(label+' is invalid');}
 function canonicalDate(value,label){if(typeof value!=='string'||value.length>64)throw new ValidationError(label+' must be a canonical ISO timestamp');const d=new Date(value);if(!Number.isFinite(d.getTime())||d.toISOString()!==value)throw new ValidationError(label+' must be a canonical ISO timestamp');return d.getTime();}
