@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { digestObject, ValidationError } from './canonical.mjs';
+import { verifyObjectSignature } from './identity.mjs';
 import {
   ASSURANCE_TIER_IDS,
   getAssuranceTier
@@ -257,6 +258,50 @@ export function policyOverlayGenerationDigest(overlays) {
   return digestObject({ schema: POLICY_OVERLAY_GENERATION_SCHEMA, overlays });
 }
 
+export const POLICY_GENERATION_RECEIPT_FORMAT = 'axiom-policy-generation-receipt.v1';
+const RECEIPT_NONCE = /^[A-Za-z0-9_-]{16,128}$/;
+
+/**
+ * A Grid-signed statement that `generation` was the overlay set in force at
+ * `as_of`, answering the request that carried `nonce` (scalability audit
+ * S-15). The Hypervisor sends a fresh nonce with each policy fetch, verifies
+ * the receipt against Grid's key before using the answer, and records it in
+ * the intent's accepted evidence, so anyone holding Grid's public key can
+ * later check which overlay set governed a decision.
+ *
+ * Returns the receipt (`{ body, signature }`) or throws `policy_unavailable`.
+ */
+export function verifyPolicyGenerationReceipt(receipt, { publicKey, generation, nonce }) {
+  const refuse = message => Object.assign(new Error(message), {
+    code: 'policy_unavailable',
+    status: 503
+  });
+  const body = receipt?.body;
+  if (
+    !body || typeof body !== 'object' || Array.isArray(body)
+    || Object.keys(body).sort().join(',') !== 'as_of,format,generation,nonce'
+    || body.format !== POLICY_GENERATION_RECEIPT_FORMAT
+    || !/^[a-f0-9]{64}$/.test(body.generation ?? '')
+    || typeof body.as_of !== 'string'
+    || !Number.isFinite(Date.parse(body.as_of))
+    || new Date(Date.parse(body.as_of)).toISOString() !== body.as_of
+    || !RECEIPT_NONCE.test(body.nonce ?? '')
+  ) {
+    throw refuse('Policy generation receipt is malformed');
+  }
+  if (body.nonce !== nonce || body.generation !== generation) {
+    throw refuse('Policy generation receipt does not answer this request');
+  }
+  let valid = false;
+  try {
+    valid = verifyObjectSignature(body, receipt.signature, publicKey);
+  } catch {
+    valid = false;
+  }
+  if (!valid) throw refuse('Policy generation receipt signature is invalid');
+  return { body, signature: receipt.signature };
+}
+
 /**
  * The Hypervisor's view of the policy in force: its base policy merged with
  * Grid's active overlays, rebuilt only when Grid's overlay generation
@@ -264,9 +309,9 @@ export function policyOverlayGenerationDigest(overlays) {
  *
  * `fetchOverlays({ generation, ...context })` asks Grid on every call, with
  * the generation already held (or null) and whatever context the caller
- * passes (a trace id), so an overlay
- * that activates, is rolled back or expires takes effect on the very next
- * intent. Grid answers `{ generation, unchanged: true }` when the caller
+ * passes (a trace id, and in the Hypervisor a nonce for Grid's signed
+ * receipt), so an overlay that activates, is rolled back or expires takes
+ * effect on the very next intent. Grid answers `{ generation, unchanged: true }` when the caller
  * already holds that generation, or `{ generation, overlays }`. The overlays
  * must hash to the generation Grid names, and a cached engine is returned
  * only for the exact generation it was built from; anything inconsistent

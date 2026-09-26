@@ -27,9 +27,10 @@ const PARENT_BLOBS = Object.freeze({
   // discovery, and the policy overlay generation (a Hypervisor holding the
   // current generation gets only the generation back; scalability audit
   // S-15), and closing intents a previous Hypervisor process left accepted
-  // (S-15). The server still composes no SIEA store; the assertions below
-  // are unchanged.
-  grid_server: '2a2f79ed17a00b8c02dedeaa1f82d482af839c65',
+  // (S-15), and a Grid-signed receipt naming the overlay generation for a
+  // caller's nonce (S-15). The server still composes no SIEA store; the
+  // assertions below are unchanged.
+  grid_server: '48df400ad6449baa00a98ed442ab28c655917ada',
   // Updated deliberately for core migration 11 (index-only: composite
   // indexes for the paged collections, accounting journals, node schedules
   // and sync bundles, scalability audit S-11). No table or column changed.

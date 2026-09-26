@@ -52,6 +52,9 @@ const ACCEPTED_KEYS = Object.freeze([
   'invocation',
   'invocation_digest'
 ]);
+// Recorded since S-15; intents accepted before it have none.
+const POLICY_RECEIPT_KEYS = Object.freeze(['body', 'signature']);
+const POLICY_RECEIPT_BODY_KEYS = Object.freeze(['format', 'generation', 'as_of', 'nonce']);
 const MUTATION_EVIDENCE_KEYS = Object.freeze([
   'plan_digest',
   'invocation_digest',
@@ -225,7 +228,14 @@ function verifyAcceptedIntent(store, birth, binding, intentId) {
   }
   const accepted = rows[0];
   const payload = assertPlainObject(accepted.payload, 'semantic native accepted intent payload');
-  exactKeys(payload, ACCEPTED_KEYS, 'semantic native accepted intent payload');
+  const { policy_generation_receipt: policyReceipt, ...acceptedFields } = payload;
+  exactKeys(acceptedFields, ACCEPTED_KEYS, 'semantic native accepted intent payload');
+  if (policyReceipt !== undefined) {
+    exactKeys(policyReceipt, POLICY_RECEIPT_KEYS, 'semantic native accepted policy receipt');
+    exactKeys(policyReceipt.body, POLICY_RECEIPT_BODY_KEYS, 'semantic native accepted policy receipt body');
+    exactKeys(policyReceipt.signature, SIGNATURE_KEYS, 'semantic native accepted policy receipt signature');
+    requiredDigest(policyReceipt.body.generation, 'accepted policy receipt generation');
+  }
   if (
     accepted.seq >= birth.seq
     || accepted.trace_id !== birth.trace_id

@@ -989,9 +989,18 @@ and intent admission is bounded; the rest is open.**
   very next intent. The saving is the decryption, transfer and merge, not
   the round trip. Removing the round trip needs a pushed, signed generation
   change, which does not exist yet.
-- **Remaining signature work.** The generation travels over the authenticated
-  internal channel; it is not a standalone Grid-signed policy-generation
-  receipt. That part of the required remediation remains open.
+- **Signed generation receipt (2026-09-26).** Every policy fetch carries a
+  fresh nonce. Grid answers with an `axiom-policy-generation-receipt.v1`
+  signed with the Grid identity: the generation in force, the time and the
+  nonce. The Hypervisor verifies it against Grid's trusted key before using
+  the answer; a missing, altered or foreign receipt, or one for another
+  nonce or generation, fails closed (`503 policy_unavailable`) before any
+  evidence is written. The verified receipt is recorded in every intent's
+  `intent.accepted` evidence as `policy_generation_receipt`, so anyone with
+  Grid's public key can check which overlay set governed a decision. The
+  receipt attests what Grid named; the Hypervisor's own check that the
+  overlays hash to that generation is unchanged. The cache is still keyed by
+  the generation, and the round trip remains (see the deviation above).
 - **Evidence.**
   - Unit tests cover the cache:
     - reuse while unchanged;
@@ -1010,6 +1019,17 @@ and intent admission is bounded; the rest is open.**
     an "unchanged" answer for another generation is accepted, when
     mismatched overlays are accepted, when the generation ignores expiry,
     and (kernel) when Grid answers "unchanged" regardless.
+  - Receipts (`policy-generation-receipt.test.mjs`): the verifier refuses
+    a missing body, another format, an extra field, a non-canonical time,
+    malformed values, another nonce or generation, another key, an altered
+    body and a garbled signature. Through the four services, each accepted
+    intent records a receipt that verifies from Grid's public key and names
+    the generation in force, including after an overlay activates, with a
+    fresh nonce each time; Grid refuses a malformed nonce; and a Hypervisor
+    trusting another Grid key refuses with `503 policy_unavailable` and
+    records nothing. 9 of 9 mutations fail the tests (skipped verification,
+    a fixed nonce, an unrecorded receipt, no nonce, generation, signature or
+    time check, Grid signing the caller's generation, no nonce validation).
 
 - **Bounded admission.** The Hypervisor runs at most 32 intents at once
   (`AXIOM_HYPERVISOR_MAX_CONCURRENT_INTENTS`). Up to 64 more

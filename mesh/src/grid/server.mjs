@@ -13,6 +13,7 @@ import { preflightEducationLearnerGridEvent } from '../domain/education-learner-
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
+import { POLICY_GENERATION_RECEIPT_FORMAT } from '../lib/policy.mjs';
 import { createCapabilityConsumptionCommitter } from './capability-consumption-route.mjs';
 import {
   acquireGridRuntimeLock,
@@ -380,16 +381,26 @@ export async function createGridService(config = meshConfig()) {
     return store.getImport(params.id, principal);
   });
   // S-15: with `generation`, a caller that already holds the overlay set in
-  // force gets only the generation back; nothing is decrypted or sent.
+  // force gets only the generation back; nothing is decrypted or sent. With
+  // `nonce`, the answer carries a receipt signed with the Grid identity that
+  // names the generation in force for exactly that request.
   router.add('GET', '/internal/v1/policy-overlays', async ({ url }) => {
     const known = url.searchParams.get('generation');
     if (known !== null && !/^[a-f0-9]{64}$/.test(known)) {
       throw new ValidationError('Policy overlay generation is invalid');
     }
+    const nonce = url.searchParams.get('nonce');
+    if (nonce !== null && !SYNC_HEAD_NONCE.test(nonce)) {
+      throw new AxiomError('invalid_nonce', 'Policy generation nonce is invalid', 400);
+    }
     const now = new Date().toISOString();
     const generation = store.policyOverlayGeneration(now);
-    if (known === generation) return { generation, unchanged: true };
-    return { generation, overlays: store.listActivePolicyOverlays(now) };
+    const answer = known === generation
+      ? { generation, unchanged: true }
+      : { generation, overlays: store.listActivePolicyOverlays(now) };
+    if (nonce === null) return answer;
+    const body = { format: POLICY_GENERATION_RECEIPT_FORMAT, generation, as_of: now, nonce };
+    return { ...answer, receipt: { body, signature: identity.signObject(body) } };
   });
   // S-15: the Hypervisor closes intents its previous process left without a
   // terminal state. The cutoff may not be in the future, so a live intent

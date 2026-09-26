@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { meshConfig } from '../lib/config.mjs';
 import {
@@ -28,7 +29,7 @@ import {
   serviceSnapshotsFromReport,
   ServiceTelemetry
 } from '../lib/observability.mjs';
-import { createActivePolicy, loadPolicyStack } from '../lib/policy.mjs';
+import { createActivePolicy, loadPolicyStack, verifyPolicyGenerationReceipt } from '../lib/policy.mjs';
 import { ExecutionGate } from '../lib/execution-gate.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
@@ -117,17 +118,34 @@ export async function createHypervisorService(config = meshConfig()) {
   });
   telemetry.setAdmissionSource(() => intentGate.snapshot());
   // Scalability audit S-15: rebuilt only when Grid's overlay generation
-  // changes; Grid is still asked on every intent (lib/policy.mjs).
+  // changes; Grid is still asked on every intent (lib/policy.mjs). Each ask
+  // carries a fresh nonce, and Grid's signed receipt for it is verified
+  // before the answer is used.
   const cachedActivePolicy = createActivePolicy({
     basePolicy,
-    fetchOverlays: async ({ generation, traceId }) => gridGet(
-      `/internal/v1/policy-overlays${generation ? `?generation=${generation}` : ''}`,
-      traceId
-    )
+    fetchOverlays: async ({ generation, traceId, nonce, sink }) => {
+      const query = new URLSearchParams({ nonce });
+      if (generation) query.set('generation', generation);
+      const response = await gridGet(`/internal/v1/policy-overlays?${query}`, traceId);
+      sink.receipt = verifyPolicyGenerationReceipt(response?.receipt, {
+        publicKey: gridKey,
+        generation: response?.generation,
+        nonce
+      });
+      return response;
+    }
   });
+  // Returns the policy engine in force and Grid's signed receipt naming its
+  // overlay generation.
   async function activePolicy(traceId) {
+    const sink = {};
     try {
-      return await cachedActivePolicy({ traceId });
+      const policy = await cachedActivePolicy({
+        traceId,
+        nonce: randomBytes(24).toString('base64url'),
+        sink
+      });
+      return { policy, receipt: sink.receipt };
     } catch (error) {
       if (error?.code === 'policy_unavailable') throw new AxiomError('policy_unavailable', error.message, 503);
       throw error;
@@ -181,7 +199,7 @@ export async function createHypervisorService(config = meshConfig()) {
     );
     return buildMachineDiscovery({
       principal,
-      policy: await activePolicy(traceId),
+      policy: (await activePolicy(traceId)).policy,
       kernelVersion: '0.12.0-dev.3'
     });
   });
@@ -309,7 +327,7 @@ export async function createHypervisorService(config = meshConfig()) {
   }));
 
   async function processIntent(intent, traceId, lifecycle, commit) {
-    const policy = await activePolicy(traceId);
+    const { policy, receipt: policyReceipt } = await activePolicy(traceId);
     let decision = policy.evaluate({
       action: intent.action,
       principal: intent.principal,
@@ -391,6 +409,7 @@ export async function createHypervisorService(config = meshConfig()) {
         request_digest: intentRequestDigest(intent),
         policy_version: decision.policy_version,
         policy_digest: decision.policy_digest,
+        policy_generation_receipt: policyReceipt,
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
         ...(machineAuthority ? { machine_authority: machineAuthority } : {}),
