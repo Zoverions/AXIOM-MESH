@@ -157,8 +157,6 @@ What it does not do:
 - Access is fixed at publication. A member who leaves the audience later can
   still open what was sealed for them, and one who joins later cannot open
   earlier content.
-- The peer command does not yet hold a disclosure key or seal and open
-  content. The module is used directly.
 
 ## Running a node
 
@@ -169,7 +167,21 @@ tests and cannot be selected from the command.
 npm run circle:peer -- status /abs/path/circle-peer.json
 npm run circle:peer -- sync   /abs/path/circle-peer.json   # one pass with every peer
 npm run circle:peer -- serve  /abs/path/circle-peer.json   # serve, and sync every interval
+
+# Publishing your own records (the next sync or serve carries them to peers):
+npm run circle:peer -- append /abs/path/circle-peer.json proposal /abs/path/proposal.json
+npm run circle:peer -- publish-disclosure-key /abs/path/circle-peer.json
+npm run circle:peer -- seal /abs/path/circle-peer.json member,steward /abs/path/content.json
+npm run circle:peer -- open /abs/path/circle-peer.json <update-digest>
 ```
+
+`append` signs the record as the next update in your own key log. The
+answer gives its digest and counter, and `excluded` says why the view does
+not keep it, if it does not: a record you were not entitled to make is still
+signed history, so check the answer. A record naming someone else is
+refused outright. Publishing holds the state lock, so stop a serving node
+first. `seal` publishes content for exactly the recipients every replica
+will expect, and `open` reads content sealed for you.
 
 Example configuration (`axiom-circle-peer-config.v0`). It and every secret
 it names must be private files (not group- or other-readable), and every
@@ -180,7 +192,11 @@ path must be absolute:
   "schema": "axiom-circle-peer-config.v0",
   "enabled": true,
   "genesis_file": "/srv/circle/genesis.json",
-  "member": { "principal_id": "bob", "private_key_file": "/srv/circle/member.pem" },
+  "member": {
+    "principal_id": "bob",
+    "private_key_file": "/srv/circle/member.pem",
+    "disclosure_key_file": "/srv/circle/disclosure.pem"
+  },
   "state_file": "/srv/circle/state/circle.sealed",
   "state_key_file": "/srv/circle/state.key",
   "listen": {
@@ -203,7 +219,11 @@ path must be absolute:
 - `enabled` must be the literal `true`. Anything else, including a missing
   field, refuses to start.
 - `member.private_key_file` is the member's Ed25519 Circle key (PKCS#8 PEM).
-  It signs requests. Keep it on the member's own node.
+  It signs requests and records. Keep it on the member's own node.
+- `member.disclosure_key_file` is optional: the member's X25519 key (PKCS#8
+  PEM, for example from `openssl genpkey -algorithm X25519`), used to publish
+  a disclosure key and to seal and open content. Without it the node syncs
+  sealed records but cannot open them.
 - `state_key_file` holds 32 random bytes (base64url). The replica is stored
   sealed under it, bound to this Circle's genesis. On load, every stored
   update is checked again.
@@ -262,6 +282,12 @@ path must be absolute:
 
   The latest verified statement is kept in the encrypted state. A statement
   whose heads digest differs from the heads it came with is refused.
+- Publishing through a node: two nodes, one serving. Each publishes a
+  disclosure key as the next update in its own log; one appends a proposal,
+  seals content for members and stewards, and syncs; the other opens it from
+  its own state. Appending while serving is refused, a record the view
+  excludes reports why, a record naming someone else is refused, and a
+  missing, readable or non-X25519 disclosure key file is refused.
 - Sealed content (`mesh/test/circle-disclosure.test.mjs`):
   - recipients open it, and nobody else can, including with the wrong key or
     under another Circle;
@@ -324,7 +350,10 @@ Each of these fails when its protection is removed:
   unknown roles;
 - the receipt-time shape check, the disclosure key id binding, the genesis
   check and recipient order;
-- binding the recipient list into the ciphertext.
+- binding the recipient list into the ciphertext;
+- publishing: the counter and previous-update link, reporting exclusion,
+  the state lock, requiring a disclosure key and its type, opening only
+  sealed content, and sealing for the whole audience.
 
 ## Before activation
 
@@ -334,8 +363,7 @@ before that decision:
 
 - what a Circle does with a withholding finding (it is evidence only);
 - a registry entry under the capability lifecycle;
-- disclosure keys held by the peer command, and whether any record kinds
-  should be sealed by default.
+- whether any record kinds should be sealed by default.
 
 Per-member rate limits, signed answers, withholding findings and sealed
 content (per-record disclosure), which were earlier on this list, are now

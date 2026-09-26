@@ -179,6 +179,12 @@ export function createCircleUpdate({
   });
 }
 
+/** The time a record states for itself (the time the view orders it by). */
+export function circleRecordTime(recordType, record) {
+  if (!Object.hasOwn(RECORD_TYPES, recordType)) throw new ValidationError('Circle record type is unknown');
+  return RECORD_TYPES[recordType].time(record);
+}
+
 export function circleUpdateDigest(update) {
   return digestObject(update.body);
 }

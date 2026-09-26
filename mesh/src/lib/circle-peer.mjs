@@ -1,11 +1,16 @@
-import { createPrivateKey } from 'node:crypto';
+import { createPrivateKey, createPublicKey } from 'node:crypto';
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ValidationError } from './canonical.mjs';
 import { ReplayGuard } from './identity.mjs';
 import { DataProtector } from './protector.mjs';
-import { CircleReplica } from './circle-exchange.mjs';
+import { CircleReplica, circleRecordTime, circleUpdateDigest, createCircleUpdate } from './circle-exchange.mjs';
+import {
+  circleDisclosureKeyRecord,
+  openCircleSealedContent,
+  sealCircleContent
+} from './circle-disclosure.mjs';
 import { circleKeyId } from './circle-keys.mjs';
 import { detectCircleWithholding } from './circle-withholding.mjs';
 import {
@@ -23,6 +28,12 @@ import {
  *
  * One process owns the state at a time (a lock beside the state file), so a
  * serving node and a one-shot sync cannot overwrite each other's updates.
+ *
+ * A member publishes through their own node: appendCirclePeerRecord signs a
+ * record as the next update in the member's own key log, and the next sync
+ * or serve carries it to peers. With a disclosure key, the node publishes
+ * that key, seals content for an audience, and opens content sealed for the
+ * member (circle-disclosure.mjs).
  */
 
 export const CIRCLE_PEER_CONFIG_SCHEMA = 'axiom-circle-peer-config.v0';
@@ -67,6 +78,16 @@ export async function loadCirclePeerRuntime(configPath, { allowInsecureLoopback 
     throw new ValidationError('Circle member key is invalid');
   }
   if (privateKey.asymmetricKeyType !== 'ed25519') throw new ValidationError('Circle member key must use Ed25519');
+  let disclosureKey = null;
+  if (config.member.disclosure_key_file) {
+    try {
+      disclosureKey = createPrivateKey(await privateFile(config.member.disclosure_key_file, 8_192, 'Circle disclosure key'));
+    } catch (error) {
+      if (error instanceof ValidationError) throw error;
+      throw new ValidationError('Circle disclosure key is invalid');
+    }
+    if (disclosureKey.asymmetricKeyType !== 'x25519') throw new ValidationError('Circle disclosure key must use X25519');
+  }
   const stateKey = Buffer.from((await privateFile(config.state_key_file, 4_096, 'Circle peer state key')).trim(), 'base64url');
   if (stateKey.length !== 32) throw new ValidationError('Circle peer state key must contain 32 bytes');
   const tls = config.listen?.tls_key_file
@@ -91,6 +112,7 @@ export async function loadCirclePeerRuntime(configPath, { allowInsecureLoopback 
     principal_id: config.member.principal_id,
     key_id: circleKeyId(privateKey),
     private_key: privateKey,
+    disclosure_key: disclosureKey,
     protector: new DataProtector(stateKey),
     tls,
     peers: Object.freeze(peers),
@@ -274,6 +296,109 @@ export async function serveCirclePeer(runtime, { now = () => Date.now(), senderF
   }
 }
 
+/**
+ * Signs `record` as the next update in this member's own key log and adds
+ * it to `replica`. Returns its digest and counter, and whether the view as
+ * of the record's time keeps it (`excluded` names why not). The replica may
+ * accept an update the view excludes, for example a record this member was
+ * not entitled to make: it is signed history either way.
+ */
+export function appendCircleRecord(runtime, replica, { recordType, record }) {
+  const own = replica.heads().heads.find(head => head.author === runtime.principal_id && head.key_id === runtime.key_id);
+  const counter = (own?.counter ?? 0) + 1;
+  const previous = own
+    ? replica.authoredAfter({ author: runtime.principal_id, keyId: runtime.key_id, counter: own.counter - 1 })[0].update
+    : null;
+  const update = createCircleUpdate({
+    genesis: runtime.genesis,
+    author: runtime.principal_id,
+    counter,
+    previous,
+    recordType,
+    record,
+    privateKey: runtime.private_key
+  });
+  const result = replica.receive(update);
+  if (result.status !== 'accepted') {
+    throw new ValidationError(`Circle record was not accepted: ${result.code ?? result.status}${result.reason ? ` (${result.reason})` : ''}`);
+  }
+  const digest = circleUpdateDigest(update);
+  const at = circleRecordTime(recordType, record);
+  const excluded = replica.view({ asOf: at }).excluded.find(item => item.digest === digest)?.reason ?? null;
+  return { digest, counter, record_type: recordType, excluded };
+}
+
+/** appendCircleRecord under the state lock, saved before the lock is released. */
+export async function appendCirclePeerRecord(runtime, input) {
+  const lock = await acquireStateLock(runtime.config.state_file);
+  try {
+    const replica = await openCirclePeerReplica(runtime);
+    const appended = appendCircleRecord(runtime, replica, input);
+    await saveCirclePeerReplica(runtime, replica);
+    return appended;
+  } finally {
+    await lock.release();
+  }
+}
+
+/** Publishes this member's disclosure key (member.disclosure_key_file). */
+export async function publishCirclePeerDisclosureKey(runtime, { now = () => Date.now() } = {}) {
+  const key = requireDisclosureKey(runtime);
+  const record = circleDisclosureKeyRecord({
+    principalId: runtime.principal_id,
+    publicKey: createPublicKey(key).export({ format: 'jwk' }).x,
+    publishedAt: new Date(now()).toISOString()
+  });
+  return appendCirclePeerRecord(runtime, { recordType: 'disclosure_key', record });
+}
+
+/**
+ * Seals `value` for the members holding `roleIds` and publishes it. The
+ * recipients are exactly those every replica will expect.
+ */
+export async function sealCirclePeerContent(runtime, { roleIds, value, now = () => Date.now() }) {
+  requireDisclosureKey(runtime);
+  const lock = await acquireStateLock(runtime.config.state_file);
+  try {
+    const replica = await openCirclePeerReplica(runtime);
+    const at = new Date(now()).toISOString();
+    const record = sealCircleContent({
+      genesisDigest: runtime.genesis_digest,
+      publishedBy: runtime.principal_id,
+      publishedAt: at,
+      audienceRoles: roleIds,
+      recipients: replica.disclosureRecipients({ publisher: runtime.principal_id, roleIds: [...new Set(roleIds)].sort(), at }),
+      value
+    });
+    const appended = appendCircleRecord(runtime, replica, { recordType: 'sealed_content', record });
+    await saveCirclePeerReplica(runtime, replica);
+    return { ...appended, recipients: record.envelope.recipients.map(item => item.principal_id) };
+  } finally {
+    await lock.release();
+  }
+}
+
+/** Opens sealed content (by its update digest) addressed to this member. */
+export async function openCirclePeerContent(runtime, digest) {
+  const key = requireDisclosureKey(runtime);
+  const replica = await openCirclePeerReplica(runtime);
+  const update = replica.exportUpdates().find(item => circleUpdateDigest(item) === digest);
+  if (!update || update.body.record_type !== 'sealed_content') {
+    throw new ValidationError('No sealed content with that digest is held');
+  }
+  return openCircleSealedContent({
+    record: update.body.record,
+    genesisDigest: runtime.genesis_digest,
+    principalId: runtime.principal_id,
+    privateKey: key
+  });
+}
+
+function requireDisclosureKey(runtime) {
+  if (!runtime.disclosure_key) throw new ValidationError('Circle peer config has no member.disclosure_key_file');
+  return runtime.disclosure_key;
+}
+
 export async function circlePeerStatus(runtime) {
   const replica = await openCirclePeerReplica(runtime);
   return {
@@ -348,7 +473,7 @@ function normalizeConfig(value, { allowInsecureLoopback }) {
     throw new ValidationError('Circle peer transport is disabled; set "enabled": true to run it');
   }
   if (!isPlainObject(value.member)) throw new ValidationError('Circle peer member is invalid');
-  allowedKeys(value.member, ['principal_id', 'private_key_file'], 'Circle peer member');
+  allowedKeys(value.member, ['principal_id', 'private_key_file', 'disclosure_key_file'], 'Circle peer member');
   if (!IDENTIFIER.test(value.member.principal_id ?? '')) throw new ValidationError('Circle peer principal_id is invalid');
   let listen = null;
   if (value.listen !== undefined) {
@@ -400,7 +525,10 @@ function normalizeConfig(value, { allowInsecureLoopback }) {
     genesis_file: absolutePath(value.genesis_file, 'Circle peer genesis_file'),
     member: {
       principal_id: value.member.principal_id,
-      private_key_file: absolutePath(value.member.private_key_file, 'Circle peer private_key_file')
+      private_key_file: absolutePath(value.member.private_key_file, 'Circle peer private_key_file'),
+      ...(value.member.disclosure_key_file !== undefined
+        ? { disclosure_key_file: absolutePath(value.member.disclosure_key_file, 'Circle peer disclosure_key_file') }
+        : {})
     },
     state_file: absolutePath(value.state_file, 'Circle peer state_file'),
     state_key_file: absolutePath(value.state_key_file, 'Circle peer state_key_file'),

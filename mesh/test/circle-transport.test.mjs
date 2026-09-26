@@ -11,8 +11,10 @@ import {
   CIRCLE_EXIT_SCHEMA,
   CIRCLE_INVITATION_SCHEMA,
   CIRCLE_MEMBERSHIP_SCHEMA,
+  CIRCLE_PROPOSAL_SCHEMA,
   CIRCLE_SCHEMA
 } from '../src/lib/circle-core.mjs';
+import { generateCircleDisclosureKey } from '../src/lib/circle-disclosure.mjs';
 import { CircleReplica, circleGenesisDigest, createCircleGenesis, createCircleUpdate } from '../src/lib/circle-exchange.mjs';
 import {
   circleKeyId,
@@ -37,6 +39,7 @@ import {
   verifyCircleWithholdingFinding
 } from '../src/lib/circle-withholding.mjs';
 import {
+  appendCirclePeerRecord,
   circlePeerFindings,
   circlePeerStatus,
   loadCirclePeerRuntime,
@@ -514,7 +517,7 @@ test('former members and revoked keys are refused', async () => {
   assert.deepEqual(await status('bob', earlier), [200, 'ok']);
 });
 
-async function peerFiles(root, name, { principal, pair = keys[principal], listen, peers = [], enabled = true, genesisValue = genesis }) {
+async function peerFiles(root, name, { principal, pair = keys[principal], listen, peers = [], enabled = true, genesisValue = genesis, disclosureKey }) {
   const dir = join(root, name);
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const genesisFile = join(dir, 'genesis.json');
@@ -523,11 +526,20 @@ async function peerFiles(root, name, { principal, pair = keys[principal], listen
   await writeFile(keyFile, pair.privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });
   const stateKeyFile = join(dir, 'state.key');
   await writeFile(stateKeyFile, randomBytes(32).toString('base64url'), { mode: 0o600 });
+  let disclosureFile;
+  if (disclosureKey) {
+    disclosureFile = join(dir, 'disclosure.pem');
+    await writeFile(disclosureFile, disclosureKey.privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });
+  }
   const config = {
     schema: 'axiom-circle-peer-config.v0',
     enabled,
     genesis_file: genesisFile,
-    member: { principal_id: principal, private_key_file: keyFile },
+    member: {
+      principal_id: principal,
+      private_key_file: keyFile,
+      ...(disclosureFile ? { disclosure_key_file: disclosureFile } : {})
+    },
     state_file: join(dir, 'state', 'circle.sealed'),
     state_key_file: stateKeyFile,
     ...(listen ? { listen } : {}),
@@ -696,4 +708,98 @@ test('the HTTP layer bounds requests and answers only its two routes', async t =
     genesisDigest: bobNode.genesisDigest, operation: 'pull', payload: bobNode.heads(), principalId: 'mallory', privateKey: keys.mallory.privateKey, now: NOW
   })), error => error.code === 'unauthenticated' && error.status === 401);
   assert.throws(() => httpCircleSender({ origin }), /must use HTTPS/);
+});
+
+test('a member publishes through their own node: records, a disclosure key, and sealed content only the audience opens', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-circle-peer-author-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const { alice, bob } = logs();
+  const lines = [];
+  const cli = (...argv) => runCirclePeerCommand(argv, { output: { write: line => lines.push(line) } });
+  const input = async (name, value) => {
+    const file = join(root, `${name}.json`);
+    await writeFile(file, JSON.stringify(value));
+    return file;
+  };
+
+  const aliceFiles = await peerFiles(root, 'alice', {
+    principal: 'alice', listen: { host: '127.0.0.1', port: 0 }, disclosureKey: generateCircleDisclosureKey()
+  });
+  const aliceRuntime = await loadCirclePeerRuntime(aliceFiles.configFile, { allowInsecureLoopback: true });
+  await seed(aliceRuntime, [...alice, ...bob]);
+  const aliceKey = await cli('publish-disclosure-key', aliceFiles.configFile).catch(error => error);
+  // The command refuses plain HTTP listeners; publishing goes through the library then.
+  assert.match(String(aliceKey.message), /requires tls_key_file/);
+  const { publishCirclePeerDisclosureKey, sealCirclePeerContent, openCirclePeerContent } = await import('../src/lib/circle-peer.mjs');
+  const published = await publishCirclePeerDisclosureKey(aliceRuntime);
+  assert.equal(published.record_type, 'disclosure_key');
+  assert.equal(published.counter, alice.length + 1, 'the next update in her own log');
+  assert.equal(published.excluded, null);
+
+  const node = await serveCirclePeer(aliceRuntime);
+  t.after(() => node.close());
+  // While her node serves, it owns the state: a second writer is refused.
+  await assert.rejects(appendCirclePeerRecord(aliceRuntime, { recordType: 'task', record: {} }), /in use by another process/);
+
+  const bobFiles = await peerFiles(root, 'bob', { principal: 'bob', disclosureKey: generateCircleDisclosureKey() });
+  await seed(await loadCirclePeerRuntime(bobFiles.configFile), [...alice, ...bob]);
+  const bobKey = await cli('publish-disclosure-key', bobFiles.configFile);
+  assert.equal(bobKey.counter, 2);
+  const now = new Date();
+  const proposal = {
+    schema: CIRCLE_PROPOSAL_SCHEMA,
+    proposal_id: 'proposal.budget',
+    circle_id: genesis.circle.circle_id,
+    charter_digest: digestObject(genesis.charter),
+    proposer: 'bob',
+    title: 'Agree the budget',
+    summary: 'The figures are sealed for members and stewards.',
+    created_at: now.toISOString(),
+    closes_at: new Date(now.getTime() + 2 * 86_400_000).toISOString(),
+    status: 'open',
+    evidence_refs: [],
+    execution_effect: 'none',
+    authority_effect: 'none'
+  };
+  const appended = await cli('append', bobFiles.configFile, 'proposal', await input('proposal', proposal));
+  assert.equal(appended.excluded, null, 'a member may propose');
+  // A record the view excludes is signed history, and the answer says why.
+  const outOfTurn = await cli('append', bobFiles.configFile, 'invitation', await input('invitation', {
+    ...invitation('dana', 'member'), issued_by: 'bob', issued_at: now.toISOString()
+  }));
+  assert.match(outOfTurn.excluded, /bob may not issue invitations/);
+  // A record naming someone else is refused outright.
+  await assert.rejects(cli('append', bobFiles.configFile, 'proposal', await input('forged', { ...proposal, proposer: 'alice' })), /authorship/);
+
+  // Bob's node syncs with alice's over loopback HTTP, which only tests may
+  // select: a second configuration over the same state names her origin.
+  const syncConfig = join(root, 'bob', 'sync-config.json');
+  await writeFile(syncConfig, JSON.stringify({ ...bobFiles.config, peers: [{ origin: `http://127.0.0.1:${node.port}` }] }), { mode: 0o600 });
+  const bobRuntime = await loadCirclePeerRuntime(syncConfig, { allowInsecureLoopback: true });
+  const first = await runCirclePeerSync(bobRuntime);
+  assert.equal(first.peers[0].status, 'synced', JSON.stringify(first.peers[0]));
+
+  const sealed = await sealCirclePeerContent(bobRuntime, { roleIds: ['member', 'steward'], value: { budget: 1200, currency: 'EUR' } });
+  assert.deepEqual(sealed.recipients, ['alice', 'bob'], 'carol has no disclosure key, so she is not a recipient');
+  assert.equal(sealed.excluded, null);
+  const second = await runCirclePeerSync(bobRuntime);
+  assert.equal(second.peers[0].status, 'synced');
+
+  // Alice's node now holds the sealed record; her key opens it.
+  const view = node.replica.view({ asOf: new Date(Date.now() + 60_000).toISOString() });
+  assert.ok(view.sealed_contents.some(item => item.digest === sealed.digest));
+  assert.deepEqual(await openCirclePeerContent(aliceRuntime, sealed.digest), { budget: 1200, currency: 'EUR' });
+  assert.deepEqual((await cli('open', bobFiles.configFile, sealed.digest)).value, { budget: 1200, currency: 'EUR' });
+
+  // Only sealed content opens; any other digest is named as such.
+  await assert.rejects(openCirclePeerContent(aliceRuntime, appended.digest), /No sealed content with that digest/);
+
+  // Without a disclosure key there is nothing to open with, and a readable key file is refused.
+  const plain = await peerFiles(root, 'carol', { principal: 'carol' });
+  await assert.rejects(openCirclePeerContent(await loadCirclePeerRuntime(plain.configFile), sealed.digest), /no member.disclosure_key_file/);
+  const signingAsDisclosure = await peerFiles(root, 'carol-wrong-key', { principal: 'carol', disclosureKey: { privateKey: keys.carol.privateKey } });
+  await assert.rejects(loadCirclePeerRuntime(signingAsDisclosure.configFile), /must use X25519/);
+  await chmod(join(root, 'bob', 'disclosure.pem'), 0o644);
+  await assert.rejects(loadCirclePeerRuntime(bobFiles.configFile), /group or others/);
+  await assert.rejects(cli('open', bobFiles.configFile), /Usage/);
 });
