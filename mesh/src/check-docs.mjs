@@ -68,6 +68,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/INTERROGATION-PLANE.md',
   'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md',
   'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md',
+  'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md',
   'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
@@ -362,6 +363,16 @@ const REQUIRED_CONTENT = Object.freeze({
     'population_effect: none',
     '## Non-claims',
     'authority_effect'
+  ],
+  'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md': [
+    '## Purpose and boundary',
+    'runtime_activation: false',
+    'No token, identity, confirmation UI, or receipt is authority by itself.',
+    '## Separate predicates',
+    '## Security key',
+    '## Required negative fixtures',
+    'exactly_once_claimed: false',
+    '## Non-claims'
   ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
@@ -843,6 +854,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md': 2_000,
   'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json': 2_500,
   'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md': 4_000,
+  'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md': 5_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
