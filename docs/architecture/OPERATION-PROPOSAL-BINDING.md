@@ -59,7 +59,8 @@ Every binding document, including rejections, carries:
 - `runtime_activation: false`
 - `authorization_result: not-evaluated`
 
-Limits: at most 64 candidates, 32 proposed operations and 32 offers.
+Limits: at most 32 candidates, 32 proposed operations and 32 offers. The
+candidate limit equals the bound in `computeCandidateSetDigest`.
 
 ## Plain-data rule: inspect originals
 
@@ -86,7 +87,9 @@ The checks run in a fixed order and the first failure wins. A failure returns
 `binding_status: rejected`, a closed `rejection_reason`, null digests and no
 bound operations.
 
-Preconditions: `input-not-plain-data`, `input-malformed`,
+Preconditions: `input-not-plain-data`, `input-malformed` (a missing or
+non-object top-level input, trusted candidate or proposal, or a non-array
+candidate, proposed or offers list),
 `candidate-limit-exceeded`, `proposed-limit-exceeded`, `offer-limit-exceeded`,
 `proposal-invalid` (O0 shape or `proposal_digest` fails).
 
@@ -115,6 +118,15 @@ operation must be in `selection.selected` (`operation-not-selected`). The
 ineligibility check comes first because an ineligible operation is also never
 selected; deny-dominant ordering gives it the more specific reason.
 
+**Arguments.** Each proposed operation's arguments are checked again against
+the manifest argument schemas (`proposal-arguments-invalid`). The check uses
+O0's own validator, not a copy: `validateCallAgainstManifest` (unknown,
+missing, wrong-type and wrong-enum arguments) and
+`nestedArgumentFailureReason` (nested object arguments). Both are now exported
+from the O0 module, and O0 behaviour is unchanged. `bound` therefore means the
+arguments satisfy the manifest schema, even when the proposal was forged and
+its digest resealed.
+
 (f) **Offers.** Each supplied offer must name a proposed operation
 (`offer-operation-not-proposed`), appear once (`offer-duplicate`), and be
 well formed (`offer-malformed`). It must re-evaluate as `eligible: true`
@@ -137,6 +149,22 @@ providers proposing the same operation and arguments yield identical
 `bound_operations` and authority fields. `binding_digest` is the digest of
 every other field. It does not depend on key order, candidate order, evidence
 order or `offers[]` order.
+
+Two properties of `bound_operations` follow from this. If a proposal repeats
+the same operation with the same arguments, it produces duplicate
+`bound_operations` entries, which are kept and not merged. Number handling,
+including `-0`, follows the repo's canonical encoding (`canonicalize` maps
+`-0` to `0`); O1 adds no rules of its own.
+
+## Validator scope: internal consistency only
+
+`validateOperationProposalBinding` checks only that a binding document is
+internally consistent. It checks the closed keys, hard zeros, enums, the
+status and cardinality rules, canonical order and that `binding_digest`
+recomputes. It cannot tell whether the digests inside were ever recomputed from
+real inputs. A hand-built `bound` document with a recomputed `binding_digest`
+passes it. Consumers must re-run `verifyOperationProposalBinding` on the
+original inputs and never trust a binding document on its own.
 
 ## Candidate-set projections (P3)
 
@@ -165,8 +193,8 @@ updated in the same change. No earlier test pinned a failure-path digest.
 ## Non-claims
 
 O1 grants no authority, assurance, currentness, execution, network, spend,
-consent, approval or runtime activation, and it evaluates no authorization. It
-does not re-validate proposal arguments against the manifest argument schemas;
-O0 did that when it created the proposal, and O1 binds the arguments by
-digest. It does not claim Needle is integrated or calibrated. It does not
+consent, approval or runtime activation, and it evaluates no authorization. A
+binding document is not a credential: only a fresh `verifyOperationProposalBinding`
+run over the original inputs is evidence. It does not claim Needle is
+integrated or calibrated. It does not
 promote any capability.

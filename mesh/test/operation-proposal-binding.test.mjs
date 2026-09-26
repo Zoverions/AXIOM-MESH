@@ -17,6 +17,7 @@ import {
 import {
   composeProposalWithOfferDigest,
   composeProposalWithSelectionDigest,
+  computeCandidateSetDigest,
   createInertOperationManifestFixture,
   createSemanticOperationProposal,
   normalizeGenericProviderResult,
@@ -641,11 +642,11 @@ test('RED 12: validator rejects any flipped hard zero, unknown fields and non-pl
   assert.throws(() => validateOperationProposalBinding(digestLie), /binding_digest is invalid/);
 });
 
-test('RED 13: more than 64 candidates or more than 32 proposed ops', () => {
-  assert.equal(OPERATION_PROPOSAL_BINDING_LIMITS.max_candidates, 64);
+test('RED 13: more than 32 candidates or more than 32 proposed ops', () => {
+  assert.equal(OPERATION_PROPOSAL_BINDING_LIMITS.max_candidates, 32);
   assert.equal(OPERATION_PROPOSAL_BINDING_LIMITS.max_proposed_operations, 32);
   const base = world();
-  const many = Array.from({ length: 65 }, (_, index) => ({
+  const many = Array.from({ length: 33 }, (_, index) => ({
     operationId: `op.inert.generated_${index}`,
     manifestDigest: base.manifest.manifest_digest,
     eligible: true,
@@ -849,3 +850,156 @@ function conformsToSchema(schema, value, path = '$') {
     }
   }
 }
+
+test('B-1: non-object top-level inputs are rejected as input-malformed and never throw', () => {
+  const base = world();
+  for (const bad of [null, 1, [], 'selection', true]) {
+    expectRejected({ ...base, selection: bad }, 'input-malformed');
+    expectRejected({ ...base, proposal: bad }, 'input-malformed');
+    expectRejected({ ...base, manifest: bad }, 'input-malformed');
+    expectRejected({ ...base, selection_trusted_input: bad }, 'input-malformed');
+    if (!Array.isArray(bad)) {
+      expectRejected({
+        ...base,
+        selection_trusted_input: { ...base.selection_trusted_input, candidates: bad }
+      }, 'input-malformed');
+      expectRejected({ ...base, proposal: { ...base.proposal, proposed: bad } }, 'input-malformed');
+    }
+    expectRejected({
+      ...base,
+      selection_trusted_input: { ...base.selection_trusted_input, candidates: [bad] }
+    }, 'input-malformed');
+    expectRejected({ ...base, offers: bad === null || Array.isArray(bad) ? 'offers' : bad }, 'input-malformed');
+    expectRejected({ ...base, offers: [bad] }, 'offer-malformed');
+  }
+  expectRejected(1, 'input-malformed');
+  expectRejected([], 'input-malformed');
+});
+
+test('NB-1 (i): manifest with flipped hard zeros is rejected even though the digest preimage does not cover them', () => {
+  const base = world();
+  const manifest = { ...base.manifest, authority_effect: 'granted', runtime_activation: true };
+  // The manifest digest preimage is {schema, version, status, operations} only.
+  assert.equal(
+    digestObject({
+      schema: manifest.schema,
+      version: manifest.version,
+      status: manifest.status,
+      operations: manifest.operations
+    }),
+    manifest.manifest_digest
+  );
+  expectRejected({ ...base, manifest }, 'manifest-invalid');
+  expectRejected({ ...base, manifest: { ...base.manifest, selection_effect: 'authorize' } }, 'manifest-invalid');
+});
+
+test('NB-1 (ii): ghost op outside the manifest with a resealed proposal and matching selection -> candidate-not-in-manifest', () => {
+  const base = world();
+  const GHOST = 'op.inert.ghost';
+  const candidates = [
+    ...base.selection_trusted_input.candidates,
+    {
+      operationId: GHOST,
+      manifestDigest: base.manifest.manifest_digest,
+      eligible: true,
+      eligibilityReason: 'eligible',
+      deterministicMatch: false
+    }
+  ];
+  const support = { [GHOST]: 0.97 };
+  const selectionInput = {
+    ...base.selection_trusted_input,
+    candidates,
+    semanticEvidence: candidates.map((candidate) =>
+      semanticEvidence(candidate, support[candidate.operationId] ?? 0.2))
+  };
+  const selection = createOperationCandidateSelectionProposal(selectionInput);
+  assert.deepEqual(selection.selected.map((item) => item.operation_id), [GHOST]);
+  const proposal = resealProposal({
+    ...base.proposal,
+    candidate_set_digest: computeCandidateSetDigest(proposalCandidates(candidates)),
+    proposed: [{ operation_id: GHOST, arguments: {}, confidence: 0.99, status: 'proposed', order_index: 0 }]
+  });
+  assert.doesNotThrow(() => validateSemanticOperationProposalShape(proposal));
+  expectRejected(
+    { ...base, selection_trusted_input: selectionInput, selection, proposal },
+    'candidate-not-in-manifest'
+  );
+});
+
+test('NB-2: resealed proposal with arguments invalid against the manifest -> proposal-arguments-invalid', () => {
+  const base = world();
+  const forge = (args) => resealProposal({
+    ...base.proposal,
+    proposed: [{ ...structuredClone(base.proposal.proposed[0]), arguments: args }]
+  });
+  const evil = forge({ target: 'EVIL', extra_arg: 'x' });
+  // [O0 gap] the O0 shape validator accepts the forged arguments.
+  assert.doesNotThrow(() => validateSemanticOperationProposalShape(evil));
+  expectRejected({ ...base, proposal: evil }, 'proposal-arguments-invalid');
+  expectRejected({ ...base, proposal: forge({}) }, 'proposal-arguments-invalid');
+  expectRejected({ ...base, proposal: forge({ target: 5 }) }, 'proposal-arguments-invalid');
+  // The valid arguments still bind.
+  assert.equal(verifyOperationProposalBinding(base).binding_status, 'bound');
+});
+
+test('NB-2: nested object arguments are checked with the O0 nested validator', () => {
+  const nestedOps = [
+    {
+      operation_id: 'op.inert.configure',
+      description: 'Configure inert nested options',
+      arguments: {
+        options: {
+          type: 'object',
+          required: true,
+          enum_values: null,
+          properties: {
+            mode: { type: 'enum', required: true, enum_values: ['observe', 'idle'], properties: null }
+          }
+        }
+      }
+    },
+    ...createInertOperationManifestFixture().operations.slice(0, 2).map((operation) => structuredClone(operation))
+  ];
+  const manifest = createInertOperationManifestFixture({ operations: nestedOps });
+  const candidates = manifest.operations.map((operation) => ({
+    operationId: operation.operation_id,
+    manifestDigest: manifest.manifest_digest,
+    eligible: true,
+    eligibilityReason: 'eligible',
+    deterministicMatch: false
+  }));
+  const selectionInput = {
+    taskPurposeDigest: F,
+    candidates,
+    semanticEvidence: candidates.map((candidate) =>
+      semanticEvidence(candidate, candidate.operationId === 'op.inert.configure' ? 0.95 : 0.2)),
+    policy: { minimumSupport: 0.55, singleSelectSupport: 0.9, topK: 2, contextBudget: 5, fallbackBehavior: 'retain-eligible' }
+  };
+  const selection = createOperationCandidateSelectionProposal(selectionInput);
+  const proposal = makeProposal({
+    manifest,
+    candidates: proposalCandidates(candidates),
+    calls: [{ operation_id: 'op.inert.configure', arguments: { options: { mode: 'observe' } }, confidence: 0.9 }]
+  });
+  const trusted = { manifest, selection_trusted_input: selectionInput, selection, proposal };
+  assert.equal(verifyOperationProposalBinding(trusted).binding_status, 'bound');
+  const forged = resealProposal({
+    ...proposal,
+    proposed: [{ ...structuredClone(proposal.proposed[0]), arguments: { options: { mode: 'EVIL' } } }]
+  });
+  expectRejected({ ...trusted, proposal: forged }, 'proposal-arguments-invalid');
+});
+
+test('NB-4: the validator checks internal consistency only; a hand-built bound document validates', () => {
+  const genuine = verifyOperationProposalBinding(world());
+  const handBuilt = resealBinding({
+    ...structuredClone(genuine),
+    operation_manifest_digest: C,
+    proposal_digest: A,
+    bound_operations: [{ operation_id: 'op.inert.anything', arguments_digest: B, offer_digest: null }]
+  });
+  // Documented limit: consumers must re-run verifyOperationProposalBinding.
+  assert.equal(validateOperationProposalBinding(handBuilt).valid, true);
+  assert.notEqual(handBuilt.binding_digest, genuine.binding_digest);
+});

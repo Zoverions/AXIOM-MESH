@@ -8,6 +8,8 @@ import {
 import {
   computeCandidateSetDigest,
   createInertOperationManifestFixture,
+  nestedArgumentFailureReason,
+  validateCallAgainstManifest,
   validateSemanticOperationProposalShape
 } from './semantic-operation-proposal.mjs';
 import {
@@ -41,7 +43,7 @@ const REASON_TOKEN = /^[a-z][a-z0-9-]{0,63}$/;
 const MAX_DEPTH = 64;
 
 export const OPERATION_PROPOSAL_BINDING_LIMITS = Object.freeze({
-  max_candidates: 64,
+  max_candidates: 32,
   max_proposed_operations: 32,
   max_offers: 32,
   max_offer_rejection_reasons: 16
@@ -76,6 +78,7 @@ export const OPERATION_PROPOSAL_BINDING_REASONS = Object.freeze([
   // (d)/(e) proposed operations
   'operation-deterministic-ineligible',
   'operation-not-selected',
+  'proposal-arguments-invalid',
   // (f) offers
   'offer-malformed',
   'offer-duplicate',
@@ -406,10 +409,23 @@ function runChecks(trusted) {
     exactOwnKeys(trusted, TRUSTED_REQUIRED, 'trusted', ['offers']);
     exactOwnKeys(trusted.manifest, MANIFEST_FIELDS, 'manifest');
     exactOwnKeys(trusted.selection_trusted_input, ['taskPurposeDigest', 'candidates', 'semanticEvidence', 'policy'], 'selection_trusted_input');
+    if (!trusted.selection || typeof trusted.selection !== 'object' || Array.isArray(trusted.selection)) {
+      throw new ValidationError('selection must be an object');
+    }
     if (!Array.isArray(trusted.selection_trusted_input.candidates)) {
       throw new ValidationError('selection_trusted_input.candidates must be an array');
     }
-    if (!trusted.proposal || typeof trusted.proposal !== 'object' || !Array.isArray(trusted.proposal.proposed)) {
+    for (const [index, candidate] of trusted.selection_trusted_input.candidates.entries()) {
+      exactOwnKeys(
+        candidate,
+        ['operationId', 'manifestDigest', 'eligible', 'eligibilityReason', 'deterministicMatch'],
+        `selection_trusted_input.candidates[${index}]`
+      );
+    }
+    if (!trusted.proposal || typeof trusted.proposal !== 'object' || Array.isArray(trusted.proposal)) {
+      throw new ValidationError('proposal must be an object');
+    }
+    if (!Array.isArray(trusted.proposal.proposed)) {
       throw new ValidationError('proposal.proposed must be an array');
     }
     if (Object.hasOwn(trusted, 'offers') && !Array.isArray(trusted.offers)) {
@@ -462,15 +478,6 @@ function runChecks(trusted) {
 
   const manifestIds = new Set(manifest.operations.map((operation) => operation.operation_id));
   const trustedById = new Map();
-  guard('input-malformed', () => {
-    for (const [index, candidate] of selectionInput.candidates.entries()) {
-      exactOwnKeys(
-        candidate,
-        ['operationId', 'manifestDigest', 'eligible', 'eligibilityReason', 'deterministicMatch'],
-        `selection_trusted_input.candidates[${index}]`
-      );
-    }
-  });
   for (const candidate of selectionInput.candidates) {
     if (!manifestIds.has(candidate.operationId)) reject('candidate-not-in-manifest');
     if (candidate.manifestDigest !== manifestDigest) reject('candidate-manifest-digest-mismatch');
@@ -505,6 +512,27 @@ function runChecks(trusted) {
     const candidate = trustedById.get(item.operation_id);
     if (candidate && candidate.eligible !== true) reject('operation-deterministic-ineligible');
     if (!candidate || !selectedIds.has(item.operation_id)) reject('operation-not-selected');
+  }
+
+  // Arguments: re-run O0's own manifest argument checks (the single canonical
+  // implementation) so bound implies the arguments satisfy the manifest schema.
+  const manifestById = new Map(manifest.operations.map((operation) => [operation.operation_id, operation]));
+  const eligibilityById = new Map(
+    proposalSpaceCandidates(selectionInput.candidates).map((candidate) => [candidate.operation_id, candidate])
+  );
+  for (const item of proposal.proposed) {
+    const call = guard('proposal-arguments-invalid', () => validateCallAgainstManifest(
+      item.operation_id,
+      item.arguments,
+      manifestById,
+      eligibilityById,
+      'eligible-only'
+    ));
+    if (call.kind !== 'proposed') reject('proposal-arguments-invalid');
+    const nested = guard('proposal-arguments-invalid', () =>
+      nestedArgumentFailureReason(manifestById.get(item.operation_id), item.arguments)
+    );
+    if (nested !== null) reject('proposal-arguments-invalid');
   }
 
   // (f) Offers: re-evaluate eligibility and recompute the digest from the original offer.

@@ -590,7 +590,7 @@ function proposalDigestPayload(document) {
   };
 }
 
-function validateCallAgainstManifest(operationId, args, manifestById, candidateById, candidateMode) {
+export function validateCallAgainstManifest(operationId, args, manifestById, candidateById, candidateMode) {
   const manifestEntry = manifestById.get(operationId);
   if (!manifestEntry) {
     return {
