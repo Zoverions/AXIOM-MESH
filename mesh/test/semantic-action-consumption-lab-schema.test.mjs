@@ -24,6 +24,15 @@ function everyObjectSchemaIsClosed(node, path = '$') {
 function conforms(document, properties, defs) {
   for (const [key, rule] of Object.entries(properties)) {
     const value = document[key];
+    if (rule.anyOf) {
+      const nullable = rule.anyOf.some(option => option.type === 'null');
+      if (value === null) {
+        assert.ok(nullable, `${key} is not nullable`);
+        continue;
+      }
+      conforms({ [key]: value }, { [key]: rule.anyOf.find(option => option.type !== 'null') }, defs);
+      continue;
+    }
     const resolved = rule.$ref ? defs[rule.$ref.split('/').at(-1)] : rule;
     if (Object.hasOwn(resolved, 'const')) assert.equal(value, resolved.const, key);
     if (resolved.enum) assert.ok(resolved.enum.includes(value), `${key}=${value}`);

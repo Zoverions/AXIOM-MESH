@@ -83,7 +83,15 @@
       "$ref": "#/$defs/digest"
     },
     "presentation_jti_digest": {
-      "$ref": "#/$defs/digest"
+      "description": "Revealed only to the admitting presenter; null in replay receipts for any other presenter and in unauthenticated reads.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/digest"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "holder_id": {
       "$ref": "#/$defs/id"

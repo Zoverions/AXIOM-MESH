@@ -35,6 +35,19 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 > `admitting_jti` recorded at admission, and any other jti is denied
 > (`admitting_token_mismatch`). The lab compares jti digests only; a live
 > design would additionally need proof of possession for that token.
+>
+> jtis must be high-entropy (at least 128 bits of randomness): a jti is the
+> only secret that binds follow-up transitions. Replay receipts returned to a
+> non-admitting presenter, and unauthenticated `getReceipt` reads, carry
+> `presentation_jti_digest: null`; only the admitting presenter sees that
+> digest. `abort` is deliberately unauthenticated in the lab: it can only
+> remove authority, never add it, so its residual risk is denial of service,
+> not escalation.
+>
+> If the admitting jti is lost (for example in a crash), an unresolved
+> admission cannot be dispatched, retried, or reconciled by anyone else; it can
+> only be terminated by `abort`. This fails closed: the consumed budget stays
+> consumed and no effect is performed.
 
 ## Separate predicates
 
@@ -108,7 +121,13 @@ trailing data, and invisible or bidi-control text characters: C0/C1 controls,
 soft hyphen, U+034F, U+061C, Hangul fillers (U+115F, U+1160, U+3164, U+FFA0),
 Khmer and Mongolian invisibles, zero-width and bidi controls, line/paragraph
 separators, U+2060–U+206F, variation selectors (U+FE00–U+FE0F,
-U+E0100–U+E01EF), BOM, and tag characters (U+E0000–U+E007F).
+U+E0100–U+E01EF), BOM, and tag characters (U+E0000–U+E007F). In addition, any
+code point in Unicode `\p{Cf}` (format) or `\p{Default_Ignorable_Code_Point}`
+is rejected (for example U+0600–U+0605, U+06DD, U+070F, U+FFF9–U+FFFB,
+U+1BCA0–U+1BCA3, U+1D173–U+1D17A, U+13430). Consequence: text containing emoji
+ZWJ sequences, Persian or Hindi ZWNJ/ZWJ, VS16 emoji presentation selectors,
+subdivision flags (tag sequences) or soft hyphens is rejected; a profile that
+needs such text must use a separate, explicitly versioned canonicalization.
 
 ## Durable state and atomicity
 
@@ -146,7 +165,11 @@ called, and a reserved admission with no committed outcome counts as consumed.
 Sink idempotency is declared by the effect profile (`sink_idempotency:
 idempotency-key | none`) and pinned into the durable admission; the per-call
 `sink_idempotent` flag on `retryDispatch` is only a declaration that must match
-the pinned value (`sink_idempotency_mismatch` otherwise). Redelivery is allowed
+the pinned value (`sink_idempotency_mismatch` otherwise). The first admission
+also binds the action and its `sink_idempotency` to the authorization instance;
+an evaluator whose own profile disagrees with that bound value is denied on
+admission and on retry (`sink_idempotency_profile_mismatch`), and the
+admission becomes `redelivery_blocked`. Redelivery is allowed
 only for a pinned `idempotency-key` sink, with the stable key, never after
 abort, and never once `redelivery_blocked` is set. Any other retry, and any
 mismatch, makes the admission explicitly `effect_uncertain` with
@@ -177,6 +200,11 @@ reconciliation, pinned sink idempotency, registration).
 | 7. Legitimate later repetition | none expected | `F7` (global-dedupe strawman shown to over-collapse) |
 | Abort/commit race (`RT-ABORT-012`) | none | three `abort/commit race (lab only)` tests |
 | Budget only goes down | none | `B2b` sink_rejected, `Addendum 3b` reload, `Addendum 3c` monotonic consumed |
+
+The isolation guard (`lab stays inert`) scans `mesh/src`, repo-root scripts,
+`apps/` and `packages/`. Widening it to every top-level directory and to
+filenames assembled with `join` or template literals (#1891 R-3) is deferred
+to a follow-up.
 
 These fixtures overlap the #1743 falsification-harness family. They are kept in
 the lab rather than added to #1743 files; a later harness change can import

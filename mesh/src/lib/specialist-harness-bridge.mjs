@@ -1,4 +1,4 @@
-import { digestObject, ValidationError } from './canonical.mjs';
+import { canonicalize, digestObject, ValidationError } from './canonical.mjs';
 import { validateAutonomyEnvelope } from './autonomy-envelope.mjs';
 import { outcomeDigest, skillAdmissionDigest, taskLifecycleDigest } from './agent-os-contracts.mjs';
 import { executionRoutePolicyDigest } from './execution-route-policy.mjs';
@@ -82,7 +82,19 @@ export function buildSpecialistHarnessBridge(input, options = {}) {
  * is checked; consumers must require `envelope_checked === true`.
  */
 export function validateSpecialistHarnessBridge(document, options = {}) {
-  return failClosed(() => validateUnsafe(document, options));
+  // Two layers, both required:
+  // 1. validateUnsafe runs on a structuredClone snapshot. The clone rejects
+  //    Proxies and other non-cloneable values, but it silently drops or
+  //    flattens accessors, symbol keys, non-enumerable properties and
+  //    non-plain prototypes, so the clone alone is NOT a plain-data check.
+  // 2. The original document must then pass strict canonicalize, which
+  //    rejects accessors (stable or flipping), symbol keys, non-enumerable
+  //    properties and non-plain prototypes. Only plain data is valid.
+  return failClosed(() => {
+    const result = validateUnsafe(structuredClone(document), options);
+    canonicalize(document);
+    return result;
+  });
 }
 
 function failClosed(run) {
@@ -318,9 +330,16 @@ function validateOptions(options) {
   }
 }
 
+// Casing guard (fail closed): a segment that is all-lower, all-upper, or one
+// Capitalized word is tokenized as before. Any other mixed-case segment (MiNd,
+// MINDx, mINd, reMinder) has no trustworthy word boundaries, so it is rejected
+// if it contains "mind" case-insensitively anywhere.
+const REGULAR_CASING = /^(?:[a-z0-9]+|[A-Z0-9]+|[A-Z][a-z0-9]*)$/;
+
 function namesMindOrGenesis(name) {
   if (GENESIS.test(name)) return true;
   for (const segment of name.split(TOKEN_SEPARATOR)) {
+    if (!REGULAR_CASING.test(segment) && segment.toLowerCase().includes('mind')) return true;
     for (const token of segment.split(TOKEN_BOUNDARY)) {
       if (MIND_TOKENS.has(token.toLowerCase())) return true;
     }

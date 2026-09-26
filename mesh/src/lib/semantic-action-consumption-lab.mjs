@@ -46,6 +46,9 @@ const MAX_DECIMAL_DIGITS = 34;
 // Covers C0/C1 controls, soft hyphen, combining grapheme joiner, Arabic letter
 // mark, Hangul fillers, Khmer/Mongolian invisibles, zero-width and bidi controls,
 // word joiner / invisible operators, variation selectors, BOM, and tag characters.
+// Any Unicode format (Cf) or default-ignorable code point is also rejected, so
+// unlisted invisible characters fail closed instead of forking the digest.
+const AMBIGUOUS_TEXT_CLASSES = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 const AMBIGUOUS_TEXT = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u2028-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/u;
 const MAX_BUDGET = 16;
 const MAX_SINK_ATTEMPTS = 8;
@@ -200,7 +203,7 @@ function canonicalValue(value, type, name) {
     if (typeof value !== 'string' || value.length === 0 || value.length > 2048) {
       throw new ValidationError(`effect parameter ${name} must be bounded text`);
     }
-    if (AMBIGUOUS_TEXT.test(value)) {
+    if (AMBIGUOUS_TEXT.test(value) || AMBIGUOUS_TEXT_CLASSES.test(value)) {
       throw new ValidationError(`effect parameter ${name} contains ambiguous characters; failing closed`);
     }
     // Canonical Unicode equivalence (NFC) is the adapter-defined text equivalence.
@@ -450,7 +453,10 @@ export function createSemanticActionConsumptionLab({
       const claimed = await mutate(key, current => {
         if (current === null) {
           return {
-            next: { status: 'pending', instance: document, instance_digest: digest, consumed: 0, aborted: false, presentations: [], admissions: [] },
+            next: {
+              status: 'pending', instance: document, instance_digest: digest, consumed: 0, aborted: false,
+              sink_binding: null, presentations: [], admissions: []
+            },
             output: null
           };
         }
@@ -516,17 +522,22 @@ export function createSemanticActionConsumptionLab({
           return { output: deny('authorization_not_current') };
         }
         if (record.aborted) return { output: deny('authorization_aborted') };
+        // The first admission binds the action and its sink idempotency to the
+        // authorization instance; an evaluator whose profile disagrees is denied.
+        if (record.sink_binding && !sameSinkBinding(record.sink_binding, canonical)) {
+          return { output: deny('sink_idempotency_profile_mismatch') };
+        }
         const last = record.admissions.at(-1);
         // Predicate 1: token_unused. A literal replay never consumes budget.
         if (record.presentations.includes(jtiDigest)) {
-          return { output: priorOrDeny(record, last, 'token_replayed') };
+          return { output: priorOrDeny(record, last, 'token_replayed', jtiDigest) };
         }
         // Predicate 2: semantic_action_not_yet_consumed, independent of predicate 1.
         if (record.consumed >= instance.execution_budget) {
-          return { output: priorOrDeny(record, last, 'semantic_budget_exhausted') };
+          return { output: priorOrDeny(record, last, 'semantic_budget_exhausted', jtiDigest) };
         }
         if (last && ['admission_consumed', 'dispatch_started', 'effect_uncertain'].includes(last.state)) {
-          return { output: priorOrDeny(record, last, 'prior_admission_unresolved') };
+          return { output: priorOrDeny(record, last, 'prior_admission_unresolved', jtiDigest) };
         }
         // presentations only grow on admission, so their length is bounded by execution_budget (<= 16).
         const ordinal = record.consumed + 1;
@@ -553,6 +564,7 @@ export function createSemanticActionConsumptionLab({
         };
         const next = {
           ...record,
+          sink_binding: record.sink_binding ?? { action: canonical.effect.action, sink_idempotency: canonical.sink_idempotency },
           consumed: ordinal,
           presentations: [...record.presentations, jtiDigest],
           admissions: [...record.admissions, admission]
@@ -645,6 +657,13 @@ export function createSemanticActionConsumptionLab({
       if (record.aborted) {
         return { change: { ...uncertain, abort_state: 'abort_after_dispatch' }, output: receipt => deny('authorization_aborted', receipt) };
       }
+      // This evaluator's own profile must agree with the value bound durably to
+      // the instance and admission; otherwise nothing is redelivered.
+      const evaluatorProfile = profileList.find(profile => profile.action === record.sink_binding?.action);
+      if (!evaluatorProfile || evaluatorProfile.sink_idempotency !== admission.sink_idempotency
+        || record.sink_binding?.sink_idempotency !== admission.sink_idempotency) {
+        return { change: uncertain, output: receipt => deny('sink_idempotency_profile_mismatch', receipt) };
+      }
       const pinnedIdempotent = admission.sink_idempotency === 'idempotency-key';
       if (request.sink_idempotent !== pinnedIdempotent) {
         return { change: uncertain, output: receipt => deny('sink_idempotency_mismatch', receipt) };
@@ -719,7 +738,7 @@ export function createSemanticActionConsumptionLab({
       const current = await store.read(instanceKey(match(request.authorization_instance_id, ID, 'authorization_instance_id')));
       const admission = current?.value.admissions.find(item => item.receipt_id === request.receipt_id);
       if (!admission) return deny('unknown_admission');
-      return freeze({ decision: 'receipt', perform: false, receipt: receiptOf(current.value, admission) });
+      return freeze({ decision: 'receipt', perform: false, receipt: receiptOf(current.value, admission, { revealJti: false }) });
     });
   }
 
@@ -750,16 +769,22 @@ export function createSemanticActionConsumptionLab({
   });
 }
 
-function priorOrDeny(record, last, reason) {
+function sameSinkBinding(binding, canonical) {
+  return binding.action === canonical.effect.action && binding.sink_idempotency === canonical.sink_idempotency;
+}
+
+// Replay receipts reveal the admitting jti digest only to the admitting
+// presenter, so a non-admitting presenter cannot brute-force a jti from it.
+function priorOrDeny(record, last, reason, viewerJtiDigest) {
   if (!last) return deny(reason);
-  const receipt = receiptOf(record, last);
+  const receipt = receiptOf(record, last, { revealJti: viewerJtiDigest === last.presentation_jti_digest });
   if (['admission_consumed', 'dispatch_started', 'effect_uncertain'].includes(last.state)) {
     return deny(last.state === 'effect_uncertain' ? 'effect_uncertain_requires_reconciliation' : reason, receipt);
   }
   return freeze({ decision: 'prior_receipt', perform: false, reason, receipt });
 }
 
-function receiptOf(record, admission) {
+function receiptOf(record, admission, { revealJti = true } = {}) {
   return deepFreeze({
     schema: SEMANTIC_ACTION_CONSUMPTION_LAB_RECEIPT_SCHEMA,
     version: 0,
@@ -773,7 +798,7 @@ function receiptOf(record, admission) {
     execution_budget: record.instance.execution_budget,
     admissions_consumed: record.consumed,
     idempotency_key: admission.idempotency_key,
-    presentation_jti_digest: admission.presentation_jti_digest,
+    presentation_jti_digest: revealJti ? admission.presentation_jti_digest : null,
     holder_id: admission.holder_id,
     admitted_at: admission.admitted_at,
     sink_idempotency: admission.sink_idempotency,

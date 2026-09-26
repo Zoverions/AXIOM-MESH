@@ -424,6 +424,113 @@ test('effect and consequence enums stay in parity with the Autonomy Envelope sch
   assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ consequence_ceiling: 'C4' })), /consequence_ceiling is invalid/);
 });
 
+test('#1891 name guard matches irregular mixed-case mind tokens case-insensitively', () => {
+  for (const ref of ['MiNd', 'MINDx', 'mINd', 'agent:MiNd:1', 'x/MINDx', 'reMinder', 'miNDful']) {
+    assert.throws(() => validateSpecialistHarnessBridge(withRef(ref)), MIND_REF, ref);
+  }
+  for (const key of ['MiNd', 'MINDx', 'mINd_id']) {
+    assert.throws(() => validateSpecialistHarnessBridge({ ...bridge(), [key]: 'x' }), FORBIDDEN, key);
+  }
+  for (const ref of ['Reminder', 'MASTERMIND', 'Mindful', 'reminder-bot', 'mastermind-tool']) {
+    assert.equal(validateSpecialistHarnessBridge(withRef(ref)).valid, true, ref);
+  }
+});
+
+test('#1891 a deceptive non-throwing Proxy cannot hide mind_id from validate()', () => {
+  const target = { ...bridge(), mind_id: 'digital.founder.1' };
+  let reads = 0;
+  const deceptive = new Proxy(target, {
+    // Hide mind_id while the validator looks, then reveal it afterwards.
+    ownKeys(object) {
+      reads += 1;
+      return Reflect.ownKeys(object).filter(key => key !== 'mind_id');
+    },
+    getOwnPropertyDescriptor(object, key) {
+      return key === 'mind_id' ? undefined : Reflect.getOwnPropertyDescriptor(object, key);
+    }
+  });
+  assert.equal(Object.keys(deceptive).includes('mind_id'), false);
+  assert.throws(() => validateSpecialistHarnessBridge(deceptive), err => err instanceof ValidationError && /failing closed/.test(err.message));
+  assert.equal(reads, 1, 'the validator never walked the Proxy');
+  assert.equal(target.mind_id, 'digital.founder.1');
+});
+
+// Extract `const NAME = wrapper([...])` from module source. The declaration
+// must start a line (so a `// const NAME=...` comment cannot satisfy it) and
+// appear exactly once; multi-line arrays, single or double quotes, and a
+// trailing comma are tolerated. Anything else inside the array fails closed.
+function runtimeStringArray(source, name, wrapper) {
+  const escapedWrapper = wrapper.split('.').join('\\.');
+  const declaration = new RegExp(`^[ \\t]*(?:export[ \\t]+)?const[ \\t]+${name}\\s*=\\s*${escapedWrapper}\\(\\s*\\[([^\\]]*)\\]\\s*\\)`, 'gm');
+  const matches = [...source.matchAll(declaration)];
+  assert.equal(matches.length, 1, `exactly one line-anchored ${name} declaration must exist in autonomy-envelope.mjs`);
+  const body = matches[0][1];
+  const items = [...body.matchAll(/(['"])([^'"\\\n]*)\1/g)].map(found => found[2]);
+  const residue = body.split(/(['"])[^'"\\\n]*\1/).filter((part, index) => index % 2 === 0).join('');
+  assert.match(residue, /^[\s,]*$/, `${name} array must contain only string literals`);
+  assert.ok(items.length > 0, `${name} array must not be empty`);
+  return items;
+}
+
+test('#1891 runtime enum extraction is line-anchored and tolerates harmless reformatting', () => {
+  const formatted = "const EFFECTS = new Set([\n  'none',\n  \"read-external\",\n]);\n";
+  assert.deepEqual(runtimeStringArray(formatted, 'EFFECTS', 'new Set'), ['none', 'read-external']);
+  const commentedOnly = "// const EFFECTS=new Set([\"none\"]);\nconst OTHER=1;\n";
+  assert.throws(() => runtimeStringArray(commentedOnly, 'EFFECTS', 'new Set'), /exactly one/);
+  const duplicated = 'const EFFECTS=new Set(["none"]);\nconst EFFECTS=new Set(["x"]);\n';
+  assert.throws(() => runtimeStringArray(duplicated, 'EFFECTS', 'new Set'), /exactly one/);
+  const computed = 'const EFFECTS=new Set(["none", ...more]);\n';
+  assert.throws(() => runtimeStringArray(computed, 'EFFECTS', 'new Set'), /only string literals/);
+});
+
+test('#1891 validate() still rejects non-plain data on the original document, not only on its clone', () => {
+  const nonEnumerable = bridge();
+  Object.defineProperty(nonEnumerable, 'mind_id', { value: 'digital.founder.1', enumerable: false });
+  const flipping = bridge();
+  const benign = structuredClone(flipping.adapter_binding);
+  const hostile = { ...benign, adapter_ref: 'agent:mind:1' };
+  let flipReads = 0;
+  Object.defineProperty(flipping, 'adapter_binding', {
+    get() { flipReads += 1; return flipReads === 1 ? benign : hostile; },
+    enumerable: true
+  });
+  const symbolKey = bridge();
+  symbolKey[Symbol('mind_id')] = 'digital.founder.1';
+  class BridgeRecord {}
+  const classInstance = Object.assign(new BridgeRecord(), bridge());
+  const stable = bridge();
+  const stableBinding = stable.adapter_binding;
+  Object.defineProperty(stable, 'adapter_binding', { get: () => stableBinding, enumerable: true });
+  const cases = [
+    ['non-enumerable mind_id', nonEnumerable],
+    ['getter that flips between reads', flipping],
+    ['symbol key', symbolKey],
+    ['class instance', classInstance],
+    ['stable getter', stable]
+  ];
+  for (const [label, document] of cases) {
+    assert.throws(() => validateSpecialistHarnessBridge(document), err => err instanceof ValidationError && /failing closed/.test(err.message), label);
+  }
+  assert.equal(validateSpecialistHarnessBridge(bridge()).valid, true, 'plain data still validates');
+});
+
+test('#1891 bridge enums stay in parity with the autonomy-envelope runtime constants', () => {
+  const source = readFileSync(new URL('../src/lib/autonomy-envelope.mjs', import.meta.url), 'utf8');
+  const envelopeEffects = runtimeStringArray(source, 'EFFECTS', 'new Set');
+  const envelopeConsequence = runtimeStringArray(source, 'CONSEQUENCE', 'Object.freeze');
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES], envelopeEffects);
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER], envelopeConsequence);
+  // Behavioral parity against the runtime validator itself.
+  for (const effect of SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES) {
+    assert.match(autonomyEnvelopeDigest(envelope({ effect_classes: [effect] })), /^[a-f0-9]{64}$/, effect);
+  }
+  for (const level of SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER) {
+    assert.match(autonomyEnvelopeDigest(envelope({ consequence_ceiling: level })), /^[a-f0-9]{64}$/, level);
+  }
+  assert.throws(() => autonomyEnvelopeDigest(envelope({ effect_classes: ['teleport'] })), ValidationError);
+  assert.throws(() => autonomyEnvelopeDigest(envelope({ consequence_ceiling: 'C4' })), ValidationError);
+});
+
 test('cyclic input fails closed with a ValidationError', () => {
   const top = bridge();
   top.self = top;
