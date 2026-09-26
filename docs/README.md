@@ -245,6 +245,11 @@ decision.
   — inert, non-delegating #1610 C3 evidence/handoff binding of one bounded
   specialist harness to one task by digest; ceilings must fit inside an
   existing Autonomy Envelope; a recommendation or output never grants authority.
+- [Semantic Action Consumption Lab v0](architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md)
+  — inert #1576 reference model and RED/GREEN fixtures for semantic replay:
+  durable consumption keyed by authorization instance + canonical effect
+  identity + remaining budget; a fresh token never replenishes budget; live
+  jti-keyed consumption is unchanged.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)

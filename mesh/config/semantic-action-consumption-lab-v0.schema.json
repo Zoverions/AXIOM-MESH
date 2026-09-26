@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/semantic-action-consumption-lab-v0.schema.json",
+  "title": "AXIOM Semantic Action Consumption Lab v0 receipt",
+  "description": "Inert, test-only reference model for #1576. A lab receipt records durable semantic-action consumption keyed by authorization instance + canonical effect identity + remaining execution budget, and separates admission_consumed, effect_committed, effect_observed and reconciliation. It never grants authority, never executes, never opens a network path, never activates runtime, and never replaces the live jti-keyed capability consumption. No token, identity, confirmation UI, or receipt is authority by itself.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "receipt_id",
+    "authorization_instance_id",
+    "authorization_instance_digest",
+    "effect_identity_digest",
+    "canonicalization_version",
+    "admission_ordinal",
+    "execution_budget",
+    "admissions_consumed",
+    "idempotency_key",
+    "presentation_jti_digest",
+    "holder_id",
+    "admitted_at",
+    "lifecycle_state",
+    "admission_consumed",
+    "effect_committed",
+    "effect_observed",
+    "reconciliation",
+    "abort_state",
+    "exactly_once_claimed",
+    "receipt_is_authority",
+    "token_is_authority",
+    "authority_effect",
+    "execution_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-semantic-action-consumption-lab-receipt.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-reference-model"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^sacl_[a-f0-9]{64}$"
+    },
+    "authorization_instance_id": {
+      "$ref": "#/$defs/id"
+    },
+    "authorization_instance_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "effect_identity_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "canonicalization_version": {
+      "const": "axiom-effect-canon.v0"
+    },
+    "admission_ordinal": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "execution_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "admissions_consumed": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "idempotency_key": {
+      "$ref": "#/$defs/digest"
+    },
+    "presentation_jti_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "holder_id": {
+      "$ref": "#/$defs/id"
+    },
+    "admitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lifecycle_state": {
+      "enum": [
+        "admission_consumed",
+        "dispatch_started",
+        "effect_committed",
+        "effect_uncertain",
+        "effect_observed",
+        "reconciled_absent",
+        "sink_rejected",
+        "aborted_before_dispatch"
+      ]
+    },
+    "admission_consumed": {
+      "const": true
+    },
+    "effect_committed": {
+      "enum": [
+        "no",
+        "yes",
+        "unknown"
+      ]
+    },
+    "effect_observed": {
+      "enum": [
+        "not_observed",
+        "observed_present",
+        "observed_absent"
+      ]
+    },
+    "reconciliation": {
+      "enum": [
+        "not_required",
+        "required",
+        "reconciled_by_sink_ack",
+        "reconciled_present",
+        "reconciled_absent"
+      ]
+    },
+    "abort_state": {
+      "enum": [
+        "none",
+        "aborted_before_dispatch",
+        "abort_after_dispatch"
+      ]
+    },
+    "exactly_once_claimed": {
+      "const": false
+    },
+    "receipt_is_authority": {
+      "const": false
+    },
+    "token_is_authority": {
+      "const": false
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "authorization_instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "status",
+        "canonicalization_version",
+        "authorization_instance_id",
+        "mandate_digest",
+        "principal_id",
+        "effect_identity_digest",
+        "execution_budget",
+        "issued_at",
+        "expires_at",
+        "authority_effect",
+        "execution_effect",
+        "network_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-semantic-authorization-instance-lab.v0"
+        },
+        "version": {
+          "const": 0
+        },
+        "status": {
+          "const": "inert-reference-model"
+        },
+        "canonicalization_version": {
+          "const": "axiom-effect-canon.v0"
+        },
+        "authorization_instance_id": {
+          "$ref": "#/$defs/id"
+        },
+        "mandate_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "principal_id": {
+          "$ref": "#/$defs/id"
+        },
+        "effect_identity_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "execution_budget": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "execution_effect": {
+          "const": "none"
+        },
+        "network_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    }
+  },
+  "x-axiom-issue": "#1576",
+  "x-axiom-semantic-validator": "mesh/src/lib/semantic-action-consumption-lab.mjs",
+  "x-axiom-runtime-activation": false,
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "runtime-wiring",
+    "live-consumption-replacement",
+    "exactly-once-delivery",
+    "token-as-authority",
+    "receipt-as-authority",
+    "global-parameter-dedupe",
+    "model-intent-keying"
+  ]
+}
