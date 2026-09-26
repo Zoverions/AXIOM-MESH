@@ -241,6 +241,10 @@ decision.
   stays on the Operation plane and is never forced into #1588 probability
   observations; authority/assurance/currentness/execution remain none.
 - [`semantic-operation-proposal.v0` schema](architecture/contracts/semantic-operation-proposal.v0.schema.json)
+- [Specialist Harness Bridge v0](architecture/SPECIALIST-HARNESS-BRIDGE.md)
+  — inert, non-delegating #1610 C3 evidence/handoff binding of one bounded
+  specialist harness to one task by digest; ceilings must fit inside an
+  existing Autonomy Envelope; a recommendation or output never grants authority.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)

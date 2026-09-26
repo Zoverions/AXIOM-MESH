@@ -67,6 +67,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/DEPLOYMENT-ENGINE-V0-CONVERGENCE.md',
   'docs/architecture/INTERROGATION-PLANE.md',
   'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md',
+  'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md',
   'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
@@ -350,6 +351,17 @@ const REQUIRED_CONTENT = Object.freeze({
     'axiom-semantic-operation-proposal.v0',
     'authority_effect',
     'runtime_activation'
+  ],
+  'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md': [
+    '## Purpose and boundary',
+    'axiom-specialist-harness-bridge.v0',
+    'A recommendation or output never grants authority',
+    '## Ceilings are a subset of the Autonomy Envelope',
+    '## Hard zeros and invariants',
+    'delegation_effect: none',
+    'population_effect: none',
+    '## Non-claims',
+    'authority_effect'
   ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
@@ -830,6 +842,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
   'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md': 2_000,
   'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json': 2_500,
+  'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md': 4_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,

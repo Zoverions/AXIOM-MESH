@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/specialist-harness-bridge-v0.schema.json",
+  "title": "AXIOM Specialist Harness Bridge v0",
+  "description": "Inert, non-delegating evidence and handoff binding that records, by digest, how one bounded specialist harness is bound to one task under an existing Autonomy Envelope. It never grants authority, never delegates, never executes, never activates runtime, and never creates population or governance identity. A recommendation or output recorded here never grants authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "bridge_id",
+    "subject_principal_id",
+    "task_binding",
+    "ceiling_binding",
+    "adapter_binding",
+    "data_binding",
+    "issued_at",
+    "expires_at",
+    "cancellation_handle",
+    "handoff_binding",
+    "provenance_binding",
+    "composition_binding",
+    "authority_effect",
+    "execution_effect",
+    "network_effect",
+    "delegation_effect",
+    "population_effect",
+    "governance_identity_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-specialist-harness-bridge.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-evidence-binding"
+    },
+    "bridge_id": {
+      "$ref": "#/$defs/id"
+    },
+    "subject_principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "task_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_digest",
+        "task_lifecycle_digest"
+      ],
+      "properties": {
+        "outcome_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "task_lifecycle_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "ceiling_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "autonomy_envelope_digest",
+        "capability_ids",
+        "data_classes",
+        "effect_classes",
+        "consequence_ceiling",
+        "max_execution_ms",
+        "max_cost"
+      ],
+      "properties": {
+        "autonomy_envelope_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "capability_ids": {
+          "$ref": "#/$defs/idArray"
+        },
+        "data_classes": {
+          "$ref": "#/$defs/textArray"
+        },
+        "effect_classes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "none",
+              "read-external",
+              "write-external",
+              "publish-external",
+              "communication",
+              "financial",
+              "create-external-resource",
+              "delete-external-resource",
+              "physical"
+            ]
+          }
+        },
+        "consequence_ceiling": {
+          "enum": [
+            "C0",
+            "C1",
+            "C2",
+            "C3"
+          ]
+        },
+        "max_execution_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300000
+        },
+        "max_cost": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "currency",
+                "max_minor_units"
+              ],
+              "properties": {
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                "max_minor_units": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "adapter_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapter_ref",
+        "adapter_kind",
+        "execution_route_policy_digest",
+        "route_class",
+        "skill_admission_digest",
+        "external_agent_ingress_digest"
+      ],
+      "properties": {
+        "adapter_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "adapter_kind": {
+          "enum": [
+            "tool-harness",
+            "skill",
+            "external-agent"
+          ]
+        },
+        "execution_route_policy_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "route_class": {
+          "enum": [
+            "structured-api",
+            "mcp-tool",
+            "cli",
+            "semantic-ui",
+            "visual-computer-use"
+          ]
+        },
+        "skill_admission_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "external_agent_ingress_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        }
+      }
+    },
+    "data_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_projection_digest",
+        "output_state",
+        "output_digest"
+      ],
+      "properties": {
+        "data_projection_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "output_state": {
+          "enum": [
+            "pending",
+            "recorded"
+          ]
+        },
+        "output_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        }
+      }
+    },
+    "issued_at": {
+      "$ref": "#/$defs/date"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/date"
+    },
+    "cancellation_handle": {
+      "$ref": "#/$defs/id"
+    },
+    "handoff_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_continuity_policy_digest"
+      ],
+      "properties": {
+        "task_continuity_policy_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "provenance_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "portable_delegation_grant_digest",
+        "ai_execution_provenance_digest",
+        "verified_work_graph_digest"
+      ],
+      "properties": {
+        "portable_delegation_grant_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "ai_execution_provenance_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "verified_work_graph_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        }
+      }
+    },
+    "composition_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantic_operation_proposal_digest",
+        "persistent_entity_bundle_digest"
+      ],
+      "properties": {
+        "semantic_operation_proposal_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "persistent_entity_bundle_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        }
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "delegation_effect": {
+      "const": "none"
+    },
+    "population_effect": {
+      "const": "none"
+    },
+    "governance_identity_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableDigest": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/specialist-harness-bridge.mjs",
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "delegation",
+    "execution",
+    "network-effect",
+    "runtime-activation",
+    "population-increase",
+    "governance-identity-creation",
+    "mind-continuation",
+    "output-as-authority"
+  ]
+}
