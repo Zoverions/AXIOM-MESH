@@ -76,7 +76,9 @@ The bridge declares its own tool/capability, data-class, effect, consequence,
 execution-time and cost ceilings. When the caller supplies the envelope object
 (`options.envelope`), the bridge:
 
-1. rejects an envelope whose `delegation_allowed` is anything but `false`;
+1. rejects an envelope whose `delegation_allowed` is anything but `false`
+   (missing, `null`, `0` or `"false"` included) before the envelope validator
+   runs;
 2. validates the envelope with the existing `validateAutonomyEnvelope` and
    requires its digest to equal `autonomy_envelope_digest`;
 3. requires the same `subject_principal_id`;
@@ -90,6 +92,20 @@ execution-time and cost ceilings. When the caller supplies the envelope object
 
 Anything wider fails closed. Passing `options.now` rejects an expired or
 not-yet-current bridge.
+
+## Without an envelope, ceilings are NOT checked
+
+> **`validateSpecialistHarnessBridge(doc)` without `options.envelope` checks
+> structure only. It does not compare any ceiling against the Autonomy
+> Envelope**, so a structurally valid bridge may declare ceilings wider than
+> its envelope. The result reports this as `envelope_checked: false`.
+> Consumers MUST require `envelope_checked === true` (and, where currentness
+> matters, `currentness_checked === true`) before relying on ceiling
+> compliance. `buildSpecialistHarnessBridge` without an envelope has the same
+> limitation.
+
+Every failure, including cyclic input, throwing getters or proxies, surfaces
+as a `ValidationError`; the validator never returns a partial result.
 
 ## Hard zeros and invariants
 
@@ -105,10 +121,20 @@ Pinned by `const` in the schema and enforced again in the validator:
 
 Further invariants:
 
+- Every object is closed (`additionalProperties: false` in the schema and an
+  exact field set in the validator), so unknown keys are rejected at every
+  depth, including `__proto__`, `constructor`, homoglyph and zero-width keys.
 - The bridge carries no `mind_id`, no mind-continuation claim and no Founder
-  Genesis receipt. Any field whose name denotes a mind or Genesis binding is
-  rejected at every depth, and `adapter_ref` cannot be a mind identity, a
-  Genesis receipt, or the subject principal itself.
+  Genesis receipt: the contract has no mind or Genesis slot, and closed
+  objects mean one cannot be added. That absence is the guarantee.
+- As defense in depth, a segment-boundary name guard rejects any field name
+  (at every depth) and any `adapter_ref` that contains a `mind`/`minds` word
+  token, split at separators, camelCase and letter/digit boundaries (for
+  example `x/mind`, `urn:mind:x`, `agent:mind:1`, `mindId`, `mind-id`), or
+  that contains `genesis` anywhere (including `genesis-receipt`). Words that
+  merely contain "mind", such as `reminder-bot` or `mastermind-tool`, pass.
+  This guard is a name heuristic, not proof that an opaque reference is not a
+  mind identity. `adapter_ref` also cannot equal the subject principal.
 - `adapter_kind` must match exactly one admission reference: a `tool-harness`
   carries neither a skill admission nor an external-agent ingress digest.
 - Wildcard or administrator-style ceilings are rejected structurally.
