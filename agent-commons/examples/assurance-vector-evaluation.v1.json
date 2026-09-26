@@ -1,0 +1,40 @@
+{
+  "schema": "axiom-assurance-vector-evaluation.v1",
+  "required_assurance": {
+    "identity": "required",
+    "authority": "required",
+    "execution": "required",
+    "evidence": "required",
+    "independent_verification": "required",
+    "currentness": "required",
+    "privacy": "required",
+    "recovery": "not_required"
+  },
+  "attempted_assurance": {
+    "identity": "achieved",
+    "authority": "achieved",
+    "execution": "achieved",
+    "evidence": "achieved",
+    "independent_verification": "attempted",
+    "currentness": "attempted",
+    "privacy": "achieved"
+  },
+  "observed_assurance": {
+    "identity": "achieved",
+    "authority": "achieved",
+    "execution": "achieved",
+    "evidence": "achieved",
+    "independent_verification": "achieved",
+    "currentness": "unknown",
+    "privacy": "achieved",
+    "recovery": "not_required"
+  },
+  "degraded_mode": {
+    "mode": "hold_pending",
+    "allow_effect": false
+  },
+  "authority": {
+    "assurance_grants_authority": false,
+    "higher_assurance_widens_scope": false
+  }
+}
