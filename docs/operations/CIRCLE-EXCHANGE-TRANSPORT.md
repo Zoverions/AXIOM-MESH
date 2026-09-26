@@ -1,6 +1,6 @@
 # Circle exchange transport (laboratory, off by default)
 
-**Updated:** 2026-09-25
+**Updated:** 2026-09-26
 
 **Status:** laboratory. Built and tested, but nothing starts it, and it runs
 only from a configuration that sets `"enabled": true`.
@@ -116,13 +116,49 @@ request exceeds about 1.1 MB, `503 busy` when replay protection is full.
   own claims, and a node hiding its own dated updates. Syncing with several
   members' nodes narrows the rest, and the per-key hash chains make gaps
   inside a log visible.
-- **Read access is membership, not role.** Any member in standing, or anyone
-  endorsed to join, can read the whole Circle. There is no per-record
-  disclosure yet.
+- **Read access is membership, unless content is sealed.** Any member in
+  standing, or anyone endorsed to join, receives every record. Content a
+  member seals for an audience (below) is readable by its recipients only,
+  but its envelope is visible to everyone: publisher, time, audience roles,
+  recipients and size. Unsealed records remain readable by every member.
 - **Clocks.** A node's clock decides both the two-minute window and who is in
   standing "now".
 - **Capacity.** A replica holds at most 4,096 updates and 1,024 pending ones.
   The transport inherits those bounds.
+
+## Sealed content (per-record disclosure)
+
+Holding records back from some members would make replicas derive
+different Circles, and the withholding checks would flag the gap. So
+disclosure works by content, not by delivery
+(`mesh/src/lib/circle-disclosure.mjs`):
+
+- Each member publishes an X25519 disclosure key in a `disclosure_key`
+  record, signed with their Circle key. Only a member in standing can
+  publish one, and a later one replaces it.
+- A member seals content for an audience named by charter role, in a
+  `sealed_content` record. The content is encrypted once with AES-256-GCM,
+  and its key is wrapped for each recipient through an ephemeral X25519
+  exchange and HKDF-SHA256. The Circle's genesis and the recipient list are
+  bound into the ciphertext, and each wrap names its recipient and key.
+- Every replica checks the recipients without decrypting anything. They
+  must be exactly the members in standing who hold an audience role and a
+  disclosure key when the content is published, plus the publisher. An
+  envelope that leaves someone out, adds someone, or uses a replaced key is
+  excluded from the view. `disclosureRecipients` gives a publisher that
+  exact list.
+- The view lists each member's disclosure key in force and every sealed
+  record kept, with its recipients. Sealed content changes no Core record.
+
+What it does not do:
+
+- Metadata stays visible, as listed above. No digest of the plaintext is
+  published, so short content cannot be guessed from one.
+- Access is fixed at publication. A member who leaves the audience later can
+  still open what was sealed for them, and one who joins later cannot open
+  earlier content.
+- The peer command does not yet hold a disclosure key or seal and open
+  content. The module is used directly.
 
 ## Running a node
 
@@ -226,6 +262,19 @@ path must be absolute:
 
   The latest verified statement is kept in the encrypted state. A statement
   whose heads digest differs from the heads it came with is refused.
+- Sealed content (`mesh/test/circle-disclosure.test.mjs`):
+  - recipients open it, and nobody else can, including with the wrong key or
+    under another Circle;
+  - flipped ciphertext, a stripped or swapped recipient, oversized content
+    and unsorted recipients are refused;
+  - the view keeps only envelopes whose recipients are exactly the audience,
+    and excludes those that leave someone out, add someone or use a
+    replaced key;
+  - a later disclosure key governs later content while earlier content stays
+    readable with the earlier key;
+  - non-members' keys, unknown roles, publishers without a key, and records
+    sealed for another Circle or naming someone else are refused;
+  - every delivery order gives the same view.
 - Withholding findings:
   - an honest node gives none;
   - a node serving rolled-back heads gives both kinds, and each re-verifies
@@ -268,7 +317,14 @@ Each of these fails when its protection is removed:
 - binding evidence to its signed heads, at receipt and on verification;
 - the time order of statements;
 - recording each finding once;
-- checking every statement in a sync, not only the last.
+- checking every statement in a sync, not only the last;
+- the sealed-content completeness check, and its key-id check;
+- the audience's roles;
+- refusing non-members' disclosure keys, publishers without one, and
+  unknown roles;
+- the receipt-time shape check, the disclosure key id binding, the genesis
+  check and recipient order;
+- binding the recipient list into the ciphertext.
 
 ## Before activation
 
@@ -276,9 +332,11 @@ This transport opens network connections between people's own nodes, so
 running it anywhere beyond a test is an activation decision. Open questions
 before that decision:
 
-- per-record disclosure;
 - what a Circle does with a withholding finding (it is evidence only);
-- a registry entry under the capability lifecycle.
+- a registry entry under the capability lifecycle;
+- disclosure keys held by the peer command, and whether any record kinds
+  should be sealed by default.
 
-Per-member rate limits, signed answers and withholding findings, which were
-earlier on this list, are now built (above).
+Per-member rate limits, signed answers, withholding findings and sealed
+content (per-record disclosure), which were earlier on this list, are now
+built (above).

@@ -14,6 +14,10 @@ import {
   validateCircleCreatorKey,
   validateCircleKeyRecord
 } from './circle-keys.mjs';
+import {
+  validateCircleDisclosureKeyRecord,
+  validateCircleSealedContentRecord
+} from './circle-disclosure.mjs';
 
 /**
  * Circle exchange between members' own nodes. Inert contract laboratory.
@@ -80,6 +84,12 @@ import {
  * update as if received alone, and the exchange repeats until a bundle is
  * complete and nothing new is learned.
  *
+ * Per-record disclosure (circle-disclosure.mjs): members publish X25519
+ * disclosure keys, and seal content for an audience named by role. Every
+ * replica holds the sealed record; the view keeps it only if its recipients
+ * are exactly the audience members in standing with a disclosure key when
+ * it is published, plus the publisher.
+ *
  * Nothing here grants authority, executes an effect, opens a network
  * connection, or changes the Grid's causal sync. circle-transport.mjs
  * carries this protocol between members' nodes over HTTPS (laboratory, off
@@ -114,7 +124,9 @@ const RECORD_TYPES = Object.freeze({
   key_endorsement: { collection: null, author: r => r.endorsed_by, time: r => r.endorsed_at },
   key_rotation: { collection: null, author: r => r.principal_id, time: r => r.rotated_at },
   key_revocation: { collection: null, author: r => r.revoked_by, time: r => r.revoked_at },
-  charter_amendment: { collection: null, author: r => r.published_by, time: r => r.published_at }
+  charter_amendment: { collection: null, author: r => r.published_by, time: r => r.published_at },
+  disclosure_key: { collection: null, author: r => r.principal_id, time: r => r.published_at },
+  sealed_content: { collection: null, author: r => r.published_by, time: r => r.published_at }
 });
 
 export function createCircleGenesis({ circle, charter, creatorKey }) {
@@ -222,6 +234,15 @@ export class CircleReplica {
     if (body.record_type === 'charter_amendment') {
       try {
         validateAmendmentShape(body.record, this.genesis.circle.circle_id);
+      } catch (error) {
+        if (!(error instanceof ValidationError)) throw error;
+        return rejected('malformed', error.message);
+      }
+    }
+    if (body.record_type === 'disclosure_key' || body.record_type === 'sealed_content') {
+      try {
+        if (body.record_type === 'disclosure_key') validateCircleDisclosureKeyRecord(body.record);
+        else validateCircleSealedContentRecord(body.record, this.genesisDigest);
       } catch (error) {
         if (!(error instanceof ValidationError)) throw error;
         return rejected('malformed', error.message);
@@ -452,6 +473,17 @@ export class CircleReplica {
     });
   }
 
+  /**
+   * The recipients sealed content must name if `publisher` publishes it at
+   * `at` for `roleIds`, with their disclosure keys: exactly what every
+   * replica will check (circle-disclosure.mjs seals for them).
+   */
+  disclosureRecipients({ publisher, roleIds, at }) {
+    const view = this.view({ asOf: at });
+    const keys = new Map(view.disclosure_keys.map(key => [key.principal_id, [key]]));
+    return circleDisclosureAudience(view.package, keys, { publisher, roleIds, at });
+  }
+
   /** Applies a bundle from another replica; every update is checked as if received alone. */
   receiveBundle(bundle) {
     exactObject(bundle, 'Circle exchange bundle', ['schema', 'genesis_digest', 'updates', 'complete']);
@@ -504,7 +536,7 @@ export class CircleReplica {
           record: item.body.record,
           time,
           // Key records apply before other records stamped at the same time.
-          rank: KEY_RECORD_TYPES.has(item.body.record_type) ? 0 : 1
+          rank: KEY_RECORD_TYPES.has(item.body.record_type) || item.body.record_type === 'disclosure_key' ? 0 : 1
         });
       }
     }
@@ -535,7 +567,7 @@ export class CircleReplica {
       voids = next;
     }
 
-    const { epochs, excluded, keys, tallies, pending } = derived;
+    const { epochs, excluded, keys, tallies, pending, disclosureKeys, sealed } = derived;
     const current = epochs.at(-1);
     return Object.freeze({
       schema: CIRCLE_VIEW_SCHEMA,
@@ -550,6 +582,12 @@ export class CircleReplica {
       tallies: Object.freeze(tallies),
       keys: Object.freeze(keys),
       key_revocation_conflict: conflict,
+      // Each member's disclosure key in force at asOf, and every sealed
+      // record kept, with its recipients (the content stays sealed).
+      disclosure_keys: Object.freeze([...disclosureKeys.entries()]
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .map(([principalId, list]) => Object.freeze({ principal_id: principalId, ...list.at(-1) }))),
+      sealed_contents: Object.freeze(sealed),
       excluded: Object.freeze(excluded),
       authority_effect: 'none',
       network_effect: 'none'
@@ -569,6 +607,8 @@ export class CircleReplica {
     const revocations = [];
     const tallies = [];
     const epochs = [];
+    const disclosureKeys = new Map();
+    const sealed = [];
     let epoch = newEpoch({ document: emptyPackage(this.genesis) }, this.genesis.circle.created_at);
 
     // Brings the Circle forward to `at`: decides proposals as they close, and
@@ -605,6 +645,41 @@ export class CircleReplica {
           adoptAmendment(this.genesis.circle, epoch, entry);
           continue;
         }
+        if (entry.type === 'disclosure_key') {
+          if (!circleStanding(epoch.document).principalAt(entry.author, new Date(entry.time))) {
+            throw new ValidationError(`${entry.author} was not a member when publishing a disclosure key`);
+          }
+          const list = disclosureKeys.get(entry.author) ?? [];
+          list.push(Object.freeze({
+            key_id: entry.record.key_id,
+            public_key: entry.record.public_key,
+            published_at: entry.record.published_at
+          }));
+          disclosureKeys.set(entry.author, list);
+          continue;
+        }
+        if (entry.type === 'sealed_content') {
+          const expected = circleDisclosureAudience(epoch.document, disclosureKeys, {
+            publisher: entry.author,
+            roleIds: entry.record.audience.role_ids,
+            at: entry.time
+          });
+          const actual = entry.record.envelope.recipients.map(item => [item.principal_id, item.disclosure_key_id]);
+          if (canonicalJson(actual) !== canonicalJson(expected.map(item => [item.principal_id, item.key_id]))) {
+            throw new ValidationError('Sealed content recipients are not exactly its audience and publisher');
+          }
+          sealed.push(Object.freeze({
+            digest: entry.digest,
+            published_by: entry.author,
+            published_at: entry.record.published_at,
+            role_ids: Object.freeze([...entry.record.audience.role_ids]),
+            recipients: Object.freeze(actual.map(([principalId, keyId]) => Object.freeze({
+              principal_id: principalId,
+              disclosure_key_id: keyId
+            })))
+          }));
+          continue;
+        }
         authorize(epoch.document, entry);
         const candidate = structuredClone(epoch.document);
         candidate[RECORD_TYPES[entry.type].collection].push(entry.record);
@@ -630,6 +705,8 @@ export class CircleReplica {
       excluded,
       tallies,
       revocations,
+      disclosureKeys,
+      sealed,
       keys: [...keys.entries()]
         .map(([keyId, key]) => Object.freeze({
           principal_id: key.principal,
@@ -955,6 +1032,37 @@ function pairKey(principal, keyId) {
 function compareHeads(left, right) {
   return left.author < right.author ? -1 : left.author > right.author ? 1
     : left.key_id < right.key_id ? -1 : left.key_id > right.key_id ? 1 : 0;
+}
+
+/**
+ * Who sealed content must be sealed for: the members in standing at `at`
+ * who hold one of `roleIds` and have a disclosure key published by then,
+ * plus the publisher, who must be a member with a disclosure key too.
+ * Sorted by principal. Used both to seal and, by every replica, to check.
+ */
+function circleDisclosureAudience(document, disclosureKeys, { publisher, roleIds, at }) {
+  const when = new Date(at);
+  const standing = circleStanding(document);
+  const defined = new Set(document.charter.roles.map(role => role.role_id));
+  const unknown = roleIds.filter(role => !defined.has(role));
+  if (unknown.length) throw new ValidationError(`Sealed content names roles the charter does not define: ${unknown.join(', ')}`);
+  if (!standing.principalAt(publisher, when)) {
+    throw new ValidationError(`${publisher} was not a member when publishing sealed content`);
+  }
+  // Records apply in time order, and the helper passes the view as of
+  // `at`, so the last key known is the one in force.
+  const keyAt = principalId => (disclosureKeys.get(principalId) ?? []).at(-1);
+  if (!keyAt(publisher)) throw new ValidationError(`${publisher} has no disclosure key`);
+  const audience = new Set([publisher]);
+  const wanted = new Set(roleIds);
+  for (const principalId of new Set(document.memberships.map(item => item.principal_id))) {
+    const membership = standing.principalMembershipAt(principalId, when);
+    if (membership?.role_ids.some(role => wanted.has(role)) && keyAt(principalId)) audience.add(principalId);
+  }
+  return [...audience].sort().map(principalId => {
+    const key = keyAt(principalId);
+    return { principal_id: principalId, key_id: key.key_id, public_key: key.public_key };
+  });
 }
 
 function administers(document, principal, at) {
