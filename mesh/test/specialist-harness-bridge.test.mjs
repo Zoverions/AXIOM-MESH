@@ -455,13 +455,71 @@ test('#1891 a deceptive non-throwing Proxy cannot hide mind_id from validate()',
   assert.equal(target.mind_id, 'digital.founder.1');
 });
 
+// Extract `const NAME = wrapper([...])` from module source. The declaration
+// must start a line (so a `// const NAME=...` comment cannot satisfy it) and
+// appear exactly once; multi-line arrays, single or double quotes, and a
+// trailing comma are tolerated. Anything else inside the array fails closed.
+function runtimeStringArray(source, name, wrapper) {
+  const escapedWrapper = wrapper.split('.').join('\\.');
+  const declaration = new RegExp(`^[ \\t]*(?:export[ \\t]+)?const[ \\t]+${name}\\s*=\\s*${escapedWrapper}\\(\\s*\\[([^\\]]*)\\]\\s*\\)`, 'gm');
+  const matches = [...source.matchAll(declaration)];
+  assert.equal(matches.length, 1, `exactly one line-anchored ${name} declaration must exist in autonomy-envelope.mjs`);
+  const body = matches[0][1];
+  const items = [...body.matchAll(/(['"])([^'"\\\n]*)\1/g)].map(found => found[2]);
+  const residue = body.split(/(['"])[^'"\\\n]*\1/).filter((part, index) => index % 2 === 0).join('');
+  assert.match(residue, /^[\s,]*$/, `${name} array must contain only string literals`);
+  assert.ok(items.length > 0, `${name} array must not be empty`);
+  return items;
+}
+
+test('#1891 runtime enum extraction is line-anchored and tolerates harmless reformatting', () => {
+  const formatted = "const EFFECTS = new Set([\n  'none',\n  \"read-external\",\n]);\n";
+  assert.deepEqual(runtimeStringArray(formatted, 'EFFECTS', 'new Set'), ['none', 'read-external']);
+  const commentedOnly = "// const EFFECTS=new Set([\"none\"]);\nconst OTHER=1;\n";
+  assert.throws(() => runtimeStringArray(commentedOnly, 'EFFECTS', 'new Set'), /exactly one/);
+  const duplicated = 'const EFFECTS=new Set(["none"]);\nconst EFFECTS=new Set(["x"]);\n';
+  assert.throws(() => runtimeStringArray(duplicated, 'EFFECTS', 'new Set'), /exactly one/);
+  const computed = 'const EFFECTS=new Set(["none", ...more]);\n';
+  assert.throws(() => runtimeStringArray(computed, 'EFFECTS', 'new Set'), /only string literals/);
+});
+
+test('#1891 validate() still rejects non-plain data on the original document, not only on its clone', () => {
+  const nonEnumerable = bridge();
+  Object.defineProperty(nonEnumerable, 'mind_id', { value: 'digital.founder.1', enumerable: false });
+  const flipping = bridge();
+  const benign = structuredClone(flipping.adapter_binding);
+  const hostile = { ...benign, adapter_ref: 'agent:mind:1' };
+  let flipReads = 0;
+  Object.defineProperty(flipping, 'adapter_binding', {
+    get() { flipReads += 1; return flipReads === 1 ? benign : hostile; },
+    enumerable: true
+  });
+  const symbolKey = bridge();
+  symbolKey[Symbol('mind_id')] = 'digital.founder.1';
+  class BridgeRecord {}
+  const classInstance = Object.assign(new BridgeRecord(), bridge());
+  const stable = bridge();
+  const stableBinding = stable.adapter_binding;
+  Object.defineProperty(stable, 'adapter_binding', { get: () => stableBinding, enumerable: true });
+  const cases = [
+    ['non-enumerable mind_id', nonEnumerable],
+    ['getter that flips between reads', flipping],
+    ['symbol key', symbolKey],
+    ['class instance', classInstance],
+    ['stable getter', stable]
+  ];
+  for (const [label, document] of cases) {
+    assert.throws(() => validateSpecialistHarnessBridge(document), err => err instanceof ValidationError && /failing closed/.test(err.message), label);
+  }
+  assert.equal(validateSpecialistHarnessBridge(bridge()).valid, true, 'plain data still validates');
+});
+
 test('#1891 bridge enums stay in parity with the autonomy-envelope runtime constants', () => {
   const source = readFileSync(new URL('../src/lib/autonomy-envelope.mjs', import.meta.url), 'utf8');
-  const effects = source.match(/const EFFECTS\s*=\s*new Set\((\[[^\]]*\])\)/);
-  const consequence = source.match(/const CONSEQUENCE\s*=\s*Object\.freeze\((\[[^\]]*\])\)/);
-  assert.ok(effects && consequence, 'autonomy-envelope runtime constants must stay locatable; update this parity test if they move');
-  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES], JSON.parse(effects[1]));
-  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER], JSON.parse(consequence[1]));
+  const envelopeEffects = runtimeStringArray(source, 'EFFECTS', 'new Set');
+  const envelopeConsequence = runtimeStringArray(source, 'CONSEQUENCE', 'Object.freeze');
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES], envelopeEffects);
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER], envelopeConsequence);
   // Behavioral parity against the runtime validator itself.
   for (const effect of SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES) {
     assert.match(autonomyEnvelopeDigest(envelope({ effect_classes: [effect] })), /^[a-f0-9]{64}$/, effect);

@@ -124,7 +124,10 @@ separators, U+2060–U+206F, variation selectors (U+FE00–U+FE0F,
 U+E0100–U+E01EF), BOM, and tag characters (U+E0000–U+E007F). In addition, any
 code point in Unicode `\p{Cf}` (format) or `\p{Default_Ignorable_Code_Point}`
 is rejected (for example U+0600–U+0605, U+06DD, U+070F, U+FFF9–U+FFFB,
-U+1BCA0–U+1BCA3, U+1D173–U+1D17A, U+13430).
+U+1BCA0–U+1BCA3, U+1D173–U+1D17A, U+13430). Consequence: text containing emoji
+ZWJ sequences, Persian or Hindi ZWNJ/ZWJ, VS16 emoji presentation selectors,
+subdivision flags (tag sequences) or soft hyphens is rejected; a profile that
+needs such text must use a separate, explicitly versioned canonicalization.
 
 ## Durable state and atomicity
 
@@ -197,6 +200,11 @@ reconciliation, pinned sink idempotency, registration).
 | 7. Legitimate later repetition | none expected | `F7` (global-dedupe strawman shown to over-collapse) |
 | Abort/commit race (`RT-ABORT-012`) | none | three `abort/commit race (lab only)` tests |
 | Budget only goes down | none | `B2b` sink_rejected, `Addendum 3b` reload, `Addendum 3c` monotonic consumed |
+
+The isolation guard (`lab stays inert`) scans `mesh/src`, repo-root scripts,
+`apps/` and `packages/`. Widening it to every top-level directory and to
+filenames assembled with `join` or template literals (#1891 R-3) is deferred
+to a follow-up.
 
 These fixtures overlap the #1743 falsification-harness family. They are kept in
 the lab rather than added to #1743 files; a later harness change can import

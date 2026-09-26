@@ -126,10 +126,15 @@ Further invariants:
 - Every object is closed (`additionalProperties: false` in the schema and an
   exact field set in the validator), so unknown keys are rejected at every
   depth, including `__proto__`, `constructor`, homoglyph and zero-width keys.
-- `validateSpecialistHarnessBridge` validates a `structuredClone` snapshot of
-  the document inside its fail-closed wrapper, so a Proxy (even one that never
-  throws) or any other non-plain-data input fails closed instead of showing
-  the validator a different shape than the caller later sees.
+- `validateSpecialistHarnessBridge` accepts plain data only, using two layers
+  inside its fail-closed wrapper. First, the semantic checks run on a
+  `structuredClone` snapshot, which rejects Proxies (including ones that never
+  throw) and other non-cloneable values. The clone alone is not a plain-data
+  check: it silently drops or flattens accessors, symbol keys, non-enumerable
+  properties and non-plain prototypes. So, second, the original document must
+  also pass strict canonical-JSON canonicalization, which rejects accessors
+  (stable or ones that change between reads), symbol keys, non-enumerable
+  properties (such as a hidden `mind_id`) and class instances.
 - The bridge carries no `mind_id`, no mind-continuation claim and no Founder
   Genesis receipt: the contract has no mind or Genesis slot, and closed
   objects mean one cannot be added. That absence is the guarantee.
@@ -142,7 +147,11 @@ Further invariants:
   Casing is handled fail-closed: a segment that is all-lower, all-upper, or a
   single Capitalized word is tokenized as above; any other mixed-case segment
   (`MiNd`, `MINDx`, `reMinder`) has no trustworthy word boundaries and is
-  rejected if it contains "mind" case-insensitively anywhere.
+  rejected if it contains "mind" case-insensitively anywhere. This deliberately
+  also rejects camelCase compounds that contain "mind", such as `reminderBot`,
+  `mastermindTool` and `remindMe` (fail closed); lower-case, kebab-case and
+  dotted forms such as `reminder-bot` still pass, and no existing `adapter_ref`
+  in the repository is affected.
   This guard is a name heuristic, not proof that an opaque reference is not a
   mind identity. `adapter_ref` also cannot equal the subject principal.
 - `adapter_kind` must match exactly one admission reference: a `tool-harness`

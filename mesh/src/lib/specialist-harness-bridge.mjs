@@ -1,4 +1,4 @@
-import { digestObject, ValidationError } from './canonical.mjs';
+import { canonicalize, digestObject, ValidationError } from './canonical.mjs';
 import { validateAutonomyEnvelope } from './autonomy-envelope.mjs';
 import { outcomeDigest, skillAdmissionDigest, taskLifecycleDigest } from './agent-os-contracts.mjs';
 import { executionRoutePolicyDigest } from './execution-route-policy.mjs';
@@ -82,10 +82,19 @@ export function buildSpecialistHarnessBridge(input, options = {}) {
  * is checked; consumers must require `envelope_checked === true`.
  */
 export function validateSpecialistHarnessBridge(document, options = {}) {
-  // Validate a plain-data snapshot: structuredClone rejects Proxies (and any
-  // non-cloneable value) and reads each getter once, so a deceptive object
-  // cannot show one shape to the validator and another to the caller.
-  return failClosed(() => validateUnsafe(structuredClone(document), options));
+  // Two layers, both required:
+  // 1. validateUnsafe runs on a structuredClone snapshot. The clone rejects
+  //    Proxies and other non-cloneable values, but it silently drops or
+  //    flattens accessors, symbol keys, non-enumerable properties and
+  //    non-plain prototypes, so the clone alone is NOT a plain-data check.
+  // 2. The original document must then pass strict canonicalize, which
+  //    rejects accessors (stable or flipping), symbol keys, non-enumerable
+  //    properties and non-plain prototypes. Only plain data is valid.
+  return failClosed(() => {
+    const result = validateUnsafe(structuredClone(document), options);
+    canonicalize(document);
+    return result;
+  });
 }
 
 function failClosed(run) {
