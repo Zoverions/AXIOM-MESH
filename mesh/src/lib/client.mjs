@@ -33,12 +33,48 @@ const TRANSPORT_POOL_LIMITS = Object.freeze({
   idleTimeoutMs: 4_000
 });
 const transportPools = new Map();
-const transportPoolCounters = { connections: 0, reused: 0, drained_pools: 0 };
-registerTransportMetrics('transport-pools', () => ({
-  pool_connections_total: transportPoolCounters.connections,
-  pool_reused_total: transportPoolCounters.reused,
-  pool_drained_total: transportPoolCounters.drained_pools
-}));
+const pooledSockets = new WeakSet();
+const transportPoolCounters = {
+  connections: 0,
+  reused: 0,
+  drained_pools: 0,
+  // Requests that waited for a socket because their pool was at its limit,
+  // and the most waiting at once.
+  queued_total: 0,
+  queued_high_water: 0
+};
+registerTransportMetrics('transport-pools', () => {
+  const state = transportPoolState();
+  return {
+    pool_connections_total: transportPoolCounters.connections,
+    pool_reused_total: transportPoolCounters.reused,
+    pool_drained_total: transportPoolCounters.drained_pools,
+    pool_queued_total: transportPoolCounters.queued_total,
+    pool_active_sockets: state.active,
+    pool_idle_sockets: state.idle,
+    pool_queued_requests: state.queued,
+    pool_queued_high_water: transportPoolCounters.queued_high_water
+  };
+});
+
+// Sockets in use, idle sockets and waiting requests across the current
+// pools, from each agent's documented `sockets`, `freeSockets` and
+// `requests` (scalability audit S-04).
+function transportPoolState() {
+  const state = { active: 0, idle: 0, queued: 0 };
+  for (const { agent } of transportPools.values()) {
+    state.active += countQueued(agent.sockets);
+    state.idle += countQueued(agent.freeSockets);
+    state.queued += countQueued(agent.requests);
+  }
+  return state;
+}
+
+function countQueued(record) {
+  let count = 0;
+  for (const list of Object.values(record ?? {})) count += list?.length ?? 0;
+  return count;
+}
 
 function transportAgent(transport, audience, target) {
   const scope = `${transport.service}\u0000${audience}\u0000${target.origin}`;
@@ -78,6 +114,7 @@ export function transportPoolStats() {
   return Object.freeze({
     pools: transportPools.size,
     ...transportPoolCounters,
+    ...transportPoolState(),
     limits: TRANSPORT_POOL_LIMITS
   });
 }
@@ -286,6 +323,7 @@ async function mutuallyAuthenticatedRequest({
       503
     );
   }
+  const agent = transportAgent(transport, audience, target);
   return new Promise((resolve, reject) => {
     const request = https.request({
       protocol: target.protocol,
@@ -301,7 +339,7 @@ async function mutuallyAuthenticatedRequest({
       minVersion: 'TLSv1.3',
       maxVersion: 'TLSv1.3',
       servername: serviceDnsName(audience),
-      agent: transportAgent(transport, audience, target)
+      agent
     }, response => {
       const chunks = [];
       let size = 0;
@@ -336,9 +374,24 @@ async function mutuallyAuthenticatedRequest({
         });
       });
     });
-    request.once('socket', () => {
-      if (request.reusedSocket) transportPoolCounters.reused += 1;
-      else transportPoolCounters.connections += 1;
+    // The agent assigns a socket or queues the request as it is created.
+    if (Object.values(agent.requests).some(list => list.includes(request))) {
+      transportPoolCounters.queued_total += 1;
+      transportPoolCounters.queued_high_water = Math.max(
+        transportPoolCounters.queued_high_water,
+        transportPoolState().queued
+      );
+    }
+    // Counted by socket identity: a queued request handed a socket another
+    // request just released is a reuse, although Node sets `reusedSocket`
+    // only for a socket taken from the idle list.
+    request.once('socket', socket => {
+      if (pooledSockets.has(socket)) {
+        transportPoolCounters.reused += 1;
+      } else {
+        pooledSockets.add(socket);
+        transportPoolCounters.connections += 1;
+      }
     });
     request.setTimeout(timeoutMs, () => {
       request.destroy(new Error('Mutually authenticated request timed out'));

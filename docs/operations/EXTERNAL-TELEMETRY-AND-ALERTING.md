@@ -120,6 +120,8 @@ The fixed alert names are:
 - `AxiomIntegrityFailure`;
 - `AxiomReplayRejected`;
 - `AxiomReplayGuardSaturated` (critical) and `AxiomReplayGuardNearCapacity`;
+- `AxiomConnectionPoolSaturated` (internal requests waited for a socket
+  because a connection pool was at its limit);
 - `AxiomAdmissionRefused` (the Hypervisor's bounded intent queue refused work);
 - `AxiomAuthenticationFailures`;
 - `AxiomServerErrorRatio`;

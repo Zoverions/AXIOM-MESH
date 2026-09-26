@@ -22,7 +22,11 @@ const REPLAY_ERRORS = new Set(['replayed_request', 'capability_replayed']);
 export const TRANSPORT_GAUGES = Object.freeze([
   'replay_entries',
   'replay_capacity',
-  'replay_high_water'
+  'replay_high_water',
+  'pool_active_sockets',
+  'pool_idle_sockets',
+  'pool_queued_requests',
+  'pool_queued_high_water'
 ]);
 export const TRANSPORT_COUNTERS = Object.freeze([
   'replay_saturated_total',
@@ -30,6 +34,7 @@ export const TRANSPORT_COUNTERS = Object.freeze([
   'pool_connections_total',
   'pool_reused_total',
   'pool_drained_total',
+  'pool_queued_total',
   'trusted_key_reads_total',
   'trusted_key_hits_total'
 ]);
@@ -277,9 +282,9 @@ export function renderOpenMetrics(report) {
     '# TYPE axiom_process_resident_memory_bytes gauge',
     '# HELP axiom_process_cpu_seconds_total Process CPU time by mode.',
     '# TYPE axiom_process_cpu_seconds_total counter',
-    '# HELP axiom_transport_state Internal transport state: replay guard occupancy, capacity and high water.',
+    '# HELP axiom_transport_state Internal transport state: replay guard occupancy, capacity and high water; pooled sockets in use and idle, and requests waiting for a socket.',
     '# TYPE axiom_transport_state gauge',
-    '# HELP axiom_transport_events_total Internal transport events: replay saturation and expiry, connection reuse, trusted-key reads.',
+    '# HELP axiom_transport_events_total Internal transport events: replay saturation and expiry, connection reuse, requests that waited for a socket, trusted-key reads.',
     '# TYPE axiom_transport_events_total counter',
     '# HELP axiom_admission_state Bounded work admission: running, waiting, bounds and high water.',
     '# TYPE axiom_admission_state gauge',
@@ -555,6 +560,14 @@ function evaluateAlerts(services) {
         severity: 'warning',
         service: service.service,
         condition: 'replay protection reached 80% of its capacity'
+      });
+    }
+    if (service.transport?.pool_queued_total > 0) {
+      alerts.push({
+        id: `connection-pool-saturated:${service.service}`,
+        severity: 'warning',
+        service: service.service,
+        condition: 'internal requests waited for a socket because a connection pool was at its limit'
       });
     }
     const refused = (service.admission?.rejected_full_total ?? 0)

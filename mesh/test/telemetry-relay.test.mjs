@@ -130,7 +130,7 @@ test('resolved alerts preserve their Alertmanager fingerprint during bounded rep
   assert.equal(resolved.endsAt, resolvedAt);
 });
 
-test('every alert the operations report raises is relayed across cycles, including transport and admission alerts', async () => {
+test('every alert the operations report raises is relayed across cycles, including transport, pool and admission alerts', async () => {
   const policy = await loadTelemetryRoutingPolicy();
   const report = reportWithAuthenticationAlert();
   const byName = new Map(report.services.map(service => [service.service, service]));
@@ -143,9 +143,11 @@ test('every alert the operations report raises is relayed across cycles, includi
   };
   const sandbox = byName.get('sandbox');
   sandbox.transport = { ...zero(sandbox.transport), replay_capacity: 100, replay_high_water: 80 };
+  const gateway = byName.get('gateway');
+  gateway.transport = { ...zero(gateway.transport), pool_queued_total: 3, pool_queued_high_water: 3 };
   const firing = operationsReport([...byName.values()]);
   const ids = firing.alerts.map(alert => alert.id).sort();
-  for (const id of ['admission-refused:hypervisor', 'replay-guard-near-capacity:sandbox', 'replay-guard-saturated:hypervisor']) {
+  for (const id of ['admission-refused:hypervisor', 'connection-pool-saturated:gateway', 'replay-guard-near-capacity:sandbox', 'replay-guard-saturated:hypervisor']) {
     assert.ok(ids.includes(id), id);
   }
 
@@ -153,7 +155,7 @@ test('every alert the operations report raises is relayed across cycles, includi
   const second = updateAlertState(first, firing, policy, '2026-07-28T22:00:30.000Z');
   const names = buildAlertmanagerRequest(firing, second, policy, '2026-07-28T22:00:30.000Z')
     .map(alert => alert.labels.alertname);
-  for (const name of ['AxiomAdmissionRefused', 'AxiomReplayGuardNearCapacity', 'AxiomReplayGuardSaturated']) {
+  for (const name of ['AxiomAdmissionRefused', 'AxiomConnectionPoolSaturated', 'AxiomReplayGuardNearCapacity', 'AxiomReplayGuardSaturated']) {
     assert.ok(names.includes(name), name);
   }
   assert.equal(names.length, ids.length, 'every raised alert is relayed');

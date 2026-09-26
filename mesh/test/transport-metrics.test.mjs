@@ -62,6 +62,31 @@ test('the operations report exports transport metrics and alerts on replay satur
   assert.match(metrics, /^axiom_transport_events_total\{service="grid",kind="pool_reused_total"\} 0$/m);
 });
 
+test('a connection pool at its limit is reported as sockets, waiting requests and a warning', () => {
+  const busy = snapshot('gateway');
+  busy.transport = {
+    ...busy.transport,
+    pool_active_sockets: 64,
+    pool_idle_sockets: 0,
+    pool_queued_requests: 6,
+    pool_queued_high_water: 6,
+    pool_queued_total: 6
+  };
+  const quiet = snapshot('grid');
+  quiet.transport = Object.fromEntries(Object.keys(quiet.transport).map(key => [key, 0]));
+  const report = operationsReport([busy, quiet]);
+  const alerts = new Map(report.alerts.map(alert => [alert.id, alert]));
+  assert.equal(alerts.get('connection-pool-saturated:gateway')?.severity, 'warning');
+  assert.equal(alerts.has('connection-pool-saturated:grid'), false);
+
+  const metrics = renderOpenMetrics(report);
+  assert.match(metrics, /^axiom_transport_state\{service="gateway",kind="pool_active_sockets"\} 64$/m);
+  assert.match(metrics, /^axiom_transport_state\{service="gateway",kind="pool_queued_requests"\} 6$/m);
+  assert.match(metrics, /^axiom_transport_state\{service="gateway",kind="pool_queued_high_water"\} 6$/m);
+  assert.match(metrics, /^axiom_transport_state\{service="grid",kind="pool_idle_sockets"\} 0$/m);
+  assert.match(metrics, /^axiom_transport_events_total\{service="gateway",kind="pool_queued_total"\} 6$/m);
+});
+
 test('a snapshot without transport evidence still validates, and invalid evidence does not', () => {
   const legacy = snapshot('sandbox');
   delete legacy.transport;

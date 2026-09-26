@@ -281,7 +281,10 @@ async function startAuthenticatedTestService({
   transportDir,
   certificateService,
   audience,
-  allowedCallers
+  allowedCallers,
+  // Resolves once the handler may answer; lets a test hold requests open.
+  hold = null,
+  onRequest = () => {}
 }) {
   const transport = await loadTransportRuntime({
     transportDir,
@@ -293,10 +296,14 @@ async function startAuthenticatedTestService({
     service: certificateService,
     status: 'live'
   }), { auth: false });
-  router.add('GET', '/internal/v1/operations', async ({ req, principal }) => ({
-    caller: principal.service,
-    protocol: req.socket.getProtocol()
-  }));
+  router.add('GET', '/internal/v1/operations', async ({ req, principal }) => {
+    onRequest();
+    if (hold) await hold;
+    return {
+      caller: principal.service,
+      protocol: req.socket.getProtocol()
+    };
+  });
   const server = createServiceServer({
     name: certificateService,
     router,
@@ -346,6 +353,64 @@ function tlsGet({ url, ca, cert, key, servername }) {
     request.once('error', reject);
   });
 }
+
+test('a pool at its socket limit queues the rest, reports them, and serves every call', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-transport-pool-limit-'));
+  const provisioned = await provisionProduction({
+    dataDir: join(root, 'data'),
+    secretDir: join(root, 'secrets')
+  });
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const gatewayIdentity = await ensureMeshIdentity(provisioned.data_dir, 'gateway', { create: false });
+  gatewayIdentity.transport = await loadTransportRuntime({
+    transportDir: provisioned.transport.transport_dir,
+    service: 'gateway'
+  });
+  let release;
+  const hold = new Promise(resolve => { release = resolve; });
+  let arrived = 0;
+  let allArrived;
+  const limitReached = new Promise(resolve => { allArrived = resolve; });
+  const limit = transportPoolStats().limits.maxSockets;
+  const service = await startAuthenticatedTestService({
+    dataDir: provisioned.data_dir,
+    transportDir: provisioned.transport.transport_dir,
+    certificateService: 'hypervisor',
+    audience: 'hypervisor',
+    allowedCallers: ['gateway'],
+    hold,
+    onRequest: () => { arrived += 1; if (arrived === limit) allArrived(); }
+  });
+  t.after(() => close(service.server));
+  t.after(() => closeTransportPools());
+  closeTransportPools();
+
+  const before = transportPoolStats();
+  const extra = 6;
+  const url = `${service.origin}/internal/v1/operations`;
+  const calls = Array.from({ length: limit + extra }, () => signedFetch(gatewayIdentity, 'hypervisor', url, { timeoutMs: 20_000 }));
+  await limitReached;
+  const busy = transportPoolStats();
+  assert.equal(busy.active, limit, 'every socket in the pool is in use');
+  assert.equal(busy.queued, extra, 'the rest wait for a socket');
+  assert.equal(busy.queued_high_water, extra);
+  assert.equal(busy.queued_total - before.queued_total, extra);
+  assert.equal(busy.connections - before.connections, limit, 'no more than the limit are opened');
+
+  release();
+  const answers = await Promise.all(calls);
+  assert.ok(answers.every(answer => answer.caller === 'gateway'));
+  // A socket returns to the pool just after its response ends.
+  for (let turn = 0; turn < 100 && transportPoolStats().active > 0; turn += 1) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  const after = transportPoolStats();
+  assert.equal(after.queued, 0);
+  assert.equal(after.active, 0);
+  assert.ok(after.idle <= transportPoolStats().limits.maxFreeSockets);
+  assert.equal(after.connections - before.connections, limit, 'queued calls reuse the pool\u2019s sockets');
+  assert.equal(after.reused - before.reused, extra);
+});
 
 test('warm internal calls reuse one authenticated connection; a new credential generation never does', async t => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-transport-pool-'));

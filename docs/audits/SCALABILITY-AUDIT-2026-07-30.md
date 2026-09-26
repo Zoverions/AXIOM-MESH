@@ -265,8 +265,8 @@ latency.
   overlap beyond policy.
 - Load tests show bounded sockets and no unbounded request queue.
 
-**Remediation status (2026-09-25): connection reuse remediated; load test
-open.** `mutuallyAuthenticatedRequest` now takes a keep-alive `https.Agent`
+**Remediation status (2026-09-26): connection reuse remediated; pool state
+exported and tested at the socket limit.** `mutuallyAuthenticatedRequest` now takes a keep-alive `https.Agent`
 from a pool keyed by caller service, audience and origin, and bound to a
 credential generation. The generation is a digest of the caller's certificate,
 key and trusted CA and the pinned fingerprint of the audience's certificate. A
@@ -291,9 +291,25 @@ a per-request check. For 300 timed sequential local calls after 20 warm-up
 calls, the pooled path took 1.94 ms per call, with one connection serving all
 320 calls. The old path took 5.47 ms per call and opened one connection per
 call. New connections, reuses and drained pools are exported in the
-operations report and `/v1/metrics` (see S-06). Active sockets and queued
-requests are not, and no load test has measured behavior near the socket
-limit.
+operations report and `/v1/metrics` (see S-06).
+
+Pool state (2026-09-26). The transport group now also carries sockets in use
+(`pool_active_sockets`), idle sockets (`pool_idle_sockets`), requests waiting
+for a socket (`pool_queued_requests`) and the most waiting at once
+(`pool_queued_high_water`), read from each current pool's documented
+`sockets`, `freeSockets` and `requests`, plus `pool_queued_total`, the
+requests that had to wait. Any wait raises a `connection-pool-saturated`
+warning, relayed as `AxiomConnectionPoolSaturated`. A test holds a real mTLS
+service's answers open and sends 70 calls through one pool: 64 sockets are in
+use, 6 calls wait (and are counted, with a high water of 6), no more than 64
+connections are opened, and once released every call succeeds, the 6 waiting
+calls reuse released sockets, and the pool settles to at most 16 idle
+sockets. The test exposed a counting error: Node marks `reusedSocket` only
+for a socket taken from the idle list, so a waiting call handed a released
+socket was counted as a new connection. Reuse is now counted by socket
+identity. 8 of 8 mutations fail the tests. The limit itself is unchanged and
+is a single-host bound: a load test across replicated services remains
+open.
 
 ### S-05 — Trusted service keys are read and parsed from disk for every signed request
 
@@ -396,8 +412,8 @@ group optional for older snapshots) and in `/v1/metrics` as
 `axiom_transport_events_total` (saturations, expiries). Any saturation
 raises a critical `replay-guard-saturated` alert, and a high-water mark at
 80% of capacity raises a `replay-guard-near-capacity` warning. The same group
-carries the connection-pool counters (S-04) and trusted-key reads and hits
-(S-05).
+carries the connection-pool counters and state (S-04) and trusted-key reads
+and hits (S-05).
 
 Correction (2026-09-25): the telemetry relay accepts only alerts in a fixed
 vocabulary, and an unknown alert id fails its alert state on the next cycle.

@@ -38,6 +38,7 @@ const RELIABILITY_KINDS = Object.freeze([
 const ALERT_NAMES = Object.freeze({
   'admission-refused': 'AxiomAdmissionRefused',
   'authentication-failures': 'AxiomAuthenticationFailures',
+  'connection-pool-saturated': 'AxiomConnectionPoolSaturated',
   'integrity-failure': 'AxiomIntegrityFailure',
   'replay-guard-near-capacity': 'AxiomReplayGuardNearCapacity',
   'replay-guard-saturated': 'AxiomReplayGuardSaturated',
@@ -50,6 +51,7 @@ const ALERT_NAMES = Object.freeze({
 const ALERT_SUMMARIES = Object.freeze({
   'admission-refused': 'Bounded admission refused work because its queue was full or its wait bound passed.',
   'authentication-failures': 'Repeated authentication failures reached the bounded threshold.',
+  'connection-pool-saturated': 'Internal requests waited for a socket because a connection pool was at its limit.',
   'integrity-failure': 'A runtime integrity verification failed.',
   'replay-guard-near-capacity': 'Replay protection reached 80% of its capacity.',
   'replay-guard-saturated': 'Replay protection refused requests because it was full.',
