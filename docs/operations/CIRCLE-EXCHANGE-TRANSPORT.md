@@ -61,6 +61,26 @@ in order, for claims the node's own signatures contradict
   that the node dated no later than the statement. The statement and that
   update, both signed by the node, are the evidence.
 
+**Across members (published node evidence).** A node's answer to an offer
+signs its heads *after* applying the offer, so the member who offered holds
+the node's own statement that it had those updates. `publish-evidence`
+publishes the latest statement from a peer, with the heads it signed, as a
+`node_evidence` record in the member's own log; it reaches every replica
+like any other record. A replica keeps it only if it is well formed, its
+heads are the ones the statement signed, it was published no earlier than
+the node issued it, its publisher was in standing, and the statement
+verifies against a key the Circle established for that node.
+
+After each sync, the peer also compares every statement from one node
+together, whoever received it: the published node evidence, its own latest
+statement from each peer, and every statement from that sync. Statements
+are taken in the node's own time order, and a statement that claims less of
+a key log than any statement signed at an earlier instant is a
+`heads_regressed` finding (recorded under the origin `published-evidence`).
+So a node that acknowledged a member's updates and later serves others
+without them is found out once the member's evidence reaches them by any
+path. Statements from different nodes are never compared.
+
 Each fact is recorded once, up to 256 findings. They are kept in the
 encrypted state and listed by `status`. `verifyCircleWithholdingFinding`
 re-derives a finding from its own evidence, for anyone holding the Circle.
@@ -110,10 +130,12 @@ request exceeds about 1.1 MB, `503 busy` when replay protection is full.
 
 ## What the transport does not protect
 
-- **Withholding is detected only where the node contradicts itself.** A node
-  can still leave out other members' updates it has received, since nothing
-  signed says when it received them. Findings cover a node rolling back its
-  own claims, and a node hiding its own dated updates. Syncing with several
+- **Withholding is detected only where the node contradicts itself.**
+  Findings cover a node rolling back its own claims, hiding its own dated
+  updates, and serving anyone less than it acknowledged to someone else
+  (once that acknowledgement is published). A node can still leave out
+  updates it received but never acknowledged in a statement, such as ones
+  relayed to it that no one published evidence for. Syncing with several
   members' nodes narrows the rest, and the per-key hash chains make gaps
   inside a log visible.
 - **Read access is membership, unless content is sealed.** Any member in
@@ -171,6 +193,7 @@ npm run circle:peer -- serve  /abs/path/circle-peer.json   # serve, and sync eve
 # Publishing your own records (the next sync or serve carries them to peers):
 npm run circle:peer -- append /abs/path/circle-peer.json proposal /abs/path/proposal.json
 npm run circle:peer -- publish-disclosure-key /abs/path/circle-peer.json
+npm run circle:peer -- publish-evidence /abs/path/circle-peer.json https://peer.example:8443
 npm run circle:peer -- seal /abs/path/circle-peer.json member,steward /abs/path/content.json
 npm run circle:peer -- open /abs/path/circle-peer.json <update-digest>
 ```
@@ -181,7 +204,10 @@ not keep it, if it does not: a record you were not entitled to make is still
 signed history, so check the answer. A record naming someone else is
 refused outright. Publishing holds the state lock, so stop a serving node
 first. `seal` publishes content for exactly the recipients every replica
-will expect, and `open` reads content sealed for you.
+will expect, and `open` reads content sealed for you. `publish-evidence`
+publishes the latest statement you hold from that peer (sync with it first);
+it is manual, so publish after an offer you want other members to be able
+to hold the node to.
 
 Example configuration (`axiom-circle-peer-config.v0`). It and every secret
 it names must be private files (not group- or other-readable), and every
@@ -311,6 +337,21 @@ path must be absolute:
   - the peer records each fact once, from every statement in a sync (a
     pull's withholding is not hidden by the offer receipt after it), and the
     findings verify from its saved state.
+- Published node evidence:
+  - a node that acknowledged bob's membership in an offer receipt, then
+    served carol without it, is found out once bob's published receipt
+    reaches carol; on its own, carol's statement shows nothing. The finding
+    re-verifies from its evidence alone;
+  - an honest node, an earlier statement that claims less, another node's
+    statements, and evidence that does not verify give no finding;
+  - through two members' nodes: bob publishes the node's receipt with
+    `publish-evidence`, carol's node records one `published-evidence`
+    finding (also when an offer receipt shares the pull's instant), once;
+  - records whose heads are not the signed ones, published before the node
+    issued the statement, with a non-canonical time, an extra field, another
+    Circle, another operation, or naming someone else are refused;
+    statements not signed by the node's established key, and records from a
+    publisher who had left, are excluded from the view.
 - Each key's budget is its own:
   - strangers never touch a member's budget;
   - an over-budget request is answered once the bucket refills, with the same
@@ -353,7 +394,14 @@ Each of these fails when its protection is removed:
 - binding the recipient list into the ciphertext;
 - publishing: the counter and previous-update link, reporting exclusion,
   the state lock, requiring a disclosure key and its type, opening only
-  sealed content, and sealing for the whole audience.
+  sealed content, and sealing for the whole audience;
+- published node evidence: the node-key signature check and the standing
+  check in the view; the heads binding, the publish-after-issue rule, the
+  genesis check, the shape check and the authorship rule at receipt;
+  comparing statements signed at one instant only with earlier ones;
+  skipping evidence that does not verify; comparing per node; the regression
+  boundary; and, in the peer, including this sync's statements and the
+  published evidence (13 of 13 mutations).
 
 ## Before activation
 
@@ -362,7 +410,9 @@ running it anywhere beyond a test is an activation decision. Open questions
 before that decision:
 
 - what a Circle does with a withholding finding (it is evidence only);
-- whether any record kinds should be sealed by default.
+- whether any record kinds should be sealed by default;
+- whether a node should publish its offer receipts as node evidence
+  automatically, which would grow each member's log, rather than on request.
 
 Per-member rate limits, signed answers, withholding findings and sealed
 content (per-record disclosure), which were earlier on this list, are now

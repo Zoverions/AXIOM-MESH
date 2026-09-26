@@ -12,7 +12,7 @@ import {
   sealCircleContent
 } from './circle-disclosure.mjs';
 import { circleKeyId } from './circle-keys.mjs';
-import { detectCircleWithholding } from './circle-withholding.mjs';
+import { detectCircleWithholding, detectCircleWithholdingAcross } from './circle-withholding.mjs';
 import {
   circlePeerOrigin,
   createCircleSyncServer,
@@ -49,6 +49,8 @@ const pendingSaves = new WeakMap();
 const peerEvidence = new WeakMap();
 const peerFindings = new WeakMap();
 const MAX_FINDINGS = 256;
+// Findings drawn from statements published as node evidence.
+const PUBLISHED_EVIDENCE_ORIGIN = 'published-evidence';
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const HOSTNAME = /^[A-Za-z0-9.:-]{1,253}$/;
 
@@ -189,6 +191,7 @@ export async function syncCirclePeers(runtime, replica, {
   now = () => Date.now()
 } = {}) {
   const results = [];
+  const received = [];
   for (const peer of runtime.peers) {
     try {
       const result = await syncCirclePeer({
@@ -203,6 +206,7 @@ export async function syncCirclePeers(runtime, replica, {
       // What this node's signatures contradict, statement by statement:
       // against its previous evidence and the updates held from its own logs.
       for (const current of result.evidence) {
+        received.push(current);
         found.push(...recordFindings(replica, peer.origin, detectCircleWithholding({
           replica, previous: kept.get(peer.origin) ?? null, current
         })));
@@ -223,6 +227,18 @@ export async function syncCirclePeers(runtime, replica, {
       await saveCirclePeerReplica(runtime, replica);
     }
   }
+  // Statements from one node to different members, compared together: node
+  // evidence members published, and this member's own (every statement from
+  // this sync, and the latest kept from earlier ones).
+  recordFindings(replica, PUBLISHED_EVIDENCE_ORIGIN, detectCircleWithholdingAcross({
+    replica,
+    evidence: [
+      ...replica.view({ asOf: new Date(now()).toISOString() }).node_evidence.map(item => item.evidence),
+      ...(peerEvidence.get(replica) ?? new Map()).values(),
+      ...received
+    ]
+  }));
+  await saveCirclePeerReplica(runtime, replica);
   return results;
 }
 
@@ -353,6 +369,32 @@ export async function publishCirclePeerDisclosureKey(runtime, { now = () => Date
 }
 
 /**
+ * Publishes the latest statement this member holds from the peer at
+ * `origin`, with the heads it signed, as node evidence. Other members then
+ * compare it with what that node served them (circle-withholding.mjs).
+ */
+export async function publishCirclePeerNodeEvidence(runtime, origin, { now = () => Date.now() } = {}) {
+  const lock = await acquireStateLock(runtime.config.state_file);
+  try {
+    const replica = await openCirclePeerReplica(runtime);
+    const evidence = (peerEvidence.get(replica) ?? new Map()).get(origin);
+    if (!evidence) throw new ValidationError(`No statement from ${origin} to publish; sync with it first`);
+    const appended = appendCircleRecord(runtime, replica, {
+      recordType: 'node_evidence',
+      record: {
+        published_by: runtime.principal_id,
+        published_at: new Date(Math.max(now(), Date.parse(evidence.statement.body.issued_at))).toISOString(),
+        evidence: { statement: evidence.statement, heads: evidence.heads }
+      }
+    });
+    await saveCirclePeerReplica(runtime, replica);
+    return appended;
+  } finally {
+    await lock.release();
+  }
+}
+
+/**
  * Seals `value` for the members holding `roleIds` and publishes it. The
  * recipients are exactly those every replica will expect.
  */
@@ -446,11 +488,13 @@ function recordFindings(replica, origin, findings) {
 }
 
 // One finding per fact: the first evidence of it is enough, so the same
-// withholding seen on every later sync is not recorded again.
+// withholding seen on every later sync is not recorded again. The fact
+// names the node whose statements it is drawn from.
 function findingKey(finding) {
+  const node = finding.evidence?.at(-1)?.statement?.body?.principal_id ?? '';
   return finding.kind === 'heads_regressed'
-    ? ['heads_regressed', finding.author, finding.key_id, finding.earlier_counter, finding.later_counter].join('\u0000')
-    : ['own_update_withheld', finding.author, finding.key_id, finding.withheld_counter].join('\u0000');
+    ? ['heads_regressed', node, finding.author, finding.key_id, finding.earlier_counter, finding.later_counter].join('\u0000')
+    : ['own_update_withheld', node, finding.author, finding.key_id, finding.withheld_counter].join('\u0000');
 }
 
 function summarize(replica) {

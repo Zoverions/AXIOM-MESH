@@ -35,6 +35,7 @@ import {
 } from '../src/lib/circle-transport.mjs';
 import {
   detectCircleWithholding,
+  detectCircleWithholdingAcross,
   verifyCircleNodeEvidence,
   verifyCircleWithholdingFinding
 } from '../src/lib/circle-withholding.mjs';
@@ -44,6 +45,7 @@ import {
   circlePeerStatus,
   loadCirclePeerRuntime,
   openCirclePeerReplica,
+  publishCirclePeerNodeEvidence,
   runCirclePeerSync,
   serveCirclePeer
 } from '../src/lib/circle-peer.mjs';
@@ -454,6 +456,169 @@ test('an update the node dated after its statement is not withholding', async ()
   const late = await pullEvidence(early, { now: Date.parse('2026-08-20T12:01:30.000Z') });
   const [finding] = detectCircleWithholding({ replica: member, current: late });
   assert.deepEqual([finding.kind, finding.claimed_counter, finding.withheld_counter], ['own_update_withheld', 2, 3]);
+});
+
+// A node's answer to `by` offering `bundle`: its statement and the heads it
+// signed after applying the offer.
+async function offerEvidence(node, bundle, { as = 'alice', by = 'bob', now = NOW } = {}) {
+  const answer = await directSender(node, { as, now })(CIRCLE_OFFER_PATH, createCircleSyncRequest({
+    genesisDigest: node.genesisDigest, operation: 'offer', payload: bundle,
+    principalId: by, privateKey: keys[by].privateKey, now
+  }));
+  return { statement: answer.statement, heads: answer.heads };
+}
+
+// Signs a node statement body with `name`'s key.
+function statementSignedBy(body, name) {
+  const canonical = canonicalJson(body);
+  return {
+    body,
+    attestation: { algorithm: 'Ed25519', digest: sha256(canonical), signature: sign(null, Buffer.from(canonical), keys[name].privateKey).toString('base64url') }
+  };
+}
+
+function evidenceUpdate(log, author, record) {
+  return JSON.parse(JSON.stringify(createCircleUpdate({
+    genesis, author, counter: log.length + 1, previous: log.at(-1) ?? null,
+    recordType: 'node_evidence', record, privateKey: keys[author].privateKey
+  })));
+}
+
+test('a node that acknowledged a member’s updates and later serves others without them is found out from published evidence', async () => {
+  const { alice, bob, carol } = logs();
+  // Alice's node lacks bob's membership until bob offers it; its receipt
+  // signs heads that include it.
+  const node = replicaWith(alice, carol);
+  const receipt = await offerEvidence(node, replicaWith(alice, bob, carol).updatesFor(node.heads()));
+  assert.equal(receipt.statement.body.operation, 'offer');
+  assert.equal(receipt.heads.heads.find(head => head.author === 'bob')?.counter, 1);
+
+  // A minute later the same node serves carol as if it never had it.
+  const withholding = replicaWith(alice, carol);
+  const served = await pullEvidence(withholding, { now: NOW + 60_000 });
+  const member = replicaWith(alice, bob, carol);
+  assert.deepEqual(detectCircleWithholding({ replica: member, current: served }), [],
+    'on its own, carol cannot tell: the update is not the node’s own');
+
+  // Bob publishes the node's receipt; it reaches carol by any path.
+  const published = evidenceUpdate(bob, 'bob', {
+    published_by: 'bob', published_at: new Date(NOW + 1_000).toISOString(), evidence: receipt
+  });
+  assert.equal(member.receive(published).status, 'accepted');
+  const asOf = new Date(NOW + 120_000).toISOString();
+  const view = member.view({ asOf });
+  assert.deepEqual(view.excluded, []);
+  assert.equal(view.node_evidence.length, 1);
+  assert.deepEqual(
+    [view.node_evidence[0].published_by, view.node_evidence[0].node_principal_id, view.node_evidence[0].issued_at],
+    ['bob', 'alice', new Date(NOW).toISOString()]
+  );
+  const evidence = view.node_evidence.map(item => item.evidence);
+
+  const findings = detectCircleWithholdingAcross({ replica: member, evidence: [...evidence, served] });
+  assert.equal(findings.length, 1);
+  assert.deepEqual(
+    [findings[0].kind, findings[0].author, findings[0].earlier_counter, findings[0].later_counter],
+    ['heads_regressed', 'bob', 1, 0]
+  );
+  // Anyone holding the Circle can check it from its own evidence.
+  assert.equal(verifyCircleWithholdingFinding(replicaWith(alice, bob, carol), JSON.parse(JSON.stringify(findings[0]))), true);
+
+  // An honest node gives none; nor does an earlier statement that claims
+  // less, since the node had not yet received the update.
+  const honest = await pullEvidence(replicaWith(alice, bob, carol), { now: NOW + 60_000 });
+  assert.deepEqual(detectCircleWithholdingAcross({ replica: member, evidence: [...evidence, honest] }), []);
+  const before = await pullEvidence(withholding, { now: NOW - 60_000 });
+  assert.deepEqual(detectCircleWithholdingAcross({ replica: member, evidence: [...evidence, before] }), []);
+  // Statements from another node are never compared with this one's.
+  const carolsNode = await pullEvidence(withholding, { as: 'carol', now: NOW + 60_000 });
+  assert.deepEqual(detectCircleWithholdingAcross({ replica: member, evidence: [...evidence, carolsNode] }), []);
+  // Evidence that does not verify is not compared.
+  const forged = { statement: statementSignedBy(served.statement.body, 'bob'), heads: served.heads };
+  assert.deepEqual(detectCircleWithholdingAcross({ replica: member, evidence: [...evidence, forged] }), []);
+});
+
+test('node evidence is kept only when well formed, published by a member in standing and signed by the node', async () => {
+  const { alice, bob, carol } = logs();
+  const node = replicaWith(alice, carol);
+  const receipt = await offerEvidence(node, replicaWith(alice, bob, carol).updatesFor(node.heads()));
+  const other = await pullEvidence(replicaWith(alice), { now: NOW + 5_000 });
+  const record = (overrides = {}) => ({
+    published_by: 'bob', published_at: new Date(NOW + 1_000).toISOString(), evidence: receipt, ...overrides
+  });
+  const refused = (value, code, pattern, author = 'bob', log = bob) => {
+    const result = replicaWith(alice, bob, carol).receive(evidenceUpdate(log, author, value));
+    assert.equal(result.status, 'rejected');
+    assert.equal(result.code, code);
+    assert.match(result.reason, pattern);
+  };
+  refused(record({ evidence: { ...receipt, heads: other.heads } }), 'malformed', /not the heads the node signed/);
+  refused(record({ published_at: new Date(NOW - 1_000).toISOString() }), 'malformed', /before the node issued it/);
+  refused(record({ published_at: '2026-08-21T00:00:01Z' }), 'malformed', /malformed/);
+  refused({ ...record(), note: 'extra' }, 'malformed', /fields are invalid/);
+  refused(record({ evidence: { ...receipt, statement: { ...receipt.statement, body: { ...receipt.statement.body, genesis_digest: 'f'.repeat(64) } } } }), 'malformed', /malformed/);
+  refused(record({ evidence: { ...receipt, statement: { ...receipt.statement, body: { ...receipt.statement.body, operation: 'push' } } } }), 'malformed', /malformed/);
+  refused(record({ published_by: 'carol' }), 'authorship', /naming someone else/);
+
+  const kept = (value, author = 'bob', log = bob, extra = []) => {
+    const replica = replicaWith(alice, bob, carol, extra);
+    assert.equal(replica.receive(evidenceUpdate(log, author, value)).status, 'accepted');
+    return replica.view({ asOf: new Date(NOW + 120_000).toISOString() });
+  };
+  // Signed by someone other than the node it names.
+  const impersonated = kept(record({ evidence: { statement: statementSignedBy(receipt.statement.body, 'bob'), heads: receipt.heads } }));
+  assert.equal(impersonated.node_evidence.length, 0);
+  assert.match(impersonated.excluded[0].reason, /not signed with a key the Circle established/);
+  // Published by a member who had left.
+  const exited = [...carol];
+  append(exited, 'carol', [['exit', exitOf('carol', '2026-08-20T18:00:00.000Z')]]);
+  const former = kept(record({ published_by: 'carol' }), 'carol', exited, exited);
+  assert.equal(former.node_evidence.length, 0);
+  assert.match(former.excluded.at(-1).reason, /was not a member when publishing node evidence/);
+  // And the honest record is kept.
+  assert.equal(kept(record()).node_evidence.length, 1);
+});
+
+test('a member publishes a node’s receipt from their own node, and another member’s node finds the withholding it proves', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-circle-peer-evidence-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const { alice, bob, carol } = logs();
+  const origin = 'http://127.0.0.1:9';
+
+  // Bob syncs with alice's node, which lacks his membership until he offers it.
+  const bobFiles = await peerFiles(root, 'bob', { principal: 'bob', peers: [{ origin }] });
+  const bobRuntime = await loadCirclePeerRuntime(bobFiles.configFile, { allowInsecureLoopback: true });
+  await seed(bobRuntime, [alice, bob, carol].flat());
+  const node = replicaWith(alice, carol);
+  const synced = await runCirclePeerSync(bobRuntime, { now: () => NOW, senderFor: () => directSender(node, { now: NOW }) });
+  assert.equal(synced.peers[0].status, 'synced');
+  await assert.rejects(publishCirclePeerNodeEvidence(bobRuntime, 'https://unknown.example'), /No statement from https:\/\/unknown\.example/);
+  const published = await publishCirclePeerNodeEvidence(bobRuntime, origin, { now: () => NOW + 1_000 });
+  assert.deepEqual([published.record_type, published.excluded], ['node_evidence', null]);
+  await assert.rejects(runCirclePeerCommand(['publish-evidence', bobFiles.configFile]), /Usage/);
+
+  // Carol holds bob's updates, including that record, and syncs with the
+  // node, which now serves as if it never had bob's membership.
+  const carolFiles = await peerFiles(root, 'carol', { principal: 'carol', peers: [{ origin }] });
+  const carolRuntime = await loadCirclePeerRuntime(carolFiles.configFile, { allowInsecureLoopback: true });
+  const bobReplica = await openCirclePeerReplica(bobRuntime);
+  const bobUpdates = bobReplica.authoredAfter({ author: 'bob', keyId: bobRuntime.key_id, counter: 0 }).map(item => item.update);
+  assert.equal(bobUpdates.length, 2);
+  await seed(carolRuntime, [alice, carol, bobUpdates].flat());
+  const withholding = replicaWith(alice, carol);
+  const sync = at => runCirclePeerSync(carolRuntime, { now: () => at, senderFor: () => directSender(withholding, { now: at }) });
+  const first = await sync(NOW + 60_000);
+  assert.equal(first.peers[0].status, 'synced');
+  assert.equal(first.peers[0].findings, 0, 'carol’s own statements alone show nothing');
+
+  const status = await circlePeerStatus(carolRuntime);
+  const found = status.findings.filter(item => item.origin === 'published-evidence');
+  assert.deepEqual(found.map(item => [item.kind, item.author, item.earlier_counter, item.later_counter]), [['heads_regressed', 'bob', 1, 0]]);
+  const { replica, findings } = await circlePeerFindings(carolRuntime);
+  for (const item of findings) assert.equal(verifyCircleWithholdingFinding(replica, item.finding), true);
+  // Seen again, it is not recorded twice.
+  await sync(NOW + 90_000);
+  assert.equal((await circlePeerStatus(carolRuntime)).findings.filter(item => item.origin === 'published-evidence').length, 1);
 });
 
 test('the peer records withholding findings once, with evidence that verifies from its state', async t => {

@@ -8,6 +8,7 @@ import {
   loadCirclePeerRuntime,
   openCirclePeerContent,
   publishCirclePeerDisclosureKey,
+  publishCirclePeerNodeEvidence,
   runCirclePeerSync,
   sealCirclePeerContent,
   serveCirclePeer
@@ -18,10 +19,11 @@ const USAGE = [
   '  serve | sync | status',
   '  append <record-type> <record.json>     sign and add one of your records',
   '  publish-disclosure-key                 publish member.disclosure_key_file',
+  '  publish-evidence <peer-origin>         publish the latest statement from that peer',
   '  seal <role[,role...]> <content.json>   seal content for those roles and publish it',
   '  open <update-digest>                   open sealed content addressed to you'
 ].join('\n');
-const ARGUMENTS = { serve: 0, sync: 0, status: 0, append: 2, 'publish-disclosure-key': 0, seal: 2, open: 1 };
+const ARGUMENTS = { serve: 0, sync: 0, status: 0, append: 2, 'publish-disclosure-key': 0, 'publish-evidence': 1, seal: 2, open: 1 };
 const MAX_INPUT_BYTES = 1_048_576;
 
 async function readJson(path) {
@@ -55,6 +57,7 @@ export async function runCirclePeerCommand(argv, {
     return write(await appendCirclePeerRecord(runtime, { recordType: rest[0], record: await readJson(rest[1]) }));
   }
   if (command === 'publish-disclosure-key') return write(await publishCirclePeerDisclosureKey(runtime));
+  if (command === 'publish-evidence') return write(await publishCirclePeerNodeEvidence(runtime, rest[0]));
   if (command === 'seal') {
     return write(await sealCirclePeerContent(runtime, { roleIds: rest[0].split(','), value: await readJson(rest[1]) }));
   }

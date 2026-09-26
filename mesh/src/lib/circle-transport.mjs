@@ -4,7 +4,7 @@ import { request as httpsRequest, createServer as createHttpsServer } from 'node
 import { canonicalJson, digestObject, sha256, ValidationError } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
 import { circleKeyId } from './circle-keys.mjs';
-import { CIRCLE_BUNDLE_MAX_BYTES } from './circle-exchange.mjs';
+import { CIRCLE_BUNDLE_MAX_BYTES, CIRCLE_NODE_STATEMENT_SCHEMA } from './circle-exchange.mjs';
 
 /**
  * Circle exchange over the network. Laboratory transport, off by default.
@@ -56,7 +56,7 @@ import { CIRCLE_BUNDLE_MAX_BYTES } from './circle-exchange.mjs';
 export const CIRCLE_SYNC_REQUEST_SCHEMA = 'axiom-circle-sync-request.v0';
 export const CIRCLE_SYNC_RESPONSE_SCHEMA = 'axiom-circle-sync-response.v0';
 export const CIRCLE_SYNC_RECEIPT_SCHEMA = 'axiom-circle-sync-receipt.v0';
-export const CIRCLE_NODE_STATEMENT_SCHEMA = 'axiom-circle-node-statement.v0';
+export { CIRCLE_NODE_STATEMENT_SCHEMA };
 export const CIRCLE_PULL_PATH = '/circle/v0/pull';
 export const CIRCLE_OFFER_PATH = '/circle/v0/offer';
 export const CIRCLE_SYNC_CLOCK_SKEW_MS = 120_000;

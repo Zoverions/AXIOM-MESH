@@ -1,7 +1,6 @@
 import { digestObject, ValidationError } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
-import { CIRCLE_HEADS_SCHEMA } from './circle-exchange.mjs';
-import { CIRCLE_NODE_STATEMENT_SCHEMA } from './circle-transport.mjs';
+import { CIRCLE_HEADS_SCHEMA, CIRCLE_NODE_STATEMENT_SCHEMA } from './circle-exchange.mjs';
 
 /**
  * Withholding findings from node statements (laboratory, with the transport).
@@ -18,10 +17,18 @@ import { CIRCLE_NODE_STATEMENT_SCHEMA } from './circle-transport.mjs';
  *   statement. The statement and that update, both signed by the node, are
  *   the evidence.
  *
+ * A node's answer to an offer signs its heads after applying the offer, so
+ * the member who offered holds the node's own statement that it had those
+ * updates. Members publish such statements as `node_evidence` records, and
+ * detectCircleWithholdingAcross compares every statement from one node,
+ * whoever received it: a later statement to anyone that claims less than an
+ * earlier one is a heads_regressed finding. So a node that acknowledged a
+ * member's updates and then serves others without them is found out once
+ * the member's evidence reaches them. Updates a node received but never
+ * acknowledged in a statement stay undetectable.
+ *
  * A finding is evidence for people to act on. It changes no standing,
- * excludes nothing from the view and triggers nothing. It cannot show that
- * a node withheld another member's updates it had received, because nothing
- * signed says when it received them.
+ * excludes nothing from the view and triggers nothing.
  */
 
 export const CIRCLE_WITHHOLDING_FINDING_SCHEMA = 'axiom-circle-withholding-finding.v0';
@@ -100,6 +107,70 @@ export function detectCircleWithholding({ replica, previous = null, current }) {
         evidence: [current],
         update: withheld.update
       }));
+    }
+  }
+  return findings;
+}
+
+/**
+ * heads_regressed findings across statements from any caller: node evidence
+ * the replica's members published (`view.node_evidence`) together with the
+ * caller's own. For each node, statements are taken in the node's own time
+ * order; any statement that claims less of a key log than an earlier
+ * statement's peak for it is a finding, with that earlier statement as
+ * evidence. Evidence that cannot be verified is skipped.
+ */
+export function detectCircleWithholdingAcross({ replica, evidence }) {
+  const byNode = new Map();
+  for (const item of evidence) {
+    let body;
+    try {
+      body = verifyCircleNodeEvidence(replica, item);
+    } catch (error) {
+      if (!(error instanceof ValidationError)) throw error;
+      continue;
+    }
+    const list = byNode.get(body.principal_id) ?? [];
+    list.push({ item, time: at(body.issued_at), digest: digestObject(body) });
+    byNode.set(body.principal_id, list);
+  }
+  const findings = [];
+  for (const list of byNode.values()) {
+    list.sort((left, right) => left.time - right.time || (left.digest < right.digest ? -1 : left.digest > right.digest ? 1 : 0));
+    // Per key log: the highest counter claimed at any earlier instant, and
+    // where. Statements signed at the same instant are compared only with
+    // earlier ones, then raise the peaks together.
+    const peaks = new Map();
+    for (let start = 0; start < list.length;) {
+      let end = start;
+      while (end < list.length && list[end].time === list[start].time) end += 1;
+      const group = list.slice(start, end).map(({ item, time }) => ({
+        item,
+        time,
+        claimed: new Map(item.heads.heads.map(head => [`${head.author}\u0000${head.key_id}`, head]))
+      }));
+      for (const { item, claimed } of group) {
+        for (const [log, peak] of peaks) {
+          const now = claimed.get(log)?.counter ?? 0;
+          if (now < peak.counter) {
+            findings.push(finding('heads_regressed', {
+              author: peak.author,
+              key_id: peak.key_id,
+              earlier_counter: peak.counter,
+              later_counter: now,
+              evidence: [peak.item, item]
+            }));
+          }
+        }
+      }
+      for (const { item, time, claimed } of group) {
+        for (const [log, head] of claimed) {
+          if ((peaks.get(log)?.counter ?? 0) < head.counter) {
+            peaks.set(log, { author: head.author, key_id: head.key_id, counter: head.counter, item, time });
+          }
+        }
+      }
+      start = end;
     }
   }
   return findings;

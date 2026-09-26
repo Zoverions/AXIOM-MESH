@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://axiom.invalid/schemas/circle-exchange-v0.schema.json",
   "title": "AXIOM Circle Exchange Update v0",
-  "description": "One signed entry in the hash-linked log of one key a Circle member holds, bound to the Circle's genesis, which carries the creator's key. Keys are endorsed by an administrator, rotated by their holder, or revoked from a named counter, each with proof of possession (mesh/src/lib/circle-keys.mjs). A charter amendment publishes the exact text an accepted proposal bound, and starts a new charter period. A disclosure key announces a member's X25519 key; sealed content is encrypted for an audience named by role, and is kept only if its recipients are exactly the audience in standing with a disclosure key, plus the publisher (mesh/src/lib/circle-disclosure.mjs). Authorship, contiguity, equivocation, key validity, authority rules and the deterministic Circle view are enforced by mesh/src/lib/circle-exchange.mjs. Exchange grants no authority, executes nothing and opens no network connection.",
+  "description": "One signed entry in the hash-linked log of one key a Circle member holds, bound to the Circle's genesis, which carries the creator's key. Keys are endorsed by an administrator, rotated by their holder, or revoked from a named counter, each with proof of possession (mesh/src/lib/circle-keys.mjs). A charter amendment publishes the exact text an accepted proposal bound, and starts a new charter period. A disclosure key announces a member's X25519 key; sealed content is encrypted for an audience named by role, and is kept only if its recipients are exactly the audience in standing with a disclosure key, plus the publisher (mesh/src/lib/circle-disclosure.mjs). Node evidence publishes a node's signed statement and the heads it signed, kept only if its publisher is in standing and the statement verifies against a key the Circle established for that node (mesh/src/lib/circle-withholding.mjs). Authorship, contiguity, equivocation, key validity, authority rules and the deterministic Circle view are enforced by mesh/src/lib/circle-exchange.mjs. Exchange grants no authority, executes nothing and opens no network connection.",
   "type": "object",
   "additionalProperties": false,
   "required": ["body", "attestation"],
@@ -18,7 +18,7 @@
         "key_id": { "$ref": "#/$defs/digest", "description": "SHA-256 of the signing key's SPKI DER encoding. Each key has its own log." },
         "counter": { "type": "integer", "minimum": 1, "maximum": 4096 },
         "prev_digest": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }] },
-        "record_type": { "enum": ["invitation", "membership", "proposal", "task", "appeal", "exit", "export", "ballot", "key_endorsement", "key_rotation", "key_revocation", "charter_amendment", "disclosure_key", "sealed_content"] },
+        "record_type": { "enum": ["invitation", "membership", "proposal", "task", "appeal", "exit", "export", "ballot", "key_endorsement", "key_rotation", "key_revocation", "charter_amendment", "disclosure_key", "sealed_content", "node_evidence"] },
         "record": { "type": "object" }
       }
     },

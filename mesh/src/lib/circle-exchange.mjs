@@ -99,6 +99,14 @@ import {
 export const CIRCLE_GENESIS_SCHEMA = 'axiom-circle-genesis.v0';
 export const CIRCLE_UPDATE_SCHEMA = 'axiom-circle-update.v0';
 export const CIRCLE_HEADS_SCHEMA = 'axiom-circle-heads.v0';
+// A node's signed statement of what it served (circle-transport.mjs). It is
+// defined here so that node evidence can be published as a Circle record.
+export const CIRCLE_NODE_STATEMENT_SCHEMA = 'axiom-circle-node-statement.v0';
+export const CIRCLE_NODE_EVIDENCE_MAX_BYTES = 262_144;
+const NODE_STATEMENT_FIELDS = Object.freeze([
+  'schema', 'genesis_digest', 'operation', 'principal_id', 'key_id',
+  'request_digest', 'answer_digest', 'heads_digest', 'issued_at'
+]);
 export const CIRCLE_VIEW_SCHEMA = 'axiom-circle-view.v0';
 export const CIRCLE_EXCHANGE_BUNDLE_SCHEMA = 'axiom-circle-exchange-bundle.v0';
 export const CIRCLE_BUNDLE_MAX_UPDATES = 512;
@@ -126,7 +134,10 @@ const RECORD_TYPES = Object.freeze({
   key_revocation: { collection: null, author: r => r.revoked_by, time: r => r.revoked_at },
   charter_amendment: { collection: null, author: r => r.published_by, time: r => r.published_at },
   disclosure_key: { collection: null, author: r => r.principal_id, time: r => r.published_at },
-  sealed_content: { collection: null, author: r => r.published_by, time: r => r.published_at }
+  sealed_content: { collection: null, author: r => r.published_by, time: r => r.published_at },
+  // A node's signed statement and the heads it signed, published by the
+  // member who received it (circle-withholding.mjs).
+  node_evidence: { collection: null, author: r => r.published_by, time: r => r.published_at }
 });
 
 export function createCircleGenesis({ circle, charter, creatorKey }) {
@@ -245,10 +256,11 @@ export class CircleReplica {
         return rejected('malformed', error.message);
       }
     }
-    if (body.record_type === 'disclosure_key' || body.record_type === 'sealed_content') {
+    if (['disclosure_key', 'sealed_content', 'node_evidence'].includes(body.record_type)) {
       try {
         if (body.record_type === 'disclosure_key') validateCircleDisclosureKeyRecord(body.record);
-        else validateCircleSealedContentRecord(body.record, this.genesisDigest);
+        else if (body.record_type === 'sealed_content') validateCircleSealedContentRecord(body.record, this.genesisDigest);
+        else validateNodeEvidenceRecord(body.record, this.genesisDigest);
       } catch (error) {
         if (!(error instanceof ValidationError)) throw error;
         return rejected('malformed', error.message);
@@ -573,7 +585,7 @@ export class CircleReplica {
       voids = next;
     }
 
-    const { epochs, excluded, keys, tallies, pending, disclosureKeys, sealed } = derived;
+    const { epochs, excluded, keys, tallies, pending, disclosureKeys, sealed, nodeEvidence } = derived;
     const current = epochs.at(-1);
     return Object.freeze({
       schema: CIRCLE_VIEW_SCHEMA,
@@ -594,6 +606,9 @@ export class CircleReplica {
         .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
         .map(([principalId, list]) => Object.freeze({ principal_id: principalId, ...list.at(-1) }))),
       sealed_contents: Object.freeze(sealed),
+      // Node statements members published, each verified against a key the
+      // Circle established for that node, with the heads it signed.
+      node_evidence: Object.freeze(nodeEvidence),
       excluded: Object.freeze(excluded),
       authority_effect: 'none',
       network_effect: 'none'
@@ -615,6 +630,7 @@ export class CircleReplica {
     const epochs = [];
     const disclosureKeys = new Map();
     const sealed = [];
+    const nodeEvidence = [];
     let epoch = newEpoch({ document: emptyPackage(this.genesis) }, this.genesis.circle.created_at);
 
     // Brings the Circle forward to `at`: decides proposals as they close, and
@@ -662,6 +678,25 @@ export class CircleReplica {
             published_at: entry.record.published_at
           }));
           disclosureKeys.set(entry.author, list);
+          continue;
+        }
+        if (entry.type === 'node_evidence') {
+          if (!circleStanding(epoch.document).principalAt(entry.author, new Date(entry.time))) {
+            throw new ValidationError(`${entry.author} was not a member when publishing node evidence`);
+          }
+          const { statement, heads } = entry.record.evidence;
+          const nodeKey = this.announced.get(pairKey(statement.body.principal_id, statement.body.key_id));
+          if (!nodeKey || !verifySignature(statement.body, statement.attestation, nodeKey)) {
+            throw new ValidationError('Node evidence is not signed with a key the Circle established for that node');
+          }
+          nodeEvidence.push(Object.freeze({
+            digest: entry.digest,
+            published_by: entry.author,
+            published_at: entry.record.published_at,
+            node_principal_id: statement.body.principal_id,
+            issued_at: statement.body.issued_at,
+            evidence: Object.freeze({ statement, heads })
+          }));
           continue;
         }
         if (entry.type === 'sealed_content') {
@@ -713,6 +748,7 @@ export class CircleReplica {
       revocations,
       disclosureKeys,
       sealed,
+      nodeEvidence,
       keys: [...keys.entries()]
         .map(([keyId, key]) => Object.freeze({
           principal_id: key.principal,
@@ -1121,6 +1157,43 @@ function validateRemoteHeads(value, genesisDigest) {
     ) throw new ValidationError('Circle equivocation is invalid');
   }
   return value;
+}
+
+// A node statement and the heads it signed, as a member publishes them. The
+// signature is checked when the view is derived, once the node's key is known.
+function validateNodeEvidenceRecord(record, genesisDigest) {
+  exactObject(record, 'Circle node evidence', ['published_by', 'published_at', 'evidence']);
+  exactObject(record.evidence, 'Circle node evidence', ['statement', 'heads']);
+  const { statement, heads } = record.evidence;
+  exactObject(statement, 'Circle node statement', ['body', 'attestation']);
+  const body = statement.body;
+  exactObject(body, 'Circle node statement', NODE_STATEMENT_FIELDS);
+  if (
+    !IDENTIFIER.test(record.published_by ?? '')
+    || !canonicalInstant(record.published_at)
+    || body.schema !== CIRCLE_NODE_STATEMENT_SCHEMA
+    || body.genesis_digest !== genesisDigest
+    || !['pull', 'offer'].includes(body.operation)
+    || !IDENTIFIER.test(body.principal_id ?? '')
+    || ![body.key_id, body.request_digest, body.answer_digest, body.heads_digest].every(value => DIGEST.test(value ?? ''))
+    || !canonicalInstant(body.issued_at)
+    || statement.attestation === null || typeof statement.attestation !== 'object' || Array.isArray(statement.attestation)
+  ) throw new ValidationError('Circle node evidence is malformed');
+  validateRemoteHeads(heads, genesisDigest);
+  if (body.heads_digest !== digestObject(heads)) {
+    throw new ValidationError('Circle node evidence heads are not the heads the node signed');
+  }
+  if (Date.parse(record.published_at) < Date.parse(body.issued_at)) {
+    throw new ValidationError('Circle node evidence cannot be published before the node issued it');
+  }
+  if (Buffer.byteLength(canonicalJson(record)) > CIRCLE_NODE_EVIDENCE_MAX_BYTES) {
+    throw new ValidationError('Circle node evidence is too large');
+  }
+}
+
+function canonicalInstant(value) {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value))
+    && new Date(value).toISOString() === value;
 }
 
 function validateGenesis(genesis) {
