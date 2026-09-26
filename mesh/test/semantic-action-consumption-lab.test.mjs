@@ -186,6 +186,7 @@ async function baselineExecute(baseline, presentation, effect, sink) {
 
 function sqliteStore(path) {
   const db = new DatabaseSync(path, { timeout: 5_000 });
+  let closed = false;
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('CREATE TABLE IF NOT EXISTS lab_state (key TEXT PRIMARY KEY, version INTEGER NOT NULL, value TEXT NOT NULL)');
   const select = db.prepare('SELECT version, value FROM lab_state WHERE key = ?');
@@ -202,6 +203,8 @@ function sqliteStore(path) {
       return Number(result.changes) === 1;
     },
     close() {
+      if (closed) return;
+      closed = true;
       db.close();
     }
   };
@@ -218,10 +221,23 @@ function barrier(parties) {
   };
 }
 
-async function tempDir(t) {
+// Every opened SQLite store is closed before the directory is removed, so
+// Windows can unlink the database files (EBUSY otherwise).
+async function sqliteLedgerDir(t) {
   const dir = await mkdtemp(join(tmpdir(), 'axiom-semantic-lab-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  return dir;
+  const path = join(dir, 'ledger.sqlite');
+  const opened = [];
+  t.after(async () => {
+    for (const store of opened) store.close();
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  });
+  return {
+    open() {
+      const store = sqliteStore(path);
+      opened.push(store);
+      return store;
+    }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -303,11 +319,9 @@ test('F2 concurrent reissuance: two fresh tokens raced through two evaluators ad
 });
 
 test('F2 concurrent reissuance: budget 2 with six racers across two SQLite replicas admits exactly two over time', async t => {
-  const dir = await tempDir(t);
-  const path = join(dir, 'ledger.sqlite');
-  const replicaA = sqliteStore(path);
-  const replicaB = sqliteStore(path);
-  t.after(() => { replicaA.close(); replicaB.close(); });
+  const ledger = await sqliteLedgerDir(t);
+  const replicaA = ledger.open();
+  const replicaB = ledger.open();
   await newLab(replicaA).registerAuthorizationInstance(instanceDocument({ budget: 2 }));
   const arrive = barrier(6);
   const interleave = async ({ label, attempt }) => { if (label === 'admit' && attempt === 0) await arrive(); };
@@ -456,12 +470,11 @@ test('F3 exact binding: a different parameter, purpose, destination or object is
 // ---------------------------------------------------------------------------
 
 test('F4 crash after commit / lost response: restarted evaluator returns the durable prior receipt, no duplicate', async t => {
-  const dir = await tempDir(t);
-  const path = join(dir, 'ledger.sqlite');
+  const ledger = await sqliteLedgerDir(t);
   const baselineSink = createSink({ idempotent: false });
   const sink = createSink({ idempotent: false });
 
-  const before = sqliteStore(path);
+  const before = ledger.open();
   const baselineBefore = createJtiKeyedBaseline(before);
   await baselineExecute(baselineBefore, freshToken(), structuredEffect(), baselineSink);
   const lab = newLab(before);
@@ -469,8 +482,7 @@ test('F4 crash after commit / lost response: restarted evaluator returns the dur
   const committed = await executeAdmitted(lab, await lab.admit({ presentation: freshToken(), effect: structuredEffect() }), sink);
   before.close(); // crash: the admission/commit response never reached the agent
 
-  const after = sqliteStore(path);
-  t.after(() => after.close());
+  const after = ledger.open();
   await baselineExecute(createJtiKeyedBaseline(after), freshToken(), structuredEffect(), baselineSink);
   assert.equal(baselineSink.mutations, 2, 'RED: retry with a fresh token repeats the effect');
 
@@ -482,17 +494,15 @@ test('F4 crash after commit / lost response: restarted evaluator returns the dur
 });
 
 test('F4 crash before dispatch: retry cannot consume again; the existing admission is resumed by receipt', async t => {
-  const dir = await tempDir(t);
-  const path = join(dir, 'ledger.sqlite');
-  const before = sqliteStore(path);
+  const ledger = await sqliteLedgerDir(t);
+  const before = ledger.open();
   const lab = newLab(before);
   await lab.registerAuthorizationInstance(instanceDocument({ budget: 2 }));
   const admitted = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
   assert.equal(admitted.decision, 'admit');
   before.close();
 
-  const after = sqliteStore(path);
-  t.after(() => after.close());
+  const after = ledger.open();
   const resumed = newLab(after);
   const retry = await resumed.admit({ presentation: freshToken({ holder: 'worker.resumed' }), effect: structuredEffect() });
   assert.equal(retry.decision, 'deny');
