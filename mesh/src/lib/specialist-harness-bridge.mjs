@@ -82,7 +82,10 @@ export function buildSpecialistHarnessBridge(input, options = {}) {
  * is checked; consumers must require `envelope_checked === true`.
  */
 export function validateSpecialistHarnessBridge(document, options = {}) {
-  return failClosed(() => validateUnsafe(document, options));
+  // Validate a plain-data snapshot: structuredClone rejects Proxies (and any
+  // non-cloneable value) and reads each getter once, so a deceptive object
+  // cannot show one shape to the validator and another to the caller.
+  return failClosed(() => validateUnsafe(structuredClone(document), options));
 }
 
 function failClosed(run) {
@@ -318,9 +321,16 @@ function validateOptions(options) {
   }
 }
 
+// Casing guard (fail closed): a segment that is all-lower, all-upper, or one
+// Capitalized word is tokenized as before. Any other mixed-case segment (MiNd,
+// MINDx, mINd, reMinder) has no trustworthy word boundaries, so it is rejected
+// if it contains "mind" case-insensitively anywhere.
+const REGULAR_CASING = /^(?:[a-z0-9]+|[A-Z0-9]+|[A-Z][a-z0-9]*)$/;
+
 function namesMindOrGenesis(name) {
   if (GENESIS.test(name)) return true;
   for (const segment of name.split(TOKEN_SEPARATOR)) {
+    if (!REGULAR_CASING.test(segment) && segment.toLowerCase().includes('mind')) return true;
     for (const token of segment.split(TOKEN_BOUNDARY)) {
       if (MIND_TOKENS.has(token.toLowerCase())) return true;
     }

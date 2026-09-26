@@ -86,7 +86,9 @@ execution-time and cost ceilings. When the caller supplies the envelope object
    of the envelope's;
 5. requires `consequence_ceiling`, `max_execution_ms` and `max_cost` to be at or
    below the envelope's (same currency; any cost fails when the envelope permits
-   none);
+   none). The bridge rejects a `max_minor_units` of `-0` even though the envelope
+   validator and schema accept it; this is stricter only and never widens a
+   ceiling;
 6. requires `issued_at` at or after the envelope `active_from` and `expires_at`
    at or before the envelope `expires_at`.
 
@@ -124,6 +126,10 @@ Further invariants:
 - Every object is closed (`additionalProperties: false` in the schema and an
   exact field set in the validator), so unknown keys are rejected at every
   depth, including `__proto__`, `constructor`, homoglyph and zero-width keys.
+- `validateSpecialistHarnessBridge` validates a `structuredClone` snapshot of
+  the document inside its fail-closed wrapper, so a Proxy (even one that never
+  throws) or any other non-plain-data input fails closed instead of showing
+  the validator a different shape than the caller later sees.
 - The bridge carries no `mind_id`, no mind-continuation claim and no Founder
   Genesis receipt: the contract has no mind or Genesis slot, and closed
   objects mean one cannot be added. That absence is the guarantee.
@@ -133,6 +139,10 @@ Further invariants:
   example `x/mind`, `urn:mind:x`, `agent:mind:1`, `mindId`, `mind-id`), or
   that contains `genesis` anywhere (including `genesis-receipt`). Words that
   merely contain "mind", such as `reminder-bot` or `mastermind-tool`, pass.
+  Casing is handled fail-closed: a segment that is all-lower, all-upper, or a
+  single Capitalized word is tokenized as above; any other mixed-case segment
+  (`MiNd`, `MINDx`, `reMinder`) has no trustworthy word boundaries and is
+  rejected if it contains "mind" case-insensitively anywhere.
   This guard is a name heuristic, not proof that an opaque reference is not a
   mind identity. `adapter_ref` also cannot equal the subject principal.
 - `adapter_kind` must match exactly one admission reference: a `tool-harness`

@@ -12,6 +12,7 @@ import { capabilityConsumptionEventId } from '../src/lib/capability-consumption.
 import {
   LabJsonNumber,
   SEMANTIC_EFFECT_CANONICALIZATION_VERSION,
+  SEMANTIC_SINK_IDEMPOTENCY,
   buildSemanticAuthorizationInstance,
   buildSemanticEffectProfile,
   canonicalSemanticEffect,
@@ -523,11 +524,13 @@ test('F4 (lab only) crash before dispatch: retry cannot consume again; the exist
   assert.equal(retry.reason, 'prior_admission_unresolved');
   assert.equal(retry.receipt.lifecycle_state, 'admission_consumed');
   assert.equal(retry.receipt.admissions_consumed, 1, 'budget unit 2 is not spent on a retry of unit 1');
+  assert.equal(retry.receipt.presentation_jti_digest, null, 'a non-admitting presenter never sees the admitting jti digest');
+  assert.equal(retry.receipt.receipt_id, admitted.receipt.receipt_id);
   const sink = createSink({ idempotent: false });
-  const dispatch = await resumed.beginDispatch(idsOf(retry.receipt));
+  const dispatch = await resumed.beginDispatch(idsOf(admitted.receipt));
   assert.equal(dispatch.decision, 'dispatch');
   sink.deliver(dispatch.idempotency_key);
-  const again = await resumed.beginDispatch(idsOf(retry.receipt));
+  const again = await resumed.beginDispatch(idsOf(admitted.receipt));
   assert.equal(again.reason, 'dispatch_already_started', 'a resumed dispatch cannot be started twice');
   assert.equal(sink.mutations, 1);
 });
@@ -1009,6 +1012,103 @@ test('N6 (lab only) numbers must be integers or decimal strings; exponent forms 
     assert.throws(() => canonicalSemanticEffect(effect, PROFILES), label);
     assert.equal((await lab.admit({ presentation: freshToken(), effect })).reason, 'canonicalization_ambiguous', label);
   }
+});
+
+// ---------------------------------------------------------------------------
+// #1891 residuals R-1, R-2, R-4, R-5
+// ---------------------------------------------------------------------------
+
+test('R-1 (lab only) an evaluator whose profile disagrees with the bound sink idempotency never redelivers', async () => {
+  const store = createInMemorySemanticLabStore();
+  const keyedLab = newLab(store);
+  await keyedLab.registerAuthorizationInstance(instanceDocument({ effectDigest: KEYED_DIGEST }));
+  const sink = createSink({ idempotent: false }); // the real sink does not dedupe
+  const admitted = await keyedLab.admit({ presentation: freshToken({ effectDigest: KEYED_DIGEST }), effect: keyedEffect() });
+  const ids = idsOf(admitted.receipt);
+  sink.deliver((await keyedLab.beginDispatch(ids)).idempotency_key);
+  await keyedLab.recordSinkOutcome({ ...ids, outcome: 'unknown' });
+
+  // Same action and tool name, but this evaluator's profile says the sink is not idempotent.
+  const disagreeing = createSemanticActionConsumptionLab({
+    store,
+    profiles: [PROFILE, buildSemanticEffectProfile({ ...KEYED_PROFILE, sink_idempotency: 'none' })],
+    now: () => NOW
+  });
+  let redeliveries = 0;
+  for (const claim of [true, false, true, true]) {
+    const retry = await disagreeing.retryDispatch({ ...ids, sink_idempotent: claim });
+    assert.equal(retry.decision, 'deny');
+    assert.equal(retry.reason, 'sink_idempotency_profile_mismatch');
+    assert.equal(retry.receipt.redelivery_blocked, true);
+    if (retry.perform) { redeliveries += 1; sink.deliver(retry.idempotency_key); }
+  }
+  assert.equal(redeliveries, 0);
+  const reissue = await disagreeing.admit({ presentation: freshToken({ effectDigest: KEYED_DIGEST }), effect: keyedEffect() });
+  assert.equal(reissue.reason, 'sink_idempotency_profile_mismatch');
+  const original = await keyedLab.retryDispatch({ ...ids, sink_idempotent: true });
+  assert.equal(original.perform, false, 'the disagreement also blocks the original evaluator');
+  assert.equal(sink.calls, 1);
+});
+
+test('R-4 (lab only) sink_idempotency is mandatory in the profile and schema, and an unknown outcome never clears redelivery_blocked', async () => {
+  const { sink_idempotency: _omitted, ...withoutSink } = PROFILE;
+  assert.throws(() => buildSemanticEffectProfile(withoutSink), /sink_idempotency/);
+  assert.throws(() => buildSemanticEffectProfile({ ...PROFILE, sink_idempotency: undefined }), /sink_idempotency/);
+  assert.throws(() => buildSemanticEffectProfile({ ...PROFILE, sink_idempotency: 'maybe' }), /sink_idempotency/);
+  assert.deepEqual([...SEMANTIC_SINK_IDEMPOTENCY], ['idempotency-key', 'none']);
+  const schema = JSON.parse(await readFile(new URL('../config/semantic-action-consumption-lab-v0.schema.json', import.meta.url), 'utf8'));
+  assert.ok(schema.required.includes('sink_idempotency'));
+  assert.deepEqual(schema.properties.sink_idempotency.enum, ['idempotency-key', 'none']);
+  assert.ok(schema.required.includes('redelivery_blocked'));
+  assert.equal(schema.properties.redelivery_blocked.type, 'boolean');
+
+  const { lab } = await registeredLab({ effectDigest: KEYED_DIGEST });
+  const sink = createSink({ idempotent: true });
+  const admitted = await lab.admit({ presentation: freshToken({ effectDigest: KEYED_DIGEST }), effect: keyedEffect() });
+  const ids = idsOf(admitted.receipt);
+  sink.deliver((await lab.beginDispatch(ids)).idempotency_key);
+  const blocked = await lab.retryDispatch({ ...ids, sink_idempotent: false });
+  assert.equal(blocked.receipt.redelivery_blocked, true);
+  const unknown = await lab.recordSinkOutcome({ ...ids, outcome: 'unknown' });
+  assert.equal(unknown.receipt.redelivery_blocked, true, 'an unknown outcome is not reconciliation');
+  const retry = await lab.retryDispatch({ ...ids, sink_idempotent: true });
+  assert.equal(retry.perform, false);
+  assert.equal(retry.reason, 'effect_uncertain_requires_reconciliation');
+  assert.equal(sink.calls, 1);
+});
+
+test('R-2 (lab only) replay receipts reveal the admitting jti digest only to the admitting presenter', async () => {
+  const { lab } = await registeredLab();
+  const original = freshToken();
+  const admitted = await lab.admit({ presentation: original, effect: structuredEffect() });
+  assert.equal(admitted.receipt.presentation_jti_digest, sha256(original.jti));
+  const other = await lab.admit({ presentation: freshToken({ holder: 'agent.other' }), effect: structuredEffect() });
+  assert.equal(other.receipt.receipt_id, admitted.receipt.receipt_id);
+  assert.equal(other.receipt.presentation_jti_digest, null);
+  const same = await lab.admit({ presentation: original, effect: structuredEffect() });
+  assert.equal(same.reason, 'token_replayed');
+  assert.equal(same.receipt.presentation_jti_digest, sha256(original.jti));
+  const read = await lab.getReceipt({ authorization_instance_id: 'authz-grade-1', receipt_id: admitted.receipt.receipt_id });
+  assert.equal(read.receipt.presentation_jti_digest, null, 'unauthenticated reads never reveal it');
+  await executeAdmitted(lab, admitted, createSink({ idempotent: false }));
+  const afterCommit = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+  assert.equal(afterCommit.decision, 'prior_receipt');
+  assert.equal(afterCommit.receipt.presentation_jti_digest, null);
+});
+
+test('R-5 (lab only) Unicode format (Cf) and default-ignorable code points fail closed', async () => {
+  const { lab } = await registeredLab();
+  const samples = [
+    0x0600, 0x0601, 0x0602, 0x0603, 0x0604, 0x0605, 0x06DD, 0x070F, 0xFFF9, 0xFFFA, 0xFFFB,
+    0x1BCA0, 0x1BCA1, 0x1BCA2, 0x1BCA3, 0x1D173, 0x1D174, 0x1D175, 0x1D176, 0x1D177, 0x1D178, 0x1D179, 0x1D17A, 0x13430
+  ];
+  for (const codePoint of samples) {
+    const label = `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`;
+    const effect = structuredEffect({ comment: `Caf${String.fromCodePoint(codePoint)}e` });
+    assert.throws(() => canonicalSemanticEffect(effect, PROFILES), /ambiguous/, label);
+    assert.equal((await lab.admit({ presentation: freshToken(), effect })).reason, 'canonicalization_ambiguous', label);
+  }
+  assert.equal(canonicalSemanticEffect(structuredEffect({ comment: 'Café 数学 عربى' }), PROFILES).effect.parameters.comment, 'Café 数学 عربى');
 });
 
 // ---------------------------------------------------------------------------

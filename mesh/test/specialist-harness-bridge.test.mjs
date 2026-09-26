@@ -424,6 +424,55 @@ test('effect and consequence enums stay in parity with the Autonomy Envelope sch
   assert.throws(() => validateSpecialistHarnessBridge(withCeiling({ consequence_ceiling: 'C4' })), /consequence_ceiling is invalid/);
 });
 
+test('#1891 name guard matches irregular mixed-case mind tokens case-insensitively', () => {
+  for (const ref of ['MiNd', 'MINDx', 'mINd', 'agent:MiNd:1', 'x/MINDx', 'reMinder', 'miNDful']) {
+    assert.throws(() => validateSpecialistHarnessBridge(withRef(ref)), MIND_REF, ref);
+  }
+  for (const key of ['MiNd', 'MINDx', 'mINd_id']) {
+    assert.throws(() => validateSpecialistHarnessBridge({ ...bridge(), [key]: 'x' }), FORBIDDEN, key);
+  }
+  for (const ref of ['Reminder', 'MASTERMIND', 'Mindful', 'reminder-bot', 'mastermind-tool']) {
+    assert.equal(validateSpecialistHarnessBridge(withRef(ref)).valid, true, ref);
+  }
+});
+
+test('#1891 a deceptive non-throwing Proxy cannot hide mind_id from validate()', () => {
+  const target = { ...bridge(), mind_id: 'digital.founder.1' };
+  let reads = 0;
+  const deceptive = new Proxy(target, {
+    // Hide mind_id while the validator looks, then reveal it afterwards.
+    ownKeys(object) {
+      reads += 1;
+      return Reflect.ownKeys(object).filter(key => key !== 'mind_id');
+    },
+    getOwnPropertyDescriptor(object, key) {
+      return key === 'mind_id' ? undefined : Reflect.getOwnPropertyDescriptor(object, key);
+    }
+  });
+  assert.equal(Object.keys(deceptive).includes('mind_id'), false);
+  assert.throws(() => validateSpecialistHarnessBridge(deceptive), err => err instanceof ValidationError && /failing closed/.test(err.message));
+  assert.equal(reads, 1, 'the validator never walked the Proxy');
+  assert.equal(target.mind_id, 'digital.founder.1');
+});
+
+test('#1891 bridge enums stay in parity with the autonomy-envelope runtime constants', () => {
+  const source = readFileSync(new URL('../src/lib/autonomy-envelope.mjs', import.meta.url), 'utf8');
+  const effects = source.match(/const EFFECTS\s*=\s*new Set\((\[[^\]]*\])\)/);
+  const consequence = source.match(/const CONSEQUENCE\s*=\s*Object\.freeze\((\[[^\]]*\])\)/);
+  assert.ok(effects && consequence, 'autonomy-envelope runtime constants must stay locatable; update this parity test if they move');
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES], JSON.parse(effects[1]));
+  assert.deepEqual([...SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER], JSON.parse(consequence[1]));
+  // Behavioral parity against the runtime validator itself.
+  for (const effect of SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES) {
+    assert.match(autonomyEnvelopeDigest(envelope({ effect_classes: [effect] })), /^[a-f0-9]{64}$/, effect);
+  }
+  for (const level of SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER) {
+    assert.match(autonomyEnvelopeDigest(envelope({ consequence_ceiling: level })), /^[a-f0-9]{64}$/, level);
+  }
+  assert.throws(() => autonomyEnvelopeDigest(envelope({ effect_classes: ['teleport'] })), ValidationError);
+  assert.throws(() => autonomyEnvelopeDigest(envelope({ consequence_ceiling: 'C4' })), ValidationError);
+});
+
 test('cyclic input fails closed with a ValidationError', () => {
   const top = bridge();
   top.self = top;
