@@ -276,7 +276,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-capsule-list.v1",
@@ -293,7 +294,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-proposal-list.v1",
@@ -310,7 +312,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-node-list.v1",
@@ -331,7 +334,8 @@
         "role",
         "minimum_security_level",
         "minimum_lease_seconds",
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-node-discovery.v1",
@@ -349,7 +353,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-node-schedule-list.v1",
@@ -366,7 +371,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-consent-list.v1",
@@ -383,7 +389,8 @@
       "idempotency": "not_applicable",
       "path_parameters": [],
       "query_parameters": [
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-approval-list.v1",
@@ -401,7 +408,8 @@
       "path_parameters": [],
       "query_parameters": [
         "owner",
-        "limit"
+        "limit",
+        "cursor"
       ],
       "request_schema": null,
       "response_schema": "axiom-memory-graph.v1",
@@ -418,7 +426,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-accounting-ledger.v1",
       "required_response_fields": [
@@ -434,7 +445,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-import-list.v1",
       "required_response_fields": [
@@ -468,7 +482,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-appeal-list.v1",
       "required_response_fields": [
@@ -483,7 +500,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-storage-offer-list.v1",
       "required_response_fields": [
@@ -500,13 +520,53 @@
       "path_parameters": [],
       "query_parameters": [
         "namespace",
-        "record_id"
+        "record_id",
+        "cursor",
+        "limit"
       ],
       "request_schema": null,
       "response_schema": "axiom-causal-sync-state.v1",
       "required_response_fields": [
         "records",
         "conflicts"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
+      "id": "sync_updates.get",
+      "method": "GET",
+      "path": "/v1/sync/updates/:id",
+      "access": "owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [
+        "id"
+      ],
+      "query_parameters": [],
+      "request_schema": null,
+      "response_schema": "axiom-causal-sync-update.v1",
+      "required_response_fields": [
+        "update_id",
+        "value_digest",
+        "value"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
+      "id": "sync_bundles.list",
+      "method": "GET",
+      "path": "/v1/sync/bundles",
+      "access": "owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
+      "request_schema": null,
+      "response_schema": "axiom-causal-sync-bundle-list.v1",
+      "required_response_fields": [
+        "bundles",
+        "page"
       ],
       "response_media_type": "application/json"
     },
@@ -536,7 +596,10 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit",
+        "cursor"
+      ],
       "request_schema": null,
       "response_schema": "axiom-backup-list.v1",
       "required_response_fields": [

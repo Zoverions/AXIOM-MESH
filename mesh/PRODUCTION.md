@@ -145,7 +145,7 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes exactly 42 currently allowed internal
+policy additionally authorizes exactly 45 currently allowed internal
 method/path permissions at both sending and receiving services and derives
 inbound mTLS peer allowlists. The additional governed Education permission is
 Hypervisor-to-Grid `POST /internal/v1/education/learner-progress`; it does not
@@ -373,6 +373,17 @@ Quarantined backup envelopes and protected SQLite columns participate in later
 data-key rotation/rollback. Do not remove quarantine until independent-media
 copy, retention, restore, destruction authorization, and change records are
 complete.
+
+Grid backups stream by default (`axiom-grid-backup.v2`): the snapshot is a
+chunked protected artifact (`snapshot.axc`), sealed, verified and restored
+1 MiB at a time, so memory no longer grows with the database. Verification,
+restore, retention, data-key rotation, rollback and the recovery drill handle
+both formats. Rotation rewraps a streaming snapshot chunk by chunk under a
+signed rewrap record, but still stages each rewrapped artifact (and the live
+database) in memory, so a snapshot above 512 MiB cannot be rotated yet.
+`AXIOM_GRID_BACKUP_FORMAT=axiom-grid-backup.v1` writes the older
+single-envelope format, for example to restore on a build that predates v2;
+existing v1 backups keep working either way.
 
 Use the disposable lifecycle drill:
 
@@ -618,7 +629,7 @@ Grid reservation control. Signed v2 admission binds node identity, owner,
 capability/security/software statement, HTTPS origin, failure domain, roles,
 resource ceilings, and expiry. `GET /v1/node-discovery` requires `node:read`,
 applies bounded filters, excludes expired/quarantined nodes, omits raw node
-keys, and returns a Grid-signed result.
+keys, and returns a Grid-signed, ranked page (`cursor` reads on).
 
 The `node.schedule` intent follows the normal kernel authority path. It creates
 only a complete deterministic placement within admission lease, declared

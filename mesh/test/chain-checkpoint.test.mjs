@@ -177,3 +177,156 @@ test('checkpoint verification detects corruption in the suffix', async t => {
   assert.equal(verification.seq, 2);
   assert.equal(verification.reason, 'payload_decryption_failed');
 });
+
+function appendAccepted(store, index) {
+  store.appendEvents({
+    traceId: `trace_checkpoint_head_${index}`,
+    actor: 'person:checkpoint',
+    events: [acceptedEvent(index)]
+  });
+}
+
+function readHead(store) {
+  const row = store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoint_head_v1'"
+  ).get();
+  return row ? JSON.parse(row.value) : null;
+}
+
+test('routine appends do not read checkpoint history (S-03)', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 3 });
+  appendAccepted(store, 1); // first append always checkpoints
+  assert.deepEqual(readHead(store), {
+    seq: 1,
+    checkpoint_digest: store.listChainCheckpoints().at(-1).checkpoint_digest
+  });
+
+  const readHistory = store.readCheckpointHistory.bind(store);
+  let historyReads = 0;
+  store.readCheckpointHistory = () => {
+    historyReads += 1;
+    return readHistory();
+  };
+  appendAccepted(store, 2);
+  appendAccepted(store, 3);
+  assert.equal(historyReads, 0, 'appends before the interval never parse history');
+
+  appendAccepted(store, 4);
+  assert.equal(historyReads, 1, 'the append that reaches the interval takes the full path');
+  assert.equal(store.listChainCheckpoints().at(-1).statement.seq, 4);
+  assert.equal(readHead(store).seq, 4);
+  assert.equal(store.verifyChain().valid, true);
+});
+
+test('a missing, malformed or impossible checkpoint head falls back to the history', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 3 });
+  appendAccepted(store, 1);
+  const setHead = value => store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoint_head_v1'"
+  ).run(value);
+
+  // Ahead of the chain: rewritten from the history, no checkpoint skipped.
+  setHead(JSON.stringify({ seq: 999, checkpoint_digest: 'a'.repeat(64) }));
+  appendAccepted(store, 2);
+  assert.equal(readHead(store).seq, 1);
+
+  setHead('not json');
+  appendAccepted(store, 3);
+  assert.equal(readHead(store).seq, 1);
+
+  // A pre-S-03 store has no head at all.
+  store.db.prepare("DELETE FROM meta WHERE key = 'chain_checkpoint_head_v1'").run();
+  appendAccepted(store, 4);
+  assert.equal(readHead(store).seq, 4);
+  assert.equal(store.listChainCheckpoints().length, 2);
+});
+
+test('an edited checkpoint head cannot make a tampered history verify', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 3 });
+  appendAccepted(store, 1);
+  const history = JSON.parse(store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoints_v1'"
+  ).get().value);
+  history[0].checkpoint_digest = 'f'.repeat(64);
+  store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'"
+  ).run(JSON.stringify(history));
+  store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoint_head_v1'"
+  ).run(JSON.stringify({ seq: 1, checkpoint_digest: 'f'.repeat(64) }));
+
+  appendAccepted(store, 2); // not due, so the corrupt history is not consulted
+  assert.equal(store.verifyChain().reason, 'checkpoint_digest_mismatch');
+  assert.equal(store.verifyFullChain().valid, true);
+});
+
+function countVerifiedCheckpoints(store) {
+  const verifyStoredEvent = store.verifyStoredEvent.bind(store);
+  const counter = { count: 0 };
+  store.verifyStoredEvent = row => {
+    counter.count += 1;
+    return verifyStoredEvent(row);
+  };
+  return counter;
+}
+
+function rewriteHistory(store, edit) {
+  const history = JSON.parse(store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoints_v1'"
+  ).get().value);
+  edit(history);
+  store.db.prepare(
+    "UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'"
+  ).run(JSON.stringify(history));
+}
+
+test('checkpoint verification re-verifies only records after an unchanged, verified prefix (S-03)', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 1 });
+  for (let index = 1; index <= 5; index += 1) appendAccepted(store, index);
+  const counter = countVerifiedCheckpoints(store);
+
+  assert.equal(store.verifyChain().valid, true);
+  assert.equal(counter.count, 5, 'first verification checks every checkpoint');
+
+  counter.count = 0;
+  assert.equal(store.verifyChain().valid, true);
+  assert.equal(counter.count, 1, 'unchanged history: only the latest checkpoint');
+
+  appendAccepted(store, 6);
+  appendAccepted(store, 7);
+  counter.count = 0;
+  const verified = store.verifyChain();
+  assert.equal(verified.valid, true);
+  assert.equal(verified.checkpoint_count, 7);
+  assert.equal(counter.count, 3, 'the previous latest plus the two new checkpoints');
+});
+
+test('a verified checkpoint prefix cannot hide later edits, key changes or a changed latest record', async t => {
+  const { store } = await checkpointFixture(t, { checkpointInterval: 1 });
+  for (let index = 1; index <= 4; index += 1) appendAccepted(store, index);
+  assert.equal(store.verifyChain().valid, true);
+
+  // An earlier record edited after it was verified, digest field left intact.
+  const original = store.db.prepare(
+    "SELECT value FROM meta WHERE key = 'chain_checkpoints_v1'"
+  ).get().value;
+  rewriteHistory(store, history => {
+    history[0].statement.created_at = '2001-01-01T00:00:00.000Z';
+  });
+  assert.equal(store.verifyChain().reason, 'checkpoint_id_mismatch');
+
+  // The latest record is always verified again.
+  store.db.prepare("UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'").run(original);
+  assert.equal(store.verifyChain().valid, true);
+  rewriteHistory(store, history => {
+    history.at(-1).checkpoint_digest = 'e'.repeat(64);
+  });
+  assert.equal(store.verifyChain().reason, 'checkpoint_digest_mismatch');
+
+  // A change to the verification keys invalidates the verified prefix.
+  store.db.prepare("UPDATE meta SET value = ? WHERE key = 'chain_checkpoints_v1'").run(original);
+  assert.equal(store.verifyChain().valid, true);
+  const signer = JSON.parse(original)[0].attestation.key_id;
+  store.verificationKeys.delete(signer);
+  assert.equal(store.verifyChain().reason, 'checkpoint_verification_key_mismatch');
+});

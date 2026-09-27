@@ -1,5 +1,4 @@
 import { sha256, AxiomError } from './canonical.mjs';
-import { safeTextEqual } from './identity.mjs';
 import { MachineIngressGuard } from './machine-ingress.mjs';
 
 export function createBearerAuthenticator(principals, {
@@ -10,12 +9,17 @@ export function createBearerAuthenticator(principals, {
     if (typeof header !== 'string' || !header.startsWith('Bearer ')) {
       throw new AxiomError('authentication_required', 'A bearer token is required', 401);
     }
-    const token = header.slice('Bearer '.length);
-    const digest = sha256(token);
-    for (const [knownDigest, candidate] of principals.entries()) {
-      if (safeTextEqual(knownDigest, digest)) return candidate;
+    // The registry is keyed by each token's SHA-256 digest, so one lookup
+    // resolves a token whatever the number of principals (scalability audit
+    // S-07). Hits and misses take the same path: one hash, one lookup. The
+    // lookup compares the digest of the presented token, never the token,
+    // and an attacker cannot steer a digest toward a stored one, so its
+    // timing reveals nothing about any registered token.
+    const principal = principals.get(sha256(header.slice('Bearer '.length)));
+    if (principal === undefined) {
+      throw new AxiomError('invalid_token', 'Bearer token is invalid', 401);
     }
-    throw new AxiomError('invalid_token', 'Bearer token is invalid', 401);
+    return principal;
   };
 
   const authenticate = async function authenticate({ req, body = Buffer.alloc(0) }) {

@@ -33,9 +33,11 @@ async function fixture(t, Store = GridStore) {
   return { store };
 }
 
-test('ordinary Grid remains core schema 10 and does not opt into sovereign information state', async t => {
+// Core schema 11 adds only the paged-collection indexes (scalability audit
+// S-11); the SIEA ledger below stays separate and unchanged.
+test('ordinary Grid is core schema 11 and does not opt into sovereign information state', async t => {
   const { store } = await fixture(t, GridStore);
-  assert.equal(store.getStatus().schema_version, 10);
+  assert.equal(store.getStatus().schema_version, 11);
   assert.equal(store.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'siea_objects'").get(), undefined);
   assert.equal(store.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sovereign_information_schema_migrations'").get(), undefined);
 });
@@ -43,7 +45,7 @@ test('ordinary Grid remains core schema 10 and does not opt into sovereign infor
 test('SIEA store creates metadata-minimized state through a separate layered migration ledger', async t => {
   const { store } = await fixture(t, SovereignInformationGridStore);
   const status = store.getStatus();
-  assert.equal(status.schema_version, 10);
+  assert.equal(status.schema_version, 11);
   assert.equal(status.sovereign_information_schema_version, 1);
   const columns = store.db.prepare('PRAGMA table_info(siea_objects)').all().map(row => row.name);
   assert.deepEqual(columns, [

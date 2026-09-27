@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee",
+  "registry_digest": "bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -9,6 +9,17 @@
       "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
       "assertions": [
         "assert.equal(capsulesAfterRevoke.capsules[0].status, 'revoked');"
+      ]
+    },
+    {
+      "capability_id": "circles.member-exchange",
+      "path": "mesh/test/circle-transport.test.mjs",
+      "test": "a member publishes through their own node: records, a disclosure key, and sealed content only the audience opens",
+      "assertions": [
+        "assert.equal(first.peers[0].status, 'synced', JSON.stringify(first.peers[0]));",
+        "assert.deepEqual(sealed.recipients, ['alice', 'bob'], 'carol has no disclosure key, so she is not a recipient');",
+        "assert.deepEqual((await cli('open', bobFiles.configFile, sealed.digest)).value, { budget: 1200, currency: 'EUR' });",
+        "await assert.rejects(openCirclePeerContent(await loadCirclePeerRuntime(plain.configFile), sealed.digest), /no member.disclosure_key_file/);"
       ]
     },
     {
@@ -228,7 +239,7 @@
       "test": "current service network policy is exact, default-deny, and segmented",
       "assertions": [
         "assert.equal(result.default_action, 'deny');",
-        "assert.equal(result.routes, 42);"
+        "assert.equal(result.routes, 45);"
       ]
     },
     {
@@ -295,7 +306,7 @@
       "path": "mesh/test/gateway-client-contract.test.mjs",
       "test": "current Gateway client contract is exact and covers every authenticated route",
       "assertions": [
-        "assert.equal(result.routes, 31);",
+        "assert.equal(result.routes, 33);",
         "assert.equal(result.direct_service_access, false);"
       ]
     },

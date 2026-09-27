@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 31 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 33 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -57,26 +57,36 @@ client.
 | `events.list` | `GET /v1/events` | owner or `audit:read` | `actor`, `after`, `limit` |
 | `social.get` | `GET /v1/social` | owner | optional `publication_limit` (1-100; default 100) |
 | `social_remote_review.get` | `GET /v1/social/remote-review` | owner | none |
-| `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) |
-| `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) |
-| `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) |
-| `nodes.discover` | `GET /v1/node-discovery` | `node:read` | capability, role, security, lease, and limit filters |
-| `node_schedules.list` | `GET /v1/node-schedules` | `node:read` | none |
-| `consents.list` | `GET /v1/consents` | owner | none |
-| `approvals.list` | `GET /v1/approvals` | owner | none |
-| `memory.list` | `GET /v1/memory` | owner or consented share | optional owner |
-| `accounting.get` | `GET /v1/accounting` | owner | none |
-| `imports.list` | `GET /v1/imports` | owner | none |
+| `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `nodes.discover` | `GET /v1/node-discovery` | `node:read` | capability, role, security, lease, and limit filters; ranked, paged by `cursor` |
+| `node_schedules.list` | `GET /v1/node-schedules` | `node:read` | optional `limit` (1-100; default 100) and `cursor` |
+| `consents.list` | `GET /v1/consents` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `approvals.list` | `GET /v1/approvals` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `memory.list` | `GET /v1/memory` | owner or consented share | optional `owner`, `limit` (1-500; default 100) and `cursor` |
+| `accounting.get` | `GET /v1/accounting` | owner | optional `limit` (1-100; default 100) and `cursor`, paging journals |
+| `imports.list` | `GET /v1/imports` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `imports.get` | `GET /v1/imports/:id` | owner | `id` |
-| `appeals.list` | `GET /v1/appeals` | owner | none |
-| `storage_offers.list` | `GET /v1/storage-offers` | owner | none |
-| `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id` |
+| `appeals.list` | `GET /v1/appeals` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `storage_offers.list` | `GET /v1/storage-offers` | owner | optional `limit` (1-100; default 100) and `cursor` |
+| `sync.list` | `GET /v1/sync` | owner | `namespace`, `record_id`, `limit` (1-200; default 100) and `cursor` |
+| `sync_updates.get` | `GET /v1/sync/updates/:id` | owner | `id`; one update with its value, for a head that `sync.list` returned with `value_omitted` |
+| `sync_bundles.list` | `GET /v1/sync/bundles` | owner | optional `limit` (1-100; default 100) and `cursor`, newest first |
 | `sync_bundles.get` | `GET /v1/sync/bundles/:digest` | owner | `digest` |
-| `backups.list` | `GET /v1/backups` | owner | none |
+| `backups.list` | `GET /v1/backups` | owner | optional `limit` (1-100; default 100) and `cursor` |
 | `backups.get` | `GET /v1/backups/:id` | owner | `id` |
 | `exports.get` | `GET /v1/exports/:id` | owner | `id` |
 | `export_bundles.get` | `GET /v1/exports/:id/bundle` | owner | `id` |
 | `audit.verify` | `GET /v1/audit/verify` | `audit:read` | none |
+
+Paged collections return a `page` object with `limit`, `has_more` and
+`next_cursor`. Pass `next_cursor` back as `cursor` until `has_more` is false.
+Items are ordered by time and then identifier, and a page starts strictly
+after the cursor. Under concurrent writes no item is returned twice, and an
+item written behind the cursor appears on the next pass. Cursors are opaque,
+accepted only in their canonical form, and valid only for the collection
+that issued them.
 
 `social.get` is deliberately owner-derived. The Gateway ignores any raw
 `owner=` query text and derives the snapshot owner only from the authenticated
@@ -122,9 +132,29 @@ An idempotency key is mandatory, 16 to 160 characters, and limited to letters,
 digits, underscore, period, colon, and hyphen. The same principal and key derive
 the same intent identifier. Reusing a key with a different effective request
 returns `idempotency_conflict`. An identical retry that remains eligible under
-the server's authentication, admission, and response checks returns the same
-success fields as the first response plus `idempotent_replay: true`. A recorded
-success does not waive those checks.
+the server's authentication, admission, and response checks answers as the
+first request did, without running it again. A recorded outcome does not waive
+those checks:
+
+- a completed intent returns the same success fields as the first response
+  plus `idempotent_replay: true`;
+- a denied intent returns its error code and HTTP status again, with
+  details `intent_id`, `status` and `idempotent_replay: true`. (A denial
+  recorded before the status was kept answers `409` if it awaited
+  confirmation, otherwise `403`);
+- a failed intent answers `409`: its outcome is final for that key. The
+  code is the recorded failure code, such as `intent_interrupted` when the
+  Hypervisor stopped before the intent finished. A code the contract marks
+  retryable becomes `intent_failed`, because retrying the same key would
+  only repeat the answer. The details add `failure_code`;
+- an intent that has not finished answers `409 intent_in_progress`. Retry
+  later with the same key.
+
+Before, a replayed denial or failure answered `200` with the stored record,
+which the client refused as an invalid response. `intent_interrupted`,
+`intent_failed` and `intent_in_progress` are not stable codes, so the client
+presents them generically, without details, and does not mark them
+retryable.
 
 The client never retries an effect automatically. An application that retries
 after an ambiguous transport failure must reuse the original key and retain the
@@ -250,7 +280,7 @@ identifier.
 
 The test suite proves:
 
-- exact 31-route and JSON Schema inventory;
+- exact 33-route and JSON Schema inventory;
 - relative-only target construction and rejection of unlisted inputs;
 - request schema and idempotency enforcement;
 - first-response and idempotent-replay compatibility;

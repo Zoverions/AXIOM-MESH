@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -108,7 +108,7 @@ visible effect.
 
 The current reference unit topology runs the four services across four exact
 single-host internal network segments. A machine-readable default-deny policy
-authorizes only 42 exact caller, destination, method, and route combinations
+authorizes only 45 exact caller, destination, method, and route combinations
 before signing or network I/O, derives each destination's active mTLS peers,
 and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. The additional
 Education edge is the bounded Hypervisor-to-Grid

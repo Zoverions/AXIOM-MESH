@@ -50,6 +50,7 @@
     "node-scheduling:drill": "node src/node-scheduling-drill.mjs",
     "online-sync": "node src/online-causal-sync.mjs",
     "online-sync:drill": "node src/online-causal-sync-drill.mjs",
+    "circle:peer": "node src/circle-peer.mjs",
     "provider:start": "node src/provider-supervisor.mjs",
     "provider:drill": "node src/provider-conformance-drill.mjs",
     "public-witness:start": "node src/public-witness-service.mjs run",

@@ -187,14 +187,14 @@ async function createStore(t) {
   return { root, dataDir, identity, key, protector, path, store, t };
 }
 
-test('social schema 1 creates local corpus tables without changing core schema 10', async t => {
+test('social schema 1 creates local corpus tables without changing the core schema version', async t => {
   const setup = await createStore(t);
   t.after(async () => {
     setup.store.close();
     await rm(setup.root, { recursive: true, force: true });
   });
   const status = setup.store.getStatus();
-  assert.equal(status.schema_version, 10);
+  assert.equal(status.schema_version, 11);
   assert.equal(status.social_schema_version, 1);
   const socialLedger = setup.store.db.prepare(`
     SELECT version, name, checksum FROM social_schema_migrations ORDER BY version
@@ -230,7 +230,7 @@ test('ordinary GridStore does not opt into the experimental social schema', asyn
     store.close();
     await rm(root, { recursive: true, force: true });
   });
-  assert.equal(store.getStatus().schema_version, 10);
+  assert.equal(store.getStatus().schema_version, 11);
   assert.equal(store.db.prepare(`
     SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'actor_states'
   `).get(), undefined);
@@ -482,7 +482,7 @@ test('supported data-key rotation re-encrypts social columns and reopens with th
     reopened.close();
     await rm(setup.root, { recursive: true, force: true });
   });
-  assert.equal(reopened.getStatus().schema_version, 10);
+  assert.equal(reopened.getStatus().schema_version, 11);
   assert.equal(reopened.getStatus().social_schema_version, 1);
   assert.equal(reopened.getActorState(f.owner, f.actorId).state_json.actor_id, f.actorId);
   assert.equal(

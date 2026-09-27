@@ -5,8 +5,17 @@
 // verification path when store.mjs is used.
 
 import { DatabaseSync } from 'node:sqlite';
-import { createPublicKey } from 'node:crypto';
-import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { createHash, createPublicKey } from 'node:crypto';
+import {
+  closeSync,
+  fsyncSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeSync
+} from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
@@ -20,9 +29,19 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
+import { COLLECTION_PAGE_MAX, decodeCollectionCursor, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
 import { runMigrations } from './migrations.mjs';
+import {
+  anchorsEnabled,
+  checkMaterializationAnchor,
+  clearMaterializationAnchor,
+  fullRebuildRequested,
+  layerFingerprint,
+  readDataVersion,
+  writeMaterializationAnchor
+} from './materialization-anchor.mjs';
 import { validateImportBundle } from '../lib/importer.mjs';
-import { validateAuthorityReducingPolicy } from '../lib/policy.mjs';
+import { policyOverlayGenerationDigest, validateAuthorityReducingPolicy } from '../lib/policy.mjs';
 import {
   verifyNodeAdmission,
   verifyNodeRenewal,
@@ -34,10 +53,14 @@ import {
   verifyCausalBundle
 } from '../lib/causal-sync.mjs';
 import {
-  discoverAdmittedNodes,
+  NODE_DISCOVERY_COLLECTION,
+  NODE_SECURITY_LEVEL_SQL,
+  discoverAdmittedNodesPage,
+  nodeDiscoveryWindow,
   effectiveScheduleStatus,
   normalizeNodeDiscoveryQuery,
   normalizeNodeScheduleRequest,
+  scheduleLoadInstant,
   selectNodePlacements
 } from '../lib/node-scheduling.mjs';
 
@@ -45,6 +68,38 @@ const GENESIS_HASH = '0'.repeat(64);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const CAPSULE_ID = /^[a-z][a-z0-9.-]{2,127}$/;
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
+/**
+ * Tables derived entirely from the event log by applyMaterializedEvent.
+ * Bump CORE_MATERIALIZER_VERSION whenever that logic changes, so anchored
+ * state from an older build is rebuilt rather than trusted.
+ */
+const CORE_MATERIALIZER_VERSION = 1;
+const CORE_MATERIALIZED_TABLES = Object.freeze([
+  'sync_heads',
+  'sync_updates',
+  'sync_bundles',
+  'governance_appeals',
+  'policy_overlays',
+  'import_records',
+  'imports',
+  'accounting_entries',
+  'accounting_journals',
+  'accounting_accounts',
+  'memory_edges',
+  'memory_objects',
+  'votes',
+  'proposals',
+  'storage_offers',
+  'node_schedules',
+  'nodes',
+  'approvals',
+  'consents',
+  'capsules',
+  'backups',
+  'exports',
+  'intents'
+]);
+
 const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ['events', 'event_id', ['payload_json']],
   ['intents', 'intent_id', ['result_json', 'error_json']],
@@ -96,6 +151,8 @@ export class GridStore {
     this.db = new DatabaseSync(path);
     try {
       this.initialize();
+      // Baseline for detecting writes by other connections during this session.
+      this.sessionDataVersion = readDataVersion(this.db);
     } catch (error) {
       try {
         this.db.close();
@@ -232,15 +289,82 @@ export class GridStore {
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('last_seq', '0');
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('last_hash', GENESIS_HASH);
     this.migrations = runMigrations(this.db);
+    this.materializationLayers = new Map();
+    this.materializationStartup = {};
+    this.registerMaterializationLayer('core', {
+      layerVersion: CORE_MATERIALIZER_VERSION,
+      schema: this.migrations,
+      tables: CORE_MATERIALIZED_TABLES
+    });
     this.migrateProtectedColumns();
     const chain = this.verifyChain();
     if (!chain.valid) {
       throw new ValidationError(`Grid evidence chain failed startup verification: ${chain.reason}`);
     }
-    this.rebuildMaterializedState();
+    this.ensureMaterialized('core', () => this.rebuildMaterializedState());
+  }
+
+  /**
+   * Declares a set of tables derived from the event log, so their state can
+   * be anchored at shutdown and trusted at the next start (see
+   * materialization-anchor.mjs).
+   */
+  registerMaterializationLayer(layer, { layerVersion, schema, tables }) {
+    this.materializationLayers.set(layer, {
+      fingerprint: layerFingerprint({ layer, layerVersion, schema }),
+      tables: Object.freeze([...tables])
+    });
+  }
+
+  /**
+   * Skips replay when a signed anchor proves the layer's tables are exactly
+   * as they were at the last clean shutdown. Otherwise replays the full log.
+   * The outcome is recorded in materializationStartup for diagnostics.
+   */
+  ensureMaterialized(layer, rebuild) {
+    if (!anchorsEnabled()) {
+      this.materializationStartup[layer] = 'replayed:anchors-disabled';
+      rebuild();
+      return;
+    }
+    if (fullRebuildRequested()) {
+      this.materializationStartup[layer] = 'replayed:forced';
+      rebuild();
+      return;
+    }
+    const check = checkMaterializationAnchor(this, layer);
+    if (check.valid) {
+      this.materializationStartup[layer] = 'anchored';
+      return;
+    }
+    this.materializationStartup[layer] = `replayed:${check.reason}`;
+    rebuild();
+  }
+
+  /**
+   * Records a signed anchor for every layer, unless another connection wrote
+   * to the database during this session -- then the state cannot be vouched
+   * for, so existing anchors are removed and the next start replays.
+   * Failure is not an error: without an anchor the next start replays.
+   */
+  recordMaterializationAnchors() {
+    if (!anchorsEnabled() || !this.materializationLayers?.size || this.db.isOpen === false) return;
+    try {
+      const externallyModified = this.sessionDataVersion === undefined
+        || readDataVersion(this.db) !== this.sessionDataVersion;
+      this.transaction(() => {
+        for (const layer of this.materializationLayers.keys()) {
+          if (externallyModified) clearMaterializationAnchor(this, layer);
+          else writeMaterializationAnchor(this, layer);
+        }
+      });
+    } catch {
+      // Intentionally ignored; see above.
+    }
   }
 
   close() {
+    this.recordMaterializationAnchors();
     this.db.close();
   }
 
@@ -300,7 +424,49 @@ export class GridStore {
     };
   }
 
+  /**
+   * Seals any legacy plaintext in protected columns.
+   *
+   * Scalability audit S-02: this used to open every protected value on every
+   * start, including every event payload, so startup cost grew with history.
+   * Once a full pass has completed for the current column mapping, a marker
+   * is recorded; later starts only open a bounded sample per column, which
+   * still fails closed on a wrong data key. A new mapping, a missing marker,
+   * AXIOM_GRID_FULL_REBUILD=1, or plaintext found in the sample all trigger
+   * the full pass again.
+   */
   migrateProtectedColumns() {
+    const marker = sha256(canonicalJson(PROTECTED_COLUMN_MAPPINGS));
+    const recorded = this.db.prepare("SELECT value FROM meta WHERE key = 'protected_columns:core'").get()?.value;
+    if (!fullRebuildRequested() && recorded === marker && this.sampleProtectedColumns(PROTECTED_COLUMN_MAPPINGS)) {
+      return;
+    }
+    this.migrateAllProtectedColumns();
+    this.db.prepare(
+      "INSERT INTO meta(key, value) VALUES ('protected_columns:core', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    ).run(marker);
+  }
+
+  /**
+   * Opens one stored value per protected column. Throws on a wrong key or
+   * corrupt ciphertext, exactly as the full pass would. Returns false if any
+   * sampled value is still plaintext, so the caller falls back to a full pass.
+   */
+  sampleProtectedColumns(mappings) {
+    for (const [table, keyExpression, columns] of mappings) {
+      for (const column of columns) {
+        const row = this.db.prepare(
+          `SELECT ${keyExpression} AS protection_key, ${column} AS value FROM ${table} WHERE ${column} IS NOT NULL LIMIT 1`
+        ).get();
+        if (!row) continue;
+        if (!this.protector.isProtected(row.value)) return false;
+        this.openJson(table, column, row.protection_key, row.value);
+      }
+    }
+    return true;
+  }
+
+  migrateAllProtectedColumns() {
     this.transaction(() => {
       for (const [table, keyExpression, columns] of PROTECTED_COLUMN_MAPPINGS) {
         const rows = this.db.prepare(
@@ -331,36 +497,12 @@ export class GridStore {
   }
 
   rebuildMaterializedState() {
-    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
     this.transaction(() => {
-      for (const table of [
-        'sync_heads',
-        'sync_updates',
-        'sync_bundles',
-        'governance_appeals',
-        'policy_overlays',
-        'import_records',
-        'imports',
-        'accounting_entries',
-        'accounting_journals',
-        'accounting_accounts',
-        'memory_edges',
-        'memory_objects',
-        'votes',
-        'proposals',
-        'storage_offers',
-        'node_schedules',
-        'nodes',
-        'approvals',
-        'consents',
-        'capsules',
-        'backups',
-        'exports',
-        'intents'
-      ]) {
+      for (const table of CORE_MATERIALIZED_TABLES) {
         this.db.exec(`DELETE FROM ${table}`);
       }
-      for (const row of rows) {
+      // Stream the log: loading it whole made memory grow with history.
+      for (const row of this.db.prepare('SELECT * FROM events ORDER BY seq').iterate()) {
         const payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
         validateMaterializedPayload(row.kind, payload);
         this.applyMaterializedEvent({
@@ -393,6 +535,7 @@ export class GridStore {
       const appended = [];
       for (const raw of events) {
         const event = normalizeEvent(raw);
+        if (TERMINAL_INTENT_EVENTS.has(event.kind)) this.requireAcceptedIntent(event.payload.intent_id, actor);
         seq += 1;
         const occurredAt = new Date().toISOString();
         const eventId = raw.event_id ?? newId('evt');
@@ -453,6 +596,85 @@ export class GridStore {
     }
   }
 
+  // An intent reaches exactly one terminal state, recorded by its own
+  // principal. Checked when appending only, so a log written before this
+  // rule still replays. Inside the commit transaction, a refused terminal
+  // event rolls back every event committed with it, including a mutation.
+  requireAcceptedIntent(intentId, actor) {
+    const row = this.db.prepare('SELECT principal, status FROM intents WHERE intent_id = ?').get(intentId);
+    if (!row) throw new AxiomError('intent_not_found', 'Intent was not found', 404);
+    if (row.principal !== actor) {
+      throw new ValidationError('An intent terminal event must be committed by its principal');
+    }
+    if (row.status !== 'accepted') {
+      throw new AxiomError('intent_not_accepted', 'Intent already reached a terminal state', 409, {
+        status: row.status
+      });
+    }
+  }
+
+  /**
+   * Closes intents that are still `accepted` but were accepted before
+   * `before` (audit S-15): their Hypervisor stopped before recording a
+   * terminal state. Each gets `intent.failed` with `intent_interrupted`,
+   * committed as its principal. A Grid effect is committed only together
+   * with `intent.completed`, so none of these intents applied one.
+   *
+   * With `intentIds`, only those intents are considered (a primary-key
+   * read), and `pending` lists those still accepted but not before the
+   * cutoff; without, every accepted intent is scanned, oldest first.
+   */
+  closeInterruptedIntents({ before, intentIds = null, limit = INTERRUPTED_INTENT_PAGE, traceId }) {
+    // Normalized, so it orders like the stored toISOString() times.
+    const cutoff = validDate(before);
+    if (!cutoff) throw new ValidationError('Interrupted intent cutoff must be an ISO timestamp');
+    const safeLimit = boundedInteger(limit, 'interrupted intent limit', 1, INTERRUPTED_INTENT_PAGE);
+    let rows;
+    const pending = [];
+    if (intentIds) {
+      if (!Array.isArray(intentIds) || intentIds.length > INTERRUPTED_INTENT_PAGE) {
+        throw new ValidationError(`Interrupted intent ids must be an array of at most ${INTERRUPTED_INTENT_PAGE}`);
+      }
+      const read = this.db.prepare(
+        "SELECT intent_id, principal, created_at FROM intents WHERE intent_id = ? AND status = 'accepted'"
+      );
+      rows = [];
+      for (const id of new Set(intentIds.map(item => assertString(item, 'intent id', { max: 160, pattern: ID })))) {
+        const row = read.get(id);
+        if (row && row.created_at < cutoff) rows.push(row);
+        else if (row) pending.push(id);
+      }
+    } else {
+      rows = this.db.prepare(`
+        SELECT intent_id, principal, created_at FROM intents
+        WHERE status = 'accepted' AND created_at < ?
+        ORDER BY created_at, intent_id
+        LIMIT ?
+      `).all(cutoff, safeLimit + 1);
+    }
+    const hasMore = !intentIds && rows.length > safeLimit;
+    const closed = [];
+    for (const row of rows.slice(0, safeLimit)) {
+      this.appendEvents({
+        traceId,
+        actor: row.principal,
+        events: [{
+          kind: 'intent.failed',
+          subject: row.intent_id,
+          payload: {
+            intent_id: row.intent_id,
+            error: {
+              code: 'intent_interrupted',
+              message: 'The Hypervisor stopped before this intent reached a terminal state; no Grid effect was committed for it.'
+            }
+          }
+        }]
+      });
+      closed.push({ intent_id: row.intent_id, principal: row.principal, accepted_at: row.created_at });
+    }
+    return { closed, has_more: hasMore, ...(intentIds ? { pending } : {}) };
+  }
+
   preflightExportRequest(actor, rawEvent) {
     assertString(actor, 'actor', { max: 160, pattern: ID });
     const event = normalizeEvent(rawEvent);
@@ -462,7 +684,9 @@ export class GridStore {
     if (event.payload.principal !== actor) {
       throw new ValidationError('Export principal must match the authenticated actor');
     }
-    this.collectExportRecords(actor, event.payload.scope);
+    // Walk every record so scope errors surface before the request is
+    // committed, without holding the records.
+    for (const record of this.exportRecords(actor, event.payload.scope)) void record;
   }
 
   applyMaterializedEvent(event) {
@@ -883,7 +1107,9 @@ export class GridStore {
           }
           const schedule = selectNodePlacements({
             nodes: this.decodedNodes(),
-            schedules: this.decodedSchedules(),
+            schedules: this.loadBearingSchedules(
+              scheduleLoadInstant(event.occurred_at, 'schedule occurred_at')
+            ),
             normalizedRequest: normalized,
             occurredAt: event.occurred_at
           });
@@ -1164,21 +1390,49 @@ export class GridStore {
     return rows.map(row => this.decodeEventRow(row));
   }
 
-  listCapsules({ limit } = {}) {
-    const rows = limit === undefined
-      ? this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC').all()
-      : this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC LIMIT ?').all(
-          boundedInteger(limit, 'capsule list limit', 1, 100)
-        );
+  /**
+   * How many causal sync bundles this owner's history holds, and the latest
+   * one's position. Signed by the Grid and bound to a caller nonce, it lets
+   * an online sync client detect a source that withholds bundle events.
+   */
+  syncHead(actor) {
+    const row = this.db.prepare(`
+      SELECT COUNT(*) AS count, MAX(seq) AS last_seq FROM events
+      WHERE actor = ? AND kind = 'sync.bundle.applied'
+    `).get(actor);
+    const lastSeq = Number(row.last_seq ?? 0);
+    return {
+      sync_event_count: Number(row.count),
+      last_sync_seq: lastSeq,
+      last_sync_event_hash: lastSeq
+        ? this.db.prepare('SELECT event_hash FROM events WHERE seq = ?').get(lastSeq).event_hash
+        : null
+    };
+  }
+
+  listCapsules({ limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'registered_at', idColumn: 'digest' });
+    const rows = this.db.prepare(`
+      SELECT * FROM capsules
+      ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+      ORDER BY registered_at DESC, digest DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'capsule list limit', 1, COLLECTION_PAGE_MAX + 1)])
+    );
     return rows.map(
       row => this.decodeProtectedRow('capsules', 'digest', row, ['manifest_json'])
     );
   }
 
-  listProposals({ limit } = {}) {
+  listProposals({ limit, after } = {}) {
     const safeLimit = limit === undefined
       ? null
-      : boundedInteger(limit, 'proposal list limit', 1, 100);
+      : boundedInteger(limit, 'proposal list limit', 1, COLLECTION_PAGE_MAX + 1);
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'proposal_id' });
+    // The page of proposals is chosen first, through proposals_page_idx; only
+    // its votes are then joined and summed.
     const sql = `
       SELECT
         p.*,
@@ -1186,15 +1440,20 @@ export class GridStore {
         COALESCE(SUM(CASE WHEN v.chamber = 'human' AND v.choice = 'against' THEN v.weight ELSE 0 END), 0) AS human_against,
         COALESCE(SUM(CASE WHEN v.chamber = 'agent' AND v.choice = 'for' THEN v.weight ELSE 0 END), 0) AS agent_for,
         COALESCE(SUM(CASE WHEN v.chamber = 'agent' AND v.choice = 'against' THEN v.weight ELSE 0 END), 0) AS agent_against
-      FROM proposals p
+      FROM (
+        SELECT * FROM proposals
+        ${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+        ORDER BY created_at DESC, proposal_id DESC
+        ${safeLimit === null ? '' : 'LIMIT ?'}
+      ) p
       LEFT JOIN votes v ON v.proposal_id = p.proposal_id
       GROUP BY p.proposal_id
-      ORDER BY p.created_at DESC
-      ${safeLimit === null ? '' : 'LIMIT ?'}
+      ORDER BY p.created_at DESC, p.proposal_id DESC
     `;
-    const rows = safeLimit === null
-      ? this.db.prepare(sql).all()
-      : this.db.prepare(sql).all(safeLimit);
+    const rows = this.db.prepare(sql).all(
+      ...keyset.params,
+      ...(safeLimit === null ? [] : [safeLimit])
+    );
     return rows.map(row => this.decodeProtectedRow(
       'proposals',
       'proposal_id',
@@ -1256,6 +1515,20 @@ export class GridStore {
     `).run(occurredAt, proposalId);
   }
 
+  // Scalability audit S-15: the identity of the policy overlay set in force
+  // at `now` (which overlays, in activation order, with which digest), read
+  // from plain columns without decrypting any policy. It changes whenever an
+  // overlay activates, is rolled back or expires, so a caller holding the
+  // same generation holds the same effective policy.
+  policyOverlayGeneration(now = new Date().toISOString()) {
+    const overlays = this.db.prepare(`
+      SELECT overlay_id, policy_digest FROM policy_overlays
+      WHERE status = 'active' AND (expires_at IS NULL OR expires_at > ?)
+      ORDER BY activated_at, overlay_id
+    `).all(now).map(row => [row.overlay_id, row.policy_digest]);
+    return policyOverlayGenerationDigest(overlays);
+  }
+
   listActivePolicyOverlays(now = new Date().toISOString()) {
     return this.db.prepare(`
       SELECT overlay_id, proposal_id, source_type, policy_digest, policy_json,
@@ -1271,12 +1544,18 @@ export class GridStore {
     ));
   }
 
-  listGovernanceAppeals(principal) {
+  listGovernanceAppeals(principal, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'appeal_id' });
     return this.db.prepare(`
       SELECT * FROM governance_appeals
-      WHERE appellant = ?
-      ORDER BY created_at DESC
-    `).all(principal).map(row => this.decodeProtectedRow(
+      WHERE appellant = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, appeal_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      principal,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'appeal limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ).map(row => this.decodeProtectedRow(
       'governance_appeals',
       'appeal_id',
       row,
@@ -1296,14 +1575,58 @@ export class GridStore {
     );
   }
 
-  listApprovals(principal, { limit = 100 } = {}) {
-    const safeLimit = boundedInteger(limit, 'approval limit', 1, 100);
-    const rows = this.db.prepare(`
-      SELECT * FROM approvals
-      WHERE approver = ? OR requester = ?
-      ORDER BY created_at DESC
+  // One page of a principal's consents for the API. Consent checks use
+  // listConsents, which must see every receipt.
+  pageConsents(principal, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'consent_id' });
+    const safeLimit = boundedInteger(limit, 'consent limit', 1, COLLECTION_PAGE_MAX + 1);
+    const branch = column => `
+      SELECT * FROM (
+        SELECT consent_id, subject, controller, purpose, scopes_json, expires_at,
+               status, created_at, revoked_at
+        FROM consents
+        WHERE ${column} = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+        ORDER BY created_at DESC, consent_id DESC
+        LIMIT ?
+      )`;
+    return this.db.prepare(`
+      ${branch('subject')}
+      UNION
+      ${branch('controller')}
+      ORDER BY created_at DESC, consent_id DESC
       LIMIT ?
-    `).all(principal, principal, safeLimit + 1);
+    `).all(
+      principal, ...keyset.params, safeLimit,
+      principal, ...keyset.params, safeLimit,
+      safeLimit
+    ).map(
+      row => this.decodeProtectedRow('consents', 'consent_id', row, ['scopes_json'])
+    );
+  }
+
+  listApprovals(principal, { limit = 100, after } = {}) {
+    const safeLimit = boundedInteger(limit, 'approval limit', 1, COLLECTION_PAGE_MAX + 1);
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'approval_id' });
+    // One index seek per role, each bounded by the page, merged: sorting
+    // every approval the principal ever touched is avoided.
+    const branch = column => `
+      SELECT * FROM (
+        SELECT * FROM approvals
+        WHERE ${column} = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+        ORDER BY created_at DESC, approval_id DESC
+        LIMIT ?
+      )`;
+    const rows = this.db.prepare(`
+      ${branch('approver')}
+      UNION
+      ${branch('requester')}
+      ORDER BY created_at DESC, approval_id DESC
+      LIMIT ?
+    `).all(
+      principal, ...keyset.params, safeLimit + 1,
+      principal, ...keyset.params, safeLimit + 1,
+      safeLimit + 1
+    );
     const truncated = rows.length > safeLimit;
     if (truncated) rows.pop();
     return { approvals: rows, truncated };
@@ -1324,19 +1647,40 @@ export class GridStore {
     return row;
   }
 
-  listMemory(requester, owner = requester, { limit = 100 } = {}) {
+  listMemory(requester, owner = requester, { limit = 100, after } = {}) {
     const safeLimit = boundedInteger(limit, 'memory limit', 1, 500);
+    const keyset = keysetClause(after, {
+      sortColumn: 'created_at',
+      idColumn: 'object_id',
+      descending: false
+    });
     const objects = this.db.prepare(`
       SELECT * FROM memory_objects
-      WHERE owner = ? AND status = 'active'
+      WHERE owner = ? AND status = 'active' ${keyset.sql ? `AND ${keyset.sql}` : ''}
       ORDER BY created_at, object_id
       LIMIT ?
-    `).all(owner, safeLimit + 1);
+    `).all(owner, ...keyset.params, safeLimit + 1);
     const truncated = objects.length > safeLimit;
     if (truncated) objects.pop();
+    // The cursor follows the last object scanned, not the last one visible:
+    // objects the requester may not read still advance the page.
+    const last = objects.at(-1);
+    return {
+      ...this.memoryGraph(requester, owner, objects, truncated),
+      page: {
+        limit: safeLimit,
+        has_more: truncated,
+        next_cursor: truncated && last
+          ? encodeCollectionCursor('memory', last.created_at, last.object_id)
+          : null
+      }
+    };
+  }
+
+  memoryGraph(requester, owner, objects, truncated) {
     const visible = owner === requester
       ? objects
-      : objects.filter(row => this.hasMemoryConsent(owner, requester, row.object_id));
+      : objects.filter(this.memoryConsentFilter(owner, requester));
     const visibleIds = new Set(visible.map(row => row.object_id));
     const decodedObjects = visible.map(row => this.decodeProtectedRow(
       'memory_objects',
@@ -1354,15 +1698,23 @@ export class GridStore {
     return { owner, objects: decodedObjects, edges, truncated };
   }
 
-  hasMemoryConsent(owner, controller, objectId) {
+  // Which of an owner's memory objects a controller may read, decided from
+  // one read of their active consents rather than one per object (scalability
+  // audit S-11): `memory:read` grants all, `memory:<id>:read` grants one.
+  memoryConsentFilter(owner, controller) {
     const rows = this.db.prepare(`
       SELECT consent_id, scopes_json FROM consents
       WHERE subject = ? AND controller = ? AND status = 'active' AND expires_at > ?
     `).all(owner, controller, new Date().toISOString());
-    return rows.some(row => {
-      const scopes = this.openJson('consents', 'scopes_json', row.consent_id, row.scopes_json);
-      return scopes.includes('memory:read') || scopes.includes(`memory:${objectId}:read`);
-    });
+    const scopes = new Set(rows.flatMap(row => (
+      this.openJson('consents', 'scopes_json', row.consent_id, row.scopes_json)
+    )));
+    if (scopes.has('memory:read')) return () => true;
+    return row => scopes.has(`memory:${row.object_id}:read`);
+  }
+
+  hasMemoryConsent(owner, controller, objectId) {
+    return this.memoryConsentFilter(owner, controller)({ object_id: objectId });
   }
 
   applyAccountingJournal(p, occurredAt) {
@@ -1403,22 +1755,37 @@ export class GridStore {
     });
   }
 
-  listAccounting(owner) {
+  // With `limit`, journals are one keyset page in (created_at, journal_id)
+  // order (scalability audit S-10); accounts and balances stay whole. Without
+  // it every journal is returned, as exports require.
+  listAccounting(owner, { limit, after } = {}) {
     const accounts = this.db.prepare(`
       SELECT * FROM accounting_accounts WHERE owner = ? ORDER BY unit, account_id
     `).all(owner);
-    const journals = this.db.prepare(`
-      SELECT * FROM accounting_journals WHERE owner = ? ORDER BY created_at, journal_id
-    `).all(owner).map(row => {
-      const journal = this.decodeProtectedRow(
-        'accounting_journals',
-        'journal_id',
-        row,
-        ['memo_json']
-      );
-      journal.entries = this.db.prepare(`
-        SELECT * FROM accounting_entries WHERE journal_id = ? ORDER BY line_no
-      `).all(row.journal_id).map(entry => ({
+    const keyset = keysetClause(after, {
+      sortColumn: 'created_at',
+      idColumn: 'journal_id',
+      descending: false
+    });
+    const pageClause = `
+      WHERE owner = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at, journal_id
+      ${limit === undefined ? '' : 'LIMIT ?'}`;
+    const pageParams = [
+      owner,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'journal limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ];
+    // Every entry of the page's journals in one joined read, grouped here,
+    // rather than one query per journal (scalability audit S-11).
+    const entriesByJournal = new Map();
+    for (const entry of this.db.prepare(`
+      SELECT e.* FROM accounting_entries e
+      JOIN (SELECT journal_id FROM accounting_journals ${pageClause}) p ON p.journal_id = e.journal_id
+      ORDER BY e.journal_id, e.line_no
+    `).all(...pageParams)) {
+      const entries = entriesByJournal.get(entry.journal_id) ?? [];
+      entries.push({
         ...entry,
         metadata_json: this.openJson(
           'accounting_entries',
@@ -1426,7 +1793,19 @@ export class GridStore {
           `${entry.journal_id}:${entry.line_no}`,
           entry.metadata_json
         )
-      }));
+      });
+      entriesByJournal.set(entry.journal_id, entries);
+    }
+    const journals = this.db.prepare(`
+      SELECT * FROM accounting_journals ${pageClause}
+    `).all(...pageParams).map(row => {
+      const journal = this.decodeProtectedRow(
+        'accounting_journals',
+        'journal_id',
+        row,
+        ['memo_json']
+      );
+      journal.entries = entriesByJournal.get(row.journal_id) ?? [];
       return journal;
     });
     const balances = this.db.prepare(`
@@ -1520,10 +1899,18 @@ export class GridStore {
     `).run(p.import_id);
   }
 
-  listImports(principal) {
+  listImports(principal, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'staged_at', idColumn: 'import_id' });
     return this.db.prepare(`
-      SELECT * FROM imports WHERE principal = ? ORDER BY staged_at DESC
-    `).all(principal).map(row => this.decodeProtectedRow(
+      SELECT * FROM imports
+      WHERE principal = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY staged_at DESC, import_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      principal,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'import limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ).map(row => this.decodeProtectedRow(
       'imports',
       'import_id',
       row,
@@ -1558,8 +1945,8 @@ export class GridStore {
     return output;
   }
 
-  listNodes({ asOf = new Date().toISOString(), limit } = {}) {
-    return this.decodedNodes({ limit }).map(node => {
+  listNodes({ asOf = new Date().toISOString(), limit, after } = {}) {
+    return this.decodedNodes({ limit, after }).map(node => {
       if (node.status === 'active' && node.expires_at <= asOf) {
         node.status = 'expired';
       }
@@ -1567,23 +1954,38 @@ export class GridStore {
     });
   }
 
-  discoverNodes(query, { asOf = new Date().toISOString() } = {}) {
-    return discoverAdmittedNodes(
-      this.listNodes({ asOf }),
-      normalizeNodeDiscoveryQuery(query),
-      { asOf }
+  // Scalability audit S-10: discovery pages in ranking order (security level
+  // high to low, then node id). SQL drops inactive, expiring and
+  // under-level nodes on plain columns and orders the rest; only the rows a
+  // page needs (plus one) are decoded, never every node ever registered.
+  discoverNodes(query, { asOf = new Date().toISOString(), after } = {}) {
+    const normalized = normalizeNodeDiscoveryQuery(query);
+    const { instant, leaseBoundary } = nodeDiscoveryWindow(normalized, asOf);
+    const cursor = decodeCollectionCursor(NODE_DISCOVERY_COLLECTION, after);
+    const level = NODE_SECURITY_LEVEL_SQL;
+    const rows = this.db.prepare(`
+      SELECT * FROM nodes
+      WHERE status = 'active' AND expires_at > ? AND ${level} >= ?
+        ${cursor ? `AND (${level} < ? OR (${level} = ? AND node_id > ?))` : ''}
+      ORDER BY ${level} DESC, node_id ASC
+    `).iterate(
+      leaseBoundary,
+      normalized.minimum_security_level,
+      ...(cursor ? [Number(cursor.sort), Number(cursor.sort), cursor.id] : [])
     );
+    const store = this;
+    function* decoded() {
+      for (const row of rows) yield store.decodeNodeRow(row);
+    }
+    return discoverAdmittedNodesPage(decoded(), normalized, { asOf: instant });
   }
 
   getNodeSchedule(scheduleId, requester, {
     asOf = new Date().toISOString()
   } = {}) {
-    const schedules = this.decodedSchedules();
-    const schedule = schedules.find(
-      item => (
-        item.schedule_id === scheduleId
-        && item.requester === requester
-      )
+    const [schedule] = this.decodedSchedules(
+      'WHERE schedule_id = ? AND requester = ?',
+      [scheduleId, requester]
     );
     if (!schedule) {
       throw new AxiomError(
@@ -1594,38 +1996,55 @@ export class GridStore {
     }
     schedule.status = effectiveScheduleStatus(
       schedule,
-      this.listNodes({ asOf }),
-      { asOf, schedules }
+      this.placementNodes([schedule], asOf),
+      { asOf, schedules: this.loadBearingSchedules(scheduleLoadInstant(asOf)) }
     );
     return schedule;
   }
 
+  // Scalability audit S-11: a requester's page is an index seek, and status
+  // reads only the nodes that page is placed on and the schedules that can
+  // carry load, never every schedule ever recorded.
   listNodeSchedules(requester, {
     asOf = new Date().toISOString(),
-    limit = 100
+    limit = 100,
+    after
   } = {}) {
-    const safeLimit = boundedInteger(limit, 'node schedule limit', 1, 100);
-    const nodes = this.listNodes({ asOf });
-    const schedules = this.decodedSchedules();
-    const owned = schedules.filter(schedule => schedule.requester === requester);
+    const safeLimit = boundedInteger(limit, 'node schedule limit', 1, COLLECTION_PAGE_MAX + 1);
+    const instant = scheduleLoadInstant(asOf);
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'schedule_id' });
+    const owned = this.decodedSchedules(
+      `WHERE requester = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, schedule_id DESC
+      LIMIT ?`,
+      [requester, ...keyset.params, safeLimit + 1]
+    );
     const truncated = owned.length > safeLimit;
+    const page = owned.slice(0, safeLimit);
+    const nodes = this.placementNodes(page, asOf);
+    const schedules = page.length ? this.loadBearingSchedules(instant) : [];
     return {
-      schedules: owned
-        .slice(0, safeLimit)
-        .map(schedule => ({
-          ...schedule,
-          status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
-        }))
-        .sort((left, right) => right.created_at.localeCompare(left.created_at)),
+      schedules: page.map(schedule => ({
+        ...schedule,
+        status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
+      })),
       truncated
     };
   }
 
-  listStorageOffers(owner) {
+  listStorageOffers(owner, { limit, after } = {}) {
     const now = new Date().toISOString();
+    const keyset = keysetClause(after, { sortColumn: 'created_at', idColumn: 'offer_id' });
     return this.db.prepare(`
-      SELECT * FROM storage_offers WHERE owner = ? ORDER BY created_at DESC
-    `).all(owner).map(row => {
+      SELECT * FROM storage_offers
+      WHERE owner = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY created_at DESC, offer_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}
+    `).all(
+      owner,
+      ...keyset.params,
+      ...(limit === undefined ? [] : [boundedInteger(limit, 'storage offer limit', 1, COLLECTION_PAGE_MAX + 1)])
+    ).map(row => {
       const decoded = this.decodeProtectedRow(
         'storage_offers',
         'offer_id',
@@ -1637,34 +2056,44 @@ export class GridStore {
     });
   }
 
-  decodedNodes({ limit } = {}) {
-    const rows = limit === undefined
-      ? this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC').all()
-      : this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC LIMIT ?').all(
-          boundedInteger(limit, 'node list limit', 1, 100)
-        );
-    return rows.map(row => {
-      const decoded = this.decodeProtectedRow(
-        'nodes',
-        'node_id',
-        row,
-        [
-          'capabilities_json',
-          'discovery_json',
-          'public_key_json',
-          'quarantine_reason_json'
-        ]
-      );
-      decoded.capabilities = decoded.capabilities_json;
-      decoded.discovery = decoded.discovery_json;
-      return decoded;
-    });
+  decodedNodes({ limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'registered_at', idColumn: 'node_id' });
+    return this.decodedNodeRows(
+      `${keyset.sql ? `WHERE ${keyset.sql}` : ''}
+      ORDER BY registered_at DESC, node_id DESC
+      ${limit === undefined ? '' : 'LIMIT ?'}`,
+      [
+        ...keyset.params,
+        ...(limit === undefined ? [] : [boundedInteger(limit, 'node list limit', 1, COLLECTION_PAGE_MAX + 1)])
+      ]
+    );
   }
 
-  decodedSchedules() {
+  decodedNodeRows(clause, params) {
+    return this.db.prepare(`SELECT * FROM nodes ${clause}`).all(...params).map(row => this.decodeNodeRow(row));
+  }
+
+  decodeNodeRow(row) {
+    const decoded = this.decodeProtectedRow(
+      'nodes',
+      'node_id',
+      row,
+      [
+        'capabilities_json',
+        'discovery_json',
+        'public_key_json',
+        'quarantine_reason_json'
+      ]
+    );
+    decoded.capabilities = decoded.capabilities_json;
+    decoded.discovery = decoded.discovery_json;
+    return decoded;
+  }
+
+  decodedSchedules(clause = 'ORDER BY created_at DESC', params = []) {
     return this.db.prepare(
-      'SELECT * FROM node_schedules ORDER BY created_at DESC'
-    ).all().map(row => {
+      `SELECT * FROM node_schedules ${clause}`
+    ).all(...params).map(row => {
       const decoded = this.decodeProtectedRow(
         'node_schedules',
         'schedule_id',
@@ -1679,11 +2108,45 @@ export class GridStore {
     });
   }
 
+  /**
+   * The schedules whose placements count toward node load at `instant`
+   * (a `scheduleLoadInstant` value): exactly those `activeLoads` counts.
+   * Expired and revoked history is never decoded.
+   */
+  loadBearingSchedules(instant) {
+    return this.decodedSchedules(
+      `WHERE status IN ('active', 'degraded') AND expires_at > ?
+      ORDER BY created_at DESC`,
+      [instant]
+    );
+  }
+
+  // The admitted nodes named by `schedules`' placements, with the same
+  // expiry view as `listNodes`.
+  placementNodes(schedules, asOf) {
+    const ids = [...new Set(schedules.flatMap(
+      schedule => schedule.placements.map(placement => placement.node_id)
+    ))];
+    const nodes = [];
+    for (let index = 0; index < ids.length; index += 500) {
+      const chunk = ids.slice(index, index + 500);
+      nodes.push(...this.decodedNodeRows(
+        `WHERE node_id IN (${chunk.map(() => '?').join(', ')})`,
+        chunk
+      ));
+    }
+    return nodes.map(node => {
+      if (node.status === 'active' && node.expires_at <= asOf) {
+        node.status = 'expired';
+      }
+      return node;
+    });
+  }
+
   degradeNodeSchedules(nodeId) {
-    for (const schedule of this.decodedSchedules()) {
+    for (const schedule of this.decodedSchedules("WHERE status = 'active'")) {
       if (
-        schedule.status !== 'active'
-        || !schedule.placements.some(
+        !schedule.placements.some(
           placement => placement.node_id === nodeId
         )
       ) continue;
@@ -1695,15 +2158,16 @@ export class GridStore {
   }
 
   degradeIneligibleNodeSchedules(nodeId, asOf) {
-    const schedules = this.decodedSchedules();
-    const nodes = this.listNodes({ asOf });
-    for (const schedule of schedules) {
+    const affected = this.decodedSchedules("WHERE status = 'active'")
+      .filter(schedule => schedule.placements.some(
+        placement => placement.node_id === nodeId
+      ));
+    if (!affected.length) return;
+    const schedules = this.loadBearingSchedules(scheduleLoadInstant(asOf));
+    const nodes = this.placementNodes(affected, asOf);
+    for (const schedule of affected) {
       if (
-        schedule.status !== 'active'
-        || !schedule.placements.some(
-          placement => placement.node_id === nodeId
-        )
-        || effectiveScheduleStatus(
+        effectiveScheduleStatus(
           schedule,
           nodes,
           { asOf, schedules }
@@ -1952,18 +2416,39 @@ export class GridStore {
     return summary;
   }
 
-  listCausalSync(owner, { namespace, recordId } = {}) {
-    const clauses = ['h.owner = ?'];
+  // Causal sync state is paged by record (scalability audit S-10). A page
+  // always holds every current head of each record it lists, so a record's
+  // status and the conflict count are never computed from a partial set of
+  // heads, as a fixed row limit could. Pages follow (namespace, record_id)
+  // order from an opaque cursor, and stop at the record limit or once the
+  // listed records pass a byte budget, which keeps a page under the 1 MiB
+  // internal response ceiling unless one record alone is larger.
+  listCausalSync(owner, { namespace, recordId, cursor, limit = SYNC_PAGE_DEFAULT_RECORDS } = {}) {
+    const safeLimit = boundedInteger(limit, 'sync page limit', 1, SYNC_PAGE_MAX_RECORDS);
+    const after = cursor === undefined ? null : decodeSyncCursor(cursor);
+    const clauses = ['owner = ?'];
     const parameters = [owner];
     if (namespace !== undefined) {
-      clauses.push('h.namespace = ?');
+      clauses.push('namespace = ?');
       parameters.push(namespace);
     }
     if (recordId !== undefined) {
-      clauses.push('h.record_id = ?');
+      clauses.push('record_id = ?');
       parameters.push(recordId);
     }
-    const rows = this.db.prepare(`
+    if (after) {
+      clauses.push('(namespace, record_id) > (?, ?)');
+      parameters.push(after.namespace, after.record_id);
+    }
+    const keys = this.db.prepare(`
+      SELECT DISTINCT namespace, record_id FROM sync_heads
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY namespace, record_id
+      LIMIT ?
+    `).all(...parameters, safeLimit + 1);
+    let hasMore = keys.length > safeLimit;
+    const pageKeys = keys.slice(0, safeLimit);
+    const headsFor = this.db.prepare(`
       SELECT
         h.owner, h.namespace, h.record_id, u.update_id, u.node_id,
         u.operation, u.value_digest, u.value_json, u.vector_json,
@@ -1971,72 +2456,159 @@ export class GridStore {
         u.public_key_digest, u.signature_json, u.status
       FROM sync_heads h
       JOIN sync_updates u ON u.update_id = h.update_id
-      WHERE ${clauses.join(' AND ')}
-      ORDER BY h.namespace, h.record_id, u.update_id
-      LIMIT 1000
-    `).all(...parameters).map(row => this.decodeProtectedRow(
-      'sync_updates',
-      'update_id',
-      row,
-      ['value_json', 'vector_json', 'resolves_json', 'signature_json']
-    ));
+      WHERE h.owner = ? AND h.namespace = ? AND h.record_id = ?
+      ORDER BY u.update_id
+    `);
     const records = [];
-    for (const row of rows) {
-      let record = records.at(-1);
-      if (
-        !record
-        || record.namespace !== row.namespace
-        || record.record_id !== row.record_id
-      ) {
-        record = {
-          owner,
-          namespace: row.namespace,
-          record_id: row.record_id,
-          status: 'active',
-          heads: []
-        };
-        records.push(record);
-      }
-      record.heads.push({
-        update_id: row.update_id,
-        node_id: row.node_id,
-        operation: row.operation,
-        value_digest: row.value_digest,
-        value: row.value_json,
-        vector: row.vector_json,
-        resolves: row.resolves_json,
-        occurred_at: row.occurred_at,
-        received_at: row.received_at,
-        author_counter: row.author_counter,
-        public_key_digest: row.public_key_digest,
-        signature: row.signature_json
-      });
-    }
-    for (const record of records) {
+    let pageBytes = 0;
+    for (const key of pageKeys) {
+      const record = {
+        owner,
+        namespace: key.namespace,
+        record_id: key.record_id,
+        status: 'active',
+        heads: headsFor.all(owner, key.namespace, key.record_id).map(row => {
+          const decoded = this.decodeProtectedRow(
+            'sync_updates',
+            'update_id',
+            row,
+            ['value_json', 'vector_json', 'resolves_json', 'signature_json']
+          );
+          return {
+            update_id: decoded.update_id,
+            node_id: decoded.node_id,
+            operation: decoded.operation,
+            value_digest: decoded.value_digest,
+            value: decoded.value_json,
+            vector: decoded.vector_json,
+            resolves: decoded.resolves_json,
+            occurred_at: decoded.occurred_at,
+            received_at: decoded.received_at,
+            author_counter: decoded.author_counter,
+            public_key_digest: decoded.public_key_digest,
+            signature: decoded.signature_json
+          };
+        })
+      };
       if (record.heads.length > 1) {
         record.status = 'conflict';
-      } else if (record.heads[0].operation === 'delete') {
+      } else if (record.heads[0]?.operation === 'delete') {
         record.status = 'tombstoned';
       }
+      let recordBytes = Buffer.byteLength(JSON.stringify(record));
+      if (records.length && pageBytes + recordBytes > SYNC_PAGE_BYTE_BUDGET) {
+        hasMore = true;
+        break;
+      }
+      if (recordBytes > SYNC_PAGE_BYTE_BUDGET) {
+        // One record larger than a whole page (several concurrent heads of
+        // up to 256 KiB each) would pass the 1 MiB response ceiling. Its
+        // heads keep every field but the value; each value is fetched on
+        // its own with GET /v1/sync/updates/:id and checked against
+        // value_digest.
+        for (const head of record.heads) {
+          head.value_bytes = Buffer.byteLength(JSON.stringify(head.value));
+          head.value = null;
+          head.value_omitted = true;
+        }
+        recordBytes = Buffer.byteLength(JSON.stringify(record));
+      }
+      records.push(record);
+      pageBytes += recordBytes;
     }
-    const bundles = this.db.prepare(`
+    // The newest bundle summaries ride along on every page under their own
+    // byte budget. A full summary lists up to 128 update identifiers (about
+    // 9.7 KB), so 100 of them next to a full page of records would pass the
+    // 1 MiB internal response ceiling. A cut list reports `truncated`.
+    const bundles = [];
+    let bundleBytes = 0;
+    let bundlesCut = false;
+    for (const row of this.db.prepare(`
       SELECT * FROM sync_bundles
       WHERE owner = ?
-      ORDER BY received_at DESC
+      ORDER BY received_at DESC, bundle_digest DESC
       LIMIT 100
-    `).all(owner).map(row => this.decodeProtectedRow(
-      'sync_bundles',
-      'bundle_digest',
-      row,
-      ['result_json']
-    ));
+    `).all(owner)) {
+      const bundle = this.decodeProtectedRow(
+        'sync_bundles',
+        'bundle_digest',
+        row,
+        ['result_json']
+      );
+      const size = Buffer.byteLength(JSON.stringify(bundle));
+      if (bundleBytes + size > SYNC_BUNDLE_BYTE_BUDGET) {
+        bundlesCut = true;
+        break;
+      }
+      bundles.push(bundle);
+      bundleBytes += size;
+    }
+    const last = records.at(-1);
     return {
       owner,
       records,
       bundles,
+      // Conflicts among the records on this page; each is counted from all
+      // of its heads.
       conflicts: records.filter(record => record.status === 'conflict').length,
-      truncated: rows.length === 1000 || bundles.length === 100
+      page: {
+        limit: safeLimit,
+        has_more: hasMore,
+        next_cursor: hasMore && last ? encodeSyncCursor(last) : null
+      },
+      truncated: hasMore || bundlesCut || bundles.length === 100
     };
+  }
+
+  /** One of the owner's sync updates, with its value (at most 256 KiB). */
+  getCausalSyncUpdate(owner, updateId) {
+    const row = this.db.prepare(`
+      SELECT * FROM sync_updates WHERE owner = ? AND update_id = ?
+    `).get(owner, updateId);
+    if (!row) {
+      throw new AxiomError('sync_update_not_found', 'Causal sync update was not found', 404);
+    }
+    const decoded = this.decodeProtectedRow(
+      'sync_updates',
+      'update_id',
+      row,
+      ['value_json', 'vector_json', 'resolves_json', 'signature_json']
+    );
+    return {
+      owner,
+      update_id: decoded.update_id,
+      bundle_digest: decoded.bundle_digest,
+      namespace: decoded.namespace,
+      record_id: decoded.record_id,
+      node_id: decoded.node_id,
+      operation: decoded.operation,
+      value_digest: decoded.value_digest,
+      value: decoded.value_json,
+      vector: decoded.vector_json,
+      resolves: decoded.resolves_json,
+      occurred_at: decoded.occurred_at,
+      received_at: decoded.received_at,
+      author_counter: decoded.author_counter,
+      public_key_digest: decoded.public_key_digest,
+      signature: decoded.signature_json,
+      status: decoded.status
+    };
+  }
+
+  // Every bundle summary, newest first, one keyset page at a time (S-10).
+  // Sync state carries only the newest that fit its budget.
+  listCausalSyncBundles(owner, { limit, after } = {}) {
+    const keyset = keysetClause(after, { sortColumn: 'received_at', idColumn: 'bundle_digest' });
+    return this.db.prepare(`
+      SELECT * FROM sync_bundles
+      WHERE owner = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY received_at DESC, bundle_digest DESC
+      LIMIT ?
+    `).all(
+      owner,
+      ...keyset.params,
+      boundedInteger(limit, 'sync bundle limit', 1, COLLECTION_PAGE_MAX + 1)
+    ).map(row => this.decodeProtectedRow('sync_bundles', 'bundle_digest', row, ['result_json']));
   }
 
   getCausalSyncBundle(owner, bundleDigest) {
@@ -2059,12 +2631,15 @@ export class GridStore {
     );
   }
 
-  listBackups(principal, { limit = 100 } = {}) {
-    const safeLimit = boundedInteger(limit, 'backup limit', 1, 100);
+  listBackups(principal, { limit = 100, after } = {}) {
+    const safeLimit = boundedInteger(limit, 'backup limit', 1, COLLECTION_PAGE_MAX + 1);
+    const keyset = keysetClause(after, { sortColumn: 'requested_at', idColumn: 'backup_id' });
     const rows = this.db.prepare(`
-      SELECT * FROM backups WHERE principal = ? ORDER BY requested_at DESC
+      SELECT * FROM backups
+      WHERE principal = ? ${keyset.sql ? `AND ${keyset.sql}` : ''}
+      ORDER BY requested_at DESC, backup_id DESC
       LIMIT ?
-    `).all(principal, safeLimit + 1);
+    `).all(principal, ...keyset.params, safeLimit + 1);
     const truncated = rows.length > safeLimit;
     if (truncated) rows.pop();
     return {
@@ -2143,23 +2718,27 @@ export class GridStore {
     }
     const principal = row.principal;
     const scope = this.openJson('exports', 'scope_json', row.export_id, row.scope_json);
-    const records = this.collectExportRecords(principal, scope);
-    const lines = records.map(record => canonicalJson(record));
-    const plaintextBundle = Buffer.from(lines.length ? `${lines.join('\n')}\n` : '');
     const exportDir = join(this.dataDir, 'exports', exportId);
     const recipient = scope.recipient;
     const manifestScope = structuredClone(scope);
     if (manifestScope.recipient) {
       manifestScope.recipient = { key_id: manifestScope.recipient.key_id };
     }
-    let storedBundle = plaintextBundle;
     let bundleName = 'bundle.jsonl';
     let bundleMediaType = 'application/x-ndjson';
     let encryption;
+    let stored;
+    let recordCount;
     if (recipient) {
+      // The recipient envelope seals the bundle whole, so an encrypted export
+      // is still assembled in memory; its plaintext never touches the disk.
+      const chunks = [];
+      const written = writeExportRecords(this.exportRecords(principal, scope), chunk => chunks.push(chunk));
+      recordCount = written.records;
       const context = `axiom:export:${exportId}:bundle.jsonl`;
-      const envelope = encryptForRecipient(plaintextBundle, recipient.public_key, context);
-      storedBundle = Buffer.from(canonicalJson(envelope));
+      const envelope = encryptForRecipient(Buffer.concat(chunks), recipient.public_key, context);
+      chunks.length = 0;
+      const storedBundle = Buffer.from(canonicalJson(envelope));
       bundleName = 'bundle.encrypted.json';
       bundleMediaType = 'application/vnd.axiom.recipient-encrypted+json';
       encryption = {
@@ -2172,9 +2751,31 @@ export class GridStore {
           media_type: 'application/x-ndjson'
         }
       };
+      await atomicWrite(join(exportDir, bundleName), storedBundle, 0o600);
+      stored = { bytes: storedBundle.length, sha256: sha256(storedBundle) };
+    } else {
+      // A plaintext bundle is written record by record while it is hashed, so
+      // memory does not grow with the export. The write is synchronous, so the
+      // records come from one consistent read of the database.
+      await mkdir(exportDir, { recursive: true, mode: 0o700 });
+      const target = join(exportDir, bundleName);
+      const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+      const fd = openSync(temp, 'wx', 0o600);
+      let written;
+      try {
+        written = writeExportRecords(this.exportRecords(principal, scope), chunk => writeAllSync(fd, chunk));
+        fsyncSync(fd);
+      } catch (error) {
+        closeSync(fd);
+        rmSync(temp, { force: true });
+        throw error;
+      }
+      closeSync(fd);
+      await rename(temp, target);
+      recordCount = written.records;
+      stored = { bytes: written.bytes, sha256: written.sha256 };
     }
     const bundlePath = join(exportDir, bundleName);
-    await atomicWrite(bundlePath, storedBundle, 0o600);
     const unsigned = {
       format: 'axiom-export.v1',
       schema_versions: {
@@ -2187,13 +2788,13 @@ export class GridStore {
       principal,
       scope: manifestScope,
       created_at: new Date().toISOString(),
-      record_count: records.length,
+      record_count: recordCount,
       files: [
         {
           name: bundleName,
           media_type: bundleMediaType,
-          bytes: storedBundle.length,
-          sha256: sha256(storedBundle)
+          bytes: stored.bytes,
+          sha256: stored.sha256
         }
       ],
       ...(encryption ? { encryption } : {}),
@@ -2221,6 +2822,13 @@ export class GridStore {
   }
 
   collectExportRecords(principal, scope) {
+    return [...this.exportRecords(principal, scope)];
+  }
+
+  // Export records in their canonical order, one at a time, so an export is
+  // written without holding every record (scalability audit S-12). Scope
+  // errors are thrown as soon as they are known.
+  *exportRecords(principal, scope) {
     const requestedTypes = new Set(Array.isArray(scope.types)
       ? scope.types
       : [
@@ -2240,37 +2848,37 @@ export class GridStore {
     const until = validDate(scope.until) ?? '9999-12-31T23:59:59.999Z';
     const objectIds = new Set(scope.object_ids ?? []);
     const capsuleIds = new Set(scope.capsule_ids ?? []);
-    const records = [];
+    const exportedCapsules = new Set();
     if (requestedTypes.has('identity')) {
-      records.push({
+      yield {
         type: 'identity_reference',
         data: {
           identity_id: principal,
           schema: 'axiom-identity-reference.v1',
           authority: 'local-authenticated-principal'
         }
-      });
+      };
     }
     if (requestedTypes.has('events')) {
       for (const row of this.db.prepare(`
         SELECT * FROM events WHERE actor = ? AND occurred_at >= ? AND occurred_at <= ? ORDER BY seq
-      `).all(principal, since, until)) {
+      `).iterate(principal, since, until)) {
         const event = this.decodeEventRow(row);
         if (
           (objectIds.size || capsuleIds.size)
           && !eventMatchesSelectors(event, objectIds, capsuleIds)
         ) continue;
-        records.push({ type: 'event', data: event });
+        yield { type: 'event', data: event };
       }
     }
     if (requestedTypes.has('intents')) {
       for (const row of this.db.prepare(`
         SELECT * FROM intents WHERE principal = ? AND created_at >= ? AND created_at <= ? ORDER BY created_at
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'intent',
           data: this.decodeProtectedRow('intents', 'intent_id', row, ['result_json', 'error_json'])
-        });
+        };
       }
     }
     if (requestedTypes.has('consents')) {
@@ -2280,11 +2888,11 @@ export class GridStore {
         FROM consents
         WHERE (subject = ? OR controller = ?) AND created_at >= ? AND created_at <= ?
         ORDER BY created_at
-      `).all(principal, principal, since, until)) {
-        records.push({
+      `).iterate(principal, principal, since, until)) {
+        yield {
           type: 'consent',
           data: this.decodeProtectedRow('consents', 'consent_id', row, ['scopes_json'])
-        });
+        };
       }
     }
     if (requestedTypes.has('approvals')) {
@@ -2292,8 +2900,8 @@ export class GridStore {
         SELECT * FROM approvals
         WHERE (approver = ? OR requester = ?) AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, approval_id
-      `).all(principal, principal, since, until)) {
-        records.push({ type: 'approval', data: row });
+      `).iterate(principal, principal, since, until)) {
+        yield { type: 'approval', data: row };
       }
     }
     if (requestedTypes.has('capsules')) {
@@ -2303,7 +2911,7 @@ export class GridStore {
         WHERE actor = ? AND kind = 'capsule.registered'
           AND occurred_at >= ? AND occurred_at <= ?
         ORDER BY seq
-      `).all(principal, since, until)) {
+      `).iterate(principal, since, until)) {
         const event = this.decodeEventRow(row);
         if (capsuleIds.size && !capsuleIds.has(event.payload.capsule_id)) continue;
         const key = `${event.payload.capsule_id}:${event.payload.version}`;
@@ -2313,17 +2921,15 @@ export class GridStore {
           SELECT * FROM capsules WHERE capsule_id = ? AND version = ?
         `).get(event.payload.capsule_id, event.payload.version);
         if (capsule) {
-          records.push({
+          exportedCapsules.add(event.payload.capsule_id);
+          yield {
             type: 'capsule',
             data: this.decodeProtectedRow('capsules', 'digest', capsule, ['manifest_json'])
-          });
+          };
         }
       }
       if (capsuleIds.size) {
-        const exported = new Set(records
-          .filter(record => record.type === 'capsule')
-          .map(record => record.data.capsule_id));
-        const missing = [...capsuleIds].filter(id => !exported.has(id));
+        const missing = [...capsuleIds].filter(id => !exportedCapsules.has(id));
         if (missing.length) throw new AxiomError(
           'export_scope_forbidden',
           'Capsule export scope includes an unknown or unowned capsule',
@@ -2337,8 +2943,8 @@ export class GridStore {
         SELECT * FROM proposals
         WHERE proposer = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, proposal_id
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'proposal',
           data: this.decodeProtectedRow(
             'proposals',
@@ -2346,18 +2952,18 @@ export class GridStore {
             row,
             ['action_json', 'rollback_json']
           )
-        });
+        };
       }
       for (const row of this.db.prepare(`
         SELECT * FROM votes WHERE voter = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, proposal_id
-      `).all(principal, since, until)) records.push({ type: 'vote', data: row });
+      `).iterate(principal, since, until)) yield { type: 'vote', data: row };
       for (const row of this.db.prepare(`
         SELECT * FROM governance_appeals
         WHERE appellant = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, appeal_id
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'appeal',
           data: this.decodeProtectedRow(
             'governance_appeals',
@@ -2365,23 +2971,24 @@ export class GridStore {
             row,
             ['grounds_json']
           )
-        });
+        };
       }
     }
     if (requestedTypes.has('votes') && !requestedTypes.has('governance')) {
       for (const row of this.db.prepare(`
         SELECT * FROM votes WHERE voter = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at, proposal_id
-      `).all(principal, since, until)) records.push({ type: 'vote', data: row });
+      `).iterate(principal, since, until)) yield { type: 'vote', data: row };
     }
     if (requestedTypes.has('memory')) {
-      const graph = this.listMemory(principal);
-      const selectedObjects = objectIds.size
-        ? graph.objects.filter(object => objectIds.has(object.object_id))
-        : graph.objects;
+      // Every active object the owner holds, one row at a time (not the API's
+      // first page, and not all at once). A scoped export names objects the
+      // owner must hold; that is checked before any memory record is written.
       if (objectIds.size) {
-        const visible = new Set(selectedObjects.map(object => object.object_id));
-        const missing = [...objectIds].filter(id => !visible.has(id));
+        const owned = this.db.prepare(`
+          SELECT 1 FROM memory_objects WHERE object_id = ? AND owner = ? AND status = 'active'
+        `);
+        const missing = [...objectIds].filter(id => !owned.get(id, principal));
         if (missing.length) throw new AxiomError(
           'export_scope_forbidden',
           'Object export scope includes an unknown or unowned object',
@@ -2389,34 +2996,75 @@ export class GridStore {
           { object_ids: missing }
         );
       }
-      const selectedIds = new Set(selectedObjects.map(object => object.object_id));
-      for (const object of selectedObjects) {
-        if (object.created_at >= since && object.created_at <= until) {
-          records.push({ type: 'memory_object', data: object });
-        }
+      for (const row of this.db.prepare(`
+        SELECT * FROM memory_objects
+        WHERE owner = ? AND status = 'active'
+        ORDER BY created_at, object_id
+      `).iterate(principal)) {
+        if (objectIds.size && !objectIds.has(row.object_id)) continue;
+        if (row.created_at < since || row.created_at > until) continue;
+        yield {
+          type: 'memory_object',
+          data: this.decodeProtectedRow('memory_objects', 'object_id', row, ['payload_json'])
+        };
       }
-      for (const edge of graph.edges) {
-        if (
-          (!objectIds.size || (selectedIds.has(edge.from_id) && selectedIds.has(edge.to_id)))
-          && edge.created_at >= since
-          && edge.created_at <= until
-        ) {
-          records.push({ type: 'memory_edge', data: edge });
-        }
+      // An edge is part of the owner's graph when both ends are active
+      // objects the owner holds.
+      for (const row of this.db.prepare(`
+        SELECT e.* FROM memory_edges e
+        JOIN memory_objects f ON f.object_id = e.from_id AND f.owner = e.owner AND f.status = 'active'
+        JOIN memory_objects t ON t.object_id = e.to_id AND t.owner = e.owner AND t.status = 'active'
+        WHERE e.owner = ? AND e.status = 'active'
+        ORDER BY e.created_at, e.edge_id
+      `).iterate(principal)) {
+        if (objectIds.size && !(objectIds.has(row.from_id) && objectIds.has(row.to_id))) continue;
+        if (row.created_at < since || row.created_at > until) continue;
+        yield {
+          type: 'memory_edge',
+          data: this.decodeProtectedRow('memory_edges', 'edge_id', row, ['metadata_json'])
+        };
       }
     }
     if (requestedTypes.has('accounting')) {
-      const accounting = this.listAccounting(principal);
-      for (const account of accounting.accounts) {
+      for (const account of this.db.prepare(`
+        SELECT * FROM accounting_accounts WHERE owner = ? ORDER BY unit, account_id
+      `).iterate(principal)) {
         if (account.created_at >= since && account.created_at <= until) {
-          records.push({ type: 'account', data: account });
+          yield { type: 'account', data: account };
         }
       }
-      for (const journal of accounting.journals) {
-        if (journal.created_at >= since && journal.created_at <= until) {
-          records.push({ type: 'journal', data: journal });
+      // Journals and their entries come from two reads in the same order,
+      // merged, so one journal is held at a time.
+      const entries = this.db.prepare(`
+        SELECT e.* FROM accounting_entries e
+        JOIN accounting_journals j ON j.journal_id = e.journal_id
+        WHERE j.owner = ?
+        ORDER BY j.created_at, j.journal_id, e.line_no
+      `).iterate(principal);
+      let nextEntry = entries.next();
+      for (const row of this.db.prepare(`
+        SELECT * FROM accounting_journals WHERE owner = ? ORDER BY created_at, journal_id
+      `).iterate(principal)) {
+        const lines = [];
+        while (!nextEntry.done && nextEntry.value.journal_id === row.journal_id) {
+          const entry = nextEntry.value;
+          lines.push({
+            ...entry,
+            metadata_json: this.openJson(
+              'accounting_entries',
+              'metadata_json',
+              `${entry.journal_id}:${entry.line_no}`,
+              entry.metadata_json
+            )
+          });
+          nextEntry = entries.next();
         }
+        if (row.created_at < since || row.created_at > until) continue;
+        const journal = this.decodeProtectedRow('accounting_journals', 'journal_id', row, ['memo_json']);
+        journal.entries = lines;
+        yield { type: 'journal', data: journal };
       }
+      if (!nextEntry.done) entries.return?.();
     }
     if (requestedTypes.has('sync')) {
       for (const row of this.db.prepare(`
@@ -2425,8 +3073,8 @@ export class GridStore {
         JOIN nodes n ON n.node_id = u.node_id
         WHERE u.owner = ? AND u.received_at >= ? AND u.received_at <= ?
         ORDER BY u.received_at, u.update_id
-      `).all(principal, since, until)) {
-        records.push({
+      `).iterate(principal, since, until)) {
+        yield {
           type: 'sync_update',
           data: {
             update_id: row.update_id,
@@ -2454,10 +3102,9 @@ export class GridStore {
             ),
             status: row.status
           }
-        });
+        };
       }
     }
-    return records;
   }
 
   getExport(exportId, principal) {
@@ -2475,6 +3122,9 @@ export class GridStore {
     };
   }
 }
+
+const TERMINAL_INTENT_EVENTS = new Set(['intent.completed', 'intent.denied', 'intent.failed']);
+const INTERRUPTED_INTENT_PAGE = 100;
 
 function normalizeEvent(raw) {
   assertPlainObject(raw, 'event');
@@ -3007,9 +3657,78 @@ function assertSamePublicKey(left, right, keyId) {
   }
 }
 
+// Serializes export records as canonical JSON lines, handing the bytes to
+// `sink` in batches of about 64 KiB. The result is byte-identical to joining
+// every line with a newline and ending with one (or empty for no records).
+const EXPORT_WRITE_BATCH_BYTES = 64 * 1024;
+
+function writeExportRecords(records, sink) {
+  const hash = createHash('sha256');
+  let pending = [];
+  let pendingBytes = 0;
+  let count = 0;
+  let bytes = 0;
+  const flush = () => {
+    if (!pendingBytes) return;
+    const batch = Buffer.concat(pending, pendingBytes);
+    pending = [];
+    pendingBytes = 0;
+    hash.update(batch);
+    bytes += batch.length;
+    sink(batch);
+  };
+  for (const record of records) {
+    const line = Buffer.from(`${canonicalJson(record)}\n`);
+    pending.push(line);
+    pendingBytes += line.length;
+    count += 1;
+    if (pendingBytes >= EXPORT_WRITE_BATCH_BYTES) flush();
+  }
+  flush();
+  return { records: count, bytes, sha256: hash.digest('hex') };
+}
+
+function writeAllSync(fd, buffer) {
+  let offset = 0;
+  while (offset < buffer.length) offset += writeSync(fd, buffer, offset, buffer.length - offset);
+}
+
 async function atomicWrite(path, content, mode) {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temp = `${path}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(temp, content, { mode, flag: 'wx' });
   await rename(temp, path);
+}
+
+export const SYNC_PAGE_DEFAULT_RECORDS = 100;
+export const SYNC_PAGE_MAX_RECORDS = 200;
+export const SYNC_PAGE_BYTE_BUDGET = 512 * 1024;
+export const SYNC_BUNDLE_BYTE_BUDGET = 256 * 1024;
+const SYNC_CURSOR_NAMESPACE = /^[a-z][a-z0-9.-]{0,127}$/;
+const SYNC_CURSOR_RECORD = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+
+export function encodeSyncCursor({ namespace, record_id: recordId }) {
+  return Buffer.from(JSON.stringify([namespace, recordId])).toString('base64url');
+}
+
+export function decodeSyncCursor(cursor) {
+  let decoded;
+  try {
+    if (typeof cursor !== 'string' || cursor.length > 512 || !/^[A-Za-z0-9_-]+$/.test(cursor)) {
+      throw new Error('shape');
+    }
+    decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+  } catch {
+    throw new ValidationError('Sync page cursor is invalid');
+  }
+  if (
+    !Array.isArray(decoded)
+    || decoded.length !== 2
+    || !SYNC_CURSOR_NAMESPACE.test(decoded[0] ?? '')
+    || !SYNC_CURSOR_RECORD.test(decoded[1] ?? '')
+    || encodeSyncCursor({ namespace: decoded[0], record_id: decoded[1] }) !== cursor
+  ) {
+    throw new ValidationError('Sync page cursor is invalid');
+  }
+  return { namespace: decoded[0], record_id: decoded[1] };
 }

@@ -141,7 +141,7 @@ test('retention planning rejects a corrupt encrypted backup before selection', a
     fixture.dataDir,
     'backups',
     fixture.backupIds[0],
-    'snapshot.axb'
+    'snapshot.axc'
   );
   const snapshot = await readFile(target);
   snapshot[snapshot.length - 2] ^= 1;

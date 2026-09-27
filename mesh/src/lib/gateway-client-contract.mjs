@@ -48,8 +48,12 @@ const ID = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
 const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
+// Updated for optional `cursor` and `limit` query parameters on `sync.list`
+// and the other paged collections, including `accounting.get` journals, and
+// for the `sync_bundles.list` and `sync_updates.get` routes (scalability
+// audit S-10), and for an optional `cursor` on `nodes.discover`.
 const EXPECTED_CONTRACT_DIGEST =
-  '77d57f3f031ef0c8f777b0c77a4560fe3b9bacf8c14935ffc7a917b677544ddd';
+  '6cb7be4889ffe28e85c142df6f311fa87c6f4e98827b21bbe3daf655f8261f10';
 const EXPECTED_JSON_SCHEMA_DIGEST =
   '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
 
@@ -135,7 +139,9 @@ export function validateGatewayClientContract(contract) {
     throw new ValidationError('Gateway client error code is invalid');
   }
 
-  if (!Array.isArray(contract.routes) || contract.routes.length !== 31) {
+  // 33 since `sync_bundles.list` (paged bundle summaries) and
+  // `sync_updates.get` (one oversized head's value), audit S-10.
+  if (!Array.isArray(contract.routes) || contract.routes.length !== 33) {
     throw new ValidationError('Gateway client route inventory is incomplete');
   }
   const ids = new Set();

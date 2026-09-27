@@ -229,6 +229,26 @@ function observe(f,record,observedAt,evidenceDigit='9') {
   });
 }
 
+// A second member who stays in standing. Circle Core judges standing at the
+// time of each act, so records the exporter could not have made after
+// leaving are made by this member instead.
+function addPeer(f) {
+  const invitation={
+    ...structuredClone(f.packageDocument.invitations[0]),
+    invitation_id:'invite.peer.1',
+    invited_principal:'human.peer'
+  };
+  f.packageDocument.invitations.push(invitation);
+  f.packageDocument.memberships.push({
+    ...structuredClone(f.packageDocument.memberships[0]),
+    membership_id:'membership.peer.1',
+    invitation_id:invitation.invitation_id,
+    principal_id:'human.peer',
+    accepted_at:'2026-09-20T12:03:00.000Z',
+    status_effective_at:'2026-09-20T12:03:00.000Z'
+  });
+}
+
 function addExit(f,effectiveAt='2026-09-25T11:00:00.000Z') {
   f.packageDocument.exits.push({
     schema:CIRCLE_EXIT_SCHEMA,
@@ -283,9 +303,11 @@ test('post-exit export may retain only records at or before the participation cu
 
 test('post-exit records cannot be laundered into retained history',()=>{
   const f=fixture();
+  addPeer(f);
   addExit(f);
   const later={
     ...structuredClone(f.packageDocument.proposals[0]),
+    proposer:'human.peer',
     proposal_id:'proposal.after-exit.1',
     title:'Post-exit proposal',
     created_at:'2026-09-25T11:30:00.000Z',
@@ -350,11 +372,12 @@ test('exporter must bind exact historical membership and principal',()=>{
 
 test('membership cannot begin after the export timestamp',()=>{
   const f=fixture();
+  addPeer(f);
   f.packageDocument.invitations[0].issued_at='2026-09-25T12:01:00.000Z';
   f.packageDocument.invitations[0].expires_at='2026-09-27T12:01:00.000Z';
   f.packageDocument.memberships[0].accepted_at='2026-09-25T12:02:00.000Z';
   f.packageDocument.memberships[0].status_effective_at='2026-09-25T12:02:00.000Z';
-  f.packageDocument.proposals[0].proposer='human.owner';
+  f.packageDocument.proposals[0].proposer='human.peer';
   refresh(f);
   const result=assess(f);
   assert.equal(result.eligible_for_disclosure_review,false);

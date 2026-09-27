@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -84,7 +84,7 @@ authority for runnable capability status. Roadmap entries, demonstrations,
 laboratories, synthetic conformance, and built-but-production-unreachable source
 do not promote a capability beyond that registry.
 
-The current registry tracks 50 capabilities, of which 31 are marked
+The current registry tracks 51 capabilities, of which 31 are marked
 `implemented`.
 
 ### Implemented production-candidate kernel surface
@@ -405,7 +405,7 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 42 current internal**
+machine-readable default-deny policy **permits only 45 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
 allowlists, and removes unrelated adjacency. The 42nd reviewed permission is the
 bounded Hypervisor-to-Grid Education learner-progress edge; it is not public

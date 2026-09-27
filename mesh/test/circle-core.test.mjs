@@ -335,3 +335,123 @@ test('Circle export carries records but never portable authority', () => {
   document.exports[0].portable_authority = true;
   assert.throws(() => validateCircleCorePackage(document), /export is invalid/);
 });
+
+function exitRecord(document, overrides = {}) {
+  const membership = document.memberships[0];
+  return {
+    schema: 'axiom-circle-exit.v0',
+    exit_id: 'exit.owner.1',
+    circle_id: document.circle.circle_id,
+    membership_id: membership.membership_id,
+    principal_id: membership.principal_id,
+    initiated_by: membership.principal_id,
+    kind: 'voluntary-exit',
+    effective_at: '2026-08-24T12:00:00.000Z',
+    reason_code: 'member-request',
+    future_obligation_effect: 'ends-except-explicit-post-exit-rules',
+    history_rewrite: false,
+    authority_effect: 'none',
+    ...overrides
+  };
+}
+
+test('Circle exit takes effect: a former member cannot propose, appeal or take tasks', () => {
+  const proposal = fixture();
+  proposal.exits.push(exitRecord(proposal));
+  proposal.proposals.push({
+    ...proposal.proposals[0],
+    proposal_id: 'proposal.after-exit',
+    created_at: '2026-08-25T12:00:00.000Z',
+    closes_at: '2026-08-26T12:00:00.000Z'
+  });
+  assert.throws(() => validateCircleCorePackage(proposal), /not made by a member at the time/);
+
+  const appeal = fixture();
+  appeal.exits.push(exitRecord(appeal));
+  appeal.appeals[0].filed_at = '2026-08-25T12:00:00.000Z';
+  assert.throws(() => validateCircleCorePackage(appeal), /not filed by a member at the time/);
+
+  const task = fixture();
+  task.exits.push(exitRecord(task));
+  task.tasks[0].created_at = '2026-08-25T12:00:00.000Z';
+  task.tasks[0].due_at = '2026-08-26T12:00:00.000Z';
+  assert.throws(() => validateCircleCorePackage(task), /did not count at the time/);
+});
+
+test('Circle exit and revocation never invalidate acts made while a member', () => {
+  const exited = fixture();
+  exited.exits.push(exitRecord(exited));
+  assert.equal(validateCircleCorePackage(exited).counts.proposals, 1);
+
+  const revoked = fixture();
+  revoked.memberships[0].status = 'revoked';
+  revoked.memberships[0].status_effective_at = '2026-08-24T12:00:00.000Z';
+  assert.equal(validateCircleCorePackage(revoked).counts.appeals, 1);
+});
+
+test('Circle exits are single, and only the member initiates a voluntary exit', () => {
+  const twice = fixture();
+  twice.exits.push(exitRecord(twice), exitRecord(twice, { exit_id: 'exit.owner.2' }));
+  assert.throws(() => validateCircleCorePackage(twice), /more than one exit/);
+
+  const forced = fixture();
+  forced.exits.push(exitRecord(forced, { initiated_by: 'human.other' }));
+  assert.throws(() => validateCircleCorePackage(forced), /exit is invalid/);
+
+  const revocation = fixture();
+  revocation.exits.push(exitRecord(revocation, { initiated_by: 'human.other', kind: 'revocation' }));
+  assert.equal(validateCircleCorePackage(revocation).counts.exits, 1);
+});
+
+test('Circle principals cannot hold overlapping memberships, but may rejoin after exit', () => {
+  const document = fixture();
+  const second = {
+    ...document.invitations[0],
+    invitation_id: 'invite.owner.2',
+    issued_at: '2026-08-20T12:05:00.000Z',
+    expires_at: '2026-08-30T12:05:00.000Z'
+  };
+  document.invitations.push(second);
+  document.memberships.push({
+    ...document.memberships[0],
+    membership_id: 'membership.owner.2',
+    invitation_id: second.invitation_id,
+    accepted_at: '2026-08-20T12:06:00.000Z',
+    status_effective_at: '2026-08-20T12:06:00.000Z'
+  });
+  assert.throws(() => validateCircleCorePackage(document), /overlapping Circle memberships/);
+
+  const rejoined = clone(document);
+  rejoined.exits.push(exitRecord(rejoined, { effective_at: '2026-08-22T00:00:00.000Z' }));
+  rejoined.memberships[1].accepted_at = '2026-08-25T12:00:00.000Z';
+  rejoined.memberships[1].status_effective_at = '2026-08-25T12:00:00.000Z';
+  assert.equal(validateCircleCorePackage(rejoined).counts.memberships, 2);
+});
+
+test('Circle decisions are single per proposal, follow it, and count each receipt once', () => {
+  const twice = fixture();
+  twice.decisions.push({ ...twice.decisions[0], decision_id: 'decision.study.2', outcome: 'rejected' });
+  assert.throws(() => validateCircleCorePackage(twice), /more than one decision/);
+
+  const early = fixture();
+  early.decisions[0].decided_at = '2026-08-20T12:00:00.000Z';
+  assert.throws(() => validateCircleCorePackage(early), /predates its proposal/);
+
+  const repeated = fixture();
+  repeated.decisions[0].participant_receipts = ['receipt.a', 'receipt.a'];
+  assert.throws(() => validateCircleCorePackage(repeated), /decision is invalid/);
+});
+
+test('Circle appeals follow their target and keep status consistent with resolution', () => {
+  const early = fixture();
+  early.appeals[0].filed_at = '2026-08-20T12:30:00.000Z';
+  assert.throws(() => validateCircleCorePackage(early), /predates the record it appeals/);
+
+  const unresolved = fixture();
+  unresolved.appeals[0].status = 'accepted';
+  assert.throws(() => validateCircleCorePackage(unresolved), /status and resolved_at disagree/);
+
+  const resolvedOpen = fixture();
+  resolvedOpen.appeals[0].resolved_at = '2026-08-22T12:00:00.000Z';
+  assert.throws(() => validateCircleCorePackage(resolvedOpen), /status and resolved_at disagree/);
+});

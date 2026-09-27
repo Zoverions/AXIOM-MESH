@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { canonicalJson, ValidationError } from './canonical.mjs';
@@ -89,6 +89,21 @@ export class DataProtector {
     } catch {
       throw new ValidationError('Protected value authentication failed');
     }
+  }
+
+  /**
+   * A 256-bit key for one artifact, derived with HKDF-SHA256 from the
+   * data-protection key, the artifact's random salt and its purpose. Used by
+   * chunked artifacts, which cannot be sealed as one envelope.
+   */
+  deriveArtifactKey(salt, info) {
+    if (!Buffer.isBuffer(salt) || salt.length < 16 || salt.length > 64) {
+      throw new ValidationError('Artifact key salt is invalid');
+    }
+    if (!Buffer.isBuffer(info) || info.length < 1 || info.length > 1024) {
+      throw new ValidationError('Artifact key purpose is invalid');
+    }
+    return Buffer.from(hkdfSync('sha256', this.key, salt, info, 32));
   }
 
   isProtected(serialized) {
