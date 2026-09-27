@@ -4,7 +4,7 @@
   "title": "AXIOM Participation Policy v0",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema","version","status","policy_id","preset","policy_source_ref","issued_at","expires_at","passive_participation","reactions_enabled","silent_investigation","explicit_mode","allowed_context_classes","quiet_context_ids","consequence_ceiling","threshold_basis","thresholds","cooldown","grants_authority","data_scope_effect","execution_effect","runtime_activation"],
+  "required": ["schema","version","status","policy_id","preset","policy_source_ref","issued_at","expires_at","passive_participation","reactions_enabled","silent_investigation","explicit_mode","context_scope_mode","allowed_context_ids","allowed_context_classes","quiet_context_ids","consequence_ceiling","threshold_basis","thresholds","cooldown","grants_authority","data_scope_effect","execution_effect","runtime_activation"],
   "properties": {
     "schema": {"const":"axiom-participation-policy.v0"},
     "version": {"const":0},
@@ -18,6 +18,8 @@
     "reactions_enabled": {"type":"boolean"},
     "silent_investigation": {"type":"boolean"},
     "explicit_mode": {"enum":["answer","investigate-first"]},
+    "context_scope_mode": {"enum":["all-eligible","allowlist"]},
+    "allowed_context_ids": {"type":"array","maxItems":256,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
     "allowed_context_classes": {"type":"array","minItems":1,"maxItems":5,"uniqueItems":true,"items":{"enum":["owner-private","direct","circle","organization","public"]}},
     "quiet_context_ids": {"type":"array","maxItems":256,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
     "consequence_ceiling": {"enum":["C0","C1","C2","C3"]},
@@ -48,6 +50,16 @@
     "execution_effect": {"const":"none"},
     "runtime_activation": {"const":false}
   },
+  "allOf": [
+    {
+      "if":{"properties":{"context_scope_mode":{"const":"all-eligible"}}},
+      "then":{"properties":{"allowed_context_ids":{"maxItems":0}}}
+    },
+    {
+      "if":{"properties":{"context_scope_mode":{"const":"allowlist"}}},
+      "then":{"properties":{"allowed_context_ids":{"minItems":1}}}
+    }
+  ],
   "$defs": {
     "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"},
     "score": {"type":"integer","minimum":0,"maximum":100}
