@@ -65,6 +65,7 @@ function event(overrides={}) {
     event_class: 'passive',
     context_id: 'channel.engineering',
     context_class: 'organization',
+    evaluated_at: '2026-09-27T04:10:00.000Z',
     supported: true,
     quiet_context: false,
     cooldown_state: 'ready',
@@ -164,6 +165,65 @@ test('context/event binding drift passes silently instead of using observations 
   assert.ok(d.reasons.includes('context-mismatch'));
 });
 
+
+
+test('expired policy fails closed for passive participation but does not suppress an explicit request', () => {
+  const p=createParticipationPreset('balanced', {
+    policyId:'participation.policy.expiring.1',
+    policySourceRef:'owner.policy.demo',
+    issuedAt:'2026-09-27T04:00:00.000Z',
+    expiresAt:'2026-09-27T04:05:00.000Z'
+  });
+  const passive=evaluateParticipation(observation(),p,event());
+  assert.equal(passive.action,'PASS');
+  assert.deepEqual(passive.reasons,['policy-expired']);
+
+  const explicit=evaluateParticipation(
+    observation({addressing_class:'explicit'}),
+    p,
+    event({event_class:'explicit'})
+  );
+  assert.equal(explicit.action,'ANSWER');
+  assert.deepEqual(explicit.reasons,['explicit-request-semantic-policy-bypassed']);
+});
+
+test('context allowlist permits only named contexts and is fail-closed when empty or inconsistent', () => {
+  const p=structuredClone(policy('balanced'));
+  p.preset='custom';
+  p.context_scope_mode='allowlist';
+  p.allowed_context_ids=['channel.allowed'];
+  assert.equal(validateParticipationPolicy(p).valid,true);
+
+  const denied=evaluateParticipation(observation(),p,event());
+  assert.equal(denied.action,'PASS');
+  assert.deepEqual(denied.reasons,['context-not-allowlisted']);
+
+  const allowed=evaluateParticipation(
+    observation({context_id:'channel.allowed'}),
+    p,
+    event({context_id:'channel.allowed'})
+  );
+  assert.equal(allowed.action,'ANSWER');
+
+  const empty=structuredClone(p);
+  empty.allowed_context_ids=[];
+  assert.throws(()=>validateParticipationPolicy(empty),/requires allowed_context_ids/);
+
+  const inconsistent=structuredClone(policy('balanced'));
+  inconsistent.allowed_context_ids=['channel.unexpected'];
+  assert.throws(()=>validateParticipationPolicy(inconsistent),/cannot carry allowed_context_ids/);
+});
+
+test('explicit request ignores unusable semantic binding instead of silently dropping the user request', () => {
+  const d=evaluateParticipation(
+    observation({addressing_class:'passive',context_id:'channel.other'}),
+    policy('balanced'),
+    event({event_class:'explicit'})
+  );
+  assert.equal(d.action,'ANSWER');
+  assert.deepEqual(d.reasons,['explicit-request-semantic-policy-bypassed']);
+});
+
 test('fallback is conservative for passive input and still permits explicit task handling', () => {
   assert.equal(fallbackParticipationDecision(event()).action,'PASS');
   assert.equal(fallbackParticipationDecision(event({event_class:'explicit'})).action,'ANSWER');
@@ -178,7 +238,8 @@ test('policy threshold/calibration boundaries reject authority flips and invalid
     x=>{x.runtime_activation=true;},
     x=>{x.thresholds.reply_usefulness_min=101;},
     x=>{x.threshold_basis='calibrated';},
-    x=>{x.allowed_context_classes.push('secret');}
+    x=>{x.allowed_context_classes.push('secret');},
+    x=>{x.context_scope_mode='other';}
   ]) {
     const x=structuredClone(base); mutate(x);
     assert.throws(()=>validateParticipationPolicy(x));
