@@ -70,7 +70,7 @@ export function evaluateParticipation(o,p,e){
   const policyExpired=p.expires_at!==null&&new Date(p.expires_at)<=evaluationTime;
   const observationFromFuture=new Date(o.observed_at)>evaluationTime;
   if(e.event_class==='explicit'){
-    if(mismatch.length||policyNotYetEffective||policyExpired||observationFromFuture||o.applicability!=='current')return decision('ANSWER',['explicit-request-semantic-policy-bypassed'],o,p);
+    if(mismatch.length||policyNotYetEffective||policyExpired||observationFromFuture||o.applicability!=='current')return fallbackParticipationDecision(e,'explicit-request-semantic-policy-bypassed');
     if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p);
     return decision('ANSWER',['explicit-request'],o,p);
   }
