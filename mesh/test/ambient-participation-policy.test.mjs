@@ -185,6 +185,8 @@ test('expired policy fails closed for passive participation but does not suppres
   );
   assert.equal(explicit.action,'ANSWER');
   assert.deepEqual(explicit.reasons,['explicit-request-semantic-policy-bypassed']);
+  assert.equal(explicit.observation_digest,null);
+  assert.equal(explicit.policy_digest,null);
 });
 
 test('future-issued policy and future semantic observation fail closed for passive input', () => {
@@ -219,6 +221,8 @@ test('future currentness anomalies cannot suppress an explicit supported request
   );
   assert.equal(policyBypass.action,'ANSWER');
   assert.deepEqual(policyBypass.reasons,['explicit-request-semantic-policy-bypassed']);
+  assert.equal(policyBypass.observation_digest,null);
+  assert.equal(policyBypass.policy_digest,null);
 
   const observationBypass=evaluateParticipation(
     observation({
@@ -230,6 +234,8 @@ test('future currentness anomalies cannot suppress an explicit supported request
   );
   assert.equal(observationBypass.action,'ANSWER');
   assert.deepEqual(observationBypass.reasons,['explicit-request-semantic-policy-bypassed']);
+  assert.equal(observationBypass.observation_digest,null);
+  assert.equal(observationBypass.policy_digest,null);
 });
 
 test('context allowlist permits only named contexts and is fail-closed when empty or inconsistent', () => {
@@ -267,6 +273,8 @@ test('explicit request ignores unusable semantic binding instead of silently dro
   );
   assert.equal(d.action,'ANSWER');
   assert.deepEqual(d.reasons,['explicit-request-semantic-policy-bypassed']);
+  assert.equal(d.observation_digest,null);
+  assert.equal(d.policy_digest,null);
 });
 
 test('fallback is conservative for passive input and still permits explicit task handling', () => {
