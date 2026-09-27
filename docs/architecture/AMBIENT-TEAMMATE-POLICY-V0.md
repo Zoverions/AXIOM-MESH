@@ -79,6 +79,8 @@ TypeSafe/System One is a natural provider for these narrow typed judgments becau
 - noise/interruption ceilings;
 - cooldown window and unsolicited-intervention count.
 
+Policy currentness is evaluated against the event's canonical `evaluated_at`; the policy `issued_at` must not be later than that evaluation point, and any `expires_at` must still be current. Observation `observed_at` must likewise not be in the future relative to the event being evaluated.
+
 The built-in `listener`, `investigator`, `balanced`, and `teammate` presets are **illustrative, unvalidated laboratory defaults**. Their numbers are not safety or quality claims. A later evaluation programme may replace them with locally calibrated policy, but calibration still cannot mint authority.
 
 ### Deterministic participation evaluator
@@ -86,16 +88,16 @@ The built-in `listener`, `investigator`, `balanced`, and `teammate` presets are 
 The pure evaluator uses observation + policy + current event state. For passive participation it fails closed when:
 
 - passive participation is disabled;
-- the participation policy has expired;
+- the participation policy is not yet effective or has expired;
 - the context is quiet, outside the allowed class set, or outside an exact context allowlist;
 - the event exceeds the autonomous consequence ceiling;
 - cooldown state is blocked or unavailable;
-- the semantic observation is stale/unknown;
+- the semantic observation is stale/unknown or claims to come from after the current evaluation time;
 - a human has already answered;
 - noise/interruption evidence needed for unsolicited speech is unknown;
 - event/context bindings do not match the observation.
 
-Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable, stale, mismatched to the current event/context, or paired with an expired proactivity policy. In those cases the semantic/policy advice is bypassed rather than allowed to suppress the explicit user request. Passive proactivity never fails open because a semantic provider or policy-currentness check failed.
+Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable, stale, from the future, mismatched to the current event/context, or paired with a not-yet-effective/expired proactivity policy. In those cases the semantic/policy advice is bypassed rather than allowed to suppress the explicit user request. Passive proactivity never fails open because a semantic provider or policy-currentness check failed.
 
 ### Active Task Steering v0
 
