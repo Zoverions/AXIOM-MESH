@@ -71,6 +71,7 @@ TypeSafe/System One is a natural provider for these narrow typed judgments becau
 - reactions on/off;
 - silent investigation on/off;
 - explicit-message handling;
+- context scope mode (`all-eligible` or exact context allowlist);
 - allowed context classes;
 - quiet-context exceptions;
 - consequence ceiling for unsolicited participation;
@@ -85,7 +86,8 @@ The built-in `listener`, `investigator`, `balanced`, and `teammate` presets are 
 The pure evaluator uses observation + policy + current event state. For passive participation it fails closed when:
 
 - passive participation is disabled;
-- the context is quiet or outside policy;
+- the participation policy has expired;
+- the context is quiet, outside the allowed class set, or outside an exact context allowlist;
 - the event exceeds the autonomous consequence ceiling;
 - cooldown state is blocked or unavailable;
 - the semantic observation is stale/unknown;
@@ -93,7 +95,7 @@ The pure evaluator uses observation + policy + current event state. For passive 
 - noise/interruption evidence needed for unsolicited speech is unknown;
 - event/context bindings do not match the observation.
 
-Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable. Passive proactivity never fails open because a semantic provider failed.
+Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable, stale, mismatched to the current event/context, or paired with an expired proactivity policy. In those cases the semantic/policy advice is bypassed rather than allowed to suppress the explicit user request. Passive proactivity never fails open because a semantic provider or policy-currentness check failed.
 
 ### Active Task Steering v0
 
