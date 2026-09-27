@@ -65,13 +65,16 @@ export function evaluateParticipation(o,p,e){
   validateParticipationObservation(o); validateParticipationPolicy(p); validateEvent(e);
   const mismatch=[]; if(o.event_digest!==e.event_digest)mismatch.push('event-digest-mismatch'); if(o.context_id!==e.context_id||o.context_class!==e.context_class)mismatch.push('context-mismatch'); if(o.addressing_class!==e.event_class)mismatch.push('addressing-class-mismatch');
   if(!e.supported)return decision('PASS',['unsupported-event'],o,p); if(e.event_class==='context-only')return decision('PASS',['context-only'],o,p);
-  const policyExpired=p.expires_at!==null&&new Date(p.expires_at)<=new Date(e.evaluated_at);
+  const evaluationTime=new Date(e.evaluated_at);
+  const policyNotYetEffective=new Date(p.issued_at)>evaluationTime;
+  const policyExpired=p.expires_at!==null&&new Date(p.expires_at)<=evaluationTime;
+  const observationFromFuture=new Date(o.observed_at)>evaluationTime;
   if(e.event_class==='explicit'){
-    if(mismatch.length||policyExpired||o.applicability!=='current')return decision('ANSWER',['explicit-request-semantic-policy-bypassed'],o,p);
+    if(mismatch.length||policyNotYetEffective||policyExpired||observationFromFuture||o.applicability!=='current')return decision('ANSWER',['explicit-request-semantic-policy-bypassed'],o,p);
     if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p);
     return decision('ANSWER',['explicit-request'],o,p);
   }
-  if(mismatch.length)return decision('PASS',mismatch,o,p); if(policyExpired)return decision('PASS',['policy-expired'],o,p);
+  if(mismatch.length)return decision('PASS',mismatch,o,p); if(policyNotYetEffective)return decision('PASS',['policy-not-yet-effective'],o,p); if(policyExpired)return decision('PASS',['policy-expired'],o,p); if(observationFromFuture)return decision('PASS',['observation-from-future'],o,p);
   if(!p.passive_participation)return decision('PASS',['passive-disabled'],o,p); if(e.quiet_context||p.quiet_context_ids.includes(e.context_id))return decision('PASS',['quiet-context'],o,p); if(!p.allowed_context_classes.includes(e.context_class))return decision('PASS',['context-not-allowed'],o,p);
   if(p.context_scope_mode==='allowlist'&&!p.allowed_context_ids.includes(e.context_id))return decision('PASS',['context-not-allowlisted'],o,p);
   if(CONSEQUENCE_RANK[e.consequence_class]>CONSEQUENCE_RANK[p.consequence_ceiling])return decision('PASS',['consequence-above-ceiling'],o,p); if(p.cooldown.required&&e.cooldown_state!=='ready')return decision('PASS',[e.cooldown_state==='unavailable'?'cooldown-unavailable':'cooldown-blocked'],o,p);
