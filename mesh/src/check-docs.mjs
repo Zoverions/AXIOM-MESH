@@ -62,6 +62,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/AGENT-ASSURANCE-EVIDENCE-V0.md',
   'docs/architecture/MACHINE-HOLDER-PRESENTATION-V0.md',
   'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md',
+  'docs/architecture/AMBIENT-TEAMMATE-POLICY-V0.md',
   'docs/architecture/MESH-NOTARIZED-AGREEMENTS.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/DEPLOYMENT-ENGINE-V0-CONVERGENCE.md',
