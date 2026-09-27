@@ -187,6 +187,51 @@ test('expired policy fails closed for passive participation but does not suppres
   assert.deepEqual(explicit.reasons,['explicit-request-semantic-policy-bypassed']);
 });
 
+test('future-issued policy and future semantic observation fail closed for passive input', () => {
+  const futurePolicy=createParticipationPreset('balanced', {
+    policyId:'participation.policy.future.1',
+    policySourceRef:'owner.policy.demo',
+    issuedAt:'2026-09-27T04:20:00.000Z'
+  });
+  const notYetEffective=evaluateParticipation(observation(),futurePolicy,event());
+  assert.equal(notYetEffective.action,'PASS');
+  assert.deepEqual(notYetEffective.reasons,['policy-not-yet-effective']);
+
+  const futureObservation=evaluateParticipation(
+    observation({observed_at:'2026-09-27T04:20:00.000Z'}),
+    policy('balanced'),
+    event()
+  );
+  assert.equal(futureObservation.action,'PASS');
+  assert.deepEqual(futureObservation.reasons,['observation-from-future']);
+});
+
+test('future currentness anomalies cannot suppress an explicit supported request', () => {
+  const futurePolicy=createParticipationPreset('balanced', {
+    policyId:'participation.policy.future.explicit.1',
+    policySourceRef:'owner.policy.demo',
+    issuedAt:'2026-09-27T04:20:00.000Z'
+  });
+  const policyBypass=evaluateParticipation(
+    observation({addressing_class:'explicit'}),
+    futurePolicy,
+    event({event_class:'explicit'})
+  );
+  assert.equal(policyBypass.action,'ANSWER');
+  assert.deepEqual(policyBypass.reasons,['explicit-request-semantic-policy-bypassed']);
+
+  const observationBypass=evaluateParticipation(
+    observation({
+      addressing_class:'explicit',
+      observed_at:'2026-09-27T04:20:00.000Z'
+    }),
+    policy('balanced'),
+    event({event_class:'explicit'})
+  );
+  assert.equal(observationBypass.action,'ANSWER');
+  assert.deepEqual(observationBypass.reasons,['explicit-request-semantic-policy-bypassed']);
+});
+
 test('context allowlist permits only named contexts and is fail-closed when empty or inconsistent', () => {
   const p=structuredClone(policy('balanced'));
   p.preset='custom';
