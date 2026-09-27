@@ -97,7 +97,7 @@ The pure evaluator uses observation + policy + current event state. For passive 
 - noise/interruption evidence needed for unsolicited speech is unknown;
 - event/context bindings do not match the observation.
 
-Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable, stale, from the future, mismatched to the current event/context, or paired with a not-yet-effective/expired proactivity policy. In those cases the semantic/policy advice is bypassed rather than allowed to suppress the explicit user request. Passive proactivity never fails open because a semantic provider or policy-currentness check failed.
+Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable, stale, from the future, mismatched to the current event/context, or paired with a not-yet-effective/expired proactivity policy. In those cases the semantic/policy advice is bypassed rather than allowed to suppress the explicit user request, and the fallback decision carries `null` observation/policy digests so unusable semantic evidence is not misrepresented as the basis for the answer. Passive proactivity never fails open because a semantic provider or policy-currentness check failed.
 
 ### Active Task Steering v0
 
