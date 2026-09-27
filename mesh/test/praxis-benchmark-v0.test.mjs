@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import {
   benchmarkSource,
   benchmarkCpuRunsPerSample,
+  measureBenchmarkCpuPerRun,
   runBenchmarks,
   checkBudgets,
   formatReport,
@@ -64,28 +65,32 @@ test('benchmark scaling uses CPU time without weakening absolute wall-clock caps
   );
 });
 
-test('CPU sampling normalizes batch work by source volume within the bounded run ceiling', () => {
+test('CPU sampling calibrates bounded batches by both source volume and median wall duration', () => {
   const small = syntheticProgram(1000);
   const large = syntheticProgram(10000);
-  const smallRuns = benchmarkCpuRunsPerSample(small.length);
-  const largeRuns = benchmarkCpuRunsPerSample(large.length);
+  const smallRuns = benchmarkCpuRunsPerSample(small.length, 3.5);
+  const largeRuns = benchmarkCpuRunsPerSample(large.length, 30);
 
-  assert.equal(smallRuns, 10);
-  assert.equal(largeRuns, 1);
-  assert.ok(smallRuns * 5 <= 80);
-  assert.ok(largeRuns * 5 <= 80);
+  assert.equal(smallRuns, 23);
+  assert.equal(largeRuns, 3);
+  assert.ok(smallRuns * 3 <= 80);
+  assert.ok(largeRuns * 3 <= 80);
+  assert.ok(smallRuns * 3.5 >= 80, 'small sample should target about 80ms of wall work');
+  assert.ok(largeRuns * 30 >= 80, 'large sample should target about 80ms of wall work');
 
-  const smallVolume = small.length * smallRuns;
-  const largeVolume = large.length * largeRuns;
-  assert.ok(
-    Math.abs(smallVolume - largeVolume) / largeVolume < 0.1,
-    'standard CPU batches should process comparable source volume'
+  assert.equal(
+    benchmarkCpuRunsPerSample(small.length, 100),
+    10,
+    'source-volume floor remains when the parser is already slow'
   );
+  assert.equal(benchmarkCpuRunsPerSample(0, 1), 26);
+  assert.equal(benchmarkCpuRunsPerSample(small.length, 0), 26);
 
-  assert.equal(benchmarkCpuRunsPerSample(0), 16);
-  assert.equal(benchmarkCpuRunsPerSample(422), 16);
   for (const invalid of [-1, 1.5, Number.NaN]) {
-    assert.throws(() => benchmarkCpuRunsPerSample(invalid), /non-negative integer/);
+    assert.throws(() => benchmarkCpuRunsPerSample(invalid, 10), /non-negative integer/);
+  }
+  for (const invalid of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.throws(() => benchmarkCpuRunsPerSample(small.length, invalid), /wall time/);
   }
 });
 
@@ -104,26 +109,33 @@ function withCpuDeltas(deltas, fn) {
 }
 
 test('CPU sampling median resists one first-batch outlier', () => {
-  withCpuDeltas([100_000, 10_000, 10_000, 10_000, 10_000], getSamples => {
-    const result = benchmarkSource('cpu-sampler-outlier', 'observe x = "v" from "src";\n');
-    assert.equal(result.parseCpuMs, 0.625);
-    assert.equal(getSamples(), 5);
+  withCpuDeltas([100_000, 10_000, 10_000], getSamples => {
+    const result = measureBenchmarkCpuPerRun(() => {}, { baseRuns: 5 });
+    assert.equal(result, 2);
+    assert.equal(getSamples(), 3);
   });
 });
 
 test('CPU sampling fails closed when repeated coarse zeros exhaust the bounded run budget', () => {
-  withCpuDeltas([0, 0, 10_000], getSamples => {
-    const result = benchmarkSource('cpu-sampler-insufficient', 'observe x = "v" from "src";\n');
-    assert.equal(result.parseCpuMs, 0);
+  withCpuDeltas([0, 10_000, 10_000], getSamples => {
+    const result = measureBenchmarkCpuPerRun(() => {}, { baseRuns: 20 });
+    assert.equal(result, 0);
     assert.equal(getSamples(), 3);
   });
 });
 
 test('CPU sampling recovers from an initial coarse zero to a stable multi-sample median', () => {
   withCpuDeltas([0, 20_000, 10_000, 10_000], getSamples => {
-    const result = benchmarkSource('cpu-sampler-coarse', 'observe x = "v" from "src";\n');
-    assert.equal(result.parseCpuMs, 0.625);
+    const result = measureBenchmarkCpuPerRun(() => {}, { baseRuns: 10 });
+    assert.equal(result, 1);
     assert.equal(getSamples(), 4);
   });
+});
+
+test('CPU sampler rejects an invalid base run count', () => {
+  assert.throws(
+    () => measureBenchmarkCpuPerRun(() => {}, { baseRuns: 0 }),
+    /baseRuns/
+  );
 });
 

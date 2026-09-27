@@ -492,14 +492,16 @@ state, or deployment path depends on it.
 
 The front-end benchmark remains laboratory evidence, not a hardware score or
 production SLO. Wall-clock parse/format checks use a median of five samples and
-retain the 5,000 ms absolute ceilings. Parse scaling uses process CPU time from
-up to five independent normalized batches. Normal batch size is derived from
-source length so the 1k and 10k corpora process comparable source volume per CPU
-sample instead of equal parse counts; each base batch is capped at 16 parses.
-A zero CPU reading may increase only the next bounded batch. The sampler never
-exceeds 80 parse runs and requires at least three nonzero CPU samples; otherwise
-it returns missing timing evidence so the existing fail-closed budget check
-rejects the scaling result. The 1k -> 10k CPU ceiling remains 20x.
+retain the 5,000 ms absolute ceilings. Parse scaling still uses process CPU time,
+but the CPU sampler now collects exactly three independent nonzero batches.
+Base batch size uses the larger of a comparable-source-volume floor and enough
+parses to target about 80 ms of the already-observed median parse wall work,
+capped at 26 parses so the complete CPU sampler never exceeds 80 parse runs.
+A zero CPU reading may grow only the next bounded batch. Fewer than three
+nonzero CPU samples returns missing timing evidence so the existing fail-closed
+budget check rejects the scaling result. Wall time calibrates measurement
+duration only; it does not replace CPU time as the scaling metric. The 1k -> 10k
+CPU ceiling remains 20x.
 
 Run the focused tests through the existing Mesh test harness:
 
