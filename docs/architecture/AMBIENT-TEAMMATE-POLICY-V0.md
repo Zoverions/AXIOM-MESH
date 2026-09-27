@@ -123,7 +123,7 @@ This design composes #1138 rather than weakening it:
 - a participation policy never expands the set of memory a task may read;
 - a model-produced suggestion to remember, repeat, or retransmit something remains data unless a separate local authority transition permits that use.
 
-A future Context/Memory Read Envelope should bind requesting principal, task/outcome, purpose, context scopes, projection, consent/policy, expiry/currentness, and exact allow/deny state. It should reuse existing memory and disclosure primitives rather than create a parallel store.
+Do **not** add a parallel Context/Memory Read Envelope. AXIOM already has the canonical `axiom-context-request.v1` -> purpose/consent/policy -> `axiom-vault-access-lease.v1` -> minimized Context Capsule architecture. Ambient participation should consume that boundary when private context is needed: the participation layer may express or carry a semantic need, but it cannot select a source vault, mint a lease, widen a disclosure projection, or convert local read access into effect authority.
 
 ## Tool disclosure
 
@@ -146,6 +146,7 @@ This extends the existing task-resume/currentness work rather than replacing it.
 | #1600 Behavioral Assurance | participation scores remain bounded behavioral evidence, not authority |
 | #1597 Knowledge -> Operation -> Authority | semantic participation decisions remain upstream of authority |
 | #1138 Semantic contagion / memory authority | scoped memory cannot become instruction authority |
+| Sovereign Vault / Context Request architecture | private context is requested and minimized through the existing request/lease/capsule boundary, not a new ambient-memory path |
 | #1422 Subagent communication/delegation | messages and steering are not implicit delegation |
 | #1575 Watch integration | external harness finding is converted into executable falsification targets |
 
