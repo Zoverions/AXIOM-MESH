@@ -203,6 +203,7 @@ export function verifyInstallReleaseManifest(
     production_promotion_established:false,
     release_input_cryptographically_valid:true,
     host_plan_required_separately:true,
+    data_compatibility:deepFreeze({...manifest.data_compatibility}),
     host_mutation_authorized:false,
     installation_authority_granted:false,
     mesh_authority_granted:false,
