@@ -112,6 +112,18 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
+- an OCI-first, non-mutating Linux host planner for the specified personal/local
+  and infrastructure-node profiles; it emits deterministic compatibility,
+  blocker, and prerequisite evidence while creating no users, credentials,
+  services, network enrollment, or authority;
+- an externally trusted Ed25519 signed release/install-manifest verifier that
+  binds exact current install, capability, application, network, and setup
+  control-plane digests and keeps artifact-byte verification separate from host
+  mutation or installation authority;
+- an inert Install Session v0 state classifier that binds one desired plan/
+  release/artifact evidence set to a self-digested installed-state observation
+  and distinguishes install/no-op/repair/upgrade/recovery review from newer,
+  diverged, partial-secret, conflict, and uncertainty stops without host mutation;
 - a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
