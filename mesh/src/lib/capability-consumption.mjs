@@ -50,6 +50,10 @@ export function capabilitySemanticConsumptionDigest(claims) {
       pattern: TOOL
     })
   });
+export function capabilitySemanticConsumptionEventId(claims) {
+  return `evt_capability_semantic_${capabilitySemanticConsumptionDigest(claims)}`;
+}
+
 }
 
 export function buildCapabilityConsumptionStatement({
