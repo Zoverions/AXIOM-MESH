@@ -81,7 +81,8 @@ export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
   exactObject(policy.authority,'Install release manifest authority policy',[
     'manifest_grants_install_authority','manifest_grants_mesh_authority',
     'manifest_grants_network_authority','manifest_enrolls_node',
-    'manifest_starts_services','manifest_mutates_host'
+    'manifest_starts_services','manifest_mutates_host',
+    'manifest_may_claim_production_promotion'
   ]);
   if(Object.values(policy.authority).some(value=>value!==false)){
     throw new ValidationError('Install release manifest policy cannot grant authority or mutate the host');
@@ -198,7 +199,8 @@ export function verifyInstallReleaseManifest(
     install_profiles:manifest.install_profiles.map(item=>item.id),
     policy_digest:policyResult.policy_digest,
     manifest_digest:bodyDigest,
-    production_promoted:manifest.production_promoted,
+    production_promoted:false,
+    production_promotion_established:false,
     release_input_cryptographically_valid:true,
     host_plan_required_separately:true,
     host_mutation_authorized:false,
@@ -213,6 +215,7 @@ export function verifyInstallReleaseManifest(
 }
 
 export function verifyInstallReleaseArtifact(artifact,bytes,{policy=manifestPolicy}={}){
+  validateInstallReleaseManifestPolicy(policy);
   validateArtifact(artifact,new Set(PROFILES),policy);
   if(!Buffer.isBuffer(bytes)&&!(bytes instanceof Uint8Array)){
     throw new ValidationError('Release artifact bytes must be a Buffer or Uint8Array');
@@ -251,7 +254,7 @@ function validateManifest(manifest,context){
     ||!ID.test(manifest.release_id)
     ||!VERSION.test(manifest.kernel_version)
     ||!context.policy.allowed_channels.includes(manifest.channel)
-    ||typeof manifest.production_promoted!=='boolean'
+    ||manifest.production_promoted!==false
     ||!REVISION.test(manifest.source_revision)
     ||!ID.test(manifest.signing_key_id)
     ||manifest.installation_grants_authority!==false
