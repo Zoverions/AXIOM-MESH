@@ -307,3 +307,30 @@ The first privileged installer must then consume **all** of:
 - documented resumable/rollback state.
 
 No earlier artifact grants permission to cross that boundary.
+
+## Converged session boundary
+
+The signed manifest and its verifier pin `host_mutation_authorized: false`,
+`installation_grants_authority: false`, `authority_effect: none` and
+`network_effect: none`. Signature validity does not change any of those fields.
+
+The converged [Install Session v0](INSTALL-SESSION-V0.md) constructor composes
+these separate checks without adding an executor. `createInstallSession`
+re-verifies the original signed package against the externally trusted signer
+inventory, derives every required selected-profile artifact from that verified
+manifest, and verifies the exact corresponding local bytes before classification.
+It does not accept a saved `releaseVerification` or `artifactProofs` record as a
+substitute for original verification inputs.
+
+The resulting session also pins `host_mutation_authorized: false`,
+`credential_effect: none`, `service_start_effect: none`, `authority_effect: none`,
+`network_effect: none` and `runtime_activation: false`. A review classification
+is not installation, admission, federation/publication, principal, or birth
+permission. Serialized reports and self-digests are not authenticated portable
+credentials. Trusted signer custody and truthful observation collection remain
+separate boundaries; supplied or synthetic observations do not become live review.
+
+This converged inert contract replaces the competing unmerged session proposals;
+it does not close the privileged executor, production signing, or fresh-host gates
+listed above. The Ubuntu host installation profile is not a requirement for every
+participating device, and membership/authorization remains outside this installer.
