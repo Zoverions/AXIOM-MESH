@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://axiom.invalid/schemas/semantic-action-consumption-lab-v0.schema.json",
   "title": "AXIOM Semantic Action Consumption Lab v0 receipt",
-  "description": "Inert, test-only reference model for #1576. A lab receipt records durable semantic-action consumption keyed by authorization instance + canonical effect identity + remaining execution budget, and separates admission_consumed, effect_committed, effect_observed and reconciliation. Sink idempotency is pinned from the effect profile at admission; remaining budget only decreases. It never grants authority, never executes, never opens a network path, never activates runtime, and never replaces the live jti-keyed capability consumption. No token, identity, confirmation UI, or receipt is authority by itself.",
+  "description": "Inert, test-only reference model for #1576. A lab receipt records durable semantic-action consumption keyed by authorization instance + canonical effect identity + remaining execution budget, and separates admission_consumed, effect_committed, effect_observed and reconciliation. Sink idempotency is pinned from the effect profile at admission; remaining budget only decreases. It never grants authority, never executes, never opens a network path, never activates runtime, and remains separate from the supported native consumption path. The native path independently blocks fresh-JTI replay for one exact signed invocation; the lab's broader mandate, authorization-instance, canonical-effect and execution-budget model remains inert. No token, identity, confirmation UI, or receipt is authority by itself.",
   "type": "object",
   "additionalProperties": false,
   "required": [

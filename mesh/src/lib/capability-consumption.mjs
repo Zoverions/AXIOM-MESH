@@ -23,6 +23,44 @@ export function capabilityConsumptionEventId(jti) {
   return `evt_capability_consume_${sha256(normalized)}`;
 }
 
+export function capabilitySemanticConsumptionDigest(claimsOrStatement) {
+  const value = assertPlainObject(
+    claimsOrStatement,
+    'capability semantic consumption claims or statement'
+  );
+  const issuer = semanticAlias(value, 'iss', 'issuer', 'capability issuer');
+  const audience = semanticAlias(value, 'aud', 'audience', 'capability audience');
+  return digestObject({
+    schema: 'axiom-capability-semantic-consumption.v1',
+    subject: assertString(value.subject, 'capability subject', {
+      max: 160,
+      pattern: ID
+    }),
+    issuer: assertString(issuer, 'capability issuer', {
+      max: 64,
+      pattern: /^[a-z][a-z0-9-]{0,63}$/
+    }),
+    audience: assertString(audience, 'capability audience', {
+      max: 64,
+      pattern: /^[a-z][a-z0-9-]{0,63}$/
+    }),
+    intent_digest: requiredDigest(value.intent_digest, 'capability intent digest'),
+    plan_digest: requiredDigest(value.plan_digest, 'capability plan digest'),
+    policy_digest: requiredDigest(value.policy_digest, 'capability policy digest'),
+    ...(value.invocation_digest
+      ? { invocation_digest: requiredDigest(value.invocation_digest, 'capability invocation digest') }
+      : {}),
+    tool: assertString(value.tool, 'capability tool', {
+      max: 128,
+      pattern: TOOL
+    })
+  });
+}
+
+export function capabilitySemanticConsumptionEventId(claims) {
+  return `evt_capability_semantic_${capabilitySemanticConsumptionDigest(claims)}`;
+}
+
 export function buildCapabilityConsumptionStatement({
   capability,
   claims,
@@ -197,6 +235,15 @@ export function normalizeCapabilityConsumptionStatement(value) {
     throw new ValidationError('Capability consumption time is outside capability lifetime');
   }
   return Object.freeze(structuredClone(statement));
+}
+
+function semanticAlias(value, claimName, statementName, label) {
+  const claim = value[claimName];
+  const statement = value[statementName];
+  if (claim !== undefined && statement !== undefined && claim !== statement) {
+    throw new ValidationError(`${label} aliases disagree`);
+  }
+  return claim ?? statement;
 }
 
 function requiredDigest(value, label) {
