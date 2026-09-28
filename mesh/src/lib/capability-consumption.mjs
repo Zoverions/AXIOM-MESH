@@ -23,6 +23,35 @@ export function capabilityConsumptionEventId(jti) {
   return `evt_capability_consume_${sha256(normalized)}`;
 }
 
+export function capabilitySemanticConsumptionDigest(claims) {
+  const value = assertPlainObject(claims, 'capability semantic consumption claims');
+  return digestObject({
+    schema: 'axiom-capability-semantic-consumption.v1',
+    subject: assertString(value.subject, 'capability subject', {
+      max: 160,
+      pattern: ID
+    }),
+    issuer: assertString(value.iss, 'capability issuer', {
+      max: 64,
+      pattern: /^[a-z][a-z0-9-]{0,63}$/
+    }),
+    audience: assertString(value.aud, 'capability audience', {
+      max: 64,
+      pattern: /^[a-z][a-z0-9-]{0,63}$/
+    }),
+    intent_digest: requiredDigest(value.intent_digest, 'capability intent digest'),
+    plan_digest: requiredDigest(value.plan_digest, 'capability plan digest'),
+    policy_digest: requiredDigest(value.policy_digest, 'capability policy digest'),
+    ...(value.invocation_digest
+      ? { invocation_digest: requiredDigest(value.invocation_digest, 'capability invocation digest') }
+      : {}),
+    tool: assertString(value.tool, 'capability tool', {
+      max: 128,
+      pattern: TOOL
+    })
+  });
+}
+
 export function buildCapabilityConsumptionStatement({
   capability,
   claims,
