@@ -35,5 +35,6 @@ test('participation cooldown evidence v0 schema is closed and non-authorizing', 
   assert.equal(value.properties.runtime_activation.const, false);
   assert.ok(value.required.includes('history_digest'));
   assert.ok(value.required.includes('evidence_digest'));
+  assert.equal(value.properties.evidence_refs.minItems, 1);
   assert.equal(value.properties.evidence_refs.maxItems, 128);
 });
