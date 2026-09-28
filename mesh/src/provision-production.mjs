@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { mkdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalJson, ValidationError } from './lib/canonical.mjs';
 import { ensureMeshIdentity } from './lib/identity.mjs';
@@ -19,6 +19,16 @@ export async function provisionProduction({
     mkdir(resolvedDataDir, { recursive: true, mode: 0o700 }),
     mkdir(resolvedSecretDir, { recursive: true, mode: 0o700 })
   ]);
+  const [canonicalDataDir, canonicalSecretDir] = await Promise.all([
+    realpath(resolvedDataDir),
+    realpath(resolvedSecretDir)
+  ]);
+  if (
+    isWithin(canonicalDataDir, canonicalSecretDir)
+    || isWithin(canonicalSecretDir, canonicalDataDir)
+  ) {
+    throw new ValidationError('Production data and secret directories must not overlap');
+  }
   await Promise.all([
     assertPrivatePath(resolvedDataDir, 'Production data directory'),
     assertPrivatePath(resolvedSecretDir, 'Production secret directory')
@@ -127,6 +137,15 @@ function resolveRequiredDirectory(value, label) {
     throw new ValidationError(`A ${label} is required`);
   }
   return resolve(value);
+}
+
+function isWithin(root, path) {
+  const child = relative(root, path);
+  return child === '' || (
+    child !== '..'
+    && !child.startsWith(`..${sep}`)
+    && !isAbsolute(child)
+  );
 }
 
 async function readOptional(path) {
