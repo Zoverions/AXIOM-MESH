@@ -177,6 +177,45 @@ test('whole-state: malformed projection evidence never becomes active authority-
   }, new Date('2026-09-27T12:00:00.000Z'));
   assert.equal(malformedRevocation.state, 'unknown');
 
+  const futureRevocation = presenter.consent({
+    consent_id: 'consent_fixture_future_revocation',
+    subject: 'local-operator',
+    controller: 'capsule:education',
+    purpose: 'curriculum-personalization',
+    scopes_json: ['learning-progress:read'],
+    expires_at: '2026-09-28T12:00:00.000Z',
+    status: 'active',
+    created_at: '2026-09-27T10:00:00.000Z',
+    revoked_at: '2026-09-27T13:00:00.000Z'
+  }, new Date('2026-09-27T12:00:00.000Z'));
+  assert.equal(futureRevocation.state, 'unknown');
+
+  const futureCreation = presenter.consent({
+    consent_id: 'consent_fixture_future_creation',
+    subject: 'local-operator',
+    controller: 'capsule:education',
+    purpose: 'curriculum-personalization',
+    scopes_json: ['learning-progress:read'],
+    expires_at: '2026-09-29T12:00:00.000Z',
+    status: 'active',
+    created_at: '2026-09-28T10:00:00.000Z',
+    revoked_at: null
+  }, new Date('2026-09-27T12:00:00.000Z'));
+  assert.equal(futureCreation.state, 'unknown');
+
+  const impossibleExpiry = presenter.consent({
+    consent_id: 'consent_fixture_impossible_expiry',
+    subject: 'local-operator',
+    controller: 'capsule:education',
+    purpose: 'curriculum-personalization',
+    scopes_json: ['learning-progress:read'],
+    expires_at: '2026-09-27T09:00:00.000Z',
+    status: 'active',
+    created_at: '2026-09-27T10:00:00.000Z',
+    revoked_at: null
+  }, new Date('2026-09-27T12:00:00.000Z'));
+  assert.equal(impossibleExpiry.state, 'unknown');
+
   const malformedVerification = presenter.verification({
     valid: false,
     seq: 4,
