@@ -11,6 +11,8 @@ import {
 import {
   capabilityConsumptionEventId,
   capabilitySemanticConsumptionDigest,
+  capabilitySemanticConsumptionEventId,
+  normalizeCapabilityConsumptionStatement,
   signCapabilityConsumptionReceipt
 } from '../lib/capability-consumption.mjs';
 
@@ -22,6 +24,7 @@ export async function createCapabilityConsumptionCommitter({
   store
 }) {
   const hypervisorKey = await loadTrustedKey(config.dataDir, 'hypervisor');
+  const historicalSemanticDigests = loadHistoricalSemanticDigests(store);
 
   return function consumeCapability({ traceId, actor, event }) {
     const request = assertPlainObject(event, 'capability consumption request');
@@ -62,12 +65,14 @@ export async function createCapabilityConsumptionCommitter({
 
     const eventId = capabilityConsumptionEventId(claims.jti);
     const semanticDigest = capabilitySemanticConsumptionDigest(claims);
+    const semanticEventId = capabilitySemanticConsumptionEventId(claims);
     if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)) {
       throw consumedError(claims.jti);
     }
-    if (store.db.prepare(
-      'SELECT 1 FROM capability_semantic_consumptions WHERE semantic_digest = ?'
-    ).get(semanticDigest)) {
+    if (
+      historicalSemanticDigests.has(semanticDigest)
+      || store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(semanticEventId)
+    ) {
       throw semanticConsumedError(semanticDigest);
     }
 
@@ -80,29 +85,42 @@ export async function createCapabilityConsumptionCommitter({
       const events = store.appendEvents({
         traceId,
         actor,
-        events: [{
-          event_id: eventId,
-          kind: 'capability.consumed',
-          subject: claims.jti,
-          payload: {
-            receipt: signed.receipt,
-            receipt_digest: signed.receipt_digest
+        events: [
+          {
+            event_id: semanticEventId,
+            kind: 'capability.semantic-consumed',
+            subject: claims.subject,
+            payload: {
+              semantic_consumption_digest: semanticDigest,
+              capability_jti: claims.jti,
+              capability_consumption_event_id: eventId
+            }
+          },
+          {
+            event_id: eventId,
+            kind: 'capability.consumed',
+            subject: claims.jti,
+            payload: {
+              receipt: signed.receipt,
+              receipt_digest: signed.receipt_digest
+            }
           }
-        }]
+        ]
       });
+      historicalSemanticDigests.add(semanticDigest);
       return Object.freeze({
         receipt: signed.receipt,
         receipt_digest: signed.receipt_digest,
-        event: events[0]
+        event: events[1],
+        semantic_event: events[0]
       });
     } catch (error) {
       if (error?.code === 'state_conflict') {
         if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)) {
           throw consumedError(claims.jti);
         }
-        if (store.db.prepare(
-          'SELECT 1 FROM capability_semantic_consumptions WHERE semantic_digest = ?'
-        ).get(semanticDigest)) {
+        if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(semanticEventId)) {
+          historicalSemanticDigests.add(semanticDigest);
           throw semanticConsumedError(semanticDigest);
         }
       }
@@ -120,6 +138,25 @@ function consumedError(jti) {
   );
 }
 
+
+function loadHistoricalSemanticDigests(store) {
+  const digests = new Set();
+  const rows = store.db.prepare(
+    "SELECT * FROM events WHERE kind = 'capability.consumed' ORDER BY seq"
+  ).all();
+  for (const row of rows) {
+    const event = store.decodeEventRow(row);
+    const statement = normalizeCapabilityConsumptionStatement(event.payload?.receipt?.statement);
+    const digest = capabilitySemanticConsumptionDigest(statement);
+    if (digests.has(digest)) {
+      throw new ValidationError(
+        'Grid history contains duplicate semantic capability consumption'
+      );
+    }
+    digests.add(digest);
+  }
+  return digests;
+}
 
 function semanticConsumedError(semanticDigest) {
   return new AxiomError(
