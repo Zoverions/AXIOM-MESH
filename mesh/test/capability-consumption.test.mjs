@@ -870,6 +870,7 @@ test('invalid historical consumption releases Grid store and runtime lock', asyn
     environment: 'test',
     autoBootstrap: true
   });
+  await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
   const grid = await createGridService(config);
   grid.store.appendEvents({
     traceId: 'trace_invalid_semantic_history',
