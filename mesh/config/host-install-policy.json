@@ -7,19 +7,31 @@
   "host_mutation_enabled": false,
   "planner": {
     "status": "implemented-non-mutating",
-    "platforms": ["linux"],
-    "architectures": ["x64", "arm64"],
+    "platforms": [
+      "linux"
+    ],
+    "architectures": [
+      "x64",
+      "arm64"
+    ],
     "supported_distributions": [
       {
         "id": "ubuntu",
-        "versions": ["24.04"],
+        "versions": [
+          "24.04"
+        ],
         "package_manager": "apt-get",
         "init_system": "systemd"
       }
     ],
     "preferred_runtime_strategy": "oci",
-    "runtime_strategies": ["oci", "source"],
-    "verified_oci_runtimes": ["docker"],
+    "runtime_strategies": [
+      "oci",
+      "source"
+    ],
+    "verified_oci_runtimes": [
+      "docker"
+    ],
     "required_facts": [
       "platform",
       "architecture",
@@ -35,7 +47,8 @@
     ],
     "node_fact_requirement": "optional-for-oci-required-for-source",
     "unsupported_host_behavior": "fail-closed-with-blockers",
-    "mutation_performed": false
+    "mutation_performed": false,
+    "planner_execution_requires_node": true
   },
   "mutating_installer": {
     "status": "not-implemented",
@@ -56,7 +69,10 @@
       "secret_dir": "/etc/axiom-mesh/secrets",
       "run_dir": "/run/axiom-mesh",
       "log_dir": "/var/log/axiom-mesh",
-      "applications": ["axiom-one", "axiom-education"]
+      "applications": [
+        "axiom-one",
+        "axiom-education"
+      ]
     },
     "infrastructure-node": {
       "topology": "independent-service-units",
