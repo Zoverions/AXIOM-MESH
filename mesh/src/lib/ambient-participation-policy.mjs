@@ -306,6 +306,47 @@ export function validateSilentInvestigationResult(d){
 }
 export function silentInvestigationResultDigest(d){validateSilentInvestigationResult(d);return digestObject(d);}
 
+export function verifySilentInvestigationBinding(result,policy,observation){
+  validateSilentInvestigationResult(result);
+  validateParticipationPolicy(policy);
+  validateParticipationObservation(observation);
+  const reasons=[];
+  if(result.policy_digest!==participationPolicyDigest(policy)) reasons.push('silent-policy-digest-mismatch');
+  if(result.observation_digest!==participationObservationDigest(observation)) reasons.push('silent-observation-digest-mismatch');
+  if(policy.silent_investigation!==true) reasons.push('silent-investigation-disabled');
+  if(observation.addressing_class==='explicit') reasons.push('explicit-request-requires-response');
+
+  if(result.silence_reason==='interruption-not-justified'){
+    const noise=observation.dimensions.noise;
+    const interruption=observation.dimensions.interruption_cost;
+    const justified=
+      (noise!==null&&noise>policy.thresholds.noise_max)
+      ||(interruption!==null&&interruption>policy.thresholds.interruption_cost_max);
+    if(!justified) reasons.push('silence-reason-not-supported');
+  }
+
+  if(result.silence_reason==='policy-suppressed'){
+    const suppressed=
+      policy.passive_participation!==true
+      ||policy.quiet_context_ids.includes(observation.context_id)
+      ||!policy.allowed_context_classes.includes(observation.context_class)
+      ||(policy.context_scope_mode==='allowlist'&&!policy.allowed_context_ids.includes(observation.context_id));
+    if(!suppressed) reasons.push('policy-does-not-suppress-context');
+  }
+
+  return Object.freeze({
+    bound:reasons.length===0,
+    reasons:Object.freeze(reasons),
+    result_digest:silentInvestigationResultDigest(result),
+    policy_digest:participationPolicyDigest(policy),
+    observation_digest:participationObservationDigest(observation),
+    authority_effect:'none',
+    communication_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false
+  });
+}
+
 function decision(action,reasons,o,p){return makeDecision(action,reasons,digestObject(o),digestObject(p));}
 function makeDecision(action,reasons,observationDigest,policyDigest){
   const d={
