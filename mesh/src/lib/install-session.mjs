@@ -280,4 +280,150 @@ export function validateInstallSession(session){
     ||!SHA.test(session.host_plan_digest)
     ||!ID.test(session.release_id)
     ||!VERSION.test(session.kernel_version)
-    ||!REVI
+    ||!REVISION.test(session.source_revision)
+    ||!SHA.test(session.manifest_digest)
+    ||!SHA.test(session.observed_install_digest)
+    ||!CLASSIFICATIONS.has(session.classification)
+    ||!NEXT_PREPARATIONS.has(session.next_preparation)
+    ||session.host_mutation_authorized!==false
+    ||session.credential_effect!=='none'
+    ||session.service_start_effect!=='none'
+    ||session.authority_effect!=='none'
+    ||session.network_effect!=='none'
+    ||session.runtime_activation!==false
+  ) throw new ValidationError('Install session boundary is invalid');
+  canonicalTime(session.observed_at,'observed_at');
+  stringArray(session.reasons,'Install session reasons',{min:1,max:32,itemMax:160});
+  stringArray(session.blockers,'Install session blockers',{min:0,max:64,itemMax:256});
+  plainArray(session.artifact_proofs,'Install session artifact_proofs',{min:1,max:128});
+  const seen=new Set();
+  for(const item of session.artifact_proofs){
+    exactObject(item,'Install session artifact proof reference',[
+      'artifact_id','artifact_sha256','proof_digest'
+    ]);
+    if(!ID.test(item.artifact_id)||!SHA.test(item.artifact_sha256)||!SHA.test(item.proof_digest)||seen.has(item.artifact_id)){
+      throw new ValidationError('Install session artifact proof reference is invalid');
+    }
+    if(PRIVATE_BIRTH_TOKEN.test(item.artifact_id)){
+      throw new ValidationError('Install session cannot reference birth/Genesis/Spark material');
+    }
+    seen.add(item.artifact_id);
+  }
+  const expectedNext=expectedPreparationForClassification(session.classification);
+  if(session.classification!=='healthy-older'&&session.next_preparation!==expectedNext){
+    throw new ValidationError('Install session next preparation does not match classification');
+  }
+  if(session.classification==='healthy-older'&&!['prepare-upgrade','stop'].includes(session.next_preparation)){
+    throw new ValidationError('Install session healthy-older next preparation is invalid');
+  }
+  if(!SHA.test(session.session_digest)||computeInstallSessionDigest(session)!==session.session_digest){
+    throw new ValidationError('Install session digest mismatch');
+  }
+  return Object.freeze({
+    valid:true,
+    session_digest:session.session_digest,
+    classification:session.classification,
+    next_preparation:session.next_preparation,
+    host_mutation_authorized:false,
+    authority_effect:'none',
+    network_effect:'none'
+  });
+}
+
+export function deriveInstallClassification({hostPlan,releaseVerification,observedInstall}){
+  validateHostInstallPlan(hostPlan);
+  validateReleaseVerification(releaseVerification);
+  validateObservedInstall(observedInstall);
+
+  const reasons=[];
+  const blockers=[];
+  if(hostPlan.host_candidate_compatible!==true){
+    blockers.push(...hostPlan.blockers.map(item=>`host-plan:${item}`));
+  }
+
+  let classification;
+  let next;
+  if(observedInstall.legacy_proof_state_detected||observedInstall.presence==='legacy-proof-markers'){
+    classification='legacy-proof-state';
+    next='stop';
+    reasons.push('legacy-proof-state-is-not-current-install-state');
+  }else if(observedInstall.presence==='absent'){
+    classification='absent';
+    next='prepare-install';
+    reasons.push('no-existing-install-state-observed');
+  }else if(observedInstall.presence==='unknown'){
+    classification='newer-or-unknown';
+    next='stop';
+    reasons.push('existing-install-state-unknown');
+  }else{
+    const exactIdentity=existingIdentityMatchesTarget(observedInstall,hostPlan,releaseVerification);
+    const relation=compareVersions(
+      observedInstall.existing_kernel_version,
+      releaseVerification.kernel_version
+    );
+    if(observedInstall.presence==='partial-current-receipt'){
+      if(exactIdentity&&observedInstall.receipt_status==='partial'){
+        classification='partial-same';
+        next='prepare-repair';
+        reasons.push('partial-install-matches-exact-target-lineage');
+      }else{
+        classification='conflicting-partial';
+        next='stop';
+        reasons.push('partial-install-does-not-match-exact-target-lineage');
+      }
+    }else if(exactIdentity&&observedInstall.receipt_status==='complete'){
+      if(observedInstall.health==='healthy'){
+        classification='healthy-same';
+        next='verify-noop';
+        reasons.push('existing-install-matches-exact-target-and-is-healthy');
+      }else if(observedInstall.health==='unhealthy'){
+        classification='partial-same';
+        next='prepare-repair';
+        reasons.push('existing-install-matches-target-but-is-unhealthy');
+      }else{
+        classification='newer-or-unknown';
+        next='stop';
+        reasons.push('existing-install-health-is-unknown');
+      }
+    }else if(
+      relation===-1
+      &&observedInstall.receipt_status==='complete'
+      &&observedInstall.health==='healthy'
+      &&observedInstall.existing_profile_id===hostPlan.profile_id
+    ){
+      classification='healthy-older';
+      if(upgradePreparationAllowed(observedInstall,releaseVerification)){
+        next='prepare-upgrade';
+        reasons.push('existing-install-is-older-and-release-declares-compatible-upgrade-posture');
+      }else{
+        next='stop';
+        reasons.push('existing-install-is-older-but-upgrade-compatibility-is-not-established');
+      }
+    }else if(relation===1||relation===null){
+      classification='newer-or-unknown';
+      next='stop';
+      reasons.push(relation===1?'existing-install-is-newer-than-target':'existing-install-version-is-not-comparable');
+    }else{
+      classification='conflicting-partial';
+      next='stop';
+      reasons.push('existing-install-identity-conflicts-with-target-release');
+    }
+  }
+
+  if(blockers.length>0){
+    next='stop';
+    reasons.push('host-plan-has-blockers');
+  }
+
+  return deepFreeze({
+    classification,
+    next_preparation:next,
+    reasons:[...new Set(reasons)],
+    blockers:[...new Set(blockers)],
+    host_mutation_authorized:false,
+    authority_effect:'none',
+    network_effect:'none'
+  });
+}
+
+function validateReleaseVerific
