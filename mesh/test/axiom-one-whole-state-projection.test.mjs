@@ -137,3 +137,51 @@ test('whole-state: audit verification has a bounded non-authorizing human explan
   assert.notEqual(invalid.tone, 'complete');
   assert.match(invalid.guidance.join(' '), /do not.*treat|invalid|repair|inspect/i);
 });
+
+
+test('whole-state: malformed projection evidence never becomes active authority-like state', () => {
+  const unknownCapability = presenter.capability({
+    id: 'future.capability',
+    family: 'future',
+    status: 'future_status',
+    summary: 'Unknown future registry state.'
+  });
+  assert.equal(unknownCapability.state, 'unknown');
+  assert.equal(unknownCapability.tone, 'uncertain');
+  assert.match(facts(unknownCapability).Authorization, /unknown/i);
+
+  const malformedConsent = presenter.consent({
+    consent_id: 'consent_fixture_malformed',
+    subject: 'local-operator',
+    controller: 'capsule:education',
+    purpose: '',
+    scopes_json: [],
+    expires_at: '2026-09-28T12:00:00.000Z',
+    status: 'active',
+    created_at: '2026-09-27T10:00:00.000Z',
+    revoked_at: null
+  }, new Date('2026-09-27T12:00:00.000Z'));
+  assert.equal(malformedConsent.state, 'unknown');
+  assert.match(malformedConsent.guidance.join(' '), /do not treat.*active consent|authority/i);
+
+  const malformedRevocation = presenter.consent({
+    consent_id: 'consent_fixture_bad_revocation',
+    subject: 'local-operator',
+    controller: 'capsule:education',
+    purpose: 'curriculum-personalization',
+    scopes_json: ['learning-progress:read'],
+    expires_at: '2026-09-28T12:00:00.000Z',
+    status: 'active',
+    created_at: '2026-09-27T10:00:00.000Z',
+    revoked_at: 'not-a-date'
+  }, new Date('2026-09-27T12:00:00.000Z'));
+  assert.equal(malformedRevocation.state, 'unknown');
+
+  const malformedVerification = presenter.verification({
+    valid: false,
+    seq: 4,
+    reason: '<script>not-a-closed-reason</script>'
+  });
+  assert.equal(malformedVerification.state, 'uncertain');
+  assert.notEqual(malformedVerification.tone, 'complete');
+});
