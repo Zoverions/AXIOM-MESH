@@ -99,6 +99,32 @@ The pure evaluator uses observation + policy + current event state. For passive 
 
 Explicit supported requests can still enter normal answer handling when the semantic evaluator is unavailable, stale, from the future, mismatched to the current event/context, or paired with a not-yet-effective/expired proactivity policy. In those cases the semantic/policy advice is bypassed rather than allowed to suppress the explicit user request, and the fallback decision carries `null` observation/policy digests so unusable semantic evidence is not misrepresented as the basis for the answer. Passive proactivity never fails open because a semantic provider or policy-currentness check failed.
 
+### Participation Decision v0
+
+`axiom-participation-decision.v0` is the closed evidence record emitted by the deterministic evaluator. It binds the chosen `ANSWER | INVESTIGATE | ACKNOWLEDGE | PASS` action, bounded reason codes, the exact participation-observation and policy digests when they were usable, and its own self-digest.
+
+The decision has hard-zero authority, data-scope, communication, execution, and runtime effects. A fallback decision that intentionally bypasses stale, mismatched, or unavailable semantic evidence records both observation and policy digests as `null` rather than laundering unusable evidence into the decision basis.
+
+A participation decision is therefore evidence about **what the interaction policy recommended**. It is not a send authorization, tool grant, disclosure grant, task mutation, or execution permit.
+
+### Cooldown Evidence v0
+
+Policy carries a cooldown window and maximum unsolicited-intervention count, but live code must not trust a caller-supplied `ready` flag.
+
+`axiom-participation-cooldown-evidence.v0` binds:
+
+- exact participation-policy digest;
+- exact context;
+- bounded time window ending exactly at the evaluation instant;
+- observed unsolicited-intervention count;
+- policy maximum;
+- history digest and at least one evidence reference;
+- deterministic `ready | blocked` state.
+
+`assessParticipationCooldown` fails to `unavailable` when the evidence is malformed or does not bind the current policy, context, evaluation time, window length, or intervention limit. The evidence-backed evaluation wrapper then feeds only that derived state into the participation evaluator. Missing or invalid cooldown evidence therefore cannot make passive proactivity fail open.
+
+This remains an offline composition contract. It does not define the eventual durable history store or grant communication authority.
+
 ### Active Task Steering v0
 
 `axiom-active-task-steering.v0` records one evidence-only decision:
@@ -112,11 +138,19 @@ The record binds the previous task digest, new event digest, actor principal, se
 
 This composes `axiom-task-lifecycle.v0` from #1823 rather than creating another task system.
 
+Before a future task harness consumes steering, `verifyActiveTaskSteeringBinding` must bind the record to the exact predecessor and, for `APPEND` / `REPLACE`, the exact successor `axiom-task-lifecycle.v0` state. The verifier rejects task, outcome, principal, authority-snapshot, budget, digest, or temporal drift. It also requires steering to preserve the predecessor's lifecycle/effect state, worker/provider/node bindings, currentness-check timestamps, resume state, and result references. The steering record may carry new semantic context, but it cannot use the successor lifecycle record to smuggle a completion, effect, worker change, or other operational transition. `STOP` and `IGNORE` remain evidence-only requests and cannot carry a successor task state.
+
+This verifier still does not execute the transition. Cancellation, replacement, or any consequential follow-on remains subject to the normal task/currentness and AXIOM authority paths.
+
+The v0 binding accepts only self-steering by the task's current principal. That is a deliberate fail-closed limitation, not a claim that collaborative steering must always be single-principal. A later Circle/team surface may allow a different actor only after an existing AXIOM authority/delegation mechanism can prove that actor's current steering authority for the exact task and decision; the steering record itself will not mint that relationship.
+
 ### Silent Investigation Result v0
 
 `axiom-silent-investigation-result.v0` makes silence an explicit terminal evidence state. It can record bounded evidence, work counts, useful/actionable findings, unresolved unknowns, and the reason no message was emitted.
 
 A silent result is not a hidden failure and is not proof that no relevant fact exists outside the searched evidence universe.
+
+`verifySilentInvestigationBinding` additionally binds the result to the exact participation policy and observation. Silent conclusions must be enabled by policy and are never accepted for an explicit addressed request. An `interruption-not-justified` reason must be supported by the observation's noise/interruption evidence; a `policy-suppressed` reason must correspond to an actual passive/quiet/context-scope restriction. The binding remains evidence-only and cannot itself suppress or send a message.
 
 ## Memory boundary
 
@@ -163,7 +197,7 @@ The implementation must preserve at least these properties:
 3. private-context evidence cannot leak into broader output without disclosure authority;
 4. stale or repeated memory cannot raise authority;
 5. quiet/passive-disabled contexts stay silent;
-6. no useful finding may terminate silently;
+6. an investigation with no useful/actionable intervention may terminate silently only with explicit bounded evidence and a recorded silence reason;
 7. steering cannot widen an effect envelope or delegate implicitly;
 8. an authorized STOP can flow into task cancellation, after which queued effects must fail currentness checks;
 9. stale approval after task replacement is rejected by the existing approval/currentness boundary;
@@ -173,6 +207,6 @@ The implementation must preserve at least these properties:
 
 ## Non-claims
 
-This slice does not provide a live proactive agent, Slack/Discord integration, automatic reactions, new provider access, memory sharing, autonomous external investigation, public messaging, task execution, production policy, or calibrated participation thresholds.
+This slice does not provide a live proactive agent, Slack/Discord integration, automatic reactions, new provider access, memory sharing, autonomous external investigation, public messaging, task execution, a durable cooldown-history store, production policy, or calibrated participation thresholds.
 
 It is a network-free, zero-authority contract/evaluator layer intended to make later ambient behavior inspectable and falsifiable before any live interaction surface is enabled.

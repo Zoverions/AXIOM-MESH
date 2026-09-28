@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/participation-cooldown-evidence-v0.schema.json",
+  "title": "AXIOM Participation Cooldown Evidence v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema","version","status","evidence_id","policy_digest","context_id",
+    "window_started_at","window_ends_at","evaluated_at","unsolicited_interventions",
+    "max_unsolicited_interventions","derived_state","history_digest","evidence_refs",
+    "evidence_digest","authority_effect","communication_effect","execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {"const":"axiom-participation-cooldown-evidence.v0"},
+    "version": {"const":0},
+    "status": {"const":"inert-participation-cooldown-evidence"},
+    "evidence_id": {"$ref":"#/$defs/id"},
+    "policy_digest": {"$ref":"#/$defs/digest"},
+    "context_id": {"$ref":"#/$defs/id"},
+    "window_started_at": {"type":"string","format":"date-time"},
+    "window_ends_at": {"type":"string","format":"date-time"},
+    "evaluated_at": {"type":"string","format":"date-time"},
+    "unsolicited_interventions": {"type":"integer","minimum":0,"maximum":1000000},
+    "max_unsolicited_interventions": {"type":"integer","minimum":0,"maximum":1000000},
+    "derived_state": {"enum":["ready","blocked"]},
+    "history_digest": {"$ref":"#/$defs/digest"},
+    "evidence_refs": {
+      "type":"array","minItems":1,"maxItems":128,"uniqueItems":true,
+      "items":{"type":"string","minLength":1,"maxLength":512}
+    },
+    "evidence_digest": {"$ref":"#/$defs/digest"},
+    "authority_effect": {"const":"none"},
+    "communication_effect": {"const":"none"},
+    "execution_effect": {"const":"none"},
+    "runtime_activation": {"const":false}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"},
+    "digest": {"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}
