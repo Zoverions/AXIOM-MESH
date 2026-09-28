@@ -1,12 +1,14 @@
 # AXIOM-MESH Host Installation and Node Profiles
 
 **Applies to:** `0.12.0-dev.3` development line  
-**Status:** productization specification; host-level fresh-machine installers are not yet implemented  
+**Status:** productization specification; non-mutating Linux host planner implemented; host-level fresh-machine installers are not yet implemented  
 **Updated:** 2026-08-23
 
 AXIOM-MESH needs a supported path from an ordinary machine to a useful, secure node. The existing `npm run setup` path is intentionally narrower: it verifies a checked-out source tree, installs from the committed dependency-free locks, and runs repository checks. It does **not** install the operating-system toolchain, create a host service, harden a machine, provision a complete local product, enroll a node in a network role, or configure remote backup custody.
 
 This document defines the missing productization boundary without weakening that source-setup trust model.
+
+The repository now includes an **inert, non-mutating Linux host planner** at `mesh/src/host-install.mjs` / `mesh/src/lib/host-install-plan.mjs`, governed by `mesh/config/host-install-policy.json`. It can inspect or accept explicit host facts and emit a digest-bound plan for `personal-local` or `infrastructure-node`. The default strategy is OCI-first: a clean-host plan may remain compatible when Node.js is absent, because Node is not a prerequisite for the future OCI installer path; a missing reviewed Docker runtime is reported as a toolchain-acquisition prerequisite, not silently installed. The planner creates no users, directories, credentials, services, network rules, or Mesh enrollment and never treats compatibility as install authority.
 
 ## Installation layers
 
@@ -273,4 +275,4 @@ The first supported fresh-Linux installer is not complete until all of the follo
 14. pass Windows/macOS compatibility checks for repository code even when the first host installer is Linux-only;
 15. collect at least one independent community reproduction before treating the installer as broadly supported.
 
-Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup**, not a completed fresh-machine Linux installer.
+Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup** plus a non-mutating host-planning surface, not a completed fresh-machine Linux installer.
