@@ -115,10 +115,10 @@ Policy carries a cooldown window and maximum unsolicited-intervention count, but
 
 - exact participation-policy digest;
 - exact context;
-- bounded time window and evaluation instant;
+- bounded time window ending exactly at the evaluation instant;
 - observed unsolicited-intervention count;
 - policy maximum;
-- history digest and evidence references;
+- history digest and at least one evidence reference;
 - deterministic `ready | blocked` state.
 
 `assessParticipationCooldown` fails to `unavailable` when the evidence is malformed or does not bind the current policy, context, evaluation time, window length, or intervention limit. The evidence-backed evaluation wrapper then feeds only that derived state into the participation evaluator. Missing or invalid cooldown evidence therefore cannot make passive proactivity fail open.
