@@ -6,7 +6,7 @@ import test from 'node:test';
 const PARENT_BLOBS = Object.freeze({
   capabilities: 'fd34c4b1836654bb7eeb7dda0f8be748ee124db8',
   gateway_contract: '2a9bb5c18fe07fa875be770a2a303d401e5919f1',
-  grid_server: 'f070c9edfc36b48e9d4abd6880779fb7d1caf6aa',
+  grid_server: '966e0c540a721b56bbb89141fed74661cd8bda90',
   core_migrations: '36514febba8d6420b165f19c9032d3510253a521'
 });
 
