@@ -232,24 +232,6 @@ const NODE_SCHEDULING_SQL = `
   ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
 ${NODE_SCHEDULING_TABLES_SQL}`;
 
-const CAPABILITY_SEMANTIC_CONSUMPTION_SQL = `
-  CREATE TABLE IF NOT EXISTS capability_semantic_consumptions (
-    semantic_digest TEXT PRIMARY KEY,
-    capability_jti TEXT NOT NULL,
-    consumption_event_id TEXT NOT NULL UNIQUE,
-    subject TEXT NOT NULL,
-    intent_digest TEXT NOT NULL,
-    plan_digest TEXT NOT NULL,
-    policy_digest TEXT NOT NULL,
-    invocation_digest TEXT,
-    tool TEXT NOT NULL,
-    consumed_at TEXT NOT NULL
-  ) STRICT;
-
-  CREATE INDEX IF NOT EXISTS capability_semantic_consumptions_subject_idx
-  ON capability_semantic_consumptions(subject, consumed_at);
-`;
-
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -358,14 +340,6 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
         ['discovery_json', 'TEXT']
       ]);
       db.exec(NODE_SCHEDULING_TABLES_SQL);
-    }
-  },
-  {
-    version: 11,
-    name: 'durable-capability-semantic-consumption',
-    source: CAPABILITY_SEMANTIC_CONSUMPTION_SQL,
-    up(db) {
-      db.exec(CAPABILITY_SEMANTIC_CONSUMPTION_SQL);
     }
   }
 ]);
