@@ -329,7 +329,11 @@ function makeDecision(action,reasons,observationDigest,policyDigest){
 }
 function assertTaskLifecyclePlainInput(value,label){
   exact(value,label,TASK_LIFECYCLE_FIELDS);
-  if(utilTypes.isProxy(value.result_refs)||!Array.isArray(value.result_refs)) throw new ValidationError(label+' result_refs must be a plain array');
+  if(
+    utilTypes.isProxy(value.result_refs)
+    ||!Array.isArray(value.result_refs)
+    ||Object.getPrototypeOf(value.result_refs)!==Array.prototype
+  ) throw new ValidationError(label+' result_refs must be a plain array');
   const keys=Reflect.ownKeys(value.result_refs);
   for(const key of keys){
     if(key==='length') continue;
