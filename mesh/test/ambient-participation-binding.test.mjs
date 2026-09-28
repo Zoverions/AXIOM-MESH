@@ -99,8 +99,8 @@ function cooldown(p=policy(),overrides={}){
     evidence_id:'participation.cooldown.binding.1',
     policy_digest:participationPolicyDigest(p),
     context_id:'channel.engineering',
-    window_started_at:'2026-09-27T04:00:00.000Z',
-    window_ends_at:'2026-09-27T04:10:00.000Z',
+    window_started_at:'2026-09-27T03:59:59.000Z',
+    window_ends_at:'2026-09-27T04:09:59.000Z',
     evaluated_at:'2026-09-27T04:09:59.000Z',
     unsolicited_interventions:1,
     max_unsolicited_interventions:p.cooldown.max_unsolicited_interventions,
@@ -216,6 +216,11 @@ test('cooldown evidence is self-digested and count-derived',()=>{
   });
   exhausted.evidence_digest=computeParticipationCooldownEvidenceDigest(exhausted);
   assert.equal(validateParticipationCooldownEvidence(exhausted).derived_state,'blocked');
+
+  const shifted=structuredClone(d);
+  shifted.window_ends_at='2026-09-27T04:10:00.000Z';
+  shifted.evidence_digest=computeParticipationCooldownEvidenceDigest(shifted);
+  assert.throws(()=>validateParticipationCooldownEvidence(shifted),/must equal evaluated_at/);
 
   const forged=structuredClone(exhausted);
   forged.derived_state='ready';
