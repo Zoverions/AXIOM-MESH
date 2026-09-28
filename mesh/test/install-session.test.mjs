@@ -332,4 +332,143 @@ test('newer existing install never downgrades automatically',()=>{
     existing_kernel_version:'0.13.0',
     existing_source_revision:'e'.repeat(40)
   });
-  const s=createInstallSession(sessionInput({observed}
+  const s=createInstallSession(sessionInput({observed}));
+  assert.equal(s.classification,'newer-or-unknown');
+  assert.equal(s.next_preparation,'stop');
+});
+
+test('legacy first-node proof state is visible and always stops',()=>{
+  const observed=absent({
+    presence:'legacy-proof-markers',
+    health:'unknown',
+    receipt_status:'partial',
+    legacy_proof_state_detected:true
+  });
+  const s=createInstallSession(sessionInput({observed}));
+  assert.equal(s.classification,'legacy-proof-state');
+  assert.equal(s.next_preparation,'stop');
+  assert.ok(s.reasons.includes('legacy-proof-state-is-not-current-install-state'));
+});
+
+test('unknown existing install state stops without guessing',()=>{
+  const observed=absent({
+    presence:'unknown',
+    health:'unknown',
+    receipt_status:'unknown'
+  });
+  const s=createInstallSession(sessionInput({observed}));
+  assert.equal(s.classification,'newer-or-unknown');
+  assert.equal(s.next_preparation,'stop');
+});
+
+test('host-plan blocker overrides otherwise preparable state',()=>{
+  const incompatible=hostPlan({
+    host_candidate_compatible:false,
+    blockers:['unsupported-platform:test']
+  });
+  const core={...incompatible};
+  delete core.plan_digest;
+  incompatible.plan_digest=digestObject(core);
+  const d=deriveInstallClassification({
+    hostPlan:incompatible,
+    releaseVerification:verification(),
+    observedInstall:absent()
+  });
+  assert.equal(d.next_preparation,'stop');
+  assert.ok(d.reasons.includes('host-plan-has-blockers'));
+});
+
+test('artifact proof must match exact release and target profile',()=>{
+  const pkg=signPackage();
+  const good=proof(pkg);
+  const wrong=structuredClone(good);
+  wrong.release_id='axiom-mesh/0.12.0-dev.3/other';
+  wrong.proof_digest=computeInstallArtifactProofDigest(wrong);
+  assert.throws(()=>createInstallSession(sessionInput({pkg,proofs:[wrong]})),/another release/);
+
+  const noProfile=structuredClone(good);
+  noProfile.profile_ids=['infrastructure-node'];
+  noProfile.proof_digest=computeInstallArtifactProofDigest(noProfile);
+  assert.throws(()=>createInstallSession(sessionInput({pkg,proofs:[noProfile]})),/lacks artifact evidence/);
+});
+
+test('birth Genesis or Spark artifact material is structurally rejected from standard session evidence',()=>{
+  for(const artifactId of ['birth.module','genesis/private','spark-key-package']){
+    const value=manifest();
+    value.artifacts[0]=artifact(artifactId,'oci-image',['personal-local','infrastructure-node'],{
+      locator:`release://0.12.0-dev.3/${artifactId}`
+    });
+    const pkg=signPackage(value);
+    assert.throws(
+      ()=>createInstallArtifactProof(pkg,artifactId,Buffer.from(`artifact:${artifactId}`),verifierOptions()),
+      /birth\/Genesis\/Spark/
+    );
+  }
+});
+
+test('caller cannot mutate derived session action or any hard-zero effect',()=>{
+  const base=createInstallSession(sessionInput());
+  for(const mutate of [
+    x=>{x.next_preparation='prepare-upgrade';},
+    x=>{x.host_mutation_authorized=true;},
+    x=>{x.credential_effect='create';},
+    x=>{x.service_start_effect='start';},
+    x=>{x.authority_effect='grant';},
+    x=>{x.network_effect='enroll';},
+    x=>{x.runtime_activation=true;}
+  ]){
+    const changed=structuredClone(base);
+    mutate(changed);
+    changed.session_digest=computeInstallSessionDigest(changed);
+    assert.throws(()=>validateInstallSession(changed));
+  }
+});
+
+test('session and observed-state chronology fail closed',()=>{
+  const input=sessionInput();
+  assert.throws(
+    ()=>createInstallSession({...input,observedAt:'2026-09-28T01:59:59.000Z'}),
+    /predate release verification/
+  );
+  const futureObserved=absent({observed_at:'2026-09-28T02:05:00.000Z'});
+  assert.throws(
+    ()=>createInstallSession({...input,observedInstall:futureObserved}),
+    /predate install-state evidence/
+  );
+});
+
+test('closed input contracts reject proxies accessors symbols hidden state and custom arrays',()=>{
+  const p=proof();
+  assert.throws(()=>validateInstallArtifactProof(new Proxy(p,{})),/Proxy/i);
+
+  const s=createInstallSession(sessionInput());
+  const symbol=structuredClone(s);
+  symbol[Symbol('authority')]='grant';
+  assert.throws(()=>validateInstallSession(symbol),/symbol/i);
+
+  const accessor=structuredClone(s);
+  Object.defineProperty(accessor,'profile_id',{enumerable:true,get(){throw new Error('getter ran');}});
+  assert.throws(()=>validateInstallSession(accessor),/data properties/i);
+
+  const hidden=structuredClone(s);
+  Object.defineProperty(hidden,'install_authority',{enumerable:false,value:true});
+  assert.throws(()=>validateInstallSession(hidden),/data properties|key inventory/i);
+
+  const custom=structuredClone(s);
+  custom.reasons.extra='hidden';
+  assert.throws(()=>validateInstallSession(custom),/custom array state/i);
+});
+
+test('classification is deterministic for canonically identical inputs',()=>{
+  const left=createInstallSession(sessionInput());
+  const right=createInstallSession(sessionInput());
+  assert.deepEqual(left,right);
+  assert.equal(left.session_digest,right.session_digest);
+});
+
+test('install-session implementation contains no live mutation process network or credential I/O',async()=>{
+  const source=await readFile(new URL('../src/lib/install-session.mjs',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/node:child_process|node:fs|node:net|node:http|node:https/);
+  assert.doesNotMatch(source,/\bfetch\s*\(|\bexec\s*\(|\bspawn\s*\(|\bexecFile\s*\(/);
+  assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|unlink|rename/);
+});
