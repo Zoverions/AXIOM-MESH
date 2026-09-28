@@ -15,6 +15,7 @@ export const HOST_INSTALL_PLAN_STATUS = 'non-mutating-planning-evidence';
 
 const PROFILE_IDS = Object.freeze(['personal-local', 'infrastructure-node']);
 const RUNTIME_STRATEGIES = Object.freeze(['oci', 'source']);
+const HOST_FACT_SOURCES = Object.freeze(['live-local-observation','supplied-evidence','synthetic-test']);
 const EXPECTED_STAGES = Object.freeze([
   'preflight',
   'release-selection',
@@ -235,6 +236,7 @@ export function buildHostInstallPlan({
     blockers,
     prerequisites,
     host_facts_digest: digestObject(hostFacts),
+    host_facts_source: hostFacts.facts_source,
     policy_digest: validation.policy_digest,
     install_targets_digest: validation.install_targets_digest,
     source_setup_policy_digest: digestObject(setupPolicy),
@@ -290,7 +292,7 @@ export function validateHostInstallPlan(
   exactObject(plan, 'Host install plan', [
     'schema','version','kernel_version','status','profile_id','target_status',
     'runtime_strategy','host_candidate_compatible','blockers','prerequisites',
-    'host_facts_digest','policy_digest','install_targets_digest',
+    'host_facts_digest','host_facts_source','policy_digest','install_targets_digest',
     'source_setup_policy_digest','profile_digest','topology','runtime_identity',
     'directories','service_units','provisioning','runtime','network','stages',
     'mutating_installer_status','eligible_for_mutating_install',
@@ -308,6 +310,7 @@ export function validateHostInstallPlan(
     || !PROFILE_IDS.includes(plan.profile_id)
     || plan.target_status !== 'specified'
     || !RUNTIME_STRATEGIES.includes(plan.runtime_strategy)
+    || !HOST_FACT_SOURCES.includes(plan.host_facts_source)
     || plan.policy_digest !== validation.policy_digest
     || plan.install_targets_digest !== validation.install_targets_digest
     || plan.source_setup_policy_digest !== digestObject(setupPolicy)
@@ -456,6 +459,9 @@ function validateHostFacts(facts, requiredFacts) {
     if (typeof facts[key] !== 'string' || facts[key].length === 0 || facts[key].length > 256) {
       throw new ValidationError(`Host fact is invalid: ${key}`);
     }
+  }
+  if (!HOST_FACT_SOURCES.includes(facts.facts_source)) {
+    throw new ValidationError('Host facts_source is invalid');
   }
   if (
     facts.node_version !== null
