@@ -405,4 +405,9 @@ test('steering binding rejects hostile task lifecycle containers before imported
   const sparse=structuredClone(previous);
   sparse.result_refs=new Array(1);
   assert.throws(()=>verifyActiveTaskSteeringBinding(s,sparse,next),/sparse|plain array/i);
+
+  const customArray=structuredClone(previous);
+  customArray.result_refs=[];
+  Object.setPrototypeOf(customArray.result_refs,{custom:true});
+  assert.throws(()=>verifyActiveTaskSteeringBinding(s,customArray,next),/plain array/i);
 });
