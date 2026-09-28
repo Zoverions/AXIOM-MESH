@@ -2,9 +2,11 @@ import { canonicalize, digestObject, sha256, ValidationError } from './canonical
 
 // Inert reference model for #1576 (semantic replay). This module is a LAB: it is
 // not imported by Gateway, Hypervisor, Sandbox, or Grid, it is not registered in
-// capabilities.json, and it never replaces the live jti-keyed capability
-// consumption in capability-consumption.mjs. It models, and lets tests falsify,
-// the gap between these separate predicates:
+// capabilities.json, and it remains separate from the supported native
+// consumption implementation. The native path now also denies a fresh-JTI
+// replay of one exact signed invocation, but it does not import this lab's
+// mandate/authorization-instance/effect-canonicalization/budget model. The lab
+// continues to model and falsify the broader gap between these predicates:
 //   token_unused                  != semantic_action_not_yet_consumed
 //   valid fresh token             != remaining authority for this semantic effect
 //   effect admission committed    != external effect observed exactly once
