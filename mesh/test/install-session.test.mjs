@@ -259,6 +259,14 @@ test('unknown stale future or cross-session observation fails closed',()=>{
     'STOP_UNCERTAIN'
   );
   assert.equal(
+    assess(candidate(),observation({observed_at:'2026-09-28T00:59:59.000Z'})).decision,
+    'STOP_UNCERTAIN'
+  );
+  assert.deepEqual(
+    assess(candidate(),observation({observed_at:'2026-09-28T00:59:59.000Z'})).reasons,
+    ['observation-predates-request']
+  );
+  assert.equal(
     assess(candidate(),observation({observed_at:'2026-09-28T00:00:00.000Z'})).decision,
     'STOP_UNCERTAIN'
   );
