@@ -40,6 +40,10 @@ import {
   normalizeNodeScheduleRequest,
   selectNodePlacements
 } from '../lib/node-scheduling.mjs';
+import {
+  capabilitySemanticConsumptionDigest,
+  normalizeCapabilityConsumptionStatement
+} from '../lib/capability-consumption.mjs';
 
 const GENESIS_HASH = '0'.repeat(64);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
@@ -356,6 +360,7 @@ export class GridStore {
         'capsules',
         'backups',
         'exports',
+        'capability_semantic_consumptions',
         'intents'
       ]) {
         this.db.exec(`DELETE FROM ${table}`);
@@ -468,6 +473,28 @@ export class GridStore {
   applyMaterializedEvent(event) {
     const p = event.payload;
     switch (event.kind) {
+      case 'capability.consumed': {
+        const statement = normalizeCapabilityConsumptionStatement(p?.receipt?.statement);
+        const semanticDigest = capabilitySemanticConsumptionDigest(statement);
+        this.db.prepare(`
+          INSERT INTO capability_semantic_consumptions(
+            semantic_digest, capability_jti, consumption_event_id, subject,
+            intent_digest, plan_digest, policy_digest, invocation_digest, tool, consumed_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          semanticDigest,
+          statement.jti,
+          event.event_id,
+          statement.subject,
+          statement.intent_digest,
+          statement.plan_digest,
+          statement.policy_digest,
+          statement.invocation_digest ?? null,
+          statement.tool,
+          statement.consumed_at
+        );
+        break;
+      }
       case 'intent.accepted':
         this.db.prepare(`
           INSERT INTO intents(
