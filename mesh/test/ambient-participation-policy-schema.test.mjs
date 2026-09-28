@@ -29,5 +29,8 @@ test('participation nested policy and observation objects are closed', async () 
   assert.equal(observation.properties.dimensions.additionalProperties, false);
   assert.equal(policy.properties.thresholds.additionalProperties, false);
   assert.equal(policy.properties.cooldown.additionalProperties, false);
+  assert.deepEqual(policy.properties.context_scope_mode.enum, ['all-eligible','allowlist']);
+  assert.equal(policy.properties.allowed_context_ids.maxItems, 256);
+  assert.equal(policy.allOf.length, 2);
   assert.equal(policy.properties.threshold_basis.const, 'illustrative-unvalidated');
 });

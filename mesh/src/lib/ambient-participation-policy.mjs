@@ -12,6 +12,7 @@ export const PARTICIPATION_PRESETS=Object.freeze(['listener','investigator','bal
 const ID=/^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$/;
 const SHA=/^[a-f0-9]{64}$/;
 const CONTEXTS=new Set(['owner-private','direct','circle','organization','public']);
+const CONTEXT_SCOPE_MODES=new Set(['all-eligible','allowlist']);
 const ADDRESSING=new Set(['explicit','passive','context-only']);
 const APPLICABILITY=new Set(['current','stale','unknown']);
 const CONSEQUENCE=new Set(['C0','C1','C2','C3']);
@@ -32,12 +33,14 @@ export function validateParticipationObservation(d){
 export function participationObservationDigest(d){validateParticipationObservation(d);return digestObject(d);}
 
 export function validateParticipationPolicy(d){
-  exact(d,'Participation policy',['schema','version','status','policy_id','preset','policy_source_ref','issued_at','expires_at','passive_participation','reactions_enabled','silent_investigation','explicit_mode','allowed_context_classes','quiet_context_ids','consequence_ceiling','threshold_basis','thresholds','cooldown','grants_authority','data_scope_effect','execution_effect','runtime_activation']);
+  exact(d,'Participation policy',['schema','version','status','policy_id','preset','policy_source_ref','issued_at','expires_at','passive_participation','reactions_enabled','silent_investigation','explicit_mode','context_scope_mode','allowed_context_ids','allowed_context_classes','quiet_context_ids','consequence_ceiling','threshold_basis','thresholds','cooldown','grants_authority','data_scope_effect','execution_effect','runtime_activation']);
   if(d.schema!==PARTICIPATION_POLICY_SCHEMA||d.version!==0||d.status!=='inert-participation-policy'||d.threshold_basis!=='illustrative-unvalidated'||d.grants_authority!==false||d.data_scope_effect!=='none'||d.execution_effect!=='none'||d.runtime_activation!==false) throw new ValidationError('Participation policy activation boundary is invalid');
   ident(d.policy_id,'policy_id'); en(d.preset,new Set([...PARTICIPATION_PRESETS,'custom']),'preset'); ident(d.policy_source_ref,'policy_source_ref'); const issued=date(d.issued_at,'issued_at');
   if(d.expires_at!==null&&date(d.expires_at,'expires_at')<=issued) throw new ValidationError('expires_at must follow issued_at');
   boolean(d.passive_participation,'passive_participation'); boolean(d.reactions_enabled,'reactions_enabled'); boolean(d.silent_investigation,'silent_investigation'); en(d.explicit_mode,new Set(['answer','investigate-first']),'explicit_mode');
-  enums(d.allowed_context_classes,'allowed_context_classes',CONTEXTS,5); ids(d.quiet_context_ids,'quiet_context_ids',256); en(d.consequence_ceiling,CONSEQUENCE,'consequence_ceiling');
+  en(d.context_scope_mode,CONTEXT_SCOPE_MODES,'context_scope_mode'); ids(d.allowed_context_ids,'allowed_context_ids',256); enums(d.allowed_context_classes,'allowed_context_classes',CONTEXTS,5); ids(d.quiet_context_ids,'quiet_context_ids',256); en(d.consequence_ceiling,CONSEQUENCE,'consequence_ceiling');
+  if(d.context_scope_mode==='all-eligible'&&d.allowed_context_ids.length!==0) throw new ValidationError('all-eligible context scope cannot carry allowed_context_ids');
+  if(d.context_scope_mode==='allowlist'&&d.allowed_context_ids.length===0) throw new ValidationError('allowlist context scope requires allowed_context_ids');
   exact(d.thresholds,'Participation thresholds',THRESHOLDS); for(const k of THRESHOLDS) score(d.thresholds[k],k);
   exact(d.cooldown,'Participation cooldown',['required','window_seconds','max_unsolicited_interventions']); boolean(d.cooldown.required,'cooldown.required'); integer(d.cooldown.window_seconds,'cooldown.window_seconds',1,86400); integer(d.cooldown.max_unsolicited_interventions,'cooldown.max_unsolicited_interventions',0,10000);
   if(!d.cooldown.required&&d.cooldown.max_unsolicited_interventions!==0) throw new ValidationError('Cooldown disabled requires max_unsolicited_interventions=0');
@@ -54,19 +57,26 @@ export function createParticipationPreset(name,{policyId,policySourceRef,issuedA
     teammate:[true,true,55,55,58,60,70,70,300,8]
   };
   const [passive,reactions,reply,confidence,investigate,ack,noise,interrupt,window,max]=presets[name];
-  const d={schema:PARTICIPATION_POLICY_SCHEMA,version:0,status:'inert-participation-policy',policy_id:policyId,preset:name,policy_source_ref:policySourceRef,issued_at:issuedAt,expires_at:expiresAt,passive_participation:passive,reactions_enabled:reactions,silent_investigation:true,explicit_mode:'answer',allowed_context_classes:['owner-private','direct','circle','organization','public'],quiet_context_ids:[],consequence_ceiling:'C1',threshold_basis:'illustrative-unvalidated',thresholds:{reply_usefulness_min:reply,reply_confidence_min:confidence,investigate_value_min:investigate,acknowledge_fit_min:ack,noise_max:noise,interruption_cost_max:interrupt},cooldown:{required:true,window_seconds:window,max_unsolicited_interventions:max},grants_authority:false,data_scope_effect:'none',execution_effect:'none',runtime_activation:false};
+  const d={schema:PARTICIPATION_POLICY_SCHEMA,version:0,status:'inert-participation-policy',policy_id:policyId,preset:name,policy_source_ref:policySourceRef,issued_at:issuedAt,expires_at:expiresAt,passive_participation:passive,reactions_enabled:reactions,silent_investigation:true,explicit_mode:'answer',context_scope_mode:'all-eligible',allowed_context_ids:[],allowed_context_classes:['owner-private','direct','circle','organization','public'],quiet_context_ids:[],consequence_ceiling:'C1',threshold_basis:'illustrative-unvalidated',thresholds:{reply_usefulness_min:reply,reply_confidence_min:confidence,investigate_value_min:investigate,acknowledge_fit_min:ack,noise_max:noise,interruption_cost_max:interrupt},cooldown:{required:true,window_seconds:window,max_unsolicited_interventions:max},grants_authority:false,data_scope_effect:'none',execution_effect:'none',runtime_activation:false};
   validateParticipationPolicy(d); return deepFreeze(d);
 }
 
 export function evaluateParticipation(o,p,e){
   validateParticipationObservation(o); validateParticipationPolicy(p); validateEvent(e);
   const mismatch=[]; if(o.event_digest!==e.event_digest)mismatch.push('event-digest-mismatch'); if(o.context_id!==e.context_id||o.context_class!==e.context_class)mismatch.push('context-mismatch'); if(o.addressing_class!==e.event_class)mismatch.push('addressing-class-mismatch');
-  if(mismatch.length)return decision('PASS',mismatch,o,p); if(!e.supported)return decision('PASS',['unsupported-event'],o,p); if(e.event_class==='context-only')return decision('PASS',['context-only'],o,p);
+  if(!e.supported)return decision('PASS',['unsupported-event'],o,p); if(e.event_class==='context-only')return decision('PASS',['context-only'],o,p);
+  const evaluationTime=new Date(e.evaluated_at);
+  const policyNotYetEffective=new Date(p.issued_at)>evaluationTime;
+  const policyExpired=p.expires_at!==null&&new Date(p.expires_at)<=evaluationTime;
+  const observationFromFuture=new Date(o.observed_at)>evaluationTime;
   if(e.event_class==='explicit'){
-    if(p.explicit_mode==='investigate-first'&&o.applicability==='current'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p);
+    if(mismatch.length||policyNotYetEffective||policyExpired||observationFromFuture||o.applicability!=='current')return fallbackParticipationDecision(e,'explicit-request-semantic-policy-bypassed');
+    if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p);
     return decision('ANSWER',['explicit-request'],o,p);
   }
+  if(mismatch.length)return decision('PASS',mismatch,o,p); if(policyNotYetEffective)return decision('PASS',['policy-not-yet-effective'],o,p); if(policyExpired)return decision('PASS',['policy-expired'],o,p); if(observationFromFuture)return decision('PASS',['observation-from-future'],o,p);
   if(!p.passive_participation)return decision('PASS',['passive-disabled'],o,p); if(e.quiet_context||p.quiet_context_ids.includes(e.context_id))return decision('PASS',['quiet-context'],o,p); if(!p.allowed_context_classes.includes(e.context_class))return decision('PASS',['context-not-allowed'],o,p);
+  if(p.context_scope_mode==='allowlist'&&!p.allowed_context_ids.includes(e.context_id))return decision('PASS',['context-not-allowlisted'],o,p);
   if(CONSEQUENCE_RANK[e.consequence_class]>CONSEQUENCE_RANK[p.consequence_ceiling])return decision('PASS',['consequence-above-ceiling'],o,p); if(p.cooldown.required&&e.cooldown_state!=='ready')return decision('PASS',[e.cooldown_state==='unavailable'?'cooldown-unavailable':'cooldown-blocked'],o,p);
   if(o.applicability!=='current')return decision('PASS',['observation-not-current'],o,p); if(e.already_answered)return decision('PASS',['already-answered'],o,p); const d=o.dimensions;
   if(d.noise===null||d.interruption_cost===null)return decision('PASS',['passive-risk-dimension-unknown'],o,p); if(d.noise>p.thresholds.noise_max)return decision('PASS',['noise-too-high'],o,p);
@@ -99,7 +109,7 @@ export function validateSilentInvestigationResult(d){
 export function silentInvestigationResultDigest(d){validateSilentInvestigationResult(d);return digestObject(d);}
 
 function decision(action,reasons,o,p){return deepFreeze({schema:'axiom-participation-decision.v0',version:0,action,reasons:[...reasons],observation_digest:digestObject(o),policy_digest:digestObject(p),authority_effect:'none',data_scope_effect:'none',execution_effect:'none',runtime_activation:false});}
-function validateEvent(e){exact(e,'Participation event',['event_digest','event_class','context_id','context_class','supported','quiet_context','cooldown_state','already_answered','consequence_class']); sha(e.event_digest,'event_digest'); en(e.event_class,ADDRESSING,'event_class'); ident(e.context_id,'context_id'); en(e.context_class,CONTEXTS,'context_class'); boolean(e.supported,'supported'); boolean(e.quiet_context,'quiet_context'); en(e.cooldown_state,COOLDOWN,'cooldown_state'); boolean(e.already_answered,'already_answered'); en(e.consequence_class,CONSEQUENCE,'consequence_class');}
+function validateEvent(e){exact(e,'Participation event',['event_digest','event_class','context_id','context_class','evaluated_at','supported','quiet_context','cooldown_state','already_answered','consequence_class']); sha(e.event_digest,'event_digest'); en(e.event_class,ADDRESSING,'event_class'); ident(e.context_id,'context_id'); en(e.context_class,CONTEXTS,'context_class'); date(e.evaluated_at,'evaluated_at'); boolean(e.supported,'supported'); boolean(e.quiet_context,'quiet_context'); en(e.cooldown_state,COOLDOWN,'cooldown_state'); boolean(e.already_answered,'already_answered'); en(e.consequence_class,CONSEQUENCE,'consequence_class');}
 function exact(v,label,fields){if(utilTypes.isProxy(v))throw new ValidationError(label+' cannot be a Proxy'); if(!v||typeof v!=='object'||Array.isArray(v))throw new ValidationError(label+' must be an object'); const proto=Object.getPrototypeOf(v); if(proto!==Object.prototype&&proto!==null)throw new ValidationError(label+' must be a plain object'); const keys=Reflect.ownKeys(v); if(keys.some(k=>typeof k==='symbol'))throw new ValidationError(label+' cannot contain symbol keys'); for(const k of keys){const d=Object.getOwnPropertyDescriptor(v,k); if(!d?.enumerable||d.get||d.set)throw new ValidationError(label+' must contain only enumerable data properties');} if(keys.map(String).sort().join(',')!==[...fields].sort().join(','))throw new ValidationError(label+' fields are invalid');}
 function ident(v,label){if(typeof v!=='string'||!ID.test(v))throw new ValidationError(label+' is invalid');}
 function nullableId(v,label){if(v!==null)ident(v,label);}
