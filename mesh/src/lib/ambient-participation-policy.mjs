@@ -11,7 +11,8 @@ export const ACTIVE_TASK_STEERING_SCHEMA='axiom-active-task-steering.v0';
 export const SILENT_INVESTIGATION_RESULT_SCHEMA='axiom-silent-investigation-result.v0';
 export const PARTICIPATION_DECISION_SCHEMA='axiom-participation-decision.v0';
 export const PARTICIPATION_COOLDOWN_EVIDENCE_SCHEMA='axiom-participation-cooldown-evidence.v0';
-export const PARTICIPATION_ACTIONS=Object.freeze(['ANSWER','INVESTIGATE','ACKNOWLEDGE','PASS']);
+export const PARTICIPATION_ACTIONS=Object.freeze(['ANSWER','INVESTIGATE','PASS']);
+export const PARTICIPATION_REACTIONS=Object.freeze(['none','acknowledge']);
 export const STEERING_DECISIONS=Object.freeze(['IGNORE','APPEND','REPLACE','STOP']);
 export const PARTICIPATION_PRESETS=Object.freeze(['listener','investigator','balanced','teammate']);
 
@@ -79,19 +80,23 @@ export function evaluateParticipation(o,p,e){
   const observationFromFuture=new Date(o.observed_at)>evaluationTime;
   if(e.event_class==='explicit'){
     if(mismatch.length||policyNotYetEffective||policyExpired||observationFromFuture||o.applicability!=='current')return fallbackParticipationDecision(e,'explicit-request-semantic-policy-bypassed');
-    if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p);
-    return decision('ANSWER',['explicit-request'],o,p);
+    const reaction=reactionRecommendation(o,p);
+    if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p,reaction);
+    return decision('ANSWER',['explicit-request'],o,p,reaction);
   }
   if(mismatch.length)return decision('PASS',mismatch,o,p); if(policyNotYetEffective)return decision('PASS',['policy-not-yet-effective'],o,p); if(policyExpired)return decision('PASS',['policy-expired'],o,p); if(observationFromFuture)return decision('PASS',['observation-from-future'],o,p);
   if(!p.passive_participation)return decision('PASS',['passive-disabled'],o,p); if(e.quiet_context||p.quiet_context_ids.includes(e.context_id))return decision('PASS',['quiet-context'],o,p); if(!p.allowed_context_classes.includes(e.context_class))return decision('PASS',['context-not-allowed'],o,p);
   if(p.context_scope_mode==='allowlist'&&!p.allowed_context_ids.includes(e.context_id))return decision('PASS',['context-not-allowlisted'],o,p);
   if(CONSEQUENCE_RANK[e.consequence_class]>CONSEQUENCE_RANK[p.consequence_ceiling])return decision('PASS',['consequence-above-ceiling'],o,p); if(p.cooldown.required&&e.cooldown_state!=='ready')return decision('PASS',[e.cooldown_state==='unavailable'?'cooldown-unavailable':'cooldown-blocked'],o,p);
-  if(o.applicability!=='current')return decision('PASS',['observation-not-current'],o,p); if(e.already_answered)return decision('PASS',['already-answered'],o,p); const d=o.dimensions;
-  if(d.noise===null||d.interruption_cost===null)return decision('PASS',['passive-risk-dimension-unknown'],o,p); if(d.noise>p.thresholds.noise_max)return decision('PASS',['noise-too-high'],o,p);
-  if(d.usefulness!==null&&d.answer_confidence!==null&&d.usefulness>=p.thresholds.reply_usefulness_min&&d.answer_confidence>=p.thresholds.reply_confidence_min&&d.interruption_cost<=p.thresholds.interruption_cost_max)return decision('ANSWER',['passive-reply-threshold-met'],o,p);
-  if(d.investigation_value!==null&&d.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['passive-investigation-threshold-met'],o,p);
-  if(p.reactions_enabled&&d.acknowledgement_fit!==null&&d.acknowledgement_fit>=p.thresholds.acknowledge_fit_min)return decision('ACKNOWLEDGE',['passive-acknowledgement-threshold-met'],o,p);
-  return decision('PASS',['no-participation-threshold-met'],o,p);
+  if(o.applicability!=='current')return decision('PASS',['observation-not-current'],o,p); const d=o.dimensions;
+  if(d.noise===null||d.interruption_cost===null)return decision('PASS',['passive-risk-dimension-unknown'],o,p);
+  const reaction=reactionRecommendation(o,p);
+  if(e.already_answered)return decision('PASS',['already-answered'],o,p,reaction);
+  if(d.noise>p.thresholds.noise_max)return decision('PASS',['noise-too-high'],o,p,reaction);
+  if(d.usefulness!==null&&d.answer_confidence!==null&&d.usefulness>=p.thresholds.reply_usefulness_min&&d.answer_confidence>=p.thresholds.reply_confidence_min&&d.interruption_cost<=p.thresholds.interruption_cost_max)return decision('ANSWER',['passive-reply-threshold-met'],o,p,reaction);
+  if(d.investigation_value!==null&&d.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['passive-investigation-threshold-met'],o,p,reaction);
+  if(reaction==='acknowledge')return decision('PASS',['passive-acknowledgement-threshold-met'],o,p,reaction);
+  return decision('PASS',['no-participation-threshold-met'],o,p,reaction);
 }
 
 export function fallbackParticipationDecision(e,reason='semantic-evaluator-unavailable'){
@@ -106,12 +111,12 @@ export function fallbackParticipationDecision(e,reason='semantic-evaluator-unava
 }
 
 export function computeParticipationDecisionDigest(d){
-  exact(d,'Participation decision digest input',['schema','version','status','action','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
+  exact(d,'Participation decision digest input',['schema','version','status','action','reaction_recommendation','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
   return digestObject({...d,decision_digest:ZERO_SHA});
 }
 
 export function validateParticipationDecision(d){
-  exact(d,'Participation decision',['schema','version','status','action','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
+  exact(d,'Participation decision',['schema','version','status','action','reaction_recommendation','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
   if(
     d.schema!==PARTICIPATION_DECISION_SCHEMA
     ||d.version!==0
@@ -123,6 +128,7 @@ export function validateParticipationDecision(d){
     ||d.runtime_activation!==false
   ) throw new ValidationError('Participation decision activation boundary is invalid');
   en(d.action,new Set(PARTICIPATION_ACTIONS),'action');
+  en(d.reaction_recommendation,new Set(PARTICIPATION_REACTIONS),'reaction_recommendation');
   strings(d.reasons,'reasons',16,128);
   if(d.reasons.length===0) throw new ValidationError('Participation decision requires at least one reason');
   if((d.observation_digest===null)!==(d.policy_digest===null)) {
@@ -347,13 +353,18 @@ export function verifySilentInvestigationBinding(result,policy,observation){
   });
 }
 
-function decision(action,reasons,o,p){return makeDecision(action,reasons,digestObject(o),digestObject(p));}
-function makeDecision(action,reasons,observationDigest,policyDigest){
+function reactionRecommendation(o,p){
+  const fit=o.dimensions.acknowledgement_fit;
+  return p.reactions_enabled&&fit!==null&&fit>=p.thresholds.acknowledge_fit_min?'acknowledge':'none';
+}
+function decision(action,reasons,o,p,reaction='none'){return makeDecision(action,reasons,digestObject(o),digestObject(p),reaction);}
+function makeDecision(action,reasons,observationDigest,policyDigest,reaction='none'){
   const d={
     schema:PARTICIPATION_DECISION_SCHEMA,
     version:0,
     status:'inert-participation-decision',
     action,
+    reaction_recommendation:reaction,
     reasons:[...reasons],
     observation_digest:observationDigest,
     policy_digest:policyDigest,
