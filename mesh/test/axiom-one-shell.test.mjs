@@ -16,8 +16,8 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.schema, 'axiom-one-preview.v1');
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.status, 'experimental-local-preview');
-  assert.equal(result.surfaces, 9);
-  assert.equal(result.gateway_routes, 15);
+  assert.equal(result.surfaces, 12);
+  assert.equal(result.gateway_routes, 16);
   assert.equal(result.bind_host, '127.0.0.1');
   assert.equal(result.gateway_target, 'same-origin-relative-v1');
   assert.equal(result.token_persistence, 'memory-only');
@@ -39,6 +39,11 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
 
   const app = await readFile(new URL('../../apps/axiom-one/app.mjs', import.meta.url), 'utf8');
   assert.match(app, /state\.client\.call\('social\.get'/);
+  assert.match(app, /state\.client\.call\('consents\.list'/);
+  assert.match(app, /state\.client\.call\('audit\.verify'/);
+  assert.match(app, /human\.capability/);
+  assert.match(app, /human\.consent/);
+  assert.match(app, /human\.verification/);
   assert.match(app, /response\.network_effect === 'none'/);
   assert.match(app, /circle-templates-v0\.json/);
   assert.match(app, /membership_authority !== false/);
