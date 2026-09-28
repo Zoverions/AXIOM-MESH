@@ -313,6 +313,15 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Current non-claims',
     'host_mutation_authorized'
   ],
+  'docs/operations/INSTALL-SESSION-V0.md': [
+    '## Purpose',
+    '## Classification',
+    '## First-node proof reconciliation',
+    '## Birth / Genesis exclusion',
+    '## Currentness',
+    '## Non-claims',
+    'host_mutation_authorized'
+  ],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
