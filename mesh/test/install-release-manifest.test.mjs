@@ -264,7 +264,15 @@ test('signer cannot promote install profile or turn channel name into production
   assert.throws(()=>verify(signPackage(promotedProfile)),/profile binding is invalid or stale/);
 
   const stableButUnpromoted=manifest({channel:'stable',production_promoted:false});
-  assert.equal(verify(signPackage(stableButUnpromoted)).production_promoted,false);
+  const verified=verify(signPackage(stableButUnpromoted));
+  assert.equal(verified.production_promoted,false);
+  assert.equal(verified.production_promotion_established,false);
+
+  const promotionLaundering=manifest({production_promoted:true});
+  assert.throws(
+    ()=>verify(signPackage(promotionLaundering)),
+    /identity or authority boundary is invalid/
+  );
 });
 
 test('signed authority host mutation and network laundering are rejected',()=>{
