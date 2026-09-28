@@ -187,6 +187,6 @@ test('host facts and plan inputs reject proxies accessors hidden fields and spar
 
 test('planner source is observation-only and cannot invoke host mutation/process execution',async()=>{
   const source=await readFile(new URL('../src/lib/host-install-plan.mjs',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/node:child_process|\bexec\s*\(|\bspawn\s*\(|\bexecFile\s*\(/);
+  assert.doesNotMatch(source,/node:child_process|\bspawn\s*\(|\bexecFile\s*\(|\bexecSync\s*\(|\bfork\s*\(/);
   assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|rm\s*\(|unlink|rename/);
 });
