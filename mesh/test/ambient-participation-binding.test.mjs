@@ -379,3 +379,30 @@ test('exported digest helpers reject proxies accessors and hidden authority fiel
   const cProxy=new Proxy(structuredClone(c),{});
   assert.throws(()=>computeParticipationCooldownEvidenceDigest(cProxy),/Proxy/i);
 });
+
+
+test('steering binding rejects hostile task lifecycle containers before imported validators read them',()=>{
+  const previous=task();
+  const next=task({updated_at:'2026-09-27T04:10:00.000Z'});
+  const s=steering(previous,next);
+
+  const proxy=new Proxy(structuredClone(previous),{});
+  assert.throws(()=>verifyActiveTaskSteeringBinding(s,proxy,next),/Proxy/i);
+
+  let reads=0;
+  const accessor=structuredClone(previous);
+  Object.defineProperty(accessor,'principal_id',{
+    enumerable:true,
+    get(){reads+=1; return 'owner.alice';}
+  });
+  assert.throws(()=>verifyActiveTaskSteeringBinding(s,accessor,next),/data properties/i);
+  assert.equal(reads,0);
+
+  const arrayProxy=new Proxy([...previous.result_refs],{});
+  const arrayWrapped={...previous,result_refs:arrayProxy};
+  assert.throws(()=>verifyActiveTaskSteeringBinding(s,arrayWrapped,next),/plain array/i);
+
+  const sparse=structuredClone(previous);
+  sparse.result_refs=new Array(1);
+  assert.throws(()=>verifyActiveTaskSteeringBinding(s,sparse,next),/sparse|plain array/i);
+});
