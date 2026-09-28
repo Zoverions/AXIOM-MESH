@@ -132,4 +132,152 @@ export function validateInstallArtifactProof(proof){
   ) throw new ValidationError('Install artifact proof boundary is invalid');
   stringArray(proof.profile_ids,'Install artifact proof profile_ids',{min:1,max:8,itemMax:64});
   canonicalTime(proof.verified_at,'verified_at');
-  if(PRIVATE_BIRTH_TOKEN.test(proof.artifact_i
+  if(PRIVATE_BIRTH_TOKEN.test(proof.artifact_id)){
+    throw new ValidationError('Install artifact proof cannot reference birth/Genesis/Spark material');
+  }
+  if(!SHA.test(proof.proof_digest)||computeInstallArtifactProofDigest(proof)!==proof.proof_digest){
+    throw new ValidationError('Install artifact proof digest mismatch');
+  }
+  return Object.freeze({
+    valid:true,
+    proof_digest:proof.proof_digest,
+    release_id:proof.release_id,
+    artifact_id:proof.artifact_id,
+    artifact_sha256:proof.artifact_sha256,
+    host_mutation_authorized:false,
+    authority_effect:'none',
+    network_effect:'none'
+  });
+}
+
+export function createInstallSession({
+  sessionId,
+  hostPlan,
+  releaseVerification,
+  artifactProofs,
+  observedInstall,
+  observedAt
+}){
+  if(typeof sessionId!=='string'||!ID.test(sessionId)){
+    throw new ValidationError('Install session_id is invalid');
+  }
+  const host=validateHostInstallPlan(hostPlan);
+  validateReleaseVerification(releaseVerification);
+  validateObservedInstall(observedInstall);
+  const observationTime=canonicalTime(observedAt,'observedAt');
+  if(observationTime<canonicalTime(releaseVerification.evaluated_at,'release evaluated_at')){
+    throw new ValidationError('Install session observation cannot predate release verification');
+  }
+  if(observationTime>=canonicalTime(releaseVerification.valid_until,'release valid_until')){
+    throw new ValidationError('Install session cannot use an expired release verification');
+  }
+  if(observationTime<canonicalTime(observedInstall.observed_at,'observed install observed_at')){
+    throw new ValidationError('Install session observation cannot predate install-state evidence');
+  }
+  if(!releaseVerification.install_profiles.includes(host.profile_id)){
+    throw new ValidationError('Install session profile is not bound by the verified release');
+  }
+  if(releaseVerification.kernel_version!==hostPlan.kernel_version){
+    throw new ValidationError('Install session host plan and release kernel version mismatch');
+  }
+
+  plainArray(artifactProofs,'Install session artifact proofs',{min:1,max:128});
+  const seenArtifacts=new Set();
+  const normalizedProofs=[];
+  let profileInstallableProof=false;
+  for(const proof of artifactProofs){
+    validateInstallArtifactProof(proof);
+    if(seenArtifacts.has(proof.artifact_id)){
+      throw new ValidationError('Install session contains duplicate artifact proof identity');
+    }
+    seenArtifacts.add(proof.artifact_id);
+    if(
+      proof.release_id!==releaseVerification.release_id
+      ||proof.manifest_digest!==releaseVerification.manifest_digest
+    ) throw new ValidationError('Install session artifact proof is bound to another release');
+    if(proof.verified_at!==releaseVerification.evaluated_at){
+      throw new ValidationError('Install session artifact proof currentness does not match release verification');
+    }
+    if(
+      proof.profile_ids.includes(host.profile_id)
+      &&INSTALLABLE_ARTIFACT_KINDS.has(proof.artifact_kind)
+    ) profileInstallableProof=true;
+    normalizedProofs.push({
+      artifact_id:proof.artifact_id,
+      artifact_sha256:proof.artifact_sha256,
+      proof_digest:proof.proof_digest
+    });
+  }
+  if(!profileInstallableProof){
+    throw new ValidationError('Install session lacks artifact evidence for target profile');
+  }
+  normalizedProofs.sort((a,b)=>a.artifact_id.localeCompare(b.artifact_id));
+
+  const derived=deriveInstallClassification({
+    hostPlan,
+    releaseVerification,
+    observedInstall
+  });
+
+  const core={
+    schema:INSTALL_SESSION_SCHEMA,
+    version:0,
+    status:'inert-pre-mutation-classification',
+    session_id:sessionId,
+    profile_id:host.profile_id,
+    host_plan_digest:host.plan_digest,
+    release_id:releaseVerification.release_id,
+    kernel_version:releaseVerification.kernel_version,
+    source_revision:releaseVerification.source_revision,
+    manifest_digest:releaseVerification.manifest_digest,
+    artifact_proofs:normalizedProofs,
+    observed_install_digest:digestObject(observedInstall),
+    observed_at:new Date(observationTime).toISOString(),
+    classification:derived.classification,
+    next_preparation:derived.next_preparation,
+    reasons:derived.reasons,
+    blockers:derived.blockers,
+    host_mutation_authorized:false,
+    credential_effect:'none',
+    service_start_effect:'none',
+    authority_effect:'none',
+    network_effect:'none',
+    runtime_activation:false,
+    session_digest:ZERO_SHA
+  };
+  core.session_digest=computeInstallSessionDigest(core);
+  validateInstallSession(core);
+  return deepFreeze(core);
+}
+
+export function computeInstallSessionDigest(session){
+  exactObject(session,'Install session digest input',[
+    'schema','version','status','session_id','profile_id','host_plan_digest',
+    'release_id','kernel_version','source_revision','manifest_digest',
+    'artifact_proofs','observed_install_digest','observed_at','classification',
+    'next_preparation','reasons','blockers','host_mutation_authorized',
+    'credential_effect','service_start_effect','authority_effect','network_effect',
+    'runtime_activation','session_digest'
+  ]);
+  return digestObject({...session,session_digest:ZERO_SHA});
+}
+
+export function validateInstallSession(session){
+  exactObject(session,'Install session',[
+    'schema','version','status','session_id','profile_id','host_plan_digest',
+    'release_id','kernel_version','source_revision','manifest_digest',
+    'artifact_proofs','observed_install_digest','observed_at','classification',
+    'next_preparation','reasons','blockers','host_mutation_authorized',
+    'credential_effect','service_start_effect','authority_effect','network_effect',
+    'runtime_activation','session_digest'
+  ]);
+  if(
+    session.schema!==INSTALL_SESSION_SCHEMA
+    ||session.version!==0
+    ||session.status!=='inert-pre-mutation-classification'
+    ||!ID.test(session.session_id)
+    ||!ID.test(session.profile_id)
+    ||!SHA.test(session.host_plan_digest)
+    ||!ID.test(session.release_id)
+    ||!VERSION.test(session.kernel_version)
+    ||!REVI
