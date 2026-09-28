@@ -24,6 +24,12 @@ export async function createCapabilityConsumptionCommitter({
   store
 }) {
   const hypervisorKey = await loadTrustedKey(config.dataDir, 'hypervisor');
+  const chain = store.verifyChain();
+  if (!chain.valid) {
+    throw new ValidationError(
+      `Cannot derive semantic capability consumption from invalid Grid history: ${chain.reason ?? 'unknown'}`
+    );
+  }
   const historicalSemanticDigests = loadHistoricalSemanticDigests(store);
 
   return function consumeCapability({ traceId, actor, event }) {
@@ -148,11 +154,9 @@ function loadHistoricalSemanticDigests(store) {
     const event = store.decodeEventRow(row);
     const statement = normalizeCapabilityConsumptionStatement(event.payload?.receipt?.statement);
     const digest = capabilitySemanticConsumptionDigest(statement);
-    if (digests.has(digest)) {
-      throw new ValidationError(
-        'Grid history contains duplicate semantic capability consumption'
-      );
-    }
+    // A valid pre-fix history may already contain more than one JTI for the
+    // same exact invocation. Preserve that append-only evidence, but collapse it
+    // to one consumed semantic identity so the upgrade cannot replenish budget.
     digests.add(digest);
   }
   return digests;
