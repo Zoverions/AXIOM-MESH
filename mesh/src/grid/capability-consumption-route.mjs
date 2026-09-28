@@ -10,6 +10,7 @@ import {
 } from '../lib/identity.mjs';
 import {
   capabilityConsumptionEventId,
+  capabilitySemanticConsumptionDigest,
   signCapabilityConsumptionReceipt
 } from '../lib/capability-consumption.mjs';
 
@@ -60,8 +61,14 @@ export async function createCapabilityConsumptionCommitter({
     }
 
     const eventId = capabilityConsumptionEventId(claims.jti);
+    const semanticDigest = capabilitySemanticConsumptionDigest(claims);
     if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)) {
       throw consumedError(claims.jti);
+    }
+    if (store.db.prepare(
+      'SELECT 1 FROM capability_semantic_consumptions WHERE semantic_digest = ?'
+    ).get(semanticDigest)) {
+      throw semanticConsumedError(semanticDigest);
     }
 
     const signed = signCapabilityConsumptionReceipt(identity, {
@@ -89,11 +96,15 @@ export async function createCapabilityConsumptionCommitter({
         event: events[0]
       });
     } catch (error) {
-      if (
-        error?.code === 'state_conflict'
-        && store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)
-      ) {
-        throw consumedError(claims.jti);
+      if (error?.code === 'state_conflict') {
+        if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)) {
+          throw consumedError(claims.jti);
+        }
+        if (store.db.prepare(
+          'SELECT 1 FROM capability_semantic_consumptions WHERE semantic_digest = ?'
+        ).get(semanticDigest)) {
+          throw semanticConsumedError(semanticDigest);
+        }
       }
       throw error;
     }
@@ -106,5 +117,15 @@ function consumedError(jti) {
     'Capability has already been durably consumed',
     409,
     { jti }
+  );
+}
+
+
+function semanticConsumedError(semanticDigest) {
+  return new AxiomError(
+    'semantic_action_consumed',
+    'This exact authorized semantic action has already been durably consumed',
+    409,
+    { semantic_consumption_digest: semanticDigest }
   );
 }
