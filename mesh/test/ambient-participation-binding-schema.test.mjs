@@ -12,7 +12,9 @@ test('participation decision v0 schema is closed and pins all effects to none', 
   assert.equal(value.additionalProperties, false);
   assert.equal(value.properties.schema.const, 'axiom-participation-decision.v0');
   assert.equal(value.properties.version.const, 0);
-  assert.deepEqual(value.properties.action.enum, ['ANSWER','INVESTIGATE','ACKNOWLEDGE','PASS']);
+  assert.deepEqual(value.properties.action.enum, ['ANSWER','INVESTIGATE','PASS']);
+  assert.deepEqual(value.properties.reaction_recommendation.enum, ['none','acknowledge']);
+  assert.ok(value.required.includes('reaction_recommendation'));
   assert.equal(value.properties.authority_effect.const, 'none');
   assert.equal(value.properties.data_scope_effect.const, 'none');
   assert.equal(value.properties.communication_effect.const, 'none');
