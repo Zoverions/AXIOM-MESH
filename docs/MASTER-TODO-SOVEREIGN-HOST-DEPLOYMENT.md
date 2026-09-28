@@ -132,6 +132,7 @@ See the [current-base convergence decisions](architecture/DEPLOYMENT-ENGINE-V0-C
 - [x] Reconstruct/consume #1282's signed release/install-manifest verification on current main — external Ed25519 trust, exact control-plane binding, separate artifact-byte verification, zero host/install/network authority.
 - [ ] Define signed bootstrapper artifact and update policy.
 - [ ] Bind one bootstrapper session to one explicit deployment request.
+  - Install Session v0 now provides **inert rerun-state classification only** (install/no-op/repair/upgrade/recovery/stops); it is not the short-lived native-helper authorization protocol and grants no mutation.
 - [ ] Implement privileged local hardware inspection behind explicit consent.
 - [ ] Implement package/image acquisition with signature/digest verification.
 - [ ] Implement safe USB target selection and destructive-action confirmation.
