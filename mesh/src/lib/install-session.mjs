@@ -18,6 +18,7 @@ const SECRET_STATES=new Set(['absent','complete','partial','unknown']);
 const DATA_STATES=new Set(['absent','present','unknown']);
 const SERVICE_STATES=new Set(['absent','stopped','running','degraded','unknown']);
 const READINESS_STATES=new Set(['not-checked','ready','not-ready','unknown']);
+const ZERO_SHA='0'.repeat(64);
 const DECISIONS=new Set([
   'INSTALL_REVIEW',
   'VERIFY_NOOP',
@@ -120,6 +121,7 @@ export function validateInstalledStateObservation(d){
       ||d.release_relation_to_desired!=='absent'
       ||d.relation_evidence_ref!==null
     ) throw new ValidationError('Absent install record cannot carry installed identity');
+    if(d.readiness_state==='ready') throw new ValidationError('Absent install record cannot claim readiness');
   }else if(d.install_record_state==='complete'){
     if(
       d.installed_profile_id===null
@@ -129,6 +131,12 @@ export function validateInstalledStateObservation(d){
       ||d.installed_release_manifest_digest===null
       ||d.release_relation_to_desired==='absent'
     ) throw new ValidationError('Complete install record requires installed identity');
+    if(d.secret_state!=='complete'||d.data_state!=='present'){
+      throw new ValidationError('Complete install record requires complete secrets and present data');
+    }
+  }
+  if(d.readiness_state==='ready'&&d.service_state!=='running'){
+    throw new ValidationError('Ready installed state requires running services');
   }
   if(
     ['ancestor','descendant','diverged'].includes(d.release_relation_to_desired)
@@ -224,7 +232,12 @@ export function assessInstallSession(candidate,observation,{evaluatedAt}={}){
       if(identity.length){
         return decision('STOP_CONFLICT',identity,candidateDigest,observationDigest);
       }
-      if(observation.readiness_state==='ready'){
+      if(
+        observation.readiness_state==='ready'
+        &&observation.service_state==='running'
+        &&observation.secret_state==='complete'
+        &&observation.data_state==='present'
+      ){
         return decision('VERIFY_NOOP',['exact-release-already-ready'],candidateDigest,observationDigest);
       }
       return decision('REPAIR_REVIEW',['exact-release-not-ready'],candidateDigest,observationDigest);
@@ -251,8 +264,8 @@ export function assessInstallSession(candidate,observation,{evaluatedAt}={}){
 export function validateInstallSessionDecision(d){
   exactObject(d,'Install session decision',[
     'schema','version','status','decision','reasons','candidate_digest',
-    'observation_digest','host_mutation_authorized','authority_effect',
-    'network_effect','runtime_activation'
+    'observation_digest','decision_digest','host_mutation_authorized',
+    'authority_effect','network_effect','runtime_activation'
   ]);
   if(
     d.schema!==INSTALL_SESSION_DECISION_SCHEMA
@@ -267,14 +280,28 @@ export function validateInstallSessionDecision(d){
   stringArray(d.reasons,'reasons',{min:1,max:16,itemMax:128});
   sha(d.candidate_digest,'candidate_digest');
   sha(d.observation_digest,'observation_digest');
+  sha(d.decision_digest,'decision_digest');
+  if(computeInstallSessionDecisionDigest(d)!==d.decision_digest){
+    throw new ValidationError('Install session decision digest mismatch');
+  }
   return Object.freeze({
     valid:true,
     decision:d.decision,
+    decision_digest:d.decision_digest,
     host_mutation_authorized:false,
     authority_effect:'none',
     network_effect:'none',
     runtime_activation:false
   });
+}
+
+export function computeInstallSessionDecisionDigest(d){
+  exactObject(d,'Install session decision digest input',[
+    'schema','version','status','decision','reasons','candidate_digest',
+    'observation_digest','decision_digest','host_mutation_authorized',
+    'authority_effect','network_effect','runtime_activation'
+  ]);
+  return digestObject({...d,decision_digest:ZERO_SHA});
 }
 
 function installedIdentityReasons(candidate,observation){
@@ -288,7 +315,7 @@ function installedIdentityReasons(candidate,observation){
 }
 
 function decision(value,reasons,candidateDigest,observationDigest){
-  const d=deepFreeze({
+  const d={
     schema:INSTALL_SESSION_DECISION_SCHEMA,
     version:0,
     status:'inert-install-session-decision',
@@ -296,13 +323,15 @@ function decision(value,reasons,candidateDigest,observationDigest){
     reasons:[...reasons],
     candidate_digest:candidateDigest,
     observation_digest:observationDigest,
+    decision_digest:ZERO_SHA,
     host_mutation_authorized:false,
     authority_effect:'none',
     network_effect:'none',
     runtime_activation:false
-  });
+  };
+  d.decision_digest=computeInstallSessionDecisionDigest(d);
   validateInstallSessionDecision(d);
-  return d;
+  return deepFreeze(d);
 }
 
 function exactObject(value,label,keys){
