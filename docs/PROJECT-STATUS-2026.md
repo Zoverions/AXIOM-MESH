@@ -116,6 +116,10 @@ The production-candidate surface includes:
   and infrastructure-node profiles; it emits deterministic compatibility,
   blocker, and prerequisite evidence while creating no users, credentials,
   services, network enrollment, or authority;
+- an externally trusted Ed25519 signed release/install-manifest verifier that
+  binds exact current install, capability, application, network, and setup
+  control-plane digests and keeps artifact-byte verification separate from host
+  mutation or installation authority;
 - a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
