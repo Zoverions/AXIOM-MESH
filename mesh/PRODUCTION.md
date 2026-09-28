@@ -46,7 +46,9 @@ for the exact dependency, receipt, failure, and non-claim boundary.
 
 ## 1. Provision outside the repository
 
-Choose two empty, access-controlled host directories. The data directory must
+Choose two empty, disjoint, access-controlled host directories. Neither may be
+inside the other, including through a symlink; provisioning rejects overlap
+before writing credentials. The data directory must
 be writable by numeric UID `10001`; the secret directory must not be stored in
 source control, container layers, backups without encryption, or release
 archives.
@@ -108,6 +110,8 @@ and readiness-based health checks. Compose enforces deny-egress with
 `network_mode: "none"` and no attached Docker network. The production
 supervisor rejects every active non-loopback interface or IPv4/IPv6 default
 route before it launches a service.
+The local ingress bridge refuses to replace a socket with an active listener;
+only an unconnected stale socket can be removed during restart.
 
 Only the public CA certificate, active manifest, and service-leaf directory are
 mounted read-only; the CA signing key remains host-only. Internal URLs require
