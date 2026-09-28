@@ -344,6 +344,23 @@ test('active steering binds exact predecessor and successor task identity withou
   );
   assert.equal(budgetResult.bound,false);
   assert.ok(budgetResult.reasons.includes('successor-budget-ref-mismatch'));
+
+  const mutations=[
+    [{...next,lifecycle_state:'waiting-input'},'successor-lifecycle-state-mismatch'],
+    [{...next,effect_state:'pending'},'successor-effect-state-mismatch'],
+    [{...next,worker_ref:'worker.other'},'successor-worker-mismatch'],
+    [{...next,provider_ref:'provider.other'},'successor-provider-mismatch'],
+    [{...next,node_ref:'node.other'},'successor-node-mismatch'],
+    [{...next,authority_checked_at:'2026-09-27T04:09:30.000Z'},'successor-authority-check-mismatch'],
+    [{...next,budget_checked_at:'2026-09-27T04:09:30.000Z'},'successor-budget-check-mismatch'],
+    [{...next,result_refs:['result.steering']},'successor-result-refs-mismatch']
+  ];
+  for(const [changed,reason] of mutations){
+    const changedSteering={...s,resulting_task_revision_digest:taskLifecycleDigest(changed)};
+    const result=verifyActiveTaskSteeringBinding(changedSteering,previous,changed);
+    assert.equal(result.bound,false);
+    assert.ok(result.reasons.includes(reason),reason);
+  }
 });
 
 test('steering rejects stale predecessor substitution and future task identity drift',()=>{
