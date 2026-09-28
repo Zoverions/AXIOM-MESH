@@ -8,6 +8,7 @@ import {
   PARTICIPATION_OBSERVATION_SCHEMA,
   assessParticipationCooldown,
   computeParticipationCooldownEvidenceDigest,
+  computeParticipationDecisionDigest,
   createParticipationPreset,
   evaluateParticipation,
   evaluateParticipationWithCooldown,
@@ -347,4 +348,29 @@ test('STOP and IGNORE remain evidence requests and cannot smuggle successor stat
   );
   assert.equal(illicit.bound,false);
   assert.ok(illicit.reasons.includes('unexpected-successor-task'));
+});
+
+
+test('exported digest helpers reject proxies accessors and hidden authority fields before reading them',()=>{
+  const d=evaluateParticipation(observation(),policy(),event());
+
+  const proxy=new Proxy(structuredClone(d),{});
+  assert.throws(()=>computeParticipationDecisionDigest(proxy),/Proxy/i);
+
+  let reads=0;
+  const accessor=structuredClone(d);
+  Object.defineProperty(accessor,'action',{
+    enumerable:true,
+    get(){reads+=1; return 'ANSWER';}
+  });
+  assert.throws(()=>computeParticipationDecisionDigest(accessor),/data properties/i);
+  assert.equal(reads,0);
+
+  const hidden=structuredClone(d);
+  Object.defineProperty(hidden,'grants_authority',{value:true,enumerable:false});
+  assert.throws(()=>computeParticipationDecisionDigest(hidden),/data properties|fields are invalid/i);
+
+  const c=cooldown(policy());
+  const cProxy=new Proxy(structuredClone(c),{});
+  assert.throws(()=>computeParticipationCooldownEvidenceDigest(cProxy),/Proxy/i);
 });
