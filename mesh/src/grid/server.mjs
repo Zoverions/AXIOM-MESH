@@ -34,6 +34,7 @@ export async function createGridService(config = meshConfig()) {
   let identity;
   let protector;
   let store;
+  let consumeCapability;
   try {
     identity = await ensureMeshIdentity(config.dataDir, 'grid', { create: config.autoBootstrap });
     identity.transport = config.transport.enabled
@@ -50,6 +51,11 @@ export async function createGridService(config = meshConfig()) {
       protector
     });
     await recordPendingRecovery({ store, dataDir: config.dataDir, identity });
+    consumeCapability = await createCapabilityConsumptionCommitter({
+      config,
+      identity,
+      store
+    });
   } catch (error) {
     if (store) store.close();
     await releaseGridRuntimeLock(runtimeLock);
@@ -58,11 +64,6 @@ export async function createGridService(config = meshConfig()) {
   const replayGuard = new ReplayGuard();
   const router = new Router();
   const telemetry = new ServiceTelemetry('grid');
-  const consumeCapability = await createCapabilityConsumptionCommitter({
-    config,
-    identity,
-    store
-  });
   let cachedChain = { valid: true };
   let nextIntegrityProbeAt = 0;
 
