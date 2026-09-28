@@ -195,7 +195,7 @@ The implementation must preserve at least these properties:
 3. private-context evidence cannot leak into broader output without disclosure authority;
 4. stale or repeated memory cannot raise authority;
 5. quiet/passive-disabled contexts stay silent;
-6. no useful finding may terminate silently;
+6. an investigation with no useful/actionable intervention may terminate silently only with explicit bounded evidence and a recorded silence reason;
 7. steering cannot widen an effect envelope or delegate implicitly;
 8. an authorized STOP can flow into task cancellation, after which queued effects must fail currentness checks;
 9. stale approval after task replacement is rejected by the existing approval/currentness boundary;
