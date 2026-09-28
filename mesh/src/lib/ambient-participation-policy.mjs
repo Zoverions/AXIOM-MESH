@@ -105,7 +105,7 @@ export function fallbackParticipationDecision(e,reason='semantic-evaluator-unava
 }
 
 export function computeParticipationDecisionDigest(d){
-  if(!d||typeof d!=='object'||Array.isArray(d)) throw new ValidationError('Participation decision must be an object');
+  exact(d,'Participation decision digest input',['schema','version','status','action','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
   return digestObject({...d,decision_digest:ZERO_SHA});
 }
 
@@ -151,7 +151,7 @@ export function participationDecisionDigest(d){
 }
 
 export function computeParticipationCooldownEvidenceDigest(d){
-  if(!d||typeof d!=='object'||Array.isArray(d)) throw new ValidationError('Participation cooldown evidence must be an object');
+  exact(d,'Participation cooldown evidence digest input',['schema','version','status','evidence_id','policy_digest','context_id','window_started_at','window_ends_at','evaluated_at','unsolicited_interventions','max_unsolicited_interventions','derived_state','history_digest','evidence_refs','evidence_digest','authority_effect','communication_effect','execution_effect','runtime_activation']);
   return digestObject({...d,evidence_digest:ZERO_SHA});
 }
 
