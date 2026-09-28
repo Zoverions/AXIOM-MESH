@@ -38,7 +38,7 @@ test('host install policy is executable while mutating installation remains abse
   assert.equal(result.authority_effect,'none');
 });
 
-test('OCI-first clean-host plan does not require preinstalled Node or mutate the host',()=>{
+test('OCI plan semantics do not classify a missing target-host Node runtime as a blocker',()=>{
   const plan=buildHostInstallPlan({
     profileId:'personal-local',
     hostFacts:linuxFacts(),
@@ -150,6 +150,12 @@ test('plans are deterministic digest-bound and closed against authority launderi
     x=>{x.mutation_performed=true;},
     x=>{x.credentials_created=true;},
     x=>{x.provisioning.signed_release_manifest_verified=true;},
+    x=>{x.topology='other';},
+    x=>{x.runtime_identity='root';},
+    x=>{x.service_units='required';},
+    x=>{x.profile_digest='a'.repeat(64);},
+    x=>{x.directories.data_dir='/tmp/other';},
+    x=>{x.provisioning.production_credentials='invent-credentials';},
     x=>{x.extra_authority=true;}
   ]) {
     const changed=structuredClone(left);
