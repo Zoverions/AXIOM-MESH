@@ -142,6 +142,8 @@ Before a future task harness consumes steering, `verifyActiveTaskSteeringBinding
 
 This verifier still does not execute the transition. Cancellation, replacement, or any consequential follow-on remains subject to the normal task/currentness and AXIOM authority paths.
 
+The v0 binding accepts only self-steering by the task's current principal. That is a deliberate fail-closed limitation, not a claim that collaborative steering must always be single-principal. A later Circle/team surface may allow a different actor only after an existing AXIOM authority/delegation mechanism can prove that actor's current steering authority for the exact task and decision; the steering record itself will not mint that relationship.
+
 ### Silent Investigation Result v0
 
 `axiom-silent-investigation-result.v0` makes silence an explicit terminal evidence state. It can record bounded evidence, work counts, useful/actionable findings, unresolved unknowns, and the reason no message was emitted.
