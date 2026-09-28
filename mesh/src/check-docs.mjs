@@ -187,6 +187,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md',
+  'docs/operations/INSTALL-SESSION-V0.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
   'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md',
@@ -311,6 +312,15 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Artifact bytes are a separate proof',
     '## Current non-claims',
     'host_mutation_authorized'
+  ],
+  'docs/operations/INSTALL-SESSION-V0.md': [
+    '## Why this exists',
+    '## Installed-state observation',
+    '## Decision semantics',
+    '## First-node proof relationship',
+    '## Non-claims',
+    'INSTALL_REVIEW',
+    'STOP_NEWER_PRESENT'
   ],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
