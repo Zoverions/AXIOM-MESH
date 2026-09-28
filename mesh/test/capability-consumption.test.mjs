@@ -486,7 +486,7 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
 
 
 
-test('RED #1576: fresh JTI must not replenish one semantic effect authorization', async t => {
+test('fresh JTI must not replenish one exact native invocation', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-replay-live-red-'));
   const portLease = await reserveProductionPortBlock('semantic replay live red test');
   const basePort = portLease.base_port;
@@ -703,18 +703,38 @@ test('semantic consumption serializes concurrent fresh JTIs but permits a distin
     && result.reason?.code === 'semantic_action_consumed'
   )).length, 1);
 
+  const distinctIntent = Object.freeze({
+    ...template.intent,
+    intent_id: 'intent_capability_restart_semantic-distinct-authorization',
+    submitted_at: new Date(Date.now() + 1).toISOString()
+  });
+  const distinctPlan = buildPlan(distinctIntent, {
+    risk: 'low',
+    tool: template.claims.tool,
+    constraints: {},
+    policy_version: 'capability-restart-test.v1',
+    policy_digest: template.claims.policy_digest,
+    policy_layers: [{
+      version: 'capability-restart-test.v1',
+      digest: template.claims.policy_digest
+    }]
+  });
   const distinctClaims = Object.freeze({
     ...template.claims,
     jti: 'semantic-distinct-authorization-jti',
-    intent_digest: sha256('distinct-authorization-instance')
+    intent_digest: digestObject(distinctIntent),
+    plan_digest: planDigest(distinctPlan)
   });
+  assert.equal(distinctIntent.action, template.intent.action);
+  assert.deepEqual(distinctIntent.input, template.intent.input);
+  assert.equal(distinctIntent.purpose, template.intent.purpose);
   assert.notEqual(
     capabilitySemanticConsumptionDigest(template.claims),
     capabilitySemanticConsumptionDigest(distinctClaims)
   );
   const distinct = Object.freeze({
-    intent: template.intent,
-    plan: template.plan,
+    intent: distinctIntent,
+    plan: distinctPlan,
     claims: distinctClaims,
     capability: issueCapability(hypervisor, distinctClaims)
   });
