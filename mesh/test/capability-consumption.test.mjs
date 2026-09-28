@@ -482,3 +482,80 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
   );
 });
 
+
+
+test('RED #1576: fresh JTI must not replenish one semantic effect authorization', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-replay-live-red-'));
+  const portLease = await reserveProductionPortBlock('semantic replay live red test');
+  const basePort = portLease.base_port;
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`
+  });
+  const hypervisor = await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  await ensureMeshIdentity(dataDir, 'grid', { create: true });
+
+  const grid = await createGridService(config);
+  await grid.start();
+  t.after(async () => {
+    try {
+      await grid.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  const first = capabilityFixture(hypervisor, {
+    jti: 'semantic-replay-first-jti',
+    suffix: 'semantic-replay',
+    ttlSeconds: config.capabilityTtlSeconds
+  });
+  const secondClaims = Object.freeze({
+    ...first.claims,
+    jti: 'semantic-replay-fresh-jti'
+  });
+  const second = Object.freeze({
+    intent: first.intent,
+    plan: first.plan,
+    claims: secondClaims,
+    capability: issueCapability(hypervisor, secondClaims)
+  });
+
+  assert.equal(first.claims.intent_digest, second.claims.intent_digest);
+  assert.equal(first.claims.plan_digest, second.claims.plan_digest);
+  assert.equal(first.claims.policy_digest, second.claims.policy_digest);
+  assert.equal(first.claims.tool, second.claims.tool);
+  assert.notEqual(first.claims.jti, second.claims.jti);
+
+  const firstReceipt = await consumeCapability({
+    identity: hypervisor,
+    config,
+    traceId: 'trace_semantic_replay_first',
+    fixture: first,
+    executionEpoch: 'sandbox_epoch_semantic_replay'
+  });
+  assert.match(firstReceipt.receipt_digest, /^[a-f0-9]{64}$/);
+
+  await assert.rejects(
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: 'trace_semantic_replay_fresh_jti',
+      fixture: second,
+      executionEpoch: 'sandbox_epoch_semantic_replay'
+    }),
+    error => (
+      error?.code === 'semantic_action_consumed'
+      || error?.code === 'capability_consumed'
+    )
+  );
+});
