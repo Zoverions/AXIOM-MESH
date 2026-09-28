@@ -186,6 +186,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
   'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md',
@@ -303,6 +304,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Current non-claims'
   ],
   'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md': [
+    '## Purpose and boundary',
+    '## External trust bootstrap',
+    '## Exact control-plane binding',
+    '## Artifact bytes are a separate proof',
+    '## Current non-claims',
+    'host_mutation_authorized'
+  ],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
