@@ -24,6 +24,44 @@ import { buildPlan, planDigest } from '../src/lib/plan.mjs';
 import { createGridService } from '../src/grid/server.mjs';
 import { createSandboxService } from '../src/sandbox/server.mjs';
 
+
+test('semantic consumption identity is stable across capability and signed-receipt field names', () => {
+  const digest = 'a'.repeat(64);
+  const claims = {
+    subject: 'owner.semantic-alias',
+    iss: 'hypervisor',
+    aud: 'sandbox',
+    intent_digest: digest,
+    plan_digest: 'b'.repeat(64),
+    policy_digest: 'c'.repeat(64),
+    invocation_digest: 'd'.repeat(64),
+    tool: 'builtin.echo'
+  };
+  const statement = {
+    subject: claims.subject,
+    issuer: claims.iss,
+    audience: claims.aud,
+    intent_digest: claims.intent_digest,
+    plan_digest: claims.plan_digest,
+    policy_digest: claims.policy_digest,
+    invocation_digest: claims.invocation_digest,
+    tool: claims.tool
+  };
+
+  assert.equal(
+    capabilitySemanticConsumptionDigest(claims),
+    capabilitySemanticConsumptionDigest(statement)
+  );
+  assert.throws(
+    () => capabilitySemanticConsumptionDigest({
+      ...claims,
+      issuer: 'other-issuer'
+    }),
+    /aliases disagree/
+  );
+});
+
+
 function capabilityFixture(identity, {
   jti,
   suffix,
