@@ -44,7 +44,7 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
 
   exactObject(policy.planner, 'Host install planner policy', [
     'status','platforms','architectures','supported_distributions',
-    'preferred_runtime_strategy','runtime_strategies','verified_oci_runtimes',
+    'preferred_runtime_strategy','runtime_strategies','recognized_oci_runtime_names',
     'required_facts','node_fact_requirement','planner_execution_requires_node',
     'unsupported_host_behavior','mutation_performed'
   ]);
@@ -54,7 +54,7 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
     || canonicalJson(policy.planner.architectures) !== canonicalJson(['x64','arm64'])
     || policy.planner.preferred_runtime_strategy !== 'oci'
     || canonicalJson(policy.planner.runtime_strategies) !== canonicalJson(RUNTIME_STRATEGIES)
-    || canonicalJson(policy.planner.verified_oci_runtimes) !== canonicalJson(['docker'])
+    || canonicalJson(policy.planner.recognized_oci_runtime_names) !== canonicalJson(['docker'])
     || policy.planner.node_fact_requirement !== 'optional-for-oci-required-for-source'
     || policy.planner.planner_execution_requires_node !== true
     || policy.planner.unsupported_host_behavior !== 'fail-closed-with-blockers'
@@ -205,8 +205,10 @@ export function buildHostInstallPlan({
   if (runtimeStrategy === 'oci') {
     if (hostFacts.container_runtime === 'none-detected') {
       prerequisites.push('install-reviewed-container-runtime:docker');
-    } else if (!policy.planner.verified_oci_runtimes.includes(hostFacts.container_runtime)) {
-      blockers.push(`unverified-container-runtime:${hostFacts.container_runtime}`);
+    } else if (!policy.planner.recognized_oci_runtime_names.includes(hostFacts.container_runtime)) {
+      blockers.push(`unrecognized-container-runtime:${hostFacts.container_runtime}`);
+    } else {
+      prerequisites.push(`verify-reviewed-container-runtime-version-health:${hostFacts.container_runtime}`);
     }
   } else {
     if (hostFacts.node_version === null || !nodeVersionAllowed(hostFacts.node_version, setupPolicy)) {
@@ -254,8 +256,10 @@ export function buildHostInstallPlan({
     },
     runtime: {
       container_runtime_observed: hostFacts.container_runtime,
-      container_runtime_verified: runtimeStrategy === 'oci'
-        && policy.planner.verified_oci_runtimes.includes(hostFacts.container_runtime),
+      container_runtime_name_recognized: runtimeStrategy === 'oci'
+        && policy.planner.recognized_oci_runtime_names.includes(hostFacts.container_runtime),
+      container_runtime_version_verified: false,
+      container_runtime_health_verified: false,
       node_runtime_required: runtimeStrategy === 'source',
       node_runtime_observed: hostFacts.node_version
     },
@@ -352,11 +356,16 @@ export function validateHostInstallPlan(
   }
 
   exactObject(plan.runtime, 'Host install plan runtime', [
-    'container_runtime_observed','container_runtime_verified',
+    'container_runtime_observed','container_runtime_name_recognized',
+    'container_runtime_version_verified','container_runtime_health_verified',
     'node_runtime_required','node_runtime_observed'
   ]);
-  if (plan.runtime.node_runtime_required !== (plan.runtime_strategy === 'source')) {
-    throw new ValidationError('Host install plan node runtime requirement drifted');
+  if (
+    plan.runtime.node_runtime_required !== (plan.runtime_strategy === 'source')
+    || plan.runtime.container_runtime_version_verified !== false
+    || plan.runtime.container_runtime_health_verified !== false
+  ) {
+    throw new ValidationError('Host install plan runtime evidence overclaims verification');
   }
   if (
     plan.runtime_strategy === 'oci'
