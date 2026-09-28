@@ -88,6 +88,25 @@ reachable; the mode is explicit on the proposal.
 - hostile falsification tests from #1628
 - digest-only composition helpers for Offer / selection
 
+## O1: Operation Proposal Binding
+
+O1 adds [Operation Proposal Binding v0](OPERATION-PROPOSAL-BINDING.md)
+(`axiom-operation-proposal-binding.v0`). It is a pure verifier that recomputes
+the manifest digest, the candidate selection, the proposal-space candidate set
+digest and every supplied offer digest from the caller's original objects.
+It binds a proposal only when all of them agree. It fixes these O0 gaps:
+
+- P1: O0 only format-checks `manifest.manifest_digest`; O1 recomputes it.
+- P2: the compose helpers only format-check digests; O1 recomputes them.
+- P3: the selection and proposal candidate digests use different projections;
+  O1 derives the proposal-space digest from the trusted selection candidates.
+- `descriptive-discovery` skips eligibility in O0; O1 never binds it.
+- The failure-path `proposal_id` now includes the provider in its preimage.
+
+**Deprecated (docs only, behaviour unchanged):** `composeProposalWithOfferDigest`
+and `composeProposalWithSelectionDigest` check only the format of the digest
+they are given. Use `verifyOperationProposalBinding` instead.
+
 ## Out of O0
 
 Package install, weights, live provider invocation, Gateway route, Grid

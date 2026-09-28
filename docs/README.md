@@ -72,6 +72,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How is the arXiv Complete snapshot admitted without turning corpus availability into permission? | [`architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md`](architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md) | Metadata-first indexing, exact paper/version/digest provenance, conservative licence classification, and owner-local full-text admission for an explicit allowlist | Live fetching, training permission, redistribution permission, scientific truth, or live arXiv currentness |
 | How are future path observations attributed without becoming routing authority? | [`rebuild/PATH-OBSERVATION-EVIDENCE.md`](rebuild/PATH-OBSERVATION-EVIDENCE.md) | External signer roles, exact portfolio binding, freshness, source provenance, replay bounds, attribution-vs-truth semantics | Claims of live telemetry, regulatory truth, route authority, or production path selection |
 | How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
+| How should an ambient agent decide whether to answer, investigate, acknowledge, or stay silent? | [`architecture/AMBIENT-TEAMMATE-POLICY-V0.md`](architecture/AMBIENT-TEAMMATE-POLICY-V0.md) | Inert participation observations, threshold policy packages, fail-closed passive evaluation, task steering, silent investigation, and explicit separation from effect authority | Live proactivity, messaging, provider access, memory access, or execution authority |
 | How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
 | How does the private companion remain portable across models/providers? | [`architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md`](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md) | Pack v2 vault manifests, companion components, optional personalized model artifacts, adaptation authorization, selective recovery and migration | Claims of implemented Pack v2 import/export, training, model unlearning, or identity equivalence |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
@@ -241,12 +242,30 @@ decision.
   stays on the Operation plane and is never forced into #1588 probability
   observations; authority/assurance/currentness/execution remain none.
 - [`semantic-operation-proposal.v0` schema](architecture/contracts/semantic-operation-proposal.v0.schema.json)
+- [Operation Proposal Binding v0 (O1)](architecture/OPERATION-PROPOSAL-BINDING.md)
+  — pure #1628 O1 verifier that recomputes manifest, selection, candidate-set
+  and offer digests from original objects before binding a proposal; a binding
+  is evidence, never permission; all effects remain none.
+- [`operation-proposal-binding.v0` schema](architecture/contracts/operation-proposal-binding.v0.schema.json)
+- [Specialist Harness Bridge v0](architecture/SPECIALIST-HARNESS-BRIDGE.md)
+  — inert, non-delegating #1610 C3 evidence/handoff binding of one bounded
+  specialist harness to one task by digest; ceilings must fit inside an
+  existing Autonomy Envelope; a recommendation or output never grants authority.
+- [Semantic Action Consumption Lab v0](architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md)
+  — inert #1576 reference model and RED/GREEN fixtures for semantic replay:
+  durable consumption keyed by authorization instance + canonical effect
+  identity + remaining budget; a fresh token never replenishes budget; live
+  jti-keyed consumption is unchanged.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Runtime & Connector Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md)
   — replaceable runtime/model/tool/protocol/compute/oracle coordination while
   preserving AXIOM as the authority root.
+- [Ambient Teammate Policy v0](architecture/AMBIENT-TEAMMATE-POLICY-V0.md)
+  — inert participation-policy layer for answer/investigate/acknowledge/pass,
+  fail-closed passive proactivity, active-task steering, silent investigation,
+  and reuse of the existing Context Request/Vault Lease boundary.
 - [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
