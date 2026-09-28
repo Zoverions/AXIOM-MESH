@@ -6,6 +6,7 @@ import {
   PARTICIPATION_COOLDOWN_EVIDENCE_SCHEMA,
   PARTICIPATION_DECISION_SCHEMA,
   PARTICIPATION_OBSERVATION_SCHEMA,
+  SILENT_INVESTIGATION_RESULT_SCHEMA,
   assessParticipationCooldown,
   computeParticipationCooldownEvidenceDigest,
   computeParticipationDecisionDigest,
@@ -15,10 +16,13 @@ import {
   fallbackParticipationDecision,
   participationCooldownEvidenceDigest,
   participationDecisionDigest,
+  participationObservationDigest,
   participationPolicyDigest,
+  silentInvestigationResultDigest,
   validateParticipationCooldownEvidence,
   validateParticipationDecision,
-  verifyActiveTaskSteeringBinding
+  verifyActiveTaskSteeringBinding,
+  verifySilentInvestigationBinding
 } from '../src/lib/ambient-participation-policy.mjs';
 import {
   taskLifecycleDigest,
@@ -164,6 +168,33 @@ function steering(previous,next,overrides={}){
     decided_at:'2026-09-27T04:10:00.000Z',
     grants_authority:false,
     delegation_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false,
+    ...overrides
+  };
+}
+
+function silentResult(p=policy(),o=observation(),overrides={}){
+  return {
+    schema:SILENT_INVESTIGATION_RESULT_SCHEMA,
+    version:0,
+    status:'inert-silent-investigation-evidence',
+    result_id:'silent.investigation.binding.1',
+    task_id:'task.binding.1',
+    policy_digest:participationPolicyDigest(p),
+    observation_digest:participationObservationDigest(o),
+    started_at:'2026-09-27T04:10:00.000Z',
+    completed_at:'2026-09-27T04:10:05.000Z',
+    evidence_refs:['evidence.investigation.1'],
+    useful_finding:false,
+    actionable_finding:false,
+    silence_reason:'no-useful-finding',
+    steps_used:2,
+    tool_calls:0,
+    duration_ms:5000,
+    unresolved_unknowns:[],
+    emitted_message:false,
+    authority_effect:'none',
     execution_effect:'none',
     runtime_activation:false,
     ...overrides
@@ -410,4 +441,90 @@ test('steering binding rejects hostile task lifecycle containers before imported
   customArray.result_refs=[];
   Object.setPrototypeOf(customArray.result_refs,{custom:true});
   assert.throws(()=>verifyActiveTaskSteeringBinding(s,customArray,next),/plain array/i);
+});
+
+
+test('silent investigation binds exact policy and observation and is never valid for explicit requests',()=>{
+  const p=policy();
+  const o=observation();
+  const result=silentResult(p,o);
+  const bound=verifySilentInvestigationBinding(result,p,o);
+  assert.equal(bound.bound,true);
+  assert.deepEqual(bound.reasons,[]);
+  assert.equal(bound.result_digest,silentInvestigationResultDigest(result));
+  assert.equal(bound.communication_effect,'none');
+
+  const wrongObservation=observation({context_id:'channel.other'});
+  const mismatch=verifySilentInvestigationBinding(result,p,wrongObservation);
+  assert.equal(mismatch.bound,false);
+  assert.ok(mismatch.reasons.includes('silent-observation-digest-mismatch'));
+
+  const explicit=observation({addressing_class:'explicit'});
+  const explicitResult=silentResult(p,explicit);
+  const explicitBinding=verifySilentInvestigationBinding(explicitResult,p,explicit);
+  assert.equal(explicitBinding.bound,false);
+  assert.ok(explicitBinding.reasons.includes('explicit-request-requires-response'));
+});
+
+test('silent interruption and policy-suppressed reasons require matching bounded evidence',()=>{
+  const p=policy();
+  const lowInterruption=observation({
+    dimensions:{
+      ...observation().dimensions,
+      noise:10,
+      interruption_cost:10
+    }
+  });
+  const unsupported=silentResult(p,lowInterruption,{
+    useful_finding:true,
+    actionable_finding:true,
+    silence_reason:'interruption-not-justified'
+  });
+  const unsupportedBinding=verifySilentInvestigationBinding(unsupported,p,lowInterruption);
+  assert.equal(unsupportedBinding.bound,false);
+  assert.ok(unsupportedBinding.reasons.includes('silence-reason-not-supported'));
+
+  const highInterruption=observation({
+    dimensions:{
+      ...observation().dimensions,
+      noise:10,
+      interruption_cost:90
+    }
+  });
+  const justified=silentResult(p,highInterruption,{
+    useful_finding:true,
+    actionable_finding:true,
+    silence_reason:'interruption-not-justified'
+  });
+  assert.equal(verifySilentInvestigationBinding(justified,p,highInterruption).bound,true);
+
+  const ordinary=silentResult(p,observation(),{
+    useful_finding:true,
+    actionable_finding:true,
+    silence_reason:'policy-suppressed'
+  });
+  const ordinaryBinding=verifySilentInvestigationBinding(ordinary,p,observation());
+  assert.equal(ordinaryBinding.bound,false);
+  assert.ok(ordinaryBinding.reasons.includes('policy-does-not-suppress-context'));
+
+  const quiet=structuredClone(p);
+  quiet.preset='custom';
+  quiet.quiet_context_ids=['channel.engineering'];
+  const quietResult=silentResult(quiet,observation(),{
+    useful_finding:true,
+    actionable_finding:true,
+    silence_reason:'policy-suppressed'
+  });
+  assert.equal(verifySilentInvestigationBinding(quietResult,quiet,observation()).bound,true);
+});
+
+test('silent investigation cannot be used when policy disables silent conclusions',()=>{
+  const p=structuredClone(policy());
+  p.preset='custom';
+  p.silent_investigation=false;
+  const o=observation();
+  const result=silentResult(p,o);
+  const binding=verifySilentInvestigationBinding(result,p,o);
+  assert.equal(binding.bound,false);
+  assert.ok(binding.reasons.includes('silent-investigation-disabled'));
 });
