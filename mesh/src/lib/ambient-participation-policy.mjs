@@ -27,6 +27,7 @@ const CONSEQUENCE_RANK={C0:0,C1:1,C2:2,C3:3};
 const COOLDOWN=new Set(['ready','blocked','unavailable']);
 const DIMS=['usefulness','answer_confidence','urgency','noise','interruption_cost','investigation_value','acknowledgement_fit'];
 const THRESHOLDS=['reply_usefulness_min','reply_confidence_min','investigate_value_min','acknowledge_fit_min','noise_max','interruption_cost_max'];
+const TASK_LIFECYCLE_FIELDS=['schema','version','status','task_id','outcome_id','principal_id','lifecycle_state','created_at','updated_at','worker_ref','provider_ref','node_ref','authority_snapshot_ref','authority_checked_at','budget_ref','budget_checked_at','resume_requested','resume_from_digest','effect_state','result_refs','grants_authority','execution_effect','runtime_activation'];
 
 export function validateParticipationObservation(d){
   exact(d,'Participation observation',['schema','version','status','observation_id','event_digest','state_digest','task_id','principal_id','context_id','context_class','addressing_class','producer_ref','producer_revision_ref','observed_at','applicability','dimensions','evidence_refs','score_semantics','authority_effect','assurance_effect','execution_effect','runtime_activation']);
@@ -251,6 +252,7 @@ export function activeTaskSteeringDigest(d){validateActiveTaskSteering(d);return
 
 export function verifyActiveTaskSteeringBinding(steering,previousTask,nextTask=null){
   validateActiveTaskSteering(steering);
+  assertTaskLifecyclePlainInput(previousTask,'Previous task lifecycle');
   validateTaskLifecycle(previousTask);
   const reasons=[];
   const previousDigest=taskLifecycleDigest(previousTask);
@@ -265,6 +267,7 @@ export function verifyActiveTaskSteeringBinding(steering,previousTask,nextTask=n
       reasons.push('successor-task-required');
     }else{
       try{
+        assertTaskLifecyclePlainInput(nextTask,'Successor task lifecycle');
         validateTaskLifecycle(nextTask);
         if(nextTask.task_id!==previousTask.task_id) reasons.push('successor-task-id-mismatch');
         if(nextTask.outcome_id!==previousTask.outcome_id) reasons.push('successor-outcome-mismatch');
@@ -323,6 +326,19 @@ function makeDecision(action,reasons,observationDigest,policyDigest){
   d.decision_digest=computeParticipationDecisionDigest(d);
   validateParticipationDecision(d);
   return deepFreeze(d);
+}
+function assertTaskLifecyclePlainInput(value,label){
+  exact(value,label,TASK_LIFECYCLE_FIELDS);
+  if(utilTypes.isProxy(value.result_refs)||!Array.isArray(value.result_refs)) throw new ValidationError(label+' result_refs must be a plain array');
+  const keys=Reflect.ownKeys(value.result_refs);
+  for(const key of keys){
+    if(key==='length') continue;
+    if(typeof key!=='string'||!/^(0|[1-9][0-9]*)$/.test(key)) throw new ValidationError(label+' result_refs has an invalid array key');
+    const descriptor=Reflect.getOwnPropertyDescriptor(value.result_refs,key);
+    if(!descriptor?.enumerable||!Object.hasOwn(descriptor,'value')) throw new ValidationError(label+' result_refs must contain only enumerable data properties');
+    if(typeof descriptor.value!=='string') throw new ValidationError(label+' result_refs items must be strings');
+  }
+  if(keys.filter(key=>key!=='length').length!==value.result_refs.length) throw new ValidationError(label+' result_refs cannot be sparse');
 }
 function validateEvent(e){exact(e,'Participation event',['event_digest','event_class','context_id','context_class','evaluated_at','supported','quiet_context','cooldown_state','already_answered','consequence_class']); sha(e.event_digest,'event_digest'); en(e.event_class,ADDRESSING,'event_class'); ident(e.context_id,'context_id'); en(e.context_class,CONTEXTS,'context_class'); date(e.evaluated_at,'evaluated_at'); boolean(e.supported,'supported'); boolean(e.quiet_context,'quiet_context'); en(e.cooldown_state,COOLDOWN,'cooldown_state'); boolean(e.already_answered,'already_answered'); en(e.consequence_class,CONSEQUENCE,'consequence_class');}
 function exact(v,label,fields){if(utilTypes.isProxy(v))throw new ValidationError(label+' cannot be a Proxy'); if(!v||typeof v!=='object'||Array.isArray(v))throw new ValidationError(label+' must be an object'); const proto=Object.getPrototypeOf(v); if(proto!==Object.prototype&&proto!==null)throw new ValidationError(label+' must be a plain object'); const keys=Reflect.ownKeys(v); if(keys.some(k=>typeof k==='symbol'))throw new ValidationError(label+' cannot contain symbol keys'); for(const k of keys){const d=Object.getOwnPropertyDescriptor(v,k); if(!d?.enumerable||d.get||d.set)throw new ValidationError(label+' must contain only enumerable data properties');} if(keys.map(String).sort().join(',')!==[...fields].sort().join(','))throw new ValidationError(label+' fields are invalid');}
