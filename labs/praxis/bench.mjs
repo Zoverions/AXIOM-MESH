@@ -8,18 +8,13 @@
 // (test or CLI) supplies the corpus. Safe for the interpreter transport-surface
 // conformance scan.
 //
-// Budgets encode "non-pathological": the front end must stay roughly linear,
-// so a 10x input must not cost more than ~20x CPU time, and absolute wall-clock
-// caps keep CI honest. Measurements use a short warm-up and median wall samples.
-// CPU time is measured across multiple independent bounded parse batches so a
-// single GC/JIT/accounting outlier cannot determine the scaling ratio. Normal
-// batches target comparable source volume rather than equal parse counts: small
-// corpora run more parses per batch, while large corpora run fewer. Each
-// nonzero batch is normalized per parse and the median is used. Coarse zero
-// readings may increase the next batch size, but at least three nonzero samples
-// are required; otherwise timing evidence fails closed as 0. CPU time is used
-// only for the scaling ratio, and the existing absolute parse/format wall-clock
-// budgets remain unchanged.
+// Budgets encode "non-pathological": the front end must stay roughly linear.
+// A 10x input must remain within the unchanged 20x scaling ceiling, measured
+// from five alternating comparable-work wall-time rounds and their median ratio.
+// Absolute parse/format wall-clock caps remain unchanged. Per-corpus CPU timing
+// is still collected as bounded diagnostic evidence, but it no longer decides
+// the scaling verdict because short process-CPU samples proved too coarse and
+// runner-sensitive near the threshold.
 
 import { performance } from 'node:perf_hooks';
 
@@ -198,12 +193,12 @@ function measureWallPerRun(fn, runs) {
   return (performance.now() - start) / runs;
 }
 
-// Absolute wall-clock budgets (ms) and CPU-time scaling budget for the
+// Absolute wall-clock budgets (ms) and paired wall-scaling budget for the
 // standard corpus.
 export const BUDGETS = {
   maxParseMs10k: 5000,
   maxFormatMs10k: 5000,
-  // 10x input must cost less than 20x CPU time (linear-ish, not quadratic).
+  // 10x input must cost no more than 20x under paired wall evidence.
   maxScalingRatio: 20
 };
 
