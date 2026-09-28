@@ -173,12 +173,13 @@ export function validateParticipationCooldownEvidence(d){
   const end=date(d.window_ends_at,'window_ends_at');
   const evaluated=date(d.evaluated_at,'evaluated_at');
   if(end<=start) throw new ValidationError('Cooldown window_ends_at must follow window_started_at');
-  if(evaluated<start||evaluated>=end) throw new ValidationError('Cooldown evaluated_at must fall within the evidence window');
+  if(evaluated!==end) throw new ValidationError('Cooldown window_ends_at must equal evaluated_at');
   integer(d.unsolicited_interventions,'unsolicited_interventions',0,1000000);
   integer(d.max_unsolicited_interventions,'max_unsolicited_interventions',0,1000000);
   en(d.derived_state,new Set(['ready','blocked']),'derived_state');
   sha(d.history_digest,'history_digest');
   strings(d.evidence_refs,'evidence_refs',128,512);
+  if(d.evidence_refs.length===0) throw new ValidationError('Cooldown evidence requires a history evidence reference');
   sha(d.evidence_digest,'evidence_digest');
   const expected=d.unsolicited_interventions>=d.max_unsolicited_interventions?'blocked':'ready';
   if(d.derived_state!==expected) throw new ValidationError('Cooldown derived_state does not match the intervention count');
