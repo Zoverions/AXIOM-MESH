@@ -27,9 +27,11 @@ kernel and release gates. It creates no production credentials and makes no
 deployment claim. The current productization contract separately specifies
 personal/local and infrastructure fresh-host install profiles. A non-mutating,
 OCI-first Linux host planner now produces digest-bound compatibility,
-blocker, and prerequisite evidence for those profiles without requiring Node.js
-for the OCI path or modifying the host. The profiles are still not supported
-fresh-host installers.
+blocker, and prerequisite evidence for those profiles. Its target-host fact
+contract permits Node.js to be absent for OCI planning, but the current planner
+command itself is a Node.js program and is not the future Node-free bootstrapper.
+It modifies no host state. The profiles are still not supported fresh-host
+installers.
 
 The authenticated Gateway surface also has a versioned client contract covering
 all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
