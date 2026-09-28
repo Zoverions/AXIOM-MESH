@@ -280,6 +280,19 @@ export function verifyActiveTaskSteeringBinding(steering,previousTask,nextTask=n
         if(nextTask.principal_id!==previousTask.principal_id) reasons.push('successor-principal-mismatch');
         if(nextTask.authority_snapshot_ref!==previousTask.authority_snapshot_ref) reasons.push('successor-authority-snapshot-mismatch');
         if(nextTask.budget_ref!==previousTask.budget_ref) reasons.push('successor-budget-ref-mismatch');
+        if(nextTask.created_at!==previousTask.created_at) reasons.push('successor-created-at-mismatch');
+        if(nextTask.lifecycle_state!==previousTask.lifecycle_state) reasons.push('successor-lifecycle-state-mismatch');
+        if(nextTask.worker_ref!==previousTask.worker_ref) reasons.push('successor-worker-mismatch');
+        if(nextTask.provider_ref!==previousTask.provider_ref) reasons.push('successor-provider-mismatch');
+        if(nextTask.node_ref!==previousTask.node_ref) reasons.push('successor-node-mismatch');
+        if(nextTask.authority_checked_at!==previousTask.authority_checked_at) reasons.push('successor-authority-check-mismatch');
+        if(nextTask.budget_checked_at!==previousTask.budget_checked_at) reasons.push('successor-budget-check-mismatch');
+        if(nextTask.resume_requested!==previousTask.resume_requested||nextTask.resume_from_digest!==previousTask.resume_from_digest) reasons.push('successor-resume-state-mismatch');
+        if(nextTask.effect_state!==previousTask.effect_state) reasons.push('successor-effect-state-mismatch');
+        if(
+          nextTask.result_refs.length!==previousTask.result_refs.length
+          ||nextTask.result_refs.some((value,index)=>value!==previousTask.result_refs[index])
+        ) reasons.push('successor-result-refs-mismatch');
         if(new Date(nextTask.updated_at)<new Date(steering.decided_at)) reasons.push('successor-predates-steering');
         if(taskLifecycleDigest(nextTask)!==steering.resulting_task_revision_digest) reasons.push('successor-digest-mismatch');
       }catch{
