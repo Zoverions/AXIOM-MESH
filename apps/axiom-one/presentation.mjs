@@ -438,9 +438,18 @@ function consent(record, now = new Date()) {
     return unknownConsent();
   }
 
+  const createdAt = new Date(record.created_at);
   const expiry = validDate(record.expires_at) ? new Date(record.expires_at) : null;
   const revokedAt = validDate(record.revoked_at) ? new Date(record.revoked_at) : null;
-  if (record.status === 'active' && record.revoked_at != null && !revokedAt) {
+  if (
+    createdAt > current
+    || (expiry && expiry <= createdAt)
+    || (
+      record.status === 'active'
+      && record.revoked_at != null
+      && (!revokedAt || revokedAt > current)
+    )
+  ) {
     return unknownConsent();
   }
   let state = record.status === 'revoked'
