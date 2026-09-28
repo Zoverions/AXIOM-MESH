@@ -63,13 +63,17 @@ test('OCI plan semantics do not classify a missing target-host Node runtime as a
   assert.equal(validateHostInstallPlan(plan).valid,true);
 });
 
-test('verified Docker observation removes the OCI acquisition prerequisite',()=>{
+test('recognized Docker name still requires separate version and health verification',()=>{
   const plan=buildHostInstallPlan({
     profileId:'personal-local',
     hostFacts:linuxFacts({container_runtime:'docker'})
   });
-  assert.deepEqual(plan.prerequisites,[]);
-  assert.equal(plan.runtime.container_runtime_verified,true);
+  assert.deepEqual(plan.prerequisites,[
+    'verify-reviewed-container-runtime-version-health:docker'
+  ]);
+  assert.equal(plan.runtime.container_runtime_name_recognized,true);
+  assert.equal(plan.runtime.container_runtime_version_verified,false);
+  assert.equal(plan.runtime.container_runtime_health_verified,false);
   assert.equal(plan.host_candidate_compatible,true);
 });
 
@@ -79,7 +83,7 @@ test('unverified OCI runtime blocks rather than being treated as equivalent',()=
     hostFacts:linuxFacts({container_runtime:'podman'})
   });
   assert.equal(plan.host_candidate_compatible,false);
-  assert.ok(plan.blockers.includes('unverified-container-runtime:podman'));
+  assert.ok(plan.blockers.includes('unrecognized-container-runtime:podman'));
 });
 
 test('source strategy requires a compatible Node runtime but OCI strategy does not',()=>{
@@ -156,6 +160,8 @@ test('plans are deterministic digest-bound and closed against authority launderi
     x=>{x.profile_digest='a'.repeat(64);},
     x=>{x.directories.data_dir='/tmp/other';},
     x=>{x.provisioning.production_credentials='invent-credentials';},
+    x=>{x.runtime.container_runtime_version_verified=true;},
+    x=>{x.runtime.container_runtime_health_verified=true;},
     x=>{x.extra_authority=true;}
   ]) {
     const changed=structuredClone(left);
