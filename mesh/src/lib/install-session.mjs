@@ -186,6 +186,9 @@ export function assessInstallSession(candidate,observation,{evaluatedAt}={}){
   if(observed>now){
     return decision('STOP_UNCERTAIN',['observation-from-future'],candidateDigest,observationDigest);
   }
+  if(observed<requested){
+    return decision('STOP_UNCERTAIN',['observation-predates-request'],candidateDigest,observationDigest);
+  }
   if((now-observed)/1000>candidate.max_observation_age_seconds){
     return decision('STOP_UNCERTAIN',['observation-stale'],candidateDigest,observationDigest);
   }
