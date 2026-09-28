@@ -47,6 +47,7 @@ test('OCI plan semantics do not classify a missing target-host Node runtime as a
   assert.equal(plan.schema,HOST_INSTALL_PLAN_SCHEMA);
   assert.equal(plan.status,HOST_INSTALL_PLAN_STATUS);
   assert.equal(plan.runtime_strategy,'oci');
+  assert.equal(plan.host_facts_source,'synthetic-test');
   assert.equal(plan.host_candidate_compatible,true);
   assert.deepEqual(plan.blockers,[]);
   assert.deepEqual(plan.prerequisites,['install-reviewed-container-runtime:docker']);
@@ -127,6 +128,14 @@ test('unsupported platform distribution architecture or host semantics fail clos
     assert.equal(plan.host_candidate_compatible,false);
     assert.ok(plan.blockers.includes(reason),reason);
   }
+});
+
+
+test('unknown host fact provenance fails closed',()=>{
+  assert.throws(()=>buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts({facts_source:'claimed-live-by-file'})
+  }),/facts_source/);
 });
 
 test('infrastructure planning reuses the existing service-unit projection without enrollment',()=>{
