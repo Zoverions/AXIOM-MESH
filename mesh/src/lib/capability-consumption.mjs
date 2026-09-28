@@ -23,19 +23,24 @@ export function capabilityConsumptionEventId(jti) {
   return `evt_capability_consume_${sha256(normalized)}`;
 }
 
-export function capabilitySemanticConsumptionDigest(claims) {
-  const value = assertPlainObject(claims, 'capability semantic consumption claims');
+export function capabilitySemanticConsumptionDigest(claimsOrStatement) {
+  const value = assertPlainObject(
+    claimsOrStatement,
+    'capability semantic consumption claims or statement'
+  );
+  const issuer = semanticAlias(value, 'iss', 'issuer', 'capability issuer');
+  const audience = semanticAlias(value, 'aud', 'audience', 'capability audience');
   return digestObject({
     schema: 'axiom-capability-semantic-consumption.v1',
     subject: assertString(value.subject, 'capability subject', {
       max: 160,
       pattern: ID
     }),
-    issuer: assertString(value.iss, 'capability issuer', {
+    issuer: assertString(issuer, 'capability issuer', {
       max: 64,
       pattern: /^[a-z][a-z0-9-]{0,63}$/
     }),
-    audience: assertString(value.aud, 'capability audience', {
+    audience: assertString(audience, 'capability audience', {
       max: 64,
       pattern: /^[a-z][a-z0-9-]{0,63}$/
     }),
@@ -230,6 +235,15 @@ export function normalizeCapabilityConsumptionStatement(value) {
     throw new ValidationError('Capability consumption time is outside capability lifetime');
   }
   return Object.freeze(structuredClone(statement));
+}
+
+function semanticAlias(value, claimName, statementName, label) {
+  const claim = value[claimName];
+  const statement = value[statementName];
+  if (claim !== undefined && statement !== undefined && claim !== statement) {
+    throw new ValidationError(`${label} aliases disagree`);
+  }
+  return claim ?? statement;
 }
 
 function requiredDigest(value, label) {
