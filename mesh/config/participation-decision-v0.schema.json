@@ -5,7 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema","version","status","action","reasons","observation_digest","policy_digest",
+    "schema","version","status","action","reaction_recommendation","reasons","observation_digest","policy_digest",
     "decision_digest","authority_effect","data_scope_effect","communication_effect",
     "execution_effect","runtime_activation"
   ],
@@ -13,7 +13,8 @@
     "schema": {"const":"axiom-participation-decision.v0"},
     "version": {"const":0},
     "status": {"const":"inert-participation-decision"},
-    "action": {"enum":["ANSWER","INVESTIGATE","ACKNOWLEDGE","PASS"]},
+    "action": {"enum":["ANSWER","INVESTIGATE","PASS"]},
+    "reaction_recommendation": {"enum":["none","acknowledge"]},
     "reasons": {
       "type":"array","minItems":1,"maxItems":16,"uniqueItems":true,
       "items":{"type":"string","minLength":1,"maxLength":128}
