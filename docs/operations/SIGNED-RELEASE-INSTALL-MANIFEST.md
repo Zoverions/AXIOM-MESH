@@ -97,7 +97,7 @@ The signed statement binds:
 - release ID;
 - kernel version;
 - channel: `development | candidate | stable`;
-- explicit `production_promoted` boolean;
+- explicit `production_promoted` field, pinned to `false` in v1;
 - exact source revision;
 - issuance and expiry;
 - signing-key ID;
@@ -109,7 +109,7 @@ The signed statement binds:
 - required non-claims;
 - hard-zero install/host/network authority fields.
 
-A channel name never implies production promotion.
+A channel name never implies production promotion. In v1, even a trusted release signer cannot assert production promotion through this manifest; `production_promoted` must remain `false` until a separately reviewed promotion contract changes that boundary.
 
 The maximum signed validity interval is 31 days. This is a freshness ceiling for the signed statement, not a safety warranty for its contents or dependencies.
 
@@ -255,7 +255,7 @@ The v1 verifier fails closed against:
 3. non-Ed25519 signer substitution;
 4. signed-body mutation;
 5. stale control-plane digests;
-6. signed profile-status promotion;
+6. signed profile-status or production-promotion laundering;
 7. future/expired/overlong manifests;
 8. missing documentation/SBOM/provenance;
 9. a profile without an installable artifact;
