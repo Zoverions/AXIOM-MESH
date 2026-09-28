@@ -34,8 +34,11 @@ It modifies no host state. A separate signed release/install-manifest verifier
 now requires an externally trusted active Ed25519 signer, exact current
 control-plane digests, bounded validity, exact profile status, and required
 artifact/evidence metadata; artifact bytes still require a separate local
-length/digest check. Neither verifier result nor artifact identity authorizes
-host mutation. The profiles are still not supported fresh-host installers.
+length/digest check. Install Session v0 additionally classifies exact no-op,
+install/repair/upgrade/recovery review, and fail-closed newer/diverged/partial-
+secret/uncertain states from bounded installed-state evidence. None of these
+results authorizes host mutation. The profiles are still not supported fresh-
+host installers.
 
 The authenticated Gateway surface also has a versioned client contract covering
 all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
