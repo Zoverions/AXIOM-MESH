@@ -99,3 +99,25 @@ test('fuzz corpus: format(parse(x)) is canonical for adversarial-but-valid input
     assert.deepEqual(parse(canonical), ast, `round-trip failed for ${JSON.stringify(source)}`);
   }
 });
+
+
+test('constructor.constructor source escape is rejected without executing host JavaScript', () => {
+  const sentinelName = '__praxisHostEscapeSentinel';
+  const previous = globalThis[sentinelName];
+  globalThis[sentinelName] = 'armed';
+
+  const source =
+    'observe escape = constructor.constructor("globalThis.__praxisHostEscapeSentinel = \\"escaped\\"")() from "fixture";';
+
+  try {
+    assert.throws(
+      () => compile(source),
+      error => error instanceof PraxisSyntaxError
+        && error.code === 'PRAXIS_SYNTAX_ERROR'
+    );
+    assert.equal(globalThis[sentinelName], 'armed');
+  } finally {
+    if (previous === undefined) delete globalThis[sentinelName];
+    else globalThis[sentinelName] = previous;
+  }
+});
