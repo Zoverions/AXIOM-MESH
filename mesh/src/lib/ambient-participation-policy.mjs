@@ -180,7 +180,7 @@ export function validateParticipationCooldownEvidence(d){
   const end=date(d.window_ends_at,'window_ends_at');
   const evaluated=date(d.evaluated_at,'evaluated_at');
   if(end<=start) throw new ValidationError('Cooldown window_ends_at must follow window_started_at');
-  if(evaluated!==end) throw new ValidationError('Cooldown window_ends_at must equal evaluated_at');
+  if(evaluated.valueOf()!==end.valueOf()) throw new ValidationError('Cooldown window_ends_at must equal evaluated_at');
   integer(d.unsolicited_interventions,'unsolicited_interventions',0,1000000);
   integer(d.max_unsolicited_interventions,'max_unsolicited_interventions',0,1000000);
   en(d.derived_state,new Set(['ready','blocked']),'derived_state');
