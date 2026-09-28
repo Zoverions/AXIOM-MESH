@@ -122,6 +122,10 @@ test('clean absent live host state yields INSTALL_REVIEW but no mutation authori
   assert.deepEqual(d.reasons,['clean-absent-state']);
   assert.equal(d.host_mutation_authorized,false);
   assert.equal(validateInstallSessionDecision(d).valid,true);
+  assert.match(d.decision_digest,/^[a-f0-9]{64}$/);
+  const changed=structuredClone(d);
+  changed.decision='STOP_CONFLICT';
+  assert.throws(()=>validateInstallSessionDecision(changed),/digest mismatch/);
 });
 
 test('non-live host plans never become installation review',()=>{
@@ -281,6 +285,18 @@ test('installed observation is self-digested and rejects semantic contradictions
     relation_evidence_ref:null
   });
   assert.throws(()=>validateInstalledStateObservation(missingRelationEvidence),/relation requires evidence/);
+});
+
+
+test('ready state cannot contradict service or complete-record evidence',()=>{
+  const noService=exactInstalled({service_state:'stopped'});
+  assert.throws(()=>validateInstalledStateObservation(noService),/Ready installed state requires running services/);
+
+  const noSecrets=exactInstalled({secret_state:'absent'});
+  assert.throws(()=>validateInstalledStateObservation(noSecrets),/complete secrets and present data/);
+
+  const absentReady=observation({readiness_state:'ready',service_state:'running'});
+  assert.throws(()=>validateInstalledStateObservation(absentReady),/Absent install record cannot claim readiness/);
 });
 
 test('hostile data containers and unknown fields fail before decision logic',()=>{
