@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
+import { hostInstallMain } from '../src/host-install.mjs';
 import {
   buildHostInstallPlan,
   HOST_INSTALL_PLAN_SCHEMA,
@@ -130,6 +133,20 @@ test('unsupported platform distribution architecture or host semantics fail clos
   }
 });
 
+
+
+test('supplied facts file is always labelled supplied-evidence',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'axiom-host-facts-'));
+  const path=join(root,'facts.json');
+  await writeFile(path,JSON.stringify(linuxFacts({
+    facts_source:'live-local-observation',
+    container_runtime:'docker'
+  })));
+  const plan=await hostInstallMain([
+    'plan','personal-local','--runtime','oci','--facts',path
+  ]);
+  assert.equal(plan.host_facts_source,'supplied-evidence');
+});
 
 test('unknown host fact provenance fails closed',()=>{
   assert.throws(()=>buildHostInstallPlan({
