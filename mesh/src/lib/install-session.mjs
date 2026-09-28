@@ -523,4 +523,186 @@ function validateObservedInstall(value){
       !['partial','conflicting'].includes(value.receipt_status)
       ||[
         value.existing_receipt_digest,value.existing_profile_id,value.existing_release_id,
-        value.existing_kernel_version,value.existing_sour
+        value.existing_kernel_version,value.existing_source_revision
+      ].some(item=>item===null)
+      ||value.legacy_proof_state_detected
+    ) throw new ValidationError('Partial install receipt state is incomplete or inconsistent');
+  }
+  if(value.presence==='legacy-proof-markers'){
+    if(!value.legacy_proof_state_detected){
+      throw new ValidationError('Legacy proof marker state must be explicit');
+    }
+    if(value.receipt_status==='complete'){
+      throw new ValidationError('Legacy proof markers cannot claim a current complete receipt');
+    }
+  }
+  if(value.presence==='unknown'){
+    if(
+      value.receipt_status!=='unknown'
+      ||value.health!=='unknown'
+      ||value.legacy_proof_state_detected
+      ||!allExistingNull
+    ){
+      throw new ValidationError('Unknown install state must remain unknown');
+    }
+  }
+  return value;
+}
+
+function existingIdentityMatchesTarget(observed,hostPlan,releaseVerification){
+  return observed.existing_profile_id===hostPlan.profile_id
+    &&observed.existing_release_id===releaseVerification.release_id
+    &&observed.existing_kernel_version===releaseVerification.kernel_version
+    &&observed.existing_source_revision===releaseVerification.source_revision;
+}
+
+function upgradePreparationAllowed(observed,releaseVerification){
+  const minimum=compareVersions(
+    observed.existing_kernel_version,
+    releaseVerification.data_compatibility.minimum_compatible_kernel
+  );
+  return minimum!==null
+    &&minimum>=0
+    &&DIRECT_UPGRADE_POSTURES.has(releaseVerification.data_compatibility.rollback_mode);
+}
+
+function expectedPreparationForClassification(classification){
+  return {
+    absent:'prepare-install',
+    'healthy-same':'verify-noop',
+    'partial-same':'prepare-repair',
+    'conflicting-partial':'stop',
+    'newer-or-unknown':'stop',
+    'legacy-proof-state':'stop'
+  }[classification]??null;
+}
+
+function compareVersions(left,right){
+  const a=parseSemver(left);
+  const b=parseSemver(right);
+  if(!a||!b) return null;
+  for(const key of ['major','minor','patch']){
+    if(a[key]<b[key]) return -1;
+    if(a[key]>b[key]) return 1;
+  }
+  return comparePrerelease(a.prerelease,b.prerelease);
+}
+
+function parseSemver(value){
+  if(typeof value!=='string') return null;
+  const match=/^(\d+)\.(\d+)\.(\d+)(?:-([A-Za-z0-9.-]+))?$/.exec(value);
+  if(!match) return null;
+  return {
+    major:Number(match[1]),minor:Number(match[2]),patch:Number(match[3]),
+    prerelease:match[4]?match[4].split('.'):[]
+  };
+}
+
+function comparePrerelease(a,b){
+  if(a.length===0&&b.length===0) return 0;
+  if(a.length===0) return 1;
+  if(b.length===0) return -1;
+  const length=Math.max(a.length,b.length);
+  for(let index=0;index<length;index+=1){
+    if(index>=a.length) return -1;
+    if(index>=b.length) return 1;
+    const left=a[index];
+    const right=b[index];
+    if(left===right) continue;
+    const leftNumeric=/^\d+$/.test(left);
+    const rightNumeric=/^\d+$/.test(right);
+    if(leftNumeric&&rightNumeric) return Number(left)<Number(right)?-1:1;
+    if(leftNumeric!==rightNumeric) return leftNumeric?-1:1;
+    return left<right?-1:1;
+  }
+  return 0;
+}
+
+function isPrivateBirthArtifact(artifact){
+  return PRIVATE_BIRTH_TOKEN.test(artifact.artifact_id)
+    ||PRIVATE_BIRTH_TOKEN.test(artifact.locator??'');
+}
+
+function canonicalTime(value,label){
+  if(typeof value!=='string') throw new ValidationError(`${label} must be a canonical UTC timestamp`);
+  const parsed=Date.parse(value);
+  if(!Number.isFinite(parsed)||new Date(parsed).toISOString()!==value){
+    throw new ValidationError(`${label} must be a canonical UTC timestamp`);
+  }
+  return parsed;
+}
+
+function nullableSha(value,label){if(value!==null&&(!SHA.test(value)))throw new ValidationError(`${label} is invalid`);}
+function nullableId(value,label){if(value!==null&&(!ID.test(value)))throw new ValidationError(`${label} is invalid`);}
+function nullableVersion(value,label){if(value!==null&&(!VERSION.test(value)))throw new ValidationError(`${label} is invalid`);}
+function nullableRevision(value,label){if(value!==null&&(!REVISION.test(value)))throw new ValidationError(`${label} is invalid`);}
+
+function stringArray(value,label,{min=0,max=64,itemMax=512}={}){
+  plainArray(value,label,{min,max});
+  const seen=new Set();
+  for(const item of value){
+    if(typeof item!=='string'||item.length<1||item.length>itemMax||seen.has(item)){
+      throw new ValidationError(`${label} contains invalid or duplicate values`);
+    }
+    seen.add(item);
+  }
+  return value;
+}
+
+function plainArray(value,label,{min=0,max=64}={}){
+  if(utilTypes.isProxy(value)) throw new ValidationError(`${label} cannot be a Proxy`);
+  if(
+    !Array.isArray(value)
+    ||Object.getPrototypeOf(value)!==Array.prototype
+    ||value.length<min
+    ||value.length>max
+  ) throw new ValidationError(`${label} has invalid cardinality or prototype`);
+  const allowed=new Set(['length']);
+  for(let index=0;index<value.length;index+=1){
+    const key=String(index);
+    allowed.add(key);
+    const descriptor=Object.getOwnPropertyDescriptor(value,key);
+    if(!descriptor?.enumerable||!Object.hasOwn(descriptor,'value')){
+      throw new ValidationError(`${label} must be dense enumerable data`);
+    }
+  }
+  for(const key of Reflect.ownKeys(value)){
+    if(typeof key==='symbol'||!allowed.has(key)){
+      throw new ValidationError(`${label} contains custom array state`);
+    }
+  }
+  return value;
+}
+
+function exactObject(value,label,keys){
+  if(utilTypes.isProxy(value)) throw new ValidationError(`${label} cannot be a Proxy`);
+  if(!value||typeof value!=='object'||Array.isArray(value)){
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const prototype=Object.getPrototypeOf(value);
+  if(prototype!==Object.prototype&&prototype!==null){
+    throw new ValidationError `${label} must be a plain object`);
+  }
+  const actual=Reflect.ownKeys(value);
+  if(actual.some(key=>typeof key==='symbol')){
+    throw new ValidationError `${label} cannot contain symbol keys`);
+  }
+  for(const key of actual){
+    const descriptor=Object.getOwnPropertyDescriptor(value,key);
+    if(!descriptor?.enumerable||!Object.hasOwn(descriptor,'value')){
+      throw new ValidationError(`${label} must contain only enumerable data properties`);
+    }
+  }
+  if(actual.map(String).sort().join(',')!==[...keys].sort().join(',')){
+    throw new ValidationError `${label} key inventory drifted`);
+  }
+  return value;
+}
+
+function deepFreeze(value){
+  if(value&&typeof value==='object'&&!Object.isFrozen(value)){
+    for(const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
