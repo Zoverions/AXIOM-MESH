@@ -652,14 +652,18 @@ certification, production repository activation, or production promotion.
 ### 14.1 AXIOM One
 
 AXIOM One is the planned private personal agent, vault, approval centre, and
-evidence record. Its concepts are Ask, Plan, Approvals, Vault, Receipts, Share,
-and Circles.
+evidence record. Its concepts are Ask, Plan, Capabilities, Approvals, Consent,
+Vault, Receipts, Verify, Share, and Circles.
 
 The experimental loopback slice currently provides bounded reviewed intent,
 owner-scoped private memory, three fixed directional provenance relations,
 correction-without-replacement, confirmation-bound tombstoning, selective local
-export, explicit bundle reveal, approval-state distinctions, same-idempotency-
-key uncertainty recovery, raw evidence, and cross-principal negative tests.
+export, explicit bundle reveal, approval-state distinctions, non-authorizing
+capability-status projection, current owner-scoped consent inspection, bounded
+local evidence-chain verification, same-idempotency-key uncertainty recovery,
+raw evidence, and cross-principal negative tests. Capability discovery never
+implies authorization, and the embedded Verify view is an integrity explanation,
+not promotion of the separate AXIOM Verify product or a truth oracle.
 
 It does not yet claim general consequential plan/execute, direct edge deletion,
 hard deletion, restore, bulk ingestion, completed browser-session security,

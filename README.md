@@ -197,11 +197,13 @@ authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
 ### AXIOM One
 
 AXIOM One remains an experimental loopback-only browser/PWA preview. The current
-slice provides node status, reversible review for five bounded actions,
+slice provides node status, reversible review for six bounded actions,
 owner-scoped private memory, three fixed directional provenance relations,
 confirmation-bound tombstoning, selective local export, explicit bundle reveal,
-raw evidence, approval-state distinctions, same-idempotency-key uncertainty
-recovery, and cross-principal negative tests.
+raw evidence, approval-state distinctions, non-authorizing capability-status
+projection, current consent-state inspection, bounded local evidence-chain
+verification, same-idempotency-key uncertainty recovery, and cross-principal
+negative tests.
 
 It is not a supported product and does not yet claim general consequential
 plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
