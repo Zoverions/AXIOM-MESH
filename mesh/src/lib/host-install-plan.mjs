@@ -45,8 +45,8 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
   exactObject(policy.planner, 'Host install planner policy', [
     'status','platforms','architectures','supported_distributions',
     'preferred_runtime_strategy','runtime_strategies','verified_oci_runtimes',
-    'required_facts','node_fact_requirement','unsupported_host_behavior',
-    'mutation_performed'
+    'required_facts','node_fact_requirement','planner_execution_requires_node',
+    'unsupported_host_behavior','mutation_performed'
   ]);
   if (
     policy.planner.status !== 'implemented-non-mutating'
@@ -56,6 +56,7 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
     || canonicalJson(policy.planner.runtime_strategies) !== canonicalJson(RUNTIME_STRATEGIES)
     || canonicalJson(policy.planner.verified_oci_runtimes) !== canonicalJson(['docker'])
     || policy.planner.node_fact_requirement !== 'optional-for-oci-required-for-source'
+    || policy.planner.planner_execution_requires_node !== true
     || policy.planner.unsupported_host_behavior !== 'fail-closed-with-blockers'
     || policy.planner.mutation_performed !== false
   ) throw new ValidationError('Host install planner policy drifted');
@@ -293,6 +294,8 @@ export function validateHostInstallPlan(
     'authority_effect','network_effect','plan_digest'
   ]);
   const validation = validateHostInstallPolicy(policy, targets);
+  const profile = policy.profiles[plan.profile_id];
+  const target = targets.targets.find(item => item.id === plan.profile_id);
   if (
     plan.schema !== HOST_INSTALL_PLAN_SCHEMA
     || plan.version !== 1
@@ -311,7 +314,20 @@ export function validateHostInstallPlan(
     || plan.credentials_created !== false
     || plan.authority_effect !== 'none'
     || plan.network_effect !== 'none'
-  ) throw new ValidationError('Host install plan weakens the non-mutating boundary');
+    || !profile
+    || !target
+    || plan.profile_digest !== digestObject(profile)
+    || plan.topology !== profile.topology
+    || plan.runtime_identity !== profile.runtime_identity
+    || plan.service_units !== profile.service_units
+    || canonicalJson(plan.directories) !== canonicalJson(expectedDirectories(profile))
+    || plan.provisioning.production_credentials !== 'compose-existing-provision-production'
+    || plan.provisioning.service_unit_projection !== (
+      profile.service_units === 'required'
+        ? 'compose-existing-provision-service-units'
+        : 'available-not-required'
+    )
+  ) throw new ValidationError('Host install plan weakens or drifts from the non-mutating boundary');
 
   validateStringArray(plan.blockers, 'plan.blockers', 64);
   validateStringArray(plan.prerequisites, 'plan.prerequisites', 64);
@@ -382,6 +398,14 @@ export function validateHostInstallPlan(
     authority_effect: 'none',
     mutation_performed: false
   });
+}
+
+function expectedDirectories(profile) {
+  return Object.fromEntries(
+    ['data_dir','secret_dir','units_dir','run_dir','log_dir']
+      .filter(key => profile[key] !== undefined)
+      .map(key => [key, profile[key]])
+  );
 }
 
 function validateSupportedDistributions(value) {
@@ -517,10 +541,13 @@ function validateStringArray(value,label,maxItems) {
     || Object.getPrototypeOf(value) !== Array.prototype
     || value.length > maxItems
   ) throw new ValidationError(`${label} has invalid cardinality`);
+  const allowedKeys = new Set(['length']);
   const seen = new Set();
   for (let index=0; index<value.length; index+=1) {
-    if (!Object.hasOwn(value,String(index))) throw new ValidationError(`${label} cannot be sparse`);
-    const descriptor=Object.getOwnPropertyDescriptor(value,String(index));
+    const key=String(index);
+    allowedKeys.add(key);
+    if (!Object.hasOwn(value,key)) throw new ValidationError(`${label} cannot be sparse`);
+    const descriptor=Object.getOwnPropertyDescriptor(value,key);
     if (!descriptor?.enumerable || !Object.hasOwn(descriptor,'value')) {
       throw new ValidationError(`${label} must contain only enumerable data properties`);
     }
@@ -529,6 +556,11 @@ function validateStringArray(value,label,maxItems) {
       throw new ValidationError(`${label} contains invalid or duplicate values`);
     }
     seen.add(item);
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key === 'symbol' || !allowedKeys.has(key)) {
+      throw new ValidationError(`${label} contains custom array state`);
+    }
   }
 }
 
