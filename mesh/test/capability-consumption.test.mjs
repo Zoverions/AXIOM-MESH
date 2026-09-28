@@ -13,7 +13,8 @@ import {
   capabilityConsumptionEventId,
   capabilitySemanticConsumptionDigest,
   capabilitySemanticConsumptionEventId,
-  verifyCapabilityConsumptionReceipt
+  verifyCapabilityConsumptionReceipt,
+  signCapabilityConsumptionReceipt
 } from '../src/lib/capability-consumption.mjs';
 import {
   ensureMeshIdentity,
@@ -22,6 +23,7 @@ import {
 } from '../src/lib/identity.mjs';
 import { buildPlan, planDigest } from '../src/lib/plan.mjs';
 import { createGridService } from '../src/grid/server.mjs';
+import { acquireGridRuntimeLock, releaseGridRuntimeLock } from '../src/grid/backup.mjs';
 import { createSandboxService } from '../src/sandbox/server.mjs';
 
 
@@ -784,4 +786,110 @@ test('semantic consumption serializes concurrent fresh JTIs but permits a distin
     executionEpoch: 'sandbox_epoch_semantic_concurrent'
   });
   assert.match(distinctReceipt.receipt_digest, /^[a-f0-9]{64}$/);
+});
+
+
+test('pre-fix JTI-only consumption remains spent after Grid upgrade', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-legacy-'));
+  const portLease = await reserveProductionPortBlock('semantic legacy history test');
+  const basePort = portLease.base_port;
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`
+  });
+  const hypervisor = await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  let grid = await createGridService(config);
+  t.after(async () => {
+    try {
+      await grid?.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  const first = capabilityFixture(hypervisor, {
+    jti: 'semantic-legacy-first-jti',
+    suffix: 'semantic-legacy',
+    ttlSeconds: config.capabilityTtlSeconds
+  });
+  const signed = signCapabilityConsumptionReceipt(grid.identity, {
+    capability: first.capability,
+    claims: first.claims,
+    executionEpoch: 'sandbox_epoch_semantic_legacy'
+  });
+  // The pre-fix Grid wrote only this JTI event, with no semantic marker.
+  grid.store.appendEvents({
+    traceId: 'trace_semantic_legacy_first',
+    actor: first.claims.subject,
+    events: [{
+      event_id: capabilityConsumptionEventId(first.claims.jti),
+      kind: 'capability.consumed',
+      subject: first.claims.jti,
+      payload: { receipt: signed.receipt, receipt_digest: signed.receipt_digest }
+    }]
+  });
+  await grid.stop();
+  grid = null;
+
+  grid = await createGridService(config);
+  await grid.start();
+  const replayClaims = Object.freeze({
+    ...first.claims,
+    jti: 'semantic-legacy-fresh-jti'
+  });
+  await assert.rejects(
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: 'trace_semantic_legacy_fresh_jti',
+      fixture: {
+        ...first,
+        claims: replayClaims,
+        capability: issueCapability(hypervisor, replayClaims)
+      },
+      executionEpoch: 'sandbox_epoch_semantic_legacy'
+    }),
+    error => error?.code === 'semantic_action_consumed'
+  );
+});
+
+test('invalid historical consumption releases Grid store and runtime lock', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-history-fail-'));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true
+  });
+  const grid = await createGridService(config);
+  grid.store.appendEvents({
+    traceId: 'trace_invalid_semantic_history',
+    actor: 'owner.restart',
+    events: [{
+      event_id: 'evt_invalid_legacy_receipt',
+      kind: 'capability.consumed',
+      subject: 'cap-invalid-legacy',
+      payload: {
+        receipt: { statement: { schema: 'invalid' } },
+        receipt_digest: 'a'.repeat(64)
+      }
+    }]
+  });
+  await grid.stop();
+
+  await assert.rejects(
+    () => createGridService(config),
+    /Capability consumption statement/
+  );
+  const lock = await acquireGridRuntimeLock(dataDir);
+  await releaseGridRuntimeLock(lock);
 });
