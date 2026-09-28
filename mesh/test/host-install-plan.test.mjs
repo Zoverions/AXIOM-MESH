@@ -52,7 +52,9 @@ test('OCI plan semantics do not classify a missing target-host Node runtime as a
   assert.deepEqual(plan.prerequisites,['install-reviewed-container-runtime:docker']);
   assert.equal(plan.runtime.node_runtime_required,false);
   assert.equal(plan.runtime.node_runtime_observed,null);
-  assert.equal(plan.runtime.container_runtime_verified,false);
+  assert.equal(plan.runtime.container_runtime_name_recognized,false);
+  assert.equal(plan.runtime.container_runtime_version_verified,false);
+  assert.equal(plan.runtime.container_runtime_health_verified,false);
   assert.equal(plan.network.public_ingress_enabled,false);
   assert.equal(plan.network.external_egress,'deny');
   assert.equal(plan.network.mesh_enrollment,'not-performed');
@@ -77,7 +79,7 @@ test('recognized Docker name still requires separate version and health verifica
   assert.equal(plan.host_candidate_compatible,true);
 });
 
-test('unverified OCI runtime blocks rather than being treated as equivalent',()=>{
+test('unrecognized OCI runtime blocks rather than being treated as equivalent',()=>{
   const plan=buildHostInstallPlan({
     profileId:'personal-local',
     hostFacts:linuxFacts({container_runtime:'podman'})
