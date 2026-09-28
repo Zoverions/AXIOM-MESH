@@ -138,7 +138,7 @@ The record binds the previous task digest, new event digest, actor principal, se
 
 This composes `axiom-task-lifecycle.v0` from #1823 rather than creating another task system.
 
-Before a future task harness consumes steering, `verifyActiveTaskSteeringBinding` must bind the record to the exact predecessor and, for `APPEND` / `REPLACE`, the exact successor `axiom-task-lifecycle.v0` state. The verifier rejects task, outcome, principal, authority-snapshot, budget, digest, or temporal drift. `STOP` and `IGNORE` remain evidence-only requests and cannot carry a successor task state.
+Before a future task harness consumes steering, `verifyActiveTaskSteeringBinding` must bind the record to the exact predecessor and, for `APPEND` / `REPLACE`, the exact successor `axiom-task-lifecycle.v0` state. The verifier rejects task, outcome, principal, authority-snapshot, budget, digest, or temporal drift. It also requires steering to preserve the predecessor's lifecycle/effect state, worker/provider/node bindings, currentness-check timestamps, resume state, and result references. The steering record may carry new semantic context, but it cannot use the successor lifecycle record to smuggle a completion, effect, worker change, or other operational transition. `STOP` and `IGNORE` remain evidence-only requests and cannot carry a successor task state.
 
 This verifier still does not execute the transition. Cancellation, replacement, or any consequential follow-on remains subject to the normal task/currentness and AXIOM authority paths.
 
