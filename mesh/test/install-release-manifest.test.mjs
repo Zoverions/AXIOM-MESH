@@ -4,6 +4,7 @@ import {
   sign
 } from 'node:crypto';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 
 import installTargets from '../config/install-targets.json' with { type: 'json' };
 import hostInstallPolicy from '../config/host-install-policy.json' with { type: 'json' };
@@ -422,4 +423,11 @@ test('artifact verification rejects hostile metadata containers',()=>{
     ()=>verifyInstallReleaseArtifact(new Proxy(target,{}),artifactBytes['runtime-personal']),
     /Proxy/i
   );
+});
+
+test('release verifier has no host mutation process network or credential side-effect imports',async()=>{
+  const source=await readFile(new URL('../src/lib/install-release-manifest.mjs',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/node:child_process|node:net|node:http|node:https/);
+  assert.doesNotMatch(source,/\bfetch\s*\(|\bexec\s*\(|\bspawn\s*\(|\bexecFile\s*\(/);
+  assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|unlink|rename/);
 });
