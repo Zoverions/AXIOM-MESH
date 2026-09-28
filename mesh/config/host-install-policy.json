@@ -29,7 +29,7 @@
       "oci",
       "source"
     ],
-    "verified_oci_runtimes": [
+    "recognized_oci_runtime_names": [
       "docker"
     ],
     "required_facts": [
