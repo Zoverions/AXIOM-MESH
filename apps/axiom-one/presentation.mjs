@@ -380,8 +380,13 @@ function capability(entry) {
     experimental: 'Experimental'
   };
   const implementation = labels[entry.status] ?? 'Unknown';
-  const state = Object.hasOwn(labels, entry.status) ? entry.status : 'unknown';
-  const tone = entry.status === 'disabled' ? 'blocked' : 'pending';
+  const knownStatus = Object.hasOwn(labels, entry.status);
+  const state = knownStatus ? entry.status : 'unknown';
+  const tone = !knownStatus
+    ? 'uncertain'
+    : entry.status === 'disabled'
+      ? 'blocked'
+      : 'pending';
   const evidenceCount = Array.isArray(entry.evidence)
     ? entry.evidence.filter(value => typeof value === 'string' && value.length).length
     : 0;
@@ -414,8 +419,30 @@ function consent(record, now = new Date()) {
   const current = now instanceof Date ? now : new Date(now);
   if (Number.isNaN(current.valueOf())) return unknownConsent();
 
+  const requiredText = ['consent_id', 'subject', 'controller', 'purpose', 'created_at'];
+  const malformedCore = requiredText.some(field => (
+    typeof record[field] !== 'string'
+    || record[field].length === 0
+    || record[field].length > 1000
+  ));
+  const malformedScopes = (
+    !Array.isArray(record.scopes_json)
+    || record.scopes_json.length === 0
+    || record.scopes_json.some(scope => (
+      typeof scope !== 'string'
+      || scope.length === 0
+      || scope.length > 1000
+    ))
+  );
+  if (malformedCore || malformedScopes || !validDate(record.created_at)) {
+    return unknownConsent();
+  }
+
   const expiry = validDate(record.expires_at) ? new Date(record.expires_at) : null;
   const revokedAt = validDate(record.revoked_at) ? new Date(record.revoked_at) : null;
+  if (record.status === 'active' && record.revoked_at != null && !revokedAt) {
+    return unknownConsent();
+  }
   let state = record.status === 'revoked'
     ? 'revoked'
     : record.status === 'active'
@@ -540,7 +567,11 @@ function verification(result) {
     });
   }
 
-  if (result.valid === false && typeof result.reason === 'string' && result.reason.length) {
+  if (
+    result.valid === false
+    && typeof result.reason === 'string'
+    && /^[a-z0-9_]{1,80}$/.test(result.reason)
+  ) {
     const facts = [fact('Reason', result.reason)];
     if (Number.isSafeInteger(result.seq) && result.seq > 0) {
       facts.unshift(fact('Sequence', String(result.seq)));
