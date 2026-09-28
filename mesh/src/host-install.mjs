@@ -41,7 +41,11 @@ export async function hostInstallMain(argv = process.argv.slice(2)) {
     hostFacts = await collectHostFacts();
   } else {
     try {
-      hostFacts = JSON.parse(await readFile(factsPath,'utf8'));
+      const supplied = JSON.parse(await readFile(factsPath,'utf8'));
+      hostFacts = {
+        ...supplied,
+        facts_source: 'supplied-evidence'
+      };
     } catch (error) {
       throw new ValidationError(`Unable to load host facts: ${error.message}`);
     }
