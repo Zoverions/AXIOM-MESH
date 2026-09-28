@@ -130,7 +130,10 @@ test('acknowledges when response and investigation are weak but reaction fit is 
     usefulness:20,answer_confidence:40,urgency:10,noise:10,interruption_cost:20,
     investigation_value:20,acknowledgement_fit:95
   }});
-  assert.equal(evaluateParticipation(o,policy('balanced'),event()).action,'ACKNOWLEDGE');
+  const d=evaluateParticipation(o,policy('balanced'),event());
+  assert.equal(d.action,'PASS');
+  assert.equal(d.reaction_recommendation,'acknowledge');
+  assert.deepEqual(d.reasons,['passive-acknowledgement-threshold-met']);
 });
 
 test('duplicate human answer, quiet context, stale observation and cooldown failure all pass', () => {
