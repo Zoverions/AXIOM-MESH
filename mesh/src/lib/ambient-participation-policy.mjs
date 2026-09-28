@@ -1,16 +1,24 @@
 import { types as utilTypes } from 'node:util';
 import { digestObject, ValidationError } from './canonical.mjs';
+import {
+  taskLifecycleDigest,
+  validateTaskLifecycle
+} from './agent-os-contracts.mjs';
 
 export const PARTICIPATION_OBSERVATION_SCHEMA='axiom-participation-observation.v0';
 export const PARTICIPATION_POLICY_SCHEMA='axiom-participation-policy.v0';
 export const ACTIVE_TASK_STEERING_SCHEMA='axiom-active-task-steering.v0';
 export const SILENT_INVESTIGATION_RESULT_SCHEMA='axiom-silent-investigation-result.v0';
-export const PARTICIPATION_ACTIONS=Object.freeze(['ANSWER','INVESTIGATE','ACKNOWLEDGE','PASS']);
+export const PARTICIPATION_DECISION_SCHEMA='axiom-participation-decision.v0';
+export const PARTICIPATION_COOLDOWN_EVIDENCE_SCHEMA='axiom-participation-cooldown-evidence.v0';
+export const PARTICIPATION_ACTIONS=Object.freeze(['ANSWER','INVESTIGATE','PASS']);
+export const PARTICIPATION_REACTIONS=Object.freeze(['none','acknowledge']);
 export const STEERING_DECISIONS=Object.freeze(['IGNORE','APPEND','REPLACE','STOP']);
 export const PARTICIPATION_PRESETS=Object.freeze(['listener','investigator','balanced','teammate']);
 
 const ID=/^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$/;
 const SHA=/^[a-f0-9]{64}$/;
+const ZERO_SHA='0'.repeat(64);
 const CONTEXTS=new Set(['owner-private','direct','circle','organization','public']);
 const CONTEXT_SCOPE_MODES=new Set(['all-eligible','allowlist']);
 const ADDRESSING=new Set(['explicit','passive','context-only']);
@@ -20,6 +28,7 @@ const CONSEQUENCE_RANK={C0:0,C1:1,C2:2,C3:3};
 const COOLDOWN=new Set(['ready','blocked','unavailable']);
 const DIMS=['usefulness','answer_confidence','urgency','noise','interruption_cost','investigation_value','acknowledgement_fit'];
 const THRESHOLDS=['reply_usefulness_min','reply_confidence_min','investigate_value_min','acknowledge_fit_min','noise_max','interruption_cost_max'];
+const TASK_LIFECYCLE_FIELDS=['schema','version','status','task_id','outcome_id','principal_id','lifecycle_state','created_at','updated_at','worker_ref','provider_ref','node_ref','authority_snapshot_ref','authority_checked_at','budget_ref','budget_checked_at','resume_requested','resume_from_digest','effect_state','result_refs','grants_authority','execution_effect','runtime_activation'];
 
 export function validateParticipationObservation(d){
   exact(d,'Participation observation',['schema','version','status','observation_id','event_digest','state_digest','task_id','principal_id','context_id','context_class','addressing_class','producer_ref','producer_revision_ref','observed_at','applicability','dimensions','evidence_refs','score_semantics','authority_effect','assurance_effect','execution_effect','runtime_activation']);
@@ -71,23 +80,171 @@ export function evaluateParticipation(o,p,e){
   const observationFromFuture=new Date(o.observed_at)>evaluationTime;
   if(e.event_class==='explicit'){
     if(mismatch.length||policyNotYetEffective||policyExpired||observationFromFuture||o.applicability!=='current')return fallbackParticipationDecision(e,'explicit-request-semantic-policy-bypassed');
-    if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p);
-    return decision('ANSWER',['explicit-request'],o,p);
+    const reaction=reactionRecommendation(o,p);
+    if(p.explicit_mode==='investigate-first'&&o.dimensions.investigation_value!==null&&o.dimensions.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['explicit-investigate-first'],o,p,reaction);
+    return decision('ANSWER',['explicit-request'],o,p,reaction);
   }
   if(mismatch.length)return decision('PASS',mismatch,o,p); if(policyNotYetEffective)return decision('PASS',['policy-not-yet-effective'],o,p); if(policyExpired)return decision('PASS',['policy-expired'],o,p); if(observationFromFuture)return decision('PASS',['observation-from-future'],o,p);
   if(!p.passive_participation)return decision('PASS',['passive-disabled'],o,p); if(e.quiet_context||p.quiet_context_ids.includes(e.context_id))return decision('PASS',['quiet-context'],o,p); if(!p.allowed_context_classes.includes(e.context_class))return decision('PASS',['context-not-allowed'],o,p);
   if(p.context_scope_mode==='allowlist'&&!p.allowed_context_ids.includes(e.context_id))return decision('PASS',['context-not-allowlisted'],o,p);
   if(CONSEQUENCE_RANK[e.consequence_class]>CONSEQUENCE_RANK[p.consequence_ceiling])return decision('PASS',['consequence-above-ceiling'],o,p); if(p.cooldown.required&&e.cooldown_state!=='ready')return decision('PASS',[e.cooldown_state==='unavailable'?'cooldown-unavailable':'cooldown-blocked'],o,p);
-  if(o.applicability!=='current')return decision('PASS',['observation-not-current'],o,p); if(e.already_answered)return decision('PASS',['already-answered'],o,p); const d=o.dimensions;
-  if(d.noise===null||d.interruption_cost===null)return decision('PASS',['passive-risk-dimension-unknown'],o,p); if(d.noise>p.thresholds.noise_max)return decision('PASS',['noise-too-high'],o,p);
-  if(d.usefulness!==null&&d.answer_confidence!==null&&d.usefulness>=p.thresholds.reply_usefulness_min&&d.answer_confidence>=p.thresholds.reply_confidence_min&&d.interruption_cost<=p.thresholds.interruption_cost_max)return decision('ANSWER',['passive-reply-threshold-met'],o,p);
-  if(d.investigation_value!==null&&d.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['passive-investigation-threshold-met'],o,p);
-  if(p.reactions_enabled&&d.acknowledgement_fit!==null&&d.acknowledgement_fit>=p.thresholds.acknowledge_fit_min)return decision('ACKNOWLEDGE',['passive-acknowledgement-threshold-met'],o,p);
-  return decision('PASS',['no-participation-threshold-met'],o,p);
+  if(o.applicability!=='current')return decision('PASS',['observation-not-current'],o,p); const d=o.dimensions;
+  if(d.noise===null||d.interruption_cost===null)return decision('PASS',['passive-risk-dimension-unknown'],o,p);
+  const reaction=reactionRecommendation(o,p);
+  if(e.already_answered)return decision('PASS',['already-answered'],o,p,reaction);
+  if(d.noise>p.thresholds.noise_max)return decision('PASS',['noise-too-high'],o,p,reaction);
+  if(d.usefulness!==null&&d.answer_confidence!==null&&d.usefulness>=p.thresholds.reply_usefulness_min&&d.answer_confidence>=p.thresholds.reply_confidence_min&&d.interruption_cost<=p.thresholds.interruption_cost_max)return decision('ANSWER',['passive-reply-threshold-met'],o,p,reaction);
+  if(d.investigation_value!==null&&d.investigation_value>=p.thresholds.investigate_value_min)return decision('INVESTIGATE',['passive-investigation-threshold-met'],o,p,reaction);
+  if(reaction==='acknowledge')return decision('PASS',['passive-acknowledgement-threshold-met'],o,p,reaction);
+  return decision('PASS',['no-participation-threshold-met'],o,p,reaction);
 }
 
 export function fallbackParticipationDecision(e,reason='semantic-evaluator-unavailable'){
-  validateEvent(e); text(reason,'reason',128); return deepFreeze({schema:'axiom-participation-decision.v0',version:0,action:e.event_class==='explicit'&&e.supported?'ANSWER':'PASS',reasons:[reason],observation_digest:null,policy_digest:null,authority_effect:'none',data_scope_effect:'none',execution_effect:'none',runtime_activation:false});
+  validateEvent(e);
+  text(reason,'reason',128);
+  return makeDecision(
+    e.event_class==='explicit'&&e.supported?'ANSWER':'PASS',
+    [reason],
+    null,
+    null
+  );
+}
+
+export function computeParticipationDecisionDigest(d){
+  exact(d,'Participation decision digest input',['schema','version','status','action','reaction_recommendation','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
+  return digestObject({...d,decision_digest:ZERO_SHA});
+}
+
+export function validateParticipationDecision(d){
+  exact(d,'Participation decision',['schema','version','status','action','reaction_recommendation','reasons','observation_digest','policy_digest','decision_digest','authority_effect','data_scope_effect','communication_effect','execution_effect','runtime_activation']);
+  if(
+    d.schema!==PARTICIPATION_DECISION_SCHEMA
+    ||d.version!==0
+    ||d.status!=='inert-participation-decision'
+    ||d.authority_effect!=='none'
+    ||d.data_scope_effect!=='none'
+    ||d.communication_effect!=='none'
+    ||d.execution_effect!=='none'
+    ||d.runtime_activation!==false
+  ) throw new ValidationError('Participation decision activation boundary is invalid');
+  en(d.action,new Set(PARTICIPATION_ACTIONS),'action');
+  en(d.reaction_recommendation,new Set(PARTICIPATION_REACTIONS),'reaction_recommendation');
+  strings(d.reasons,'reasons',16,128);
+  if(d.reasons.length===0) throw new ValidationError('Participation decision requires at least one reason');
+  if((d.observation_digest===null)!==(d.policy_digest===null)) {
+    throw new ValidationError('Participation decision evidence digests must both be present or both be null');
+  }
+  if(d.observation_digest!==null) sha(d.observation_digest,'observation_digest');
+  if(d.policy_digest!==null) sha(d.policy_digest,'policy_digest');
+  sha(d.decision_digest,'decision_digest');
+  if(computeParticipationDecisionDigest(d)!==d.decision_digest) {
+    throw new ValidationError('Participation decision digest mismatch');
+  }
+  return Object.freeze({
+    valid:true,
+    action:d.action,
+    decision_digest:d.decision_digest,
+    authority_effect:'none',
+    data_scope_effect:'none',
+    communication_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false
+  });
+}
+
+export function participationDecisionDigest(d){
+  validateParticipationDecision(d);
+  return d.decision_digest;
+}
+
+export function computeParticipationCooldownEvidenceDigest(d){
+  exact(d,'Participation cooldown evidence digest input',['schema','version','status','evidence_id','policy_digest','context_id','window_started_at','window_ends_at','evaluated_at','unsolicited_interventions','max_unsolicited_interventions','derived_state','history_digest','evidence_refs','evidence_digest','authority_effect','communication_effect','execution_effect','runtime_activation']);
+  return digestObject({...d,evidence_digest:ZERO_SHA});
+}
+
+export function validateParticipationCooldownEvidence(d){
+  exact(d,'Participation cooldown evidence',['schema','version','status','evidence_id','policy_digest','context_id','window_started_at','window_ends_at','evaluated_at','unsolicited_interventions','max_unsolicited_interventions','derived_state','history_digest','evidence_refs','evidence_digest','authority_effect','communication_effect','execution_effect','runtime_activation']);
+  if(
+    d.schema!==PARTICIPATION_COOLDOWN_EVIDENCE_SCHEMA
+    ||d.version!==0
+    ||d.status!=='inert-participation-cooldown-evidence'
+    ||d.authority_effect!=='none'
+    ||d.communication_effect!=='none'
+    ||d.execution_effect!=='none'
+    ||d.runtime_activation!==false
+  ) throw new ValidationError('Participation cooldown evidence activation boundary is invalid');
+  ident(d.evidence_id,'evidence_id');
+  sha(d.policy_digest,'policy_digest');
+  ident(d.context_id,'context_id');
+  const start=date(d.window_started_at,'window_started_at');
+  const end=date(d.window_ends_at,'window_ends_at');
+  const evaluated=date(d.evaluated_at,'evaluated_at');
+  if(end<=start) throw new ValidationError('Cooldown window_ends_at must follow window_started_at');
+  if(evaluated.valueOf()!==end.valueOf()) throw new ValidationError('Cooldown window_ends_at must equal evaluated_at');
+  integer(d.unsolicited_interventions,'unsolicited_interventions',0,1000000);
+  integer(d.max_unsolicited_interventions,'max_unsolicited_interventions',0,1000000);
+  en(d.derived_state,new Set(['ready','blocked']),'derived_state');
+  sha(d.history_digest,'history_digest');
+  strings(d.evidence_refs,'evidence_refs',128,512);
+  if(d.evidence_refs.length===0) throw new ValidationError('Cooldown evidence requires a history evidence reference');
+  sha(d.evidence_digest,'evidence_digest');
+  const expected=d.unsolicited_interventions>=d.max_unsolicited_interventions?'blocked':'ready';
+  if(d.derived_state!==expected) throw new ValidationError('Cooldown derived_state does not match the intervention count');
+  if(computeParticipationCooldownEvidenceDigest(d)!==d.evidence_digest) {
+    throw new ValidationError('Participation cooldown evidence digest mismatch');
+  }
+  return Object.freeze({
+    valid:true,
+    evidence_digest:d.evidence_digest,
+    derived_state:d.derived_state,
+    authority_effect:'none',
+    communication_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false
+  });
+}
+
+export function participationCooldownEvidenceDigest(d){
+  validateParticipationCooldownEvidence(d);
+  return d.evidence_digest;
+}
+
+export function assessParticipationCooldown(p,evidence,event){
+  validateParticipationPolicy(p);
+  validateEvent(event);
+  if(!p.cooldown.required) {
+    return Object.freeze({state:'ready',reasons:Object.freeze(['cooldown-not-required']),evidence_digest:null,authority_effect:'none',communication_effect:'none',execution_effect:'none'});
+  }
+  try {
+    validateParticipationCooldownEvidence(evidence);
+  } catch {
+    return Object.freeze({state:'unavailable',reasons:Object.freeze(['cooldown-evidence-invalid']),evidence_digest:null,authority_effect:'none',communication_effect:'none',execution_effect:'none'});
+  }
+  const reasons=[];
+  const policyDigest=participationPolicyDigest(p);
+  if(evidence.policy_digest!==policyDigest) reasons.push('cooldown-policy-mismatch');
+  if(evidence.context_id!==event.context_id) reasons.push('cooldown-context-mismatch');
+  if(evidence.evaluated_at!==event.evaluated_at) reasons.push('cooldown-evaluation-time-mismatch');
+  const expectedWindowMs=p.cooldown.window_seconds*1000;
+  if(new Date(evidence.window_ends_at)-new Date(evidence.window_started_at)!==expectedWindowMs) {
+    reasons.push('cooldown-window-mismatch');
+  }
+  if(evidence.max_unsolicited_interventions!==p.cooldown.max_unsolicited_interventions) {
+    reasons.push('cooldown-limit-mismatch');
+  }
+  return Object.freeze({
+    state:reasons.length===0?evidence.derived_state:'unavailable',
+    reasons:Object.freeze(reasons),
+    evidence_digest:reasons.length===0?evidence.evidence_digest:null,
+    authority_effect:'none',
+    communication_effect:'none',
+    execution_effect:'none'
+  });
+}
+
+export function evaluateParticipationWithCooldown(o,p,e,evidence){
+  const cooldown=assessParticipationCooldown(p,evidence,e);
+  return evaluateParticipation(o,p,{...e,cooldown_state:cooldown.state});
 }
 
 export function validateActiveTaskSteering(d){
@@ -99,6 +256,66 @@ export function validateActiveTaskSteering(d){
 }
 export function activeTaskSteeringDigest(d){validateActiveTaskSteering(d);return digestObject(d);}
 
+export function verifyActiveTaskSteeringBinding(steering,previousTask,nextTask=null){
+  validateActiveTaskSteering(steering);
+  assertTaskLifecyclePlainInput(previousTask,'Previous task lifecycle');
+  validateTaskLifecycle(previousTask);
+  const reasons=[];
+  const previousDigest=taskLifecycleDigest(previousTask);
+  if(steering.task_id!==previousTask.task_id) reasons.push('task-id-mismatch');
+  if(steering.previous_task_digest!==previousDigest) reasons.push('previous-task-digest-mismatch');
+  if(steering.actor_principal_id!==previousTask.principal_id) reasons.push('actor-principal-mismatch');
+  if(steering.authority_snapshot_ref!==previousTask.authority_snapshot_ref) reasons.push('authority-snapshot-mismatch');
+  if(new Date(steering.decided_at)<new Date(previousTask.updated_at)) reasons.push('steering-predates-task-state');
+
+  if(steering.decision==='APPEND'||steering.decision==='REPLACE'){
+    if(nextTask===null){
+      reasons.push('successor-task-required');
+    }else{
+      try{
+        assertTaskLifecyclePlainInput(nextTask,'Successor task lifecycle');
+        validateTaskLifecycle(nextTask);
+        if(nextTask.task_id!==previousTask.task_id) reasons.push('successor-task-id-mismatch');
+        if(nextTask.outcome_id!==previousTask.outcome_id) reasons.push('successor-outcome-mismatch');
+        if(nextTask.principal_id!==previousTask.principal_id) reasons.push('successor-principal-mismatch');
+        if(nextTask.authority_snapshot_ref!==previousTask.authority_snapshot_ref) reasons.push('successor-authority-snapshot-mismatch');
+        if(nextTask.budget_ref!==previousTask.budget_ref) reasons.push('successor-budget-ref-mismatch');
+        if(nextTask.created_at!==previousTask.created_at) reasons.push('successor-created-at-mismatch');
+        if(nextTask.lifecycle_state!==previousTask.lifecycle_state) reasons.push('successor-lifecycle-state-mismatch');
+        if(nextTask.worker_ref!==previousTask.worker_ref) reasons.push('successor-worker-mismatch');
+        if(nextTask.provider_ref!==previousTask.provider_ref) reasons.push('successor-provider-mismatch');
+        if(nextTask.node_ref!==previousTask.node_ref) reasons.push('successor-node-mismatch');
+        if(nextTask.authority_checked_at!==previousTask.authority_checked_at) reasons.push('successor-authority-check-mismatch');
+        if(nextTask.budget_checked_at!==previousTask.budget_checked_at) reasons.push('successor-budget-check-mismatch');
+        if(nextTask.resume_requested!==previousTask.resume_requested||nextTask.resume_from_digest!==previousTask.resume_from_digest) reasons.push('successor-resume-state-mismatch');
+        if(nextTask.effect_state!==previousTask.effect_state) reasons.push('successor-effect-state-mismatch');
+        if(
+          nextTask.result_refs.length!==previousTask.result_refs.length
+          ||nextTask.result_refs.some((value,index)=>value!==previousTask.result_refs[index])
+        ) reasons.push('successor-result-refs-mismatch');
+        if(new Date(nextTask.updated_at)<new Date(steering.decided_at)) reasons.push('successor-predates-steering');
+        if(taskLifecycleDigest(nextTask)!==steering.resulting_task_revision_digest) reasons.push('successor-digest-mismatch');
+      }catch{
+        reasons.push('successor-task-invalid');
+      }
+    }
+  }else if(nextTask!==null){
+    reasons.push('unexpected-successor-task');
+  }
+
+  return Object.freeze({
+    bound:reasons.length===0,
+    reasons:Object.freeze(reasons),
+    steering_digest:activeTaskSteeringDigest(steering),
+    previous_task_digest:previousDigest,
+    successor_task_digest:nextTask===null?null:(()=>{try{return taskLifecycleDigest(nextTask);}catch{return null;}})(),
+    authority_effect:'none',
+    delegation_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false
+  });
+}
+
 export function validateSilentInvestigationResult(d){
   exact(d,'Silent investigation result',['schema','version','status','result_id','task_id','policy_digest','observation_digest','started_at','completed_at','evidence_refs','useful_finding','actionable_finding','silence_reason','steps_used','tool_calls','duration_ms','unresolved_unknowns','emitted_message','authority_effect','execution_effect','runtime_activation']);
   if(d.schema!==SILENT_INVESTIGATION_RESULT_SCHEMA||d.version!==0||d.status!=='inert-silent-investigation-evidence'||d.emitted_message!==false||d.authority_effect!=='none'||d.execution_effect!=='none'||d.runtime_activation!==false) throw new ValidationError('Silent investigation activation boundary is invalid');
@@ -108,7 +325,90 @@ export function validateSilentInvestigationResult(d){
 }
 export function silentInvestigationResultDigest(d){validateSilentInvestigationResult(d);return digestObject(d);}
 
-function decision(action,reasons,o,p){return deepFreeze({schema:'axiom-participation-decision.v0',version:0,action,reasons:[...reasons],observation_digest:digestObject(o),policy_digest:digestObject(p),authority_effect:'none',data_scope_effect:'none',execution_effect:'none',runtime_activation:false});}
+export function verifySilentInvestigationBinding(result,policy,observation){
+  validateSilentInvestigationResult(result);
+  validateParticipationPolicy(policy);
+  validateParticipationObservation(observation);
+  const reasons=[];
+  if(result.policy_digest!==participationPolicyDigest(policy)) reasons.push('silent-policy-digest-mismatch');
+  if(result.observation_digest!==participationObservationDigest(observation)) reasons.push('silent-observation-digest-mismatch');
+  if(policy.silent_investigation!==true) reasons.push('silent-investigation-disabled');
+  if(observation.addressing_class==='explicit') reasons.push('explicit-request-requires-response');
+
+  if(result.silence_reason==='interruption-not-justified'){
+    const noise=observation.dimensions.noise;
+    const interruption=observation.dimensions.interruption_cost;
+    const justified=
+      (noise!==null&&noise>policy.thresholds.noise_max)
+      ||(interruption!==null&&interruption>policy.thresholds.interruption_cost_max);
+    if(!justified) reasons.push('silence-reason-not-supported');
+  }
+
+  if(result.silence_reason==='policy-suppressed'){
+    const suppressed=
+      policy.passive_participation!==true
+      ||policy.quiet_context_ids.includes(observation.context_id)
+      ||!policy.allowed_context_classes.includes(observation.context_class)
+      ||(policy.context_scope_mode==='allowlist'&&!policy.allowed_context_ids.includes(observation.context_id));
+    if(!suppressed) reasons.push('policy-does-not-suppress-context');
+  }
+
+  return Object.freeze({
+    bound:reasons.length===0,
+    reasons:Object.freeze(reasons),
+    result_digest:silentInvestigationResultDigest(result),
+    policy_digest:participationPolicyDigest(policy),
+    observation_digest:participationObservationDigest(observation),
+    authority_effect:'none',
+    communication_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false
+  });
+}
+
+function reactionRecommendation(o,p){
+  const fit=o.dimensions.acknowledgement_fit;
+  return p.reactions_enabled&&fit!==null&&fit>=p.thresholds.acknowledge_fit_min?'acknowledge':'none';
+}
+function decision(action,reasons,o,p,reaction='none'){return makeDecision(action,reasons,digestObject(o),digestObject(p),reaction);}
+function makeDecision(action,reasons,observationDigest,policyDigest,reaction='none'){
+  const d={
+    schema:PARTICIPATION_DECISION_SCHEMA,
+    version:0,
+    status:'inert-participation-decision',
+    action,
+    reaction_recommendation:reaction,
+    reasons:[...reasons],
+    observation_digest:observationDigest,
+    policy_digest:policyDigest,
+    decision_digest:ZERO_SHA,
+    authority_effect:'none',
+    data_scope_effect:'none',
+    communication_effect:'none',
+    execution_effect:'none',
+    runtime_activation:false
+  };
+  d.decision_digest=computeParticipationDecisionDigest(d);
+  validateParticipationDecision(d);
+  return deepFreeze(d);
+}
+function assertTaskLifecyclePlainInput(value,label){
+  exact(value,label,TASK_LIFECYCLE_FIELDS);
+  if(
+    utilTypes.isProxy(value.result_refs)
+    ||!Array.isArray(value.result_refs)
+    ||Object.getPrototypeOf(value.result_refs)!==Array.prototype
+  ) throw new ValidationError(label+' result_refs must be a plain array');
+  const keys=Reflect.ownKeys(value.result_refs);
+  for(const key of keys){
+    if(key==='length') continue;
+    if(typeof key!=='string'||!/^(0|[1-9][0-9]*)$/.test(key)) throw new ValidationError(label+' result_refs has an invalid array key');
+    const descriptor=Reflect.getOwnPropertyDescriptor(value.result_refs,key);
+    if(!descriptor?.enumerable||!Object.hasOwn(descriptor,'value')) throw new ValidationError(label+' result_refs must contain only enumerable data properties');
+    if(typeof descriptor.value!=='string') throw new ValidationError(label+' result_refs items must be strings');
+  }
+  if(keys.filter(key=>key!=='length').length!==value.result_refs.length) throw new ValidationError(label+' result_refs cannot be sparse');
+}
 function validateEvent(e){exact(e,'Participation event',['event_digest','event_class','context_id','context_class','evaluated_at','supported','quiet_context','cooldown_state','already_answered','consequence_class']); sha(e.event_digest,'event_digest'); en(e.event_class,ADDRESSING,'event_class'); ident(e.context_id,'context_id'); en(e.context_class,CONTEXTS,'context_class'); date(e.evaluated_at,'evaluated_at'); boolean(e.supported,'supported'); boolean(e.quiet_context,'quiet_context'); en(e.cooldown_state,COOLDOWN,'cooldown_state'); boolean(e.already_answered,'already_answered'); en(e.consequence_class,CONSEQUENCE,'consequence_class');}
 function exact(v,label,fields){if(utilTypes.isProxy(v))throw new ValidationError(label+' cannot be a Proxy'); if(!v||typeof v!=='object'||Array.isArray(v))throw new ValidationError(label+' must be an object'); const proto=Object.getPrototypeOf(v); if(proto!==Object.prototype&&proto!==null)throw new ValidationError(label+' must be a plain object'); const keys=Reflect.ownKeys(v); if(keys.some(k=>typeof k==='symbol'))throw new ValidationError(label+' cannot contain symbol keys'); for(const k of keys){const d=Object.getOwnPropertyDescriptor(v,k); if(!d?.enumerable||d.get||d.set)throw new ValidationError(label+' must contain only enumerable data properties');} if(keys.map(String).sort().join(',')!==[...fields].sort().join(','))throw new ValidationError(label+' fields are invalid');}
 function ident(v,label){if(typeof v!=='string'||!ID.test(v))throw new ValidationError(label+' is invalid');}
