@@ -82,7 +82,7 @@ This still does not prove the host plan itself is valid; a future privileged com
 - self-digest;
 - hard-zero mutation/authority/runtime effects.
 
-The observation carries no secret values, tokens, key bytes, environment dump, raw service configuration, or artifact bytes.
+The observation carries no secret values, tokens, key bytes, environment dump, raw service configuration, or artifact bytes. For a live session it must also be captured **at or after** the candidate request and remain within the candidate's bounded observation-age window; pre-request, stale, future, or unknown state fails closed.
 
 ## Decision semantics
 
