@@ -346,4 +346,181 @@ export function deriveInstallClassification({hostPlan,releaseVerification,observ
   if(observedInstall.legacy_proof_state_detected||observedInstall.presence==='legacy-proof-markers'){
     classification='legacy-proof-state';
     next='stop';
-    reas
+    reasons.push('legacy-proof-state-is-not-current-install-state');
+  }else if(observedInstall.presence==='absent'){
+    classification='absent';
+    next='prepare-install';
+    reasons.push('no-existing-install-state-observed');
+  }else if(observedInstall.presence==='unknown'){
+    classification='newer-or-unknown';
+    next='stop';
+    reasons.push('existing-install-state-unknown');
+  }else{
+    const exactIdentity=existingIdentityMatchesTarget(observedInstall,hostPlan,releaseVerification);
+    const relation=compareVersions(
+      observedInstall.existing_kernel_version,
+      releaseVerification.kernel_version
+    );
+    if(observedInstall.presence==='partial-current-receipt'){
+      if(exactIdentity&&observedInstall.receipt_status==='partial'){
+        classification='partial-same';
+        next='prepare-repair';
+        reasons.push('partial-install-matches-exact-target-lineage');
+      }else{
+        classification='conflicting-partial';
+        next='stop';
+        reasons.push('partial-install-does-not-match-exact-target-lineage');
+      }
+    }else if(exactIdentity&&observedInstall.receipt_status==='complete'){
+      if(observedInstall.health==='healthy'){
+        classification='healthy-same';
+        next='verify-noop';
+        reasons.push('existing-install-matches-exact-target-and-is-healthy');
+      }else if(observedInstall.health==='unhealthy'){
+        classification='partial-same';
+        next='prepare-repair';
+        reasons.push('existing-install-matches-target-but-is-unhealthy');
+      }else{
+        classification='newer-or-unknown';
+        next='stop';
+        reasons.push('existing-install-health-is-unknown');
+      }
+    }else if(
+      relation===-1
+      &&observedInstall.receipt_status==='complete'
+      &&observedInstall.health==='healthy'
+      &&observedInstall.existing_profile_id===hostPlan.profile_id
+    ){
+      classification='healthy-older';
+      if(upgradePreparationAllowed(observedInstall,releaseVerification)){
+        next='prepare-upgrade';
+        reasons.push('existing-install-is-older-and-release-declares-compatible-upgrade-posture');
+      }else{
+        next='stop';
+        reasons.push('existing-install-is-older-but-upgrade-compatibility-is-not-established');
+      }
+    }else if(relation===1||relation===null){
+      classification='newer-or-unknown';
+      next='stop';
+      reasons.push(relation===1?'existing-install-is-newer-than-target':'existing-install-version-is-not-comparable');
+    }else{
+      classification='conflicting-partial';
+      next='stop';
+      reasons.push('existing-install-identity-conflicts-with-target-release');
+    }
+  }
+
+  if(blockers.length>0){
+    next='stop';
+    reasons.push('host-plan-has-blockers');
+  }
+
+  return deepFreeze({
+    classification,
+    next_preparation:next,
+    reasons:[...new Set(reasons)],
+    blockers:[...new Set(blockers)],
+    host_mutation_authorized:false,
+    authority_effect:'none',
+    network_effect:'none'
+  });
+}
+
+function validateReleaseVerification(value){
+  exactObject(value,'Install release verification',RELEASE_VERIFICATION_FIELDS);
+  if(
+    value.valid!==true
+    ||typeof value.schema!=='string'
+    ||typeof value.manifest_schema!=='string'
+    ||!ID.test(value.release_id)
+    ||!VERSION.test(value.kernel_version)
+    ||typeof value.channel!=='string'
+    ||!REVISION.test(value.source_revision)
+    ||!ID.test(value.signer_key_id)
+    ||value.signature_verified!==true
+    ||value.control_plane_bound!==true
+    ||value.install_profile_binding_complete!==true
+    ||value.artifact_metadata_bound!==true
+    ||value.artifact_bytes_verified!==false
+    ||!Number.isSafeInteger(value.artifact_count)
+    ||value.artifact_count<1
+    ||!SHA.test(value.policy_digest)
+    ||!SHA.test(value.manifest_digest)
+    ||value.production_promoted!==false
+    ||value.production_promotion_established!==false
+    ||value.release_input_cryptographically_valid!==true
+    ||value.host_plan_required_separately!==true
+    ||value.host_mutation_authorized!==false
+    ||value.installation_authority_granted!==false
+    ||value.mesh_authority_granted!==false
+    ||value.network_authority_granted!==false
+    ||value.node_enrolled!==false
+    ||value.services_started!==false
+    ||value.authority_effect!=='none'
+    ||value.network_effect!=='none'
+  ) throw new ValidationError('Install release verification is not a current zero-authority verified result');
+  canonicalTime(value.evaluated_at,'release evaluated_at');
+  canonicalTime(value.valid_until,'release valid_until');
+  stringArray(value.install_profiles,'Install release verification profiles',{min:1,max:8,itemMax:64});
+  exactObject(value.data_compatibility,'Install release verification data compatibility',[
+    'migration_generation','rollback_mode','minimum_compatible_kernel'
+  ]);
+  if(
+    !Number.isSafeInteger(value.data_compatibility.migration_generation)
+    ||value.data_compatibility.migration_generation<0
+    ||!ROLLBACK_MODES.has(value.data_compatibility.rollback_mode)
+    ||!VERSION.test(value.data_compatibility.minimum_compatible_kernel)
+  ) throw new ValidationError('Install release verification data compatibility is invalid');
+  return value;
+}
+
+function validateObservedInstall(value){
+  exactObject(value,'Observed install state',[
+    'observation_source','presence','health','receipt_status','existing_receipt_digest',
+    'existing_profile_id','existing_release_id','existing_kernel_version',
+    'existing_source_revision','legacy_proof_state_detected','observed_at'
+  ]);
+  if(
+    !OBSERVATION_SOURCES.has(value.observation_source)
+    ||!PRESENCE.has(value.presence)
+    ||!HEALTH.has(value.health)
+    ||!RECEIPT_STATUS.has(value.receipt_status)
+    ||typeof value.legacy_proof_state_detected!=='boolean'
+  ) throw new ValidationError('Observed install state vocabulary is invalid');
+  canonicalTime(value.observed_at,'observed install observed_at');
+  nullableSha(value.existing_receipt_digest,'existing_receipt_digest');
+  nullableId(value.existing_profile_id,'existing_profile_id');
+  nullableId(value.existing_release_id,'existing_release_id');
+  nullableVersion(value.existing_kernel_version,'existing_kernel_version');
+  nullableRevision(value.existing_source_revision,'existing_source_revision');
+
+  const allExistingNull=[
+    value.existing_receipt_digest,value.existing_profile_id,value.existing_release_id,
+    value.existing_kernel_version,value.existing_source_revision
+  ].every(item=>item===null);
+
+  if(value.presence==='absent'){
+    if(
+      value.health!=='not-applicable'
+      ||value.receipt_status!=='none'
+      ||!allExistingNull
+      ||value.legacy_proof_state_detected
+    ) throw new ValidationError('Absent install state cannot carry existing-install evidence');
+  }
+  if(value.presence==='current-receipt'){
+    if(
+      value.receipt_status!=='complete'
+      ||value.health==='not-applicable'
+      ||[
+        value.existing_receipt_digest,value.existing_profile_id,value.existing_release_id,
+        value.existing_kernel_version,value.existing_source_revision
+      ].some(item=>item===null)
+      ||value.legacy_proof_state_detected
+    ) throw new ValidationError('Current install receipt state is incomplete or inconsistent');
+  }
+  if(value.presence==='partial-current-receipt'){
+    if(
+      !['partial','conflicting'].includes(value.receipt_status)
+      ||[
+        value.existing_receipt_digest,value.existing_profile_id,value.existing_release_id,
+        value.existing_kernel_version,value.existing_sour
