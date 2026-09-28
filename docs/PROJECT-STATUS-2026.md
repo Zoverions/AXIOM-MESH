@@ -112,6 +112,10 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
+- an OCI-first, non-mutating Linux host planner for the specified personal/local
+  and infrastructure-node profiles; it emits deterministic compatibility,
+  blocker, and prerequisite evidence while creating no users, credentials,
+  services, network enrollment, or authority;
 - a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
