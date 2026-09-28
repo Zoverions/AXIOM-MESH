@@ -8,7 +8,7 @@ AXIOM-MESH needs a supported path from an ordinary machine to a useful, secure n
 
 This document defines the missing productization boundary without weakening that source-setup trust model.
 
-The repository now includes an **inert, non-mutating Linux host planner** at `mesh/src/host-install.mjs` / `mesh/src/lib/host-install-plan.mjs`, governed by `mesh/config/host-install-policy.json`. It can inspect or accept explicit host facts and emit a digest-bound plan for `personal-local` or `infrastructure-node`. The default strategy is OCI-first: the **target-host facts contract** allows `node_version: null` and does not treat target-host Node.js absence as an OCI compatibility blocker; a missing reviewed Docker runtime is reported as a toolchain-acquisition prerequisite, not silently installed. The current repository planner command is itself a Node.js program and therefore is **not** the future Node-free fresh-host bootstrapper. The planner creates no users, directories, credentials, services, network rules, or Mesh enrollment and never treats compatibility as install authority.
+The repository now includes an **inert, non-mutating Linux host planner** at `mesh/src/host-install.mjs` / `mesh/src/lib/host-install-plan.mjs`, governed by `mesh/config/host-install-policy.json`, plus a separate **signed release/install-manifest verifier** at `mesh/src/lib/install-release-manifest.mjs`, governed by `mesh/config/install-release-manifest-policy.json`. It can inspect or accept explicit host facts and emit a digest-bound plan for `personal-local` or `infrastructure-node`. The default strategy is OCI-first: the **target-host facts contract** allows `node_version: null` and does not treat target-host Node.js absence as an OCI compatibility blocker; a missing reviewed Docker runtime is reported as a toolchain-acquisition prerequisite, not silently installed. The current repository planner command is itself a Node.js program and therefore is **not** the future Node-free fresh-host bootstrapper. The planner creates no users, directories, credentials, services, network rules, or Mesh enrollment and never treats compatibility as install authority.
 
 ## Installation layers
 
@@ -129,6 +129,8 @@ A supported infrastructure-node installer must cover:
 ## Release channels and synchronization
 
 Fresh installation is only sustainable if releases become a synchronization anchor for code, documentation, applications, installers, and downstream compatibility.
+
+The candidate stack now has the verifier contract documented in [Signed Release Install Manifest](SIGNED-RELEASE-INSTALL-MANIFEST.md). It verifies an externally trusted Ed25519 release statement, exact current control-plane digests, release metadata, profile bindings, and artifact metadata while returning hard-zero host/install/network authority. Artifact bytes remain a separate local digest proof. No production signer or published manifest exists.
 
 The installer must consume a machine-readable release manifest that binds at least:
 
