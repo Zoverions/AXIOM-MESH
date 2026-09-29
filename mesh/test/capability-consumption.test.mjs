@@ -11,7 +11,10 @@ import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import {
   buildCapabilityConsumptionStatement,
   capabilityConsumptionEventId,
-  verifyCapabilityConsumptionReceipt
+  capabilitySemanticConsumptionDigest,
+  capabilitySemanticConsumptionEventId,
+  verifyCapabilityConsumptionReceipt,
+  signCapabilityConsumptionReceipt
 } from '../src/lib/capability-consumption.mjs';
 import {
   ensureMeshIdentity,
@@ -20,7 +23,46 @@ import {
 } from '../src/lib/identity.mjs';
 import { buildPlan, planDigest } from '../src/lib/plan.mjs';
 import { createGridService } from '../src/grid/server.mjs';
+import { acquireGridRuntimeLock, releaseGridRuntimeLock } from '../src/grid/backup.mjs';
 import { createSandboxService } from '../src/sandbox/server.mjs';
+
+
+test('semantic consumption identity is stable across capability and signed-receipt field names', () => {
+  const digest = 'a'.repeat(64);
+  const claims = {
+    subject: 'owner.semantic-alias',
+    iss: 'hypervisor',
+    aud: 'sandbox',
+    intent_digest: digest,
+    plan_digest: 'b'.repeat(64),
+    policy_digest: 'c'.repeat(64),
+    invocation_digest: 'd'.repeat(64),
+    tool: 'builtin.echo'
+  };
+  const statement = {
+    subject: claims.subject,
+    issuer: claims.iss,
+    audience: claims.aud,
+    intent_digest: claims.intent_digest,
+    plan_digest: claims.plan_digest,
+    policy_digest: claims.policy_digest,
+    invocation_digest: claims.invocation_digest,
+    tool: claims.tool
+  };
+
+  assert.equal(
+    capabilitySemanticConsumptionDigest(claims),
+    capabilitySemanticConsumptionDigest(statement)
+  );
+  assert.throws(
+    () => capabilitySemanticConsumptionDigest({
+      ...claims,
+      issuer: 'other-issuer'
+    }),
+    /aliases disagree/
+  );
+});
+
 
 function capabilityFixture(identity, {
   jti,
@@ -482,3 +524,373 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
   );
 });
 
+
+
+test('fresh JTI must not replenish one exact native invocation', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-replay-live-red-'));
+  const portLease = await reserveProductionPortBlock('semantic replay live red test');
+  const basePort = portLease.base_port;
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`
+  });
+  const hypervisor = await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  await ensureMeshIdentity(dataDir, 'grid', { create: true });
+
+  const grid = await createGridService(config);
+  await grid.start();
+  t.after(async () => {
+    try {
+      await grid.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  const first = capabilityFixture(hypervisor, {
+    jti: 'semantic-replay-first-jti',
+    suffix: 'semantic-replay',
+    ttlSeconds: config.capabilityTtlSeconds
+  });
+  const secondClaims = Object.freeze({
+    ...first.claims,
+    jti: 'semantic-replay-fresh-jti'
+  });
+  const second = Object.freeze({
+    intent: first.intent,
+    plan: first.plan,
+    claims: secondClaims,
+    capability: issueCapability(hypervisor, secondClaims)
+  });
+
+  assert.equal(first.claims.intent_digest, second.claims.intent_digest);
+  assert.equal(first.claims.plan_digest, second.claims.plan_digest);
+  assert.equal(first.claims.policy_digest, second.claims.policy_digest);
+  assert.equal(first.claims.tool, second.claims.tool);
+  assert.notEqual(first.claims.jti, second.claims.jti);
+  assert.equal(
+    capabilitySemanticConsumptionDigest(first.claims),
+    capabilitySemanticConsumptionDigest(second.claims)
+  );
+  assert.equal(
+    capabilitySemanticConsumptionEventId(first.claims),
+    capabilitySemanticConsumptionEventId(second.claims)
+  );
+
+  const firstReceipt = await consumeCapability({
+    identity: hypervisor,
+    config,
+    traceId: 'trace_semantic_replay_first',
+    fixture: first,
+    executionEpoch: 'sandbox_epoch_semantic_replay'
+  });
+  assert.match(firstReceipt.receipt_digest, /^[a-f0-9]{64}$/);
+
+  await assert.rejects(
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: 'trace_semantic_replay_fresh_jti',
+      fixture: second,
+      executionEpoch: 'sandbox_epoch_semantic_replay'
+    }),
+    error => (
+      error?.code === 'semantic_action_consumed'
+      || error?.code === 'capability_consumed'
+    )
+  );
+});
+
+
+test('semantic consumption survives Grid restart for a fresh capability JTI', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-replay-restart-'));
+  const portLease = await reserveProductionPortBlock('semantic replay restart test');
+  const basePort = portLease.base_port;
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`
+  });
+  const hypervisor = await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  await ensureMeshIdentity(dataDir, 'grid', { create: true });
+
+  let grid = await createGridService(config);
+  await grid.start();
+  t.after(async () => {
+    try {
+      await grid?.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  const first = capabilityFixture(hypervisor, {
+    jti: 'semantic-restart-first-jti',
+    suffix: 'semantic-restart',
+    ttlSeconds: config.capabilityTtlSeconds
+  });
+  await consumeCapability({
+    identity: hypervisor,
+    config,
+    traceId: 'trace_semantic_restart_first',
+    fixture: first,
+    executionEpoch: 'sandbox_epoch_semantic_restart'
+  });
+
+  await grid.stop();
+  grid = await createGridService(config);
+  await grid.start();
+
+  const replayClaims = Object.freeze({
+    ...first.claims,
+    jti: 'semantic-restart-fresh-jti'
+  });
+  const replay = Object.freeze({
+    intent: first.intent,
+    plan: first.plan,
+    claims: replayClaims,
+    capability: issueCapability(hypervisor, replayClaims)
+  });
+
+  await assert.rejects(
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: 'trace_semantic_restart_fresh_jti',
+      fixture: replay,
+      executionEpoch: 'sandbox_epoch_semantic_restart'
+    }),
+    error => error?.code === 'semantic_action_consumed'
+  );
+});
+
+test('semantic consumption serializes concurrent fresh JTIs but permits a distinct authorization instance', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-replay-concurrent-'));
+  const portLease = await reserveProductionPortBlock('semantic replay concurrency test');
+  const basePort = portLease.base_port;
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`
+  });
+  const hypervisor = await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  await ensureMeshIdentity(dataDir, 'grid', { create: true });
+  const grid = await createGridService(config);
+  await grid.start();
+  t.after(async () => {
+    try {
+      await grid.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  const template = capabilityFixture(hypervisor, {
+    jti: 'semantic-concurrent-template',
+    suffix: 'semantic-concurrent',
+    ttlSeconds: config.capabilityTtlSeconds
+  });
+  const variants = ['a', 'b'].map(label => {
+    const claims = Object.freeze({
+      ...template.claims,
+      jti: `semantic-concurrent-${label}`
+    });
+    return Object.freeze({
+      intent: template.intent,
+      plan: template.plan,
+      claims,
+      capability: issueCapability(hypervisor, claims)
+    });
+  });
+
+  const results = await Promise.allSettled(variants.map((fixture, index) => (
+    consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: `trace_semantic_concurrent_${index}`,
+      fixture,
+      executionEpoch: 'sandbox_epoch_semantic_concurrent'
+    })
+  )));
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(result => (
+    result.status === 'rejected'
+    && result.reason?.code === 'semantic_action_consumed'
+  )).length, 1);
+
+  const distinctIntent = Object.freeze({
+    ...template.intent,
+    intent_id: 'intent_capability_restart_semantic-distinct-authorization',
+    submitted_at: new Date(Date.now() + 1).toISOString()
+  });
+  const distinctPlan = buildPlan(distinctIntent, {
+    risk: 'low',
+    tool: template.claims.tool,
+    constraints: {},
+    policy_version: 'capability-restart-test.v1',
+    policy_digest: template.claims.policy_digest,
+    policy_layers: [{
+      version: 'capability-restart-test.v1',
+      digest: template.claims.policy_digest
+    }]
+  });
+  const distinctClaims = Object.freeze({
+    ...template.claims,
+    jti: 'semantic-distinct-authorization-jti',
+    intent_digest: digestObject(distinctIntent),
+    plan_digest: planDigest(distinctPlan)
+  });
+  assert.equal(distinctIntent.action, template.intent.action);
+  assert.deepEqual(distinctIntent.input, template.intent.input);
+  assert.equal(distinctIntent.purpose, template.intent.purpose);
+  assert.notEqual(
+    capabilitySemanticConsumptionDigest(template.claims),
+    capabilitySemanticConsumptionDigest(distinctClaims)
+  );
+  const distinct = Object.freeze({
+    intent: distinctIntent,
+    plan: distinctPlan,
+    claims: distinctClaims,
+    capability: issueCapability(hypervisor, distinctClaims)
+  });
+  const distinctReceipt = await consumeCapability({
+    identity: hypervisor,
+    config,
+    traceId: 'trace_semantic_distinct_authorization',
+    fixture: distinct,
+    executionEpoch: 'sandbox_epoch_semantic_concurrent'
+  });
+  assert.match(distinctReceipt.receipt_digest, /^[a-f0-9]{64}$/);
+});
+
+
+test('pre-fix JTI-only consumption remains spent after Grid upgrade', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-legacy-'));
+  const portLease = await reserveProductionPortBlock('semantic legacy history test');
+  const basePort = portLease.base_port;
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true,
+    gatewayPort: basePort,
+    hypervisorPort: basePort + 1,
+    sandboxPort: basePort + 2,
+    gridPort: basePort + 3,
+    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+    gridUrl: `http://127.0.0.1:${basePort + 3}`
+  });
+  const hypervisor = await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  let grid = await createGridService(config);
+  t.after(async () => {
+    try {
+      await grid?.stop().catch(() => {});
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  const first = capabilityFixture(hypervisor, {
+    jti: 'semantic-legacy-first-jti',
+    suffix: 'semantic-legacy',
+    ttlSeconds: config.capabilityTtlSeconds
+  });
+  const signed = signCapabilityConsumptionReceipt(grid.identity, {
+    capability: first.capability,
+    claims: first.claims,
+    executionEpoch: 'sandbox_epoch_semantic_legacy'
+  });
+  // The pre-fix Grid wrote only this JTI event, with no semantic marker.
+  grid.store.appendEvents({
+    traceId: 'trace_semantic_legacy_first',
+    actor: first.claims.subject,
+    events: [{
+      event_id: capabilityConsumptionEventId(first.claims.jti),
+      kind: 'capability.consumed',
+      subject: first.claims.jti,
+      payload: { receipt: signed.receipt, receipt_digest: signed.receipt_digest }
+    }]
+  });
+  await grid.stop();
+  grid = null;
+
+  grid = await createGridService(config);
+  await grid.start();
+  const replayClaims = Object.freeze({
+    ...first.claims,
+    jti: 'semantic-legacy-fresh-jti'
+  });
+  await assert.rejects(
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: 'trace_semantic_legacy_fresh_jti',
+      fixture: {
+        ...first,
+        claims: replayClaims,
+        capability: issueCapability(hypervisor, replayClaims)
+      },
+      executionEpoch: 'sandbox_epoch_semantic_legacy'
+    }),
+    error => error?.code === 'semantic_action_consumed'
+  );
+});
+
+test('invalid historical consumption releases Grid store and runtime lock', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-semantic-history-fail-'));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  const config = meshConfig({
+    dataDir,
+    environment: 'test',
+    autoBootstrap: true
+  });
+  await ensureMeshIdentity(dataDir, 'hypervisor', { create: true });
+  const grid = await createGridService(config);
+  grid.store.appendEvents({
+    traceId: 'trace_invalid_semantic_history',
+    actor: 'owner.restart',
+    events: [{
+      event_id: 'evt_invalid_legacy_receipt',
+      kind: 'capability.consumed',
+      subject: 'cap-invalid-legacy',
+      payload: {
+        receipt: { statement: { schema: 'invalid' } },
+        receipt_digest: 'a'.repeat(64)
+      }
+    }]
+  });
+  await grid.stop();
+
+  await assert.rejects(
+    () => createGridService(config),
+    /Capability consumption statement/
+  );
+  const lock = await acquireGridRuntimeLock(dataDir);
+  await releaseGridRuntimeLock(lock);
+});

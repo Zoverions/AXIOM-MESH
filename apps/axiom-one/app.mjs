@@ -10,9 +10,12 @@ const ROUTES = new Set([
   'ask',
   'social',
   'circles',
+  'capabilities',
   'approvals',
+  'consent',
   'vault',
   'receipts',
+  'verify',
   'share',
   'explore'
 ]);
@@ -116,9 +119,12 @@ async function renderRoute() {
       ask: renderAsk,
       social: renderSocial,
       circles: renderCircles,
+      capabilities: renderCapabilities,
       approvals: renderApprovals,
+      consent: renderConsent,
       vault: renderVault,
       receipts: renderReceipts,
+      verify: renderVerify,
       share: renderShare,
       explore: renderExplore
     }[state.route];
@@ -479,6 +485,23 @@ async function renderCircles() {
   );
 }
 
+async function renderCapabilities() {
+  const response = await state.client.call('capabilities.list');
+  const capabilities = response.capabilities ?? [];
+  view.replaceChildren(
+    header('Capabilities',
+      'Registry discovery describes what this build contains. It does not tell this page that a capability is currently available or authorized for use.'),
+    capabilities.length
+      ? element('div', { className: 'stack' }, capabilities.map(item => humanExplanation(
+        human.capability(item),
+        'Raw capability registry entry',
+        item
+      )))
+      : empty('No capability records were returned by the Gateway.'),
+    rawDetails('Raw capability registry response', response)
+  );
+}
+
 async function renderApprovals() {
   const response = await state.client.call('approvals.list');
   const approvals = response.approvals ?? [];
@@ -493,6 +516,24 @@ async function renderApprovals() {
       )))
       : empty('No approval records are visible to this principal.'),
     rawDetails('Raw approval response', response)
+  );
+}
+
+async function renderConsent() {
+  const response = await state.client.call('consents.list');
+  const consents = response.consents ?? [];
+  const now = new Date();
+  view.replaceChildren(
+    header('Consent',
+      'Current owner-scoped consent records are shown as evidence of purpose and scope, never as a substitute for execution authority.'),
+    consents.length
+      ? element('div', { className: 'stack' }, consents.map(item => humanExplanation(
+        human.consent(item, now),
+        'Raw consent evidence',
+        item
+      )))
+      : empty('No consent records are visible to this principal.'),
+    rawDetails('Raw consent response', response)
   );
 }
 
@@ -1110,6 +1151,19 @@ async function renderReceipts() {
   );
 }
 
+async function renderVerify() {
+  const response = await state.client.call('audit.verify');
+  view.replaceChildren(
+    header('Verify',
+      'Verify checks the integrity and continuity of this node\'s local evidence chain. It does not grant authority or prove an external claim is true.'),
+    humanExplanation(
+      human.verification(response),
+      'Raw audit verification',
+      response
+    )
+  );
+}
+
 async function renderShare() {
   view.replaceChildren(
     header('Share',
@@ -1138,8 +1192,7 @@ async function renderExplore() {
     ['Admitted nodes', 'nodes.list'],
     ['Capsules', 'capsules.list'],
     ['Imports', 'imports.list'],
-    ['Backups', 'backups.list'],
-    ['Audit continuity', 'audit.verify']
+    ['Backups', 'backups.list']
   ];
   const output = element('div', { className: 'stack' }, [
     empty('Choose a resource to inspect. Scope-protected resources may be denied; the denial will remain visible.')

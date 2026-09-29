@@ -10,6 +10,9 @@ import {
 } from '../lib/identity.mjs';
 import {
   capabilityConsumptionEventId,
+  capabilitySemanticConsumptionDigest,
+  capabilitySemanticConsumptionEventId,
+  normalizeCapabilityConsumptionStatement,
   signCapabilityConsumptionReceipt
 } from '../lib/capability-consumption.mjs';
 
@@ -21,6 +24,13 @@ export async function createCapabilityConsumptionCommitter({
   store
 }) {
   const hypervisorKey = await loadTrustedKey(config.dataDir, 'hypervisor');
+  const chain = store.verifyChain();
+  if (!chain.valid) {
+    throw new ValidationError(
+      `Cannot derive semantic capability consumption from invalid Grid history: ${chain.reason ?? 'unknown'}`
+    );
+  }
+  const historicalSemanticDigests = loadHistoricalSemanticDigests(store);
 
   return function consumeCapability({ traceId, actor, event }) {
     const request = assertPlainObject(event, 'capability consumption request');
@@ -60,8 +70,16 @@ export async function createCapabilityConsumptionCommitter({
     }
 
     const eventId = capabilityConsumptionEventId(claims.jti);
+    const semanticDigest = capabilitySemanticConsumptionDigest(claims);
+    const semanticEventId = capabilitySemanticConsumptionEventId(claims);
     if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)) {
       throw consumedError(claims.jti);
+    }
+    if (
+      historicalSemanticDigests.has(semanticDigest)
+      || store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(semanticEventId)
+    ) {
+      throw semanticConsumedError(semanticDigest);
     }
 
     const signed = signCapabilityConsumptionReceipt(identity, {
@@ -73,27 +91,44 @@ export async function createCapabilityConsumptionCommitter({
       const events = store.appendEvents({
         traceId,
         actor,
-        events: [{
-          event_id: eventId,
-          kind: 'capability.consumed',
-          subject: claims.jti,
-          payload: {
-            receipt: signed.receipt,
-            receipt_digest: signed.receipt_digest
+        events: [
+          {
+            event_id: semanticEventId,
+            kind: 'capability.semantic-consumed',
+            subject: claims.subject,
+            payload: {
+              semantic_consumption_digest: semanticDigest,
+              capability_jti: claims.jti,
+              capability_consumption_event_id: eventId
+            }
+          },
+          {
+            event_id: eventId,
+            kind: 'capability.consumed',
+            subject: claims.jti,
+            payload: {
+              receipt: signed.receipt,
+              receipt_digest: signed.receipt_digest
+            }
           }
-        }]
+        ]
       });
+      historicalSemanticDigests.add(semanticDigest);
       return Object.freeze({
         receipt: signed.receipt,
         receipt_digest: signed.receipt_digest,
-        event: events[0]
+        event: events[1],
+        semantic_event: events[0]
       });
     } catch (error) {
-      if (
-        error?.code === 'state_conflict'
-        && store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)
-      ) {
-        throw consumedError(claims.jti);
+      if (error?.code === 'state_conflict') {
+        if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(eventId)) {
+          throw consumedError(claims.jti);
+        }
+        if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(semanticEventId)) {
+          historicalSemanticDigests.add(semanticDigest);
+          throw semanticConsumedError(semanticDigest);
+        }
       }
       throw error;
     }
@@ -106,5 +141,32 @@ function consumedError(jti) {
     'Capability has already been durably consumed',
     409,
     { jti }
+  );
+}
+
+
+function loadHistoricalSemanticDigests(store) {
+  const digests = new Set();
+  const rows = store.db.prepare(
+    "SELECT * FROM events WHERE kind = 'capability.consumed' ORDER BY seq"
+  ).all();
+  for (const row of rows) {
+    const event = store.decodeEventRow(row);
+    const statement = normalizeCapabilityConsumptionStatement(event.payload?.receipt?.statement);
+    const digest = capabilitySemanticConsumptionDigest(statement);
+    // A valid pre-fix history may already contain more than one JTI for the
+    // same exact invocation. Preserve that append-only evidence, but collapse it
+    // to one consumed semantic identity so the upgrade cannot replenish budget.
+    digests.add(digest);
+  }
+  return digests;
+}
+
+function semanticConsumedError(semanticDigest) {
+  return new AxiomError(
+    'semantic_action_consumed',
+    'This exact authorized semantic action has already been durably consumed',
+    409,
+    { semantic_consumption_digest: semanticDigest }
   );
 }
