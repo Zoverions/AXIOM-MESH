@@ -1,0 +1,157 @@
+{
+  "schema": "axiom-runtime-enforcement-evidence-fixtures.v1",
+  "target": "runtime-enforcement-evidence-plane",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "authority_granted": false,
+  "purpose": "Portable negative cases proving that host/runtime identity, endpoint policy, containment, protocol transitions, and external sensor evidence cannot become AXIOM effect authority.",
+  "cases": [
+    {
+      "id": "host-allows-axiom-denies",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": true,
+        "sensor_evidence_valid": true,
+        "axiom_authorization_allowed": false
+      },
+      "attempt": "treat host runtime approval and healthy sensor evidence as permission for an AXIOM effect",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "reason_code": "axiom_authority_absent"
+      }
+    },
+    {
+      "id": "axiom-allows-host-containment-denies",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": false,
+        "host_containment_reason": "endpoint_quarantine",
+        "sensor_evidence_valid": true,
+        "axiom_authorization_allowed": true
+      },
+      "attempt": "use a valid AXIOM authorization decision to override an independent host containment deny",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "reason_code": "host_containment_denied"
+      }
+    },
+    {
+      "id": "valid-sensor-evidence-without-local-grant",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": true,
+        "sensor_evidence_valid": true,
+        "sensor_source": "external-runtime-sensor",
+        "sensor_observation_fresh": true,
+        "axiom_authorization_allowed": false
+      },
+      "attempt": "promote verified runtime telemetry into local effect authority",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "receipt_sensor_evidence_state": "verified-input-only",
+        "reason_code": "axiom_authority_absent"
+      }
+    },
+    {
+      "id": "tampered-sensor-evidence",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": true,
+        "sensor_evidence_required_by_local_policy": true,
+        "sensor_evidence_valid": false,
+        "sensor_integrity_failure": "digest_mismatch",
+        "axiom_authorization_allowed": true
+      },
+      "attempt": "continue to effect because AXIOM authority is valid even though required external runtime evidence is invalid",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "receipt_sensor_evidence_state": "invalid",
+        "reason_code": "required_runtime_evidence_invalid"
+      }
+    },
+    {
+      "id": "runtime-switch-after-authorization",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": true,
+        "authorized_runtime_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "actual_runtime_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "sensor_evidence_valid": true,
+        "axiom_authorization_allowed": true
+      },
+      "attempt": "execute under a different runtime/process binding after authorization without re-evaluation",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "reason_code": "runtime_evidence_binding_changed"
+      }
+    },
+    {
+      "id": "host-identity-only-no-grant",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": true,
+        "sensor_evidence_valid": null,
+        "axiom_authorization_allowed": false
+      },
+      "attempt": "treat a known and approved endpoint agent identity as sufficient authority",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "reason_code": "identity_is_not_authority"
+      }
+    },
+    {
+      "id": "mcp-transition-host-allowed-sandbox-denied",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": true,
+        "tool_or_protocol_transition": "mcp",
+        "sensor_evidence_valid": true,
+        "axiom_authorization_allowed": false
+      },
+      "attempt": "inherit effect permission from an MCP transition that the host runtime permits",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "reason_code": "protocol_transition_is_not_authority"
+      }
+    },
+    {
+      "id": "axiom-grant-cannot-disable-endpoint-kill-switch",
+      "given": {
+        "host_runtime_identity_verified": true,
+        "host_policy_allows_execution": true,
+        "host_containment_allows_execution": false,
+        "host_containment_reason": "endpoint_kill_switch_active",
+        "sensor_evidence_valid": true,
+        "axiom_authorization_allowed": true
+      },
+      "attempt": "use a valid AXIOM grant to bypass an active endpoint kill switch",
+      "expect": {
+        "effect_allowed": false,
+        "decision": "deny",
+        "authority_minted_by_host_or_sensor": false,
+        "reason_code": "host_containment_denied"
+      }
+    }
+  ]
+}
