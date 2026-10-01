@@ -1,9 +1,14 @@
 #![forbid(unsafe_code)]
 
+mod authority_context;
 #[path = "../../../trust-core/rust/canonical_value_v0.rs"]
 mod canonical_value_v0;
 mod intent_attenuation;
 
+pub use authority_context::{
+    AuthorityContextCase, AuthorityContextError, parse_authority_context_fixture,
+    parse_authority_context_line, validate_authority_context,
+};
 pub use canonical_value_v0::{
     CanonicalCase, CanonicalScalar, VectorError, canonicalize_case, parse_canonical_fixture,
     parse_canonical_vector_row,
