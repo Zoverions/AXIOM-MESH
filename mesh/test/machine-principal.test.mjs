@@ -56,6 +56,7 @@ test('machine principal v1 canonicalizes authority and binds a human sponsor', (
     principal_type: 'agent',
     sponsor: 'owner.alice',
     lifetime: 'session',
+    expires_at: '2099-01-01T00:00:00.000Z',
     runtime_id: 'runtime.hermes.local.1',
     runtime_kind: 'local-process',
     authority_digest: principal.authority_digest,
@@ -225,4 +226,36 @@ test('non-persistent machine principals expire explicitly and persistent princip
     }), options),
     /must not set expires_at/
   );
+});
+
+test('machine capability expiry cannot outlive non-persistent principal authority', async () => {
+  const module = await import('../src/lib/machine-principal.mjs');
+  assert.equal(
+    typeof module.machineCapabilityExpiryEpoch,
+    'function',
+    'machine-principal module must expose a principal-bounded capability expiry helper'
+  );
+
+  const now = new Date('2026-08-09T20:00:00.000Z');
+  const principal = fixture({ expires_at: '2026-08-09T20:00:05.000Z' });
+  assert.equal(module.machineCapabilityExpiryEpoch(principal, {
+    now,
+    capabilityTtlSeconds: 30
+  }), Math.floor(new Date(principal.expires_at).valueOf() / 1000));
+  assert.equal(module.machineCapabilityExpiryEpoch(principal, {
+    now,
+    capabilityTtlSeconds: 2
+  }), Math.floor(now.valueOf() / 1000) + 2);
+
+  const persistent = fixture({ lifetime: 'persistent', expires_at: undefined });
+  assert.equal(module.machineCapabilityExpiryEpoch(persistent, {
+    now,
+    capabilityTtlSeconds: 30
+  }), Math.floor(now.valueOf() / 1000) + 30);
+
+  const subsecond = fixture({ expires_at: '2026-08-09T20:00:00.950Z' });
+  assert.throws(() => module.machineCapabilityExpiryEpoch(subsecond, {
+    now: new Date('2026-08-09T20:00:00.900Z'),
+    capabilityTtlSeconds: 30
+  }), /expires before a capability can be issued/);
 });
