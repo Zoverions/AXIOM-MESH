@@ -1,0 +1,5 @@
+# AXIOM authority v0 exhaustive truth table
+# Index bits, most-significant to least-significant:
+# principal_verified capability_authorized consent_required consent_valid budget_required budget_positive
+# false=0, true=1; decision deny=0, allow=1
+0000000000000000000000000000000000000000000000001101110100001101
