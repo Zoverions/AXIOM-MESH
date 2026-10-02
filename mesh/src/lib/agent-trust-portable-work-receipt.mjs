@@ -151,12 +151,11 @@ function assertDigestListOption(value, label) {
   }
 }
 
-// Bounds the read of a caller iterable: at most 256 distinct digests (the
-// receipt cap) and at most 4,096 items in total, so a huge or endless
+// Bounds the read of a caller iterable at 4,096 items, so a huge or endless
 // generator is rejected instead of exhausting memory or blocking. Each item is
-// checked as a digest before deduplication and sorting.
+// checked as a digest before deduplication and sorting; the 256-digest
+// receipt cap is then enforced by canonicalDigestSet.
 const MAX_DIGEST_OPTION_ITEMS = 4096;
-const MAX_DIGEST_OPTION_DIGESTS = 256;
 
 function digestListOption(value, label) {
   assertDigestListOption(value, label);
@@ -169,9 +168,6 @@ function digestListOption(value, label) {
         throw new ValidationError(`${label} must contain at most ${MAX_DIGEST_OPTION_ITEMS} items`);
       }
       unique.add(digest(item, `${label}[${count - 1}]`));
-      if (unique.size > MAX_DIGEST_OPTION_DIGESTS) {
-        throw new ValidationError(`${label} must contain at most ${MAX_DIGEST_OPTION_DIGESTS} digests`);
-      }
     }
   } catch (error) {
     if (error instanceof ValidationError) throw error;
