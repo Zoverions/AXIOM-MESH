@@ -31,6 +31,9 @@ const ATTESTATION_SCOPE = 'delegation-root-binding';
 const CREDENTIAL_EFFECT = 'authorize-evidence-signing-only';
 const REVOCATION_EFFECT = 'revoke-evidence-signing-key';
 const MAX_PATH_LENGTH = 128;
+// Same bound as the currentness checkpoint's revocation inventory. Without it
+// the only limit was the snapshot node budget (about 2,173 revocations).
+const MAX_REVOCATIONS = 128;
 const ROOT_BINDING_KEYS = Object.freeze([
   'schema',
   'root_holder',
@@ -836,6 +839,11 @@ function normalizeRootBinding(raw) {
 function normalizeMatchingRevocations(revocations, credential, trustedControllerPublicKey) {
   if (!Array.isArray(revocations)) {
     throw new ValidationError('Delegation root attestation key revocations must be an array');
+  }
+  if (revocations.length > MAX_REVOCATIONS) {
+    throw new ValidationError(
+      `Delegation root attestation key revocations must contain at most ${MAX_REVOCATIONS} entries`
+    );
   }
   const matches = [];
   for (const revocation of revocations) {
