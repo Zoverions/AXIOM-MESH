@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { createPublicKey, generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
 import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
@@ -397,6 +397,9 @@ async function revokedKeyFixture() {
     expectedRootBindingDigest: binding.binding_digest
   };
   return {
+    binding,
+    controller,
+    firstKey,
     first,
     revocation,
     revokedAttestation,
@@ -513,4 +516,97 @@ test('lifecycle verification rejects hidden, symbol and non-plain attestation st
     error => error instanceof ValidationError && /Proxy/.test(error.message)
   );
   assert.equal(counter.traps, 0);
+});
+
+// A real controller public key whose `type` read runs `mutate`. Options are not
+// snapshotted, so this runs caller code after the evidence snapshot is taken.
+function mutatingControllerKey(publicKey, mutate) {
+  const key = createPublicKey(publicKey.export({ type: 'spki', format: 'pem' }));
+  let reads = 0;
+  Object.defineProperty(key, 'type', {
+    configurable: true,
+    get() {
+      reads += 1;
+      mutate();
+      return 'public';
+    }
+  });
+  return { key, reads: () => reads };
+}
+
+test('mutating options cannot redirect the signer key lookup to raw input', async () => {
+  const f = await revokedKeyFixture();
+  const input = structuredClone(f.revokedAttestation);
+  const hook = mutatingControllerKey(f.controller.publicKey, () => {
+    input.statement.signer_key_id = 'f'.repeat(64);
+  });
+  assert.throws(() => f.verify(input, { trustedControllerPublicKey: hook.key }), /revoked at requested time/i);
+  assert.ok(hook.reads() > 0);
+});
+
+test('mutating options cannot move raw issued_at before revocation or into the output', async () => {
+  const f = await revokedKeyFixture();
+  const input = structuredClone(f.revokedAttestation);
+  const hook = mutatingControllerKey(f.controller.publicKey, () => {
+    input.statement.issued_at = '2026-08-28T04:01:00.000Z';
+  });
+  assert.throws(() => f.verify(input, { trustedControllerPublicKey: hook.key }), /revoked at requested time/i);
+  assert.ok(hook.reads() > 0);
+
+  const valid = structuredClone(f.validAttestation);
+  const outputHook = mutatingControllerKey(f.controller.publicKey, () => {
+    valid.statement.issued_at = '2026-08-28T04:00:30.000Z';
+  });
+  const result = f.verify(valid, { trustedControllerPublicKey: outputHook.key });
+  assert.equal(result.verified, true);
+  assert.equal(result.issued_at, f.validAttestation.statement.issued_at);
+});
+
+test('mutating options cannot swap the raw attestation for another genuinely signed one', async () => {
+  const f = await revokedKeyFixture();
+  const input = structuredClone(f.revokedAttestation);
+  const replacement = structuredClone(f.validAttestation);
+  const hook = mutatingControllerKey(f.controller.publicKey, () => {
+    Object.assign(input, structuredClone(replacement));
+  });
+  assert.throws(() => f.verify(input, { trustedControllerPublicKey: hook.key }), /revoked at requested time/i);
+  assert.equal(input.statement.issued_at, replacement.statement.issued_at);
+});
+
+test('mutating options cannot drop a successor from the raw credential list after path validation', async () => {
+  const binding = rootBinding();
+  const controller = keys();
+  const firstKey = keys();
+  const secondKey = keys();
+  const {
+    createDelegationRootAttestationKeyCredential,
+    verifyDelegationRootAttestationWithKeyLifecycle
+  } = await lifecycle();
+  const first = await initialCredential({ binding, controller, operational: firstKey });
+  const second = createDelegationRootAttestationKeyCredential({
+    rootBinding: binding,
+    controllerPrivateKey: controller.privateKey,
+    operationalPublicKey: secondKey.publicKey,
+    keyEpoch: 2,
+    activatedAt: ROTATED,
+    transitionKind: 'rotation',
+    predecessorCredential: first,
+    predecessorDisposition: 'retired'
+  });
+  const staleAttestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: firstKey.privateKey,
+    issued_at: '2026-08-28T04:30:00.000Z'
+  });
+  const credentials = [first, second];
+  const hook = mutatingControllerKey(controller.publicKey, () => {
+    credentials.length = 1;
+  });
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(staleAttestation, {
+    trustedControllerPublicKey: hook.key,
+    credentials,
+    expectedRootBindingDigest: binding.binding_digest
+  }), /stale after successor activation/i);
+  assert.equal(credentials.length, 1, 'the option hook must have truncated the raw list');
 });
