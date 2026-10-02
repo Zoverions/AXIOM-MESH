@@ -78,7 +78,7 @@ The verifier requires an externally supplied trusted-signer inventory.
 Each signer binds:
 
 - exact key ID;
-- Ed25519 public key;
+- Ed25519 public key, as a single canonical SPKI `BEGIN PUBLIC KEY` PEM block that re-exports to the identical PEM (line endings normalized; extra key data is rejected) (private-key encodings, DER, JWK, and multi-block input are rejected before key conversion, so release private-key material is never accepted as trusted-signer input);
 - explicit roles;
 - state: `active | retired | revoked`.
 
@@ -170,6 +170,8 @@ Manifest verification returns:
 `artifact_bytes_verified: false`
 
 Actual local bytes must separately pass `verifyInstallReleaseArtifact(...)`, which checks exact byte length and SHA-256.
+
+The artifact metadata passed to `verifyInstallReleaseArtifact(...)` must come from the just-verified manifest result; the byte check alone is not manifest-backed provenance (its result carries `manifest_bound: false`) and must not be used as an install gate until the manifest-bound overload lands. It accepts only a non-Proxy `Uint8Array`/`Buffer` and hashes a private copy of its bytes.
 
 A valid signature therefore cannot hide:
 
@@ -268,6 +270,8 @@ The v1 verifier fails closed against:
 16. proxy/accessor/hidden/symbol/custom-array input smuggling.
 
 ## Current non-claims
+
+Every verifier result pins `host_mutation_authorized: false`.
 
 This work does **not** provide or claim:
 

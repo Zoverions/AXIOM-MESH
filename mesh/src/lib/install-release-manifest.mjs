@@ -23,6 +23,9 @@ export const INSTALL_RELEASE_MANIFEST_SCHEMA='axiom-install-release-manifest.v1'
 export const INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA='axiom-install-release-manifest-package.v1';
 export const INSTALL_RELEASE_MANIFEST_POLICY_SCHEMA='axiom-install-release-manifest-policy.v1';
 
+// Trusted signers carry SPKI public-key PEM only. createPublicKey would also accept
+// private-key encodings and derive a public key, admitting release private keys.
+const SPKI_PUBLIC_KEY_PEM=/^-----BEGIN PUBLIC KEY-----\r?\n(?:[A-Za-z0-9+/]+={0,2}\r?\n)+-----END PUBLIC KEY-----\r?\n?$/;
 const CHANNELS=Object.freeze(['development','candidate','stable']);
 const PROFILES=Object.freeze(['personal-local','infrastructure-node']);
 const ARTIFACT_KINDS=Object.freeze([
@@ -98,9 +101,11 @@ export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
   });
 }
 
-export function verifyInstallReleaseManifest(
-  packageValue,
-  {
+export function verifyInstallReleaseManifest(packageValue,options={}){
+  if(options===null||typeof options!=='object'||utilTypes.isProxy(options)){
+    throw new ValidationError('Install release manifest options must be an object');
+  }
+  const {
     trustedSigners,
     evaluatedAt,
     policy=manifestPolicy,
@@ -111,8 +116,7 @@ export function verifyInstallReleaseManifest(
     currentServiceNetworkPolicy=serviceNetworkPolicy,
     currentSourceSetupPolicy=sourceSetupPolicy,
     migrationGeneration=MIGRATIONS.length
-  }={}
-){
+  }=options;
   const policyResult=validateInstallReleaseManifestPolicy(policy);
   exactObject(packageValue,'Install release manifest package',[
     'schema','manifest','signature'
@@ -165,6 +169,10 @@ export function verifyInstallReleaseManifest(
   if(publicKey.asymmetricKeyType!=='ed25519'){
     throw new ValidationError('Trusted release signer must use Ed25519');
   }
+  const normalizedPem=`${signer.public_key.replace(/\r\n/g,'\n').replace(/\n?$/,'')}\n`;
+  if(publicKey.export({type:'spki',format:'pem'})!==normalizedPem){
+    throw new ValidationError('Trusted release signer public key is not canonical SPKI PEM');
+  }
 
   let verified=false;
   try{
@@ -214,13 +222,30 @@ export function verifyInstallReleaseManifest(
   });
 }
 
-export function verifyInstallReleaseArtifact(artifact,bytes,{policy=manifestPolicy}={}){
+/**
+ * Verify local artifact bytes against one artifact metadata record.
+ *
+ * The artifact metadata must come from the result of a just-verified manifest
+ * (`verifyInstallReleaseManifest`); this byte check alone is not
+ * manifest-backed provenance (`manifest_bound: false`) and must not be used as
+ * an install gate until the manifest-bound overload lands.
+ */
+export function verifyInstallReleaseArtifact(artifact,bytes,options={}){
+  if(options===null||typeof options!=='object'||utilTypes.isProxy(options)){
+    throw new ValidationError('Release artifact options must be an object');
+  }
+  const {policy=manifestPolicy}=options;
   validateInstallReleaseManifestPolicy(policy);
   validateArtifact(artifact,new Set(PROFILES),policy);
-  if(!Buffer.isBuffer(bytes)&&!(bytes instanceof Uint8Array)){
+  if(utilTypes.isProxy(bytes)||!utilTypes.isUint8Array(bytes)){
     throw new ValidationError('Release artifact bytes must be a Buffer or Uint8Array');
   }
-  const buffer=Buffer.from(bytes);
+  let buffer;
+  try{
+    buffer=Buffer.from(new Uint8Array(bytes));
+  }catch{
+    throw new ValidationError('Release artifact bytes are unreadable');
+  }
   if(buffer.length!==artifact.byte_length){
     throw new ValidationError(`Release artifact byte length mismatch: ${artifact.artifact_id}`);
   }
@@ -234,6 +259,7 @@ export function verifyInstallReleaseArtifact(artifact,bytes,{policy=manifestPoli
     artifact_bytes_verified:true,
     sha256:artifact.sha256,
     byte_length:artifact.byte_length,
+    manifest_bound:false,
     host_mutation_authorized:false,
     authority_effect:'none'
   });
@@ -430,6 +456,7 @@ function trustedSignerFor(keyId,trustedSigners,policy){
       ||typeof signer.public_key!=='string'
       ||signer.public_key.length<32
       ||signer.public_key.length>16_384
+      ||!SPKI_PUBLIC_KEY_PEM.test(signer.public_key)
       ||!['active','retired','revoked'].includes(signer.status)
     ) throw new ValidationError('Trusted release signer inventory is invalid');
     ids.add(signer.key_id);

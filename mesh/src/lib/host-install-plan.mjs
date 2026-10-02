@@ -8,6 +8,7 @@ import installTargets from '../../config/install-targets.json' with { type: 'jso
 import installPolicy from '../../config/host-install-policy.json' with { type: 'json' };
 import sourceSetupPolicy from '../../config/setup.json' with { type: 'json' };
 import { canonicalJson, digestObject, ValidationError } from './canonical.mjs';
+import { classifyRuntimeProfile } from './node-runtime-version.mjs';
 
 export const HOST_INSTALL_POLICY_SCHEMA = 'axiom-host-install-policy.v1';
 export const HOST_INSTALL_PLAN_SCHEMA = 'axiom-host-install-plan.v1';
@@ -28,6 +29,36 @@ const EXPECTED_STAGES = Object.freeze([
   'human-handoff',
   'optional-integrations'
 ]);
+const HOST_FACT_STRING_MAX = 200;
+const SUPPORTED_DISTRIBUTIONS = Object.freeze([
+  { id:'ubuntu', versions:['24.04'], package_manager:'apt-get', init_system:'systemd' }
+]);
+const REQUIRED_FACTS = Object.freeze([
+  'platform','architecture','distro_id','distro_version','init_system','package_manager',
+  'node_version','memory_bytes','root_filesystem_free_bytes','container_runtime','effective_uid'
+]);
+const COMMON_DIRECTORIES = Object.freeze({
+  data_dir:'/var/lib/axiom-mesh/data',
+  secret_dir:'/etc/axiom-mesh/secrets',
+  run_dir:'/run/axiom-mesh',
+  log_dir:'/var/log/axiom-mesh'
+});
+const PERSONAL_LOCAL_APPLICATIONS = Object.freeze(['axiom-one','axiom-education']);
+const INFRASTRUCTURE_NETWORK_PARTICIPATION = 'not-enrolled-by-install';
+const PLAN_CONTAINER_KEYS = Object.freeze(['blockers','prerequisites','directories','provisioning','runtime','network','stages']);
+const PLAN_PROVISIONING_KEYS = Object.freeze(['production_credentials','service_unit_projection','signed_release_manifest_verified']);
+const PLAN_RUNTIME_KEYS = Object.freeze([
+  'container_runtime_observed','container_runtime_name_recognized',
+  'container_runtime_version_verified','container_runtime_health_verified',
+  'node_runtime_required','node_runtime_observed'
+]);
+const PLAN_NETWORK_KEYS = Object.freeze(['public_ingress_enabled','external_egress','mesh_enrollment']);
+const PLAN_STAGE_KEYS = Object.freeze(['id','sequence','state','privileged_effect_performed']);
+const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
+const PROFILE_DIRECTORIES = Object.freeze({
+  'personal-local': COMMON_DIRECTORIES,
+  'infrastructure-node': Object.freeze({ ...COMMON_DIRECTORIES, units_dir:'/var/lib/axiom-mesh/units' })
+});
 
 export function validateHostInstallPolicy(policy = installPolicy, targets = installTargets) {
   exactObject(policy, 'Host install policy', [
@@ -63,10 +94,13 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
   ) throw new ValidationError('Host install planner policy drifted');
 
   validateStringArray(policy.planner.required_facts, 'planner.required_facts', 32);
-  if (!policy.planner.required_facts.includes('node_version')) {
-    throw new ValidationError('Host install planner must carry explicit node_version evidence');
+  if (canonicalJson(policy.planner.required_facts) !== canonicalJson(REQUIRED_FACTS)) {
+    throw new ValidationError('Host install planner required_facts drifted');
   }
   validateSupportedDistributions(policy.planner.supported_distributions);
+  if (canonicalJson(policy.planner.supported_distributions) !== canonicalJson(SUPPORTED_DISTRIBUTIONS)) {
+    throw new ValidationError('Host install planner supported_distributions drifted');
+  }
 
   exactObject(policy.mutating_installer, 'Mutating installer policy', [
     'status','requires_signed_release_manifest','requires_disposable_host_evidence',
@@ -109,6 +143,19 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
       || profile.topology !== target.topology
       || profile.service_units !== target.service_units
     ) throw new ValidationError(`Host install authority or topology boundary drifted: ${profileId}`);
+    if (canonicalJson(expectedDirectories(profile)) !== canonicalJson(PROFILE_DIRECTORIES[profileId])) {
+      throw new ValidationError(`Host install profile directories drifted: ${profileId}`);
+    }
+    if (profileId === 'personal-local') {
+      validateStringArray(profile.applications, 'personal-local applications', 16);
+      if (
+        canonicalJson(profile.applications) !== canonicalJson(PERSONAL_LOCAL_APPLICATIONS)
+        || canonicalJson(profile.applications) !== canonicalJson(target.application_catalog)
+      ) throw new ValidationError('Host install profile applications drifted: personal-local');
+    } else if (
+      profile.network_participation !== INFRASTRUCTURE_NETWORK_PARTICIPATION
+      || target.mesh_enrollment !== 'explicit-separate-step'
+    ) throw new ValidationError('Host install profile network participation drifted: infrastructure-node');
   }
 
   return Object.freeze({
@@ -299,6 +346,7 @@ export function validateHostInstallPlan(
     'mutation_performed','live_services_started','credentials_created',
     'authority_effect','network_effect','plan_digest'
   ]);
+  assertPlanStructure(plan);
   const validation = validateHostInstallPolicy(policy, targets);
   const profile = policy.profiles[plan.profile_id];
   const target = targets.targets.find(item => item.id === plan.profile_id);
@@ -311,6 +359,7 @@ export function validateHostInstallPlan(
     || plan.target_status !== 'specified'
     || !RUNTIME_STRATEGIES.includes(plan.runtime_strategy)
     || !HOST_FACT_SOURCES.includes(plan.host_facts_source)
+    || !DIGEST_PATTERN.test(plan.host_facts_digest)
     || plan.policy_digest !== validation.policy_digest
     || plan.install_targets_digest !== validation.install_targets_digest
     || plan.source_setup_policy_digest !== digestObject(setupPolicy)
@@ -336,35 +385,26 @@ export function validateHostInstallPlan(
     )
   ) throw new ValidationError('Host install plan weakens or drifts from the non-mutating boundary');
 
-  validateStringArray(plan.blockers, 'plan.blockers', 64);
-  validateStringArray(plan.prerequisites, 'plan.prerequisites', 64);
   if (plan.host_candidate_compatible !== (plan.blockers.length === 0)) {
     throw new ValidationError('Host install compatibility does not match blockers');
   }
 
-  exactObject(plan.network, 'Host install plan network', [
-    'public_ingress_enabled','external_egress','mesh_enrollment'
-  ]);
   if (
     plan.network.public_ingress_enabled !== false
     || plan.network.external_egress !== 'deny'
     || plan.network.mesh_enrollment !== 'not-performed'
   ) throw new ValidationError('Host install plan network boundary is invalid');
 
-  exactObject(plan.provisioning, 'Host install plan provisioning', [
-    'production_credentials','service_unit_projection','signed_release_manifest_verified'
-  ]);
   if (plan.provisioning.signed_release_manifest_verified !== false) {
     throw new ValidationError('Host install plan cannot claim release verification');
   }
 
-  exactObject(plan.runtime, 'Host install plan runtime', [
-    'container_runtime_observed','container_runtime_name_recognized',
-    'container_runtime_version_verified','container_runtime_health_verified',
-    'node_runtime_required','node_runtime_observed'
-  ]);
   if (
     plan.runtime.node_runtime_required !== (plan.runtime_strategy === 'source')
+    || plan.runtime.container_runtime_name_recognized !== (
+      plan.runtime_strategy === 'oci'
+      && policy.planner.recognized_oci_runtime_names.includes(plan.runtime.container_runtime_observed)
+    )
     || plan.runtime.container_runtime_version_verified !== false
     || plan.runtime.container_runtime_health_verified !== false
   ) {
@@ -376,14 +416,8 @@ export function validateHostInstallPlan(
     && plan.blockers.some(item => item.startsWith('source-node-runtime-'))
   ) throw new ValidationError('OCI install planning cannot require a Node runtime');
 
-  if (!Array.isArray(plan.stages) || plan.stages.length !== EXPECTED_STAGES.length) {
-    throw new ValidationError('Host install plan stage inventory is invalid');
-  }
   for (let index = 0; index < plan.stages.length; index += 1) {
     const stage = plan.stages[index];
-    exactObject(stage, 'Host install plan stage', [
-      'id','sequence','state','privileged_effect_performed'
-    ]);
     if (
       stage.id !== EXPECTED_STAGES[index]
       || stage.sequence !== index + 1
@@ -410,6 +444,73 @@ export function validateHostInstallPlan(
     authority_effect: 'none',
     mutation_performed: false
   });
+}
+
+// Structural gate for an untrusted plan: runs before any member read, so nested
+// Proxies, accessors, and non-JSON leaves fail closed with ValidationError.
+function assertPlanStructure(plan) {
+  scalarLeaves(plan, 'Host install plan', PLAN_CONTAINER_KEYS);
+  validateStringArray(plan.blockers, 'plan.blockers', 64);
+  validateStringArray(plan.prerequisites, 'plan.prerequisites', 64);
+  exactObject(plan.provisioning, 'Host install plan provisioning', PLAN_PROVISIONING_KEYS);
+  scalarLeaves(plan.provisioning, 'Host install plan provisioning');
+  exactObject(plan.runtime, 'Host install plan runtime', PLAN_RUNTIME_KEYS);
+  scalarLeaves(plan.runtime, 'Host install plan runtime');
+  exactObject(plan.network, 'Host install plan network', PLAN_NETWORK_KEYS);
+  scalarLeaves(plan.network, 'Host install plan network');
+  plainRecord(plan.directories, 'Host install plan directories');
+  for (const key of Object.keys(plan.directories)) {
+    if (typeof plan.directories[key] !== 'string') {
+      throw new ValidationError('Host install plan directories must contain only strings');
+    }
+  }
+  plainDataArray(plan.stages, 'Host install plan stages', EXPECTED_STAGES.length);
+  for (const stage of plan.stages) {
+    exactObject(stage, 'Host install plan stage', PLAN_STAGE_KEYS);
+    scalarLeaves(stage, 'Host install plan stage');
+  }
+  const { blockers: _blockers, prerequisites: _prerequisites, ...rest } = plan;
+  try {
+    canonicalJson(rest);
+  } catch (error) {
+    throw new ValidationError(`Host install plan is not canonical JSON data: ${error.message}`);
+  }
+}
+
+function scalarLeaves(record, label, containerKeys = []) {
+  for (const key of Object.keys(record)) {
+    if (containerKeys.includes(key)) continue;
+    const item = record[key];
+    if (!(
+      item === null
+      || typeof item === 'boolean'
+      || typeof item === 'string'
+      || (typeof item === 'number' && Number.isFinite(item))
+    )) throw new ValidationError(`${label} field ${key} must be a JSON scalar`);
+  }
+}
+
+function plainDataArray(value, label, length) {
+  if (
+    utilTypes.isProxy(value)
+    || !Array.isArray(value)
+    || Object.getPrototypeOf(value) !== Array.prototype
+    || value.length !== length
+  ) throw new ValidationError(`${label} inventory is invalid`);
+  for (const key of Reflect.ownKeys(value)) {
+    if (key === 'length') continue;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      typeof key === 'symbol'
+      || String(Number(key)) !== key
+      || Number(key) >= length
+      || !descriptor.enumerable
+      || !Object.hasOwn(descriptor, 'value')
+    ) throw new ValidationError(`${label} must contain only indexed data properties`);
+  }
+  for (let index = 0; index < length; index += 1) {
+    if (!Object.hasOwn(value, String(index))) throw new ValidationError(`${label} cannot be sparse`);
+  }
 }
 
 function expectedDirectories(profile) {
@@ -456,7 +557,7 @@ function validateHostFacts(facts, requiredFacts) {
     'facts_source','platform','architecture','distro_id','distro_version',
     'init_system','package_manager','container_runtime'
   ]) {
-    if (typeof facts[key] !== 'string' || facts[key].length === 0 || facts[key].length > 256) {
+    if (typeof facts[key] !== 'string' || facts[key].length === 0 || facts[key].length > HOST_FACT_STRING_MAX) {
       throw new ValidationError(`Host fact is invalid: ${key}`);
     }
   }
@@ -478,29 +579,16 @@ function validateHostFacts(facts, requiredFacts) {
   ) throw new ValidationError('Host fact is invalid: effective_uid');
 }
 
+// One canonical Node.js version rule, shared with source setup.
 function nodeVersionAllowed(version, setupPolicy) {
-  const parsed = parseVersion(version);
-  if (!parsed) return false;
-  const primary = parseVersion(setupPolicy.runtime.minimum_version);
-  const compatibility = parseVersion(setupPolicy.runtime.compatibility_minimum_version);
-  return (
-    parsed.major === primary.major
-    && compareVersions(parsed, primary) >= 0
-    && parsed.major < setupPolicy.runtime.maximum_major_exclusive
-  ) || (
-    parsed.major === compatibility.major
-    && compareVersions(parsed, compatibility) >= 0
-    && parsed.major < setupPolicy.runtime.compatibility_maximum_major_exclusive
-  );
-}
-
-function parseVersion(value) {
-  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(value ?? '');
-  return match ? { major:Number(match[1]), minor:Number(match[2]), patch:Number(match[3]) } : null;
-}
-
-function compareVersions(a,b) {
-  return a.major-b.major || a.minor-b.minor || a.patch-b.patch;
+  if (typeof version !== 'string') return false;
+  try {
+    classifyRuntimeProfile(version, setupPolicy.runtime);
+    return true;
+  } catch (error) {
+    if (error instanceof ValidationError) return false;
+    throw error;
+  }
 }
 
 async function linuxDistribution() {
@@ -580,6 +668,14 @@ function validateStringArray(value,label,maxItems) {
 }
 
 function exactObject(value,label,keys) {
+  plainRecord(value,label);
+  const actual=Reflect.ownKeys(value);
+  if (actual.map(String).sort().join(',') !== [...keys].sort().join(',')) {
+    throw new ValidationError(`${label} key inventory drifted`);
+  }
+}
+
+function plainRecord(value,label) {
   if (utilTypes.isProxy(value)) throw new ValidationError(`${label} cannot be a Proxy`);
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError(`${label} must be an object`);
@@ -597,9 +693,6 @@ function exactObject(value,label,keys) {
     if (!descriptor?.enumerable || !Object.hasOwn(descriptor,'value')) {
       throw new ValidationError(`${label} must contain only enumerable data properties`);
     }
-  }
-  if (actual.map(String).sort().join(',') !== [...keys].sort().join(',')) {
-    throw new ValidationError(`${label} key inventory drifted`);
   }
 }
 

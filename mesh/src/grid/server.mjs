@@ -34,6 +34,7 @@ export async function createGridService(config = meshConfig()) {
   let identity;
   let protector;
   let store;
+  let consumeCapability;
   try {
     identity = await ensureMeshIdentity(config.dataDir, 'grid', { create: config.autoBootstrap });
     identity.transport = config.transport.enabled
@@ -50,6 +51,11 @@ export async function createGridService(config = meshConfig()) {
       protector
     });
     await recordPendingRecovery({ store, dataDir: config.dataDir, identity });
+    consumeCapability = await createCapabilityConsumptionCommitter({
+      config,
+      identity,
+      store
+    });
   } catch (error) {
     if (store) store.close();
     await releaseGridRuntimeLock(runtimeLock);
@@ -58,11 +64,6 @@ export async function createGridService(config = meshConfig()) {
   const replayGuard = new ReplayGuard();
   const router = new Router();
   const telemetry = new ServiceTelemetry('grid');
-  const consumeCapability = await createCapabilityConsumptionCommitter({
-    config,
-    identity,
-    store
-  });
   let cachedChain = { valid: true };
   let nextIntegrityProbeAt = 0;
 
@@ -110,9 +111,12 @@ export async function createGridService(config = meshConfig()) {
     if (!Array.isArray(input.events)) {
       throw new ValidationError('Commit events must be an array');
     }
-    if (input.events.some(event => event?.kind === 'capability.consumed')) {
+    if (input.events.some(event => (
+      event?.kind === 'capability.consumed'
+      || event?.kind === 'capability.semantic-consumed'
+    ))) {
       throw new ValidationError(
-        'Caller-supplied capability.consumed events are forbidden; Grid derives them from exact consumption requests'
+        'Caller-supplied capability consumption events are forbidden; Grid derives them from exact consumption requests'
       );
     }
     const consumptionRequests = input.events.filter(

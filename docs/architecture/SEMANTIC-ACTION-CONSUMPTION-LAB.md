@@ -7,19 +7,26 @@
 
 ## Purpose and boundary
 
-The supported build consumes a Sandbox capability durably under an
-identifier-local key: `capabilityConsumptionEventId(jti)` in
-`mesh/src/lib/capability-consumption.mjs`, committed by the Grid consumption
-route. That prevents literal token replay. It does not, by itself, prevent a
-model that replans from obtaining a **fresh, individually valid token** for the
-same already-consumed semantic action.
+The supported build preserves literal JTI replay rejection and additionally
+derives a deterministic **native semantic-consumption identity** from the exact
+signed capability bindings: subject, issuer, audience, intent digest, plan
+digest, policy digest, optional invocation digest, and tool. Grid serializes a
+semantic-consumption marker and the ordinary `capability.consumed` receipt in
+one existing event-log transaction. Reissuing the same exact native invocation
+under a fresh JTI therefore cannot replenish that one consumption, including
+after Grid restart.
 
-This lab is an **inert, library-and-test-only reference model** that makes that
-gap mechanically testable. It is not imported by Gateway, Hypervisor, Sandbox,
-or Grid; it is not registered in `mesh/config/capabilities.json`; it does not
-change the live authorization or consumption semantics; and it is not a second
-canonical consumption implementation. Any future live change must go through
-its own reviewed issue and the supported sequence:
+That live correction is deliberately narrower than this lab. It does **not**
+claim the lab's explicit mandate binding, authorization-instance registration,
+versioned canonical effect equivalence, multi-execution budget, delegated-child
+accounting, or external sink exactly-once semantics. A genuinely distinct
+authorization instance remains repeatable.
+
+This lab remains an **inert, library-and-test-only reference model** for those
+broader properties. It is not imported by Gateway, Hypervisor, Sandbox, or
+Grid; it is not registered in `mesh/config/capabilities.json`; and it is not a
+second canonical consumption implementation. Further promotion still requires
+separate falsification and review through the supported sequence:
 
 ```text
 Gateway -> Hypervisor -> Sandbox -> Grid

@@ -285,11 +285,13 @@ execution evidence;
   visible conflicts and explicit all-head resolution;
 - signed deployment-independent secret and policy provider startup;
 - the experimental loopback AXIOM One shell, including an exact human
-  explanation contract for five bounded actions, all 20 stable Gateway
-  outcomes, all 37 current kernel event kinds, approval states, raw evidence,
-  fixed directional owner-scoped provenance with correction-without-replacement,
+  explanation contract for six bounded actions, all 20 stable Gateway
+  outcomes, all 37 current kernel event kinds, approval states, non-authorizing
+  capability-status projection, current owner-scoped consent state, bounded
+  evidence-chain verification, raw evidence, fixed directional owner-scoped provenance with correction-without-replacement,
   and same-key uncertain-outcome recovery without claiming an authoritative
-  pre-execution kernel plan or edge-deletion control;
+  pre-execution kernel plan, per-principal capability authorization, external
+  truth, or edge-deletion control;
 - strict pilot-evidence and independent-security-review intake verifiers;
 - authenticated operator API and CLI;
 - an experimental loopback-only AXIOM One PWA foundation with a contract-only
@@ -297,7 +299,8 @@ execution evidence;
   creation/listing, three fixed directional provenance links,
   correction-without-replacement, confirmation-bound tombstoning, selective
   local export, explicit-only bundle reveal, cross-principal denial evidence,
-  and explicit unavailable Share, Circles, and AI states.
+  capability/consent/Verify read projections, and explicit unavailable Share,
+  live Circles, and production-AI states.
 
 The current checkpoint does **not** include a supported AXIOM One browser
 application, autonomous-agent runtime, MCP/A2A endpoint, machine delegation,

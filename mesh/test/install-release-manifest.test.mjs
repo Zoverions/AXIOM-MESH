@@ -23,7 +23,8 @@ import {
 import {
   canonicalJson,
   digestObject,
-  sha256
+  sha256,
+  ValidationError
 } from '../src/lib/canonical.mjs';
 
 const pair=generateKeyPairSync('ed25519');
@@ -183,6 +184,11 @@ test('artifact bytes require an exact local digest and length check',()=>{
   const ok=verifyInstallReleaseArtifact(target,artifactBytes['runtime-personal']);
   assert.equal(ok.artifact_bytes_verified,true);
   assert.equal(ok.host_mutation_authorized,false);
+  assert.equal(ok.manifest_bound,false);
+  assert.deepEqual(Object.keys(ok).sort(),[
+    'artifact_bytes_verified','artifact_id','artifact_kind','authority_effect','byte_length',
+    'host_mutation_authorized','manifest_bound','sha256','valid'
+  ]);
   assert.throws(
     ()=>verifyInstallReleaseArtifact(target,Buffer.from('tampered')),
     /byte length mismatch|digest mismatch/
@@ -361,8 +367,8 @@ test('AXIOM Host naming cannot launder Secure Boot or measured-boot evidence',()
     'axiom-host-image',
     ['personal-local']
   );
-  value.non_claims=value.non_claims.filter(
-    claim=>claim!=='axiom-host-image-does-not-prove-secure-or-measured-boot'
+  value.non_claims=value.non_claims.map(
+    claim=>claim==='axiom-host-image-does-not-prove-secure-or-measured-boot'?'unrelated-non-claim':claim
   );
   assert.throws(()=>verify(signPackage(value)),/missing non-claim/);
 });
@@ -435,7 +441,121 @@ test('artifact verification rejects hostile metadata containers',()=>{
 
 test('release verifier has no host mutation process network or credential side-effect imports',async()=>{
   const source=await readFile(new URL('../src/lib/install-release-manifest.mjs',import.meta.url),'utf8');
+  const imports=[...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(match=>match[1]);
+  assert.deepEqual(imports,[
+    'node:crypto',
+    'node:util',
+    '../../config/install-release-manifest-policy.json',
+    '../../config/install-targets.json',
+    '../../config/host-install-policy.json',
+    '../../config/capabilities.json',
+    '../../config/application-catalog.json',
+    '../../config/service-network-policy.json',
+    '../../config/setup.json',
+    '../grid/migrations.mjs',
+    './canonical.mjs'
+  ]);
+  const specifiers=text=>[
+    ...text.matchAll(/^\s*(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]/gm)
+  ].map(match=>match[1]);
+  assert.deepEqual(specifiers(source),imports);
+  assert.deepEqual(specifiers("import 'node:child_process';\nexport * from './x.mjs';"),['node:child_process','./x.mjs']);
+  const migrations=await readFile(new URL('../src/grid/migrations.mjs',import.meta.url),'utf8');
+  assert.deepEqual(specifiers(migrations),['../lib/canonical.mjs']);
+  const canonical=await readFile(new URL('../src/lib/canonical.mjs',import.meta.url),'utf8');
+  assert.deepEqual(specifiers(canonical),['node:crypto']);
+  for (const [name,text] of [['install-release-manifest',source],['migrations',migrations],['canonical',canonical]]) {
+    assert.doesNotMatch(text,/\bprocess\b|globalThis|\bimport\s*\(|\brequire\s*\(/,name);
+  }
+  assert.doesNotMatch(source,/\bimport\s*\(|node:fs|node:dgram|node:tls|node:dns|process\.env/);
   assert.doesNotMatch(source,/node:child_process|node:net|node:http|node:https/);
   assert.doesNotMatch(source,/\bfetch\s*\(|\bexec\s*\(|\bspawn\s*\(|\bexecFile\s*\(/);
   assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|unlink|rename/);
+});
+
+test('trusted signer inventory rejects private-key material before key conversion',()=>{
+  const privatePem=pair.privateKey.export({type:'pkcs8',format:'pem'});
+  for (const public_key of [
+    privatePem,
+    privatePem.replace('PRIVATE KEY','PUBLIC KEY').replace('PRIVATE KEY','PUBLIC KEY')+'\n'+publicPem,
+    `${publicPem}${privatePem}`,
+    pair.privateKey.export({type:'pkcs8',format:'der'}).toString('base64'),
+    JSON.stringify(pair.privateKey.export({format:'jwk'}))
+  ]) {
+    assert.throws(
+      ()=>verify(signPackage(),{trustedSigners:[trustedSigner({public_key})]}),
+      /Trusted release signer inventory is invalid/
+    );
+  }
+  assert.equal(verify(signPackage(),{trustedSigners:[trustedSigner({public_key:publicPem})]}).valid,true);
+});
+
+function countingProxy(target){
+  const counter={traps:0};
+  const handler=new Proxy({},{
+    get(_unused,trap){
+      return (...args)=>{counter.traps+=1;return Reflect[trap](...args);};
+    }
+  });
+  return {proxy:new Proxy(target,handler),counter};
+}
+
+function assertValidationError(fn,label){
+  assert.throws(fn,error=>{
+    assert.ok(error instanceof ValidationError,`${label}: ${error?.name}: ${error?.message}`);
+    return true;
+  },label);
+}
+
+test('artifact verifier rejects proxied or lying byte containers and bad options',()=>{
+  const target=manifest().artifacts.find(item=>item.artifact_id==='runtime-personal');
+  const good=artifactBytes['runtime-personal'];
+
+  const {proxy,counter}=countingProxy(Buffer.from(good));
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,proxy),'Buffer Proxy');
+  assert.equal(counter.traps,0);
+
+  class LyingBytes extends Uint8Array {
+    get length(){return good.length;}
+  }
+  const lying=new LyingBytes(good.length+7);
+  lying.set(good,0);
+  lying.set(Buffer.from('garbage'),good.length);
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,lying),'Uint8Array subclass with overridden length');
+  assert.throws(()=>verifyInstallReleaseArtifact(target,lying),/byte length mismatch/);
+  const detached=new Uint8Array(good);
+  detached.buffer.transfer();
+  assert.throws(()=>verifyInstallReleaseArtifact(target,detached),/Release artifact bytes are unreadable/);
+
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,good,null),'artifact options:null');
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,good,'policy'),'artifact options:string');
+  const options=countingProxy({});
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,good,options.proxy),'artifact options Proxy');
+  assert.equal(options.counter.traps,0);
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,[...good]),'plain array bytes');
+
+  assert.equal(verifyInstallReleaseArtifact(target,new Uint8Array(good)).artifact_bytes_verified,true);
+});
+
+test('manifest verifier rejects null or proxied options with ValidationError',()=>{
+  assertValidationError(()=>verifyInstallReleaseManifest(signPackage(),null),'manifest options:null');
+  assertValidationError(()=>verifyInstallReleaseManifest(signPackage(),7),'manifest options:number');
+  const options=countingProxy({trustedSigners:[trustedSigner()],evaluatedAt:EVALUATED_AT});
+  assertValidationError(()=>verifyInstallReleaseManifest(signPackage(),options.proxy),'manifest options Proxy');
+  assert.equal(options.counter.traps,0);
+});
+
+test('trusted signer PEM must be canonical SPKI that re-exports identically',()=>{
+  const lines=publicPem.trimEnd().split('\n');
+  for (const public_key of [
+    [...lines.slice(0,-1),'AAAA',lines.at(-1)].join('\n')+'\n',
+    [lines[0],lines.slice(1,-1).join('').slice(0,20),lines.slice(1,-1).join('').slice(20),lines.at(-1)].join('\n')+'\n'
+  ]) {
+    assert.throws(
+      ()=>verify(signPackage(),{trustedSigners:[trustedSigner({public_key})]}),
+      /Trusted release signer public key is (invalid|not canonical SPKI PEM)/
+    );
+  }
+  assert.equal(verify(signPackage(),{trustedSigners:[trustedSigner({public_key:publicPem.replace(/\n/g,'\r\n')})]}).valid,true);
+  assert.equal(verify(signPackage(),{trustedSigners:[trustedSigner({public_key:publicPem.trimEnd()})]}).valid,true);
 });
