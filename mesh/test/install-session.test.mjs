@@ -401,11 +401,29 @@ test('every decision is explicitly not bound to an authenticated observation',()
 });
 
 test('assessInstallSession rejects null or non-plain options with ValidationError',()=>{
-  for (const options of [null,7,'evaluatedAt',[],new Proxy({evaluatedAt:'2026-09-28T01:01:00.000Z'},{})]) {
+  const evaluatedAt='2026-09-28T01:01:00.000Z';
+  class AssessmentOptions { constructor(){ this.evaluatedAt=evaluatedAt; } }
+  assert.equal(assessInstallSession(candidate(),observation(),{evaluatedAt}).decision,'INSTALL_REVIEW');
+  const cases=[
+    ['null',null],
+    ['number',7],
+    ['string','evaluatedAt'],
+    ['array',[]],
+    ['proxy',new Proxy({evaluatedAt},{})],
+    ['class instance',new AssessmentOptions()],
+    ['inherited evaluatedAt',Object.create({evaluatedAt})]
+  ];
+  for (const [label,options] of cases) {
     assert.throws(()=>assessInstallSession(candidate(),observation(),options),error=>{
-      assert.ok(error instanceof ValidationError,`${String(options)}: ${error?.name}: ${error?.message}`);
+      assert.ok(error instanceof ValidationError,`${label}: ${error?.name}: ${error?.message}`);
       assert.match(error.message,/Install session assessment options must be a plain object/);
       return true;
-    });
+    },label);
   }
+});
+
+test('assessInstallSession rejects a revoked Proxy as options with ValidationError',()=>{
+  const {proxy,revoke}=Proxy.revocable({},{});
+  revoke();
+  assert.throws(()=>assessInstallSession(candidate(),observation(),proxy),ValidationError);
 });

@@ -175,7 +175,7 @@ export function installedStateObservationDigest(d){validateInstalledStateObserva
 
 export function assessInstallSession(candidate,observation,options={}){
   if(
-    options===null||typeof options!=='object'||Array.isArray(options)||utilTypes.isProxy(options)
+    options===null||typeof options!=='object'||utilTypes.isProxy(options)||Array.isArray(options)
     ||![Object.prototype,null].includes(Object.getPrototypeOf(options))
   ) throw new ValidationError('Install session assessment options must be a plain object');
   const {evaluatedAt}=options;
