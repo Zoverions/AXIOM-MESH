@@ -712,3 +712,37 @@ test('AT-7: validateHostInstallPlan meets the hostile-input contract', async () 
     nullablePaths: ['arg0.runtime.node_runtime_observed']
   }, assert);
 });
+
+// AT-4: the policy and targets are plain JSON data throughout before any
+// canonicalJson comparison or digest, so no trap or getter runs.
+test('AT-4: validateHostInstallPolicy rejects Proxy or accessor planner.platforms with ValidationError and runs no trap or getter',()=>{
+  let calls=0;
+  const variants={
+    'transparent Proxy':(platforms)=>new Proxy(platforms,{get(target,key,receiver){ calls+=1; return Reflect.get(target,key,receiver); }}),
+    'throwing Proxy':(platforms)=>new Proxy(platforms,new Proxy({},{get(){ return ()=>{ calls+=1; throw new Error('trap ran'); }; }})),
+    'getter at [0]':(platforms)=>Object.defineProperty([...platforms],0,{get(){ calls+=1; return platforms[0]; },enumerable:true})
+  };
+  for (const [name,make] of Object.entries(variants)) {
+    const policy=structuredClone(installPolicy);
+    policy.planner.platforms=make(policy.planner.platforms);
+    assert.throws(()=>validateHostInstallPolicy(policy,structuredClone(installTargetsJson)),ValidationError,name);
+  }
+  assert.equal(calls,0);
+  assert.equal(validateHostInstallPolicy(structuredClone(installPolicy),structuredClone(installTargetsJson)).valid,true);
+});
+
+test('hostile-input contract: validateHostInstallPolicy rejects every hostile variant with ValidationError',async()=>{
+  await assertHostileInputContract({
+    name:'validateHostInstallPolicy',
+    fn:validateHostInstallPolicy,
+    validArgs:()=>[structuredClone(installPolicy),structuredClone(installTargetsJson)],
+    // Both arguments default to the shipped configuration.
+    acceptablePaths:{arg0:['undefined'],arg1:['undefined']},
+    // The targets catalogue is open here: this validator cross-checks only the
+    // fields it binds (kernel version, per-target catalogues) and digests the
+    // rest, so only non-JSON hostility is checked under it.
+    structuralOnlyPaths:['arg1'],
+    openPaths:[/^arg1(\..*)?$/],
+    maxPaths:2000
+  },assert);
+});
