@@ -2384,9 +2384,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/specialist-harness-bridge.mjs#validateSpecialistHarnessBridge": {
-      "counting-getter": "read-through"
-    },
+    "src/lib/specialist-harness-bridge.mjs#validateSpecialistHarnessBridge": {},
     "src/lib/state-fabric-simulation.mjs#validateStateFabricSimulation": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",

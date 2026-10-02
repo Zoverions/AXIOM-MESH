@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+
 import { autonomyEnvelopeDigest } from '../src/lib/autonomy-envelope.mjs';
 import { ValidationError } from '../src/lib/canonical.mjs';
 import { outcomeDigest, taskLifecycleDigest } from '../src/lib/agent-os-contracts.mjs';
@@ -576,11 +578,14 @@ test('delegation_allowed missing, null, 0 or "false" is rejected before the enve
   ]) {
     const e = envelope();
     mutate(e);
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), /non-delegating/, label);
+    // An accessor probe can no longer observe ordering: the options snapshot
+    // rejects the accessor itself before any envelope check, without calling it.
     let reached = false;
     const schema = e.schema;
     Object.defineProperty(e, 'schema', { get() { reached = true; return schema; }, enumerable: true });
-    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), /non-delegating/, label);
-    assert.equal(reached, false, `envelope validator must not be reached (${label})`);
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), ValidationError, label);
+    assert.equal(reached, false, `envelope getter must not run (${label})`);
   }
 });
 
@@ -670,3 +675,64 @@ for (const field of ['authority_effect', 'execution_effect', 'network_effect', '
     assert.throws(() => validateSpecialistHarnessBridge(missing), /fields are invalid/);
   });
 }
+
+// AT-5: options, envelope and references are plain data read once; no getter
+// or Proxy trap runs and hidden, symbol or accessor state is a ValidationError.
+test('AT-5: accessor, non-enumerable or Proxy envelope and hidden-key references are rejected with ValidationError', () => {
+  let calls = 0;
+  const env = envelope();
+  const counted = (value) => new Proxy(value, { get(target, key, receiver) { calls += 1; return Reflect.get(target, key, receiver); } });
+  const hostile = {
+    'accessor envelope': Object.defineProperty({ now: NOW }, 'envelope', { get() { calls += 1; return env; }, enumerable: true }),
+    'non-enumerable envelope': Object.defineProperty({ now: NOW }, 'envelope', { value: env, enumerable: false }),
+    'Proxy envelope': { envelope: counted(envelope()), now: NOW },
+    'references with hidden mind_id': {
+      envelope: envelope(), now: NOW,
+      references: Object.defineProperty({ outcome: outcome() }, 'mind_id', { value: 'hidden', enumerable: false })
+    },
+    'symbol-keyed options': { envelope: envelope(), now: NOW, [Symbol('extra')]: true },
+    'Proxy now': { envelope: envelope(), now: counted(new Date(NOW)) }
+  };
+  assert.equal(validateSpecialistHarnessBridge(bridge(), { envelope: envelope(), now: NOW, references: { outcome: outcome() } }).valid, true);
+  assert.equal(validateSpecialistHarnessBridge(bridge(), { envelope: envelope(), now: new Date(NOW) }).valid, true);
+  for (const [label, options] of Object.entries(hostile)) {
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), options), ValidationError, label);
+  }
+  assert.equal(calls, 0, 'no getter or trap ran');
+});
+
+test('AT-5: a getter inside the bridge document is never called', () => {
+  let calls = 0;
+  const document = bridge();
+  const value = document.bridge_id;
+  Object.defineProperty(document, 'bridge_id', { get() { calls += 1; return value; }, enumerable: true });
+  assert.throws(() => validateSpecialistHarnessBridge(document), err => err instanceof ValidationError && /failing closed/.test(err.message));
+  assert.equal(calls, 0);
+});
+
+test('hostile-input contract: validateSpecialistHarnessBridge rejects every hostile variant with ValidationError', async () => {
+  await assertHostileInputContract({
+    name: 'validateSpecialistHarnessBridge',
+    fn: validateSpecialistHarnessBridge,
+    validArgs: () => [bridge(), {
+      envelope: envelope(),
+      now: NOW,
+      references: {
+        outcome: outcome(),
+        task_lifecycle: task(),
+        execution_route_policy: routePolicy(),
+        task_continuity_policy: continuityPolicy()
+      }
+    }],
+    // Absent options and references are undefined; the remaining paths are
+    // nullable fields of the bridge and of the referenced documents' schemas.
+    nullablePaths: [
+      /^arg0\..*_digest$/,
+      'arg0.ceiling_binding.max_cost',
+      /^arg1(\.(envelope|now|references|references\.[a-z_]+))?$/,
+      /^arg1\.references\.outcome\.(cost_budget\.currency|deadline|resource_envelope_ref)$/,
+      /^arg1\.references\.task_lifecycle\.(authority_checked_at|authority_snapshot_ref|budget_checked_at|budget_ref|node_ref|provider_ref|resume_from_digest|worker_ref)$/
+    ],
+    maxPaths: 1000
+  }, assert);
+});
