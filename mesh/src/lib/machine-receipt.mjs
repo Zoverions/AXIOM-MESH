@@ -1,3 +1,6 @@
+import { KeyObject, createPublicKey } from 'node:crypto';
+import { types } from 'node:util';
+
 import {
   AxiomError,
   ValidationError,
@@ -177,15 +180,35 @@ export function verifyMachineIntentReceipt(input, gridPublicKey) {
   // by node:crypto after this point and may run caller code, so nothing below
   // reads the caller's object again.
   const receipt = validateMachineIntentReceipt(input);
-  if (!gridPublicKey) throw new ValidationError('Grid verification key is required');
+  const key = gridVerificationKey(gridPublicKey);
+  let valid;
+  try {
+    valid = verifyObjectSignature(receipt.statement, receipt.attestation, key);
+  } catch {
+    throw new ValidationError('Grid verification key cannot verify the machine intent receipt');
+  }
   return {
-    valid: verifyObjectSignature(receipt.statement, receipt.attestation, gridPublicKey),
+    valid,
     receipt_digest: receipt.receipt_digest,
     intent_id: receipt.statement.intent.intent_id,
     status: receipt.statement.intent.status,
     verification_mode: receipt.statement.chain.verification_mode,
     prefix_assurance: receipt.statement.chain.prefix_assurance
   };
+}
+
+// The key is parsed once, up front, so a revoked Proxy, a non-key object or an
+// undecodable string is a ValidationError rather than a raw node:crypto error.
+// A KeyObject is used as is; anything else is read once by createPublicKey.
+function gridVerificationKey(gridPublicKey) {
+  if (!gridPublicKey) throw new ValidationError('Grid verification key is required');
+  if (types.isProxy(gridPublicKey)) throw new ValidationError('Grid verification key cannot be a Proxy');
+  if (gridPublicKey instanceof KeyObject) return gridPublicKey;
+  try {
+    return createPublicKey(gridPublicKey);
+  } catch {
+    throw new ValidationError('Grid verification key is invalid');
+  }
 }
 
 // Only ever applied to a fresh snapshot (a tree of plain data), so this is

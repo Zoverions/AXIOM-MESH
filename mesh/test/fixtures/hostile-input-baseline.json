@@ -143,11 +143,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/agent-trust-portable-work-receipt.mjs#verifyAgentPortableWorkReceipt": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/agent-trust-portable-work-receipt.mjs#verifyAgentPortableWorkReceipt": {},
     "src/lib/agent-trust-promotion-preflight.mjs#verifyAgentTrustPromotionPreflight": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",

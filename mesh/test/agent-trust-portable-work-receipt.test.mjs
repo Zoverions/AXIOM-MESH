@@ -843,3 +843,93 @@ test('plain, JSON and structuredClone Grid receipts still mint and verify identi
     }
   }
 });
+
+function revokedProxy(target = []) {
+  const revocable = Proxy.revocable(target, {});
+  revocable.revoke();
+  return revocable.proxy;
+}
+
+test('digest-list options, grid key and receipt arguments are validated up front with ValidationError, never a raw TypeError', () => {
+  const f = fixture();
+  const receipt = create(f);
+  for (const [label, value] of [['5', 5], ['{}', {}], ['null', null], ['revoked Proxy', revokedProxy()]]) {
+    for (const field of ['reportedArtifactDigests', 'reportedEvidenceDigests']) {
+      assert.throws(() => create(f, { [field]: value }), ValidationError, `create ${field}=${label}`);
+    }
+    for (const field of ['expectedArtifactDigests', 'expectedEvidenceDigests']) {
+      assert.throws(() => verifyAgentPortableWorkReceipt(receipt, { ...verifyEvidence(f), [field]: value }), ValidationError, `verify ${field}=${label}`);
+    }
+  }
+  const throwingIterable = { *[Symbol.iterator]() { throw new Error('caller iterator'); } };
+  assert.throws(() => create(f, { reportedArtifactDigests: throwingIterable }), ValidationError);
+  for (const [label, key] of [['revoked Proxy', revokedProxy({})], ['{}', {}], ['x', 'x']]) {
+    assert.throws(() => create(f, { gridPublicKey: key }), ValidationError, `create gridPublicKey=${label}`);
+    assert.throws(() => verifyAgentPortableWorkReceipt(receipt, { ...verifyEvidence(f), gridPublicKey: key }), ValidationError, `verify gridPublicKey=${label}`);
+  }
+  assert.throws(() => verifyAgentPortableWorkReceipt(revokedProxy({}), verifyEvidence(f)), ValidationError, 'revoked receipt');
+  assert.throws(() => verifyAgentPortableWorkReceipt({ ...receipt, statement: revokedProxy({}) }, verifyEvidence(f)), ValidationError, 'revoked statement');
+  // Arrays, Sets and generators of digests still work, deduplicated and sorted.
+  assert.deepEqual(create(f, { reportedArtifactDigests: new Set([ARTIFACT_B, ARTIFACT_A]) }).statement.reported_artifact_digests, [ARTIFACT_A, ARTIFACT_B]);
+  assert.equal(verifyAgentPortableWorkReceipt(receipt, { ...verifyEvidence(f), expectedArtifactDigests: [ARTIFACT_A, ARTIFACT_B, ARTIFACT_A] }).valid, true);
+});
+
+test('a Proxy digest array cannot pass the 256 cap with one length and supply 300 digests (length read at most once)', () => {
+  const f = fixture();
+  const receipt = structuredClone(create(f));
+  const many = Array.from({ length: 300 }, (_, index) => index.toString(16).padStart(64, '0'));
+  let lengthReads = 0;
+  let traps = 0;
+  const lying = new Proxy([...receipt.statement.reported_artifact_digests], {
+    get(target, key, receiver) {
+      traps += 1;
+      if (key === 'length') { lengthReads += 1; return lengthReads === 1 ? 1 : many.length; }
+      if (typeof key === 'string' && /^\d+$/.test(key)) return many[Number(key)];
+      return Reflect.get(target, key, receiver);
+    },
+    has(target, key) { return (typeof key === 'string' && /^\d+$/.test(key) && Number(key) < many.length) || Reflect.has(target, key); }
+  });
+  receipt.statement.reported_artifact_digests = lying;
+  assert.throws(
+    () => verifyAgentPortableWorkReceipt(receipt, verifyEvidence(f)),
+    error => error instanceof ValidationError && /reported_artifact_digests must contain at most 256 digests/.test(error.message)
+  );
+  assert.ok(lengthReads <= 1, `length read ${lengthReads} times`);
+  assert.equal(traps, 0, 'the Proxy is rejected before any trap runs');
+  // A real 257-item array is still capped and a 256-item one reaches the digest checks.
+  const over = structuredClone(create(f));
+  over.statement.reported_artifact_digests = many.slice(0, 257);
+  assert.throws(() => verifyAgentPortableWorkReceipt(over, verifyEvidence(f)), /at most 256 digests/);
+  const atCap = structuredClone(create(f));
+  atCap.statement.reported_artifact_digests = many.slice(0, 256);
+  assert.throws(() => verifyAgentPortableWorkReceipt(atCap, verifyEvidence(f)), /statement digest mismatch/);
+});
+
+test('M13: an iterable that swaps in another genuinely signed Grid receipt after the snapshot cannot rebind the minted receipt', () => {
+  const f = fixture();
+  const alternate = buildGridReceipt({ executor: f.executor, status: 'denied' });
+  const raw = structuredClone(f.gridReceipt);
+  let swaps = 0;
+  const swapping = {
+    *[Symbol.iterator]() {
+      swaps += 1;
+      for (const key of Object.keys(raw)) delete raw[key];
+      Object.assign(raw, structuredClone(alternate));
+      yield ARTIFACT_A;
+    }
+  };
+  let minted;
+  try {
+    minted = create(f, { gridMachineReceipt: raw, reportedArtifactDigests: swapping });
+  } catch (error) {
+    assert.ok(error instanceof ValidationError, `${error?.name}: ${error?.message}`);
+    return;
+  }
+  assert.equal(swaps, 1);
+  assert.equal(minted.statement.grid_machine_receipt_digest, f.gridReceipt.receipt_digest);
+  assert.notEqual(minted.statement.grid_machine_receipt_digest, alternate.receipt_digest);
+  assert.equal(minted.statement.grid_terminal_status, 'completed');
+  // The minted receipt verifies only against the snapshotted receipt, never the swapped one.
+  assert.equal(verifyAgentPortableWorkReceipt(minted, verifyEvidence(f)).valid, true);
+  assert.throws(() => verifyAgentPortableWorkReceipt(minted, { ...verifyEvidence(f), gridMachineReceipt: raw }), ValidationError);
+});

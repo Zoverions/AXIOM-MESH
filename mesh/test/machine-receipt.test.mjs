@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { createPublicKey, generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { MeshIdentity } from '../src/lib/identity.mjs';
@@ -257,4 +257,26 @@ test('bigint, symbol, undefined and non-finite receipt values are plain-data Val
       }
     }
   }
+});
+
+test('a revoked Proxy, non-key object or undecodable grid key is a ValidationError, never a raw node:crypto error', () => {
+  const { identity, receipt } = signedReceipt();
+  const revocable = Proxy.revocable({}, {});
+  revocable.revoke();
+  let traps = 0;
+  const recording = new Proxy({}, { get() { traps += 1; return undefined; } });
+  for (const [label, key] of [['{}', {}], ['x', 'x'], ['revoked Proxy', revocable.proxy], ['recording Proxy', recording], ['number', 5]]) {
+    assert.throws(() => verifyMachineIntentReceipt(receipt, key), ValidationError, label);
+  }
+  assert.equal(traps, 0);
+  assert.throws(() => verifyMachineIntentReceipt(receipt), /Grid verification key is required/);
+  // Valid key forms are unchanged.
+  const pem = typeof identity.publicKey === 'string'
+    ? identity.publicKey
+    : identity.publicKey.export({ type: 'spki', format: 'pem' });
+  assert.equal(verifyMachineIntentReceipt(receipt, identity.publicKey).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, pem).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, createPublicKey(pem)).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, { key: pem, format: 'pem' }).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, gridIdentity().publicKey).valid, false);
 });
