@@ -151,7 +151,7 @@ function plainFields(record, label, allowed, supported = 'supported') {
 }
 
 function plainTime(value) {
-  if (types.isProxy(value)) throw new ValidationError('now is invalid');
+  // types.isDate is false for a Proxy and runs no trap.
   if (types.isDate(value)) return Date.prototype.getTime.call(value);
   if (value !== undefined && typeof value !== 'string' && typeof value !== 'number') throw new ValidationError('now is invalid');
   return value;

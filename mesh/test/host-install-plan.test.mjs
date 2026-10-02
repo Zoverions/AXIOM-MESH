@@ -746,3 +746,12 @@ test('hostile-input contract: validateHostInstallPolicy rejects every hostile va
     maxPaths:2000
   },assert);
 });
+
+test('a non-array targets inventory or a non-record target entry is a ValidationError, never a raw TypeError',()=>{
+  for (const [label,value] of [['number',5],['string','x'],['null entry',[null]],['number entry',[5]],['array entry',[[]]]]) {
+    const targets=structuredClone(installTargetsJson);
+    targets.targets=value;
+    assert.throws(()=>validateHostInstallPolicy(structuredClone(installPolicy),targets),
+      error=>error instanceof ValidationError&&/Install targets inventory is invalid/.test(error.message),label);
+  }
+});

@@ -1,4 +1,3 @@
-import { KeyObject, createPublicKey } from 'node:crypto';
 import { types } from 'node:util';
 
 import {
@@ -197,18 +196,13 @@ export function verifyMachineIntentReceipt(input, gridPublicKey) {
   };
 }
 
-// The key is parsed once, up front, so a revoked Proxy, a non-key object or an
-// undecodable string is a ValidationError rather than a raw node:crypto error.
-// A KeyObject is used as is; anything else is read once by createPublicKey.
+// Checked up front, before node:crypto touches it: a Proxy (even a revoked
+// one) is a ValidationError and runs no trap. Any other unusable key surfaces
+// from the signature check, which the caller wraps as a ValidationError.
 function gridVerificationKey(gridPublicKey) {
   if (!gridPublicKey) throw new ValidationError('Grid verification key is required');
   if (types.isProxy(gridPublicKey)) throw new ValidationError('Grid verification key cannot be a Proxy');
-  if (gridPublicKey instanceof KeyObject) return gridPublicKey;
-  try {
-    return createPublicKey(gridPublicKey);
-  } catch {
-    throw new ValidationError('Grid verification key is invalid');
-  }
+  return gridPublicKey;
 }
 
 // Only ever applied to a fresh snapshot (a tree of plain data), so this is

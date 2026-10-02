@@ -933,3 +933,38 @@ test('M13: an iterable that swaps in another genuinely signed Grid receipt after
   assert.equal(verifyAgentPortableWorkReceipt(minted, verifyEvidence(f)).valid, true);
   assert.throws(() => verifyAgentPortableWorkReceipt(minted, { ...verifyEvidence(f), gridMachineReceipt: raw }), ValidationError);
 });
+
+test('digest-list options are type-checked before any other evidence is read', () => {
+  const f = fixture();
+  const receipt = create(f);
+  assert.throws(
+    () => create(f, { handoff: null, reportedEvidenceDigests: 5 }),
+    error => error instanceof ValidationError && /reportedEvidenceDigests/.test(error.message)
+  );
+  assert.throws(
+    () => verifyAgentPortableWorkReceipt(receipt, { ...verifyEvidence(f), handoff: null, expectedEvidenceDigests: 5 }),
+    error => error instanceof ValidationError && /expectedEvidenceDigests/.test(error.message)
+  );
+});
+
+test('canonicalDigestSet reads length once: digests appended by an element getter during the read are ignored', () => {
+  const f = fixture();
+  const receipt = structuredClone(create(f));
+  const original = receipt.statement.reported_artifact_digests;
+  const growing = [...original];
+  let appended = false;
+  Object.defineProperty(growing, 0, {
+    enumerable: true,
+    get() {
+      if (!appended) {
+        appended = true;
+        for (let index = 0; index < 300; index += 1) growing.push(index.toString(16).padStart(64, '0'));
+      }
+      return original[0];
+    }
+  });
+  receipt.statement.reported_artifact_digests = growing;
+  const verified = verifyAgentPortableWorkReceipt(receipt, verifyEvidence(f));
+  assert.equal(verified.valid, true);
+  assert.equal(appended, true);
+});
