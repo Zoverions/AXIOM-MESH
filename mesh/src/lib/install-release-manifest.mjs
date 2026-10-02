@@ -23,6 +23,9 @@ export const INSTALL_RELEASE_MANIFEST_SCHEMA='axiom-install-release-manifest.v1'
 export const INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA='axiom-install-release-manifest-package.v1';
 export const INSTALL_RELEASE_MANIFEST_POLICY_SCHEMA='axiom-install-release-manifest-policy.v1';
 
+// Trusted signers carry SPKI public-key PEM only. createPublicKey would also accept
+// private-key encodings and derive a public key, admitting release private keys.
+const SPKI_PUBLIC_KEY_PEM=/^-----BEGIN PUBLIC KEY-----\r?\n(?:[A-Za-z0-9+/]+={0,2}\r?\n)+-----END PUBLIC KEY-----\r?\n?$/;
 const CHANNELS=Object.freeze(['development','candidate','stable']);
 const PROFILES=Object.freeze(['personal-local','infrastructure-node']);
 const ARTIFACT_KINDS=Object.freeze([
@@ -430,6 +433,7 @@ function trustedSignerFor(keyId,trustedSigners,policy){
       ||typeof signer.public_key!=='string'
       ||signer.public_key.length<32
       ||signer.public_key.length>16_384
+      ||!SPKI_PUBLIC_KEY_PEM.test(signer.public_key)
       ||!['active','retired','revoked'].includes(signer.status)
     ) throw new ValidationError('Trusted release signer inventory is invalid');
     ids.add(signer.key_id);

@@ -78,7 +78,7 @@ The verifier requires an externally supplied trusted-signer inventory.
 Each signer binds:
 
 - exact key ID;
-- Ed25519 public key;
+- Ed25519 public key, as a single SPKI `BEGIN PUBLIC KEY` PEM block (private-key encodings, DER, JWK, and multi-block input are rejected before key conversion, so release private-key material is never accepted as trusted-signer input);
 - explicit roles;
 - state: `active | retired | revoked`.
 

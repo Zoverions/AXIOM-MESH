@@ -435,7 +435,44 @@ test('artifact verification rejects hostile metadata containers',()=>{
 
 test('release verifier has no host mutation process network or credential side-effect imports',async()=>{
   const source=await readFile(new URL('../src/lib/install-release-manifest.mjs',import.meta.url),'utf8');
+  const imports=[...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(match=>match[1]);
+  assert.deepEqual(imports,[
+    'node:crypto',
+    'node:util',
+    '../../config/install-release-manifest-policy.json',
+    '../../config/install-targets.json',
+    '../../config/host-install-policy.json',
+    '../../config/capabilities.json',
+    '../../config/application-catalog.json',
+    '../../config/service-network-policy.json',
+    '../../config/setup.json',
+    '../grid/migrations.mjs',
+    './canonical.mjs'
+  ]);
+  const migrations=await readFile(new URL('../src/grid/migrations.mjs',import.meta.url),'utf8');
+  assert.deepEqual(
+    [...migrations.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(match=>match[1]),
+    ['../lib/canonical.mjs']
+  );
+  assert.doesNotMatch(source,/\bimport\s*\(|node:fs|node:dgram|node:tls|node:dns|process\.env/);
   assert.doesNotMatch(source,/node:child_process|node:net|node:http|node:https/);
   assert.doesNotMatch(source,/\bfetch\s*\(|\bexec\s*\(|\bspawn\s*\(|\bexecFile\s*\(/);
   assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|unlink|rename/);
+});
+
+test('trusted signer inventory rejects private-key material before key conversion',()=>{
+  const privatePem=pair.privateKey.export({type:'pkcs8',format:'pem'});
+  for (const public_key of [
+    privatePem,
+    privatePem.replace('PRIVATE KEY','PUBLIC KEY').replace('PRIVATE KEY','PUBLIC KEY')+'\n'+publicPem,
+    `${publicPem}${privatePem}`,
+    pair.privateKey.export({type:'pkcs8',format:'der'}).toString('base64'),
+    JSON.stringify(pair.privateKey.export({format:'jwk'}))
+  ]) {
+    assert.throws(
+      ()=>verify(signPackage(),{trustedSigners:[trustedSigner({public_key})]}),
+      /Trusted release signer inventory is invalid/
+    );
+  }
+  assert.equal(verify(signPackage(),{trustedSigners:[trustedSigner({public_key:publicPem})]}).valid,true);
 });
