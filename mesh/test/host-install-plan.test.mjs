@@ -1,0 +1,226 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+
+import { hostInstallMain } from '../src/host-install.mjs';
+import {
+  buildHostInstallPlan,
+  HOST_INSTALL_PLAN_SCHEMA,
+  HOST_INSTALL_PLAN_STATUS,
+  validateHostInstallPlan,
+  validateHostInstallPolicy
+} from '../src/lib/host-install-plan.mjs';
+
+function linuxFacts(overrides={}) {
+  return {
+    facts_source:'synthetic-test',
+    platform:'linux',
+    architecture:'x64',
+    distro_id:'ubuntu',
+    distro_version:'24.04',
+    init_system:'systemd',
+    package_manager:'apt-get',
+    node_version:null,
+    memory_bytes:16*1024*1024*1024,
+    root_filesystem_free_bytes:100*1024*1024*1024,
+    container_runtime:'none-detected',
+    effective_uid:1000,
+    ...overrides
+  };
+}
+
+test('host install policy is executable while mutating installation remains absent',()=>{
+  const result=validateHostInstallPolicy();
+  assert.equal(result.valid,true);
+  assert.equal(result.schema,'axiom-host-install-policy.v1');
+  assert.deepEqual([...result.profile_ids],['personal-local','infrastructure-node']);
+  assert.match(result.policy_digest,/^[a-f0-9]{64}$/);
+  assert.equal(result.host_mutation_enabled,false);
+  assert.equal(result.authority_effect,'none');
+});
+
+test('OCI plan semantics do not classify a missing target-host Node runtime as a blocker',()=>{
+  const plan=buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts(),
+    runtimeStrategy:'oci'
+  });
+  assert.equal(plan.schema,HOST_INSTALL_PLAN_SCHEMA);
+  assert.equal(plan.status,HOST_INSTALL_PLAN_STATUS);
+  assert.equal(plan.runtime_strategy,'oci');
+  assert.equal(plan.host_facts_source,'synthetic-test');
+  assert.equal(plan.host_candidate_compatible,true);
+  assert.deepEqual(plan.blockers,[]);
+  assert.deepEqual(plan.prerequisites,['install-reviewed-container-runtime:docker']);
+  assert.equal(plan.runtime.node_runtime_required,false);
+  assert.equal(plan.runtime.node_runtime_observed,null);
+  assert.equal(plan.runtime.container_runtime_name_recognized,false);
+  assert.equal(plan.runtime.container_runtime_version_verified,false);
+  assert.equal(plan.runtime.container_runtime_health_verified,false);
+  assert.equal(plan.network.public_ingress_enabled,false);
+  assert.equal(plan.network.external_egress,'deny');
+  assert.equal(plan.network.mesh_enrollment,'not-performed');
+  assert.equal(plan.mutation_performed,false);
+  assert.equal(plan.credentials_created,false);
+  assert.equal(plan.live_services_started,false);
+  assert.equal(plan.authority_effect,'none');
+  assert.equal(validateHostInstallPlan(plan).valid,true);
+});
+
+test('recognized Docker name still requires separate version and health verification',()=>{
+  const plan=buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts({container_runtime:'docker'})
+  });
+  assert.deepEqual(plan.prerequisites,[
+    'verify-reviewed-container-runtime-version-health:docker'
+  ]);
+  assert.equal(plan.runtime.container_runtime_name_recognized,true);
+  assert.equal(plan.runtime.container_runtime_version_verified,false);
+  assert.equal(plan.runtime.container_runtime_health_verified,false);
+  assert.equal(plan.host_candidate_compatible,true);
+});
+
+test('unrecognized OCI runtime blocks rather than being treated as equivalent',()=>{
+  const plan=buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts({container_runtime:'podman'})
+  });
+  assert.equal(plan.host_candidate_compatible,false);
+  assert.ok(plan.blockers.includes('unrecognized-container-runtime:podman'));
+});
+
+test('source strategy requires a compatible Node runtime but OCI strategy does not',()=>{
+  const missing=buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts(),
+    runtimeStrategy:'source'
+  });
+  assert.equal(missing.host_candidate_compatible,false);
+  assert.ok(missing.blockers.some(item=>item.includes('source-node-runtime-unavailable-or-unsupported:missing')));
+
+  const compatible=buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts({node_version:'24.18.0'}),
+    runtimeStrategy:'source'
+  });
+  assert.equal(compatible.host_candidate_compatible,true);
+  assert.equal(compatible.runtime.node_runtime_required,true);
+
+  const compatibilityLane=buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts({node_version:'22.23.2'}),
+    runtimeStrategy:'source'
+  });
+  assert.equal(compatibilityLane.host_candidate_compatible,true);
+});
+
+test('unsupported platform distribution architecture or host semantics fail closed',()=>{
+  for (const [facts,reason] of [
+    [linuxFacts({platform:'win32'}),'unsupported-platform:win32'],
+    [linuxFacts({architecture:'riscv64'}),'unsupported-architecture:riscv64'],
+    [linuxFacts({distro_id:'debian',distro_version:'13'}),'unsupported-distribution:debian:13'],
+    [linuxFacts({init_system:'openrc'}),'unsupported-init-system:openrc'],
+    [linuxFacts({package_manager:'dnf'}),'unsupported-package-manager:dnf'],
+    [linuxFacts({memory_bytes:0}),'memory-observation-unavailable'],
+    [linuxFacts({root_filesystem_free_bytes:0}),'root-filesystem-free-space-observation-unavailable']
+  ]) {
+    const plan=buildHostInstallPlan({profileId:'personal-local',hostFacts:facts});
+    assert.equal(plan.host_candidate_compatible,false);
+    assert.ok(plan.blockers.includes(reason),reason);
+  }
+});
+
+
+
+test('supplied facts file is always labelled supplied-evidence',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'axiom-host-facts-'));
+  const path=join(root,'facts.json');
+  await writeFile(path,JSON.stringify(linuxFacts({
+    facts_source:'live-local-observation',
+    container_runtime:'docker'
+  })));
+  const plan=await hostInstallMain([
+    'plan','personal-local','--runtime','oci','--facts',path
+  ]);
+  assert.equal(plan.host_facts_source,'supplied-evidence');
+});
+
+test('unknown host fact provenance fails closed',()=>{
+  assert.throws(()=>buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:linuxFacts({facts_source:'claimed-live-by-file'})
+  }),/facts_source/);
+});
+
+test('infrastructure planning reuses the existing service-unit projection without enrollment',()=>{
+  const plan=buildHostInstallPlan({
+    profileId:'infrastructure-node',
+    hostFacts:linuxFacts({container_runtime:'docker'})
+  });
+  assert.equal(plan.topology,'independent-service-units');
+  assert.equal(plan.service_units,'required');
+  assert.equal(plan.provisioning.service_unit_projection,'compose-existing-provision-service-units');
+  assert.equal(plan.network.mesh_enrollment,'not-performed');
+  assert.equal(plan.authority_effect,'none');
+});
+
+test('plans are deterministic digest-bound and closed against authority laundering',()=>{
+  const facts=linuxFacts({container_runtime:'docker'});
+  const left=buildHostInstallPlan({profileId:'personal-local',hostFacts:facts});
+  const right=buildHostInstallPlan({profileId:'personal-local',hostFacts:facts});
+  assert.deepEqual(left,right);
+  assert.match(left.plan_digest,/^[a-f0-9]{64}$/);
+
+  for (const mutate of [
+    x=>{x.authority_effect='grant';},
+    x=>{x.network.public_ingress_enabled=true;},
+    x=>{x.network.external_egress='allow';},
+    x=>{x.eligible_for_mutating_install=true;},
+    x=>{x.mutation_performed=true;},
+    x=>{x.credentials_created=true;},
+    x=>{x.provisioning.signed_release_manifest_verified=true;},
+    x=>{x.topology='other';},
+    x=>{x.runtime_identity='root';},
+    x=>{x.service_units='required';},
+    x=>{x.profile_digest='a'.repeat(64);},
+    x=>{x.directories.data_dir='/tmp/other';},
+    x=>{x.provisioning.production_credentials='invent-credentials';},
+    x=>{x.runtime.container_runtime_version_verified=true;},
+    x=>{x.runtime.container_runtime_health_verified=true;},
+    x=>{x.extra_authority=true;}
+  ]) {
+    const changed=structuredClone(left);
+    mutate(changed);
+    assert.throws(()=>validateHostInstallPlan(changed));
+  }
+});
+
+test('host facts and plan inputs reject proxies accessors hidden fields and sparse arrays',()=>{
+  const facts=linuxFacts({container_runtime:'docker'});
+  assert.throws(()=>buildHostInstallPlan({
+    profileId:'personal-local',
+    hostFacts:new Proxy(facts,{})
+  }),/Proxy/i);
+
+  let reads=0;
+  const accessor=structuredClone(facts);
+  Object.defineProperty(accessor,'platform',{
+    enumerable:true,
+    get(){reads+=1;return 'linux';}
+  });
+  assert.throws(()=>buildHostInstallPlan({profileId:'personal-local',hostFacts:accessor}),/data properties/i);
+  assert.equal(reads,0);
+
+  const plan=structuredClone(buildHostInstallPlan({profileId:'personal-local',hostFacts:facts}));
+  plan.blockers=new Array(1);
+  assert.throws(()=>validateHostInstallPlan(plan),/sparse|invalid cardinality/i);
+});
+
+test('planner source is observation-only and cannot invoke host mutation/process execution',async()=>{
+  const source=await readFile(new URL('../src/lib/host-install-plan.mjs',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/node:child_process|\bspawn\s*\(|\bexecFile\s*\(|\bexecSync\s*\(|\bfork\s*\(/);
+  assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|rm\s*\(|unlink|rename/);
+});

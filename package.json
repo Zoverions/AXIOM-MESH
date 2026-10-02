@@ -72,6 +72,8 @@
     "release:verify": "npm --prefix mesh run release:verify",
     "release:evidence": "npm --prefix mesh run release:evidence",
     "growth:demand:check": "npm --prefix mesh run growth:demand:check",
-    "growth:gtm:check": "npm --prefix mesh run growth:gtm:check"
+    "growth:gtm:check": "npm --prefix mesh run growth:gtm:check",
+    "host-install:policy": "npm --prefix mesh run host-install:policy",
+    "host-install:plan": "npm --prefix mesh run host-install:plan --"
   }
 }

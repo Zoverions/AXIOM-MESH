@@ -25,8 +25,20 @@ supported Node.js/npm toolchain, installs the two exact zero-dependency locks
 with lifecycle scripts disabled, proves they did not change, and runs the
 kernel and release gates. It creates no production credentials and makes no
 deployment claim. The current productization contract separately specifies
-personal/local and infrastructure fresh-host install profiles; those are
-priority targets and are not yet supported installers.
+personal/local and infrastructure fresh-host install profiles. A non-mutating,
+OCI-first Linux host planner now produces digest-bound compatibility,
+blocker, and prerequisite evidence for those profiles. Its target-host fact
+contract permits Node.js to be absent for OCI planning, but the current planner
+command itself is a Node.js program and is not the future Node-free bootstrapper.
+It modifies no host state. A separate signed release/install-manifest verifier
+now requires an externally trusted active Ed25519 signer, exact current
+control-plane digests, bounded validity, exact profile status, and required
+artifact/evidence metadata; artifact bytes still require a separate local
+length/digest check. Install Session v0 additionally classifies exact no-op,
+install/repair/upgrade/recovery review, and fail-closed newer/diverged/partial-
+secret/uncertain states from bounded installed-state evidence. None of these
+results authorizes host mutation. The profiles are still not supported fresh-
+host installers.
 
 The authenticated Gateway surface also has a versioned client contract covering
 all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
@@ -147,9 +159,13 @@ production Education actions, or proving the downstream repository has adopted
 the exact contract. Downstream adoption requires an exact merged Mesh pin,
 feature-adoption state, and Education's own verification.
 
-Likewise, source setup is not host installation. The first supported fresh-host
-installer must begin from a supported clean Linux host, verify an immutable
-signed release before privileged mutation, create unprivileged service/data/
+Likewise, source setup and host planning are not host installation. The
+current planner may establish only bounded host compatibility and prerequisites;
+it creates no users, credentials, services, network state, or install authority.
+The first supported fresh-host installer must begin from a supported clean Linux
+host, consume a compatible exact host plan, verify an immutable signed release
+against the current control plane and locally verify artifact bytes before
+privileged mutation, create unprivileged service/data/
 secret boundaries, preserve no-public-ingress and deny-egress defaults, and
 prove reboot, update, tampered/incompatible-update rejection, restore or safe
 rollback, uninstall, and non-secret receipts. Infrastructure-node installation
