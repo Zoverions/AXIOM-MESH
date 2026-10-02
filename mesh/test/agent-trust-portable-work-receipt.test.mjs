@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { MeshIdentity } from '../src/lib/identity.mjs';
 import { PolicyEngine } from '../src/lib/policy.mjs';
 import { buildMachineDiscovery } from '../src/lib/machine-discovery.mjs';
@@ -15,6 +15,14 @@ import {
   createAgentPortableWorkReceipt,
   verifyAgentPortableWorkReceipt
 } from '../src/lib/agent-trust-portable-work-receipt.mjs';
+import {
+  containerPaths,
+  countingProxy,
+  label,
+  propertyPaths,
+  withAccessorAt,
+  withProxyAt
+} from '../test-support/hostile-plain-data.mjs';
 
 const humans = new Set(['owner.alice']);
 const INPUT = '1'.repeat(64);
@@ -613,4 +621,225 @@ test('unknown portable receipt fields fail closed', () => {
     () => verifyAgentPortableWorkReceipt(statementExtra, verifyEvidence(f)),
     /unsupported field magic/
   );
+});
+
+// P3: validate/verifyMachineIntentReceipt used to hand the caller's own object
+// back, and verifyBoundInputs read `statement` off it again. A getter or lying
+// Proxy could show the genuine signed statement to the Grid checks and a forged
+// outcome digest and chain head to the portable receipt being minted.
+function forgedGridStatement(gridReceipt) {
+  const forged = structuredClone(gridReceipt.statement);
+  const field = forged.intent.status === 'completed' ? 'result_digest' : 'error_digest';
+  forged.outcome[field] = 'f'.repeat(64);
+  forged.chain.head = 'e'.repeat(64);
+  return forged;
+}
+
+function insideMachineReceiptVerifier() {
+  return /(validate|verify)MachineIntentReceipt/.test(new Error().stack);
+}
+
+function assertNotForged(run, label) {
+  let minted;
+  try {
+    minted = run();
+  } catch (error) {
+    assert.ok(error instanceof ValidationError, `${label}: expected ValidationError, got ${error?.name}: ${error?.message}`);
+    return error;
+  }
+  assert.fail(
+    `${label}: accepted (terminal_outcome_digest=${minted?.statement?.terminal_outcome_digest?.slice(0, 8)}`
+    + ` grid_chain_head=${minted?.statement?.grid_chain_head?.slice(0, 8)} valid=${minted?.valid})`
+  );
+}
+
+test('P3: a statement getter cannot show the Grid checks one statement and the minted receipt another', () => {
+  const f = fixture();
+  const genuine = f.gridReceipt;
+  const forged = forgedGridStatement(genuine);
+  assert.throws(
+    () => create(f, { gridMachineReceipt: { ...genuine, statement: forged } }),
+    /digest does not match the envelope/
+  );
+  let getterCalls = 0;
+  const hostile = { ...genuine };
+  Object.defineProperty(hostile, 'statement', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      getterCalls += 1;
+      return insideMachineReceiptVerifier() ? genuine.statement : forged;
+    }
+  });
+  const createError = assertNotForged(() => create(f, { gridMachineReceipt: hostile }), 'P3 getter create');
+  assert.match(createError.message, /must be plain data; statement is an accessor/);
+  const minted = create(f);
+  assertNotForged(
+    () => verifyAgentPortableWorkReceipt(minted, { ...verifyEvidence(f), gridMachineReceipt: hostile }),
+    'P3 getter verify'
+  );
+  assert.equal(getterCalls, 0, 'the statement getter must never run');
+});
+
+test('P3: a lying Proxy cannot show the Grid checks one statement and the minted receipt another', () => {
+  const f = fixture();
+  const genuine = f.gridReceipt;
+  const forged = forgedGridStatement(genuine);
+  const counter = { traps: 0 };
+  const hostile = countingProxy({ ...genuine }, counter, {
+    statement: () => (insideMachineReceiptVerifier() ? genuine.statement : forged)
+  });
+  const createError = assertNotForged(() => create(f, { gridMachineReceipt: hostile }), 'P3 Proxy create');
+  assert.match(createError.message, /must be plain data; <root> is a Proxy/);
+  const minted = create(f);
+  assertNotForged(
+    () => verifyAgentPortableWorkReceipt(minted, { ...verifyEvidence(f), gridMachineReceipt: hostile }),
+    'P3 Proxy verify'
+  );
+  assert.equal(counter.traps, 0, 'the Proxy must be rejected before any trap runs');
+});
+
+test('a Proxy or accessor anywhere in the Grid receipt input is rejected by create and verify before any trap or getter runs', () => {
+  const f = fixture();
+  const minted = create(f);
+  const document = f.gridReceipt;
+  const runs = [
+    ['create', value => create(f, { gridMachineReceipt: value })],
+    ['verify', value => verifyAgentPortableWorkReceipt(minted, { ...verifyEvidence(f), gridMachineReceipt: value })]
+  ];
+  let checked = 0;
+  for (const [name, run] of runs) {
+    for (const path of containerPaths(document)) {
+      const counter = { traps: 0 };
+      assert.throws(
+        () => run(withProxyAt(document, path, counter)),
+        error => error instanceof ValidationError && /must be plain data/.test(error.message) && /Proxy/.test(error.message),
+        `${name} Proxy at ${label(path)}`
+      );
+      assert.equal(counter.traps, 0, `${name} Proxy at ${label(path)} ran a trap`);
+      checked += 1;
+    }
+    for (const path of propertyPaths(document)) {
+      const counter = { getters: 0 };
+      assert.throws(
+        () => run(withAccessorAt(document, path, counter)),
+        error => error instanceof ValidationError && /must be plain data/.test(error.message) && /accessor/.test(error.message),
+        `${name} accessor at ${label(path)}`
+      );
+      assert.equal(counter.getters, 0, `${name} accessor at ${label(path)} ran its getter`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 100, `expected to cover every position, covered ${checked}`);
+});
+
+// Hostile caller options around a PLAIN Grid receipt. node:crypto reads the
+// `gridPublicKey` `{ key }` getter inside the Grid signature check, after the
+// receipt has been checked: it swaps the raw statement for a forged one (and
+// corrupts receipt_digest). The `reportedArtifactDigests` iterable runs after
+// the first bound-input pass and before the second, and restores the genuine
+// statement so a raw re-validation would pass.
+function rewritingOptions(f) {
+  const genuine = f.gridReceipt;
+  const genuineStatement = structuredClone(genuine.statement);
+  const forged = forgedGridStatement(genuine);
+  const raw = structuredClone(genuine);
+  const pem = f.executor.grid.publicKey.export({ type: 'spki', format: 'pem' });
+  const counts = { keyReads: 0, restores: 0 };
+  const restore = () => {
+    raw.statement = genuineStatement;
+    raw.receipt_digest = genuine.receipt_digest;
+  };
+  const gridPublicKey = {
+    format: 'pem',
+    get key() {
+      counts.keyReads += 1;
+      raw.statement = forged;
+      raw.receipt_digest = '0'.repeat(64);
+      return pem;
+    }
+  };
+  const reportedArtifactDigests = {
+    *[Symbol.iterator]() {
+      counts.restores += 1;
+      restore();
+      yield ARTIFACT_A;
+    }
+  };
+  return { genuine, forged, raw, counts, restore, gridPublicKey, reportedArtifactDigests };
+}
+
+test('P3 key-getter: a plain Grid receipt rewritten through a hostile gridPublicKey getter and restored by a reportedArtifactDigests iterable cannot mint a forged outcome', () => {
+  for (const status of ['completed', 'denied']) {
+    const f = fixture({ status });
+    const h = rewritingOptions(f);
+    const field = status === 'completed' ? 'result_digest' : 'error_digest';
+    let minted;
+    try {
+      minted = create(f, {
+        gridMachineReceipt: h.raw,
+        gridPublicKey: h.gridPublicKey,
+        reportedArtifactDigests: h.reportedArtifactDigests
+      });
+    } catch (error) {
+      // Rejecting is an acceptable fail-closed outcome.
+      assert.ok(error instanceof ValidationError, `${status}: ${error?.name}: ${error?.message}`);
+      continue;
+    }
+    assert.ok(h.counts.keyReads > 0 && h.counts.restores > 0, `${status}: both option hooks ran after the snapshot`);
+    assert.notEqual(minted.statement.terminal_outcome_digest, h.forged.outcome[field], `${status}: forged terminal_outcome_digest minted`);
+    assert.notEqual(minted.statement.grid_chain_head, h.forged.chain.head, `${status}: forged grid_chain_head minted`);
+    // Otherwise the receipt must carry exactly the Grid-signed snapshot values.
+    assert.equal(minted.statement.terminal_outcome_digest, h.genuine.statement.outcome[field]);
+    assert.equal(minted.statement.grid_chain_head, h.genuine.statement.chain.head);
+    assert.equal(minted.statement.grid_machine_receipt_digest, h.genuine.receipt_digest);
+  }
+});
+
+test('P3 key-getter: create ignores the raw rewrite and binds exactly the Grid receipt snapshot', () => {
+  // Pins the current fail-safe behaviour precisely (no rejection, no forged
+  // value) so a raw read anywhere after the snapshot changes the outcome.
+  const f = fixture();
+  const h = rewritingOptions(f);
+  const minted = create(f, {
+    gridMachineReceipt: h.raw,
+    gridPublicKey: h.gridPublicKey,
+    reportedArtifactDigests: h.reportedArtifactDigests
+  });
+  assert.ok(h.counts.keyReads > 0 && h.counts.restores > 0, 'both option hooks ran after the snapshot');
+  h.restore();
+  assert.deepEqual(minted.statement, create(f, { reportedArtifactDigests: [ARTIFACT_A] }).statement);
+});
+
+test('P3 key-getter: verify reads only the Grid receipt snapshot while a gridPublicKey getter rewrites the raw receipt', () => {
+  const f = fixture();
+  const h = rewritingOptions(f);
+  const verified = verifyAgentPortableWorkReceipt(create(f), {
+    ...verifyEvidence(f),
+    gridMachineReceipt: h.raw,
+    gridPublicKey: h.gridPublicKey
+  });
+  assert.ok(h.counts.keyReads > 0, 'the key getter ran after the snapshot');
+  assert.equal(verified.valid, true);
+  assert.equal(verified.terminal_outcome_digest, h.genuine.statement.outcome.result_digest);
+  assert.equal(verified.grid_machine_receipt_digest, h.genuine.receipt_digest);
+});
+
+test('plain, JSON and structuredClone Grid receipts still mint and verify identically', () => {
+  for (const status of ['completed', 'denied']) {
+    const f = fixture({ status });
+    const baseline = create(f);
+    for (const [name, gridMachineReceipt] of [
+      ['json', JSON.parse(JSON.stringify(f.gridReceipt))],
+      ['structuredClone', structuredClone(f.gridReceipt)]
+    ]) {
+      const minted = create(f, { gridMachineReceipt });
+      assert.deepEqual(minted.statement, baseline.statement, `${status} ${name} create`);
+      const verified = verifyAgentPortableWorkReceipt(JSON.parse(JSON.stringify(baseline)), {
+        ...verifyEvidence(f),
+        gridMachineReceipt
+      });
+      assert.equal(verified.valid, true, `${status} ${name} verify`);
+    }
+  }
 });
