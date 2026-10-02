@@ -1,12 +1,23 @@
 # AXIOM-MESH Host Installation and Node Profiles
 
 **Applies to:** `0.12.0-dev.3` development line  
-**Status:** productization specification; host-level fresh-machine installers are not yet implemented  
+**Status:** productization specification; non-mutating Linux host planner implemented; host-level fresh-machine installers are not yet implemented  
 **Updated:** 2026-08-23
 
 AXIOM-MESH needs a supported path from an ordinary machine to a useful, secure node. The existing `npm run setup` path is intentionally narrower: it verifies a checked-out source tree, installs from the committed dependency-free locks, and runs repository checks. It does **not** install the operating-system toolchain, create a host service, harden a machine, provision a complete local product, enroll a node in a network role, or configure remote backup custody.
 
 This document defines the missing productization boundary without weakening that source-setup trust model.
+
+The repository now includes an **inert, non-mutating Linux host planner** at `mesh/src/host-install.mjs` / `mesh/src/lib/host-install-plan.mjs`, governed by `mesh/config/host-install-policy.json`. It can inspect or accept explicit host facts and emit a digest-bound plan for `personal-local` or `infrastructure-node`. The default strategy is OCI-first: the **target-host facts contract** allows `node_version: null` and does not treat target-host Node.js absence as an OCI compatibility blocker; a missing Docker runtime is reported as an install prerequisite, while a discovered `docker` executable is only a recognized runtime name and still requires separate version/health verification before any future install. The current repository planner command is itself a Node.js program and therefore is **not** the future Node-free fresh-host bootstrapper. The planner creates no users, directories, credentials, services, network rules, or Mesh enrollment and never treats compatibility as install authority.
+
+Planner limits that consumers must respect:
+
+- `validateHostInstallPlan` checks only a plan's internal consistency with the current policy, targets, setup policy, and its own digest. It does not re-observe the host and cannot tell whether blockers were honestly derived: a plan whose blockers were stripped and whose digest was resealed still validates. Any consumer that acts on host compatibility must re-run the planner itself rather than trust a supplied plan.
+- Library callers of `buildHostInstallPlan` can self-declare `facts_source: live-local-observation`; only the CLI forces `--facts` input to `supplied-evidence`. The facts-source label is therefore provenance metadata, not proof.
+- The planner reports memory and root-filesystem free space only as "observation unavailable" when they are zero; there is no minimum memory or disk threshold yet. It records `effective_uid` but does not flag running as root.
+- Source-strategy Node.js versions are judged by the same rule as source setup: `classifyRuntimeProfile` in the pure module `mesh/src/lib/node-runtime-version.mjs`, which `mesh/src/setup.mjs` imports and re-exports. It allows an optional single `v` prefix and requires exact `MAJOR.MINOR.PATCH` without leading zeros inside the policy's primary/compatibility ranges; pre-releases and trailing content are rejected.
+- The planner module graph (`host-install.mjs`, `lib/host-install-plan.mjs`, `lib/node-runtime-version.mjs`, `lib/canonical.mjs`, and JSON policy files) does not import `node:child_process` or any network module; a static test pins the planner's imports and scans these sources for process-execution, filesystem-write, and network calls.
+- `validateHostInstallPlan` treats a plan as untrusted data: before reading any member it rejects Proxies and accessors at every nesting level (without invoking traps or getters), non-JSON leaves (`undefined`, `NaN`, symbols, functions, nested objects in scalar positions), and non-canonical arrays, always with `ValidationError`. It also re-derives `container_runtime_name_recognized` from the strategy and observed runtime. Validation is a point-in-time check: a plan changed after validation must be validated again.
 
 ## Installation layers
 
@@ -273,4 +284,4 @@ The first supported fresh-Linux installer is not complete until all of the follo
 14. pass Windows/macOS compatibility checks for repository code even when the first host installer is Linux-only;
 15. collect at least one independent community reproduction before treating the installer as broadly supported.
 
-Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup**, not a completed fresh-machine Linux installer.
+Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup** plus a non-mutating host-planning surface, not a completed fresh-machine Linux installer.

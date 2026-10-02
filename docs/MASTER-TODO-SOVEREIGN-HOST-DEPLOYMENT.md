@@ -128,7 +128,7 @@ See the [current-base convergence decisions](architecture/DEPLOYMENT-ENGINE-V0-C
 
 ## Priority 7 — Native bootstrapper and installation preparation
 
-- [ ] Reconstruct/consume #1281's non-mutating host-install planner on current main before adding privilege.
+- [x] Reconstruct/consume #1281's non-mutating host-install planner on current main before adding privilege — OCI-first inert planner restored with explicit blockers/prerequisites and zero host mutation.
 - [ ] Reconstruct/consume #1282's signed release/install-manifest verification on current main.
 - [ ] Define signed bootstrapper artifact and update policy.
 - [ ] Bind one bootstrapper session to one explicit deployment request.
