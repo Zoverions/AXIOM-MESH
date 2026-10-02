@@ -10,6 +10,13 @@ This document defines the missing productization boundary without weakening that
 
 The repository now includes an **inert, non-mutating Linux host planner** at `mesh/src/host-install.mjs` / `mesh/src/lib/host-install-plan.mjs`, governed by `mesh/config/host-install-policy.json`. It can inspect or accept explicit host facts and emit a digest-bound plan for `personal-local` or `infrastructure-node`. The default strategy is OCI-first: the **target-host facts contract** allows `node_version: null` and does not treat target-host Node.js absence as an OCI compatibility blocker; a missing Docker runtime is reported as an install prerequisite, while a discovered `docker` executable is only a recognized runtime name and still requires separate version/health verification before any future install. The current repository planner command is itself a Node.js program and therefore is **not** the future Node-free fresh-host bootstrapper. The planner creates no users, directories, credentials, services, network rules, or Mesh enrollment and never treats compatibility as install authority.
 
+Planner limits that consumers must respect:
+
+- `validateHostInstallPlan` checks only a plan's internal consistency with the current policy, targets, setup policy, and its own digest. It does not re-observe the host and cannot tell whether blockers were honestly derived: a plan whose blockers were stripped and whose digest was resealed still validates. Any consumer that acts on host compatibility must re-run the planner itself rather than trust a supplied plan.
+- Library callers of `buildHostInstallPlan` can self-declare `facts_source: live-local-observation`; only the CLI forces `--facts` input to `supplied-evidence`. The facts-source label is therefore provenance metadata, not proof.
+- The planner reports memory and root-filesystem free space only as "observation unavailable" when they are zero; there is no minimum memory or disk threshold yet. It records `effective_uid` but does not flag running as root.
+- Source-strategy Node.js versions are judged by the same rule as source setup (`classifyRuntimeProfile` in `mesh/src/setup.mjs`): an optional single `v` prefix, exact `MAJOR.MINOR.PATCH`, and the policy's primary/compatibility ranges. Pre-releases and trailing content are rejected.
+
 ## Installation layers
 
 The project distinguishes four layers. They must not be collapsed into one privileged script.

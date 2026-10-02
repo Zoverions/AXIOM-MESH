@@ -8,6 +8,7 @@ import installTargets from '../../config/install-targets.json' with { type: 'jso
 import installPolicy from '../../config/host-install-policy.json' with { type: 'json' };
 import sourceSetupPolicy from '../../config/setup.json' with { type: 'json' };
 import { canonicalJson, digestObject, ValidationError } from './canonical.mjs';
+import { classifyRuntimeProfile } from '../setup.mjs';
 
 export const HOST_INSTALL_POLICY_SCHEMA = 'axiom-host-install-policy.v1';
 export const HOST_INSTALL_PLAN_SCHEMA = 'axiom-host-install-plan.v1';
@@ -28,6 +29,24 @@ const EXPECTED_STAGES = Object.freeze([
   'human-handoff',
   'optional-integrations'
 ]);
+const HOST_FACT_STRING_MAX = 200;
+const SUPPORTED_DISTRIBUTIONS = Object.freeze([
+  { id:'ubuntu', versions:['24.04'], package_manager:'apt-get', init_system:'systemd' }
+]);
+const REQUIRED_FACTS = Object.freeze([
+  'platform','architecture','distro_id','distro_version','init_system','package_manager',
+  'node_version','memory_bytes','root_filesystem_free_bytes','container_runtime','effective_uid'
+]);
+const COMMON_DIRECTORIES = Object.freeze({
+  data_dir:'/var/lib/axiom-mesh/data',
+  secret_dir:'/etc/axiom-mesh/secrets',
+  run_dir:'/run/axiom-mesh',
+  log_dir:'/var/log/axiom-mesh'
+});
+const PROFILE_DIRECTORIES = Object.freeze({
+  'personal-local': COMMON_DIRECTORIES,
+  'infrastructure-node': Object.freeze({ ...COMMON_DIRECTORIES, units_dir:'/var/lib/axiom-mesh/units' })
+});
 
 export function validateHostInstallPolicy(policy = installPolicy, targets = installTargets) {
   exactObject(policy, 'Host install policy', [
@@ -63,10 +82,13 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
   ) throw new ValidationError('Host install planner policy drifted');
 
   validateStringArray(policy.planner.required_facts, 'planner.required_facts', 32);
-  if (!policy.planner.required_facts.includes('node_version')) {
-    throw new ValidationError('Host install planner must carry explicit node_version evidence');
+  if (canonicalJson(policy.planner.required_facts) !== canonicalJson(REQUIRED_FACTS)) {
+    throw new ValidationError('Host install planner required_facts drifted');
   }
   validateSupportedDistributions(policy.planner.supported_distributions);
+  if (canonicalJson(policy.planner.supported_distributions) !== canonicalJson(SUPPORTED_DISTRIBUTIONS)) {
+    throw new ValidationError('Host install planner supported_distributions drifted');
+  }
 
   exactObject(policy.mutating_installer, 'Mutating installer policy', [
     'status','requires_signed_release_manifest','requires_disposable_host_evidence',
@@ -109,6 +131,9 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
       || profile.topology !== target.topology
       || profile.service_units !== target.service_units
     ) throw new ValidationError(`Host install authority or topology boundary drifted: ${profileId}`);
+    if (canonicalJson(expectedDirectories(profile)) !== canonicalJson(PROFILE_DIRECTORIES[profileId])) {
+      throw new ValidationError(`Host install profile directories drifted: ${profileId}`);
+    }
   }
 
   return Object.freeze({
@@ -456,7 +481,7 @@ function validateHostFacts(facts, requiredFacts) {
     'facts_source','platform','architecture','distro_id','distro_version',
     'init_system','package_manager','container_runtime'
   ]) {
-    if (typeof facts[key] !== 'string' || facts[key].length === 0 || facts[key].length > 256) {
+    if (typeof facts[key] !== 'string' || facts[key].length === 0 || facts[key].length > HOST_FACT_STRING_MAX) {
       throw new ValidationError(`Host fact is invalid: ${key}`);
     }
   }
@@ -478,29 +503,16 @@ function validateHostFacts(facts, requiredFacts) {
   ) throw new ValidationError('Host fact is invalid: effective_uid');
 }
 
+// One canonical Node.js version rule: the source-setup classifier in setup.mjs.
 function nodeVersionAllowed(version, setupPolicy) {
-  const parsed = parseVersion(version);
-  if (!parsed) return false;
-  const primary = parseVersion(setupPolicy.runtime.minimum_version);
-  const compatibility = parseVersion(setupPolicy.runtime.compatibility_minimum_version);
-  return (
-    parsed.major === primary.major
-    && compareVersions(parsed, primary) >= 0
-    && parsed.major < setupPolicy.runtime.maximum_major_exclusive
-  ) || (
-    parsed.major === compatibility.major
-    && compareVersions(parsed, compatibility) >= 0
-    && parsed.major < setupPolicy.runtime.compatibility_maximum_major_exclusive
-  );
-}
-
-function parseVersion(value) {
-  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(value ?? '');
-  return match ? { major:Number(match[1]), minor:Number(match[2]), patch:Number(match[3]) } : null;
-}
-
-function compareVersions(a,b) {
-  return a.major-b.major || a.minor-b.minor || a.patch-b.patch;
+  if (typeof version !== 'string') return false;
+  try {
+    classifyRuntimeProfile(version, setupPolicy.runtime);
+    return true;
+  } catch (error) {
+    if (error instanceof ValidationError) return false;
+    throw error;
+  }
 }
 
 async function linuxDistribution() {

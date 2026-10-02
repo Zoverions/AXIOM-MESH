@@ -582,7 +582,7 @@ export function assertProductionRuntime(nodeVersion = process.version) {
   return normalizeVersion(nodeVersion, 'Node.js');
 }
 
-function classifyRuntimeProfile(value, runtimePolicy) {
+export function classifyRuntimeProfile(value, runtimePolicy) {
   const normalized = normalizeVersion(value, 'Node.js');
   const major = versionTuple(normalized, 'Node.js')[0];
 
@@ -679,6 +679,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }
