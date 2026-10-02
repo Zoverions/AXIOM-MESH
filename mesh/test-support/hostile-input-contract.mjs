@@ -25,12 +25,13 @@ export class HostileSentinel extends Error {
   }
 }
 
-const RAW_ERROR_NAMES = new Set([
-  'TypeError', 'RangeError', 'SyntaxError', 'ReferenceError', 'EvalError', 'URIError',
-  'AggregateError', 'InternalError', 'Error'
-]);
-
-/** Classifies a thrown value: typed (documented rejection), sentinel or raw. */
+/**
+ * Classifies a thrown value: typed (documented rejection), sentinel or raw.
+ * Typed means ValidationError, or a module error carrying a module-defined
+ * string code (AxiomError, AssertionLadderError, McpProjectionError). Every
+ * other error is raw, including built-in errors, Node ERR_* errors and
+ * platform exceptions such as DOMException/DataCloneError.
+ */
 export function classifyThrown(error) {
   if (error instanceof HostileSentinel) return 'sentinel';
   if (error === null || typeof error !== 'object') return 'raw';
@@ -43,9 +44,7 @@ export function classifyThrown(error) {
     return 'raw';
   }
   if (name === 'ValidationError' || code === 'validation_error') return 'typed';
-  if (typeof name === 'string' && !RAW_ERROR_NAMES.has(name)) return 'typed';
-  // AxiomError-style: plain Error name with a module-defined (non-Node) code.
-  if (name === 'Error' && typeof code === 'string' && !code.startsWith('ERR_')) return 'typed';
+  if (typeof code === 'string' && code.length > 0 && !code.startsWith('ERR_')) return 'typed';
   return 'raw';
 }
 
@@ -551,6 +550,14 @@ function posix(file, root) {
  * Runs the generic probe over every exported verify* or validate* in the scanned
  * directories. Returns { functions: { "<file>#<name>": { case: class } } },
  * listing every export (an empty object means every case passed).
+ *
+ * Scope: this is a top-level probe, not per-slot isolation. Every export gets
+ * each hostile value as its first argument; exports whose declared arity
+ * (Function.length) is at least 2 also get each hostile options value as the
+ * second argument, with {} as the first. Defaulted parameters, third and
+ * later parameters, and slots an invalid {} first argument never reaches are
+ * not isolated here. Those are covered by the full nested contract
+ * (checkHostileInputContract) in each registered module's own test file.
  */
 export async function probeAllExports(root = MESH_ROOT) {
   const functions = {};

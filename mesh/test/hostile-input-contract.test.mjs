@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { ValidationError } from '../src/lib/canonical.mjs';
+import { AxiomError, ValidationError } from '../src/lib/canonical.mjs';
+import { AssertionLadderError } from '../src/lib/assertion-ladder.mjs';
 import {
   BASELINE_PATH,
   BASELINE_SCHEMA,
@@ -74,6 +75,17 @@ test('AT-8: classification separates typed rejections, raw errors and caller exc
   assert.equal(classifyThrown(new RangeError('x')), 'raw');
   assert.equal(classifyThrown(Object.assign(new Error('x'), { code: 'ERR_INVALID_ARG_TYPE' })), 'raw');
   assert.equal(classifyThrown('string'), 'raw');
+  // Platform exceptions and unfamiliar names without a module code are raw.
+  let dataClone;
+  try { structuredClone(new Proxy({}, {})); } catch (error) { dataClone = error; }
+  assert.equal(dataClone?.name, 'DataCloneError');
+  assert.equal(classifyThrown(dataClone), 'raw');
+  assert.equal(classifyThrown(new DOMException('x', 'AbortError')), 'raw');
+  class OddError extends Error { constructor() { super('x'); this.name = 'OddError'; } }
+  assert.equal(classifyThrown(new OddError()), 'raw');
+  // Module errors with a module-defined code are typed.
+  assert.equal(classifyThrown(new AxiomError('receipt_evidence_mismatch', 'x', 409)), 'typed');
+  assert.equal(classifyThrown(new AssertionLadderError('ladder_invalid', 'x')), 'typed');
   assert.equal(classifyThrown(new HostileSentinel('x')), 'sentinel');
   assert.deepEqual(walkPaths({ a: { b: [1, { c: 2 }] } }).map(path => path.join('.')), ['a', 'a.b', 'a.b.0', 'a.b.1', 'a.b.1.c']);
 });
