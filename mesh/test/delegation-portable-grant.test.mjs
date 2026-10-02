@@ -259,6 +259,10 @@ test('hidden, symbol, non-plain and cyclic proof state is rejected as plain-data
   customArrayProperty.grant.authority.actions.extra = 'x';
   const sparse = structuredClone(proof);
   sparse.grant.authority.actions = new Array(1);
+  const outOfRangeIndex = structuredClone(proof);
+  outOfRangeIndex.grant.authority.actions = [];
+  outOfRangeIndex.grant.authority.actions.length = 1;
+  outOfRangeIndex.grant.authority.actions['4294967295'] = 'system.echo';
   const functionValued = structuredClone(proof);
   functionValued.statement.audience_id = () => proof.statement.audience_id;
   const cases = [
@@ -268,6 +272,7 @@ test('hidden, symbol, non-plain and cyclic proof state is rejected as plain-data
     ['cyclic', cyclic, /is cyclic/],
     ['customArrayProperty', customArrayProperty, /custom array property/],
     ['sparse', sparse, /sparse array/],
+    ['outOfRangeIndex', outOfRangeIndex, /custom array property 4294967295/],
     ['functionValued', functionValued, /is a function/]
   ];
   for (const [name, value, reason] of cases) {

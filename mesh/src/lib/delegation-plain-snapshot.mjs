@@ -4,6 +4,8 @@ import { ValidationError } from './canonical.mjs';
 
 const MAX_DEPTH = 64;
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
+// ECMAScript array indexes stop at 2^32 - 2; larger numeric keys are custom properties.
+const MAX_ARRAY_INDEX = 2 ** 32 - 2;
 
 /**
  * Copies caller-supplied delegation evidence into fresh plain data once, at
@@ -49,7 +51,9 @@ function copy(value, name, path, ancestors, depth) {
     if (!Object.hasOwn(descriptor, 'value')) reject(name, childPath, 'is an accessor');
     if (!descriptor.enumerable) reject(name, childPath, 'is non-enumerable');
     if (isArray) {
-      if (!ARRAY_INDEX.test(key)) reject(name, path, `has a custom array property ${key}`);
+      if (!ARRAY_INDEX.test(key) || Number(key) > MAX_ARRAY_INDEX) {
+        reject(name, path, `has a custom array property ${key}`);
+      }
       indexes += 1;
     }
     Object.defineProperty(output, key, {
