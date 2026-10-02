@@ -361,8 +361,8 @@ test('AXIOM Host naming cannot launder Secure Boot or measured-boot evidence',()
     'axiom-host-image',
     ['personal-local']
   );
-  value.non_claims=value.non_claims.filter(
-    claim=>claim!=='axiom-host-image-does-not-prove-secure-or-measured-boot'
+  value.non_claims=value.non_claims.map(
+    claim=>claim==='axiom-host-image-does-not-prove-secure-or-measured-boot'?'unrelated-non-claim':claim
   );
   assert.throws(()=>verify(signPackage(value)),/missing non-claim/);
 });

@@ -269,6 +269,8 @@ The v1 verifier fails closed against:
 
 ## Current non-claims
 
+Every verifier result pins `host_mutation_authorized: false`.
+
 This work does **not** provide or claim:
 
 - a published signed install release;
