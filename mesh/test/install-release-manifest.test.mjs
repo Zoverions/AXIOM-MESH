@@ -364,6 +364,22 @@ test('AXIOM Host naming cannot launder Secure Boot or measured-boot evidence',()
   value.non_claims=value.non_claims.filter(
     claim=>claim!=='axiom-host-image-does-not-prove-secure-or-measured-boot'
   );
+  assert.throws(()=>verify(signPackage(value)),/invalid cardinality or prototype/);
+});
+
+test('AXIOM Host full-cardinality claims still require the Secure Boot non-claim',()=>{
+  const value=manifest();
+  value.artifacts[0]=artifact(
+    'runtime-personal',
+    'axiom-host-image',
+    ['personal-local']
+  );
+  value.non_claims=value.non_claims.map(
+    claim=>claim==='axiom-host-image-does-not-prove-secure-or-measured-boot'
+      ?'test-placeholder-does-not-satisfy-the-required-non-claim'
+      :claim
+  );
+  assert.equal(value.non_claims.length,6);
   assert.throws(()=>verify(signPackage(value)),/missing non-claim/);
 });
 
