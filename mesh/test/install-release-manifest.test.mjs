@@ -4,6 +4,7 @@ import {
   sign
 } from 'node:crypto';
 import test from 'node:test';
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
 import { readFile } from 'node:fs/promises';
 
 import installTargets from '../config/install-targets.json' with { type: 'json' };
@@ -12,6 +13,7 @@ import capabilityRegistry from '../config/capabilities.json' with { type: 'json'
 import applicationCatalog from '../config/application-catalog.json' with { type: 'json' };
 import serviceNetworkPolicy from '../config/service-network-policy.json' with { type: 'json' };
 import sourceSetupPolicy from '../config/setup.json' with { type: 'json' };
+import releasePolicy from '../config/install-release-manifest-policy.json' with { type: 'json' };
 import { MIGRATIONS } from '../src/grid/migrations.mjs';
 import {
   INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA,
@@ -558,4 +560,15 @@ test('trusted signer PEM must be canonical SPKI that re-exports identically',()=
   }
   assert.equal(verify(signPackage(),{trustedSigners:[trustedSigner({public_key:publicPem.replace(/\n/g,'\r\n')})]}).valid,true);
   assert.equal(verify(signPackage(),{trustedSigners:[trustedSigner({public_key:publicPem.trimEnd()})]}).valid,true);
+});
+
+// AT-7 anchor: the policy validator already meets the hostile-input contract.
+// Its argument defaults to the shipped policy, so an undefined argument is valid.
+test('AT-7: validateInstallReleaseManifestPolicy meets the hostile-input contract', async () => {
+  await assertHostileInputContract({
+    name: 'validateInstallReleaseManifestPolicy',
+    fn: validateInstallReleaseManifestPolicy,
+    validArgs: () => [structuredClone(releasePolicy)],
+    acceptablePaths: { arg0: ['undefined'] }
+  }, assert);
 });

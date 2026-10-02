@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+
 import installPolicy from '../config/host-install-policy.json' with { type: 'json' };
 import installTargetsJson from '../config/install-targets.json' with { type: 'json' };
 import { hostInstallMain } from '../src/host-install.mjs';
@@ -699,4 +701,14 @@ test('personal-local applications are pinned even when the target catalogue drif
   policy.profiles['personal-local'].applications=['axiom-one','axiom-birth'];
   targets.targets.find(item=>item.id==='personal-local').application_catalog=['axiom-one','axiom-birth'];
   assert.throws(()=>validateHostInstallPolicy(policy,targets),/applications drifted: personal-local/);
+});
+
+// AT-7 anchor: the plan validator already meets the hostile-input contract.
+test('AT-7: validateHostInstallPlan meets the hostile-input contract', async () => {
+  await assertHostileInputContract({
+    name: 'validateHostInstallPlan',
+    fn: validateHostInstallPlan,
+    validArgs: () => [basePlan()],
+    nullablePaths: ['arg0.runtime.node_runtime_observed']
+  }, assert);
 });

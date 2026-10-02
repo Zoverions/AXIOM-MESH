@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+
 import { digestObject } from '../src/lib/canonical.mjs';
 import {
   computeBoundedDecisionQuestionSchemaDigest
@@ -1002,4 +1004,29 @@ test('NB-4: the validator checks internal consistency only; a hand-built bound d
   // Documented limit: consumers must re-run verifyOperationProposalBinding.
   assert.equal(validateOperationProposalBinding(handBuilt).valid, true);
   assert.notEqual(handBuilt.binding_digest, genuine.binding_digest);
+});
+
+// AT-7 anchor: these validators already meet the hostile-input contract and
+// must stay green. Nullable paths are the schema's own nullable fields.
+test('AT-7: verifyOperationProposalBinding and validateOperationProposalBinding meet the hostile-input contract', async () => {
+  const document = verifyOperationProposalBinding(world());
+  await assertHostileInputContract({
+    name: 'verifyOperationProposalBinding',
+    fn: verifyOperationProposalBinding,
+    style: 'returns',
+    isRejected: (result) => result?.binding_status === 'rejected',
+    validArgs: () => [world()],
+    nullablePaths: [
+      'arg0.proposal.usage_evidence',
+      'arg0.proposal.calibration_report_ref',
+      'arg0.proposal.explanation',
+      /^arg0\.selection_trusted_input\.semanticEvidence\.\d+\.observation\.(provider_confidence|calibration_report_ref)$/
+    ]
+  }, assert);
+  await assertHostileInputContract({
+    name: 'validateOperationProposalBinding',
+    fn: validateOperationProposalBinding,
+    validArgs: () => [structuredClone(document)],
+    nullablePaths: ['arg0.rejection_reason', /^arg0\.bound_operations\.\d+\.offer_digest$/]
+  }, assert);
 });

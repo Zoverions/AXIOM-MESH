@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+
 import {
   ACTIVE_TASK_STEERING_SCHEMA,
   PARTICIPATION_OBSERVATION_SCHEMA,
@@ -389,4 +391,23 @@ test('closed documents reject unknown fields, symbols, accessors and inherited p
   assert.throws(()=>validateParticipationObservation(inherited),/plain object/i);
   const proxy=new Proxy(structuredClone(base),{});
   assert.throws(()=>validateParticipationObservation(proxy),/Proxy/i);
+});
+
+// AT-7 anchor. validateParticipationPolicy (:44) is not an anchor: on main its
+// context id/class arrays are not shape-checked, so a hidden or custom array
+// property or an accessor index surfaces canonical.mjs's raw TypeError (still
+// fail-closed). It stays in the ratchet baseline as a follow-up.
+test('AT-7: validateActiveTaskSteering meets the hostile-input contract', async () => {
+  const steering = {
+    schema: ACTIVE_TASK_STEERING_SCHEMA, version: 0, status: 'inert-steering-evidence',
+    steering_id: 'steering.demo.1', task_id: 'task.demo.1', previous_task_digest: A, new_event_digest: B,
+    actor_principal_id: 'owner.alice', semantic_observation_digest: C, authority_snapshot_ref: 'authority.snapshot.1',
+    decision: 'APPEND', resulting_task_revision_digest: D, decided_at: '2026-09-27T04:11:00.000Z',
+    grants_authority: false, delegation_effect: 'none', execution_effect: 'none', runtime_activation: false
+  };
+  await assertHostileInputContract({
+    name: 'validateActiveTaskSteering',
+    fn: validateActiveTaskSteering,
+    validArgs: () => [structuredClone(steering)]
+  }, assert);
 });
