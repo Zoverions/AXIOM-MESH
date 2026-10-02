@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
-import { digestObject } from '../src/lib/canonical.mjs';
+import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { MeshIdentity } from '../src/lib/identity.mjs';
 import {
   buildMachineIntentReceipt,
   validateMachineIntentReceipt,
   verifyMachineIntentReceipt
 } from '../src/lib/machine-receipt.mjs';
+import {
+  containerPaths,
+  label,
+  propertyPaths,
+  withAccessorAt,
+  withProxyAt
+} from '../test-support/hostile-plain-data.mjs';
 
 function gridIdentity() {
   const pair = generateKeyPairSync('ed25519');
@@ -63,7 +70,7 @@ test('machine receipt binds intent, terminal evidence, chain assurance, and Grid
   assert.deepEqual(receipt.statement.evidence_events.map(item => item.seq), [10, 11]);
   assert.equal(receipt.statement.chain.prefix_assurance, 'signed_checkpoint');
   assert.match(receipt.receipt_digest, /^[a-f0-9]{64}$/);
-  assert.equal(validateMachineIntentReceipt(receipt), receipt);
+  assert.deepEqual(validateMachineIntentReceipt(receipt), receipt);
   const verified = verifyMachineIntentReceipt(receipt, identity.publicKey);
   assert.equal(verified.valid, true); assert.equal(verified.intent_id, intent.intent_id);
 });
@@ -94,4 +101,146 @@ test('machine receipt digest and Grid signature detect substitution', () => {
   const envelope = { schema: tamperedSignature.schema, statement: tamperedSignature.statement, attestation: tamperedSignature.attestation };
   tamperedSignature.receipt_digest = digestObject(envelope);
   assert.equal(verifyMachineIntentReceipt(tamperedSignature, identity.publicKey).valid, false);
+});
+
+function isDeepFrozen(value) {
+  if (value === null || typeof value !== 'object') return true;
+  return Object.isFrozen(value) && Object.values(value).every(isDeepFrozen);
+}
+
+function nullPrototypeCopy(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(nullPrototypeCopy);
+  const copy = Object.create(null);
+  for (const key of Object.keys(value)) copy[key] = nullPrototypeCopy(value[key]);
+  return copy;
+}
+
+function signedReceipt(options) {
+  const identity = gridIdentity();
+  const { intent, events, chain } = fixture(options);
+  return { identity, receipt: buildMachineIntentReceipt({ intent, events, chain, identity, kernelVersion: '0.12.0-dev.3' }) };
+}
+
+test('validate returns a deep-frozen snapshot, never the caller object', () => {
+  const { identity, receipt } = signedReceipt();
+  const validated = validateMachineIntentReceipt(receipt);
+  assert.notEqual(validated, receipt);
+  assert.notEqual(validated.statement, receipt.statement);
+  assert.deepEqual(validated, receipt);
+  assert.equal(isDeepFrozen(validated), true);
+  assert.equal(Object.isFrozen(receipt), false, 'the caller object is not frozen in place');
+  receipt.statement.intent.status = 'failed';
+  assert.equal(validated.statement.intent.status, 'completed', 'later caller writes do not reach the snapshot');
+  // A frozen snapshot validates again to an equal (fresh) frozen snapshot.
+  const again = validateMachineIntentReceipt(validated);
+  assert.notEqual(again, validated);
+  assert.deepEqual(again, validated);
+  assert.equal(verifyMachineIntentReceipt(validated, identity.publicKey).valid, true);
+});
+
+test('a Proxy or accessor anywhere in the receipt is rejected before any trap or getter runs', () => {
+  const { identity, receipt } = signedReceipt();
+  const runs = [
+    ['validate', value => validateMachineIntentReceipt(value)],
+    ['verify', value => verifyMachineIntentReceipt(value, identity.publicKey)]
+  ];
+  let checked = 0;
+  for (const [name, run] of runs) {
+    for (const path of containerPaths(receipt)) {
+      const counter = { traps: 0 };
+      assert.throws(
+        () => run(withProxyAt(receipt, path, counter)),
+        error => error instanceof ValidationError && /must be plain data/.test(error.message) && /Proxy/.test(error.message),
+        `${name} Proxy at ${label(path)}`
+      );
+      assert.equal(counter.traps, 0, `${name} Proxy at ${label(path)} ran a trap`);
+      checked += 1;
+    }
+    for (const path of propertyPaths(receipt)) {
+      const counter = { getters: 0 };
+      assert.throws(
+        () => run(withAccessorAt(receipt, path, counter)),
+        error => error instanceof ValidationError && /must be plain data/.test(error.message) && /accessor/.test(error.message),
+        `${name} accessor at ${label(path)}`
+      );
+      assert.equal(counter.getters, 0, `${name} accessor at ${label(path)} ran its getter`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 100, `expected to cover every position, covered ${checked}`);
+});
+
+test('a key option that rewrites the raw receipt during verification cannot change the verified result', () => {
+  const { identity, receipt } = signedReceipt();
+  const raw = structuredClone(receipt);
+  let keyReads = 0;
+  const hostileKey = {
+    format: 'pem',
+    get key() {
+      keyReads += 1;
+      raw.statement.intent.status = 'failed';
+      raw.statement.intent.intent_id = 'intent_forged';
+      raw.statement.chain.prefix_assurance = 'full_chain';
+      raw.receipt_digest = 'f'.repeat(64);
+      return identity.publicKey.export({ type: 'spki', format: 'pem' });
+    }
+  };
+  const verified = verifyMachineIntentReceipt(raw, hostileKey);
+  assert.ok(keyReads > 0, 'the key getter ran after the snapshot');
+  assert.equal(verified.valid, true);
+  assert.equal(verified.status, 'completed');
+  assert.equal(verified.intent_id, receipt.statement.intent.intent_id);
+  assert.equal(verified.prefix_assurance, 'signed_checkpoint');
+  assert.equal(verified.receipt_digest, receipt.receipt_digest);
+});
+
+test('hidden, symbol, non-plain, cyclic and function receipt state fails as plain-data ValidationError', () => {
+  const { receipt } = signedReceipt();
+  const hidden = structuredClone(receipt);
+  Object.defineProperty(hidden, 'mind_id', { value: 'x', enumerable: false, configurable: true, writable: true });
+  const symbolKeyed = structuredClone(receipt);
+  symbolKeyed.statement[Symbol('shadow')] = 'x';
+  class Statement {}
+  const nonPlain = { ...receipt, statement: Object.assign(new Statement(), receipt.statement) };
+  const cyclic = structuredClone(receipt);
+  cyclic.statement.chain.self = cyclic.statement.chain;
+  const functionValued = structuredClone(receipt);
+  functionValued.statement.outcome.result_digest = () => receipt.statement.outcome.result_digest;
+  const cases = [
+    ['hidden', hidden, /non-enumerable/],
+    ['symbolKeyed', symbolKeyed, /symbol key/],
+    ['nonPlain', nonPlain, /non-plain prototype/],
+    ['cyclic', cyclic, /is cyclic/],
+    ['functionValued', functionValued, /is a function/]
+  ];
+  for (const [name, value, reason] of cases) {
+    assert.throws(
+      () => validateMachineIntentReceipt(value),
+      error => error instanceof ValidationError && /must be plain data/.test(error.message) && reason.test(error.message),
+      name
+    );
+  }
+});
+
+test('plain, JSON, structuredClone and null-prototype receipts behave as before', () => {
+  for (const status of ['completed', 'denied']) {
+    const { identity, receipt } = signedReceipt({ status });
+    for (const [name, value] of [
+      ['plain', receipt],
+      ['json', JSON.parse(JSON.stringify(receipt))],
+      ['structuredClone', structuredClone(receipt)],
+      ['nullPrototype', nullPrototypeCopy(receipt)]
+    ]) {
+      assert.deepEqual({ ...validateMachineIntentReceipt(value) }, { ...value }, `${status} ${name} validate`);
+      assert.equal(verifyMachineIntentReceipt(value, identity.publicKey).valid, true, `${status} ${name} verify`);
+    }
+  }
+  const { receipt } = signedReceipt();
+  for (const bad of [null, undefined, 'receipt', 7, []]) {
+    assert.throws(() => validateMachineIntentReceipt(bad), /Machine intent receipt must be an object/);
+  }
+  assert.throws(() => validateMachineIntentReceipt({ ...receipt, schema: 'x' }), /schema is invalid/);
+  assert.throws(() => validateMachineIntentReceipt({ ...receipt, verification: {} }), /digest does not match|statement-bound/);
+  assert.throws(() => validateMachineIntentReceipt({ ...receipt, receipt_digest: 'nope' }), /digest is invalid/);
 });

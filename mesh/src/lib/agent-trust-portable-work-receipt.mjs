@@ -191,10 +191,15 @@ function terminalOutcome(machineReceipt) {
 function verifyBoundInputs({
   handoff,
   executorCredential,
-  machineReceipt,
+  machineReceipt: receiptInput,
   gridPublicKey
 }) {
-  validateMachineIntentReceipt(machineReceipt);
+  // Every read below uses this one deep-frozen snapshot. Callers already pass
+  // the frozen snapshot from validateMachineIntentReceipt; validating it again
+  // yields an equal frozen copy, so a raw object can never reach the reads.
+  // gridPublicKey can run caller code inside the signature check, which is why
+  // nothing here touches the caller's receipt after the snapshot.
+  const machineReceipt = validateMachineIntentReceipt(receiptInput);
   const gridVerification = verifyMachineIntentReceipt(machineReceipt, gridPublicKey);
   if (gridVerification.valid !== true) {
     throw new ValidationError('portable work receipt requires a valid Grid machine intent receipt signature');
@@ -240,7 +245,15 @@ function verifyBoundInputs({
   }
 
   const outcome = terminalOutcome(machineReceipt);
-  return Object.freeze({ gridVerification, gridStatement, gridIntent, startedAt, finishedAt, outcome });
+  return Object.freeze({
+    machineReceipt,
+    gridVerification,
+    gridStatement,
+    gridIntent,
+    startedAt,
+    finishedAt,
+    outcome
+  });
 }
 
 function normalizeStatement(raw, evidence) {
@@ -347,7 +360,7 @@ function normalizeStatement(raw, evidence) {
     executor_credential_digest: executorCredential.credential_digest,
     executor_operational_key_id: executorCredential.statement.operational_key_id,
     executor_identity_profile: 'a1-machine-identity-credential',
-    grid_machine_receipt_digest: machineReceipt.receipt_digest,
+    grid_machine_receipt_digest: checked.machineReceipt.receipt_digest,
     grid_intent_id: checked.gridIntent.intent_id,
     grid_terminal_status: checked.gridIntent.status,
     grid_action: checked.gridIntent.action,
@@ -414,7 +427,7 @@ export function createAgentPortableWorkReceipt({
     executor_credential_digest: executorCredential.credential_digest,
     executor_operational_key_id: executorCredential.statement.operational_key_id,
     executor_identity_profile: 'a1-machine-identity-credential',
-    grid_machine_receipt_digest: machineReceipt.receipt_digest,
+    grid_machine_receipt_digest: checked.machineReceipt.receipt_digest,
     grid_intent_id: checked.gridIntent.intent_id,
     grid_terminal_status: checked.gridIntent.status,
     grid_action: checked.gridIntent.action,
