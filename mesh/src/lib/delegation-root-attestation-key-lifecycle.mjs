@@ -14,6 +14,7 @@ import {
   sha256
 } from './canonical.mjs';
 import { DELEGATION_ROOT_BINDING_SCHEMA } from './delegation-ledger.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 import {
   delegationRootAttestationKeyId,
   verifyDelegationRootAttestation
@@ -312,12 +313,16 @@ export function validateDelegationRootAttestationKeyCredentialTransition(
   };
 }
 
-export function validateDelegationRootAttestationKeyCredentialPath(credentials, {
+export function validateDelegationRootAttestationKeyCredentialPath(credentialsInput, {
   trustedControllerPublicKey,
   expectedRootBindingDigest,
   expectedRootAuthorityDigest,
   expectedRootHolder
 } = {}) {
+  const credentials = snapshotDelegationPlainData(
+    credentialsInput,
+    'delegation root attestation credential path'
+  );
   if (!Array.isArray(credentials) || credentials.length < 1) {
     throw new ValidationError('Delegation root attestation credential path must be non-empty');
   }
@@ -519,14 +524,27 @@ export function assertDelegationRootAttestationKeyUsableAt(credential, {
   };
 }
 
-export function verifyDelegationRootAttestationWithKeyLifecycle(attestation, {
+export function verifyDelegationRootAttestationWithKeyLifecycle(attestationInput, {
   trustedControllerPublicKey,
-  credentials,
-  revocations = [],
+  credentials: credentialsInput,
+  revocations: revocationsInput = [],
   expectedRootBindingDigest,
   expectedRootAuthorityDigest,
   expectedRootHolder
 } = {}) {
+  // Snapshot caller evidence once, at entry. The signer lookup reads only the
+  // snapshot; the key-usability and revocation checks read only the verified
+  // statement, so a getter or lying Proxy cannot show the lifecycle check a
+  // different issued_at or signer_key_id than the signature covers.
+  const attestation = snapshotDelegationPlainData(attestationInput, 'delegation root attestation');
+  const credentials = snapshotDelegationPlainData(
+    credentialsInput,
+    'delegation root attestation key credentials'
+  );
+  const revocations = snapshotDelegationPlainData(
+    revocationsInput,
+    'delegation root attestation key revocations'
+  );
   const path = validateDelegationRootAttestationKeyCredentialPath(credentials, {
     trustedControllerPublicKey,
     expectedRootBindingDigest,
@@ -543,7 +561,7 @@ export function verifyDelegationRootAttestationWithKeyLifecycle(attestation, {
   );
   assertPlainObject(attestation, 'delegation root attestation');
   const signerKeyId = assertDigest(
-    attestation?.statement?.signer_key_id,
+    attestation.statement?.signer_key_id,
     'delegation root attestation signer_key_id'
   );
   const signerCredentialIndex = normalizedCredentials.findIndex(
@@ -561,21 +579,18 @@ export function verifyDelegationRootAttestationWithKeyLifecycle(attestation, {
     signerCredential,
     trustedControllerPublicKey
   );
-  const issuedAt = canonicalTimestamp(
-    attestation?.statement?.issued_at,
-    'delegation root attestation issued_at'
-  );
-  assertDelegationRootAttestationKeyUsableAt(signerCredential, {
-    trustedControllerPublicKey,
-    at: issuedAt,
-    successorCredential: successor,
-    revocation: matchingRevocations[0]
-  });
   const verifiedAttestation = verifyDelegationRootAttestation(attestation, {
     trusted_signer_public_key: signerCredential.statement.operational_public_key,
     expected_root_binding_digest: path.root_binding_digest,
     expected_root_authority_digest: path.root_authority_digest,
     expected_signer_id: path.root_holder
+  });
+  const issuedAt = verifiedAttestation.statement.issued_at;
+  assertDelegationRootAttestationKeyUsableAt(signerCredential, {
+    trustedControllerPublicKey,
+    at: issuedAt,
+    successorCredential: successor,
+    revocation: matchingRevocations[0]
   });
   return {
     verified: true,
@@ -673,12 +688,13 @@ function normalizeCredentialStatement(raw) {
   const rootAuthorityDigest = assertDigest(raw.root_authority_digest, 'root authority digest');
   const rootHolder = assertIdentifier(raw.root_holder, 'root holder');
   const controllerKeyId = assertDigest(raw.controller_key_id, 'controller key id');
+  const suppliedOperationalPublicKey = raw.operational_public_key;
   const operationalPublic = parsePublicKey(
-    raw.operational_public_key,
+    suppliedOperationalPublicKey,
     'delegation root attestation operational public key'
   );
   const operationalPublicPem = canonicalPublicKeyPem(operationalPublic);
-  if (raw.operational_public_key !== operationalPublicPem) {
+  if (suppliedOperationalPublicKey !== operationalPublicPem) {
     throw new ValidationError('Delegation root attestation operational public key must be canonical');
   }
   const operationalKeyId = assertDigest(raw.operational_key_id, 'operational key id');
