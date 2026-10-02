@@ -572,3 +572,71 @@ test('AT-7: validateInstallReleaseManifestPolicy meets the hostile-input contrac
     acceptablePaths: { arg0: ['undefined'] }
   }, assert);
 });
+
+// Hostile-input contract (AT-1/2/3). Pattern checks run only on strings and the
+// options record must be own enumerable data, so no caller code runs and no raw
+// TypeError escapes.
+class Sentinel extends Error {}
+
+function signedWith(field,value){
+  const pkg=signPackage();
+  Object.defineProperty(pkg.manifest,field,{value,enumerable:true,writable:true,configurable:true});
+  return pkg;
+}
+
+function assertTypedRejection(run,label){
+  let thrown;
+  try{ run(); }catch(error){ thrown=error; }
+  assert.ok(thrown instanceof ValidationError,`${label}: ${thrown?.name}: ${thrown?.message}`);
+}
+
+test('AT-1: a release_id whose toString throws is rejected with ValidationError and never runs',()=>{
+  let calls=0;
+  const hostile={toString(){ calls+=1; throw new Sentinel('release_id toString ran'); }};
+  assertTypedRejection(()=>verify(signedWith('release_id',hostile)),'release_id toString');
+  assert.equal(calls,0);
+});
+
+test('AT-2: a throwing Proxy, revoked Proxy or undefined at release_id or kernel_version is rejected with ValidationError',()=>{
+  for(const field of ['release_id','kernel_version']){
+    let traps=0;
+    const throwing=new Proxy({},new Proxy({},{get(){ return ()=>{ traps+=1; throw new Sentinel('trap ran'); }; }}));
+    const revocable=Proxy.revocable({},{});
+    revocable.revoke();
+    for(const [name,value] of [['throwing Proxy',throwing],['revoked Proxy',revocable.proxy],['undefined',undefined]]){
+      assertTypedRejection(()=>verify(signedWith(field,value)),`${field} ${name}`);
+    }
+    assert.equal(traps,0,`${field}: no trap runs`);
+  }
+});
+
+test('AT-3: options.trustedSigners as an accessor or non-enumerable property is rejected with ValidationError',()=>{
+  const base={trustedSigners:[trustedSigner()],evaluatedAt:EVALUATED_AT};
+  let reads=0;
+  const accessor=Object.defineProperty({evaluatedAt:EVALUATED_AT},'trustedSigners',{
+    get(){ reads+=1; return [trustedSigner()]; },enumerable:true
+  });
+  const hidden=Object.defineProperty({evaluatedAt:EVALUATED_AT},'trustedSigners',{
+    value:[trustedSigner()],enumerable:false
+  });
+  assert.equal(verifyInstallReleaseManifest(signPackage(),base).valid,true);
+  assertTypedRejection(()=>verifyInstallReleaseManifest(signPackage(),accessor),'accessor trustedSigners');
+  assertTypedRejection(()=>verifyInstallReleaseManifest(signPackage(),hidden),'non-enumerable trustedSigners');
+  assert.equal(reads,0,'the trustedSigners getter never runs');
+  for(const [name,options] of [
+    ['symbol key',{...base,[Symbol('extra')]:true}],
+    ['unknown field',{...base,trustedSigner:[trustedSigner()]}],
+    ['own __proto__ key',Object.assign(JSON.parse('{"__proto__":{"valid":true}}'),base)],
+    ['non-plain prototype',Object.assign(Object.create({valid:true}),base)]
+  ]){
+    assertTypedRejection(()=>verifyInstallReleaseManifest(signPackage(),options),name);
+  }
+});
+
+test('hostile-input contract: verifyInstallReleaseManifest rejects every hostile variant with ValidationError',async()=>{
+  await assertHostileInputContract({
+    name:'verifyInstallReleaseManifest',
+    fn:verifyInstallReleaseManifest,
+    validArgs:()=>[signPackage(),{trustedSigners:[trustedSigner()],evaluatedAt:EVALUATED_AT}]
+  },assert);
+});
