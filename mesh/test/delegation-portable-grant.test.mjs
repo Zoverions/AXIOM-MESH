@@ -2,13 +2,21 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { normalizeDelegationAuthority } from '../src/lib/delegation-graph.mjs';
 import { createDelegationRootAttestation } from '../src/lib/delegation-root-attestation.mjs';
 import {
   createPortableDelegationGrant,
   verifyPortableDelegationGrant
 } from '../src/lib/delegation-portable-grant.mjs';
+import {
+  containerPaths,
+  countingProxy,
+  label,
+  propertyPaths,
+  withAccessorAt,
+  withProxyAt
+} from '../test-support/hostile-plain-data.mjs';
 
 const T0 = '2026-08-27T20:00:00.000Z';
 const T1 = '2026-08-27T21:00:00.000Z';
@@ -152,4 +160,165 @@ test('future signing, expiry, and supplied revocation fail closed without implyi
       reason: 'local observed revocation'
     }]
   }), /revoked/i);
+});
+
+function nullPrototypeCopy(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(nullPrototypeCopy);
+  const copy = Object.create(null);
+  for (const key of Object.keys(value)) copy[key] = nullPrototypeCopy(value[key]);
+  return copy;
+}
+
+test('P4: a lying Proxy cannot show the pinned audience to the check while the signature covers another', () => {
+  const f = fixture();
+  const proof = f.sign();
+  const otherAudience = 'audience.not-signed-for';
+  assert.throws(
+    () => f.verify(proof, { expected_audience_id: otherAudience }),
+    /audience does not match pinned verifier/
+  );
+  const counter = { traps: 0 };
+  const lying = countingProxy({ ...proof.statement }, counter, { audience_id: otherAudience });
+  assert.throws(
+    () => f.verify({ ...proof, statement: lying }, { expected_audience_id: otherAudience }),
+    error => error instanceof ValidationError && /plain data/.test(error.message)
+  );
+  assert.equal(counter.traps, 0, 'the Proxy must be rejected before any trap runs');
+});
+
+test('P4: a flipping audience getter is rejected cleanly without running the getter', () => {
+  const f = fixture();
+  const proof = f.sign();
+  const otherAudience = 'audience.not-signed-for';
+  const statement = { ...proof.statement };
+  let reads = 0;
+  Object.defineProperty(statement, 'audience_id', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      reads += 1;
+      return reads === 1 ? otherAudience : proof.statement.audience_id;
+    }
+  });
+  assert.throws(
+    () => f.verify({ ...proof, statement }, { expected_audience_id: otherAudience }),
+    error => error instanceof ValidationError && /accessor/.test(error.message)
+  );
+  assert.equal(reads, 0);
+});
+
+test('a Proxy or accessor anywhere in the proof or root evidence is rejected before any trap or getter runs', () => {
+  const f = fixture();
+  const proof = f.sign();
+  const positions = [
+    ['proof', proof, (value) => f.verify(value)],
+    ['root_attestation', f.attestation, (value) => f.verify(proof, { root_attestation: value })],
+    ['root_authority', f.root, (value) => f.verify(proof, { root_authority: value })]
+  ];
+  let checked = 0;
+  for (const [name, document, run] of positions) {
+    for (const path of containerPaths(document)) {
+      const counter = { traps: 0 };
+      assert.throws(
+        () => run(withProxyAt(document, path, counter)),
+        error => error instanceof ValidationError && /Proxy/.test(error.message),
+        `${name} Proxy at ${label(path)}`
+      );
+      assert.equal(counter.traps, 0, `${name} Proxy at ${label(path)} ran a trap`);
+      checked += 1;
+    }
+    for (const path of propertyPaths(document)) {
+      const counter = { getters: 0 };
+      assert.throws(
+        () => run(withAccessorAt(document, path, counter)),
+        error => error instanceof ValidationError && /accessor/.test(error.message),
+        `${name} accessor at ${label(path)}`
+      );
+      assert.equal(counter.getters, 0, `${name} accessor at ${label(path)} ran its getter`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 60, `expected to cover every position, covered ${checked}`);
+});
+
+test('hidden, symbol, non-plain and cyclic proof state is rejected as plain-data failure, never a raw TypeError', () => {
+  const f = fixture();
+  const proof = f.sign();
+  const hidden = structuredClone(proof);
+  Object.defineProperty(hidden.statement, 'audience_id', {
+    value: proof.statement.audience_id, enumerable: false, configurable: true, writable: true
+  });
+  const symbolKeyed = structuredClone(proof);
+  symbolKeyed.grant[Symbol('shadow')] = 'x';
+  class Statement {}
+  const nonPlain = { ...proof, statement: Object.assign(new Statement(), proof.statement) };
+  const cyclic = structuredClone(proof);
+  cyclic.grant.authority.self = cyclic.grant.authority;
+  const customArrayProperty = structuredClone(proof);
+  customArrayProperty.grant.authority.actions.extra = 'x';
+  const sparse = structuredClone(proof);
+  sparse.grant.authority.actions = new Array(1);
+  const functionValued = structuredClone(proof);
+  functionValued.statement.audience_id = () => proof.statement.audience_id;
+  const cases = [
+    ['hidden', hidden, /non-enumerable/],
+    ['symbolKeyed', symbolKeyed, /symbol key/],
+    ['nonPlain', nonPlain, /non-plain prototype/],
+    ['cyclic', cyclic, /is cyclic/],
+    ['customArrayProperty', customArrayProperty, /custom array property/],
+    ['sparse', sparse, /sparse array/],
+    ['functionValued', functionValued, /is a function/]
+  ];
+  for (const [name, value, reason] of cases) {
+    assert.throws(
+      () => f.verify(value),
+      error => error instanceof ValidationError && /must be plain data/.test(error.message)
+        && reason.test(error.message),
+      name
+    );
+  }
+  const revocationCounter = { traps: 0 };
+  assert.throws(
+    () => f.verify(proof, { revocations: countingProxy([], revocationCounter) }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(revocationCounter.traps, 0);
+});
+
+test('plain JSON, structured clones and null-prototype copies of a valid proof still verify', () => {
+  const f = fixture();
+  const proof = f.sign();
+  assert.equal(f.verify(JSON.parse(JSON.stringify(proof))).valid, true);
+  assert.equal(f.verify(structuredClone(proof)).valid, true);
+  assert.equal(f.verify(nullPrototypeCopy(proof)).valid, true);
+  assert.equal(f.verify(proof, { root_attestation: nullPrototypeCopy(f.attestation) }).valid, true);
+});
+
+test('create reads the root attestation once and rejects a hostile root attestation', () => {
+  const f = fixture();
+  const counter = { getters: 0 };
+  assert.throws(
+    () => f.sign({ root_attestation: withAccessorAt(f.attestation, ['statement', 'root_binding_digest'], counter) }),
+    error => error instanceof ValidationError && /accessor/.test(error.message)
+  );
+  assert.equal(counter.getters, 0);
+  const proxyCounter = { traps: 0 };
+  assert.throws(
+    () => f.sign({ root_attestation: withProxyAt(f.attestation, ['statement'], proxyCounter) }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(proxyCounter.traps, 0);
+  const grantCounter = { getters: 0 };
+  assert.throws(
+    () => f.sign({ grant: withAccessorAt(f.grant, ['authority', 'actions', '0'], grantCounter) }),
+    error => error instanceof ValidationError && /accessor/.test(error.message)
+  );
+  assert.equal(grantCounter.getters, 0);
+  const authorityCounter = { traps: 0 };
+  assert.throws(
+    () => f.sign({ root_authority: withProxyAt(f.root, ['budgets'], authorityCounter) }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(authorityCounter.traps, 0);
 });

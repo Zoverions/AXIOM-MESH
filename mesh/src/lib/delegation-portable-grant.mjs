@@ -11,6 +11,7 @@ import {
   normalizeDelegationGrant,
   resolveDelegationChain
 } from './delegation-graph.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 import {
   delegationRootAttestationKeyId,
   verifyDelegationRootAttestation
@@ -111,20 +112,24 @@ function validateOneHop(root, grant, signedAt, now) {
 }
 
 export function createPortableDelegationGrant({
-  root_authority,
-  root_attestation,
-  grant,
+  root_authority: rootAuthorityInput,
+  root_attestation: rootAttestationInput,
+  grant: grantInput,
   signer_private_key,
   audience_id,
   signed_at
 } = {}) {
+  // Read caller evidence once; everything below sees only these copies.
+  const rootAuthority = snapshotDelegationPlainData(rootAuthorityInput, 'portable delegation root_authority');
+  const rootAttestation = snapshotDelegationPlainData(rootAttestationInput, 'portable delegation root_attestation');
+  const grant = snapshotDelegationPlainData(grantInput, 'portable delegation grant');
   const signer = privateKey(signer_private_key);
   const signerPublicKey = createPublicKey(signer);
   const { root, attestation } = validatedRoot(
-    root_authority,
-    root_attestation,
+    rootAuthority,
+    rootAttestation,
     signerPublicKey,
-    root_attestation?.statement?.root_binding_digest
+    rootAttestation?.statement?.root_binding_digest
   );
   const normalizedGrant = normalizeDelegationGrant(grant);
   const signedAt = timestamp(signed_at, 'portable delegation grant signed_at');
@@ -160,19 +165,26 @@ export function createPortableDelegationGrant({
   return { ...signed, proof_digest: digestObject(signed) };
 }
 
-export function verifyPortableDelegationGrant(raw, {
-  root_authority,
-  root_attestation,
+export function verifyPortableDelegationGrant(input, {
+  root_authority: rootAuthorityInput,
+  root_attestation: rootAttestationInput,
   trusted_root_public_key,
   expected_root_binding_digest,
   expected_audience_id,
   now = new Date(),
-  revocations = []
+  revocations: revocationsInput = []
 } = {}) {
+  // Snapshot caller evidence once, at entry. Every check below, the digest and
+  // the signature read only these copies, so a getter or lying Proxy cannot
+  // show one value to a check and another to canonicalJson.
+  const raw = snapshotDelegationPlainData(input, 'portable delegation grant proof');
+  const rootAuthority = snapshotDelegationPlainData(rootAuthorityInput, 'portable delegation root_authority');
+  const rootAttestation = snapshotDelegationPlainData(rootAttestationInput, 'portable delegation root_attestation');
+  const revocations = snapshotDelegationPlainData(revocationsInput, 'portable delegation revocations');
   const pin = publicKey(trusted_root_public_key);
   const pinnedBinding = digest(expected_root_binding_digest, 'portable delegation expected_root_binding_digest');
   const expectedAudience = identifier(expected_audience_id, 'portable delegation expected_audience_id');
-  const { root, attestation } = validatedRoot(root_authority, root_attestation, pin, pinnedBinding);
+  const { root, attestation } = validatedRoot(rootAuthority, rootAttestation, pin, pinnedBinding);
   const value = exact(raw, [
     'schema', 'statement', 'grant', 'statement_digest', 'signer_signature', 'proof_digest'
   ], 'portable delegation grant proof');

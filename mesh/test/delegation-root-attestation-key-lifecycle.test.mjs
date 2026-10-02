@@ -2,12 +2,20 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { DELEGATION_ROOT_BINDING_SCHEMA } from '../src/lib/delegation-ledger.mjs';
 import {
   createDelegationRootAttestation,
   delegationRootAttestationKeyId
 } from '../src/lib/delegation-root-attestation.mjs';
+import {
+  containerPaths,
+  countingProxy,
+  label,
+  propertyPaths,
+  withAccessorAt,
+  withProxyAt
+} from '../test-support/hostile-plain-data.mjs';
 
 const ACTIVATED = '2026-08-28T04:00:00.000Z';
 const ROTATED = '2026-08-28T04:10:00.000Z';
@@ -352,4 +360,157 @@ test('historical verification rejects retired or revoked signer keys at the atte
     revocations: [revocation],
     expectedRootBindingDigest: binding.binding_digest
   }), /revoked at requested time/i);
+});
+
+async function revokedKeyFixture() {
+  const binding = rootBinding();
+  const controller = keys();
+  const firstKey = keys();
+  const {
+    createDelegationRootAttestationKeyRevocation,
+    verifyDelegationRootAttestationWithKeyLifecycle
+  } = await lifecycle();
+  const first = await initialCredential({ binding, controller, operational: firstKey });
+  const revocation = createDelegationRootAttestationKeyRevocation(first, {
+    trustedControllerPublicKey: controller.publicKey,
+    controllerPrivateKey: controller.privateKey,
+    effectiveAt: '2026-08-28T04:05:00.000Z',
+    reasonCode: 'compromised'
+  });
+  // The compromised key signs after its revocation; the genuinely signed time is 04:30.
+  const revokedAttestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: firstKey.privateKey,
+    issued_at: '2026-08-28T04:30:00.000Z'
+  });
+  const validAttestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: firstKey.privateKey,
+    issued_at: '2026-08-28T04:01:00.000Z'
+  });
+  const options = {
+    trustedControllerPublicKey: controller.publicKey,
+    credentials: [first],
+    revocations: [revocation],
+    expectedRootBindingDigest: binding.binding_digest
+  };
+  return {
+    first,
+    revocation,
+    revokedAttestation,
+    validAttestation,
+    options,
+    verify: (attestation, changes = {}) =>
+      verifyDelegationRootAttestationWithKeyLifecycle(attestation, { ...options, ...changes })
+  };
+}
+
+test('P2: an issued_at getter cannot move a revoked-key attestation before its revocation', async () => {
+  const f = await revokedKeyFixture();
+  assert.throws(() => f.verify(f.revokedAttestation), /revoked at requested time/i);
+  assert.throws(() => f.verify(JSON.parse(JSON.stringify(f.revokedAttestation))), /revoked at requested time/i);
+  let reads = 0;
+  const statement = { ...f.revokedAttestation.statement };
+  Object.defineProperty(statement, 'issued_at', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      reads += 1;
+      return reads === 1 ? '2026-08-28T04:01:00.000Z' : f.revokedAttestation.statement.issued_at;
+    }
+  });
+  assert.throws(
+    () => f.verify({ ...f.revokedAttestation, statement }),
+    error => error instanceof ValidationError && /accessor/.test(error.message)
+  );
+  assert.equal(reads, 0);
+});
+
+test('P2: a lying issued_at Proxy cannot bypass key revocation', async () => {
+  const f = await revokedKeyFixture();
+  const counter = { traps: 0 };
+  const statement = countingProxy({ ...f.revokedAttestation.statement }, counter, {
+    issued_at: (read, signed) => (read === 1 ? '2026-08-28T04:01:00.000Z' : signed)
+  });
+  assert.throws(
+    () => f.verify({ ...f.revokedAttestation, statement }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(counter.traps, 0);
+});
+
+test('lifecycle verification rejects a Proxy or accessor anywhere in attestation, credentials or revocations', async () => {
+  const f = await revokedKeyFixture();
+  assert.equal(f.verify(f.validAttestation).verified, true);
+  assert.equal(f.verify(f.validAttestation).issued_at, '2026-08-28T04:01:00.000Z');
+  const positions = [
+    ['attestation', f.validAttestation, value => f.verify(value)],
+    ['credentials', f.options.credentials, value => f.verify(f.validAttestation, { credentials: value })],
+    ['revocations', f.options.revocations, value => f.verify(f.validAttestation, { revocations: value })]
+  ];
+  let checked = 0;
+  for (const [name, document, run] of positions) {
+    for (const path of containerPaths(document)) {
+      const counter = { traps: 0 };
+      assert.throws(
+        () => run(withProxyAt(document, path, counter)),
+        error => error instanceof ValidationError && /Proxy/.test(error.message),
+        `${name} Proxy at ${label(path)}`
+      );
+      assert.equal(counter.traps, 0, `${name} Proxy at ${label(path)} ran a trap`);
+      checked += 1;
+    }
+    for (const path of propertyPaths(document)) {
+      const counter = { getters: 0 };
+      assert.throws(
+        () => run(withAccessorAt(document, path, counter)),
+        error => error instanceof ValidationError && /accessor/.test(error.message),
+        `${name} accessor at ${label(path)}`
+      );
+      assert.equal(counter.getters, 0, `${name} accessor at ${label(path)} ran its getter`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 50, `expected to cover every position, covered ${checked}`);
+});
+
+test('lifecycle verification rejects hidden, symbol and non-plain attestation state without a raw TypeError', async () => {
+  const f = await revokedKeyFixture();
+  const hidden = structuredClone(f.validAttestation);
+  Object.defineProperty(hidden.statement, 'issued_at', {
+    value: f.validAttestation.statement.issued_at, enumerable: false, configurable: true, writable: true
+  });
+  const symbolKeyed = structuredClone(f.validAttestation);
+  symbolKeyed.statement[Symbol('shadow')] = 'x';
+  class Statement {}
+  const nonPlain = {
+    ...f.validAttestation,
+    statement: Object.assign(new Statement(), f.validAttestation.statement)
+  };
+  const cases = [
+    ['hidden', hidden, /non-enumerable/],
+    ['symbolKeyed', symbolKeyed, /symbol key/],
+    ['nonPlain', nonPlain, /non-plain prototype/]
+  ];
+  for (const [name, value, reason] of cases) {
+    assert.throws(
+      () => f.verify(value),
+      error => error instanceof ValidationError && /must be plain data/.test(error.message)
+        && reason.test(error.message),
+      name
+    );
+  }
+  const {
+    validateDelegationRootAttestationKeyCredentialPath
+  } = await lifecycle();
+  const counter = { traps: 0 };
+  assert.throws(
+    () => validateDelegationRootAttestationKeyCredentialPath(countingProxy([...f.options.credentials], counter), {
+      trustedControllerPublicKey: f.options.trustedControllerPublicKey
+    }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(counter.traps, 0);
 });
