@@ -1,3 +1,5 @@
+import { types } from 'node:util';
+
 import {
   ValidationError,
   assertPlainObject,
@@ -156,12 +158,28 @@ const WITHHELD_REASONS_BY_MODE = Object.freeze({
   ])
 });
 
+// Closed records are plain own enumerable data, mirroring the strict walk in
+// operation-proposal-binding.mjs: the Proxy test runs before anything else
+// touches the value, and hidden, symbol-keyed and accessor fields are rejected
+// rather than skipped, so no trap or getter runs.
 function exact(value, fields, name) {
+  if (types.isProxy(value)) throw new ValidationError(name + ' cannot be a Proxy');
   const object = assertPlainObject(value, name);
+  const prototype = Object.getPrototypeOf(object);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new ValidationError(name + ' must be a plain object');
+  }
   const allowed = new Set(fields);
-  for (const key of Object.keys(object)) {
+  for (const key of Reflect.ownKeys(object)) {
+    if (typeof key === 'symbol') {
+      throw new ValidationError(name + ' cannot contain symbol keys');
+    }
     if (!allowed.has(key)) {
       throw new ValidationError(name + ' contains unknown field ' + key);
+    }
+    const descriptor = Reflect.getOwnPropertyDescriptor(object, key);
+    if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new ValidationError(name + '.' + key + ' must be an enumerable data property');
     }
   }
   for (const key of fields) {
