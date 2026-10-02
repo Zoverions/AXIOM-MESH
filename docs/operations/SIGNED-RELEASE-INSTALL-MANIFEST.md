@@ -294,20 +294,22 @@ This work does **not** provide or claim:
 
 ## Next gate
 
-Before any privileged installer can consume this verifier as a live mutation prerequisite, #1901 requires:
+Install Session v0 now provides the explicit **pre-mutation classification** layer that #1901 required after reconciling the isolated first-node proof. It binds the exact host plan, verified release, locally verified artifact bytes, and observed install state, and derives only `verify-noop`, `prepare-install`, `prepare-repair`, `prepare-upgrade`, or `stop`. Legacy proof markers, conflicting state, and newer-or-unknown state stop fail closed.
 
-1. exact-head protected verification;
-2. merge/reconciliation of the non-mutating planner + verifier;
-3. reconciliation against the current isolated first-node installer proof;
-4. explicit install-session/resume/rollback state design;
-5. disposable clean-host evidence.
+Before any privileged installer can consume these evidence layers as a live mutation prerequisite, #1901 still requires:
+
+1. exact-head protected verification of the planner, verifier, and Install Session v0 stack;
+2. merge/reconciliation of those inert boundaries onto current `main`;
+3. a separately reviewed privileged bootstrapper authority/execution contract;
+4. disposable clean-host install/readiness/reboot/update/tamper/rollback-or-restore evidence.
 
 The first privileged installer must then consume **all** of:
 
 - externally trusted current signed manifest;
 - locally verified artifact bytes;
 - compatible exact host plan;
+- current Install Session v0 classification;
 - explicit operator invocation;
 - documented resumable/rollback state.
 
-No earlier artifact grants permission to cross that boundary.
+No planner, signature, artifact proof, or session classification grants permission to cross that boundary.

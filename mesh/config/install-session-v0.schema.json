@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/install-session-v0.schema.json",
+  "title": "AXIOM Install Session v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema","version","status","session_id","profile_id","host_plan_digest",
+    "release_id","kernel_version","source_revision","manifest_digest",
+    "artifact_proofs","observed_install_digest","observed_at","classification",
+    "next_preparation","reasons","blockers","host_mutation_authorized",
+    "credential_effect","service_start_effect","authority_effect","network_effect",
+    "runtime_activation","session_digest"
+  ],
+  "properties": {
+    "schema": {"const":"axiom-install-session.v0"},
+    "version": {"const":0},
+    "status": {"const":"inert-pre-mutation-classification"},
+    "session_id": {"$ref":"#/$defs/id"},
+    "profile_id": {"$ref":"#/$defs/id"},
+    "host_plan_digest": {"$ref":"#/$defs/digest"},
+    "release_id": {"$ref":"#/$defs/id"},
+    "kernel_version": {"type":"string","pattern":"^\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?$"},
+    "source_revision": {"type":"string","pattern":"^[a-f0-9]{40}$"},
+    "manifest_digest": {"$ref":"#/$defs/digest"},
+    "artifact_proofs": {
+      "type":"array","minItems":1,"maxItems":128,
+      "items": {
+        "type":"object","additionalProperties":false,
+        "required":["artifact_id","artifact_sha256","proof_digest"],
+        "properties": {
+          "artifact_id":{"$ref":"#/$defs/id"},
+          "artifact_sha256":{"$ref":"#/$defs/digest"},
+          "proof_digest":{"$ref":"#/$defs/digest"}
+        }
+      }
+    },
+    "observed_install_digest": {"$ref":"#/$defs/digest"},
+    "observed_at": {"type":"string","format":"date-time"},
+    "classification": {"enum":[
+      "absent","healthy-same","healthy-older","partial-same","conflicting-partial",
+      "newer-or-unknown","legacy-proof-state"
+    ]},
+    "next_preparation": {"enum":[
+      "verify-noop","prepare-install","prepare-repair","prepare-upgrade","stop"
+    ]},
+    "reasons": {
+      "type":"array","minItems":1,"maxItems":32,"uniqueItems":true,
+      "items":{"type":"string","minLength":1,"maxLength":160}
+    },
+    "blockers": {
+      "type":"array","maxItems":64,"uniqueItems":true,
+      "items":{"type":"string","minLength":1,"maxLength":256}
+    },
+    "host_mutation_authorized":{"const":false},
+    "credential_effect":{"const":"none"},
+    "service_start_effect":{"const":"none"},
+    "authority_effect":{"const":"none"},
+    "network_effect":{"const":"none"},
+    "runtime_activation":{"const":false},
+    "session_digest":{"$ref":"#/$defs/digest"}
+  },
+  "$defs": {
+    "id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{1,191}$"},
+    "digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}

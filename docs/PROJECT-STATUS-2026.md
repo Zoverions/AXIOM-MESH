@@ -120,6 +120,11 @@ The production-candidate surface includes:
   binds exact current install, capability, application, network, and setup
   control-plane digests and keeps artifact-byte verification separate from host
   mutation or installation authority;
+- an inert install-session classifier that composes exact host-plan, signed-release,
+  local artifact-byte, and existing-install evidence into verify/install/repair/
+  upgrade/stop preparation only; legacy first-node proof state, conflicting state,
+  and newer-or-unknown state stop fail-closed, and no classification authorizes
+  host mutation, credential creation, service start, network enrollment, or runtime activation;
 - a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct

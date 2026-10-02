@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/install-artifact-proof-v0.schema.json",
+  "title": "AXIOM Install Artifact Proof v0",
+  "type":"object",
+  "additionalProperties":false,
+  "required":[
+    "schema","version","status","release_id","manifest_digest","profile_ids",
+    "artifact_id","artifact_kind","artifact_sha256","byte_length","verified_at",
+    "artifact_bytes_verified","host_mutation_authorized","credential_effect",
+    "service_start_effect","authority_effect","network_effect","runtime_activation",
+    "proof_digest"
+  ],
+  "properties": {
+    "schema":{"const":"axiom-install-artifact-proof.v0"},
+    "version":{"const":0},
+    "status":{"const":"verified-local-artifact-bytes-evidence"},
+    "release_id":{"$ref":"#/$defs/id"},
+    "manifest_digest":{"$ref":"#/$defs/digest"},
+    "profile_ids":{"type":"array","minItems":1,"maxItems":8,"uniqueItems":true,"items":{"$ref":"#/$defs/id"}},
+    "artifact_id":{"$ref":"#/$defs/id"},
+    "artifact_kind":{"type":"string","minLength":1,"maxLength":128},
+    "artifact_sha256":{"$ref":"#/$defs/digest"},
+    "byte_length":{"type":"integer","minimum":1,"maximum":1000000000000},
+    "verified_at":{"type":"string","format":"date-time"},
+    "artifact_bytes_verified":{"const":true},
+    "host_mutation_authorized":{"const":false},
+    "credential_effect":{"const":"none"},
+    "service_start_effect":{"const":"none"},
+    "authority_effect":{"const":"none"},
+    "network_effect":{"const":"none"},
+    "runtime_activation":{"const":false},
+    "proof_digest":{"$ref":"#/$defs/digest"}
+  },
+  "$defs": {
+    "id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{1,191}$"},
+    "digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}
