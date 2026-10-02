@@ -86,6 +86,12 @@ Likewise, `release_manifest_digest`, `artifact_sha256s`, and `artifact_evidence_
 
 The observation carries no secret values, tokens, key bytes, environment dump, raw service configuration, or artifact bytes. For a live session it must also be captured **at or after** the candidate request and remain within the candidate's bounded observation-age window; pre-request, stale, future, or unknown state fails closed.
 
+The observation is caller-asserted: it is matched to the candidate only by session_id and the time window, is not bound to the candidate digest, and has no authenticated provenance; decisions carry observation_bound: false, and no later privileged step may gate on a decision until #1913 binds the observation to the candidate digest and a live-local observation source.
+
+`validateInstallSessionDecision` proves integrity, not origin: a relabelled decision with a recomputed digest still validates, so any later step must re-run `assessInstallSession` on the candidate and observation rather than trust a supplied decision.
+
+An observation that claims an **ancestor** relation while reporting the desired release id or desired source revision is contradictory and yields `STOP_CONFLICT` (`ancestor-claim-matches-desired-identity`), never `UPGRADE_REVIEW`.
+
 ## Decision semantics
 
 ### INSTALL_REVIEW
@@ -116,7 +122,7 @@ A future repair path must still be separately admitted.
 
 ### UPGRADE_REVIEW
 
-Only when the installed release is externally evidenced as an **ancestor** of the desired release and the profile matches.
+Only when the installed release is caller-asserted with an evidence reference as an **ancestor** of the desired release and the profile matches.
 
 This is not automatic update permission.
 

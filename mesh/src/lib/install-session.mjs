@@ -173,7 +173,12 @@ export function computeInstalledStateObservationDigest(d){
 }
 export function installedStateObservationDigest(d){validateInstalledStateObservation(d);return d.observation_digest;}
 
-export function assessInstallSession(candidate,observation,{evaluatedAt}={}){
+export function assessInstallSession(candidate,observation,options={}){
+  if(
+    options===null||typeof options!=='object'||Array.isArray(options)||utilTypes.isProxy(options)
+    ||![Object.prototype,null].includes(Object.getPrototypeOf(options))
+  ) throw new ValidationError('Install session assessment options must be a plain object');
+  const {evaluatedAt}=options;
   validateInstallSessionCandidate(candidate);
   validateInstalledStateObservation(observation);
   const now=date(evaluatedAt,'evaluatedAt');
@@ -251,6 +256,12 @@ export function assessInstallSession(candidate,observation,{evaluatedAt}={}){
       return decision('REPAIR_REVIEW',['exact-release-not-ready'],candidateDigest,observationDigest);
     }
     if(observation.release_relation_to_desired==='ancestor'){
+      if(
+        observation.installed_release_id===candidate.desired_release_id
+        ||observation.installed_source_revision===candidate.desired_source_revision
+      ){
+        return decision('STOP_CONFLICT',['ancestor-claim-matches-desired-identity'],candidateDigest,observationDigest);
+      }
       if(observation.installed_profile_id!==candidate.profile_id){
         return decision('STOP_CONFLICT',['installed-profile-mismatch'],candidateDigest,observationDigest);
       }
@@ -272,13 +283,14 @@ export function assessInstallSession(candidate,observation,{evaluatedAt}={}){
 export function validateInstallSessionDecision(d){
   exactObject(d,'Install session decision',[
     'schema','version','status','decision','reasons','candidate_digest',
-    'observation_digest','decision_digest','host_mutation_authorized',
+    'observation_digest','decision_digest','observation_bound','host_mutation_authorized',
     'authority_effect','network_effect','runtime_activation'
   ]);
   if(
     d.schema!==INSTALL_SESSION_DECISION_SCHEMA
     ||d.version!==0
     ||d.status!=='inert-install-session-decision'
+    ||d.observation_bound!==false
     ||d.host_mutation_authorized!==false
     ||d.authority_effect!=='none'
     ||d.network_effect!=='none'
@@ -306,7 +318,7 @@ export function validateInstallSessionDecision(d){
 export function computeInstallSessionDecisionDigest(d){
   exactObject(d,'Install session decision digest input',[
     'schema','version','status','decision','reasons','candidate_digest',
-    'observation_digest','decision_digest','host_mutation_authorized',
+    'observation_digest','decision_digest','observation_bound','host_mutation_authorized',
     'authority_effect','network_effect','runtime_activation'
   ]);
   return digestObject({...d,decision_digest:ZERO_SHA});
@@ -332,6 +344,7 @@ function decision(value,reasons,candidateDigest,observationDigest){
     candidate_digest:candidateDigest,
     observation_digest:observationDigest,
     decision_digest:ZERO_SHA,
+    observation_bound:false,
     host_mutation_authorized:false,
     authority_effect:'none',
     network_effect:'none',

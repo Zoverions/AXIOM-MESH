@@ -10,8 +10,10 @@ import {
   installSessionCandidateDigest,
   validateInstallSessionCandidate,
   validateInstallSessionDecision,
-  validateInstalledStateObservation
+  validateInstalledStateObservation,
+  computeInstallSessionDecisionDigest
 } from '../src/lib/install-session.mjs';
+import { ValidationError } from '../src/lib/canonical.mjs';
 
 const A='a'.repeat(64);
 const B='b'.repeat(64);
@@ -361,5 +363,49 @@ test('a complete install record that lost part of its secrets stops as partial s
       /Complete install record cannot carry absent secrets or data/,
       JSON.stringify(overrides)
     );
+  }
+});
+
+test('ancestor claim that matches the desired identity is a conflict, not an upgrade',()=>{
+  const o=exactInstalled({
+    release_relation_to_desired:'ancestor',
+    relation_evidence_ref:'release-lineage.claimed-ancestor'
+  });
+  const d=assess(candidate(),o);
+  assert.equal(d.decision,'STOP_CONFLICT');
+  assert.deepEqual(d.reasons,['ancestor-claim-matches-desired-identity']);
+  assert.equal(d.observation_bound,false);
+  for (const overrides of [
+    {installed_source_revision:'4'.repeat(40)},
+    {installed_release_id:'axiom-mesh/0.11.0/old'}
+  ]) {
+    const partial=assess(candidate(),exactInstalled({
+      release_relation_to_desired:'ancestor',
+      relation_evidence_ref:'release-lineage.claimed-ancestor',
+      ...overrides
+    }));
+    assert.equal(partial.decision,'STOP_CONFLICT',JSON.stringify(overrides));
+    assert.deepEqual(partial.reasons,['ancestor-claim-matches-desired-identity']);
+  }
+});
+
+test('every decision is explicitly not bound to an authenticated observation',()=>{
+  const d=assess();
+  assert.equal(d.observation_bound,false);
+  assert.equal(validateInstallSessionDecision(d).valid,true);
+  const relabelled={...d,observation_bound:true};
+  relabelled.decision_digest=computeInstallSessionDecisionDigest(relabelled);
+  assert.throws(()=>validateInstallSessionDecision(relabelled),/activation boundary is invalid/);
+  const {observation_bound:_omitted,...missing}=d;
+  assert.throws(()=>validateInstallSessionDecision(missing),/fields are invalid|key inventory|invalid/);
+});
+
+test('assessInstallSession rejects null or non-plain options with ValidationError',()=>{
+  for (const options of [null,7,'evaluatedAt',[],new Proxy({evaluatedAt:'2026-09-28T01:01:00.000Z'},{})]) {
+    assert.throws(()=>assessInstallSession(candidate(),observation(),options),error=>{
+      assert.ok(error instanceof ValidationError,`${String(options)}: ${error?.name}: ${error?.message}`);
+      assert.match(error.message,/Install session assessment options must be a plain object/);
+      return true;
+    });
   }
 });

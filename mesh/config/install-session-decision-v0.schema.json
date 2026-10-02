@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "schema","version","status","decision","reasons","candidate_digest",
-    "observation_digest","decision_digest","host_mutation_authorized",
+    "observation_digest","decision_digest","observation_bound","host_mutation_authorized",
     "authority_effect","network_effect","runtime_activation"
   ],
   "properties": {
@@ -22,6 +22,7 @@
     "candidate_digest":{"$ref":"#/$defs/digest"},
     "observation_digest":{"$ref":"#/$defs/digest"},
     "decision_digest":{"$ref":"#/$defs/digest"},
+    "observation_bound":{"const":false},
     "host_mutation_authorized":{"const":false},
     "authority_effect":{"const":"none"},
     "network_effect":{"const":"none"},

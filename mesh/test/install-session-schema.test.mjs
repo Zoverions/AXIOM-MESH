@@ -10,7 +10,7 @@ const cases=[
     'authority_effect','mutation_effect','runtime_activation'
   ]],
   ['install-session-decision-v0.schema.json','axiom-install-session-decision.v0',[
-    'host_mutation_authorized','authority_effect','network_effect','runtime_activation'
+    'observation_bound','host_mutation_authorized','authority_effect','network_effect','runtime_activation'
   ]]
 ];
 
