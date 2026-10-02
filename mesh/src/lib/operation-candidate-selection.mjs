@@ -915,6 +915,11 @@ function validateOperationCandidateSelectionProposalShape(document) {
     throw new ValidationError('operation candidate selection proposal_id does not match inputs');
   }
 
+  // Type-check before the structuredClone in proposalDigestPayload, so a
+  // Proxy, symbol or function here is not a raw DataCloneError.
+  if (typeof value.proposal_digest !== 'string') {
+    throw new ValidationError('operation candidate selection proposal digest is invalid');
+  }
   const expectedDigest = digestObject(proposalDigestPayload(value));
   if (value.proposal_digest !== expectedDigest) {
     throw new ValidationError('operation candidate selection proposal digest is invalid');

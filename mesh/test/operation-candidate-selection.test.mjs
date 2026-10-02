@@ -714,3 +714,12 @@ test('hostile-input contract: operation candidate selection records reject every
     assert.deepEqual(violations.filter(outsideSelectionResidual), [], fn.name);
   }
 });
+
+test('a Proxy, symbol or function proposal_digest is a ValidationError, never a raw DataCloneError', () => {
+  const document = createOperationCandidateSelectionProposal(hostileTrusted());
+  for (const [label, value] of [['Proxy', new Proxy({}, {})], ['symbol', Symbol('x')], ['function', () => document.proposal_digest]]) {
+    const tampered = structuredClone(document);
+    tampered.proposal_digest = value;
+    assert.throws(() => validateOperationCandidateSelectionProposal(tampered, hostileTrusted()), ValidationError, label);
+  }
+});
