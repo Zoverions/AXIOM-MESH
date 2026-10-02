@@ -151,15 +151,33 @@ function assertDigestListOption(value, label) {
   }
 }
 
+// Bounds the read of a caller iterable: at most 256 distinct digests (the
+// receipt cap) and at most 4,096 items in total, so a huge or endless
+// generator is rejected instead of exhausting memory or blocking. Each item is
+// checked as a digest before deduplication and sorting.
+const MAX_DIGEST_OPTION_ITEMS = 4096;
+const MAX_DIGEST_OPTION_DIGESTS = 256;
+
 function digestListOption(value, label) {
   assertDigestListOption(value, label);
-  let items;
+  const unique = new Set();
+  let count = 0;
   try {
-    items = [...value];
-  } catch {
+    for (const item of value) {
+      count += 1;
+      if (count > MAX_DIGEST_OPTION_ITEMS) {
+        throw new ValidationError(`${label} must contain at most ${MAX_DIGEST_OPTION_ITEMS} items`);
+      }
+      unique.add(digest(item, `${label}[${count - 1}]`));
+      if (unique.size > MAX_DIGEST_OPTION_DIGESTS) {
+        throw new ValidationError(`${label} must contain at most ${MAX_DIGEST_OPTION_DIGESTS} digests`);
+      }
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
     throw new ValidationError(`${label} must be an array or iterable of digests`);
   }
-  return [...new Set(items)].sort();
+  return [...unique].sort();
 }
 
 function parsePrivateKey(value, label) {

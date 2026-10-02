@@ -968,3 +968,21 @@ test('canonicalDigestSet reads length once: digests appended by an element gette
   assert.equal(verified.valid, true);
   assert.equal(appended, true);
 });
+
+test('digest-list options are read with a bound and each item is checked before sorting', () => {
+  const f = fixture();
+  const receipt = create(f);
+  let pulled = 0;
+  const endless = { *[Symbol.iterator]() { for (;;) { pulled += 1; yield ARTIFACT_A; } } };
+  assert.throws(() => create(f, { reportedArtifactDigests: endless }), /at most 4096 items/);
+  assert.ok(pulled <= 4097, `pulled ${pulled}`);
+  const distinct = Array.from({ length: 257 }, (_, index) => index.toString(16).padStart(64, '0'));
+  assert.throws(() => create(f, { reportedArtifactDigests: distinct }), /at most 256 digests/);
+  for (const [label, list] of [['symbol', [ARTIFACT_A, Symbol('x')]], ['number', [ARTIFACT_A, 5]], ['object', [ARTIFACT_A, {}]]]) {
+    assert.throws(() => create(f, { reportedArtifactDigests: list }), ValidationError, `create ${label}`);
+    assert.throws(() => verifyAgentPortableWorkReceipt(receipt, { ...verifyEvidence(f), expectedArtifactDigests: list }), ValidationError, `verify ${label}`);
+  }
+  // Duplicates still collapse: 300 copies of one digest are one reported digest.
+  assert.deepEqual(create(f, { reportedArtifactDigests: Array(300).fill(ARTIFACT_A) }).statement.reported_artifact_digests, [ARTIFACT_A]);
+  assert.deepEqual(create(f, { reportedArtifactDigests: distinct.slice(0, 256) }).statement.reported_artifact_digests.length, 256);
+});
