@@ -120,6 +120,10 @@ The production-candidate surface includes:
   binds exact current install, capability, application, network, and setup
   control-plane digests and keeps artifact-byte verification separate from host
   mutation or installation authority;
+- an inert Install Session v0 state classifier that binds one desired plan/
+  release/artifact evidence set to a self-digested installed-state observation
+  and distinguishes install/no-op/repair/upgrade/recovery review from newer,
+  diverged, partial-secret, conflict, and uncertainty stops without host mutation;
 - a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
