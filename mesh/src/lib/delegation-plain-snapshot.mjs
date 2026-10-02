@@ -2,7 +2,11 @@ import { types } from 'node:util';
 
 import { ValidationError } from './canonical.mjs';
 
-const MAX_DEPTH = 64;
+export const DELEGATION_SNAPSHOT_MAX_DEPTH = 64;
+// Every visited value counts, so a DAG of shared references is charged once per
+// path. This bounds snapshot work (and the copied tree handed to canonicalize)
+// linearly instead of letting 23 shared objects expand to 2^22 copies.
+export const DELEGATION_SNAPSHOT_MAX_NODES = 50_000;
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 // ECMAScript array indexes stop at 2^32 - 2; larger numeric keys are custom properties.
 const MAX_ARRAY_INDEX = 2 ** 32 - 2;
@@ -15,25 +19,30 @@ const MAX_ARRAY_INDEX = 2 ** 32 - 2;
  * operation touches a value (so no trap runs), properties are read through own
  * data descriptors (so no getter runs), and Proxies, accessors, symbol keys,
  * non-enumerable state, non-plain prototypes, custom or sparse array state,
- * functions and cycles are rejected with ValidationError. Primitive values
- * are copied unchanged; the existing validators still type-check them, and
- * canonical.mjs remains the only canonical encoder.
+ * functions, cycles, nesting deeper than 64 and inputs over 50,000 values are
+ * rejected with ValidationError. A source object reachable through two parents
+ * is copied separately under each one: the snapshot is always a tree and never
+ * aliases one copy under two parents. Primitive values are copied unchanged;
+ * the existing validators still type-check them, and canonical.mjs remains the
+ * only canonical encoder.
  */
 export function snapshotDelegationPlainData(value, name) {
-  return copy(value, name, '<root>', new Set(), 0);
+  return copy(value, name, '<root>', new Set(), 0, { nodes: 0 });
 }
 
 function reject(name, path, reason) {
   throw new ValidationError(`${name} must be plain data; ${path} ${reason}`);
 }
 
-function copy(value, name, path, ancestors, depth) {
+function copy(value, name, path, ancestors, depth, budget) {
   // The Proxy test is the first operation on every value: nothing else may
   // touch a value before it is known not to be a Proxy.
   if (types.isProxy(value)) reject(name, path, 'is a Proxy');
+  budget.nodes += 1;
+  if (budget.nodes > DELEGATION_SNAPSHOT_MAX_NODES) reject(name, path, 'exceeds the node budget');
   if (typeof value === 'function') reject(name, path, 'is a function');
   if (value === null || typeof value !== 'object') return value;
-  if (depth > MAX_DEPTH) reject(name, path, 'exceeds the depth bound');
+  if (depth > DELEGATION_SNAPSHOT_MAX_DEPTH) reject(name, path, 'exceeds the depth bound');
   if (ancestors.has(value)) reject(name, path, 'is cyclic');
   const isArray = Array.isArray(value);
   const prototype = Object.getPrototypeOf(value);
@@ -57,7 +66,7 @@ function copy(value, name, path, ancestors, depth) {
       indexes += 1;
     }
     Object.defineProperty(output, key, {
-      value: copy(descriptor.value, name, childPath, ancestors, depth + 1),
+      value: copy(descriptor.value, name, childPath, ancestors, depth + 1, budget),
       enumerable: true,
       writable: true,
       configurable: true

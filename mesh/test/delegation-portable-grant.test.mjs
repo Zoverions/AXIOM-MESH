@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { createPrivateKey, generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
 import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
@@ -326,4 +326,65 @@ test('create reads the root attestation once and rejects a hostile root attestat
     error => error instanceof ValidationError && /Proxy/.test(error.message)
   );
   assert.equal(authorityCounter.traps, 0);
+});
+
+test('caller options that rewrite the raw proof mid-verify cannot redirect the audience check', () => {
+  const f = fixture();
+  const input = structuredClone(f.sign());
+  let rewrites = 0;
+  // `now` is coerced after the snapshot and before the audience check.
+  const now = {
+    [Symbol.toPrimitive]() {
+      rewrites += 1;
+      input.statement.audience_id = 'verifier.other';
+      return T2;
+    }
+  };
+  assert.throws(
+    () => f.verify(input, { expected_audience_id: 'verifier.other', now }),
+    /audience does not match pinned verifier/
+  );
+  assert.ok(rewrites > 0, 'the option hook must have run');
+  assert.equal(input.statement.audience_id, 'verifier.other');
+});
+
+test('over-deep and shared-reference blow-up proofs are rejected cleanly by the snapshot limits', () => {
+  const f = fixture();
+  const proof = f.sign();
+  let deep = {};
+  const deepRoot = deep;
+  for (let index = 0; index < 65; index += 1) {
+    deep.x = {};
+    deep = deep.x;
+  }
+  assert.throws(
+    () => f.verify({ ...proof, statement: { ...proof.statement, extra: deepRoot } }),
+    error => error instanceof ValidationError && /exceeds the depth bound/.test(error.message)
+  );
+  let dag = { leaf: true };
+  for (let index = 0; index < 22; index += 1) dag = { a: dag, b: dag };
+  assert.throws(
+    () => f.verify({ ...proof, statement: { ...proof.statement, extra: dag } }),
+    error => error instanceof ValidationError && /exceeds the node budget/.test(error.message)
+  );
+});
+
+test('caller options that rewrite the raw root attestation cannot change the binding create signs against', () => {
+  const f = fixture();
+  const rootAttestation = structuredClone(f.attestation);
+  const signerKey = createPrivateKey(f.signer.privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  let rewrites = 0;
+  // The signer key is read after the snapshot and before the binding lookup.
+  Object.defineProperty(signerKey, 'type', {
+    configurable: true,
+    get() {
+      rewrites += 1;
+      rootAttestation.statement.root_binding_digest = 'e'.repeat(64);
+      return 'private';
+    }
+  });
+  const proof = f.sign({ root_attestation: rootAttestation, signer_private_key: signerKey });
+  assert.ok(rewrites > 0, 'the option hook must have run');
+  assert.equal(proof.statement.root_binding_digest, f.rootBinding.binding_digest);
+  assert.equal(f.verify(proof).valid, true);
 });
