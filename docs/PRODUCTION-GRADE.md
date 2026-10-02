@@ -30,8 +30,12 @@ OCI-first Linux host planner now produces digest-bound compatibility,
 blocker, and prerequisite evidence for those profiles. Its target-host fact
 contract permits Node.js to be absent for OCI planning, but the current planner
 command itself is a Node.js program and is not the future Node-free bootstrapper.
-It modifies no host state. The profiles are still not supported fresh-host
-installers.
+It modifies no host state. A separate signed release/install-manifest verifier
+now requires an externally trusted active Ed25519 signer, exact current
+control-plane digests, bounded validity, exact profile status, and required
+artifact/evidence metadata; artifact bytes still require a separate local
+length/digest check. Neither verifier result nor artifact identity authorizes
+host mutation. The profiles are still not supported fresh-host installers.
 
 The authenticated Gateway surface also has a versioned client contract covering
 all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
@@ -156,8 +160,9 @@ Likewise, source setup and host planning are not host installation. The
 current planner may establish only bounded host compatibility and prerequisites;
 it creates no users, credentials, services, network state, or install authority.
 The first supported fresh-host installer must begin from a supported clean Linux
-host, verify an immutable
-signed release before privileged mutation, create unprivileged service/data/
+host, consume a compatible exact host plan, verify an immutable signed release
+against the current control plane and locally verify artifact bytes before
+privileged mutation, create unprivileged service/data/
 secret boundaries, preserve no-public-ingress and deny-egress defaults, and
 prove reboot, update, tampered/incompatible-update rejection, restore or safe
 rollback, uninstall, and non-secret receipts. Infrastructure-node installation
