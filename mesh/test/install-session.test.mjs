@@ -301,7 +301,14 @@ test('ready state cannot contradict service or complete-record evidence',()=>{
   assert.throws(()=>validateInstalledStateObservation(noService),/Ready installed state requires running services/);
 
   const noSecrets=exactInstalled({secret_state:'absent'});
-  assert.throws(()=>validateInstalledStateObservation(noSecrets),/complete secrets and present data/);
+  assert.throws(()=>validateInstalledStateObservation(noSecrets),/Complete install record cannot carry absent secrets or data/);
+  for (const overrides of [{secret_state:'partial'},{secret_state:'unknown'},{data_state:'unknown'}]) {
+    assert.throws(
+      ()=>validateInstalledStateObservation(exactInstalled(overrides)),
+      /Ready installed state requires complete secrets and present data/,
+      JSON.stringify(overrides)
+    );
+  }
 
   const absentReady=observation({readiness_state:'ready',service_state:'running'});
   assert.throws(()=>validateInstalledStateObservation(absentReady),/Absent install record cannot claim readiness/);
@@ -330,4 +337,29 @@ test('install session logic has no process filesystem network or credential side
   const source=await readFile(new URL('../src/lib/install-session.mjs',import.meta.url),'utf8');
   assert.doesNotMatch(source,/node:child_process|node:fs|node:net|node:http|node:https/);
   assert.doesNotMatch(source,/\bfetch\s*\(|\bspawn\s*\(|\bexecFile\s*\(|\bexecSync\s*\(|\bfork\s*\(/);
+  const specifiers=[
+    ...source.matchAll(/^\s*(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]/gm)
+  ].map(match=>match[1]);
+  assert.deepEqual(specifiers,['node:util','./canonical.mjs']);
+  assert.doesNotMatch(
+    source,
+    /\bprocess\b|globalThis|\bimport\s*\(|\brequire\s*\(|\bFunction\b|\beval\b|\.constructor\s*\(|\[['"]constructor['"]\]|\bnavigator\b|\bDeno\b|\bBun\b|\bWebAssembly\b/
+  );
+});
+
+test('a complete install record that lost part of its secrets stops as partial secret state',()=>{
+  const partial=exactInstalled({secret_state:'partial',service_state:'stopped',readiness_state:'not-ready'});
+  assert.equal(validateInstalledStateObservation(partial).valid,true);
+  assert.equal(assess(candidate(),partial).decision,'STOP_PARTIAL_SECRET_STATE');
+  for (const overrides of [{secret_state:'unknown'},{data_state:'unknown'}]) {
+    const unknown=exactInstalled({...overrides,readiness_state:'not-ready'});
+    assert.equal(assess(candidate(),unknown).decision,'STOP_UNCERTAIN',JSON.stringify(overrides));
+  }
+  for (const overrides of [{secret_state:'absent'},{data_state:'absent'}]) {
+    assert.throws(
+      ()=>validateInstalledStateObservation(exactInstalled({...overrides,readiness_state:'not-ready'})),
+      /Complete install record cannot carry absent secrets or data/,
+      JSON.stringify(overrides)
+    );
+  }
 });

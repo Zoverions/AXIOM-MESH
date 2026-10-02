@@ -129,7 +129,7 @@ Recovery decisions must preserve newer revocation/consent/authority history and 
 ### Hard stops
 
 - `STOP_NONLIVE_PLAN`: synthetic/supplied plan facts cannot enter live install review.
-- `STOP_PARTIAL_SECRET_STATE`: partial secret state is never auto-repaired.
+- `STOP_PARTIAL_SECRET_STATE`: partial secret state is never auto-repaired, including when a `complete` install record (historical evidence) now observes only part of its secret set. A complete record with absent secrets or data is rejected as invalid evidence, and a `ready` claim requires complete secrets and present data.
 - `STOP_NEWER_PRESENT`: no automatic downgrade.
 - `STOP_DIVERGED`: no hidden branch/fork replacement.
 - `STOP_CONFLICT`: inconsistent identity/runtime evidence.

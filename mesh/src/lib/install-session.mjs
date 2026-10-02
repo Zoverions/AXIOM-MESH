@@ -131,12 +131,17 @@ export function validateInstalledStateObservation(d){
       ||d.installed_release_manifest_digest===null
       ||d.release_relation_to_desired==='absent'
     ) throw new ValidationError('Complete install record requires installed identity');
-    if(d.secret_state!=='complete'||d.data_state!=='present'){
-      throw new ValidationError('Complete install record requires complete secrets and present data');
+    // The record is historical; current secret/data state may have degraded.
+    // Partial or unknown current state is classified (hard stop); absent is invalid.
+    if(d.secret_state==='absent'||d.data_state==='absent'){
+      throw new ValidationError('Complete install record cannot carry absent secrets or data');
     }
   }
   if(d.readiness_state==='ready'&&d.service_state!=='running'){
     throw new ValidationError('Ready installed state requires running services');
+  }
+  if(d.readiness_state==='ready'&&(d.secret_state!=='complete'||d.data_state!=='present')){
+    throw new ValidationError('Ready installed state requires complete secrets and present data');
   }
   if(
     ['ancestor','descendant','diverged'].includes(d.release_relation_to_desired)
