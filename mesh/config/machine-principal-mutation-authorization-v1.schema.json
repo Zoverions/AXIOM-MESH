@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/machine-principal-mutation-authorization-v1.schema.json",
+  "title": "AXIOM Machine Principal Mutation Authorization v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "actor_id",
+    "target_principal_id",
+    "target_principal_type",
+    "root_authority_digest",
+    "predecessor_lifecycle_seq",
+    "predecessor_lifecycle_head_digest",
+    "predecessor_authority_digest",
+    "transition_kind",
+    "successor_authority_digest",
+    "reason",
+    "policy_version",
+    "policy_digest",
+    "operation",
+    "intent_id",
+    "issued_at",
+    "effective_at",
+    "expires_at",
+    "command_id"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-machine-principal-mutation-authorization.v1"
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "target_principal_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "target_principal_type": {
+      "enum": [
+        "agent",
+        "service"
+      ]
+    },
+    "root_authority_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "predecessor_lifecycle_seq": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "predecessor_lifecycle_head_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "predecessor_authority_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "transition_kind": {
+      "enum": [
+        "initialize",
+        "narrow",
+        "revoke",
+        "compromise",
+        "expire"
+      ]
+    },
+    "successor_authority_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "policy_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "operation": {
+      "enum": [
+        "machine.principal.lifecycle.initialize",
+        "machine.principal.lifecycle.mutate"
+      ]
+    },
+    "intent_id": {
+      "type": "string",
+      "pattern": "^intent_[a-f0-9]{64}$"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "command_id": {
+      "type": "string",
+      "pattern": "^machine_cmd_[a-f0-9]{64}$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/machine-principal-currentness.mjs"
+}
