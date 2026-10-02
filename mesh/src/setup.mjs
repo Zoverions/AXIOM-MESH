@@ -8,6 +8,16 @@ import {
   ValidationError
 } from './lib/canonical.mjs';
 import { MESH_ROOT } from './lib/config.mjs';
+import {
+  classifyRuntimeProfile,
+  compareVersion,
+  normalizeVersion,
+  SEMVER,
+  validateVersionInRange,
+  versionTuple
+} from './lib/node-runtime-version.mjs';
+
+export { classifyRuntimeProfile, normalizeVersion, versionTuple };
 
 export const SOURCE_SETUP_POLICY_SCHEMA = 'axiom-source-setup-policy.v1';
 
@@ -67,7 +77,6 @@ const REQUIRED_KERNEL_SCRIPTS = Object.freeze({
     'node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node src/check-demand-evidence.mjs && node --test --test-reporter=spec',
   'release:verify': 'node src/release.mjs'
 });
-const SEMVER = /^\d+\.\d+\.\d+$/;
 const VERIFICATION_STEPS = Object.freeze([
   { name: 'check', arguments: ['run', 'check'], rerun: 'npm run check' },
   {
@@ -580,66 +589,6 @@ export function assertProductionRuntime(nodeVersion = process.version) {
     );
   }
   return normalizeVersion(nodeVersion, 'Node.js');
-}
-
-export function classifyRuntimeProfile(value, runtimePolicy) {
-  const normalized = normalizeVersion(value, 'Node.js');
-  const major = versionTuple(normalized, 'Node.js')[0];
-
-  if (major === 24) {
-    validateVersionInRange(
-      normalized,
-      runtimePolicy.minimum_version,
-      runtimePolicy.maximum_major_exclusive,
-      'Node.js'
-    );
-    return 'primary';
-  }
-
-  if (major === 22) {
-    validateVersionInRange(
-      normalized,
-      runtimePolicy.compatibility_minimum_version,
-      runtimePolicy.compatibility_maximum_major_exclusive,
-      'Node.js'
-    );
-    return 'compatibility';
-  }
-
-  throw new ValidationError(
-    `Node.js ${normalized} is outside ${runtimePolicy.engine}`
-  );
-}
-
-function validateVersionInRange(value, minimum, maximumMajorExclusive, name) {
-  const normalized = normalizeVersion(value, name);
-  const actual = versionTuple(normalized, name);
-  const lower = versionTuple(minimum, `${name} minimum`);
-  if (
-    compareVersion(actual, lower) < 0
-    || actual[0] >= maximumMajorExclusive
-  ) throw new ValidationError(
-    `${name} ${normalized} is outside ${minimum} <= version < ${maximumMajorExclusive}.0.0`
-  );
-}
-
-function normalizeVersion(value, name) {
-  const normalized = String(value ?? '').replace(/^v/, '');
-  if (!SEMVER.test(normalized)) {
-    throw new ValidationError(`${name} version is invalid`);
-  }
-  return normalized;
-}
-
-function versionTuple(value, name) {
-  return normalizeVersion(value, name).split('.').map(Number);
-}
-
-function compareVersion(left, right) {
-  for (let index = 0; index < 3; index += 1) {
-    if (left[index] !== right[index]) return left[index] - right[index];
-  }
-  return 0;
 }
 
 function exactObject(value, name, keys) {
