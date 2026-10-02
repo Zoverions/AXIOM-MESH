@@ -96,3 +96,34 @@ test('the node budget counts every value on every path, exactly at the bound', (
     isPlainDataRejection(/exceeds the node budget/)
   );
 });
+
+test('bigint, symbol, NaN and +/-Infinity anywhere, and undefined below the root, are plain-data ValidationErrors', () => {
+  for (const [label, value, reason] of [
+    ['bigint', 1n, /is a bigint/],
+    ['symbol', Symbol('x'), /is a symbol/],
+    ['NaN', Number.NaN, /not a finite number/],
+    ['Infinity', Number.POSITIVE_INFINITY, /not a finite number/],
+    ['-Infinity', Number.NEGATIVE_INFINITY, /not a finite number/],
+    ['undefined', undefined, /is undefined/]
+  ]) {
+    assert.throws(() => snapshotDelegationPlainData({ ok: 1, value }, 'evidence'), isPlainDataRejection(reason), `${label} in a record`);
+    assert.throws(() => snapshotDelegationPlainData([1, value], 'evidence'), isPlainDataRejection(reason), `${label} in an array`);
+    if (value !== undefined) {
+      assert.throws(() => snapshotDelegationPlainData(value, 'evidence'), isPlainDataRejection(reason), `${label} at the root`);
+    }
+  }
+  // An absent argument still reaches the caller's own validator.
+  assert.equal(snapshotDelegationPlainData(undefined, 'evidence'), undefined);
+  // JSON values are unchanged, including -0 and null.
+  const json = { a: [0, -0, 1.5, 'x', true, false, null], b: { c: null } };
+  assert.equal(canonicalJson(snapshotDelegationPlainData(json, 'evidence')), canonicalJson(json));
+});
+
+test('an own __proto__ key from JSON.parse is copied as an own data key, never as the prototype', () => {
+  const source = JSON.parse('{"__proto__":{"injected":true},"kept":1}');
+  const copy = snapshotDelegationPlainData(source, 'evidence');
+  assert.equal(Object.getPrototypeOf(copy), Object.prototype);
+  assert.deepEqual(Object.keys(copy), ['__proto__', 'kept']);
+  assert.equal(copy.injected, undefined);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(copy, '__proto__').value, { injected: true });
+});

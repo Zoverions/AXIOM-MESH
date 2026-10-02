@@ -388,3 +388,42 @@ test('caller options that rewrite the raw root attestation cannot change the bin
   assert.equal(proof.statement.root_binding_digest, f.rootBinding.binding_digest);
   assert.equal(f.verify(proof).valid, true);
 });
+
+function withOwnProto(value, path, injected) {
+  // JSON.parse creates an own "__proto__" data key; plain assignment would not.
+  const copy = structuredClone(value);
+  let holder = copy;
+  for (const key of path) holder = holder[key];
+  const text = JSON.stringify(holder).replace(/^\{/, `{"__proto__":${JSON.stringify(injected)},`);
+  const replaced = JSON.parse(text);
+  if (path.length === 0) return replaced;
+  let parent = copy;
+  for (const key of path.slice(0, -1)) parent = parent[key];
+  parent[path.at(-1)] = replaced;
+  return copy;
+}
+
+test('an own __proto__ key (JSON.parse) in the proof or its root attestation is rejected, never applied as a prototype', () => {
+  const f = fixture();
+  const proof = f.sign();
+  assert.equal(f.verify(JSON.parse(JSON.stringify(proof))).valid, true);
+  for (const path of [[], ['statement'], ['grant'], ['grant', 'authority']]) {
+    const tampered = withOwnProto(proof, path, { audience_id: 'verifier.example', valid: true });
+    assert.equal(Object.hasOwn(path.reduce((node, key) => node[key], tampered), '__proto__'), true);
+    assert.throws(() => f.verify(tampered), ValidationError, `proof ${path.join('.') || '<root>'}`);
+  }
+  for (const path of [[], ['statement']]) {
+    const attestation = withOwnProto(f.attestation, path, { signer_id: 'owner.alice' });
+    assert.throws(() => f.verify(proof, { root_attestation: attestation }), ValidationError, `attestation ${path.join('.') || '<root>'}`);
+  }
+});
+
+test('bigint, symbol, undefined and non-finite proof values are plain-data ValidationErrors, never a raw TypeError', () => {
+  const f = fixture();
+  const proof = f.sign();
+  for (const [label, value] of [['bigint', 1n], ['symbol', Symbol('x')], ['undefined', undefined], ['NaN', Number.NaN], ['Infinity', Infinity]]) {
+    const tampered = structuredClone(proof);
+    tampered.statement.audience_id = value;
+    assert.throws(() => f.verify(tampered), error => error instanceof ValidationError && /must be plain data/.test(error.message), label);
+  }
+});

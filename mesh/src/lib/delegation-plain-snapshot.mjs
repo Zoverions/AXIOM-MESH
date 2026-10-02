@@ -22,9 +22,12 @@ const MAX_ARRAY_INDEX = 2 ** 32 - 2;
  * functions, cycles, nesting deeper than 64 and inputs over 50,000 values are
  * rejected with ValidationError. A source object reachable through two parents
  * is copied separately under each one: the snapshot is always a tree and never
- * aliases one copy under two parents. Primitive values are copied unchanged;
- * the existing validators still type-check them, and canonical.mjs remains the
- * only canonical encoder.
+ * aliases one copy under two parents. Values JSON cannot carry (bigint,
+ * symbol, NaN and +/-Infinity anywhere, and undefined below the root) are
+ * rejected with ValidationError too; an undefined root still passes through
+ * so callers keep their own "missing argument" errors. Other primitives are
+ * copied unchanged; the existing validators still type-check them, and
+ * canonical.mjs remains the only canonical encoder.
  */
 export function snapshotDelegationPlainData(value, name) {
   return copy(value, name, '<root>', new Set(), 0, { nodes: 0 });
@@ -41,6 +44,9 @@ function copy(value, name, path, ancestors, depth, budget) {
   budget.nodes += 1;
   if (budget.nodes > DELEGATION_SNAPSHOT_MAX_NODES) reject(name, path, 'exceeds the node budget');
   if (typeof value === 'function') reject(name, path, 'is a function');
+  if (typeof value === 'bigint' || typeof value === 'symbol') reject(name, path, `is a ${typeof value}`);
+  if (typeof value === 'number' && !Number.isFinite(value)) reject(name, path, 'is not a finite number');
+  if (value === undefined && depth > 0) reject(name, path, 'is undefined');
   if (value === null || typeof value !== 'object') return value;
   if (depth > DELEGATION_SNAPSHOT_MAX_DEPTH) reject(name, path, 'exceeds the depth bound');
   if (ancestors.has(value)) reject(name, path, 'is cyclic');

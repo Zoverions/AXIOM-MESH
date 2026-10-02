@@ -244,3 +244,17 @@ test('plain, JSON, structuredClone and null-prototype receipts behave as before'
   assert.throws(() => validateMachineIntentReceipt({ ...receipt, verification: {} }), /digest does not match|statement-bound/);
   assert.throws(() => validateMachineIntentReceipt({ ...receipt, receipt_digest: 'nope' }), /digest is invalid/);
 });
+
+test('bigint, symbol, undefined and non-finite receipt values are plain-data ValidationErrors, never a raw canonical TypeError', () => {
+  const { identity, receipt } = signedReceipt();
+  for (const [label, value] of [['bigint', 1n], ['symbol', Symbol('x')], ['undefined', undefined], ['NaN', Number.NaN], ['Infinity', Infinity], ['-Infinity', -Infinity]]) {
+    for (const place of ['statement', 'verification']) {
+      const tampered = structuredClone(receipt);
+      if (place === 'statement') tampered.statement.intent.status = value;
+      else tampered.verification = value;
+      for (const run of [() => validateMachineIntentReceipt(tampered), () => verifyMachineIntentReceipt(tampered, identity.publicKey)]) {
+        assert.throws(run, error => error instanceof ValidationError && /must be plain data/.test(error.message), `${label} at ${place}`);
+      }
+    }
+  }
+});
