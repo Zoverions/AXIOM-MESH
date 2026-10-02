@@ -950,7 +950,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     '/v1/memory?owner=local-operator'
   );
   assert.equal(hiddenMemory.objects.length, 0);
-  await api(gateway, token, '/v1/intents', {
+  const disclosureConsent = await api(gateway, token, '/v1/intents', {
     method: 'POST',
     body: {
       action: 'consent.grant',
@@ -969,6 +969,24 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   );
   assert.deepEqual(sharedMemory.objects.map(item => item.object_id), [memoryOne.object_id]);
   assert.equal(sharedMemory.edges.length, 0);
+
+  await api(gateway, token, '/v1/intents', {
+    method: 'POST',
+    body: {
+      action: 'consent.revoke',
+      input: {
+        consent_id: disclosureConsent.consent_id,
+        revocation_handle: disclosureConsent.revocation_handle
+      }
+    }
+  });
+  const afterDisclosureRevocation = await api(
+    gateway,
+    approverToken,
+    '/v1/memory?owner=local-operator'
+  );
+  assert.deepEqual(afterDisclosureRevocation.objects, []);
+  assert.deepEqual(afterDisclosureRevocation.edges, []);
 
   const nodeKeys = generateKeyPairSync('ed25519');
   const nodePublicKey = nodeKeys.publicKey.export({ type: 'spki', format: 'pem' });

@@ -255,8 +255,9 @@ decision.
 - [Semantic Action Consumption Lab v0](architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md)
   — inert #1576 reference model and RED/GREEN fixtures for semantic replay:
   durable consumption keyed by authorization instance + canonical effect
-  identity + remaining budget; a fresh token never replenishes budget; live
-  jti-keyed consumption is unchanged.
+  identity + remaining budget. The supported native path now independently
+  blocks fresh-JTI replay for one exact signed invocation; the broader lab
+  mandate/canonical-effect/multi-budget model remains inert.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)

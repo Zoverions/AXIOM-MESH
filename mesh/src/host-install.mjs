@@ -40,15 +40,23 @@ export async function hostInstallMain(argv = process.argv.slice(2)) {
   if (factsPath === null) {
     hostFacts = await collectHostFacts();
   } else {
+    let source;
     try {
-      const supplied = JSON.parse(await readFile(factsPath,'utf8'));
-      hostFacts = {
-        ...supplied,
-        facts_source: 'supplied-evidence'
-      };
+      source = await readFile(factsPath,'utf8');
     } catch (error) {
-      throw new ValidationError(`Unable to load host facts: ${error.message}`);
+      throw new ValidationError(`Unable to read host facts file${error?.code ? ` (${error.code})` : ''}`);
     }
+    let supplied;
+    try {
+      supplied = JSON.parse(source);
+    } catch {
+      // Never echo file content: a mistaken path can point at a secret.
+      throw new ValidationError('Host facts file is not valid JSON');
+    }
+    hostFacts = {
+      ...supplied,
+      facts_source: 'supplied-evidence'
+    };
   }
 
   const plan = buildHostInstallPlan({

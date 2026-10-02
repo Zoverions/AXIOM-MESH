@@ -170,6 +170,29 @@ discovery statement, schedule, causal bundle, apply approval, and supported
 machine effect remains signature-, sponsor/owner-, scope-, purpose-, expiry-,
 and replay-bound as applicable.
 
+### Capability semantic-replay boundary
+
+Literal capability-token replay and semantic replay are separate threats. A
+freshly signed capability with a new JTI must not replenish consumption for the
+same exact native authorization instance merely because the presentation token
+changed.
+
+The current Grid consumption path therefore derives a deterministic semantic
+consumption identity from the signed capability's subject, issuer, audience,
+intent digest, plan digest, policy digest, optional invocation digest, and tool.
+Grid appends that marker and the ordinary JTI-bound `capability.consumed`
+receipt in one existing event-log transaction. Deterministic event IDs serialize
+concurrent contenders, and startup reconstructs prior semantic consumptions from
+signed Grid history. Caller-supplied semantic-consumption events are refused.
+
+This is a bounded property, not a general semantic-effect theorem. It proves
+fresh-JTI replay resistance only for one exact native signed invocation. It does
+not yet prove that differently expressed or replanned intents are the same
+effect, bind a higher-level mandate to exactly one authorization instance,
+provide multi-execution semantic budgets, account delegated children against a
+shared budget, or guarantee exactly-once external effects. Those remain explicit
+#1576 research/falsification boundaries.
+
 ### Emergent coordination and collective authority boundary
 
 Emergent collective authority / unauthorized coordination is an explicit threat
