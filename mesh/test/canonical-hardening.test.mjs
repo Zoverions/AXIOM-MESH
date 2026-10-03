@@ -259,7 +259,7 @@ test('cycles are rejected as CanonicalJsonError instead of overflowing the stack
   }
 });
 
-test('nesting is bounded by CANONICAL_JSON_MAX_DEPTH (2048), above the deepest real input (1004)', () => {
+test('nesting is bounded by CANONICAL_JSON_MAX_DEPTH (2048), above the 2,000-level contract bound', () => {
   assert.equal(canonical.CANONICAL_JSON_MAX_DEPTH, 2048);
   assert.equal(canonicalJson(nest(1004)).length, 1004 * 2 + 1);
   assert.equal(canonicalJson(nest(2048)).length, 2048 * 2 + 1);
@@ -279,8 +279,177 @@ test('an engine stack overflow inside canonicalize is reported as CanonicalJsonE
     let value = 1;
     for (let index = 0; index < 2048; index += 1) value = [value];
     try { canonicalJson(value); process.stdout.write('accepted'); }
-    catch (error) { process.stdout.write(JSON.stringify([error.name, error.code ?? null, error instanceof TypeError])); }
+    catch (error) { process.stdout.write(JSON.stringify([error.name, error.code ?? null, error instanceof TypeError, error.message])); }
   `;
   const output = execFileSync(process.execPath, ['--stack-size=200', '--input-type=module', '-e', script], { encoding: 'utf8' });
-  assert.equal(output, JSON.stringify(['CanonicalJsonError', 'canonical_json_invalid', true]));
+  assert.equal(output, JSON.stringify(['CanonicalJsonError', 'canonical_json_invalid', true, 'Canonical JSON input exceeds the engine stack depth']));
+});
+
+test('N1: an engine limit that is not a stack overflow is typed with its own message, not reported as stack depth', () => {
+  // A real Set-size overflow needs an array of 16,777,216 elements (about 1 GB
+  // of index strings), so the child makes Set#add throw V8's exact
+  // "Set maximum size exceeded" RangeError for one index key instead.
+  const script = `
+    const add = Set.prototype.add;
+    Set.prototype.add = function (value) {
+      if (value === '5') throw new RangeError('Set maximum size exceeded');
+      return add.call(this, value);
+    };
+    const { canonicalJson } = await import(${JSON.stringify(new URL('../src/lib/canonical.mjs', import.meta.url).href)});
+    try { canonicalJson([0, 1, 2, 3, 4, 5, 6]); process.stdout.write('accepted'); }
+    catch (error) { process.stdout.write(JSON.stringify([error.name, error.code ?? null, error instanceof TypeError, error.message])); }
+  `;
+  const output = execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' });
+  assert.equal(output, JSON.stringify([
+    'CanonicalJsonError', 'canonical_json_invalid', true,
+    'Canonical JSON input exceeds an engine limit (Set maximum size exceeded)'
+  ]));
+});
+
+test('N3: canonicalize uses no more stack per level than main at --stack-size=400', () => {
+  // The reference is main's (74b0399b) recursion, embedded here only to compare
+  // stack use in the same process, JIT state and stack size. canonical.mjs
+  // stays the only canonical encoder. A 5% tolerance absorbs JIT noise; the
+  // per-level cost this pins was 15-25% higher before the frames were slimmed.
+  const script = `
+    const { canonicalize } = await import(${JSON.stringify(new URL('../src/lib/canonical.mjs', import.meta.url).href)});
+    function refValue(value) {
+      if (value === null || typeof value === 'boolean' || typeof value === 'string') return value;
+      if (typeof value === 'number') { if (!Number.isFinite(value)) throw new TypeError('n'); return Object.is(value, -0) ? 0 : value; }
+      if (Array.isArray(value)) return refArray(value);
+      if (typeof value === 'object') return refRecord(value);
+      throw new TypeError('t');
+    }
+    function refArray(value) {
+      if (Object.getPrototypeOf(value) !== Array.prototype) throw new TypeError('p');
+      if (Object.getOwnPropertySymbols(value).length) throw new TypeError('s');
+      const allowedNames = new Set(['length']);
+      const output = [];
+      for (let index = 0; index < value.length; index += 1) {
+        const key = String(index);
+        allowedNames.add(key);
+        if (!Object.hasOwn(value, key)) throw new TypeError(\`sparse \${index}\`);
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) throw new TypeError(\`index \${index}\`);
+        output.push(refValue(descriptor.value));
+      }
+      for (const name of Object.getOwnPropertyNames(value)) {
+        if (!allowedNames.has(name)) throw new TypeError(\`custom \${name}\`);
+      }
+      return output;
+    }
+    function refRecord(value) {
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) throw new TypeError('p');
+      if (Object.getOwnPropertySymbols(value).length) throw new TypeError('s');
+      const ownNames = Object.getOwnPropertyNames(value);
+      const enumerableKeys = Object.keys(value);
+      if (ownNames.length !== enumerableKeys.length) throw new TypeError('e');
+      const output = {};
+      for (const key of enumerableKeys.sort()) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) throw new TypeError(\`property \${key}\`);
+        const item = descriptor.value;
+        if (item === undefined || typeof item === 'function' || typeof item === 'symbol') throw new TypeError(\`encode \${key}\`);
+        Object.defineProperty(output, key, { value: refValue(item), enumerable: true, configurable: true, writable: true });
+      }
+      return output;
+    }
+    const chain = (levels, record) => { let value = 1; for (let index = 0; index < levels; index += 1) value = record ? { k: value } : [value]; return value; };
+    const deepest = (encode, record) => {
+      const ok = levels => { try { encode(chain(levels, record)); return true; } catch { return false; } };
+      let low = 1, high = 2047;
+      while (low < high) { const middle = Math.ceil((low + high) / 2); if (ok(middle)) low = middle; else high = middle - 1; }
+      return low;
+    };
+    const result = {};
+    for (const record of [false, true]) result[record ? 'records' : 'arrays'] = [deepest(refValue, record), deepest(canonicalize, record)];
+    process.stdout.write(JSON.stringify(result));
+  `;
+  const result = JSON.parse(execFileSync(process.execPath, ['--stack-size=400', '--input-type=module', '-e', script], { encoding: 'utf8' }));
+  for (const [shape, [reference, head]] of Object.entries(result)) {
+    assert.ok(reference < 2047, `${shape}: the reference must overflow below the probe ceiling (${reference})`);
+    assert.ok(head >= Math.floor(reference * 0.95), `${shape}: head reaches ${head} levels, main's recursion ${reference}`);
+  }
+});
+
+test('the contract depth bound is 2,000 levels, enforced iteratively as a ValidationError', () => {
+  const { CANONICAL_JSON_MAX_CONTRACT_DEPTH, assertContractDepth } = canonical;
+  assert.equal(CANONICAL_JSON_MAX_CONTRACT_DEPTH, 2000);
+  const record = levels => { let value = 1; for (let index = 0; index < levels; index += 1) value = { k: value }; return value; };
+  for (const make of [nest, record]) {
+    assert.doesNotThrow(() => assertContractDepth(make(1999), 'x'));
+    assert.doesNotThrow(() => assertContractDepth(make(2000), 'x'));
+    for (const levels of [2001, 2048, 200_000]) {
+      assert.throws(() => assertContractDepth(make(levels), 'doc'),
+        error => error instanceof canonical.ValidationError && error.message === 'doc nesting exceeds 2000 levels', String(levels));
+    }
+  }
+  // The deepest branch counts, wherever it is.
+  assert.throws(() => assertContractDepth({ a: 1, b: [nest(1999)] }, 'doc'), canonical.ValidationError);
+  assert.doesNotThrow(() => assertContractDepth({ a: nest(1999), b: [1] }, 'doc'));
+  for (const primitive of [null, undefined, 1, 'x', true, 1n, Symbol('s')]) {
+    assert.doesNotThrow(() => assertContractDepth(primitive, 'x'));
+  }
+});
+
+test('the contract depth walk runs no caller code and leaves other rejections to canonicalize', () => {
+  const { assertContractDepth } = canonical;
+  let calls = 0;
+  const traps = new Proxy({}, Object.fromEntries(
+    ['get', 'has', 'ownKeys', 'getOwnPropertyDescriptor', 'getPrototypeOf'].map(name => [name, () => { calls += 1; throw new Error('trap'); }])
+  ));
+  const getter = Object.defineProperty({}, 'deep', { enumerable: true, get() { calls += 1; return nest(5000); } });
+  const { proxy: revoked, revoke } = Proxy.revocable({}, {});
+  revoke();
+  assert.doesNotThrow(() => assertContractDepth({ traps, getter, revoked, list: [traps] }, 'x'));
+  assert.doesNotThrow(() => assertContractDepth(traps, 'x'));
+  assert.equal(calls, 0);
+  // Cycles terminate and are not a depth question; canonicalize still rejects them.
+  const cyclic = { a: {} };
+  cyclic.a.back = cyclic;
+  assert.doesNotThrow(() => assertContractDepth(cyclic, 'x'));
+  rejectsTyped(() => canonicalJson(cyclic), /cyclic/);
+  // A rejected call leaves no traversal state behind for the next one.
+  rejectsTyped(() => canonicalJson(nest(2049)), /nesting exceeds 2048/);
+  assert.equal(canonicalJson(nest(2048)).length, 2048 * 2 + 1);
+  rejectsTyped(() => canonicalJson([cyclic.a]), /cyclic/);
+  assert.equal(canonicalJson([{ a: 1 }]), '[{"a":1}]');
+  // A DAG of 26 shared levels has 2^26 paths but is measured once per object.
+  let shared = [1];
+  for (let index = 0; index < 26; index += 1) shared = [shared, shared];
+  const started = process.hrtime.bigint();
+  assert.doesNotThrow(() => assertContractDepth(shared, 'x'));
+  assert.ok(process.hrtime.bigint() - started < 1_000_000_000n);
+  let wide = [1];
+  for (let index = 0; index < 2001; index += 1) wide = [wide, wide];
+  assert.throws(() => assertContractDepth(wide, 'x'), canonical.ValidationError);
+});
+
+test('the contract depth walk counts a shared subtree at its deepest position', () => {
+  const { assertContractDepth } = canonical;
+  // The shared subtree is measured first through a shallow path; reaching it
+  // again under 15 more levels must still count its full height.
+  const shared = nest(1990);
+  let deeper = shared;
+  for (let index = 0; index < 15; index += 1) deeper = [deeper];
+  assert.throws(() => assertContractDepth({ a: shared, b: deeper }, 'doc'), canonical.ValidationError);
+  assert.doesNotThrow(() => assertContractDepth({ a: shared, b: [[shared]] }, 'doc'));
+});
+
+test('canonicalize does not retain a rejected input', () => {
+  // The traversal state is module-level; a rejected call must not keep the
+  // caller's objects alive until the next call.
+  const script = `
+    const { canonicalJson } = await import(${JSON.stringify(new URL('../src/lib/canonical.mjs', import.meta.url).href)});
+    let input = { a: {} };
+    input.a.back = input;
+    const ref = new WeakRef(input);
+    try { canonicalJson(input); } catch {}
+    input = null;
+    for (let round = 0; round < 3; round += 1) { await new Promise(resolve => setTimeout(resolve, 0)); globalThis.gc(); }
+    process.stdout.write(String(ref.deref() === undefined));
+  `;
+  const output = execFileSync(process.execPath, ['--expose-gc', '--input-type=module', '-e', script], { encoding: 'utf8' });
+  assert.equal(output, 'true');
 });

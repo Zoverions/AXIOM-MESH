@@ -1,5 +1,7 @@
 import {
+  CANONICAL_JSON_MAX_CONTRACT_DEPTH,
   ValidationError,
+  assertContractDepth,
   assertPlainObject,
   assertString,
   digestObject
@@ -23,6 +25,12 @@ const MAX_ARGS = 32;
 const MAX_EXPLANATION = 512;
 export const SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES = 65_536;
 const MAX_SERIALIZED_BYTES = SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES;
+// Nesting bound for a whole proposal document, counted in container levels
+// from the document root. Free-form argument values are otherwise bounded only
+// by the byte limit, which would allow depth up to 32,768; canonicalize accepts
+// at most CANONICAL_JSON_MAX_DEPTH (2,048), so the contract promises 2,000 and
+// over-deep input is a ValidationError before any digest runs.
+export const SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH = CANONICAL_JSON_MAX_CONTRACT_DEPTH;
 
 const DOCUMENT_FIELDS = Object.freeze([
   'schema',
@@ -1158,6 +1166,7 @@ function validateSuppressedEntry(entry, index) {
 }
 
 export function validateSemanticOperationProposalShape(document) {
+  assertContractDepth(document, 'semantic operation proposal');
   const value = exact(document, DOCUMENT_FIELDS, 'semantic operation proposal');
   if (value.schema !== SEMANTIC_OPERATION_PROPOSAL_SCHEMA) {
     throw new ValidationError('semantic operation proposal schema is invalid');

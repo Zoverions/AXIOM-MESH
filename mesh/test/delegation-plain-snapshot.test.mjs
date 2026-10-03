@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { ValidationError, canonicalJson } from '../src/lib/canonical.mjs';
+import * as canonical from '../src/lib/canonical.mjs';
 // Namespace import, so this file still loads against a helper without the limits.
 import * as snapshot from '../src/lib/delegation-plain-snapshot.mjs';
 
@@ -99,7 +100,10 @@ test('the node budget counts every value on every path, exactly at the bound', (
 
 test('a caller-chosen budget is honoured exactly at its bounds and defaults stay 50,000 / 64', () => {
   assert.equal(snapshot.DELEGATION_SNAPSHOT_NODE_CEILING, 2_000_000);
-  assert.equal(snapshot.DELEGATION_SNAPSHOT_DEPTH_CEILING, 32_768);
+  // The depth ceiling admits exactly the canonical contract depth (2,000
+  // levels, root at depth 0), never more than canonicalize is promised to accept.
+  assert.equal(snapshot.DELEGATION_SNAPSHOT_DEPTH_CEILING, 1_999);
+  assert.equal(snapshot.DELEGATION_SNAPSHOT_DEPTH_CEILING, canonical.CANONICAL_JSON_MAX_CONTRACT_DEPTH - 1);
   const limits = { maxNodes: 10 };
   assert.equal(snapshotDelegationPlainData(new Array(9).fill(0), 'flat', limits).length, 9);
   assert.throws(() => snapshotDelegationPlainData(new Array(10).fill(0), 'flat', limits), isPlainDataRejection(/exceeds the node budget/));
@@ -120,15 +124,18 @@ test('a budget that is not a positive safe integer within its ceiling is refused
   for (const maxNodes of bad) {
     assert.throws(() => snapshotDelegationPlainData([], 'x', { maxNodes }), RangeError, String(maxNodes));
   }
-  for (const maxDepth of [0, -1, 2.5, 32_769, '64']) {
+  for (const maxDepth of [0, -1, 2.5, 2_000, 32_768, '64']) {
     assert.throws(() => snapshotDelegationPlainData([], 'x', { maxDepth }), RangeError, String(maxDepth));
   }
-  assert.equal(snapshotDelegationPlainData([1], 'x', { maxNodes: 2_000_000, maxDepth: 32_768 })[0], 1);
+  assert.equal(snapshotDelegationPlainData([1], 'x', { maxNodes: 2_000_000, maxDepth: 1_999 })[0], 1);
+  // At the ceiling, 2,000 container levels pass and 2,001 are a depth rejection.
+  assert.doesNotThrow(() => snapshotDelegationPlainData(nested(1_999), 'deep', { maxDepth: 1_999 }));
+  assert.throws(() => snapshotDelegationPlainData(nested(2_000), 'deep', { maxDepth: 1_999 }), isPlainDataRejection(/exceeds the depth bound/));
 });
 
 test('nesting past the engine stack under a raised depth bound is a ValidationError, never a raw RangeError', () => {
   assert.throws(
-    () => snapshotDelegationPlainData(nested(200_000), 'deep', { maxDepth: 32_768 }),
+    () => snapshotDelegationPlainData(nested(200_000), 'deep', { maxDepth: 1_999 }),
     isPlainDataRejection(/exceeds the (depth bound|engine stack depth)/)
   );
 });

@@ -126,6 +126,11 @@ Further invariants:
 - Every object is closed (`additionalProperties: false` in the schema and an
   exact field set in the validator), so unknown keys are rejected at every
   depth, including `__proto__`, `constructor`, homoglyph and zero-width keys.
+- A `semantic_operation_proposal` reference is snapshotted with a depth budget
+  of 2,000 container levels, the proposal contract's nesting bound
+  (`CANONICAL_JSON_MAX_CONTRACT_DEPTH`), not the 32,768 its byte limit alone
+  would allow. A deeper reference is a `ValidationError`. No snapshot budget may
+  exceed that bound.
 - `validateSpecialistHarnessBridge` accepts plain data only, using two layers
   inside its fail-closed wrapper. First, the semantic checks run on a
   `structuredClone` snapshot, which rejects Proxies (including ones that never

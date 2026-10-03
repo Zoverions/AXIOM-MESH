@@ -57,6 +57,21 @@ Hard zeros (all proposals):
 - `network_effect: none`
 - `selection_effect: proposal-only`
 
+Size and nesting bounds:
+
+- The serialized document is at most 65,536 bytes.
+- The whole document nests at most 2,000 container levels, counted from the
+  document root (`SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH`, equal to
+  `CANONICAL_JSON_MAX_CONTRACT_DEPTH` in `mesh/src/lib/canonical.mjs`).
+  Free-form argument values are where this bites: the byte limit alone would
+  allow about 32,768 levels, but canonical JSON accepts at most 2,048, so the
+  validator rejects deeper documents with a `ValidationError` before any digest
+  runs. JSON Schema cannot express a depth limit, so the wire schema states it
+  in a `$comment`. Earlier releases sometimes accepted deeper arguments, but
+  only up to wherever the engine stack ran out (about 3,290 levels at Node's
+  default stack size, about 1,250 at `--stack-size=400`), so that was never a
+  guarantee.
+
 ## Needle ≠ Decision Observation
 
 Needle-shaped payloads (`function_calls`, `suppressed_calls`, scalar
