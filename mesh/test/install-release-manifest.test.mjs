@@ -466,7 +466,7 @@ test('release verifier has no host mutation process network or credential side-e
   const migrations=await readFile(new URL('../src/grid/migrations.mjs',import.meta.url),'utf8');
   assert.deepEqual(specifiers(migrations),['../lib/canonical.mjs']);
   const canonical=await readFile(new URL('../src/lib/canonical.mjs',import.meta.url),'utf8');
-  assert.deepEqual(specifiers(canonical),['node:crypto']);
+  assert.deepEqual(specifiers(canonical),['node:crypto','node:util']);
   const snapshot=await readFile(new URL('../src/lib/delegation-plain-snapshot.mjs',import.meta.url),'utf8');
   assert.deepEqual(specifiers(snapshot),['node:util','./canonical.mjs']);
   for (const [name,text] of [

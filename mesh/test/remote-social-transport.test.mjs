@@ -485,3 +485,24 @@ test('transport configuration fails closed on insecure origins and shared trust 
     /different keys/
   );
 });
+
+test('a canonical JSON failure stays a retryable transport failure (code canonical_json_invalid)', async t => {
+  const { canonicalJson } = await import('../src/lib/canonical.mjs');
+  const data = fixture();
+  const setup = await createStore(t);
+  const job = queue(setup.store, data);
+  let canonicalError;
+  try { canonicalJson({ unencodable: undefined }); } catch (error) { canonicalError = error; }
+  assert.ok(canonicalError instanceof TypeError);
+  const row = setup.store.requireTransportJob(OWNER, job.job_id);
+  const { leaseExpiresAt } = setup.store.claimTransportJob(row, 5_000, NOW);
+  setup.store.recordTransportFailure(OWNER, job.job_id, leaseExpiresAt, canonicalError, NOW);
+  const failed = setup.store.getRemoteSocialTransportJob(OWNER, job.job_id);
+  // Not terminal: only ValidationError and 4xx source rejections are terminal.
+  assert.equal(failed.status, 'pending');
+  assert.equal(failed.attempts, 1);
+  assert.equal(failed.next_attempt_at, '2026-08-17T03:50:01.000Z');
+  // Documented side effect of the typed error: its safe code is recorded
+  // instead of the generic remote_social_transport_failed fallback.
+  assert.equal(failed.last_error_code, 'canonical_json_invalid');
+});
