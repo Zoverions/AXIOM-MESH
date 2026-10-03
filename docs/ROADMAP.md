@@ -270,6 +270,7 @@ They change no current capability status.
 - bind every request to a named provider, model, data scope, purpose, budget,
   timeout, cancellation signal, retention rule, and result receipt;
 - support local or user-supplied providers without making either mandatory;
+- maintain a zero-cost/disposable external-GPU onboarding laboratory (Colab first) that detects the actual assigned hardware at runtime, uses only synthetic/public prompts, emits inert provider-shaped observations, and creates no provider registration, compute-node admission, listener, credential path, or remote-execution authority;
 - add document, note, link, and structured-record ingestion into the encrypted
   memory graph with explicit ownership, provenance, deduplication, tombstoning,
   and export behavior;
