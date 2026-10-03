@@ -6,6 +6,8 @@ const SHELL_ASSETS = Object.freeze([
   '/app.mjs',
   '/presentation.mjs',
   '/local-organize.mjs',
+  '/social-feed-preview.mjs',
+  '/social-feed-ranking-core.mjs',
   '/human-contract.json',
   '/manifest.webmanifest',
   '/icon.svg',
