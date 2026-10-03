@@ -18,6 +18,7 @@ import {
   sha256,
   ValidationError
 } from './canonical.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 export const INSTALL_RELEASE_MANIFEST_SCHEMA='axiom-install-release-manifest.v1';
 export const INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA='axiom-install-release-manifest-package.v1';
@@ -56,6 +57,26 @@ const REVISION=/^[a-f0-9]{40}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:/-]{1,191}$/;
 const VERSION=/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/;
 const BASE64URL=/^[A-Za-z0-9_-]{64,256}$/;
+
+// Results issued by verifyInstallReleaseManifest, mapped to a frozen binding:
+// the signed manifest's digest, release and signer identity, and a frozen
+// snapshot of its artifacts taken right after signature verification. The map
+// is module-private, so no caller can add an entry: membership is the
+// unforgeable proof that an object is a genuine verified result, and a
+// structural copy or lookalike is never in it.
+const ISSUED_MANIFEST_RESULTS=new WeakMap();
+const VERIFIED_RESULT_KEYS=Object.freeze([
+  'valid','schema','manifest_schema','release_id','kernel_version','channel',
+  'source_revision','evaluated_at','valid_until','signer_key_id',
+  'signature_verified','control_plane_bound','install_profile_binding_complete',
+  'artifact_metadata_bound','artifact_bytes_verified','artifact_count',
+  'install_profiles','policy_digest','manifest_digest','production_promoted',
+  'production_promotion_established','release_input_cryptographically_valid',
+  'host_plan_required_separately','host_mutation_authorized',
+  'installation_authority_granted','mesh_authority_granted',
+  'network_authority_granted','node_enrolled','services_started',
+  'authority_effect','network_effect'
+]);
 
 export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
   exactObject(policy,'Install release manifest policy',[
@@ -185,7 +206,13 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
   }
   if(!verified) throw new ValidationError('Install release manifest signature verification failed');
 
-  return deepFreeze({
+  // Validation and signing read the same own data properties synchronously and
+  // no caller code ran in between, so this snapshot equals the signed artifacts.
+  // Later changes to the caller's package or manifest cannot reach it.
+  const signedArtifacts=deepFreeze(
+    snapshotDelegationPlainData(manifest.artifacts,'Install release artifacts')
+  );
+  const result=deepFreeze({
     valid:true,
     schema:INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA,
     manifest_schema:manifest.schema,
@@ -218,23 +245,137 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
     authority_effect:'none',
     network_effect:'none'
   });
+  ISSUED_MANIFEST_RESULTS.set(result,Object.freeze({
+    manifest_digest:bodyDigest,
+    release_id:manifest.release_id,
+    signer_key_id:manifest.signing_key_id,
+    artifacts:signedArtifacts
+  }));
+  return result;
 }
 
 /**
- * Verify local artifact bytes against one artifact metadata record.
+ * Verify local artifact bytes. Two forms:
  *
- * The artifact metadata must come from the result of a just-verified manifest
- * (`verifyInstallReleaseManifest`); this byte check alone is not
- * manifest-backed provenance (`manifest_bound: false`) and must not be used as
- * an install gate until the manifest-bound overload lands.
+ * Bound form (the only form usable as an install gate):
+ * `verifyInstallReleaseArtifact(verifiedResult, artifact_id, bytes)`.
+ * `verifiedResult` must be the very object returned by
+ * `verifyInstallReleaseManifest` in this module instance. It is checked
+ * fail-closed: a Proxy is rejected before any other operation, the object must
+ * be a frozen plain record of exactly the verified-result keys held as own data
+ * properties (no accessors, no extra or symbol keys) with `valid`,
+ * `signature_verified`, `control_plane_bound` and `artifact_metadata_bound` all
+ * `true`, and it must be registered in a module-private WeakMap that only
+ * `verifyInstallReleaseManifest` writes, so structural copies and lookalikes
+ * fail. Artifact metadata is read only from the frozen snapshot of the signed
+ * manifest's artifacts bound to that result, never from the caller, so later
+ * changes to the original package or manifest have no effect. `artifact_id`
+ * must name exactly one signed artifact; an unknown or duplicated id is a
+ * `ValidationError`. The bound form takes no options. The result carries
+ * `manifest_bound: true`, the verified `manifest_digest`, `release_id` and
+ * `signer_key_id`, and zero authority. A consumer that gates on bytes must
+ * require `manifest_bound: true` and compare `manifest_digest` (and
+ * `release_id`) with the manifest it expects.
+ *
+ * Unbound form: `verifyInstallReleaseArtifact(artifact, bytes, options)` checks
+ * bytes against a caller-supplied metadata record. It is not manifest-backed
+ * provenance: its result always carries `manifest_bound: false` and it must
+ * never be used as an install gate. `options` must be a plain record whose only
+ * allowed field, `policy`, is an own enumerable data property: arrays, Proxies,
+ * accessors, inherited or unknown fields are rejected without running caller
+ * code.
+ *
+ * In both forms bytes must be a non-Proxy `Uint8Array`/`Buffer`; a private copy
+ * is hashed and must match the exact byte length and SHA-256.
  */
-export function verifyInstallReleaseArtifact(artifact,bytes,options={}){
-  if(options===null||typeof options!=='object'||utilTypes.isProxy(options)){
-    throw new ValidationError('Release artifact options must be an object');
+export function verifyInstallReleaseArtifact(subject,second,...rest){
+  // typeof never runs caller code, even on a Proxy.
+  if(typeof second==='string') return verifyBoundArtifact(subject,second,rest);
+  if(rest.length>1){
+    throw new ValidationError('Unbound release artifact verification takes artifact, bytes and options only');
   }
-  const {policy=manifestPolicy}=options;
+  const options=rest[0]===undefined?{}:rest[0];
+  artifactOptionsRecord(options);
+  const policy=Object.hasOwn(options,'policy')?options.policy:manifestPolicy;
   validateInstallReleaseManifestPolicy(policy);
-  validateArtifact(artifact,new Set(PROFILES),policy);
+  validateArtifact(subject,new Set(PROFILES),policy);
+  verifyArtifactBytes(subject,second);
+  return Object.freeze({
+    valid:true,
+    artifact_id:subject.artifact_id,
+    artifact_kind:subject.kind,
+    artifact_bytes_verified:true,
+    sha256:subject.sha256,
+    byte_length:subject.byte_length,
+    manifest_bound:false,
+    host_mutation_authorized:false,
+    authority_effect:'none'
+  });
+}
+
+function verifyBoundArtifact(verifiedResult,artifactId,rest){
+  if(rest.length!==1){
+    throw new ValidationError('Bound release artifact verification takes verifiedResult, artifact_id and bytes only');
+  }
+  const binding=issuedManifestBinding(verifiedResult);
+  if(!matches(ID,artifactId)){
+    throw new ValidationError('Release artifact id is invalid');
+  }
+  const found=binding.artifacts.filter(item=>item.artifact_id===artifactId);
+  if(found.length===0){
+    throw new ValidationError(`Release artifact is not in the verified manifest: ${artifactId}`);
+  }
+  if(found.length!==1){
+    throw new ValidationError(`Release artifact id is duplicated in the verified manifest: ${artifactId}`);
+  }
+  const artifact=found[0];
+  verifyArtifactBytes(artifact,rest[0]);
+  return Object.freeze({
+    valid:true,
+    artifact_id:artifact.artifact_id,
+    artifact_kind:artifact.kind,
+    artifact_bytes_verified:true,
+    sha256:artifact.sha256,
+    byte_length:artifact.byte_length,
+    manifest_bound:true,
+    manifest_digest:binding.manifest_digest,
+    release_id:binding.release_id,
+    signer_key_id:binding.signer_key_id,
+    host_mutation_authorized:false,
+    authority_effect:'none'
+  });
+}
+
+// Returns the frozen binding of a genuine verifyInstallReleaseManifest result.
+// Nothing is read from verifiedResult except own data properties of an object
+// this module created and froze; the returned binding is the module's own.
+function issuedManifestBinding(verifiedResult){
+  if(utilTypes.isProxy(verifiedResult)){
+    throw new ValidationError('Verified install release result cannot be a Proxy');
+  }
+  exactObject(verifiedResult,'Verified install release result',VERIFIED_RESULT_KEYS);
+  if(!Object.isFrozen(verifiedResult)){
+    throw new ValidationError('Verified install release result must be frozen');
+  }
+  if(
+    verifiedResult.valid!==true
+    ||verifiedResult.signature_verified!==true
+    ||verifiedResult.control_plane_bound!==true
+    ||verifiedResult.artifact_metadata_bound!==true
+  ) throw new ValidationError('Verified install release result is not a valid verified manifest');
+  const binding=ISSUED_MANIFEST_RESULTS.get(verifiedResult);
+  if(binding===undefined){
+    throw new ValidationError('Verified install release result was not issued by verifyInstallReleaseManifest');
+  }
+  if(
+    verifiedResult.manifest_digest!==binding.manifest_digest
+    ||verifiedResult.release_id!==binding.release_id
+    ||verifiedResult.signer_key_id!==binding.signer_key_id
+  ) throw new ValidationError('Verified install release result does not match its signed manifest binding');
+  return binding;
+}
+
+function verifyArtifactBytes(artifact,bytes){
   if(utilTypes.isProxy(bytes)||!utilTypes.isUint8Array(bytes)){
     throw new ValidationError('Release artifact bytes must be a Buffer or Uint8Array');
   }
@@ -250,17 +391,6 @@ export function verifyInstallReleaseArtifact(artifact,bytes,options={}){
   if(sha256(buffer)!==artifact.sha256){
     throw new ValidationError(`Release artifact digest mismatch: ${artifact.artifact_id}`);
   }
-  return Object.freeze({
-    valid:true,
-    artifact_id:artifact.artifact_id,
-    artifact_kind:artifact.kind,
-    artifact_bytes_verified:true,
-    sha256:artifact.sha256,
-    byte_length:artifact.byte_length,
-    manifest_bound:false,
-    host_mutation_authorized:false,
-    authority_effect:'none'
-  });
 }
 
 function validateManifest(manifest,context){
@@ -525,6 +655,30 @@ function optionsRecord(options){
     const descriptor=Object.getOwnPropertyDescriptor(options,key);
     if(!descriptor.enumerable||!Object.hasOwn(descriptor,'value')){
       throw new ValidationError('Install release manifest options must contain only enumerable data properties');
+    }
+  }
+}
+
+const ARTIFACT_OPTION_FIELDS=new Set(['policy']);
+
+// Same rule for the unbound artifact form: own enumerable data properties only,
+// so no getter or trap runs and an inherited or array-shaped options value
+// cannot supply a policy.
+function artifactOptionsRecord(options){
+  if(options===null||typeof options!=='object'||utilTypes.isProxy(options)){
+    throw new ValidationError('Release artifact options must be an object');
+  }
+  const prototype=Object.getPrototypeOf(options);
+  if(Array.isArray(options)||(prototype!==Object.prototype&&prototype!==null)){
+    throw new ValidationError('Release artifact options must be a plain object');
+  }
+  for(const key of Reflect.ownKeys(options)){
+    if(typeof key==='symbol'||!ARTIFACT_OPTION_FIELDS.has(key)){
+      throw new ValidationError('Release artifact options contain an unsupported field');
+    }
+    const descriptor=Object.getOwnPropertyDescriptor(options,key);
+    if(!descriptor.enumerable||!Object.hasOwn(descriptor,'value')){
+      throw new ValidationError('Release artifact options must contain only enumerable data properties');
     }
   }
 }
