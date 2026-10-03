@@ -1625,11 +1625,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/public-witness-service.mjs#verifyPublicWitnessConflict": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/public-witness-service.mjs#verifyPublicWitnessConflict": {},
     "src/lib/public-witness-service.mjs#verifyPublicWitnessObservation": {},
     "src/lib/public-witness-source-control-store.mjs#verifyPublicWitnessSourceControlRecord": {
       "throwing-proxy": "sentinel",

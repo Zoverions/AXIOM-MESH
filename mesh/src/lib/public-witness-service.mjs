@@ -415,7 +415,9 @@ export function verifyPublicWitnessConflict(raw, {
   expectedDomainId,
   observations
 } = {}) {
-  const verified = verifyEnvelope(raw, {
+  // Same single plain-data copy as observations: a Proxy cannot report one
+  // artifact_digests length to the 2-2 bound and another to the signed output.
+  const verified = verifyEnvelope(snapshotDelegationPlainData(raw, 'public witness conflict'), {
     schema: PUBLIC_WITNESS_CONFLICT_SCHEMA,
     keys: CONFLICT_KEYS,
     statementNormalizer: normalizeConflictStatement,

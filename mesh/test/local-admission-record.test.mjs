@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 import { ValidationError } from '../src/lib/canonical.mjs';
 import { validateLocalAdmissionRecord } from '../src/lib/local-admission-record.mjs';
 
@@ -294,4 +295,33 @@ test('fail-closed controls: missing authority or review evidence, expiry and con
   const early = validateLocalAdmissionRecord(raw, { now: new Date('2026-09-01T12:00:00.000Z') });
   assert.equal(early.valid, false);
   assert.equal(early.checks.effective, false);
+});
+
+test('P5: a Date from another realm is still read as a Date (brand check, not instanceof)', async () => {
+  const raw = await exampleRecord();
+  const expected = validateLocalAdmissionRecord(raw, { now: NOW });
+  const foreign = runInNewContext(`new Date(${NOW.valueOf()})`);
+  assert.equal(foreign instanceof Date, false, 'the fixture really is cross-realm');
+  assert.deepEqual(validateLocalAdmissionRecord(raw, { now: foreign }), expected);
+  const foreignExpired = runInNewContext(`new Date(${JSON.stringify(raw.expires_at)})`);
+  assert.equal(validateLocalAdmissionRecord(raw, { now: foreignExpired }).checks.not_expired, false);
+});
+
+test('P5: a polluted Object.prototype.now is never used as now', async () => {
+  const raw = await exampleRecord();
+  // The record is valid only at NOW (2026-09-01 to 2026-09-08); the real clock is later.
+  assert.ok(Date.now() > Date.parse(raw.expires_at));
+  Object.defineProperty(Object.prototype, 'now', { value: NOW, configurable: true, writable: true });
+  try {
+    // Options without an own now use the current time, never the inherited NOW.
+    for (const options of [{}, { unrelated: true }, undefined]) {
+      const result = validateLocalAdmissionRecord(raw, options);
+      assert.equal(result.checks.not_expired, false, JSON.stringify(options));
+      assert.equal(result.valid, false);
+    }
+    assert.equal(validateLocalAdmissionRecord(raw, { now: NOW }).valid, true);
+  } finally {
+    delete Object.prototype.now;
+  }
+  assert.equal(Object.hasOwn(Object.prototype, 'now'), false);
 });
