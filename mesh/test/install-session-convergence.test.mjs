@@ -545,3 +545,66 @@ test('R1: a missing, malformed or mismatched expected manifest digest is rejecte
   // The genuine package with its pinned digest converges.
   assert.equal(run(fixture().input).decision.decision,'INSTALL_REVIEW');
 });
+
+// ---------------------------------------------------------------------------
+// Mutation-driven guards: each case below isolates one guard so that removing
+// it changes the observable outcome.
+test('ancestor upgrade needs a strictly older kernel and an established minimum order',()=>{
+  const desired=hostPolicy.kernel_version;
+  const equal=fixture();older(equal,desired);
+  assert.equal(run(equal.input).decision.decision,'STOP_UPGRADE_UNPROVEN');
+  // Pre-release minimum versus release with the same core has no established
+  // order here, so the minimum is not proven even though 0.11.0 is older.
+  const preMinimum=fixture();
+  preMinimum.manifest.data_compatibility.minimum_compatible_kernel='0.11.0-rc.1';preMinimum.resign();
+  older(preMinimum,'0.11.0');
+  assert.equal(run(preMinimum.input).decision.decision,'STOP_UPGRADE_UNPROVEN');
+});
+
+test('a same-release record with a different installed kernel is a conflict, not a no-op',()=>{
+  const f=fixture();installed(f,{installed_kernel_version:'0.11.0'});
+  const s=run(f.input);
+  assert.equal(s.decision.decision,'STOP_CONFLICT');
+  assert.ok(s.decision.reasons.includes('installed-kernel-version-mismatch'));
+});
+
+test('installed kernel presence follows the install record state',()=>{
+  const complete=fixture();installed(complete,{installed_kernel_version:null});
+  denied(complete.input);
+  const absent=fixture();absent.input.observedInstall.installed_kernel_version='0.11.0';
+  denied(absent.input);
+});
+
+test('structural classifier snapshots the observation before validating it',()=>{
+  const f=fixture();const s=run(f.input);
+  let reads=0;
+  const observation={...f.input.observedInstall};
+  Object.defineProperty(observation,'observation_source',{enumerable:true,get(){reads++;return 'live-local-observation';}});
+  assert.throws(()=>sessions.assessInstallSession(s.candidate,observation,{evaluatedAt:NOW}),ValidationError);
+  assert.equal(reads,0);
+});
+
+test('byte views are copied through intrinsic accessors, not spoofable own properties',()=>{
+  const f=fixture();const name='fixture.artifact.0';
+  const view=new Uint8Array(f.input.artifactBytes[name]);
+  Object.defineProperty(view,'length',{value:1});
+  f.input.artifactBytes[name]=view;
+  assert.equal(run(f.input).artifact_proofs.length,4);
+});
+
+test('re-digested envelopes still reject activation, ordering and proof-candidate tampering',()=>{
+  const s=run(fixture().input);
+  for(const [change,pattern] of [
+    [x=>{x.host_mutation_authorized=true;},/activation boundary/],
+    [x=>{x.authority_effect='grant';},/activation boundary/],
+    [x=>{x.network_effect='egress';},/activation boundary/],
+    [x=>{x.runtime_activation=true;},/activation boundary/],
+    [x=>{x.artifact_proofs=[...x.artifact_proofs].reverse();},/strictly sorted/],
+    [x=>{x.artifact_proofs[0].artifact_sha256='c'.repeat(64);},/do not match its candidate/],
+    [x=>{x.artifact_proofs=x.artifact_proofs.slice(1);},/do not match its candidate/]
+  ]){
+    const y=structuredClone(s);change(y);
+    y.session_digest=digestObject({...y,session_digest:ZERO});
+    assert.throws(()=>sessions.validateVerifiedInstallSession(y),error=>error instanceof ValidationError&&pattern.test(error.message));
+  }
+});
