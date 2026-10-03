@@ -459,6 +459,13 @@ function kernelVersion(v,label){
     throw new ValidationError(`${label} version is invalid or ambiguous`);
   }
   const dash=v.indexOf('-');
+  // Core components are ordered as Numbers, so each must be a safe integer;
+  // larger values could collapse to the same Number and compare equal.
+  for(const component of (dash===-1?v:v.slice(0,dash)).split('.')){
+    if(!Number.isSafeInteger(Number(component))){
+      throw new ValidationError(`${label} version is invalid or ambiguous`);
+    }
+  }
   if(dash===-1) return;
   for(const identifier of v.slice(dash+1).split('.')){
     if(

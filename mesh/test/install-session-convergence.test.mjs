@@ -616,3 +616,12 @@ test('kernel version validation rejects backtracking-shaped and non-canonical pr
   const ok=fixture();older(ok,'0.11.0-x.7.z.92');
   assert.equal(run(ok.input).decision.decision,'STOP_UPGRADE_UNPROVEN');
 });
+
+test('kernel core components beyond the safe-integer range are rejected, not collapsed',()=>{
+  const installed=fixture();older(installed,'9007199254740992.0.0');denied(installed.input,/version/i);
+  const minimum=fixture();
+  minimum.manifest.data_compatibility.minimum_compatible_kernel='9007199254740993.0.0';minimum.resign();
+  older(minimum,'0.11.0');
+  denied(minimum.input);
+  const safe=fixture();older(safe,'0.11.0');assert.equal(run(safe.input).decision.decision,'UPGRADE_REVIEW');
+});
