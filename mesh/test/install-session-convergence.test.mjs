@@ -625,3 +625,41 @@ test('kernel core components beyond the safe-integer range are rejected, not col
   denied(minimum.input);
   const safe=fixture();older(safe,'0.11.0');assert.equal(run(safe.input).decision.decision,'UPGRADE_REVIEW');
 });
+
+test('byte windows come from intrinsic TypedArray getters, never from own or inherited lying accessors',()=>{
+  const name='fixture.artifact.0';
+  const windowed=f=>{
+    const bytes=f.input.artifactBytes[name];
+    const backing=new Uint8Array(bytes.length+8);backing.fill(0x41);backing.set(bytes,3);
+    return {bytes,backing};
+  };
+  let reads=0;
+  const lie={
+    buffer:{enumerable:false,configurable:true,get(){reads++;return new ArrayBuffer(64);}},
+    byteOffset:{enumerable:false,configurable:true,get(){reads++;return 0;}},
+    byteLength:{enumerable:false,configurable:true,get(){reads++;return 4;}},
+    length:{enumerable:false,configurable:true,get(){reads++;return 4;}}
+  };
+  // Own-property accessors on the view.
+  const own=fixture();
+  {
+    const {bytes,backing}=windowed(own);
+    const view=new Uint8Array(backing.buffer,3,bytes.length);
+    Object.defineProperties(view,lie);
+    own.input.artifactBytes[name]=view;
+  }
+  const ownSession=run(own.input);
+  assert.equal(ownSession.artifact_proofs.find(proof=>proof.artifact_id===name).artifact_sha256,sha256(Buffer.from('synthetic-oci-image-contents')));
+  assert.equal(reads,0);
+  // Inherited accessors from a Uint8Array subclass prototype.
+  class LyingView extends Uint8Array{}
+  Object.defineProperties(LyingView.prototype,lie);
+  const inherited=fixture();
+  {
+    const {bytes,backing}=windowed(inherited);
+    inherited.input.artifactBytes[name]=new LyingView(backing.buffer,3,bytes.length);
+  }
+  const inheritedSession=run(inherited.input);
+  assert.equal(inheritedSession.artifact_proofs.find(proof=>proof.artifact_id===name).byte_length,'synthetic-oci-image-contents'.length);
+  assert.equal(reads,0);
+});
