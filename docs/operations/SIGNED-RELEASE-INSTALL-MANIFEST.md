@@ -169,9 +169,22 @@ Manifest verification returns:
 
 `artifact_bytes_verified: false`
 
-Actual local bytes must separately pass `verifyInstallReleaseArtifact(...)`, which checks exact byte length and SHA-256.
+Actual local bytes must separately pass `verifyInstallReleaseArtifact(...)`, which checks exact byte length and SHA-256. It has two forms.
 
-The artifact metadata passed to `verifyInstallReleaseArtifact(...)` must come from the just-verified manifest result; the byte check alone is not manifest-backed provenance (its result carries `manifest_bound: false`) and must not be used as an install gate until the manifest-bound overload lands. It accepts only a non-Proxy `Uint8Array`/`Buffer` and hashes a private copy of its bytes.
+**Bound form (the only form an install gate may use):** `verifyInstallReleaseArtifact(verifiedResult, artifact_id, bytes)`.
+
+- `verifiedResult` must be the exact object returned by `verifyInstallReleaseManifest`. It is checked fail-closed: a Proxy is rejected before anything else touches it; it must be a frozen plain record holding exactly the verified-result keys as own enumerable data properties (no accessors, symbol keys, or extra or missing keys); `valid`, `signature_verified`, `control_plane_bound`, and `artifact_metadata_bound` must all be `true`; and it must be registered in a module-private `WeakMap` that only `verifyInstallReleaseManifest` writes. A spread, `structuredClone`, or other structural copy of a genuine result is therefore rejected, as is any lookalike.
+- Artifact metadata comes only from a frozen snapshot of the signed manifest's `artifacts`, taken (with the shared plain-data snapshot helper) right after signature verification and bound to that result in the same `WeakMap`. The caller never supplies metadata, and later changes to the original package or manifest object cannot change the outcome. The verified result's existing fields and their meaning are unchanged; no field is added to it.
+- `artifact_id` must name exactly one artifact in that snapshot. An invalid, unknown, or duplicated id is a `ValidationError`. The bound form accepts no options.
+- On success it returns the artifact identity (`artifact_id`, `artifact_kind`, `sha256`, `byte_length`), `artifact_bytes_verified: true`, `manifest_bound: true`, the verified `manifest_digest`, `release_id`, and `signer_key_id`, plus `host_mutation_authorized: false` and `authority_effect: 'none'`.
+
+A consumer that gates on artifact bytes must require `manifest_bound: true` and must compare `manifest_digest` (and `release_id`) with the manifest it expects; `valid` or `artifact_bytes_verified` alone is not sufficient. A result from a different manifest or release names that other manifest, and an id that manifest did not sign is unknown to it.
+
+**Unbound form:** `verifyInstallReleaseArtifact(artifact, bytes, options)` checks bytes against a caller-supplied metadata record. It is not manifest-backed provenance: its result always carries `manifest_bound: false` and it must never be used as an install gate. `options` may contain only `policy`, as an own enumerable data property; arrays, Proxies, accessors, and inherited, symbol, or unknown fields are rejected without running caller code.
+
+Both forms accept only a non-Proxy `Uint8Array`/`Buffer`, hash a private copy of its bytes, and require the exact signed byte length and SHA-256. Only the byte content is read; other properties on the byte container are ignored.
+
+The verifier's source boundary test forbids ambient and dynamic code in this module and the modules it imports: `process`, `globalThis`, dynamic `import()`, `require(`, the `Function` constructor, `eval`, and reaching a constructor through a member access (`.constructor`, `['constructor']`).
 
 A valid signature therefore cannot hide:
 
