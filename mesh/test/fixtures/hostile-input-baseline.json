@@ -827,6 +827,7 @@
     "src/lib/install-session.mjs#validateInstallSessionCandidate": {},
     "src/lib/install-session.mjs#validateInstallSessionDecision": {},
     "src/lib/install-session.mjs#validateInstalledStateObservation": {},
+    "src/lib/install-session.mjs#validateVerifiedInstallSession": {},
     "src/lib/institutional-pattern-package.mjs#validateInstitutionalPatternPackage": {
       "undefined": "raw",
       "null": "raw",

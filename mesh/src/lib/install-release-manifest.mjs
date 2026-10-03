@@ -273,9 +273,16 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
  * must name exactly one signed artifact; an unknown or duplicated id is a
  * `ValidationError`. The bound form takes no options. The result carries
  * `manifest_bound: true`, the verified `manifest_digest`, `release_id` and
- * `signer_key_id`, and zero authority. A consumer that gates on bytes must
- * require `manifest_bound: true` and compare `manifest_digest` (and
- * `release_id`) with the manifest it expects.
+ * `signer_key_id`, and zero authority. Trust root: `manifest_bound: true` only
+ * proves the bytes match the manifest that produced `verifiedResult`, which was
+ * verified against whatever `trustedSigners` its caller supplied. A caller can
+ * register its own key under the real key_id, so `release_id` and
+ * `signer_key_id` are labels and comparing them does not bind the trust root.
+ * A consumer that gates on bytes must require `manifest_bound: true` and either
+ * compare `manifest_digest` with an independently trusted expected digest, or
+ * itself call `verifyInstallReleaseManifest` with a signer set it pins and pass
+ * that exact result here; it must never gate on a verified result handed in by
+ * other code.
  *
  * Unbound form: `verifyInstallReleaseArtifact(artifact, bytes, options)` checks
  * bytes against a caller-supplied metadata record. It is not manifest-backed
