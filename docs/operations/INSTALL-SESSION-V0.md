@@ -66,7 +66,7 @@ Only a candidate whose host plan was derived from `live-local-observation` can r
 
 This still does not prove the host plan itself is valid; a future privileged composition must validate and bind the actual upstream plan object.
 
-Likewise, `release_manifest_digest`, `artifact_sha256s`, and `artifact_evidence_refs` are bound identities only: this layer does not call `verifyInstallReleaseManifest` or `verifyInstallReleaseArtifact`. The current unbound byte check returns `manifest_bound: false`. A future privileged composition must not gate on it, and must instead require the manifest-bound artifact verification from #1914 (`manifest_bound: true` with a matching `manifest_digest`).
+Likewise, `release_manifest_digest`, `artifact_sha256s`, and `artifact_evidence_refs` are bound identities only: this layer does not call `verifyInstallReleaseManifest` or `verifyInstallReleaseArtifact`. The unbound byte check `verifyInstallReleaseArtifact(artifact, bytes)` returns `manifest_bound: false`. A future privileged composition must not gate on it, and must instead use the manifest-bound form `verifyInstallReleaseArtifact(verifiedResult, artifact_id, bytes)` from #1914 and require `manifest_bound: true` with a matching `manifest_digest`.
 
 ## Installed-state observation
 

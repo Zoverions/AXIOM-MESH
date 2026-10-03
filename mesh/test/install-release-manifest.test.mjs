@@ -455,7 +455,8 @@ test('release verifier has no host mutation process network or credential side-e
     '../../config/service-network-policy.json',
     '../../config/setup.json',
     '../grid/migrations.mjs',
-    './canonical.mjs'
+    './canonical.mjs',
+    './delegation-plain-snapshot.mjs'
   ]);
   const specifiers=text=>[
     ...text.matchAll(/^\s*(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]/gm)
@@ -466,13 +467,65 @@ test('release verifier has no host mutation process network or credential side-e
   assert.deepEqual(specifiers(migrations),['../lib/canonical.mjs']);
   const canonical=await readFile(new URL('../src/lib/canonical.mjs',import.meta.url),'utf8');
   assert.deepEqual(specifiers(canonical),['node:crypto']);
-  for (const [name,text] of [['install-release-manifest',source],['migrations',migrations],['canonical',canonical]]) {
-    assert.doesNotMatch(text,/\bprocess\b|globalThis|\bimport\s*\(|\brequire\s*\(/,name);
+  const snapshot=await readFile(new URL('../src/lib/delegation-plain-snapshot.mjs',import.meta.url),'utf8');
+  assert.deepEqual(specifiers(snapshot),['node:util','./canonical.mjs']);
+  for (const [name,text] of [
+    ['install-release-manifest',source],
+    ['migrations',migrations],
+    ['canonical',canonical],
+    ['delegation-plain-snapshot',snapshot]
+  ]) {
+    assertNoAmbientOrDynamicCode(text,name);
   }
   assert.doesNotMatch(source,/\bimport\s*\(|node:fs|node:dgram|node:tls|node:dns|process\.env/);
   assert.doesNotMatch(source,/node:child_process|node:net|node:http|node:https/);
   assert.doesNotMatch(source,/\bfetch\s*\(|\bexec\s*\(|\bspawn\s*\(|\bexecFile\s*\(/);
   assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|unlink|rename/);
+});
+
+// Boundary scan for the release verifier's module graph: no ambient process or
+// global object, no dynamic import or require, and no dynamic code (#1914
+// residual 2): the Function constructor, eval, or reaching a constructor through
+// a member such as (()=>{}).constructor(...). A class's own constructor(...)
+// method definition is not a member access and stays allowed.
+const AMBIENT_OR_DYNAMIC_CODE=[
+  /\bprocess\b/,
+  /globalThis/,
+  /\bimport\s*\(/,
+  /\brequire\s*\(/,
+  /\bFunction\b/,
+  /\beval\b/,
+  /\.\s*constructor\b/,
+  /\[\s*['"`]constructor['"`]\s*\]/
+];
+
+function assertNoAmbientOrDynamicCode(text,name){
+  for(const pattern of AMBIENT_OR_DYNAMIC_CODE){
+    assert.doesNotMatch(text,pattern,`${name}: ${pattern}`);
+  }
+}
+
+test('boundary scan catches planted Function, eval and member constructor calls',()=>{
+  for(const planted of [
+    "const g=Function('return this')();",
+    'const g=new Function("return this")();',
+    "const f=(()=>{}).constructor('return this');",
+    "const f=(()=>{}) . constructor ('return this');",
+    "const f=(()=>{})['constructor']('return this');",
+    "const v=eval('1+1');",
+    "const v=(0,eval)('this');",
+    "const p=globalThis.process;",
+    "const r=require('node:fs');",
+    "const m=await import('node:fs');"
+  ]){
+    assert.throws(()=>assertNoAmbientOrDynamicCode(`export const ok=1;\n${planted}\n`,'planted'),{code:'ERR_ASSERTION'},planted);
+  }
+  for(const allowed of [
+    'class E extends Error { constructor(message){ super(message); } }',
+    'const evaluatedAt=1; const evaluationTime=2; function verify(){}'
+  ]){
+    assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode(allowed,'allowed'),allowed);
+  }
 });
 
 test('trusted signer inventory rejects private-key material before key conversion',()=>{
@@ -638,5 +691,301 @@ test('hostile-input contract: verifyInstallReleaseManifest rejects every hostile
     name:'verifyInstallReleaseManifest',
     fn:verifyInstallReleaseManifest,
     validArgs:()=>[signPackage(),{trustedSigners:[trustedSigner()],evaluatedAt:EVALUATED_AT}]
+  },assert);
+});
+
+// ---------------------------------------------------------------------------
+// #1914: manifest-bound artifact verification overload.
+
+const BOUND_RESULT_KEYS=[
+  'artifact_bytes_verified','artifact_id','artifact_kind','authority_effect',
+  'byte_length','host_mutation_authorized','manifest_bound','manifest_digest',
+  'release_id','sha256','signer_key_id','valid'
+];
+
+function boundFixture(value=manifest()){
+  const packageValue=signPackage(value);
+  return {packageValue,verified:verify(packageValue)};
+}
+
+test('#1914 bound form verifies bytes against the signed manifest and carries its identity',()=>{
+  const {packageValue,verified}=boundFixture();
+  for(const item of packageValue.manifest.artifacts){
+    const bytes=artifactBytes[item.artifact_id];
+    const ok=verifyInstallReleaseArtifact(verified,item.artifact_id,bytes);
+    assert.deepEqual(Object.keys(ok).sort(),BOUND_RESULT_KEYS);
+    assert.equal(Object.isFrozen(ok),true);
+    assert.equal(ok.valid,true);
+    assert.equal(ok.manifest_bound,true);
+    assert.equal(ok.artifact_bytes_verified,true);
+    assert.equal(ok.artifact_id,item.artifact_id);
+    assert.equal(ok.artifact_kind,item.kind);
+    assert.equal(ok.sha256,sha256(bytes));
+    assert.equal(ok.byte_length,bytes.length);
+    assert.equal(ok.manifest_digest,verified.manifest_digest);
+    assert.equal(ok.manifest_digest,sha256(canonicalJson(packageValue.manifest)));
+    assert.equal(ok.release_id,verified.release_id);
+    assert.equal(ok.signer_key_id,KEY_ID);
+    assert.equal(ok.host_mutation_authorized,false);
+    assert.equal(ok.authority_effect,'none');
+  }
+  // The verified result itself keeps its existing fields and semantics.
+  assert.equal(verified.artifact_bytes_verified,false);
+  assert.equal(Object.hasOwn(verified,'manifest_bound'),false);
+  assert.equal(Object.hasOwn(verified,'artifacts'),false);
+});
+
+test('#1914 unbound form never carries manifest_bound:true and cannot be fed a verified result',()=>{
+  const {packageValue,verified}=boundFixture();
+  for(const item of packageValue.manifest.artifacts){
+    const unbound=verifyInstallReleaseArtifact(item,artifactBytes[item.artifact_id]);
+    assert.equal(unbound.manifest_bound,false);
+    assert.equal(Object.hasOwn(unbound,'manifest_digest'),false);
+    assert.equal(Object.hasOwn(unbound,'release_id'),false);
+  }
+  const good=artifactBytes['runtime-personal'];
+  const target=packageValue.manifest.artifacts[0];
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,good),'verified result as unbound artifact');
+  assertValidationError(()=>verifyInstallReleaseArtifact({...target,manifest_bound:true},good),'artifact claiming manifest_bound');
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,good,{manifest_bound:true}),'options claiming manifest_bound');
+  assertValidationError(()=>verifyInstallReleaseArtifact(target,good,{},{}),'unbound extra argument');
+});
+
+test('#1914 unverified, forged, lookalike and modified verified results are rejected',()=>{
+  const {packageValue,verified}=boundFixture();
+  const good=artifactBytes['runtime-personal'];
+  const id='runtime-personal';
+  const frozenCopy=value=>Object.freeze(value);
+  const cases=[
+    ['package instead of verified result',packageValue],
+    ['manifest instead of verified result',packageValue.manifest],
+    ['artifact record',packageValue.manifest.artifacts[0]],
+    ['policy result',validateInstallReleaseManifestPolicy()],
+    ['unbound artifact result',verifyInstallReleaseArtifact(packageValue.manifest.artifacts[0],good)],
+    ['spread lookalike',{...verified}],
+    ['frozen spread lookalike',frozenCopy({...verified})],
+    ['structuredClone lookalike',frozenCopy(structuredClone(verified))],
+    ['null-prototype lookalike',frozenCopy(Object.assign(Object.create(null),verified))],
+    ['forged flags',frozenCopy({...verified,manifest_digest:'f'.repeat(64)})],
+    ['modified release_id',frozenCopy({...verified,release_id:'axiom-mesh/other'})],
+    ['modified signer_key_id',frozenCopy({...verified,signer_key_id:'release:other'})],
+    ['valid:false',frozenCopy({...verified,valid:false})],
+    ['signature_verified:false',frozenCopy({...verified,signature_verified:false})],
+    ['control_plane_bound:false',frozenCopy({...verified,control_plane_bound:false})],
+    ['artifact_metadata_bound:false',frozenCopy({...verified,artifact_metadata_bound:false})],
+    ['extra key',frozenCopy({...verified,artifacts:packageValue.manifest.artifacts})],
+    ['missing key',frozenCopy(Object.fromEntries(Object.entries(verified).filter(([key])=>key!=='policy_digest')))],
+    ['symbol key',frozenCopy({...verified,[Symbol('bound')]:true})],
+    ['inheriting from genuine result',Object.freeze(Object.create(verified))],
+    ['empty object',{}],
+    ['null',null],
+    ['undefined',undefined],
+    ['number',7]
+  ];
+  for(const [name,value] of cases){
+    assertValidationError(()=>verifyInstallReleaseArtifact(value,id,good),name);
+  }
+  // The genuine result is frozen: in-place modification is impossible and the
+  // binding is unchanged.
+  assert.throws(()=>{ verified.manifest_digest='f'.repeat(64); },TypeError);
+  assert.throws(()=>{ verified.install_profiles.push('x'); },TypeError);
+  assert.equal(verifyInstallReleaseArtifact(verified,id,good).manifest_bound,true);
+});
+
+test('#1914 Proxy and accessor verified results are rejected without running caller code',()=>{
+  const {verified}=boundFixture();
+  const good=artifactBytes['runtime-personal'];
+  const proxied=countingProxy(verified);
+  assertValidationError(()=>verifyInstallReleaseArtifact(proxied.proxy,'runtime-personal',good),'Proxy over genuine result');
+  assert.equal(proxied.counter.traps,0);
+  const revocable=Proxy.revocable(verified,{});
+  revocable.revoke();
+  assertValidationError(()=>verifyInstallReleaseArtifact(revocable.proxy,'runtime-personal',good),'revoked Proxy');
+
+  let reads=0;
+  const accessor={...verified};
+  Object.defineProperty(accessor,'valid',{enumerable:true,get(){ reads+=1; return true; }});
+  Object.freeze(accessor);
+  assertValidationError(()=>verifyInstallReleaseArtifact(accessor,'runtime-personal',good),'accessor lookalike');
+  const throwing={...verified};
+  Object.defineProperty(throwing,'manifest_digest',{enumerable:true,get(){ reads+=1; throw new Sentinel('getter ran'); }});
+  Object.freeze(throwing);
+  assertValidationError(()=>verifyInstallReleaseArtifact(throwing,'runtime-personal',good),'throwing accessor lookalike');
+  const hidden={...verified};
+  Object.defineProperty(hidden,'valid',{enumerable:false,value:true});
+  assertValidationError(()=>verifyInstallReleaseArtifact(Object.freeze(hidden),'runtime-personal',good),'non-enumerable lookalike');
+  assert.equal(reads,0,'no getter on a lookalike result runs');
+});
+
+test('#1914 unknown, invalid and duplicate artifact ids fail closed with ValidationError',()=>{
+  const {verified}=boundFixture();
+  const good=artifactBytes['runtime-personal'];
+  for(const id of ['missing-artifact','constructor','toString','__proto__','hasOwnProperty','runtime-personal-x','Runtime-personal']){
+    assertValidationError(()=>verifyInstallReleaseArtifact(verified,id,good),`unknown id ${id}`);
+    assert.throws(()=>verifyInstallReleaseArtifact(verified,id,good),/not in the verified manifest|artifact id is invalid/);
+  }
+  for(const id of ['','x','runtime-personal\n',' runtime-personal','a'.repeat(300)]){
+    assertValidationError(()=>verifyInstallReleaseArtifact(verified,id,good),`invalid id ${JSON.stringify(id).slice(0,40)}`);
+  }
+  // A non-string id never selects the bound form, and is still rejected.
+  for(const id of [7,null,{toString(){ throw new Sentinel('coerced'); }}]){
+    assertValidationError(()=>verifyInstallReleaseArtifact(verified,id,good),`non-string id ${typeof id}`);
+  }
+  // A manifest that names an artifact id twice never yields a verified result,
+  // so no binding with a duplicate id can exist; the bound lookup also refuses
+  // anything but exactly one match (defense in depth).
+  const duplicate=manifest();
+  duplicate.artifacts.push({...duplicate.artifacts[0]});
+  assertValidationError(()=>verify(signPackage(duplicate)),'duplicate id manifest');
+  assert.throws(()=>verify(signPackage(duplicate)),/artifact id is duplicated/);
+});
+
+test('#1914 mutating the source package or manifest after verification does not change the bound result',()=>{
+  const {packageValue,verified}=boundFixture();
+  const good=artifactBytes['runtime-personal'];
+  const tampered=Buffer.from('attacker image bytes');
+  const before=verifyInstallReleaseArtifact(verified,'runtime-personal',good);
+  const target=packageValue.manifest.artifacts[0];
+  target.sha256=sha256(tampered);
+  target.byte_length=tampered.length;
+  target.kind='source-archive';
+  packageValue.manifest.artifacts.push(artifact('injected','oci-image',['personal-local']));
+  packageValue.manifest.artifacts[1]={...packageValue.manifest.artifacts[1],artifact_id:'renamed'};
+  packageValue.manifest.release_id='axiom-mesh/attacker';
+  packageValue.signature.digest='0'.repeat(64);
+  packageValue.manifest=manifest({release_id:'axiom-mesh/replaced'});
+
+  assert.deepEqual(verifyInstallReleaseArtifact(verified,'runtime-personal',good),before);
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',tampered),'tampered bytes after mutation');
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'injected',Buffer.from('artifact:injected')),'injected artifact');
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'renamed',artifactBytes['runtime-infrastructure']),'renamed artifact');
+  assert.equal(
+    verifyInstallReleaseArtifact(verified,'runtime-infrastructure',artifactBytes['runtime-infrastructure']).release_id,
+    'axiom-mesh/0.12.0-dev.3/test-release'
+  );
+});
+
+test('#1914 bound form rejects byte tampering, length mismatch and substituted artifact bytes',()=>{
+  const {verified}=boundFixture();
+  const good=artifactBytes['runtime-personal'];
+  const flipped=Buffer.from(good);
+  flipped[0]^=1;
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',flipped),/digest mismatch: runtime-personal/);
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',flipped),'same-length tamper');
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',good.subarray(0,good.length-1)),/byte length mismatch/);
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',Buffer.concat([good,Buffer.from([0])])),/byte length mismatch/);
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',Buffer.alloc(0)),'empty bytes');
+  // Bytes of another signed artifact (a different source) under this id.
+  for(const other of ['runtime-infrastructure','documentation','sbom','provenance']){
+    assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',artifactBytes[other]),`bytes of ${other}`);
+  }
+  const sameLength=Buffer.from('oci image personaX');
+  assert.equal(sameLength.length,good.length);
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',sameLength),/digest mismatch/);
+
+  const {proxy,counter}=countingProxy(Buffer.from(good));
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',proxy),'Proxy bytes');
+  assert.equal(counter.traps,0);
+  class LyingBytes extends Uint8Array { get length(){ return good.length; } }
+  const lying=new LyingBytes(good.length+3);
+  lying.set(good,0);
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',lying),/byte length mismatch/);
+  const detached=new Uint8Array(good);
+  detached.buffer.transfer();
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',detached),/bytes are unreadable/);
+  for(const bytes of [[...good],good.toString('hex'),undefined,null,new DataView(new ArrayBuffer(4))]){
+    assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',bytes),`non-byte input ${typeof bytes}`);
+  }
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal'),'missing bytes');
+  assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',good,{policy:releasePolicy}),'bound form takes no options');
+  assert.equal(verifyInstallReleaseArtifact(verified,'runtime-personal',new Uint8Array(good)).manifest_bound,true);
+});
+
+test('#1914 a result from a different manifest or release does not verify another release\'s artifact',()=>{
+  const first=boundFixture();
+  const otherBytes=Buffer.from('oci image personal, release two');
+  const secondManifest=manifest({release_id:'axiom-mesh/0.12.0-dev.3/second-release'});
+  secondManifest.artifacts[0]={
+    ...secondManifest.artifacts[0],
+    sha256:sha256(otherBytes),
+    byte_length:otherBytes.length
+  };
+  secondManifest.artifacts=secondManifest.artifacts.filter(item=>item.artifact_id!=='sbom');
+  secondManifest.artifacts.push(artifact('sbom-two','sbom',['personal-local','infrastructure-node']));
+  const second=boundFixture(secondManifest);
+  assert.notEqual(second.verified.manifest_digest,first.verified.manifest_digest);
+
+  // Release one's bytes do not pass against release two's signed digest.
+  assertValidationError(
+    ()=>verifyInstallReleaseArtifact(second.verified,'runtime-personal',artifactBytes['runtime-personal']),
+    'release one bytes against release two'
+  );
+  // An id only release one signed is unknown to release two, and vice versa.
+  assertValidationError(()=>verifyInstallReleaseArtifact(second.verified,'sbom',artifactBytes.sbom),'release one id in release two');
+  assertValidationError(()=>verifyInstallReleaseArtifact(first.verified,'sbom-two',Buffer.from('artifact:sbom-two')),'release two id in release one');
+  // Where an artifact is identical in both, each bound result names its own
+  // manifest, so a consumer expecting release one rejects release two's result.
+  const one=verifyInstallReleaseArtifact(first.verified,'documentation',artifactBytes.documentation);
+  const two=verifyInstallReleaseArtifact(second.verified,'documentation',artifactBytes.documentation);
+  assert.equal(one.manifest_digest,first.verified.manifest_digest);
+  assert.equal(two.manifest_digest,second.verified.manifest_digest);
+  assert.notEqual(one.manifest_digest,two.manifest_digest);
+  assert.notEqual(one.release_id,two.release_id);
+  assert.equal(verifyInstallReleaseArtifact(second.verified,'runtime-personal',otherBytes).release_id,secondManifest.release_id);
+
+  // Splicing release two's identity into release one's result is a lookalike.
+  assertValidationError(
+    ()=>verifyInstallReleaseArtifact(Object.freeze({...first.verified,manifest_digest:second.verified.manifest_digest,release_id:second.verified.release_id}),'runtime-personal',artifactBytes['runtime-personal']),
+    'spliced identity'
+  );
+});
+
+test('#1914 residual 1: unbound artifact options are own enumerable data only',()=>{
+  const target=manifest().artifacts[0];
+  const good=artifactBytes['runtime-personal'];
+  let reads=0;
+  const getter=Object.defineProperty({},'policy',{enumerable:true,get(){ reads+=1; return releasePolicy; }});
+  const throwing=Object.defineProperty({},'policy',{enumerable:true,get(){ reads+=1; throw new Sentinel('policy getter'); }});
+  const hidden=Object.defineProperty({},'policy',{enumerable:false,value:releasePolicy});
+  const cases=[
+    ['accessor policy',getter],
+    ['throwing accessor policy',throwing],
+    ['non-enumerable policy',hidden],
+    ['inherited policy',Object.create({policy:releasePolicy})],
+    ['inherited weakened policy',Object.create({policy:{...releasePolicy,allowed_platforms:['any','linux','windows']}})],
+    ['array options',[]],
+    ['array options with policy',Object.assign([],{policy:releasePolicy})],
+    ['unknown field',{trustedSigners:[]}],
+    ['symbol field',{[Symbol('policy')]:releasePolicy}],
+    ['own __proto__ key',JSON.parse('{"__proto__":{"policy":{}}}')],
+    ['class instance',new (class Options { constructor(){ this.policy=releasePolicy; } })()],
+    ['Map',new Map([['policy',releasePolicy]])],
+    ['function',()=>({})],
+    ['null',null],
+    ['number',7]
+  ];
+  for(const [name,options] of cases){
+    assertValidationError(()=>verifyInstallReleaseArtifact(target,good,options),name);
+  }
+  assert.equal(reads,0,'no options getter runs');
+  assert.equal(verifyInstallReleaseArtifact(target,good,{}).manifest_bound,false);
+  assert.equal(verifyInstallReleaseArtifact(target,good,{policy:structuredClone(releasePolicy)}).valid,true);
+  assert.equal(verifyInstallReleaseArtifact(target,good,Object.assign(Object.create(null),{policy:structuredClone(releasePolicy)})).valid,true);
+  assert.equal(verifyInstallReleaseArtifact(target,good,undefined).valid,true);
+});
+
+test('#1914 hostile-input contract: bound verifyInstallReleaseArtifact',async()=>{
+  const packageValue=signPackage();
+  const verified=verify(packageValue);
+  await assertHostileInputContract({
+    name:'verifyInstallReleaseArtifact (bound)',
+    fn:verifyInstallReleaseArtifact,
+    validArgs:()=>[verified,'runtime-personal',Buffer.from(artifactBytes['runtime-personal'])],
+    // Byte indexes of a Buffer are not property slots; the root bytes argument
+    // still receives every hostile variant.
+    skipPaths:[/^arg2\./],
+    // Expando properties on the byte container are never read: only its byte
+    // content is copied (as in #1903) and hashed, so the exact bytes still pass.
+    acceptablePaths:{arg2:['hidden-mind-id','symbol-key','cycle']}
   },assert);
 });
