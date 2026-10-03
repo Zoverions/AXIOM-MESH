@@ -8,8 +8,11 @@ import { executionRoutePolicyDigest } from './execution-route-policy.mjs';
 import { taskContinuityPolicyDigest } from './task-continuity-policy.mjs';
 import { validateExternalAgentIngressRequest } from './external-agent-ingress-request.mjs';
 import { aiExecutionProvenanceDigest } from './ai-execution-provenance.mjs';
-import { verifiedWorkGraphDigest } from './verified-work-graph.mjs';
-import { validateSemanticOperationProposal } from './semantic-operation-proposal-core.mjs';
+import { VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES, verifiedWorkGraphDigest } from './verified-work-graph.mjs';
+import {
+  SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES,
+  validateSemanticOperationProposal
+} from './semantic-operation-proposal-core.mjs';
 import { persistentEntityBundleDigest } from './persistent-entity-bundle.mjs';
 
 export const SPECIALIST_HARNESS_BRIDGE_SCHEMA = 'axiom-specialist-harness-bridge.v0';
@@ -99,9 +102,24 @@ export function validateSpecialistHarnessBridge(document, options = {}) {
   });
 }
 
-function plainSnapshot(value, label) {
+// Snapshot limits for references whose schema admits more than the default
+// 50,000 values or depth 64. Every other reference has a fixed shape well
+// inside the defaults (the largest, outcome, is under 5,000 values at depth 2).
+// - verified_work_graph: up to 1,093,644 values at depth 4 (see
+//   VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES).
+// - semantic_operation_proposal: argument values are free-form JSON, bounded
+//   only by the 65,536-byte serialization limit. Each nesting level costs at
+//   least two bytes ("[" and "]"), so depth stays at or below 32,768; each
+//   value costs at least two bytes with its separator, so the value count stays
+//   under the 50,000 default.
+const REFERENCE_SNAPSHOT_LIMITS = Object.freeze({
+  verified_work_graph: Object.freeze({ maxNodes: VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES }),
+  semantic_operation_proposal: Object.freeze({ maxDepth: SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES / 2 })
+});
+
+function plainSnapshot(value, label, limits) {
   try {
-    return snapshotDelegationPlainData(value, label);
+    return snapshotDelegationPlainData(value, label, limits);
   } catch (error) {
     throw new ValidationError(`Specialist harness bridge input could not be read safely; failing closed (${error.message})`);
   }
@@ -126,7 +144,7 @@ function plainReferences(references) {
   if (references === undefined) return undefined;
   const result = {};
   for (const [key, value] of plainFields(references, 'references', REFERENCE_FIELDS, 'a supported reference')) {
-    result[key] = plainSnapshot(value, `references.${key}`);
+    result[key] = plainSnapshot(value, `references.${key}`, REFERENCE_SNAPSHOT_LIMITS[key]);
   }
   return result;
 }

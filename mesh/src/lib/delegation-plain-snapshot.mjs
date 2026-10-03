@@ -7,6 +7,10 @@ export const DELEGATION_SNAPSHOT_MAX_DEPTH = 64;
 // path. This bounds snapshot work (and the copied tree handed to canonicalize)
 // linearly instead of letting 23 shared objects expand to 2^22 copies.
 export const DELEGATION_SNAPSHOT_MAX_NODES = 50_000;
+// Hard ceilings for a caller-chosen budget. Only a caller whose schema provably
+// admits more than the defaults may raise them, and never past these ceilings.
+export const DELEGATION_SNAPSHOT_NODE_CEILING = 2_000_000;
+export const DELEGATION_SNAPSHOT_DEPTH_CEILING = 32_768;
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 // ECMAScript array indexes stop at 2^32 - 2; larger numeric keys are custom properties.
 const MAX_ARRAY_INDEX = 2 ** 32 - 2;
@@ -28,9 +32,35 @@ const MAX_ARRAY_INDEX = 2 ** 32 - 2;
  * so callers keep their own "missing argument" errors. Other primitives are
  * copied unchanged; the existing validators still type-check them, and
  * canonical.mjs remains the only canonical encoder.
+ *
+ * `limits.maxNodes` and `limits.maxDepth` default to 50,000 and 64. A caller
+ * whose schema admits larger documents may pass a budget derived from that
+ * schema's maxima; each must be a positive safe integer no greater than its
+ * ceiling (2,000,000 values, depth 32,768). Nesting deeper than the engine
+ * stack allows is a ValidationError too, never a raw RangeError or a partial
+ * copy.
  */
-export function snapshotDelegationPlainData(value, name) {
-  return copy(value, name, '<root>', new Set(), 0, { nodes: 0 });
+export function snapshotDelegationPlainData(value, name, limits = {}) {
+  const bounds = {
+    maxNodes: limit(limits.maxNodes, DELEGATION_SNAPSHOT_MAX_NODES, DELEGATION_SNAPSHOT_NODE_CEILING, 'maxNodes'),
+    maxDepth: limit(limits.maxDepth, DELEGATION_SNAPSHOT_MAX_DEPTH, DELEGATION_SNAPSHOT_DEPTH_CEILING, 'maxDepth')
+  };
+  try {
+    return copy(value, name, '<root>', new Set(), 0, { nodes: 0, ...bounds });
+  } catch (error) {
+    // copy() throws only ValidationError itself; a RangeError here is the
+    // engine's stack limit, reached before a raised maxDepth.
+    if (error instanceof RangeError) reject(name, '<root>', 'exceeds the engine stack depth');
+    throw error;
+  }
+}
+
+function limit(value, fallback, ceiling, label) {
+  if (value === undefined) return fallback;
+  if (!Number.isSafeInteger(value) || value < 1 || value > ceiling) {
+    throw new RangeError(`snapshot ${label} must be an integer from 1 to ${ceiling}`);
+  }
+  return value;
 }
 
 function reject(name, path, reason) {
@@ -42,13 +72,13 @@ function copy(value, name, path, ancestors, depth, budget) {
   // touch a value before it is known not to be a Proxy.
   if (types.isProxy(value)) reject(name, path, 'is a Proxy');
   budget.nodes += 1;
-  if (budget.nodes > DELEGATION_SNAPSHOT_MAX_NODES) reject(name, path, 'exceeds the node budget');
+  if (budget.nodes > budget.maxNodes) reject(name, path, 'exceeds the node budget');
   if (typeof value === 'function') reject(name, path, 'is a function');
   if (typeof value === 'bigint' || typeof value === 'symbol') reject(name, path, `is a ${typeof value}`);
   if (typeof value === 'number' && !Number.isFinite(value)) reject(name, path, 'is not a finite number');
   if (value === undefined && depth > 0) reject(name, path, 'is undefined');
   if (value === null || typeof value !== 'object') return value;
-  if (depth > DELEGATION_SNAPSHOT_MAX_DEPTH) reject(name, path, 'exceeds the depth bound');
+  if (depth > budget.maxDepth) reject(name, path, 'exceeds the depth bound');
   if (ancestors.has(value)) reject(name, path, 'is cyclic');
   const isArray = Array.isArray(value);
   const prototype = Object.getPrototypeOf(value);
