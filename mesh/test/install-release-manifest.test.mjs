@@ -820,12 +820,13 @@ test('#1914 Proxy and accessor verified results are rejected without running cal
 test('#1914 unknown, invalid and duplicate artifact ids fail closed with ValidationError',()=>{
   const {verified}=boundFixture();
   const good=artifactBytes['runtime-personal'];
-  for(const id of ['missing-artifact','constructor','toString','__proto__','hasOwnProperty','runtime-personal-x','Runtime-personal']){
+  for(const id of ['missing-artifact','constructor','toString','hasOwnProperty','runtime-personal-x','Runtime-personal']){
     assertValidationError(()=>verifyInstallReleaseArtifact(verified,id,good),`unknown id ${id}`);
-    assert.throws(()=>verifyInstallReleaseArtifact(verified,id,good),/not in the verified manifest|artifact id is invalid/);
+    assert.throws(()=>verifyInstallReleaseArtifact(verified,id,good),/not in the verified manifest/);
   }
-  for(const id of ['','x','runtime-personal\n',' runtime-personal','a'.repeat(300)]){
+  for(const id of ['','x','__proto__','runtime-personal\n',' runtime-personal','a'.repeat(300)]){
     assertValidationError(()=>verifyInstallReleaseArtifact(verified,id,good),`invalid id ${JSON.stringify(id).slice(0,40)}`);
+    assert.throws(()=>verifyInstallReleaseArtifact(verified,id,good),/Release artifact id is invalid/);
   }
   // A non-string id never selects the bound form, and is still rejected.
   for(const id of [7,null,{toString(){ throw new Sentinel('coerced'); }}]){
