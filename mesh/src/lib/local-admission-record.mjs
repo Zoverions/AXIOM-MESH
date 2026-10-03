@@ -4,6 +4,9 @@ import {
   assertString,
   assertStringArray
 } from './canonical.mjs';
+import { types } from 'node:util';
+
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 export const LOCAL_ADMISSION_RECORD_SCHEMA = 'axiom-local-admission-record.v1';
 
@@ -39,8 +42,41 @@ function timestamp(value, label) {
   return text;
 }
 
-export function validateLocalAdmissionRecord(raw, { now = new Date() } = {}) {
-  const value = exact(raw, [
+function readNow(options) {
+  if (options === undefined) return new Date();
+  if (types.isProxy(options) || !options || typeof options !== 'object' || Array.isArray(options)) {
+    throw new ValidationError('local admission options must be an object');
+  }
+  const prototype = Object.getPrototypeOf(options);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new ValidationError('local admission options must be a plain object');
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(options, 'now');
+  if (descriptor === undefined) return new Date();
+  if (!Object.hasOwn(descriptor, 'value')) {
+    throw new ValidationError('local admission options.now must be a data property');
+  }
+  return descriptor.value === undefined ? new Date() : descriptor.value;
+}
+
+// Converts the already-read now without calling caller code: a genuine Date is
+// read through Date.prototype.getTime, and only primitives go through new Date.
+function nowMilliseconds(now) {
+  if (types.isDate(now)) return Date.prototype.getTime.call(now);
+  if (now === null || ['string', 'number', 'boolean'].includes(typeof now)) return new Date(now).valueOf();
+  return Number.NaN;
+}
+
+/**
+ * Validates a local admission record. The record is copied once at entry into
+ * fresh plain data (snapshotDelegationPlainData): no Proxy trap or getter runs,
+ * and accessors, symbol keys, hidden fields, non-plain prototypes and non-JSON
+ * values are a ValidationError. Every check and the returned fields read only
+ * that copy, so the output contains only values that were validated.
+ */
+export function validateLocalAdmissionRecord(raw, options = undefined) {
+  const now = readNow(options);
+  const value = exact(snapshotDelegationPlainData(raw, 'local admission record'), [
     'schema',
     'admission_id',
     'target_instance_id',
@@ -186,7 +222,7 @@ export function validateLocalAdmissionRecord(raw, { now = new Date() } = {}) {
     throw new ValidationError('local admission record must declare limitations');
   }
 
-  const nowMs = now instanceof Date ? now.valueOf() : new Date(now).valueOf();
+  const nowMs = nowMilliseconds(now);
   if (!Number.isFinite(nowMs)) throw new ValidationError('now is invalid');
   const validFromMs = new Date(validFrom).valueOf();
   const expiresMs = new Date(expiresAt).valueOf();
