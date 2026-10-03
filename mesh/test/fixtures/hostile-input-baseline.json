@@ -2,9 +2,7 @@
   "schema": "axiom-hostile-input-baseline.v1",
   "generated_by": "node test-support/hostile-input-baseline.mjs --write",
   "functions": {
-    "src/lib/agent-assurance-evidence.mjs#verifySealedAgentAssuranceEvidence": {
-      "recording-proxy": "read-through"
-    },
+    "src/lib/agent-assurance-evidence.mjs#verifySealedAgentAssuranceEvidence": {},
     "src/lib/agent-challenge-registry.mjs#validateAgentChallenge": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -179,41 +177,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/ai-provider-draft-attestation.mjs#verifyAiProviderDraftAttestation": {
-      "undefined": "raw",
-      "null": "raw",
-      "number": "raw",
-      "nan": "raw",
-      "string": "raw",
-      "boolean": "raw",
-      "bigint": "raw",
-      "symbol": "raw",
-      "function": "raw",
-      "empty-array": "raw",
-      "empty-object": "raw",
-      "frozen-object": "raw",
-      "null-prototype": "raw",
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "raw",
-      "recording-proxy": "raw",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "raw",
-      "nested-proxy-in-array": "raw",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "own-proto-key": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "array-cycle": "raw",
-      "depth-100": "raw",
-      "sparse-array": "raw",
-      "to-string-throws": "raw"
-    },
+    "src/lib/ai-provider-draft-attestation.mjs#verifyAiProviderDraftAttestation": {},
     "src/lib/ai-provider-invoke.mjs#validateAiProviderInvoke": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -346,21 +310,7 @@
       "revoked-proxy": "raw"
     },
     "src/lib/causal-sync.mjs#verifyCausalBundle": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/causal-sync.mjs#verifyCausalUpdate": {
       "throwing-proxy": "sentinel",
@@ -494,9 +444,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/context-retrieval-planner.mjs#validateContextVaultCatalogEntry": {
-      "recording-proxy": "read-through"
-    },
+    "src/lib/context-retrieval-planner.mjs#validateContextVaultCatalogEntry": {},
     "src/lib/context-semantic-review-evidence.mjs#validateLocalContextSemanticReviewEvidence": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -590,56 +538,8 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/epistemic-contracts.mjs#validateEpistemicProposal": {
-      "undefined": "raw",
-      "nan": "raw",
-      "bigint": "raw",
-      "symbol": "raw",
-      "function": "raw",
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "nested-proxy-in-array": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "array-cycle": "raw",
-      "sparse-array": "raw",
-      "to-string-throws": "raw"
-    },
-    "src/lib/epistemic-reproducibility-closure.mjs#validateReproducibilityClosure": {
-      "undefined": "raw",
-      "nan": "raw",
-      "bigint": "raw",
-      "symbol": "raw",
-      "function": "raw",
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "nested-proxy-in-array": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "array-cycle": "raw",
-      "sparse-array": "raw",
-      "to-string-throws": "raw"
-    },
+    "src/lib/epistemic-contracts.mjs#validateEpistemicProposal": {},
+    "src/lib/epistemic-reproducibility-closure.mjs#validateReproducibilityClosure": {},
     "src/lib/execution-route-policy.mjs#validateExecutionRoutePolicy": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -1827,140 +1727,28 @@
       "options-throwing-proxy": "sentinel"
     },
     "src/lib/research-capsule-contracts.mjs#verifyResearchClaimAdjudication": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-capsule-contracts.mjs#verifyResearchClaimAdjudicationBinding": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-capsule-contracts.mjs#verifyResearchKnowledgeProjection": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-capsule-contracts.mjs#verifyResearchOperationCandidate": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-capsule-contracts.mjs#verifyResearchReproductionEvidence": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-capsule-contracts.mjs#verifyResearchSourceManifest": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-composition-graph.mjs#verifyResearchContribution": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/research-composition-graph.mjs#verifyResearchRelation": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/resilient-path-fabric.mjs#validateResilientPathFabric": {
       "throwing-proxy": "sentinel",
@@ -2391,89 +2179,19 @@
       "revoked-proxy": "raw"
     },
     "src/lib/threat-intelligence-contracts.mjs#verifyRegressionCandidate": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/threat-intelligence-contracts.mjs#verifyReproductionCase": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/threat-intelligence-contracts.mjs#verifyThreatAdaptationReceipt": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/threat-intelligence-contracts.mjs#verifyThreatHypothesis": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/threat-intelligence-contracts.mjs#verifyThreatObservation": {
-      "class-instance": "raw",
-      "date": "raw",
-      "map": "raw",
-      "typed-array": "raw",
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw",
-      "nested-throwing-proxy": "sentinel",
-      "hidden-mind-id": "raw",
-      "symbol-key": "raw",
-      "throwing-getter": "raw",
-      "counting-getter": "raw",
-      "inherited-valid": "raw",
-      "cycle": "raw",
-      "to-string-throws": "raw"
+      "revoked-proxy": "raw"
     },
     "src/lib/transport-credentials.mjs#validateTransportCredentials": {
       "undefined": "raw",
@@ -2522,12 +2240,10 @@
       "options-throwing-getter": "accept"
     },
     "src/lib/vault-catalog-projection.mjs#validateSovereignVaultManifest": {
-      "null": "raw",
-      "recording-proxy": "read-through"
+      "null": "raw"
     },
     "src/lib/vault-catalog-projection.mjs#verifyVaultSemanticIndex": {
-      "null": "raw",
-      "recording-proxy": "read-through"
+      "null": "raw"
     },
     "src/lib/verified-work-graph.mjs#validateVerifiedWorkGraph": {
       "throwing-proxy": "sentinel",
