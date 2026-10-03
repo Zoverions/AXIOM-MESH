@@ -29,8 +29,13 @@ const READINESS_STATES=new Set(['not-checked','ready','not-ready','unknown']);
 const ROLLBACK_MODES=new Set(['in-place-compatible','backup-restore-required','migration-specific']);
 const LIVE_LOCAL='live-local-observation';
 // Kernel versions: exact semver 2.0 core and pre-release, no build metadata and
-// no leading zeros in numeric identifiers, so one string has one meaning.
-const KERNEL_VERSION=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?$/;
+// no leading zeros in numeric identifiers, so one string has one meaning. The
+// shape is matched linearly and each pre-release identifier is checked on its
+// own, so no pattern can backtrack.
+const KERNEL_VERSION_SHAPE=/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/;
+const PRERELEASE_IDENTIFIER=/^[0-9A-Za-z-]+$/;
+const NUMERIC_IDENTIFIER=/^\d+$/;
+const CANONICAL_NUMERIC_IDENTIFIER=/^(?:0|[1-9]\d*)$/;
 // The standard install inventory never carries Birth/Genesis/Spark material.
 const PRIVATE_BIRTH_TOKEN=/(^|[._:/-])(birth|genesis|spark)([._:/-]|$)/i;
 const ZERO_SHA='0'.repeat(64);
@@ -450,8 +455,16 @@ function exactObject(value,label,keys){
 }
 function bool(v,label){if(typeof v!=='boolean')throw new ValidationError(`${label} must be boolean`);}
 function kernelVersion(v,label){
-  if(typeof v!=='string'||v.length>128||!KERNEL_VERSION.test(v)){
+  if(typeof v!=='string'||v.length>128||!KERNEL_VERSION_SHAPE.test(v)){
     throw new ValidationError(`${label} version is invalid or ambiguous`);
+  }
+  const dash=v.indexOf('-');
+  if(dash===-1) return;
+  for(const identifier of v.slice(dash+1).split('.')){
+    if(
+      !PRERELEASE_IDENTIFIER.test(identifier)
+      ||(NUMERIC_IDENTIFIER.test(identifier)&&!CANONICAL_NUMERIC_IDENTIFIER.test(identifier))
+    ) throw new ValidationError(`${label} version is invalid or ambiguous`);
   }
 }
 // Core MAJOR.MINOR.PATCH ordering reuses node-runtime-version.mjs. Pre-release

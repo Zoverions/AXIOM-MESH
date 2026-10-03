@@ -608,3 +608,11 @@ test('re-digested envelopes still reject activation, ordering and proof-candidat
     assert.throws(()=>sessions.validateVerifiedInstallSession(y),error=>error instanceof ValidationError&&pattern.test(error.message));
   }
 });
+
+test('kernel version validation rejects backtracking-shaped and non-canonical pre-releases',()=>{
+  for(const version of ['0.0.0-0.'+'--.'.repeat(38)+'!','0.11.0-a..b','0.11.0-01','0.11.0-','0.11.0+build']){
+    const f=fixture();older(f,version);denied(f.input,/version/i);
+  }
+  const ok=fixture();older(ok,'0.11.0-x.7.z.92');
+  assert.equal(run(ok.input).decision.decision,'STOP_UPGRADE_UNPROVEN');
+});
