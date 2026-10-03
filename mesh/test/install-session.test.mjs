@@ -31,6 +31,10 @@ function candidate(overrides={}){
     runtime_strategy:'oci',
     desired_release_id:'axiom-mesh/0.12.0-dev.3/test',
     desired_source_revision:REV,
+    desired_kernel_version:'0.12.0-dev.3',
+    minimum_compatible_kernel:'0.11.0',
+    rollback_mode:'in-place-compatible',
+    host_candidate_compatible:true,
     host_plan_digest:A,
     host_plan_facts_source:'live-local-observation',
     release_manifest_digest:B,
@@ -46,14 +50,19 @@ function candidate(overrides={}){
   };
 }
 
-function observation(overrides={}){
+// Observations are bound to one candidate digest (T3) and are live-local (T4).
+function observation(overrides={},boundTo=candidate()){
   const d={
     schema:INSTALLED_STATE_OBSERVATION_SCHEMA,
     version:0,
     status:'inert-installed-state-observation',
     observation_id:'install.observation.demo.1',
     session_id:'install.session.demo.1',
+    candidate_digest:installSessionCandidateDigest(boundTo),
     observed_at:'2026-09-28T01:00:30.000Z',
+    observation_source:'live-local-observation',
+    legacy_proof_state_detected:false,
+    installed_kernel_version:null,
     install_record_state:'absent',
     installed_profile_id:null,
     installed_release_id:null,
@@ -77,9 +86,10 @@ function observation(overrides={}){
   return d;
 }
 
-function exactInstalled(overrides={}){
+function exactInstalled(overrides={},boundTo=candidate()){
   return observation({
     install_record_state:'complete',
+    installed_kernel_version:'0.12.0-dev.3',
     installed_profile_id:'personal-local',
     installed_release_id:'axiom-mesh/0.12.0-dev.3/test',
     installed_source_revision:REV,
@@ -92,7 +102,7 @@ function exactInstalled(overrides={}){
     service_state:'running',
     readiness_state:'ready',
     ...overrides
-  });
+  },boundTo);
 }
 
 function assess(c=candidate(),o=observation(),evaluatedAt='2026-09-28T01:01:00.000Z'){
@@ -132,7 +142,8 @@ test('clean absent live host state yields INSTALL_REVIEW but no mutation authori
 
 test('non-live host plans never become installation review',()=>{
   for(const source of ['supplied-evidence','synthetic-test']){
-    const d=assess(candidate({host_plan_facts_source:source}),observation());
+    const c=candidate({host_plan_facts_source:source});
+    const d=assess(c,observation({},c));
     assert.equal(d.decision,'STOP_NONLIVE_PLAN');
     assert.deepEqual(d.reasons,['host-plan-not-live-local']);
   }
@@ -157,6 +168,7 @@ test('same exact release that is not ready becomes repair review',()=>{
 test('newer installed release blocks downgrade even when operator asks for desired release',()=>{
   const o=exactInstalled({
     installed_release_id:'axiom-mesh/0.13.0/newer',
+    installed_kernel_version:'0.13.0',
     installed_source_revision:'2'.repeat(40),
     installed_host_plan_digest:C,
     installed_release_manifest_digest:D,
@@ -179,6 +191,7 @@ test('diverged release stops instead of hidden merge or replacement',()=>{
 test('ancestor release permits only upgrade review',()=>{
   const o=exactInstalled({
     installed_release_id:'axiom-mesh/0.11.0/old',
+    installed_kernel_version:'0.11.0',
     installed_source_revision:'4'.repeat(40),
     installed_host_plan_digest:C,
     installed_release_manifest_digest:D,
@@ -342,7 +355,29 @@ test('install session logic has no process filesystem network or credential side
   const specifiers=[
     ...source.matchAll(/^\s*(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]/gm)
   ].map(match=>match[1]);
-  assert.deepEqual(specifiers,['node:util','./canonical.mjs']);
+  assert.deepEqual(specifiers,[
+    'node:util',
+    './canonical.mjs',
+    './delegation-plain-snapshot.mjs',
+    './host-install-plan.mjs',
+    './install-release-manifest.mjs',
+    './node-runtime-version.mjs'
+  ]);
+  // The planner is used only for its pure validator; host fact collection
+  // (filesystem and OS probes) is never reached from this module.
+  assert.doesNotMatch(source,/collectHostFacts|buildHostInstallPlan/);
+  // Artifact bytes are checked only through the manifest-bound overload, and
+  // the gate requires manifest_bound plus the verified digest and release.
+  const code=source.split('\n').filter(line=>!/^\s*(\*|\/\/|\/\*)/.test(line)).join('\n');
+  assert.equal([...code.matchAll(/verifyInstallReleaseArtifact\s*\(/g)].length,1);
+  assert.match(code,/verifyInstallReleaseArtifact\(verified,id,bytesById\.get\(id\)\);/);
+  assert.match(source,/proof\.manifest_bound!==true/);
+  assert.match(source,/proof\.manifest_digest!==expectedManifestDigest/);
+  assert.match(source,/verified\.manifest_digest!==expectedManifestDigest/);
+  // The gate verifies the package itself; it never takes a verified result in.
+  assert.equal([...code.matchAll(/verifyInstallReleaseManifest\s*\(/g)].length,1);
+  assert.match(code,/const verified=verifyInstallReleaseManifest\(releasePackage,\{trustedSigners,evaluatedAt\}\);/);
+  assert.match(source,/proof\.release_id!==verified\.release_id/);
   assert.doesNotMatch(
     source,
     /\bprocess\b|globalThis|\bimport\s*\(|\brequire\s*\(|\bFunction\b|\beval\b|\.constructor\s*\(|\[['"]constructor['"]\]|\bnavigator\b|\bDeno\b|\bBun\b|\bWebAssembly\b/

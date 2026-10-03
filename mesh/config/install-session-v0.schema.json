@@ -6,7 +6,8 @@
   "additionalProperties": false,
   "required": [
     "schema","version","status","session_id","profile_id","runtime_strategy",
-    "desired_release_id","desired_source_revision","host_plan_digest",
+    "desired_release_id","desired_source_revision","desired_kernel_version",
+    "minimum_compatible_kernel","rollback_mode","host_candidate_compatible","host_plan_digest",
     "host_plan_facts_source","release_manifest_digest","artifact_sha256s",
     "artifact_evidence_refs","requested_at","max_observation_age_seconds",
     "host_mutation_authorized","authority_effect","network_effect",
@@ -21,6 +22,10 @@
     "runtime_strategy": {"enum":["oci","source"]},
     "desired_release_id": {"$ref":"#/$defs/id"},
     "desired_source_revision": {"type":"string","pattern":"^[a-f0-9]{40}$"},
+    "desired_kernel_version": {"$ref":"#/$defs/kernel_version"},
+    "minimum_compatible_kernel": {"$ref":"#/$defs/kernel_version"},
+    "rollback_mode": {"enum":["in-place-compatible","backup-restore-required","migration-specific"]},
+    "host_candidate_compatible": {"type":"boolean"},
     "host_plan_digest": {"$ref":"#/$defs/digest"},
     "host_plan_facts_source": {"enum":["live-local-observation","supplied-evidence","synthetic-test"]},
     "release_manifest_digest": {"$ref":"#/$defs/digest"},
@@ -41,6 +46,7 @@
   },
   "$defs": {
     "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,191}$"},
-    "digest": {"type":"string","pattern":"^[a-f0-9]{64}$"}
+    "digest": {"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "kernel_version": {"type":"string","maxLength":128,"pattern":"^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?$"}
   }
 }

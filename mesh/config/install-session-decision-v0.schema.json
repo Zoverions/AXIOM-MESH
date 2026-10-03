@@ -15,7 +15,8 @@
     "status":{"const":"inert-install-session-decision"},
     "decision":{"enum":[
       "INSTALL_REVIEW","VERIFY_NOOP","REPAIR_REVIEW","UPGRADE_REVIEW",
-      "RECOVERY_REVIEW","STOP_NONLIVE_PLAN","STOP_PARTIAL_SECRET_STATE",
+      "RECOVERY_REVIEW","STOP_NONLIVE_PLAN","STOP_HOST_BLOCKED",
+      "STOP_LEGACY_PROOF_STATE","STOP_UPGRADE_UNPROVEN","STOP_PARTIAL_SECRET_STATE",
       "STOP_NEWER_PRESENT","STOP_DIVERGED","STOP_CONFLICT","STOP_UNCERTAIN"
     ]},
     "reasons":{"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":128}},
