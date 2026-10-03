@@ -1385,11 +1385,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/local-admission-record.mjs#validateLocalAdmissionRecord": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/local-admission-record.mjs#validateLocalAdmissionRecord": {},
     "src/lib/machine-discovery.mjs#validateMachineDiscovery": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
