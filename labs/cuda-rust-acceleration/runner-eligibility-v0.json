@@ -1,0 +1,66 @@
+{
+  "schema": "axiom-cuda-rust-runner-eligibility.v0",
+  "version": 0,
+  "candidate_id": "cuda-rust.cutile-rs.a0",
+  "issue": 1637,
+  "evaluated_date": "2026-09-18",
+  "freshness": {
+    "current_state_only": true,
+    "recheck_before_execution": true
+  },
+  "requirements": {
+    "os": "linux",
+    "architecture": [
+      "x64",
+      "arm64"
+    ],
+    "gpu_vendor": "NVIDIA",
+    "minimum_compute_capability": 8,
+    "minimum_cuda_toolkit": 13.2,
+    "recommended_cuda_toolkit": 13.3,
+    "minimum_rust": "1.89.0",
+    "tileiras_required": true,
+    "isolated_lab_required": true,
+    "ambient_production_credentials_allowed": false
+  },
+  "github_hosted_gpu": {
+    "observed_gpu": "NVIDIA Tesla T4",
+    "observed_vram_gb": 16,
+    "observed_compute_capability": 7.5,
+    "compatibility": "rejected",
+    "reason": "hosted GPU is below cutile-rs sm_80 minimum",
+    "larger_runner_account_requirement": "organization-or-enterprise-on-supported-paid-plan",
+    "source_refs": [
+      "https://docs.github.com/en/actions/reference/runners/larger-runners",
+      "https://docs.github.com/en/actions/concepts/runners/larger-runners",
+      "https://developer.nvidia.com/cuda/gpus"
+    ]
+  },
+  "self_hosted_or_external_gpu": {
+    "live_runner_inventory_verified": false,
+    "repository_gpu_runner_declaration_observed": false,
+    "repository_hardware_record_observed": false,
+    "status": "unknown-not-observed"
+  },
+  "spend_boundary": {
+    "paid_infrastructure_authorized": false,
+    "auto_provision_paid_runner": false
+  },
+  "execution": {
+    "status": "BLOCKED_ENVIRONMENT",
+    "eligible_runner_verified": false,
+    "allow_gpu_job_dispatch": false,
+    "gpu_execution_status": "NOT_RUN",
+    "benchmark_evidence": null,
+    "performance_claims": []
+  },
+  "boundaries": {
+    "authority_effect": "none",
+    "network_effect": "none",
+    "credential_visibility": "none",
+    "runtime_activation": false,
+    "capability_promotion": false,
+    "grid_mutation": false,
+    "gateway_route_added": false
+  }
+}
