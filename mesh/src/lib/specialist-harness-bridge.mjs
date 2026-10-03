@@ -1,12 +1,18 @@
+import { types } from 'node:util';
+
 import { canonicalize, digestObject, ValidationError } from './canonical.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 import { validateAutonomyEnvelope } from './autonomy-envelope.mjs';
 import { outcomeDigest, skillAdmissionDigest, taskLifecycleDigest } from './agent-os-contracts.mjs';
 import { executionRoutePolicyDigest } from './execution-route-policy.mjs';
 import { taskContinuityPolicyDigest } from './task-continuity-policy.mjs';
 import { validateExternalAgentIngressRequest } from './external-agent-ingress-request.mjs';
 import { aiExecutionProvenanceDigest } from './ai-execution-provenance.mjs';
-import { verifiedWorkGraphDigest } from './verified-work-graph.mjs';
-import { validateSemanticOperationProposal } from './semantic-operation-proposal-core.mjs';
+import { VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES, verifiedWorkGraphDigest } from './verified-work-graph.mjs';
+import {
+  SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES,
+  validateSemanticOperationProposal
+} from './semantic-operation-proposal-core.mjs';
 import { persistentEntityBundleDigest } from './persistent-entity-bundle.mjs';
 
 export const SPECIALIST_HARNESS_BRIDGE_SCHEMA = 'axiom-specialist-harness-bridge.v0';
@@ -82,19 +88,91 @@ export function buildSpecialistHarnessBridge(input, options = {}) {
  * is checked; consumers must require `envelope_checked === true`.
  */
 export function validateSpecialistHarnessBridge(document, options = {}) {
-  // Two layers, both required:
-  // 1. validateUnsafe runs on a structuredClone snapshot. The clone rejects
-  //    Proxies and other non-cloneable values, but it silently drops or
-  //    flattens accessors, symbol keys, non-enumerable properties and
-  //    non-plain prototypes, so the clone alone is NOT a plain-data check.
-  // 2. The original document must then pass strict canonicalize, which
-  //    rejects accessors (stable or flipping), symbol keys, non-enumerable
-  //    properties and non-plain prototypes. Only plain data is valid.
+  // The document, the options record and the envelope/references evidence are
+  // copied once with the strict plain-data walk before anything else reads
+  // them: Proxies are rejected before any trap runs, no getter is called, and
+  // accessors, symbol keys, non-enumerable properties, non-plain prototypes and
+  // cycles are rejected. The copy must then pass strict canonicalize, which
+  // also rejects values JSON cannot encode. Only plain data is valid.
   return failClosed(() => {
-    const result = validateUnsafe(structuredClone(document), options);
-    canonicalize(document);
+    const snapshot = plainSnapshot(document, 'Specialist harness bridge');
+    const result = validateUnsafe(snapshot, plainOptions(options));
+    canonicalize(snapshot);
     return result;
   });
+}
+
+// Snapshot limits for references whose schema admits more than the default
+// 50,000 values or depth 64. Every other reference has a fixed shape well
+// inside the defaults (the largest, outcome, is under 5,000 values at depth 2).
+// - verified_work_graph: up to 1,093,644 values at depth 4 (see
+//   VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES).
+// - semantic_operation_proposal: argument values are free-form JSON, bounded
+//   only by the 65,536-byte serialization limit. Each nesting level costs at
+//   least two bytes ("[" and "]"), so depth stays at or below 32,768; each
+//   value costs at least two bytes with its separator, so the value count stays
+//   under the 50,000 default.
+const REFERENCE_SNAPSHOT_LIMITS = Object.freeze({
+  verified_work_graph: Object.freeze({ maxNodes: VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES }),
+  semantic_operation_proposal: Object.freeze({ maxDepth: SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES / 2 })
+});
+
+function plainSnapshot(value, label, limits) {
+  try {
+    return snapshotDelegationPlainData(value, label, limits);
+  } catch (error) {
+    throw new ValidationError(`Specialist harness bridge input could not be read safely; failing closed (${error.message})`);
+  }
+}
+
+// The options record and options.references must be own enumerable data with
+// known fields (an undefined value still means "not supplied"). The envelope
+// and each reference are snapshotted like the document; now is a string, a
+// finite number or a genuine Date, read without calling any caller method.
+function plainOptions(options) {
+  const result = {};
+  for (const [key, value] of plainFields(options, 'options', OPTION_FIELDS)) {
+    if (key === 'envelope') result.envelope = plainSnapshot(value, 'options.envelope');
+    else if (key === 'references') result.references = plainReferences(value);
+    else if (key === 'now') result.now = plainTime(value);
+    else result[key] = value;
+  }
+  return result;
+}
+
+function plainReferences(references) {
+  if (references === undefined) return undefined;
+  const result = {};
+  for (const [key, value] of plainFields(references, 'references', REFERENCE_FIELDS, 'a supported reference')) {
+    result[key] = plainSnapshot(value, `references.${key}`, REFERENCE_SNAPSHOT_LIMITS[key]);
+  }
+  return result;
+}
+
+function plainFields(record, label, allowed, supported = 'supported') {
+  if (types.isProxy(record) || !record || typeof record !== 'object' || Array.isArray(record)) {
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const prototype = Object.getPrototypeOf(record);
+  if (prototype !== Object.prototype && prototype !== null) throw new ValidationError(`${label} must be a plain object`);
+  const fields = [];
+  for (const key of Reflect.ownKeys(record)) {
+    if (typeof key === 'symbol') throw new ValidationError(`${label} cannot contain symbol keys`);
+    if (!allowed.has(key)) throw new ValidationError(`${label}.${key} is not ${supported}`);
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new ValidationError(`${label}.${key} must be an enumerable data property`);
+    }
+    fields.push([key, descriptor.value]);
+  }
+  return fields;
+}
+
+function plainTime(value) {
+  // types.isDate is false for a Proxy and runs no trap.
+  if (types.isDate(value)) return Date.prototype.getTime.call(value);
+  if (value !== undefined && typeof value !== 'string' && typeof value !== 'number') throw new ValidationError('now is invalid');
+  return value;
 }
 
 function failClosed(run) {

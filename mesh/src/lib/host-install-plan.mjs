@@ -61,6 +61,12 @@ const PROFILE_DIRECTORIES = Object.freeze({
 });
 
 export function validateHostInstallPolicy(policy = installPolicy, targets = installTargets) {
+  // Both documents are compared through canonicalJson and digestObject below,
+  // so first require plain JSON data throughout: no Proxy trap or getter runs
+  // and no raw canonical TypeError escapes.
+  plainJsonTree(policy, 'Host install policy');
+  plainJsonTree(targets, 'Install targets');
+  plainRecord(targets, 'Install targets');
   exactObject(policy, 'Host install policy', [
     'schema','version','kernel_version','status','authority_effect',
     'host_mutation_enabled','planner','mutating_installer','profiles','stages'
@@ -124,7 +130,11 @@ export function validateHostInstallPolicy(policy = installPolicy, targets = inst
     || canonicalJson(policy.stages) !== canonicalJson(EXPECTED_STAGES)
   ) throw new ValidationError('Host install profile or stage inventory drifted');
 
-  const targetById = new Map(targets.targets?.map(target => [target.id, target]) ?? []);
+  const targetList = targets.targets ?? [];
+  if (!Array.isArray(targetList) || targetList.some(target => !target || typeof target !== 'object' || Array.isArray(target))) {
+    throw new ValidationError('Install targets inventory is invalid');
+  }
+  const targetById = new Map(targetList.map(target => [target.id, target]));
   for (const profileId of PROFILE_IDS) {
     const profile = policy.profiles[profileId];
     const target = targetById.get(profileId);
@@ -488,6 +498,27 @@ function scalarLeaves(record, label, containerKeys = []) {
       || (typeof item === 'number' && Number.isFinite(item))
     )) throw new ValidationError(`${label} field ${key} must be a JSON scalar`);
   }
+}
+
+const JSON_TREE_MAX_DEPTH = 64;
+
+function plainJsonTree(value, label, depth = 0, ancestors = new Set()) {
+  if (utilTypes.isProxy(value)) throw new ValidationError(`${label} cannot contain a Proxy`);
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new ValidationError(`${label} cannot contain non-finite numbers`);
+    return;
+  }
+  if (typeof value !== 'object') throw new ValidationError(`${label} must contain only JSON data`);
+  if (depth > JSON_TREE_MAX_DEPTH) throw new ValidationError(`${label} exceeds the nesting bound`);
+  if (ancestors.has(value)) throw new ValidationError(`${label} cannot be cyclic`);
+  if (Array.isArray(value)) plainDataArray(value, label, value.length);
+  else plainRecord(value, label);
+  ancestors.add(value);
+  for (const key of Object.keys(value)) {
+    plainJsonTree(Object.getOwnPropertyDescriptor(value, key).value, label, depth + 1, ancestors);
+  }
+  ancestors.delete(value);
 }
 
 function plainDataArray(value, label, length) {

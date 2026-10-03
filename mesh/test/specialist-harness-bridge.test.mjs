@@ -2,11 +2,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+
 import { autonomyEnvelopeDigest } from '../src/lib/autonomy-envelope.mjs';
 import { ValidationError } from '../src/lib/canonical.mjs';
 import { outcomeDigest, taskLifecycleDigest } from '../src/lib/agent-os-contracts.mjs';
 import { executionRoutePolicyDigest } from '../src/lib/execution-route-policy.mjs';
 import { taskContinuityPolicyDigest } from '../src/lib/task-continuity-policy.mjs';
+import * as workGraph from '../src/lib/verified-work-graph.mjs';
+import * as proposals from '../src/lib/semantic-operation-proposal.mjs';
+import { digestObject } from '../src/lib/canonical.mjs';
 import {
   SPECIALIST_HARNESS_BRIDGE_CONSEQUENCE_ORDER,
   SPECIALIST_HARNESS_BRIDGE_EFFECT_CLASSES,
@@ -576,11 +581,14 @@ test('delegation_allowed missing, null, 0 or "false" is rejected before the enve
   ]) {
     const e = envelope();
     mutate(e);
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), /non-delegating/, label);
+    // An accessor probe can no longer observe ordering: the options snapshot
+    // rejects the accessor itself before any envelope check, without calling it.
     let reached = false;
     const schema = e.schema;
     Object.defineProperty(e, 'schema', { get() { reached = true; return schema; }, enumerable: true });
-    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), /non-delegating/, label);
-    assert.equal(reached, false, `envelope validator must not be reached (${label})`);
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), { envelope: e }), ValidationError, label);
+    assert.equal(reached, false, `envelope getter must not run (${label})`);
   }
 });
 
@@ -670,3 +678,206 @@ for (const field of ['authority_effect', 'execution_effect', 'network_effect', '
     assert.throws(() => validateSpecialistHarnessBridge(missing), /fields are invalid/);
   });
 }
+
+// AT-5: options, envelope and references are plain data read once; no getter
+// or Proxy trap runs and hidden, symbol or accessor state is a ValidationError.
+test('AT-5: accessor, non-enumerable or Proxy envelope and hidden-key references are rejected with ValidationError', () => {
+  let calls = 0;
+  const env = envelope();
+  const counted = (value) => new Proxy(value, { get(target, key, receiver) { calls += 1; return Reflect.get(target, key, receiver); } });
+  const hostile = {
+    'accessor envelope': Object.defineProperty({ now: NOW }, 'envelope', { get() { calls += 1; return env; }, enumerable: true }),
+    'non-enumerable envelope': Object.defineProperty({ now: NOW }, 'envelope', { value: env, enumerable: false }),
+    'Proxy envelope': { envelope: counted(envelope()), now: NOW },
+    'references with hidden mind_id': {
+      envelope: envelope(), now: NOW,
+      references: Object.defineProperty({ outcome: outcome() }, 'mind_id', { value: 'hidden', enumerable: false })
+    },
+    'symbol-keyed options': { envelope: envelope(), now: NOW, [Symbol('extra')]: true },
+    'Proxy now': { envelope: envelope(), now: counted(new Date(NOW)) }
+  };
+  assert.equal(validateSpecialistHarnessBridge(bridge(), { envelope: envelope(), now: NOW, references: { outcome: outcome() } }).valid, true);
+  assert.equal(validateSpecialistHarnessBridge(bridge(), { envelope: envelope(), now: new Date(NOW) }).valid, true);
+  for (const [label, options] of Object.entries(hostile)) {
+    assert.throws(() => validateSpecialistHarnessBridge(bridge(), options), ValidationError, label);
+  }
+  assert.equal(calls, 0, 'no getter or trap ran');
+});
+
+test('AT-5: a getter inside the bridge document is never called', () => {
+  let calls = 0;
+  const document = bridge();
+  const value = document.bridge_id;
+  Object.defineProperty(document, 'bridge_id', { get() { calls += 1; return value; }, enumerable: true });
+  assert.throws(() => validateSpecialistHarnessBridge(document), err => err instanceof ValidationError && /failing closed/.test(err.message));
+  assert.equal(calls, 0);
+});
+
+test('hostile-input contract: validateSpecialistHarnessBridge rejects every hostile variant with ValidationError', async () => {
+  await assertHostileInputContract({
+    name: 'validateSpecialistHarnessBridge',
+    fn: validateSpecialistHarnessBridge,
+    validArgs: () => [bridge(), {
+      envelope: envelope(),
+      now: NOW,
+      references: {
+        outcome: outcome(),
+        task_lifecycle: task(),
+        execution_route_policy: routePolicy(),
+        task_continuity_policy: continuityPolicy()
+      }
+    }],
+    // Absent options and references are undefined; the remaining paths are
+    // nullable fields of the bridge and of the referenced documents' schemas.
+    nullablePaths: [
+      /^arg0\..*_digest$/,
+      'arg0.ceiling_binding.max_cost',
+      /^arg1(\.(envelope|now|references|references\.[a-z_]+))?$/,
+      /^arg1\.references\.outcome\.(cost_budget\.currency|deadline|resource_envelope_ref)$/,
+      /^arg1\.references\.task_lifecycle\.(authority_checked_at|authority_snapshot_ref|budget_checked_at|budget_ref|node_ref|provider_ref|resume_from_digest|worker_ref)$/
+    ],
+    maxPaths: 1000
+  }, assert);
+});
+
+// --- Reference snapshot budgets follow each reference schema's own maxima ---
+// Literals, not the module constants, so these tests also run unchanged against
+// trees that predate the constants.
+const WORK_GRAPH_MAX_PLAIN_VALUES = 1 + 11 + 4096 * (1 + 10 + 256);
+
+function workGraphNode(index, dependencies) {
+  return {
+    node_id: `n${index}`, kind: index === 0 ? 'goal' : 'task', label: `node ${index}`, state: 'proposed',
+    dependencies, artifact_digest: null, verification_result: 'not-applicable',
+    verifier_ref: null, verification_evidence_digest: null, lineage_ref: null
+  };
+}
+
+function workGraphDocument(nodes) {
+  return {
+    schema: workGraph.VERIFIED_WORK_GRAPH_SCHEMA, version: '0.1.0', status: 'inert-evidence',
+    graph_id: 'graph.max', subject_ref: 'subject.max', nodes, created_at: '2026-09-24T12:00:00.000Z',
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', execution_authority: false
+  };
+}
+
+// Node i depends on the (up to) maxDependencies nodes before it: acyclic, one goal.
+function maxWorkGraph(nodeCount, maxDependencies) {
+  const nodes = [];
+  for (let index = 0; index < nodeCount; index += 1) {
+    const dependencies = [];
+    if (index > 0) for (let prior = Math.max(0, index - maxDependencies); prior < index; prior += 1) dependencies.push(`n${prior}`);
+    nodes.push(workGraphNode(index, dependencies));
+  }
+  return workGraphDocument(nodes);
+}
+
+function plainValueCount(value) {
+  if (value === null || typeof value !== 'object') return 1;
+  let count = 1;
+  for (const item of Object.values(value)) count += plainValueCount(item);
+  return count;
+}
+
+const withWorkGraphDigest = digest => withBridge(b => { b.provenance_binding.verified_work_graph_digest = digest; });
+const checkWorkGraph = (b, graph) => validateSpecialistHarnessBridge(b, {
+  envelope: envelope(), now: NOW, references: { verified_work_graph: graph }
+});
+
+test('B-1: a schema-maximum verified work graph reference (4096 nodes, up to 256 dependencies) is accepted', () => {
+  const graph = maxWorkGraph(4096, 256);
+  const values = plainValueCount(graph);
+  assert.ok(values > 50_000, `fixture must exceed the default snapshot budget (${values})`);
+  assert.ok(values <= WORK_GRAPH_MAX_PLAIN_VALUES);
+  const result = checkWorkGraph(withWorkGraphDigest(workGraph.verifiedWorkGraphDigest(graph)), graph);
+  assert.equal(result.valid, true);
+  assert.deepEqual([...result.references_checked], ['verified_work_graph']);
+  assert.equal(result.grants_authority, false);
+});
+
+test('B-1: the work-graph snapshot budget is the schema maximum, derived from the schema constants', () => {
+  assert.equal(workGraph.VERIFIED_WORK_GRAPH_MAX_NODES, 4096);
+  assert.equal(workGraph.VERIFIED_WORK_GRAPH_MAX_DEPENDENCIES, 256);
+  // 1 root + 11 top-level values; per node 1 object + 10 values + 256 dependency strings.
+  assert.equal(workGraph.VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES, WORK_GRAPH_MAX_PLAIN_VALUES);
+  // The schema itself still refuses a 257th dependency and a 4097th node.
+  const tooManyDependencies = maxWorkGraph(300, 256);
+  tooManyDependencies.nodes[299].dependencies = Array.from({ length: 257 }, (_, index) => `n${index}`);
+  assert.throws(() => workGraph.validateVerifiedWorkGraph(tooManyDependencies), /dependencies/);
+  assert.throws(() => workGraph.validateVerifiedWorkGraph(maxWorkGraph(4097, 1)), /1-4096 nodes/);
+});
+
+test('B-1: a reference over its schema budget is a ValidationError; one at the budget still meets its schema validator', () => {
+  // One shared node object and one shared 256-dependency array, 4096 times:
+  // exactly the schema-maximum count of values on the snapshot's per-path count.
+  const node = workGraphNode(1, Array.from({ length: 256 }, (_, index) => `d${index}`));
+  const atBudget = workGraphDocument(new Array(4096).fill(node));
+  assert.equal(plainValueCount(atBudget), WORK_GRAPH_MAX_PLAIN_VALUES);
+  const b = withWorkGraphDigest(D('9'));
+  // It fits the snapshot, so the work-graph schema validator runs on the copy and rejects it.
+  assert.throws(() => checkWorkGraph(b, atBudget), error => error instanceof ValidationError
+    && /duplicate node/.test(error.message) && !/plain data/.test(error.message));
+  const overBudget = workGraphDocument(new Array(4096).fill(node));
+  overBudget.subject_ref = [0];
+  assert.equal(plainValueCount(overBudget), WORK_GRAPH_MAX_PLAIN_VALUES + 1);
+  assert.throws(() => checkWorkGraph(b, overBudget), error => error instanceof ValidationError
+    && /references\.verified_work_graph must be plain data; .* exceeds the node budget/.test(error.message));
+  // The raised budget belongs to verified_work_graph alone; other references keep 50,000.
+  const bigOutcome = { ...outcome(), task_ids: new Array(50_000).fill('task.demo.1') };
+  assert.throws(() => validateSpecialistHarnessBridge(bridge(), { references: { outcome: bigOutcome } }),
+    error => error instanceof ValidationError && /references\.outcome must be plain data; .* exceeds the node budget/.test(error.message));
+});
+
+test('B-1: a small schema-invalid work graph inside the budget is still rejected by the work-graph validator', () => {
+  const graph = maxWorkGraph(8, 2);
+  const digest = workGraph.verifiedWorkGraphDigest(graph);
+  const b = withWorkGraphDigest(digest);
+  assert.deepEqual([...checkWorkGraph(b, graph).references_checked], ['verified_work_graph']);
+  const unknownDependency = structuredClone(graph);
+  unknownDependency.nodes[7].dependencies = ['n6', 'missing'];
+  assert.throws(() => checkWorkGraph(b, unknownDependency), error => error instanceof ValidationError && !/plain data/.test(error.message));
+  const twoGoals = structuredClone(graph);
+  twoGoals.nodes[7] = workGraphNode(0, []);
+  twoGoals.nodes[7].node_id = 'n7';
+  assert.throws(() => checkWorkGraph(b, twoGoals), /exactly one goal/);
+});
+
+function deepArgumentProposal(levels) {
+  const provider = {
+    provider_ref: 'provider.bridge.deep', profile_ref: 'profile.bridge.deep', artifact_ref: 'artifact.bridge.deep',
+    runtime_ref: 'runtime.bridge.deep', revision_evidence: 'content-addressed', provider_mode: 'owner-local'
+  };
+  const manifest = proposals.createInertOperationManifestFixture();
+  const candidates = manifest.operations.map(entry => ({ operation_id: entry.operation_id, eligible: true, eligibility_reason: 'eligible' }));
+  const providerResult = proposals.normalizeGenericProviderResult({
+    calls: [{ operation_id: manifest.operations[0].operation_id, arguments: { settings: 1 }, confidence: 0.8 }],
+    suppressed: [], confidence: 0.8, latency_ms: 1, usage_evidence: null, explanation: null
+  });
+  const proposal = structuredClone(proposals.createSemanticOperationProposal({
+    provider, manifest, candidates, request_digest: D('a'), state_digest: D('b'), state_classification: 'internal',
+    candidate_mode: 'eligible-only', provider_result: providerResult, expected_provider_identity: provider,
+    locality_policy: 'any', calibration_report_ref: null
+  }));
+  let value = 1;
+  for (let index = 0; index < levels; index += 1) value = [value];
+  (proposal.withheld[0] ?? proposal.proposed[0]).arguments = { settings: value };
+  const { proposal_digest: _ignored, ...payload } = proposal;
+  proposal.proposal_digest = digestObject(payload);
+  return proposal;
+}
+
+test('B-1: a semantic operation proposal with argument nesting deeper than 64 is accepted as before', () => {
+  for (const levels of [100, 1000]) {
+    const proposal = deepArgumentProposal(levels);
+    const digest = proposals.validateSemanticOperationProposal(proposal).proposal_digest;
+    const b = withBridge(x => { x.composition_binding.semantic_operation_proposal_digest = digest; });
+    const result = validateSpecialistHarnessBridge(b, { references: { semantic_operation_proposal: proposal } });
+    assert.deepEqual([...result.references_checked], ['semantic_operation_proposal'], String(levels));
+  }
+  // The proposal's own 65,536-byte bound still applies to the snapshot copy.
+  const oversized = deepArgumentProposal(1);
+  (oversized.withheld[0] ?? oversized.proposed[0]).arguments = { settings: 'x'.repeat(70_000) };
+  const b = withBridge(x => { x.composition_binding.semantic_operation_proposal_digest = D('8'); });
+  assert.throws(() => validateSpecialistHarnessBridge(b, { references: { semantic_operation_proposal: oversized } }),
+    error => error instanceof ValidationError && !/plain data/.test(error.message));
+});

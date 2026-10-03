@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { createPublicKey, generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { MeshIdentity } from '../src/lib/identity.mjs';
@@ -243,4 +243,40 @@ test('plain, JSON, structuredClone and null-prototype receipts behave as before'
   assert.throws(() => validateMachineIntentReceipt({ ...receipt, schema: 'x' }), /schema is invalid/);
   assert.throws(() => validateMachineIntentReceipt({ ...receipt, verification: {} }), /digest does not match|statement-bound/);
   assert.throws(() => validateMachineIntentReceipt({ ...receipt, receipt_digest: 'nope' }), /digest is invalid/);
+});
+
+test('bigint, symbol, undefined and non-finite receipt values are plain-data ValidationErrors, never a raw canonical TypeError', () => {
+  const { identity, receipt } = signedReceipt();
+  for (const [label, value] of [['bigint', 1n], ['symbol', Symbol('x')], ['undefined', undefined], ['NaN', Number.NaN], ['Infinity', Infinity], ['-Infinity', -Infinity]]) {
+    for (const place of ['statement', 'verification']) {
+      const tampered = structuredClone(receipt);
+      if (place === 'statement') tampered.statement.intent.status = value;
+      else tampered.verification = value;
+      for (const run of [() => validateMachineIntentReceipt(tampered), () => verifyMachineIntentReceipt(tampered, identity.publicKey)]) {
+        assert.throws(run, error => error instanceof ValidationError && /must be plain data/.test(error.message), `${label} at ${place}`);
+      }
+    }
+  }
+});
+
+test('a revoked Proxy, non-key object or undecodable grid key is a ValidationError, never a raw node:crypto error', () => {
+  const { identity, receipt } = signedReceipt();
+  const revocable = Proxy.revocable({}, {});
+  revocable.revoke();
+  let traps = 0;
+  const recording = new Proxy({}, { get() { traps += 1; return undefined; } });
+  for (const [label, key] of [['{}', {}], ['x', 'x'], ['revoked Proxy', revocable.proxy], ['recording Proxy', recording], ['number', 5]]) {
+    assert.throws(() => verifyMachineIntentReceipt(receipt, key), ValidationError, label);
+  }
+  assert.equal(traps, 0);
+  assert.throws(() => verifyMachineIntentReceipt(receipt), /Grid verification key is required/);
+  // Valid key forms are unchanged.
+  const pem = typeof identity.publicKey === 'string'
+    ? identity.publicKey
+    : identity.publicKey.export({ type: 'spki', format: 'pem' });
+  assert.equal(verifyMachineIntentReceipt(receipt, identity.publicKey).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, pem).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, createPublicKey(pem)).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, { key: pem, format: 'pem' }).valid, true);
+  assert.equal(verifyMachineIntentReceipt(receipt, gridIdentity().publicKey).valid, false);
 });

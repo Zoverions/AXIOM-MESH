@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+
 import installPolicy from '../config/host-install-policy.json' with { type: 'json' };
 import installTargetsJson from '../config/install-targets.json' with { type: 'json' };
 import { hostInstallMain } from '../src/host-install.mjs';
@@ -699,4 +701,57 @@ test('personal-local applications are pinned even when the target catalogue drif
   policy.profiles['personal-local'].applications=['axiom-one','axiom-birth'];
   targets.targets.find(item=>item.id==='personal-local').application_catalog=['axiom-one','axiom-birth'];
   assert.throws(()=>validateHostInstallPolicy(policy,targets),/applications drifted: personal-local/);
+});
+
+// AT-7 anchor: the plan validator already meets the hostile-input contract.
+test('AT-7: validateHostInstallPlan meets the hostile-input contract', async () => {
+  await assertHostileInputContract({
+    name: 'validateHostInstallPlan',
+    fn: validateHostInstallPlan,
+    validArgs: () => [basePlan()],
+    nullablePaths: ['arg0.runtime.node_runtime_observed']
+  }, assert);
+});
+
+// AT-4: the policy and targets are plain JSON data throughout before any
+// canonicalJson comparison or digest, so no trap or getter runs.
+test('AT-4: validateHostInstallPolicy rejects Proxy or accessor planner.platforms with ValidationError and runs no trap or getter',()=>{
+  let calls=0;
+  const variants={
+    'transparent Proxy':(platforms)=>new Proxy(platforms,{get(target,key,receiver){ calls+=1; return Reflect.get(target,key,receiver); }}),
+    'throwing Proxy':(platforms)=>new Proxy(platforms,new Proxy({},{get(){ return ()=>{ calls+=1; throw new Error('trap ran'); }; }})),
+    'getter at [0]':(platforms)=>Object.defineProperty([...platforms],0,{get(){ calls+=1; return platforms[0]; },enumerable:true})
+  };
+  for (const [name,make] of Object.entries(variants)) {
+    const policy=structuredClone(installPolicy);
+    policy.planner.platforms=make(policy.planner.platforms);
+    assert.throws(()=>validateHostInstallPolicy(policy,structuredClone(installTargetsJson)),ValidationError,name);
+  }
+  assert.equal(calls,0);
+  assert.equal(validateHostInstallPolicy(structuredClone(installPolicy),structuredClone(installTargetsJson)).valid,true);
+});
+
+test('hostile-input contract: validateHostInstallPolicy rejects every hostile variant with ValidationError',async()=>{
+  await assertHostileInputContract({
+    name:'validateHostInstallPolicy',
+    fn:validateHostInstallPolicy,
+    validArgs:()=>[structuredClone(installPolicy),structuredClone(installTargetsJson)],
+    // Both arguments default to the shipped configuration.
+    acceptablePaths:{arg0:['undefined'],arg1:['undefined']},
+    // The targets catalogue is open here: this validator cross-checks only the
+    // fields it binds (kernel version, per-target catalogues) and digests the
+    // rest, so only non-JSON hostility is checked under it.
+    structuralOnlyPaths:['arg1'],
+    openPaths:[/^arg1(\..*)?$/],
+    maxPaths:2000
+  },assert);
+});
+
+test('a non-array targets inventory or a non-record target entry is a ValidationError, never a raw TypeError',()=>{
+  for (const [label,value] of [['number',5],['string','x'],['null entry',[null]],['number entry',[5]],['array entry',[[]]]]) {
+    const targets=structuredClone(installTargetsJson);
+    targets.targets=value;
+    assert.throws(()=>validateHostInstallPolicy(structuredClone(installPolicy),targets),
+      error=>error instanceof ValidationError&&/Install targets inventory is invalid/.test(error.message),label);
+  }
 });

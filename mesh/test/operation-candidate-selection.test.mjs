@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { checkHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+import { ValidationError } from '../src/lib/canonical.mjs';
+
 import {
   computeBoundedDecisionQuestionSchemaDigest
 } from '../src/lib/bounded-decision-question-schema.mjs';
@@ -642,5 +645,81 @@ test('production selector remains pure and has no live provider or authority sur
       false,
       'operation candidate selector must not import or invoke ' + forbidden
     );
+  }
+});
+
+// AT-6: closed records in the trusted input and the document are plain own
+// enumerable data; hidden, symbol-keyed, accessor and Proxy records are a
+// ValidationError and no trap or getter runs.
+function hostileTrusted() {
+  const primary = candidate('operation.primary', B);
+  const secondary = candidate('operation.secondary', C);
+  return {
+    taskPurposeDigest: F,
+    candidates: [primary, secondary],
+    semanticEvidence: [semanticEvidence(primary, 0.8), semanticEvidence(secondary, 0.7)],
+    policy: policy()
+  };
+}
+
+test('AT-6: trusted candidates[0] with hidden mind_id, a symbol key or a throwing Proxy, or a taskPurposeDigest accessor, is rejected with ValidationError', () => {
+  const document = createOperationCandidateSelectionProposal(hostileTrusted());
+  let calls = 0;
+  const cases = {
+    'hidden mind_id': (trusted) => { Object.defineProperty(trusted.candidates[0], 'mind_id', { value: 'hidden', enumerable: false }); },
+    'symbol key': (trusted) => { trusted.candidates[0][Symbol('extra')] = true; },
+    'throwing Proxy': (trusted) => {
+      trusted.candidates[0] = new Proxy(trusted.candidates[0], new Proxy({}, { get() { return () => { calls += 1; throw new Error('trap ran'); }; } }));
+    },
+    'taskPurposeDigest accessor': (trusted) => {
+      Object.defineProperty(trusted, 'taskPurposeDigest', { get() { calls += 1; return F; }, enumerable: true });
+    }
+  };
+  for (const fn of [verifyOperationCandidateSelectionProposal, validateOperationCandidateSelectionProposal]) {
+    assert.equal(fn(structuredClone(document), hostileTrusted()).valid, true);
+    for (const [label, mutate] of Object.entries(cases)) {
+      const trusted = hostileTrusted();
+      mutate(trusted);
+      assert.throws(() => fn(structuredClone(document), trusted), ValidationError, `${fn.name}: ${label}`);
+    }
+  }
+  assert.equal(calls, 0, 'no trap or getter ran');
+});
+
+// Residual outside this fix (follow-up): array containers are not yet
+// shape-checked in this module, and the nested bounded-decision observation,
+// provider profile and question schema are validated by their own modules.
+// Every record-level case must pass the contract.
+const SELECTION_ARRAYS = '(arg0\\.(selected|withheld|uncertainty_reasons|validated_semantic_evidence)|arg1\\.(candidates|semanticEvidence))';
+const ARRAY_CONTAINER = new RegExp(`^${SELECTION_ARRAYS}$`);
+const ARRAY_INDEX = new RegExp(`^${SELECTION_ARRAYS}\\.\\d+$`);
+const NESTED_EVIDENCE = /^arg1\.semanticEvidence\.\d+\.(observation|providerProfile|questionSchema)(\.|$)/;
+const INDEX_DESCRIPTOR_VARIANTS = new Set(['throwing-getter', 'counting-getter', 'non-enumerable-replacement']);
+
+function outsideSelectionResidual(violation) {
+  const [, path, variant] = violation.split(' ');
+  if (NESTED_EVIDENCE.test(path) || ARRAY_CONTAINER.test(path)) return false;
+  return !(ARRAY_INDEX.test(path) && INDEX_DESCRIPTOR_VARIANTS.has(variant.replace(/:$/, '')));
+}
+
+test('hostile-input contract: operation candidate selection records reject every hostile variant with ValidationError', async () => {
+  const document = createOperationCandidateSelectionProposal(hostileTrusted());
+  for (const fn of [verifyOperationCandidateSelectionProposal, validateOperationCandidateSelectionProposal]) {
+    const { checked, violations } = await checkHostileInputContract({
+      name: fn.name,
+      fn,
+      validArgs: () => [structuredClone(document), hostileTrusted()]
+    });
+    assert.ok(checked > 1000, `${fn.name}: checked ${checked}`);
+    assert.deepEqual(violations.filter(outsideSelectionResidual), [], fn.name);
+  }
+});
+
+test('a Proxy, symbol or function proposal_digest is a ValidationError, never a raw DataCloneError', () => {
+  const document = createOperationCandidateSelectionProposal(hostileTrusted());
+  for (const [label, value] of [['Proxy', new Proxy({}, {})], ['symbol', Symbol('x')], ['function', () => document.proposal_digest]]) {
+    const tampered = structuredClone(document);
+    tampered.proposal_digest = value;
+    assert.throws(() => validateOperationCandidateSelectionProposal(tampered, hostileTrusted()), ValidationError, label);
   }
 });

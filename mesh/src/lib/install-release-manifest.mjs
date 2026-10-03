@@ -102,9 +102,7 @@ export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
 }
 
 export function verifyInstallReleaseManifest(packageValue,options={}){
-  if(options===null||typeof options!=='object'||utilTypes.isProxy(options)){
-    throw new ValidationError('Install release manifest options must be an object');
-  }
+  optionsRecord(options);
   const {
     trustedSigners,
     evaluatedAt,
@@ -157,7 +155,7 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
     signature.algorithm!==policy.signature_algorithm
     ||signature.key_id!==manifest.signing_key_id
     ||signature.digest!==bodyDigest
-    ||!BASE64URL.test(signature.signature)
+    ||!matches(BASE64URL,signature.signature)
   ) throw new ValidationError('Install release manifest signature metadata is invalid');
 
   let publicKey;
@@ -277,12 +275,12 @@ function validateManifest(manifest,context){
   if(
     manifest.schema!==INSTALL_RELEASE_MANIFEST_SCHEMA
     ||manifest.version!==1
-    ||!ID.test(manifest.release_id)
-    ||!VERSION.test(manifest.kernel_version)
+    ||!matches(ID,manifest.release_id)
+    ||!matches(VERSION,manifest.kernel_version)
     ||!context.policy.allowed_channels.includes(manifest.channel)
     ||manifest.production_promoted!==false
-    ||!REVISION.test(manifest.source_revision)
-    ||!ID.test(manifest.signing_key_id)
+    ||!matches(REVISION,manifest.source_revision)
+    ||!matches(ID,manifest.signing_key_id)
     ||manifest.installation_grants_authority!==false
     ||manifest.host_mutation_authorized!==false
     ||manifest.authority_effect!=='none'
@@ -384,7 +382,7 @@ function validateDataCompatibility(value,migrationGeneration){
     ||value.migration_generation<0
     ||value.migration_generation!==migrationGeneration
     ||!ROLLBACK_MODES.includes(value.rollback_mode)
-    ||!VERSION.test(value.minimum_compatible_kernel)
+    ||!matches(VERSION,value.minimum_compatible_kernel)
   ) throw new ValidationError('Install release data compatibility binding is invalid');
 }
 
@@ -403,7 +401,7 @@ function validateControlPlane(value,context){
     source_setup_policy_sha256:digestObject(context.currentSourceSetupPolicy)
   };
   for(const [key,expectedDigest] of Object.entries(expected)){
-    if(!SHA256.test(value[key])||value[key]!==expectedDigest){
+    if(!matches(SHA256,value[key])||value[key]!==expectedDigest){
       throw new ValidationError(`Install release control-plane binding is stale: ${key}`);
     }
   }
@@ -415,7 +413,7 @@ function validateArtifact(artifact,profileIds,policy=manifestPolicy){
     'locator','sha256','byte_length','required_for_profiles'
   ]);
   if(
-    !ID.test(artifact.artifact_id)
+    !matches(ID,artifact.artifact_id)
     ||!policy.allowed_artifact_kinds.includes(artifact.kind)
     ||!policy.allowed_platforms.includes(artifact.platform)
     ||!policy.allowed_architectures.includes(artifact.architecture)
@@ -425,7 +423,7 @@ function validateArtifact(artifact,profileIds,policy=manifestPolicy){
     ||typeof artifact.locator!=='string'
     ||artifact.locator.length<1
     ||artifact.locator.length>2048
-    ||!SHA256.test(artifact.sha256)
+    ||!matches(SHA256,artifact.sha256)
     ||!Number.isSafeInteger(artifact.byte_length)
     ||artifact.byte_length<1
     ||artifact.byte_length>1_000_000_000_000
@@ -451,7 +449,7 @@ function trustedSignerFor(keyId,trustedSigners,policy){
     ]);
     stringArray(signer.roles,'Trusted release signer roles',{min:1,max:32,itemMax:128});
     if(
-      !ID.test(signer.key_id)
+      !matches(ID,signer.key_id)
       ||ids.has(signer.key_id)
       ||typeof signer.public_key!=='string'
       ||signer.public_key.length<32
@@ -495,6 +493,40 @@ function stringArray(value,label,{min=0,max=64,itemMax=512}={}){
     seen.add(item);
   }
   return value;
+}
+
+// Pattern tests run only on strings: RegExp#test would otherwise coerce a
+// Proxy, symbol or {toString} value and surface its error or run its code.
+function matches(pattern,value){
+  return typeof value==='string'&&pattern.test(value);
+}
+
+const OPTION_FIELDS=new Set([
+  'trustedSigners','evaluatedAt','policy','currentInstallTargets',
+  'currentHostInstallPolicy','currentCapabilityRegistry','currentApplicationCatalog',
+  'currentServiceNetworkPolicy','currentSourceSetupPolicy','migrationGeneration'
+]);
+
+// Options are read once, by destructuring, so they must be a plain record of
+// own enumerable data properties: no Proxy trap or getter runs, and hidden,
+// symbol-keyed or unknown fields are rejected instead of ignored.
+function optionsRecord(options){
+  if(options===null||typeof options!=='object'||utilTypes.isProxy(options)){
+    throw new ValidationError('Install release manifest options must be an object');
+  }
+  const prototype=Object.getPrototypeOf(options);
+  if(Array.isArray(options)||(prototype!==Object.prototype&&prototype!==null)){
+    throw new ValidationError('Install release manifest options must be a plain object');
+  }
+  for(const key of Reflect.ownKeys(options)){
+    if(typeof key==='symbol'||!OPTION_FIELDS.has(key)){
+      throw new ValidationError('Install release manifest options contain an unsupported field');
+    }
+    const descriptor=Object.getOwnPropertyDescriptor(options,key);
+    if(!descriptor.enumerable||!Object.hasOwn(descriptor,'value')){
+      throw new ValidationError('Install release manifest options must contain only enumerable data properties');
+    }
+  }
 }
 
 function plainArray(value,label,{min=0,max=64}={}){

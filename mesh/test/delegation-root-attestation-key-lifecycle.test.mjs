@@ -610,3 +610,83 @@ test('mutating options cannot drop a successor from the raw credential list afte
   }), /stale after successor activation/i);
   assert.equal(credentials.length, 1, 'the option hook must have truncated the raw list');
 });
+
+test('an own __proto__ key (JSON.parse) in the attestation or a credential is rejected, never applied as a prototype', async () => {
+  const binding = rootBinding();
+  const controller = keys();
+  const operational = keys();
+  const { verifyDelegationRootAttestationWithKeyLifecycle } = await lifecycle();
+  const credential = await initialCredential({ binding, controller, operational });
+  const attestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: operational.privateKey,
+    issued_at: '2026-08-28T04:05:00.000Z'
+  });
+  const options = {
+    trustedControllerPublicKey: controller.publicKey,
+    credentials: [credential],
+    expectedRootBindingDigest: binding.binding_digest,
+    expectedRootAuthorityDigest: binding.root_authority_digest,
+    expectedRootHolder: binding.root_holder
+  };
+  const withOwnProto = (value, injected) => JSON.parse(
+    JSON.stringify(value).replace(/^\{/, `{"__proto__":${JSON.stringify(injected)},`)
+  );
+  assert.equal(verifyDelegationRootAttestationWithKeyLifecycle(JSON.parse(JSON.stringify(attestation)), options).verified, true);
+  const tampered = withOwnProto(attestation, { signer_id: binding.root_holder });
+  assert.equal(Object.hasOwn(tampered, '__proto__'), true);
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(tampered, options), ValidationError);
+  const statement = JSON.parse(JSON.stringify(attestation));
+  statement.statement = withOwnProto(statement.statement, { issued_at: '2026-08-28T04:05:00.000Z' });
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(statement, options), ValidationError);
+  const credentialTampered = withOwnProto(credential, { credential_digest: credential.credential_digest });
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(attestation, { ...options, credentials: [credentialTampered] }), ValidationError);
+});
+
+test('lifecycle verification accepts at most 128 revocations, like the currentness checkpoint', async () => {
+  const binding = rootBinding();
+  const controller = keys();
+  const firstKey = keys();
+  const secondKey = keys();
+  const {
+    createDelegationRootAttestationKeyCredential,
+    createDelegationRootAttestationKeyRevocation,
+    verifyDelegationRootAttestationWithKeyLifecycle
+  } = await lifecycle();
+  const first = await initialCredential({ binding, controller, operational: firstKey });
+  const second = createDelegationRootAttestationKeyCredential({
+    rootBinding: binding,
+    controllerPrivateKey: controller.privateKey,
+    operationalPublicKey: secondKey.publicKey,
+    keyEpoch: 2,
+    activatedAt: ROTATED,
+    transitionKind: 'rotation',
+    predecessorCredential: first,
+    predecessorDisposition: 'retired'
+  });
+  // Revokes the retired first key only; the attestation is signed by the second.
+  const revocation = createDelegationRootAttestationKeyRevocation(first, {
+    trustedControllerPublicKey: controller.publicKey,
+    controllerPrivateKey: controller.privateKey,
+    effectiveAt: '2026-08-28T04:05:00.000Z',
+    reasonCode: 'compromised'
+  });
+  const attestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: secondKey.privateKey,
+    issued_at: '2026-08-28T04:15:00.000Z'
+  });
+  const verify = count => verifyDelegationRootAttestationWithKeyLifecycle(attestation, {
+    trustedControllerPublicKey: controller.publicKey,
+    credentials: [first, second],
+    revocations: Array.from({ length: count }, () => revocation),
+    expectedRootBindingDigest: binding.binding_digest
+  });
+  assert.equal(verify(128).verified, true);
+  assert.throws(
+    () => verify(129),
+    error => error instanceof ValidationError && /at most 128 entries/.test(error.message)
+  );
+});
