@@ -21,6 +21,7 @@ import {
   verifyPersonaSigningCredential,
   verifyPersonaSigningRevocation
 } from './persona-journal-credential.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 export const PUBLIC_WITNESS_OBSERVATION_SCHEMA = 'axiom-public-witness-observation.v1';
 export const PUBLIC_WITNESS_CONFLICT_SCHEMA = 'axiom-public-witness-conflict.v1';
@@ -392,7 +393,10 @@ function normalizeConflictStatement(raw) {
 }
 
 export function verifyPublicWitnessObservation(raw, { trustedWitnessPublicKey, expectedDomainId } = {}) {
-  const verified = verifyEnvelope(raw, {
+  // One plain-data copy at entry: a getter or Proxy cannot show one
+  // artifact_schema to the kind/schema consistency checks and another to the
+  // signed output, and nothing below reads the caller's object again.
+  const verified = verifyEnvelope(snapshotDelegationPlainData(raw, 'public witness observation'), {
     schema: PUBLIC_WITNESS_OBSERVATION_SCHEMA,
     keys: OBSERVATION_KEYS,
     statementNormalizer: normalizeObservationStatement,
