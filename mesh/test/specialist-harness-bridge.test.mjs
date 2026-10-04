@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import vm from 'node:vm';
 import test from 'node:test';
 
@@ -1166,7 +1168,16 @@ for (const [name, wrap] of Object.entries(wrapperShapes())) {
 }
 process.stdout.write(JSON.stringify(results));
 `;
-  const output = execFileSync(process.execPath, ['--stack-size=500', '--input-type=module', '-e', script], { encoding: 'utf8', maxBuffer: 1 << 24 });
+  // Written to a file: the script is longer than Windows allows on a command line.
+  const directory = mkdtempSync(join(tmpdir(), 'axiom-1927-'));
+  const file = join(directory, 'stack-500.mjs');
+  let output;
+  try {
+    writeFileSync(file, script);
+    output = execFileSync(process.execPath, ['--stack-size=500', file], { encoding: 'utf8', maxBuffer: 1 << 24 });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
   const results = JSON.parse(output);
   assert.equal(Object.keys(results).length, Object.keys(wrapperShapes()).length * 2);
   for (const [key, outcome] of Object.entries(results)) {
