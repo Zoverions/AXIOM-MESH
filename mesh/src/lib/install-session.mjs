@@ -36,6 +36,13 @@ const KERNEL_VERSION_SHAPE=/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[
 const PRERELEASE_IDENTIFIER=/^[0-9A-Za-z-]+$/;
 const NUMERIC_IDENTIFIER=/^\d+$/;
 const CANONICAL_NUMERIC_IDENTIFIER=/^(?:0|[1-9]\d*)$/;
+// The one ordered pre-release: exactly `dev.<N>`, N a canonical decimal in
+// [0, Number.MAX_SAFE_INTEGER]. N is spelled out digit by digit exactly as each
+// core component is in the kernel_version schema pattern (#1925): disjoint
+// alternatives, no nested or overlapping quantifier, so matching is linear and
+// Number(N) is exact.
+const SAFE_INTEGER_SOURCE='(?:0|[1-9]\\d{0,14}|[1-8]\\d{15}|900[0-6]\\d{12}|90070\\d{11}|90071[0-8]\\d{10}|900719[0-8]\\d{9}|9007199[0-1]\\d{8}|90071992[0-4]\\d{7}|900719925[0-3]\\d{6}|9007199254[0-6]\\d{5}|90071992547[0-3]\\d{4}|9007199254740[0-8]\\d{2}|90071992547409[0-8]\\d{1}|900719925474099[0-1])';
+const DEV_PRERELEASE=new RegExp(`^dev\\.(${SAFE_INTEGER_SOURCE})$`);
 // The standard install inventory never carries Birth/Genesis/Spark material.
 const PRIVATE_BIRTH_TOKEN=/(^|[._:/-])(birth|genesis|spark)([._:/-]|$)/i;
 const ZERO_SHA='0'.repeat(64);
@@ -336,11 +343,19 @@ export function assessInstallSession(candidateInput,observationInput,options={})
       // A declared ancestor is only an upgrade candidate when the installed
       // kernel is provably older, meets the signed minimum, the rollback posture
       // is bounded and the installed release is healthy.
+      // The one same-core upgrade: X.Y.Z-dev.N to X.Y.Z-dev.M (M > N) or to the
+      // bare X.Y.Z. kernelOrder is null only for equal cores with different
+      // pre-releases; there, and only there, the dev line orders the upgrade and
+      // the signed minimum. Every other path keeps the default order.
+      const devUpgrade=kernelOrder===null&&compareKernelVersions(
+        observation.installed_kernel_version,candidate.desired_kernel_version,true
+      )===-1;
+      const upgradeOrder=devUpgrade?-1:kernelOrder;
       const minimumOrder=compareKernelVersions(
-        observation.installed_kernel_version,candidate.minimum_compatible_kernel
+        observation.installed_kernel_version,candidate.minimum_compatible_kernel,devUpgrade
       );
       if(
-        kernelOrder!==-1
+        upgradeOrder!==-1
         ||minimumOrder===null
         ||minimumOrder<0
         ||candidate.rollback_mode==='migration-specific'
@@ -474,18 +489,38 @@ function kernelVersion(v,label){
     ) throw new ValidationError(`${label} version is invalid or ambiguous`);
   }
 }
-// Core MAJOR.MINOR.PATCH ordering reuses node-runtime-version.mjs. Pre-release
-// identifiers are compared for equality only: equal cores with different
-// pre-releases (including release versus pre-release) have no established
-// order here and return null, which every caller treats as "not proven".
-function compareKernelVersions(left,right){
+// Core MAJOR.MINOR.PATCH ordering reuses node-runtime-version.mjs; different
+// cores are ordered by the core alone. With equal cores, identical
+// pre-releases are equal. By default nothing else is ordered: equal cores with
+// different pre-releases return null, which every caller treats as "not
+// proven". Only with `devLine` (used solely for a same-core dev upgrade, see
+// assessInstallSession) is the restricted dev line also ordered:
+// X.Y.Z-dev.N < X.Y.Z-dev.M exactly when N < M, and every X.Y.Z-dev.N < the
+// bare X.Y.Z. Any other equal-core pair (another label, dev with extra
+// identifiers, a non-canonical or unsafe N, a release versus a non-dev
+// pre-release) still returns null.
+function compareKernelVersions(left,right,devLine=false){
   kernelVersion(left,'installed kernel');
   kernelVersion(right,'compared kernel');
   const [leftCore,...leftPre]=left.split('-');
   const [rightCore,...rightPre]=right.split('-');
   const order=compareVersion(versionTuple(leftCore,'Kernel'),versionTuple(rightCore,'Kernel'));
   if(order!==0) return order<0?-1:1;
-  return leftPre.join('-')===rightPre.join('-')?0:null;
+  const leftLabel=leftPre.join('-');
+  const rightLabel=rightPre.join('-');
+  if(leftLabel===rightLabel) return 0;
+  if(!devLine) return null;
+  const leftRank=devLineRank(leftLabel);
+  const rightRank=devLineRank(rightLabel);
+  if(leftRank===null||rightRank===null) return null;
+  return leftRank<rightRank?-1:1;
+}
+// Position on the dev line of one core: dev.N ranks N, the bare release ranks
+// above every dev.N, anything else is off the line (null).
+function devLineRank(label){
+  if(label==='') return Infinity;
+  const match=DEV_PRERELEASE.exec(label);
+  return match===null?null:Number(match[1]);
 }
 function ident(v,label){if(typeof v!=='string'||!ID.test(v))throw new ValidationError(`${label} is invalid`);}
 function nullableId(v,label){if(v!==null)ident(v,label);}
