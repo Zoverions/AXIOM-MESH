@@ -37,11 +37,16 @@ export const HOST_GLOBAL = new RegExp(
   `(?<!(?<!\\.)\\.\\s*)(?<![\\w$#])(?:${HOST_GLOBALS.join('|')})(?![\\w$])`
 );
 
+// A '/' starts a regular expression only where it cannot be division. Where
+// it is ambiguous it stays code, so a misread can only over-report: after ')',
+// ']', '}' (block or expression), a postfix '++'/'--', an identifier or a
+// contextual word such as of, yield, await or let, and after a keyword used
+// as a property name (obj.return).
 const REGEX_AFTER_KEYWORD = new Set([
-  'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void',
-  'throw', 'instanceof', 'yield', 'await'
+  'return', 'typeof', 'case', 'do', 'else', 'in', 'new', 'delete', 'void',
+  'throw', 'instanceof'
 ]);
-const REGEX_AFTER_PUNCTUATOR = new Set('(,=:[!&|?{};+-*%<>~^'.split(''));
+const REGEX_AFTER_PUNCTUATOR = new Set('(,=:[!&|?{;+-*%<>~^'.split(''));
 
 // Returns `text` with every comment and every string, template and regular
 // expression literal's text replaced by spaces (newlines kept), so offsets and
@@ -58,8 +63,12 @@ export function codeOnly(text) {
   let previous = '';
   let word = '';
   let gap = false;
+  let wordAfterDot = false;
+  let doubled = false;
   const fail = what => { throw new SyntaxError(`ambient-code scan cannot tokenize: unterminated ${what} at ${index}`); };
-  const regexAllowed = () => previous === '' || REGEX_AFTER_PUNCTUATOR.has(previous) || REGEX_AFTER_KEYWORD.has(word);
+  const regexAllowed = () => previous === ''
+    || (REGEX_AFTER_PUNCTUATOR.has(previous) && !((previous === '+' || previous === '-') && doubled))
+    || (REGEX_AFTER_KEYWORD.has(word) && !wordAfterDot);
   const quoted = quote => {
     out.push(quote);
     index += 1;
@@ -143,8 +152,13 @@ export function codeOnly(text) {
     index += 1;
     if (/\s/.test(char)) { gap = true; continue; }
     if (/[\w$]/.test(char)) {
-      word = !gap && /^[\w$]$/.test(previous) ? word + char : char;
+      if (!gap && /^[\w$]$/.test(previous)) word += char;
+      else { wordAfterDot = previous === '.'; word = char; }
+      doubled = false;
     } else {
+      // '++' or '--' with no gap: a postfix or prefix update, never followed
+      // by a regular expression.
+      doubled = !gap && previous === char && (char === '+' || char === '-') && !doubled;
       word = '';
     }
     previous = char;
@@ -158,5 +172,10 @@ export function assertNoAmbientOrDynamicCode(text, name) {
   for (const pattern of AMBIENT_OR_DYNAMIC_CODE) {
     assert.doesNotMatch(text, pattern, `${name}: ${pattern}`);
   }
-  assert.doesNotMatch(codeOnly(text), HOST_GLOBAL, `${name}: bare host global (${HOST_GLOBALS.join(', ')})`);
+  const code = codeOnly(text);
+  // Literal escapes are blanked, so a backslash left in code is an identifier
+  // escape (\u0077indow is window, \u0070rocess is process): rejected outright
+  // so no pattern here can be bypassed by spelling.
+  assert.doesNotMatch(code, /\\/, `${name}: identifier escape in code`);
+  assert.doesNotMatch(code, HOST_GLOBAL, `${name}: bare host global (${HOST_GLOBALS.join(', ')})`);
 }

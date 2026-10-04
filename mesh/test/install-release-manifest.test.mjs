@@ -532,7 +532,19 @@ test('boundary scan catches bare host globals and ignores property access, strin
     "'s'+Deno",
     'return self',
     'x = a / b / window',
-    '({window:1})'
+    '({window:1})',
+    // Copilot on #1929: ambiguous '/' after a postfix ++/--, a contextual word,
+    // a property named like a keyword or a closing brace stays code.
+    'let x=4; x++ / window / 2',
+    'let x=4; x-- / self / 2',
+    'let of=4; of / window / 2',
+    'let yield_=0; const y=obj.return / Deno / 2',
+    'const f=function(){} / window / 2',
+    // Identifier escapes resolve to the same bare global, so any escape in code fails.
+    'const x=\\u0077indow.location',
+    'const x=\\u{77}indow',
+    'const x=wind\\u006fw',
+    'const p=\\u0070rocess'
   ]){
     assert.throws(()=>assertNoAmbientOrDynamicCode(`export const ok=1;\n${planted}\n`,'planted'),{code:'ERR_ASSERTION'},planted);
   }
