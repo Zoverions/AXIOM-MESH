@@ -877,6 +877,31 @@ function deepArgumentProposal(levels) {
   return proposal;
 }
 
+// A valid proposal whose only entry is in `proposed` (the deep-argument
+// fixture's call is withheld), so the proposed-entry field pre-pass is reached.
+function proposedEntryProposal() {
+  const provider = {
+    provider_ref: 'provider.bridge.deep', profile_ref: 'profile.bridge.deep', artifact_ref: 'artifact.bridge.deep',
+    runtime_ref: 'runtime.bridge.deep', revision_evidence: 'content-addressed', provider_mode: 'owner-local'
+  };
+  const manifest = proposals.createInertOperationManifestFixture();
+  const operation = manifest.operations.find(entry => entry.operation_id === 'op.inert.echo_flag');
+  const candidates = manifest.operations.map(entry => ({ operation_id: entry.operation_id, eligible: true, eligibility_reason: 'eligible' }));
+  const providerResult = proposals.normalizeGenericProviderResult({
+    calls: [{ operation_id: operation.operation_id, arguments: { enabled: true }, confidence: 0.8 }],
+    suppressed: [], confidence: 0.8, latency_ms: 1, usage_evidence: null, explanation: null
+  });
+  const proposal = structuredClone(proposals.createSemanticOperationProposal({
+    provider, manifest, candidates, request_digest: D('a'), state_digest: D('b'), state_classification: 'internal',
+    candidate_mode: 'eligible-only', provider_result: providerResult, expected_provider_identity: provider,
+    locality_policy: 'any', calibration_report_ref: null
+  }));
+  assert.equal(proposal.proposed.length, 1);
+  assert.equal(proposal.withheld.length, 0);
+  assert.equal(proposals.validateSemanticOperationProposal(proposal).valid, true);
+  return proposal;
+}
+
 function nestingDepth(value) {
   // Container levels from the root, counted independently of the code under test.
   if (value === null || typeof value !== 'object') return 0;
@@ -1023,6 +1048,13 @@ test('R-C: non-JSON values and unknown fields are rejected without walking their
     'Uint8Array(1e7) argument': argument(new Uint8Array(10_000_000)),
     'unknown document field holding 1e6 objects': proposal => { proposal.extra = many(); },
     'unknown entry field holding 1e6 objects': proposal => { (proposal.withheld[0] ?? proposal.proposed[0]).extra = big; },
+    // #1918 N20: the line above only reaches a withheld entry when the fixture
+    // has one, so the proposed-entry field pre-pass needs its own case.
+    'unknown proposed-entry field holding 1e6 objects': () => {
+      const proposal = proposedEntryProposal();
+      proposal.proposed[0].extra = big;
+      return proposal;
+    },
     'Map of 1e6 entries': argument(new Map(big.map((item, index) => [index, item]))),
     'Set of 1e6 objects': argument(new Set(big)),
     'class instance holding 1e6 objects': argument(new Holder()),
@@ -1033,8 +1065,9 @@ test('R-C: non-JSON values and unknown fields are rejected without walking their
     'getter returning 1e6 objects': argument(getter)
   };
   for (const [name, mutate] of Object.entries(cases)) {
-    const proposal = deepArgumentProposal(1);
-    mutate(proposal);
+    // A case may return its own proposal instead of mutating the default one.
+    const fallback = deepArgumentProposal(1);
+    const proposal = mutate(fallback) ?? fallback;
     trapCalls = 0;
     const { error, counts } = countReads(() => proposals.validateSemanticOperationProposal(proposal));
     // A ValidationError: unknown fields from the field-set checks, non-JSON

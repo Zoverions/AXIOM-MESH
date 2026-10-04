@@ -14,6 +14,7 @@ import {
   computeInstallSessionDecisionDigest
 } from '../src/lib/install-session.mjs';
 import { ValidationError } from '../src/lib/canonical.mjs';
+import { assertNoAmbientOrDynamicCode } from '../test-support/ambient-code-scan.mjs';
 
 const A='a'.repeat(64);
 const B='b'.repeat(64);
@@ -378,10 +379,8 @@ test('install session logic has no process filesystem network or credential side
   assert.equal([...code.matchAll(/verifyInstallReleaseManifest\s*\(/g)].length,1);
   assert.match(code,/const verified=verifyInstallReleaseManifest\(releasePackage,\{trustedSigners,evaluatedAt\}\);/);
   assert.match(source,/proof\.release_id!==verified\.release_id/);
-  assert.doesNotMatch(
-    source,
-    /\bprocess\b|globalThis|\bimport\s*\(|\brequire\s*\(|\bFunction\b|\beval\b|\.constructor\s*\(|\[['"]constructor['"]\]|\bnavigator\b|\bDeno\b|\bBun\b|\bWebAssembly\b/
-  );
+  // Shared #1903/#1916 boundary scan, including the bare host globals.
+  assertNoAmbientOrDynamicCode(source,'install-session');
 });
 
 test('a complete install record that lost part of its secrets stops as partial secret state',()=>{
