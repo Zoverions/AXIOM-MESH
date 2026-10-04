@@ -4,7 +4,7 @@ import test from 'node:test';
 
 import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { digestObject, ValidationError } from '../src/lib/canonical.mjs';
 import {
   computeBoundedDecisionQuestionSchemaDigest
 } from '../src/lib/bounded-decision-question-schema.mjs';
@@ -760,12 +760,18 @@ test('RED 16: proposal carrying a non-enumerable extra field, a symbol key, an a
   variants.proxy = new Proxy({ ...base.proposal }, {});
   variants.classInstance = Object.assign(Object.create({ inherited: true }), base.proposal);
 
-  // [O0 gap] the O0 shape validator accepts every top-level variant (its
-  // closed-key check uses Object.keys and never inspects descriptors or Proxies).
-  for (const [name, proposal] of Object.entries(variants)) {
-    if (name === 'nestedAccessor') continue;
-    assert.doesNotThrow(() => validateSemanticOperationProposalShape(proposal), name);
+  // The O0 shape validator still accepts top-level non-enumerable and symbol
+  // state (its closed-key check uses Object.keys; canonical JSON never sees
+  // the top level). Since #1927 it fails closed on a top-level accessor, a
+  // Proxy root and a non-plain root, without running the getter.
+  for (const name of ['nonEnumerable', 'symbol']) {
+    assert.doesNotThrow(() => validateSemanticOperationProposalShape(variants[name]), name);
   }
+  for (const name of ['accessor', 'nestedAccessor', 'proxy', 'classInstance']) {
+    assert.throws(() => validateSemanticOperationProposalShape(variants[name]),
+      error => error instanceof ValidationError && /must be plain JSON data/.test(error.message), name);
+  }
+  assert.equal(reads, 0, 'the shape validator never runs a caller getter');
   reads = 0;
   for (const [name, proposal] of Object.entries(variants)) {
     const document = verifyOperationProposalBinding({ ...base, proposal });

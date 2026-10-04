@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import vm from 'node:vm';
 import test from 'node:test';
 
 import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
@@ -918,6 +922,267 @@ test('B-1 contract depth: the proposal reference snapshot budget is the contract
   assert.equal(CANONICAL_JSON_MAX_CONTRACT_DEPTH, 1400);
   assert.equal(proposals.SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH, CANONICAL_JSON_MAX_CONTRACT_DEPTH);
   assert.ok(CANONICAL_JSON_MAX_DEPTH - CANONICAL_JSON_MAX_CONTRACT_DEPTH >= 32, 'headroom for wrappers');
+});
+
+// Builds the parsed JSON for a proposal whose document nests `depth` levels,
+// without recursing (JSON.stringify could not serialize 32,004 levels).
+function deepProposalJson(depth) {
+  const text = JSON.stringify(deepArgumentProposal(1));
+  const levels = depth - 4;
+  const marker = '"settings":[1]';
+  assert.equal(text.split(marker).length, 2);
+  const proposal = JSON.parse(text.replace(marker, `"settings":${'['.repeat(levels)}1${']'.repeat(levels)}`));
+  // A real digest where canonical JSON can compute one (up to 2,048 levels),
+  // so only the depth bound stands between such a document and acceptance.
+  const { proposal_digest: _stale, ...payload } = proposal;
+  try { proposal.proposal_digest = digestObject(payload); } catch { /* past the canonical guard or the stack: stale digest */ }
+  return proposal;
+}
+
+function iterativeDepth(value) {
+  let deepest = 0;
+  const pending = [[value, 1]];
+  while (pending.length) {
+    const [node, level] = pending.pop();
+    if (node === null || typeof node !== 'object') continue;
+    deepest = Math.max(deepest, level);
+    for (const item of Object.values(node)) pending.push([item, level + 1]);
+  }
+  return deepest;
+}
+
+// Counts the reflective reads the depth walk (Reflect.ownKeys and
+// Object.getOwnPropertyDescriptor, once per entered node and key), the
+// canonicalizer (Object.getOwnPropertyNames) and the argument copy
+// (structuredClone) make during one synchronous call.
+function countReads(callback) {
+  const counts = { ownKeys: 0, descriptors: 0, canonicalRecords: 0, structuredClone: 0 };
+  const originals = {
+    ownKeys: Reflect.ownKeys, descriptor: Object.getOwnPropertyDescriptor,
+    names: Object.getOwnPropertyNames, clone: globalThis.structuredClone
+  };
+  Reflect.ownKeys = function ownKeys(target) { counts.ownKeys += 1; return originals.ownKeys(target); };
+  Object.getOwnPropertyDescriptor = function getOwnPropertyDescriptor(target, key) {
+    counts.descriptors += 1;
+    return originals.descriptor(target, key);
+  };
+  Object.getOwnPropertyNames = function getOwnPropertyNames(target) { counts.canonicalRecords += 1; return originals.names(target); };
+  globalThis.structuredClone = function structuredClone(...args) { counts.structuredClone += 1; return originals.clone(...args); };
+  let outcome;
+  try {
+    outcome = { value: callback() };
+  } catch (error) {
+    outcome = { error };
+  } finally {
+    Reflect.ownKeys = originals.ownKeys;
+    Object.getOwnPropertyDescriptor = originals.descriptor;
+    Object.getOwnPropertyNames = originals.names;
+    globalThis.structuredClone = originals.clone;
+  }
+  return { ...outcome, counts };
+}
+
+test('R-C: parsed JSON deeper than the 1,400-level bound is a ValidationError before any digest or structuredClone copy', () => {
+  for (const depth of [1401, 2049, 3000, 10_000, 32_004]) {
+    const proposal = deepProposalJson(depth);
+    assert.equal(iterativeDepth(proposal), depth);
+    const { error, counts } = countReads(() => proposals.validateSemanticOperationProposal(proposal));
+    assert.ok(error instanceof ValidationError && error.message === 'semantic operation proposal nesting exceeds 1400 levels',
+      `validator at ${depth}: ${error?.name} ${error?.message}`);
+    // No canonicalize (digest) and no argument copy ran.
+    assert.equal(counts.canonicalRecords, 0, `digest at ${depth}`);
+    assert.equal(counts.structuredClone, 0, `copy at ${depth}`);
+    assert.throws(() => validateSpecialistHarnessBridge(bridgeFor(proposal), { references: { semantic_operation_proposal: proposal } }),
+      error => error instanceof ValidationError && /exceeds the depth bound/.test(error.message), `bridge at ${depth}`);
+  }
+  // At the bound the same construction is accepted (digest recomputed for it).
+  const atBound = JSON.parse(JSON.stringify(deepArgumentProposal(1396)));
+  assert.equal(iterativeDepth(atBound), 1400);
+  assert.equal(proposals.validateSemanticOperationProposal(atBound).valid, true);
+});
+
+test('R-C: non-JSON values and unknown fields are rejected without walking their contents', () => {
+  const baseline = countReads(() => proposals.validateSemanticOperationProposal(deepArgumentProposal(1)));
+  assert.equal(baseline.value?.valid, true, String(baseline.error));
+  const many = () => Array.from({ length: 1_000_000 }, () => ({}));
+  const big = many();
+  const { proxy: revoked, revoke } = Proxy.revocable({}, {});
+  revoke();
+  let trapCalls = 0;
+  const trapping = new Proxy(big, Object.fromEntries(
+    ['get', 'has', 'ownKeys', 'getOwnPropertyDescriptor', 'getPrototypeOf'].map(name => [name, (...args) => { trapCalls += 1; return Reflect[name](...args); }])
+  ));
+  class Holder { constructor() { this.items = big; } }
+  class Items extends Array {}
+  const subclassed = Items.from(big);
+  const overProxy = Object.create(trapping);
+  overProxy.items = big;
+  const getter = Object.defineProperty({}, 'items', { enumerable: true, get() { trapCalls += 1; return big; } });
+  const argument = value => proposal => { (proposal.withheld[0] ?? proposal.proposed[0]).arguments = { settings: value }; };
+  const cases = {
+    'Uint8Array(1e7) argument': argument(new Uint8Array(10_000_000)),
+    'unknown document field holding 1e6 objects': proposal => { proposal.extra = many(); },
+    'unknown entry field holding 1e6 objects': proposal => { (proposal.withheld[0] ?? proposal.proposed[0]).extra = big; },
+    'Map of 1e6 entries': argument(new Map(big.map((item, index) => [index, item]))),
+    'Set of 1e6 objects': argument(new Set(big)),
+    'class instance holding 1e6 objects': argument(new Holder()),
+    'Array subclass of 1e6 objects': argument(subclassed),
+    'Proxy over 1e6 objects': argument(trapping),
+    'revoked Proxy': argument(revoked),
+    'record whose prototype is a Proxy': argument(overProxy),
+    'getter returning 1e6 objects': argument(getter)
+  };
+  for (const [name, mutate] of Object.entries(cases)) {
+    const proposal = deepArgumentProposal(1);
+    mutate(proposal);
+    trapCalls = 0;
+    const { error, counts } = countReads(() => proposals.validateSemanticOperationProposal(proposal));
+    // A ValidationError: unknown fields from the field-set checks, non-JSON
+    // values from the fail-closed depth walk (#1927; was CanonicalJsonError).
+    assert.ok(error instanceof ValidationError, `${name}: ${error}`);
+    assert.equal(trapCalls, 0, `${name}: caller code ran`);
+    // No more reflective reads than a small valid proposal needs: the 1e6 or
+    // 1e7 contents were never entered.
+    for (const key of ['ownKeys', 'descriptors', 'canonicalRecords']) {
+      assert.ok(counts[key] <= baseline.counts[key], `${name}: ${key} ${counts[key]} > baseline ${baseline.counts[key]}`);
+    }
+  }
+});
+
+test('R-C/B-1: the depth walk fails closed on any non-JSON object, at the root or below, without entering it', async () => {
+  const { assertContractDepth } = await import('../src/lib/canonical.mjs');
+  let deep = 1;
+  for (let index = 0; index < 5000; index += 1) deep = [deep];
+  class Holder { constructor() { this.items = deep; } }
+  class Items extends Array {}
+  const foreign = vm.runInNewContext('({ record: {}, list: [] })');
+  // Non-JSON containers are never treated as leaves: each is a ValidationError
+  // the moment the walk meets it, before any of its keys are read.
+  const nonJson = [new Holder(), Items.of(deep), new Map([[1, deep]]), new Set([deep]), new Uint8Array(4), new Date(0),
+    Object.assign(Object.create(new Proxy({}, {})), { items: deep }), Object.assign(Object.create(Object.create(null)), { items: deep }),
+    Object.assign(foreign.record, { items: deep }), foreign.list];
+  for (const leaf of nonJson) {
+    const label = Object.prototype.toString.call(leaf);
+    const nested = countReads(() => assertContractDepth({ leaf }, 'doc'));
+    assert.ok(nested.error instanceof ValidationError && /^doc must be plain JSON data \(found a non-JSON object\)$/.test(nested.error.message), label);
+    assert.equal(nested.counts.ownKeys, 1, `${label}: only the parent's keys are read`);
+    const root = countReads(() => assertContractDepth(leaf, 'doc'));
+    assert.ok(root.error instanceof ValidationError && /found a non-JSON object/.test(root.error.message), `${label} as root`);
+    assert.equal(root.counts.ownKeys, 0, `${label}: rejected before its keys are read`);
+  }
+  // JSON containers are walked: plain records, null-prototype records, arrays.
+  for (const container of [{ items: deep }, Object.assign(Object.create(null), { items: deep }), [deep]]) {
+    assert.throws(() => assertContractDepth({ container }, 'doc'), error => error instanceof ValidationError && /nesting exceeds 1400/.test(error.message));
+    assert.throws(() => assertContractDepth(container, 'doc'), error => error instanceof ValidationError && /nesting exceeds 1400/.test(error.message));
+  }
+});
+
+// The shapes Verifier found bypassing the bound at a6ffa6fe (#1927 B-1, B-2),
+// each applied to a proposal whose arguments nest `levels` below the root.
+function wrapperShapes() {
+  const foreign = () => vm.runInNewContext('({ Object, Array })');
+  class Klass {}
+  class Items extends Array {}
+  const copy = (target, source) => Object.assign(target, source);
+  const entry = proposal => proposal.withheld[0] ? ['withheld', 0] : ['proposed', 0];
+  return {
+    // B-1: non-plain document roots.
+    'root with a class prototype': p => Object.setPrototypeOf(p, Klass.prototype),
+    'root with a cross-realm Object.prototype': p => Object.setPrototypeOf(p, foreign().Object.prototype),
+    'root = Object.create(Object.create(null))': p => Object.setPrototypeOf(p, Object.create(null)),
+    'root that is a Proxy': p => new Proxy(p, {}),
+    // B-2: non-plain wrappers above the arguments.
+    'entry that is a class instance': p => { const [l, i] = entry(p); p[l][i] = copy(new Klass(), p[l][i]); return p; },
+    'entry that is cross-realm': p => { const [l, i] = entry(p); p[l][i] = copy(new (foreign().Object)(), p[l][i]); return p; },
+    'entry that is a Proxy': p => { const [l, i] = entry(p); p[l][i] = new Proxy(p[l][i], {}); return p; },
+    'entry with an accessor arguments': p => {
+      const [l, i] = entry(p); const value = p[l][i].arguments;
+      Object.defineProperty(p[l][i], 'arguments', { enumerable: true, get: () => value }); return p;
+    },
+    'arguments that are cross-realm': p => { const [l, i] = entry(p); p[l][i].arguments = copy(new (foreign().Object)(), p[l][i].arguments); return p; },
+    'arguments = Object.create(Object.create(null))': p => { const [l, i] = entry(p); p[l][i].arguments = copy(Object.create(Object.create(null)), p[l][i].arguments); return p; },
+    'arguments with a Proxy prototype': p => { const [l, i] = entry(p); p[l][i].arguments = copy(Object.create(new Proxy({}, {})), p[l][i].arguments); return p; },
+    'list that is an Array subclass': p => { const [l] = entry(p); p[l] = Items.from(p[l]); return p; },
+    'list that is cross-realm': p => { const [l] = entry(p); const list = new (foreign().Array)(); list.push(...p[l]); p[l] = list; return p; },
+    'list with an accessor index': p => { const [l] = entry(p); const item = p[l][0]; Object.defineProperty(p[l], 0, { enumerable: true, get: () => item }); return p; }
+  };
+}
+
+test('#1927 B-1/B-2: non-plain roots and wrappers cannot carry a parsed proposal past the bound (1,401 levels, default stack)', () => {
+  for (const [name, wrap] of Object.entries(wrapperShapes())) {
+    for (const depth of [1401, 2048]) {
+      const proposal = wrap(deepProposalJson(depth));
+      const { error, counts } = countReads(() => proposals.validateSemanticOperationProposal(proposal));
+      assert.ok(error instanceof ValidationError && /must be plain JSON data/.test(error.message), `${name} at ${depth}: ${error?.name} ${error?.message}`);
+      assert.equal(counts.structuredClone, 0, `${name}: no argument copy`);
+      assert.equal(counts.canonicalRecords, 0, `${name}: no digest`);
+    }
+  }
+});
+
+test('#1927 residual (a): no caller getter or Proxy trap runs before the proposal is rejected', () => {
+  let calls = 0;
+  const counting = target => new Proxy(target, Object.fromEntries(
+    ['get', 'has', 'ownKeys', 'getOwnPropertyDescriptor', 'getPrototypeOf'].map(name => [name, (...args) => { calls += 1; return Reflect[name](...args); }])
+  ));
+  const getter = (object, key) => {
+    const value = object[key];
+    Object.defineProperty(object, key, { enumerable: true, configurable: true, get() { calls += 1; return value; } });
+    return object;
+  };
+  const entry = proposal => proposal.withheld[0] ? ['withheld', 0] : ['proposed', 0];
+  const cases = {
+    'root field getter': p => getter(p, 'candidate_mode'),
+    'root list getter': p => getter(p, entry(p)[0]),
+    'provider field getter': p => { getter(p.provider, 'provider_ref'); return p; },
+    'list index getter': p => { getter(p[entry(p)[0]], 0); return p; },
+    'entry field getter': p => { const [l, i] = entry(p); getter(p[l][i], 'operation_id'); return p; },
+    'arguments value getter': p => { const [l, i] = entry(p); getter(p[l][i].arguments, 'settings'); return p; },
+    'counting Proxy root': p => counting(p),
+    'counting Proxy provider': p => { p.provider = counting(p.provider); return p; },
+    'counting Proxy list': p => { const [l] = entry(p); p[l] = counting(p[l]); return p; },
+    'counting Proxy entry': p => { const [l, i] = entry(p); p[l][i] = counting(p[l][i]); return p; }
+  };
+  for (const [name, wrap] of Object.entries(cases)) {
+    for (const depth of [5, 1401]) {
+      const proposal = wrap(deepProposalJson(depth));
+      calls = 0;
+      assert.throws(() => proposals.validateSemanticOperationProposal(proposal),
+        error => error instanceof ValidationError && /must be plain JSON data/.test(error.message), `${name} at ${depth}`);
+      assert.equal(calls, 0, `${name} at ${depth}: caller code ran`);
+    }
+  }
+});
+
+test('#1927 B-1/B-2: the same shapes give a ValidationError, never a raw RangeError, at --stack-size=500 (1,700 and 2,000 levels)', () => {
+  const source = readFileSync(new URL(import.meta.url), 'utf8')
+    .replace("import test from 'node:test';", 'const test = () => {};')
+    .replaceAll("from '../", `from '${new URL('../', import.meta.url).href}`);
+  const script = `${source}
+const results = {};
+for (const [name, wrap] of Object.entries(wrapperShapes())) {
+  for (const depth of [1700, 2000]) {
+    try { proposals.validateSemanticOperationProposal(wrap(deepProposalJson(depth))); results[name + '@' + depth] = 'accepted'; }
+    catch (error) { results[name + '@' + depth] = (error instanceof ValidationError ? 'ValidationError: ' : String(error?.name) + ': ') + String(error?.message).slice(0, 80); }
+  }
+}
+process.stdout.write(JSON.stringify(results));
+`;
+  // Written to a file: the script is longer than Windows allows on a command line.
+  const directory = mkdtempSync(join(tmpdir(), 'axiom-1927-'));
+  const file = join(directory, 'stack-500.mjs');
+  let output;
+  try {
+    writeFileSync(file, script);
+    output = execFileSync(process.execPath, ['--stack-size=500', file], { encoding: 'utf8', maxBuffer: 1 << 24 });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+  const results = JSON.parse(output);
+  assert.equal(Object.keys(results).length, Object.keys(wrapperShapes()).length * 2);
+  for (const [key, outcome] of Object.entries(results)) {
+    assert.match(outcome, /^ValidationError: .*must be plain JSON data/, key);
+  }
 });
 
 test('B-1: a semantic operation proposal with argument nesting deeper than 64 is accepted as before', () => {

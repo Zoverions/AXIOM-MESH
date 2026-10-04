@@ -2011,21 +2011,13 @@
       "options-throwing-proxy": "raw",
       "options-throwing-getter": "raw"
     },
-    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposal": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposal": {},
     "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposalSchema": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposalShape": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposalShape": {},
     "src/lib/semantic-operation-proposal.mjs#validateCallAgainstManifest": {
       "undefined": "raw",
       "null": "raw",
@@ -2065,21 +2057,13 @@
       "options-throwing-proxy": "raw",
       "options-throwing-getter": "raw"
     },
-    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposal": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposal": {},
     "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposalSchema": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
-    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposalShape": {
-      "throwing-proxy": "sentinel",
-      "recording-proxy": "read-through",
-      "revoked-proxy": "raw"
-    },
+    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposalShape": {},
     "src/lib/service-network-policy.mjs#validateComposeNetworkSegmentation": {},
     "src/lib/service-network-policy.mjs#validateServiceNetworkPolicy": {
       "throwing-proxy": "sentinel",
