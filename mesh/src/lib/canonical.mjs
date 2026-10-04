@@ -3,7 +3,7 @@ import { types } from 'node:util';
 
 /**
  * Maximum container nesting accepted by canonicalize. No contract may declare
- * more than CANONICAL_JSON_MAX_CONTRACT_DEPTH (below), and 2,048 leaves 48
+ * more than CANONICAL_JSON_MAX_CONTRACT_DEPTH (below), and 2,048 leaves 648
  * levels of headroom above that for wrappers that embed a contract document
  * before digesting it. It is below the roughly 3,100 levels at which the
  * default engine stack overflows for this recursion, so the bound normally
@@ -18,13 +18,18 @@ export const CANONICAL_JSON_MAX_DEPTH = 2048;
  * or imply, counted in container levels from the document root (a bare `[]`
  * or `{}` is one level). Validators enforce it with assertContractDepth before
  * canonicalize runs, so in-bounds parsed input never meets the canonical depth
- * guard and over-deep input gets a ValidationError. Main's acceptance above
- * this was never a contract: it ended wherever the engine stack ran out
- * (about 3,290 levels at the default stack size, about 1,250 at
- * --stack-size=400), and no fixture, example or legitimate test nests deeper
- * than 1,004 levels.
+ * guard and over-deep input gets a ValidationError.
+ *
+ * The value is measured, not chosen: the semantic operation proposal
+ * validator's structuredClone argument copy overflows the native stack first,
+ * and on Windows CI (Node 24, default stack) the deepest proposal it and the
+ * bridge accepted was 1,833 document levels (1,829 argument levels), against
+ * 2,000+ on Linux and both macOS runners. 1,400 is about 24% below that
+ * minimum. Main's acceptance above this was never a contract either: it ended
+ * wherever the stack ran out. No fixture, example or legitimate test nests
+ * deeper than 1,004 levels.
  */
-export const CANONICAL_JSON_MAX_CONTRACT_DEPTH = 2000;
+export const CANONICAL_JSON_MAX_CONTRACT_DEPTH = 1400;
 
 /**
  * Typed rejection for values canonical JSON cannot encode. It extends

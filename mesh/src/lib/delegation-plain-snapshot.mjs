@@ -12,7 +12,7 @@ export const DELEGATION_SNAPSHOT_MAX_NODES = 50_000;
 export const DELEGATION_SNAPSHOT_NODE_CEILING = 2_000_000;
 // maxDepth counts the root as depth 0, so a maxDepth of N admits N + 1
 // container levels. The ceiling therefore admits exactly
-// CANONICAL_JSON_MAX_CONTRACT_DEPTH (2,000) levels: no snapshot budget may
+// CANONICAL_JSON_MAX_CONTRACT_DEPTH (1,400) levels: no snapshot budget may
 // promise nesting that canonicalize refuses.
 export const DELEGATION_SNAPSHOT_DEPTH_CEILING = CANONICAL_JSON_MAX_CONTRACT_DEPTH - 1;
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
@@ -40,7 +40,7 @@ const MAX_ARRAY_INDEX = 2 ** 32 - 2;
  * `limits.maxNodes` and `limits.maxDepth` default to 50,000 and 64. A caller
  * whose schema admits larger documents may pass a budget derived from that
  * schema's maxima; each must be a positive safe integer no greater than its
- * ceiling (2,000,000 values, depth 1,999, which is 2,000 levels). Nesting deeper than the engine
+ * ceiling (2,000,000 values, depth 1,399, which is 1,400 levels). Nesting deeper than the engine
  * stack allows is a ValidationError too, never a raw RangeError or a partial
  * copy.
  */

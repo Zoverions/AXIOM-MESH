@@ -885,24 +885,25 @@ function bridgeFor(proposal) {
   return withBridge(x => { x.composition_binding.semantic_operation_proposal_digest = proposal.proposal_digest; });
 }
 
-test('B-1 contract depth: a parsed proposal at the 2,000-level bound passes both validators', () => {
+test('B-1 contract depth: a parsed proposal at the 1,400-level bound passes both validators', () => {
   // deepArgumentProposal nests the argument value four levels below the root.
-  const proposal = JSON.parse(JSON.stringify(deepArgumentProposal(1996)));
-  assert.equal(nestingDepth(proposal), 2000);
+  const proposal = JSON.parse(JSON.stringify(deepArgumentProposal(1396)));
+  assert.equal(nestingDepth(proposal), 1400);
   assert.equal(proposals.validateSemanticOperationProposal(proposal).valid, true);
   const result = validateSpecialistHarnessBridge(bridgeFor(proposal), { references: { semantic_operation_proposal: proposal } });
   assert.deepEqual([...result.references_checked], ['semantic_operation_proposal']);
 });
 
 test('B-1 contract depth: a parsed proposal one level over the bound, or deeper, is a ValidationError on both validators', () => {
-  // 1997 is bound + 1; 2044 was the deepest the canonical guard alone admitted;
-  // 2045, 2100, 3000 and 3200 are Verifier's cases (all within 65,536 bytes).
-  for (const levels of [1997, 2044, 2045, 2100, 3000, 3200]) {
+  // 1397 is bound + 1; 1829 was the deepest Windows CI accepted; 2044 was the
+  // deepest the canonical guard alone admitted; 2045, 2100, 3000 and 3200 are
+  // Verifier's cases (all within 65,536 bytes).
+  for (const levels of [1397, 1829, 1996, 2044, 2045, 2100, 3000, 3200]) {
     const proposal = JSON.parse(JSON.stringify(deepArgumentProposal(levels)));
     assert.equal(nestingDepth(proposal), levels + 4);
     assert.ok(Buffer.byteLength(JSON.stringify(proposal)) <= proposals.SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES);
     assert.throws(() => proposals.validateSemanticOperationProposal(proposal),
-      error => error instanceof ValidationError && /semantic operation proposal nesting exceeds 2000 levels/.test(error.message),
+      error => error instanceof ValidationError && /semantic operation proposal nesting exceeds 1400 levels/.test(error.message),
       `validator at ${levels}`);
     assert.throws(() => validateSpecialistHarnessBridge(bridgeFor(proposal), { references: { semantic_operation_proposal: proposal } }),
       error => error instanceof ValidationError && /exceeds the depth bound/.test(error.message),
@@ -914,7 +915,7 @@ test('B-1 contract depth: the proposal reference snapshot budget is the contract
   const source = readFileSync(new URL('../src/lib/specialist-harness-bridge.mjs', import.meta.url), 'utf8');
   assert.match(source, /semantic_operation_proposal: Object\.freeze\(\{ maxDepth: CANONICAL_JSON_MAX_CONTRACT_DEPTH - 1 \}\)/);
   const { CANONICAL_JSON_MAX_CONTRACT_DEPTH, CANONICAL_JSON_MAX_DEPTH } = await import('../src/lib/canonical.mjs');
-  assert.equal(CANONICAL_JSON_MAX_CONTRACT_DEPTH, 2000);
+  assert.equal(CANONICAL_JSON_MAX_CONTRACT_DEPTH, 1400);
   assert.equal(proposals.SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH, CANONICAL_JSON_MAX_CONTRACT_DEPTH);
   assert.ok(CANONICAL_JSON_MAX_DEPTH - CANONICAL_JSON_MAX_CONTRACT_DEPTH >= 32, 'headroom for wrappers');
 });

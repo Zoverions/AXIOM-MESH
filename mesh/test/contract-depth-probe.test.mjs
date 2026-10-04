@@ -1,14 +1,16 @@
-// Diagnostic only: measures how deep a parsed semantic operation proposal can
-// nest before the validator path (including its structuredClone argument copy)
-// or the specialist-harness bridge fails on this runner. It never fails: it
-// prints one grep-able AXIOM_DEPTH_PROBE line.
+// Diagnostic only, opt-in with AXIOM_DEPTH_PROBE=1: measures how deep a parsed
+// semantic operation proposal can nest before the validator path (including
+// its structuredClone argument copy) or the specialist-harness bridge fails on
+// this runner. It never fails: it prints one grep-able AXIOM_DEPTH_PROBE line.
+// CANONICAL_JSON_MAX_CONTRACT_DEPTH was derived from these lines (#1926); the
+// validator results are capped by that bound (argument levels = bound - 4).
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { CANONICAL_JSON_MAX_CONTRACT_DEPTH, digestObject } from '../src/lib/canonical.mjs';
 import * as proposals from '../src/lib/semantic-operation-proposal.mjs';
 
 const MESH = new URL('../', import.meta.url).href;
@@ -83,7 +85,9 @@ function deepest(predicate) {
   return low;
 }
 
-test('AXIOM_DEPTH_PROBE: proposal validator and bridge depth on this runner (diagnostic, never fails)', async t => {
+test('AXIOM_DEPTH_PROBE: proposal validator and bridge depth on this runner (diagnostic, never fails)', {
+  skip: process.env.AXIOM_DEPTH_PROBE === '1' ? false : 'opt-in diagnostic: set AXIOM_DEPTH_PROBE=1'
+}, async t => {
   const file = join(tmpdir(), `axiom-depth-probe-${process.pid}.mjs`);
   let line;
   try {
@@ -109,7 +113,7 @@ test('AXIOM_DEPTH_PROBE: proposal validator and bridge depth on this runner (dia
       try { structuredClone(nested(middle)); } catch { ok = false; }
       if (ok) low = middle; else high = middle - 1;
     }
-    line = `AXIOM_DEPTH_PROBE os=${process.platform}-${process.arch} node=${process.version} validator_max=${validator} bridge_max=${bridge} inprocess_validator_max=${inprocess} structuredclone_inprocess_max=${low} search_ceiling=${HIGH} bound_cap=1996`;
+    line = `AXIOM_DEPTH_PROBE os=${process.platform}-${process.arch} node=${process.version} validator_max=${validator} bridge_max=${bridge} inprocess_validator_max=${inprocess} structuredclone_inprocess_max=${low} search_ceiling=${HIGH} bound_cap=${CANONICAL_JSON_MAX_CONTRACT_DEPTH - 4}`;
   } catch (error) {
     line = `AXIOM_DEPTH_PROBE os=${process.platform}-${process.arch} node=${process.version} error=${String(error?.message).slice(0, 200)}`;
   } finally {

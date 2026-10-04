@@ -28,8 +28,10 @@ const MAX_SERIALIZED_BYTES = SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES;
 // Nesting bound for a whole proposal document, counted in container levels
 // from the document root. Free-form argument values are otherwise bounded only
 // by the byte limit, which would allow depth up to 32,768; canonicalize accepts
-// at most CANONICAL_JSON_MAX_DEPTH (2,048), so the contract promises 2,000 and
-// over-deep input is a ValidationError before any digest runs.
+// at most CANONICAL_JSON_MAX_DEPTH (2,048) and the structuredClone argument copy
+// overflows earlier on some platforms (1,833 levels on Windows), so the contract
+// promises 1,400 and over-deep input is a ValidationError before any digest or
+// copy runs.
 export const SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH = CANONICAL_JSON_MAX_CONTRACT_DEPTH;
 
 const DOCUMENT_FIELDS = Object.freeze([

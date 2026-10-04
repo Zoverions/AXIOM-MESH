@@ -259,7 +259,7 @@ test('cycles are rejected as CanonicalJsonError instead of overflowing the stack
   }
 });
 
-test('nesting is bounded by CANONICAL_JSON_MAX_DEPTH (2048), above the 2,000-level contract bound', () => {
+test('nesting is bounded by CANONICAL_JSON_MAX_DEPTH (2048), above the 1,400-level contract bound', () => {
   assert.equal(canonical.CANONICAL_JSON_MAX_DEPTH, 2048);
   assert.equal(canonicalJson(nest(1004)).length, 1004 * 2 + 1);
   assert.equal(canonicalJson(nest(2048)).length, 2048 * 2 + 1);
@@ -308,9 +308,11 @@ test('N1: an engine limit that is not a stack overflow is typed with its own mes
 
 test('N3: canonicalize uses no more stack per level than main at --stack-size=400', () => {
   // The reference is main's (74b0399b) recursion, embedded here only to compare
-  // stack use in the same process, JIT state and stack size. canonical.mjs
-  // stays the only canonical encoder. A 5% tolerance absorbs JIT noise; the
-  // per-level cost this pins was 15-25% higher before the frames were slimmed.
+  // stack use in the same process and stack size. canonical.mjs stays the only
+  // canonical encoder. --jitless keeps every frame an interpreter frame, so the
+  // comparison is deterministic: optimizing-tier timing (which varies with
+  // machine load) cannot make either side look deeper. 291d9d9a reached about
+  // 12-15% fewer levels than the reference here; this head reaches more.
   const script = `
     const { canonicalize } = await import(${JSON.stringify(new URL('../src/lib/canonical.mjs', import.meta.url).href)});
     function refValue(value) {
@@ -366,28 +368,28 @@ test('N3: canonicalize uses no more stack per level than main at --stack-size=40
     for (const record of [false, true]) result[record ? 'records' : 'arrays'] = [deepest(refValue, record), deepest(canonicalize, record)];
     process.stdout.write(JSON.stringify(result));
   `;
-  const result = JSON.parse(execFileSync(process.execPath, ['--stack-size=400', '--input-type=module', '-e', script], { encoding: 'utf8' }));
+  const result = JSON.parse(execFileSync(process.execPath, ['--jitless', '--stack-size=400', '--input-type=module', '-e', script], { encoding: 'utf8' }));
   for (const [shape, [reference, head]] of Object.entries(result)) {
     assert.ok(reference < 2047, `${shape}: the reference must overflow below the probe ceiling (${reference})`);
-    assert.ok(head >= Math.floor(reference * 0.95), `${shape}: head reaches ${head} levels, main's recursion ${reference}`);
+    assert.ok(head >= reference, `${shape}: head reaches ${head} levels, main's recursion ${reference}`);
   }
 });
 
-test('the contract depth bound is 2,000 levels, enforced iteratively as a ValidationError', () => {
+test('the contract depth bound is 1,400 levels, enforced iteratively as a ValidationError', () => {
   const { CANONICAL_JSON_MAX_CONTRACT_DEPTH, assertContractDepth } = canonical;
-  assert.equal(CANONICAL_JSON_MAX_CONTRACT_DEPTH, 2000);
+  assert.equal(CANONICAL_JSON_MAX_CONTRACT_DEPTH, 1400);
   const record = levels => { let value = 1; for (let index = 0; index < levels; index += 1) value = { k: value }; return value; };
   for (const make of [nest, record]) {
-    assert.doesNotThrow(() => assertContractDepth(make(1999), 'x'));
-    assert.doesNotThrow(() => assertContractDepth(make(2000), 'x'));
-    for (const levels of [2001, 2048, 200_000]) {
+    assert.doesNotThrow(() => assertContractDepth(make(1399), 'x'));
+    assert.doesNotThrow(() => assertContractDepth(make(1400), 'x'));
+    for (const levels of [1401, 2048, 200_000]) {
       assert.throws(() => assertContractDepth(make(levels), 'doc'),
-        error => error instanceof canonical.ValidationError && error.message === 'doc nesting exceeds 2000 levels', String(levels));
+        error => error instanceof canonical.ValidationError && error.message === 'doc nesting exceeds 1400 levels', String(levels));
     }
   }
   // The deepest branch counts, wherever it is.
-  assert.throws(() => assertContractDepth({ a: 1, b: [nest(1999)] }, 'doc'), canonical.ValidationError);
-  assert.doesNotThrow(() => assertContractDepth({ a: nest(1999), b: [1] }, 'doc'));
+  assert.throws(() => assertContractDepth({ a: 1, b: [nest(1399)] }, 'doc'), canonical.ValidationError);
+  assert.doesNotThrow(() => assertContractDepth({ a: nest(1399), b: [1] }, 'doc'));
   for (const primitive of [null, undefined, 1, 'x', true, 1n, Symbol('s')]) {
     assert.doesNotThrow(() => assertContractDepth(primitive, 'x'));
   }
@@ -422,7 +424,7 @@ test('the contract depth walk runs no caller code and leaves other rejections to
   assert.doesNotThrow(() => assertContractDepth(shared, 'x'));
   assert.ok(process.hrtime.bigint() - started < 1_000_000_000n);
   let wide = [1];
-  for (let index = 0; index < 2001; index += 1) wide = [wide, wide];
+  for (let index = 0; index < 1401; index += 1) wide = [wide, wide];
   assert.throws(() => assertContractDepth(wide, 'x'), canonical.ValidationError);
 });
 
@@ -430,7 +432,7 @@ test('the contract depth walk counts a shared subtree at its deepest position', 
   const { assertContractDepth } = canonical;
   // The shared subtree is measured first through a shallow path; reaching it
   // again under 15 more levels must still count its full height.
-  const shared = nest(1990);
+  const shared = nest(1390);
   let deeper = shared;
   for (let index = 0; index < 15; index += 1) deeper = [deeper];
   assert.throws(() => assertContractDepth({ a: shared, b: deeper }, 'doc'), canonical.ValidationError);

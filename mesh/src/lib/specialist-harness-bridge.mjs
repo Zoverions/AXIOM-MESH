@@ -107,8 +107,8 @@ export function validateSpecialistHarnessBridge(document, options = {}) {
 // - semantic_operation_proposal: argument values are free-form JSON. The
 //   65,536-byte serialization limit alone would allow depth up to 32,768, but
 //   the proposal contract bounds nesting at CANONICAL_JSON_MAX_CONTRACT_DEPTH
-//   (2,000 levels from the document root), the most canonicalize is promised
-//   to accept. The snapshot counts the root as depth 0, so maxDepth is one
+//   (1,400 levels from the document root), which every supported platform's
+//   validator path can honour. The snapshot counts the root as depth 0, so maxDepth is one
 //   less. Each value costs at least two bytes with its separator, so the value
 //   count stays under the 50,000 default.
 const REFERENCE_SNAPSHOT_LIMITS = Object.freeze({
