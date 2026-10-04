@@ -124,18 +124,19 @@ export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
 
 export function verifyInstallReleaseManifest(packageValue,options={}){
   optionsRecord(options);
-  const {
-    trustedSigners,
-    evaluatedAt,
-    policy=manifestPolicy,
-    currentInstallTargets=installTargets,
-    currentHostInstallPolicy=hostInstallPolicy,
-    currentCapabilityRegistry=capabilityRegistry,
-    currentApplicationCatalog=applicationCatalog,
-    currentServiceNetworkPolicy=serviceNetworkPolicy,
-    currentSourceSetupPolicy=sourceSetupPolicy,
-    migrationGeneration=MIGRATIONS.length
-  }=options;
+  // Own properties only (as the artifact form's policy): an inherited key, for
+  // example from a polluted Object.prototype, never supplies a value or
+  // replaces a default. An own undefined value still takes the default.
+  const trustedSigners=ownOption(options,'trustedSigners',undefined);
+  const evaluatedAt=ownOption(options,'evaluatedAt',undefined);
+  const policy=ownOption(options,'policy',manifestPolicy);
+  const currentInstallTargets=ownOption(options,'currentInstallTargets',installTargets);
+  const currentHostInstallPolicy=ownOption(options,'currentHostInstallPolicy',hostInstallPolicy);
+  const currentCapabilityRegistry=ownOption(options,'currentCapabilityRegistry',capabilityRegistry);
+  const currentApplicationCatalog=ownOption(options,'currentApplicationCatalog',applicationCatalog);
+  const currentServiceNetworkPolicy=ownOption(options,'currentServiceNetworkPolicy',serviceNetworkPolicy);
+  const currentSourceSetupPolicy=ownOption(options,'currentSourceSetupPolicy',sourceSetupPolicy);
+  const migrationGeneration=ownOption(options,'migrationGeneration',MIGRATIONS.length);
   const policyResult=validateInstallReleaseManifestPolicy(policy);
   exactObject(packageValue,'Install release manifest package',[
     'schema','manifest','signature'
@@ -644,7 +645,15 @@ const OPTION_FIELDS=new Set([
   'currentServiceNetworkPolicy','currentSourceSetupPolicy','migrationGeneration'
 ]);
 
-// Options are read once, by destructuring, so they must be a plain record of
+// optionsRecord has already proven every own key is an enumerable data
+// property, so this read runs no getter or trap.
+function ownOption(options,key,fallback){
+  if(!Object.hasOwn(options,key)) return fallback;
+  const value=options[key];
+  return value===undefined?fallback:value;
+}
+
+// Options are read once, through ownOption, so they must be a plain record of
 // own enumerable data properties: no Proxy trap or getter runs, and hidden,
 // symbol-keyed or unknown fields are rejected instead of ignored.
 function optionsRecord(options){

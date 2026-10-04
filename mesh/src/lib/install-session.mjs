@@ -571,7 +571,7 @@ const SESSION_KEYS=Object.freeze([
  * `{sessionId, hostPlan, releasePackage, expectedReleaseManifestDigest,
  * trustedSigners, artifactBytes, requestedAt, evaluatedAt,
  * maxObservationAgeSeconds}`. Plain data is snapshotted once and byte views
- * are copied from their actual window, then:
+ * are copied from their actual byte range, then:
  * - the host plan is checked by main's validateHostInstallPlan;
  * - this function itself verifies the original signed package with
  *   verifyInstallReleaseManifest (repository policy defaults, no caller
@@ -800,7 +800,7 @@ function proofEvidence(proofs){
 }
 
 // A plain record of own enumerable data properties mapping artifact ids to
-// byte views. Each view is copied from its actual window through the
+// byte views. Each view is copied from its actual byte range through the
 // intrinsic %TypedArray% getters (caller-defined accessors on the view are
 // ignored); shared or detached storage is rejected.
 function snapshotArtifactBytes(value){

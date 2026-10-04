@@ -5,6 +5,7 @@ import {
 } from 'node:crypto';
 import test from 'node:test';
 import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
+import { assertNoAmbientOrDynamicCode, codeOnly, HOST_GLOBAL, HOST_GLOBALS, RAW_HOST_GLOBAL } from '../test-support/ambient-code-scan.mjs';
 import { readFile } from 'node:fs/promises';
 
 import installTargets from '../config/install-targets.json' with { type: 'json' };
@@ -469,13 +470,16 @@ test('release verifier has no host mutation process network or credential side-e
   assert.deepEqual(specifiers(canonical),['node:crypto','node:util']);
   const snapshot=await readFile(new URL('../src/lib/delegation-plain-snapshot.mjs',import.meta.url),'utf8');
   assert.deepEqual(specifiers(snapshot),['node:util','./canonical.mjs']);
-  for (const [name,text] of [
-    ['install-release-manifest',source],
+  for (const [name,text,options] of [
+    ['install-release-manifest',source,{rawHostGlobals:false}],
     ['migrations',migrations],
     ['canonical',canonical],
     ['delegation-plain-snapshot',snapshot]
   ]) {
-    assertNoAmbientOrDynamicCode(text,name);
+    // The raw-text host-global layer is on for every module except the
+    // manifest verifier, whose error text says 'validity window'; main had no
+    // raw host-global check there. Its code-only scan still runs.
+    assertNoAmbientOrDynamicCode(text,name,options);
   }
   assert.doesNotMatch(source,/\bimport\s*\(|node:fs|node:dgram|node:tls|node:dns|process\.env/);
   assert.doesNotMatch(source,/node:child_process|node:net|node:http|node:https/);
@@ -483,27 +487,8 @@ test('release verifier has no host mutation process network or credential side-e
   assert.doesNotMatch(source,/writeFile|mkdir|chmod|chown|unlink|rename/);
 });
 
-// Boundary scan for the release verifier's module graph: no ambient process or
-// global object, no dynamic import or require, and no dynamic code (#1914
-// residual 2): the Function constructor, eval, or reaching a constructor through
-// a member such as (()=>{}).constructor(...). A class's own constructor(...)
-// method definition is not a member access and stays allowed.
-const AMBIENT_OR_DYNAMIC_CODE=[
-  /\bprocess\b/,
-  /globalThis/,
-  /\bimport\s*\(/,
-  /\brequire\s*\(/,
-  /\bFunction\b/,
-  /\beval\b/,
-  /\.\s*constructor\b/,
-  /\[\s*['"`]constructor['"`]\s*\]/
-];
-
-function assertNoAmbientOrDynamicCode(text,name){
-  for(const pattern of AMBIENT_OR_DYNAMIC_CODE){
-    assert.doesNotMatch(text,pattern,`${name}: ${pattern}`);
-  }
-}
+// Boundary scan (AMBIENT_OR_DYNAMIC_CODE plus the #1916 bare host globals)
+// lives in test-support/ambient-code-scan.mjs, shared with install-session.
 
 test('boundary scan catches planted Function, eval and member constructor calls',()=>{
   for(const planted of [
@@ -526,6 +511,107 @@ test('boundary scan catches planted Function, eval and member constructor calls'
   ]){
     assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode(allowed,'allowed'),allowed);
   }
+});
+
+// #1916: bare host globals are forbidden in the scanned modules, but property
+// access and prose in strings, templates, regular expressions and comments are not.
+test('boundary scan catches bare host globals and ignores property access, strings and comments',()=>{
+  assert.deepEqual(HOST_GLOBALS,['navigator','self','window','Deno','Bun','WebAssembly']);
+  for(const planted of [
+    'const agent=navigator.userAgent;',
+    'self.postMessage(1);',
+    "const w=window['location'];",
+    'const w=window;',
+    "if(typeof Deno!=='undefined'){}",
+    "const f=Bun.file('x');",
+    'const m=WebAssembly.compile(bytes);',
+    'call(self);',
+    'const copy={...window};',
+    'const t=`${window.location}`;',
+    'const t=`a${`b${Deno.pid}`}c`;',
+    "const ok=/a/.test(s)&&navigator;",
+    "const s='\\\\'+window;",
+    '/* c */ Bun',
+    "'s'+Deno",
+    'return self',
+    'x = a / b / window',
+    '({window:1})',
+    // Copilot on #1929: ambiguous '/' after a postfix ++/--, a contextual word,
+    // a property named like a keyword or a closing brace stays code.
+    'let x=4; x++ / window / 2',
+    'let x=4; x-- / self / 2',
+    'let of=4; of / window / 2',
+    'let yield_=0; const y=obj.return / Deno / 2',
+    'const f=function(){} / window / 2',
+    // Identifier escapes resolve to the same bare global, so any escape in code fails.
+    'const x=\\u0077indow.location',
+    'const x=\\u{77}indow',
+    'const x=wind\\u006fw',
+    'const p=\\u0070rocess',
+    // #1929 B-1 (Verifier): a numeric literal's trailing dot is not property access.
+    'const q=1.\nwindow.postMessage(1)',
+    'let n=2.\nself',
+    'const q=10.\n  Deno.exit()',
+    'const q=[0.\n,Bun]',
+    // #1929 B-1: a regular expression after ')', '}', await, of or yield whose
+    // quote or backtick would open a fake string under the division reading.
+    "if(x) /'/.test(s)&&window&&/'/.test(t)",
+    'if(x) /`/.test(s);Deno.exit();/`/.test(t)',
+    "{}\n/'/.test(a)&&navigator&&/'/.test(b)",
+    'async function f(){await /"/.exec(s);Bun.spawn(1);/"/.exec(t)}',
+    "for(const m of /'/.exec(s)||[]){};self;/'/.exec(t)",
+    "function*g(){yield /'/;window;/'/}",
+    // Variants: a fake comment or a fake regex start under the division reading,
+    // a closing brace of a function body, and a while/for header.
+    'if(x) /a*/.test(s);WebAssembly;/b/.test(t)',
+    'if(x) /[//]/.test(s);navigator',
+    'function g(){}\n/"/.test(a);self;/"/.test(b)',
+    "while(x) /'/.exec(s)&&window&&/'/.exec(t)",
+    'async function h(){await /`/;Deno;/`/}'
+  ]){
+    // Both layers must catch every planted case on its own.
+    const text=`export const ok=1;\n${planted}\n`;
+    assert.throws(()=>assertNoAmbientOrDynamicCode(text,'planted'),{code:'ERR_ASSERTION'},planted);
+    assert.throws(()=>assertNoAmbientOrDynamicCode(text,'planted',{rawHostGlobals:false}),
+      error=>error.code==='ERR_ASSERTION'||error instanceof SyntaxError,`code-only: ${planted}`);
+  }
+  for(const allowed of [
+    'obj.window=1;',
+    'obj?.navigator;',
+    'a . self;',
+    'obj\n  .WebAssembly;',
+    "const m='validity window';",
+    'const m="self";',
+    "const m='it\\'s Deno';",
+    'const t=`Bun ${1} WebAssembly`;',
+    'const t=`${obj.window}`;',
+    '// navigator',
+    '/* Deno\n window */',
+    'const r=/window|self/.test(s);',
+    'const r=[/Bun/g];',
+    'windowSize+selfTest+myDeno+$window+_self+Bunny+WebAssemblyX;',
+    'class A{#window=1;m(){return this.#window;}}',
+    // Unambiguous division keeps the rest of its line as code.
+    'const r=a[0] / b / c;',
+    "const r=n / 2 + 'px';",
+    'const r=x++ / 2 / y;'
+  ]){
+    assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode(allowed,'allowed',{rawHostGlobals:false}),allowed);
+    // The raw-text layer (on by default) still reports any of these that names a host global.
+    if(RAW_HOST_GLOBAL.test(allowed)) assert.throws(()=>assertNoAmbientOrDynamicCode(allowed,'allowed'),{code:'ERR_ASSERTION'},allowed);
+  }
+  // The code-only view keeps offsets, and untokenizable input fails closed.
+  const sample="const a='window'; // self\nconst b=1;";
+  assert.equal(codeOnly(sample).length,sample.length);
+  assert.equal(codeOnly(sample).split('\n').length,2);
+  for(const broken of ["const a='window;",'const a=`${window','/* window','const r=/window',
+    "if(x) /'/",'f() / 2 // half','{}/`/',
+    // An ambiguous '/' followed by a quote or backtick fails closed even when
+    // no later '/' is on the line (division here, but not proven lexically).
+    "f(a) / n + 'px'",'g() / `${n}`']){
+    assert.throws(()=>codeOnly(broken),SyntaxError,broken);
+  }
+  assert.match('window',HOST_GLOBAL);
 });
 
 test('trusted signer inventory rejects private-key material before key conversion',()=>{
@@ -989,4 +1075,65 @@ test('#1914 hostile-input contract: bound verifyInstallReleaseArtifact',async()=
     // content is copied (as in #1903) and hashed, so the exact bytes still pass.
     acceptablePaths:{arg2:['hidden-mind-id','symbol-key','cycle']}
   },assert);
+});
+
+// Options and their defaults come from own properties only: a polluted
+// Object.prototype (or any inherited key) can neither replace a default
+// control-plane input nor supply a missing signer set or evaluation time.
+function withPollutedPrototype(key,value,callback){
+  assert.equal(Object.hasOwn(Object.prototype,key),false,key);
+  Object.defineProperty(Object.prototype,key,{value,configurable:true,writable:true,enumerable:false});
+  try{
+    return callback();
+  }finally{
+    delete Object.prototype[key];
+  }
+}
+
+test('verifier option defaults ignore a polluted Object.prototype',()=>{
+  const expected=verify(signPackage());
+  const drifted={...hostInstallPolicy,kernel_version:'9.9.9'};
+  const weakPolicy={...releasePolicy,max_validity_seconds:1};
+  for(const [key,value] of [
+    ['policy',weakPolicy],
+    ['currentInstallTargets',{...installTargets,kernel_version:'9.9.9'}],
+    ['currentHostInstallPolicy',drifted],
+    ['currentCapabilityRegistry',{...capabilityRegistry,kernel_version:'9.9.9'}],
+    ['currentApplicationCatalog',{}],
+    ['currentServiceNetworkPolicy',{}],
+    ['currentSourceSetupPolicy',{...sourceSetupPolicy,kernel_version:'9.9.9'}],
+    ['migrationGeneration',MIGRATIONS.length+1]
+  ]){
+    const result=withPollutedPrototype(key,value,()=>verify(signPackage()));
+    assert.deepEqual(result,expected,key);
+    const nullPrototype=Object.assign(Object.create(null),{trustedSigners:[trustedSigner()],evaluatedAt:EVALUATED_AT});
+    assert.deepEqual(withPollutedPrototype(key,value,()=>verifyInstallReleaseManifest(signPackage(),nullPrototype)),expected,`${key} null-prototype`);
+  }
+});
+
+test('verifier options never take signers or evaluation time from the prototype',()=>{
+  const packageValue=signPackage();
+  withPollutedPrototype('trustedSigners',[trustedSigner()],()=>{
+    assert.throws(()=>verifyInstallReleaseManifest(packageValue,{evaluatedAt:EVALUATED_AT}),/Trusted release signers/);
+  });
+  withPollutedPrototype('evaluatedAt',EVALUATED_AT,()=>{
+    assert.throws(()=>verifyInstallReleaseManifest(packageValue,{trustedSigners:[trustedSigner()]}),/evaluatedAt/);
+  });
+});
+
+test('own option values and own undefined defaults behave exactly as before',()=>{
+  const packageValue=signPackage();
+  const expected=verify(packageValue);
+  const explicit={
+    trustedSigners:[trustedSigner()],evaluatedAt:EVALUATED_AT,policy:releasePolicy,
+    currentInstallTargets:installTargets,currentHostInstallPolicy:hostInstallPolicy,
+    currentCapabilityRegistry:capabilityRegistry,currentApplicationCatalog:applicationCatalog,
+    currentServiceNetworkPolicy:serviceNetworkPolicy,currentSourceSetupPolicy:sourceSetupPolicy,
+    migrationGeneration:MIGRATIONS.length
+  };
+  assert.deepEqual(verifyInstallReleaseManifest(packageValue,explicit),expected);
+  const undefinedDefaults=Object.fromEntries(Object.keys(explicit).map(key=>[key,key==='trustedSigners'||key==='evaluatedAt'?explicit[key]:undefined]));
+  assert.deepEqual(verifyInstallReleaseManifest(packageValue,undefinedDefaults),expected);
+  assert.throws(()=>verifyInstallReleaseManifest(packageValue,{...explicit,currentHostInstallPolicy:{...hostInstallPolicy,kernel_version:'9.9.9'}}),/kernel version/);
+  assert.throws(()=>verifyInstallReleaseManifest(packageValue,{...explicit,trustedSigners:undefined}),/Trusted release signers/);
 });
