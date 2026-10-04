@@ -3,6 +3,7 @@
   "$id": "urn:axiom:contract:semantic-operation-proposal:v0",
   "title": "AXIOM Semantic Operation Proposal v0",
   "description": "Closed wire schema for the inert Semantic Operation Proposal v0. Provider output is proposal evidence about likely operation intent. It never mints authority, assurance, currentness, execution rights, or runtime activation. Semantic validation, manifest membership, eligibility non-restoration, argument typing, Needle confidence non-normalization into #1588 distributions, and locality fail-closed rules are enforced by mesh/src/lib/semantic-operation-proposal.mjs.",
+  "$comment": "Nesting bound: the whole document nests at most 1,400 container levels counted from the root (SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH = CANONICAL_JSON_MAX_CONTRACT_DEPTH). JSON Schema cannot express a depth limit; the validator enforces it with a ValidationError before canonicalization, which matters for the free-form argument values.",
   "type": "object",
   "additionalProperties": false,
   "required": [

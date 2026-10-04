@@ -1,6 +1,6 @@
 import { types } from 'node:util';
 
-import { ValidationError } from './canonical.mjs';
+import { CANONICAL_JSON_MAX_CONTRACT_DEPTH, ValidationError } from './canonical.mjs';
 
 export const DELEGATION_SNAPSHOT_MAX_DEPTH = 64;
 // Every visited value counts, so a DAG of shared references is charged once per
@@ -10,7 +10,11 @@ export const DELEGATION_SNAPSHOT_MAX_NODES = 50_000;
 // Hard ceilings for a caller-chosen budget. Only a caller whose schema provably
 // admits more than the defaults may raise them, and never past these ceilings.
 export const DELEGATION_SNAPSHOT_NODE_CEILING = 2_000_000;
-export const DELEGATION_SNAPSHOT_DEPTH_CEILING = 32_768;
+// maxDepth counts the root as depth 0, so a maxDepth of N admits N + 1
+// container levels. The ceiling therefore admits exactly
+// CANONICAL_JSON_MAX_CONTRACT_DEPTH (1,400) levels: no snapshot budget may
+// promise nesting that canonicalize refuses.
+export const DELEGATION_SNAPSHOT_DEPTH_CEILING = CANONICAL_JSON_MAX_CONTRACT_DEPTH - 1;
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 // ECMAScript array indexes stop at 2^32 - 2; larger numeric keys are custom properties.
 const MAX_ARRAY_INDEX = 2 ** 32 - 2;
@@ -36,7 +40,7 @@ const MAX_ARRAY_INDEX = 2 ** 32 - 2;
  * `limits.maxNodes` and `limits.maxDepth` default to 50,000 and 64. A caller
  * whose schema admits larger documents may pass a budget derived from that
  * schema's maxima; each must be a positive safe integer no greater than its
- * ceiling (2,000,000 values, depth 32,768). Nesting deeper than the engine
+ * ceiling (2,000,000 values, depth 1,399, which is 1,400 levels). Nesting deeper than the engine
  * stack allows is a ValidationError too, never a raw RangeError or a partial
  * copy.
  */

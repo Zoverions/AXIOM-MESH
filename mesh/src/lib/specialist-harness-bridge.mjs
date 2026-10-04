@@ -1,6 +1,6 @@
 import { types } from 'node:util';
 
-import { canonicalize, digestObject, ValidationError } from './canonical.mjs';
+import { CANONICAL_JSON_MAX_CONTRACT_DEPTH, canonicalize, digestObject, ValidationError } from './canonical.mjs';
 import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 import { validateAutonomyEnvelope } from './autonomy-envelope.mjs';
 import { outcomeDigest, skillAdmissionDigest, taskLifecycleDigest } from './agent-os-contracts.mjs';
@@ -9,10 +9,7 @@ import { taskContinuityPolicyDigest } from './task-continuity-policy.mjs';
 import { validateExternalAgentIngressRequest } from './external-agent-ingress-request.mjs';
 import { aiExecutionProvenanceDigest } from './ai-execution-provenance.mjs';
 import { VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES, verifiedWorkGraphDigest } from './verified-work-graph.mjs';
-import {
-  SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES,
-  validateSemanticOperationProposal
-} from './semantic-operation-proposal-core.mjs';
+import { validateSemanticOperationProposal } from './semantic-operation-proposal-core.mjs';
 import { persistentEntityBundleDigest } from './persistent-entity-bundle.mjs';
 
 export const SPECIALIST_HARNESS_BRIDGE_SCHEMA = 'axiom-specialist-harness-bridge.v0';
@@ -107,14 +104,16 @@ export function validateSpecialistHarnessBridge(document, options = {}) {
 // inside the defaults (the largest, outcome, is under 5,000 values at depth 2).
 // - verified_work_graph: up to 1,093,644 values at depth 4 (see
 //   VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES).
-// - semantic_operation_proposal: argument values are free-form JSON, bounded
-//   only by the 65,536-byte serialization limit. Each nesting level costs at
-//   least two bytes ("[" and "]"), so depth stays at or below 32,768; each
-//   value costs at least two bytes with its separator, so the value count stays
-//   under the 50,000 default.
+// - semantic_operation_proposal: argument values are free-form JSON. The
+//   65,536-byte serialization limit alone would allow depth up to 32,768, but
+//   the proposal contract bounds nesting at CANONICAL_JSON_MAX_CONTRACT_DEPTH
+//   (1,400 levels from the document root), which every supported platform's
+//   validator path can honour. The snapshot counts the root as depth 0, so maxDepth is one
+//   less. Each value costs at least two bytes with its separator, so the value
+//   count stays under the 50,000 default.
 const REFERENCE_SNAPSHOT_LIMITS = Object.freeze({
   verified_work_graph: Object.freeze({ maxNodes: VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES }),
-  semantic_operation_proposal: Object.freeze({ maxDepth: SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES / 2 })
+  semantic_operation_proposal: Object.freeze({ maxDepth: CANONICAL_JSON_MAX_CONTRACT_DEPTH - 1 })
 });
 
 function plainSnapshot(value, label, limits) {
