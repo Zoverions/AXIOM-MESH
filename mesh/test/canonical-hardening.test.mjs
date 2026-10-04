@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import * as canonical from '../src/lib/canonical.mjs';
 import { errorResponse } from '../src/lib/http.mjs';
@@ -428,15 +429,61 @@ test('the contract depth walk runs no caller code and leaves other rejections to
   assert.throws(() => assertContractDepth(wide, 'x'), canonical.ValidationError);
 });
 
-test('the contract depth walk counts a shared subtree at its deepest position', () => {
+test('the contract depth walk counts a shared subtree at its deepest position, exactly', () => {
   const { assertContractDepth } = canonical;
-  // The shared subtree is measured first through a shallow path; reaching it
-  // again under 15 more levels must still count its full height.
+  const depth = value => {
+    // Independent of the walk under test: every path, iteratively.
+    let deepest = 0;
+    const pending = [[value, 1]];
+    while (pending.length) {
+      const [node, level] = pending.pop();
+      if (node === null || typeof node !== 'object') continue;
+      deepest = Math.max(deepest, level);
+      for (const item of Object.values(node)) pending.push([item, level + 1]);
+    }
+    return deepest;
+  };
+  // A 1,390-level shared subtree is reached first directly under the root
+  // record (measured shallow), then again under `wrappers` more arrays.
   const shared = nest(1390);
-  let deeper = shared;
-  for (let index = 0; index < 15; index += 1) deeper = [deeper];
-  assert.throws(() => assertContractDepth({ a: shared, b: deeper }, 'doc'), canonical.ValidationError);
-  assert.doesNotThrow(() => assertContractDepth({ a: shared, b: [[shared]] }, 'doc'));
+  const document = wrappers => {
+    let deeper = shared;
+    for (let index = 0; index < wrappers; index += 1) deeper = [deeper];
+    return { a: shared, b: deeper };
+  };
+  // Root + 9 wrappers + 1,390 = 1,400: at the bound, accepted.
+  assert.equal(depth(document(9)), 1400);
+  assert.doesNotThrow(() => assertContractDepth(document(9), 'doc'));
+  // Root + 10 wrappers + 1,390 = 1,401: one over, rejected.
+  assert.equal(depth(document(10)), 1401);
+  assert.throws(() => assertContractDepth(document(10), 'doc'),
+    error => error instanceof canonical.ValidationError && error.message === 'doc nesting exceeds 1400 levels');
+  // Same when the deep path is visited first.
+  const { a, b } = document(10);
+  assert.throws(() => assertContractDepth({ b, a }, 'doc'), canonical.ValidationError);
+  assert.doesNotThrow(() => assertContractDepth({ b: document(9).b, a }, 'doc'));
+});
+
+test('the opt-in depth probe is skipped unless AXIOM_DEPTH_PROBE=1', () => {
+  // Runs only the probe test (by name) in a child, so this test cannot recurse.
+  const probe = new URL('./contract-depth-probe.test.mjs', import.meta.url);
+  for (const setting of [undefined, '', '0', 'true', 'yes', ' 1']) {
+    const env = { ...process.env };
+    delete env.AXIOM_DEPTH_PROBE;
+    delete env.NODE_TEST_CONTEXT;
+    if (setting !== undefined) env.AXIOM_DEPTH_PROBE = setting;
+    const started = process.hrtime.bigint();
+    const output = execFileSync(process.execPath, [
+      '--test', '--test-reporter=tap', '--test-name-pattern=^AXIOM_DEPTH_PROBE', fileURLToPath(probe)
+    ], { encoding: 'utf8', env });
+    const label = JSON.stringify(setting);
+    assert.match(output, /# SKIP opt-in diagnostic: set AXIOM_DEPTH_PROBE=1/, label);
+    assert.match(output, /^# skipped 1$/m, label);
+    assert.match(output, /^# pass 0$/m, label);
+    assert.doesNotMatch(output, /AXIOM_DEPTH_PROBE os=/, label);
+    // A skipped probe spawns no binary-search children.
+    assert.ok(process.hrtime.bigint() - started < 30_000_000_000n, label);
+  }
 });
 
 test('canonicalize does not retain a rejected input', () => {

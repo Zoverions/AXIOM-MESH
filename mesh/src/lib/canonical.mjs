@@ -16,8 +16,8 @@ export const CANONICAL_JSON_MAX_DEPTH = 2048;
 /**
  * Maximum nesting any contract whose documents reach canonicalize may declare
  * or imply, counted in container levels from the document root (a bare `[]`
- * or `{}` is one level). Validators enforce it with assertContractDepth before
- * canonicalize runs, so in-bounds parsed input never meets the canonical depth
+ * or `{}` is one level). Validators enforce it with assertContractDepth after
+ * their cheap field-set checks and before canonicalize runs, so in-bounds parsed input never meets the canonical depth
  * guard and over-deep input gets a ValidationError.
  *
  * The value is measured, not chosen: the semantic operation proposal
@@ -81,9 +81,13 @@ export function canonicalize(value) {
  * CANONICAL_JSON_MAX_CONTRACT_DEPTH container levels. It walks iteratively
  * (no recursion, so no stack limit), runs no caller code (Proxies are not
  * entered, and only own data descriptors are read, never getters), and
- * computes each shared object's height once. It does not judge anything else:
- * Proxies, accessors, cycles and non-JSON values are left for canonicalize and
- * the caller's validator to reject exactly as before.
+ * computes each shared object's height once. It enters only the containers
+ * JSON.parse produces: arrays with the intrinsic Array prototype and records
+ * whose prototype is Object.prototype or null. Anything else (typed arrays,
+ * Map, Set, Date, class instances, Proxies) is a leaf, so rejecting it stays
+ * cheap and is left to the caller's validator and canonicalize exactly as
+ * before; for JSON input the walk is unchanged. Accessors and cycles are
+ * likewise left to them.
  */
 export function assertContractDepth(value, name) {
   if (contractHeight(value) > CANONICAL_JSON_MAX_CONTRACT_DEPTH) {
@@ -91,18 +95,25 @@ export function assertContractDepth(value, name) {
   }
 }
 
+// The Proxy test runs first, so neither prototype read can reach a trap.
+function isJsonContainer(value) {
+  if (value === null || typeof value !== 'object' || types.isProxy(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return Array.isArray(value) ? prototype === Array.prototype : (prototype === Object.prototype || prototype === null);
+}
+
 function contractChildren(value) {
   const children = [];
   for (const key of Reflect.ownKeys(value)) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     const item = descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
-    if (item !== null && typeof item === 'object' && !types.isProxy(item)) children.push(item);
+    if (isJsonContainer(item)) children.push(item);
   }
   return children;
 }
 
 function contractHeight(root) {
-  if (root === null || typeof root !== 'object' || types.isProxy(root)) return 0;
+  if (!isJsonContainer(root)) return 0;
   const heights = new Map();
   const onPath = new Set();
   const stack = [{ node: root, children: contractChildren(root), next: 0, height: 1 }];

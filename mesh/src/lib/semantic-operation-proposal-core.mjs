@@ -1168,7 +1168,6 @@ function validateSuppressedEntry(entry, index) {
 }
 
 export function validateSemanticOperationProposalShape(document) {
-  assertContractDepth(document, 'semantic operation proposal');
   const value = exact(document, DOCUMENT_FIELDS, 'semantic operation proposal');
   if (value.schema !== SEMANTIC_OPERATION_PROPOSAL_SCHEMA) {
     throw new ValidationError('semantic operation proposal schema is invalid');
@@ -1197,6 +1196,16 @@ export function validateSemanticOperationProposalShape(document) {
   if (!Array.isArray(value.suppressed) || value.suppressed.length > MAX_PROPOSED) {
     throw new ValidationError('suppressed must be a bounded array');
   }
+  // The cheap shape checks run first (as on main), so an unknown field holding
+  // a large value is rejected without walking it: the document's own fields
+  // above, then each entry's field set (the same check and message its
+  // validator below uses). The depth bound then runs before any argument
+  // digest or structuredClone copy, so JSON input deeper than the bound is
+  // still a ValidationError before either.
+  value.proposed.forEach((entry, index) => exact(entry, PROPOSED_FIELDS, `proposed[${index}]`));
+  value.withheld.forEach((entry, index) => exact(entry, WITHHELD_FIELDS, `withheld[${index}]`));
+  value.suppressed.forEach((entry, index) => exact(entry, SUPPRESSED_FIELDS, `suppressed[${index}]`));
+  assertContractDepth(document, 'semantic operation proposal');
   value.proposed.forEach(validateProposedEntry);
   value.withheld.forEach(validateWithheldEntry);
   value.suppressed.forEach(validateSuppressedEntry);

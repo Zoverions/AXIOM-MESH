@@ -69,6 +69,11 @@ Size and nesting bounds:
   earlier on some platforms (1,833 levels on Windows CI, Node 24). The bound
   sits about 24% below that lowest measured value, and the validator rejects
   deeper documents with a `ValidationError` before any digest or copy runs.
+  The depth check runs after the document's and each entry's field-set checks,
+  so an unknown field is rejected without walking its value, and it walks only
+  JSON containers (plain arrays and records): typed arrays, `Map`, `Set`,
+  class instances and Proxies are not entered and are rejected by the
+  validator and canonical JSON as before.
   JSON Schema cannot express a depth limit, so the wire schema states it in a
   `$comment`. Earlier releases sometimes accepted deeper arguments, but only up
   to wherever the stack ran out (about 2,900–3,290 levels on Linux at Node's

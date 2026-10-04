@@ -920,6 +920,149 @@ test('B-1 contract depth: the proposal reference snapshot budget is the contract
   assert.ok(CANONICAL_JSON_MAX_DEPTH - CANONICAL_JSON_MAX_CONTRACT_DEPTH >= 32, 'headroom for wrappers');
 });
 
+// Builds the parsed JSON for a proposal whose document nests `depth` levels,
+// without recursing (JSON.stringify could not serialize 32,004 levels).
+function deepProposalJson(depth) {
+  const text = JSON.stringify(deepArgumentProposal(1));
+  const levels = depth - 4;
+  const marker = '"settings":[1]';
+  assert.equal(text.split(marker).length, 2);
+  return JSON.parse(text.replace(marker, `"settings":${'['.repeat(levels)}1${']'.repeat(levels)}`));
+}
+
+function iterativeDepth(value) {
+  let deepest = 0;
+  const pending = [[value, 1]];
+  while (pending.length) {
+    const [node, level] = pending.pop();
+    if (node === null || typeof node !== 'object') continue;
+    deepest = Math.max(deepest, level);
+    for (const item of Object.values(node)) pending.push([item, level + 1]);
+  }
+  return deepest;
+}
+
+// Counts the reflective reads the depth walk (Reflect.ownKeys and
+// Object.getOwnPropertyDescriptor, once per entered node and key), the
+// canonicalizer (Object.getOwnPropertyNames) and the argument copy
+// (structuredClone) make during one synchronous call.
+function countReads(callback) {
+  const counts = { ownKeys: 0, descriptors: 0, canonicalRecords: 0, structuredClone: 0 };
+  const originals = {
+    ownKeys: Reflect.ownKeys, descriptor: Object.getOwnPropertyDescriptor,
+    names: Object.getOwnPropertyNames, clone: globalThis.structuredClone
+  };
+  Reflect.ownKeys = function ownKeys(target) { counts.ownKeys += 1; return originals.ownKeys(target); };
+  Object.getOwnPropertyDescriptor = function getOwnPropertyDescriptor(target, key) {
+    counts.descriptors += 1;
+    return originals.descriptor(target, key);
+  };
+  Object.getOwnPropertyNames = function getOwnPropertyNames(target) { counts.canonicalRecords += 1; return originals.names(target); };
+  globalThis.structuredClone = function structuredClone(...args) { counts.structuredClone += 1; return originals.clone(...args); };
+  let outcome;
+  try {
+    outcome = { value: callback() };
+  } catch (error) {
+    outcome = { error };
+  } finally {
+    Reflect.ownKeys = originals.ownKeys;
+    Object.getOwnPropertyDescriptor = originals.descriptor;
+    Object.getOwnPropertyNames = originals.names;
+    globalThis.structuredClone = originals.clone;
+  }
+  return { ...outcome, counts };
+}
+
+test('R-C: parsed JSON deeper than the 1,400-level bound is a ValidationError before any digest or structuredClone copy', () => {
+  for (const depth of [1401, 2049, 3000, 10_000, 32_004]) {
+    const proposal = deepProposalJson(depth);
+    assert.equal(iterativeDepth(proposal), depth);
+    const { error, counts } = countReads(() => proposals.validateSemanticOperationProposal(proposal));
+    assert.ok(error instanceof ValidationError && error.message === 'semantic operation proposal nesting exceeds 1400 levels',
+      `validator at ${depth}: ${error?.name} ${error?.message}`);
+    // No canonicalize (digest) and no argument copy ran.
+    assert.equal(counts.canonicalRecords, 0, `digest at ${depth}`);
+    assert.equal(counts.structuredClone, 0, `copy at ${depth}`);
+    assert.throws(() => validateSpecialistHarnessBridge(bridgeFor(proposal), { references: { semantic_operation_proposal: proposal } }),
+      error => error instanceof ValidationError && /exceeds the depth bound/.test(error.message), `bridge at ${depth}`);
+  }
+  // At the bound the same construction is accepted (digest recomputed for it).
+  const atBound = JSON.parse(JSON.stringify(deepArgumentProposal(1396)));
+  assert.equal(iterativeDepth(atBound), 1400);
+  assert.equal(proposals.validateSemanticOperationProposal(atBound).valid, true);
+});
+
+test('R-C: non-JSON values and unknown fields are rejected without walking their contents', () => {
+  const baseline = countReads(() => proposals.validateSemanticOperationProposal(deepArgumentProposal(1)));
+  assert.equal(baseline.value?.valid, true, String(baseline.error));
+  const many = () => Array.from({ length: 1_000_000 }, () => ({}));
+  const big = many();
+  const { proxy: revoked, revoke } = Proxy.revocable({}, {});
+  revoke();
+  let trapCalls = 0;
+  const trapping = new Proxy(big, Object.fromEntries(
+    ['get', 'has', 'ownKeys', 'getOwnPropertyDescriptor', 'getPrototypeOf'].map(name => [name, (...args) => { trapCalls += 1; return Reflect[name](...args); }])
+  ));
+  class Holder { constructor() { this.items = big; } }
+  class Items extends Array {}
+  const subclassed = Items.from(big);
+  const overProxy = Object.create(trapping);
+  overProxy.items = big;
+  const getter = Object.defineProperty({}, 'items', { enumerable: true, get() { trapCalls += 1; return big; } });
+  const argument = value => proposal => { (proposal.withheld[0] ?? proposal.proposed[0]).arguments = { settings: value }; };
+  const cases = {
+    'Uint8Array(1e7) argument': argument(new Uint8Array(10_000_000)),
+    'unknown document field holding 1e6 objects': proposal => { proposal.extra = many(); },
+    'unknown entry field holding 1e6 objects': proposal => { (proposal.withheld[0] ?? proposal.proposed[0]).extra = big; },
+    'Map of 1e6 entries': argument(new Map(big.map((item, index) => [index, item]))),
+    'Set of 1e6 objects': argument(new Set(big)),
+    'class instance holding 1e6 objects': argument(new Holder()),
+    'Array subclass of 1e6 objects': argument(subclassed),
+    'Proxy over 1e6 objects': argument(trapping),
+    'revoked Proxy': argument(revoked),
+    'record whose prototype is a Proxy': argument(overProxy),
+    'getter returning 1e6 objects': argument(getter)
+  };
+  for (const [name, mutate] of Object.entries(cases)) {
+    const proposal = deepArgumentProposal(1);
+    mutate(proposal);
+    trapCalls = 0;
+    const { error, counts } = countReads(() => proposals.validateSemanticOperationProposal(proposal));
+    // Rejected as before: a ValidationError for unknown fields, the canonical
+    // TypeError (CanonicalJsonError) for non-JSON argument values.
+    assert.ok(error instanceof TypeError || error instanceof ValidationError, `${name}: ${error}`);
+    assert.equal(trapCalls, 0, `${name}: caller code ran`);
+    // No more reflective reads than a small valid proposal needs: the 1e6 or
+    // 1e7 contents were never entered.
+    for (const key of ['ownKeys', 'descriptors', 'canonicalRecords']) {
+      assert.ok(counts[key] <= baseline.counts[key], `${name}: ${key} ${counts[key]} > baseline ${baseline.counts[key]}`);
+    }
+  }
+});
+
+test('R-C: the depth walk enters only JSON containers', async () => {
+  const { assertContractDepth } = await import('../src/lib/canonical.mjs');
+  let deep = 1;
+  for (let index = 0; index < 5000; index += 1) deep = [deep];
+  class Holder { constructor() { this.items = deep; } }
+  class Items extends Array {}
+  // Non-JSON containers are leaves for the walk (their validator rejects them);
+  // plain records, null-prototype records and plain arrays are walked.
+  for (const leaf of [new Holder(), Items.of(deep), new Map([[1, deep]]), new Set([deep]), new Uint8Array(4), new Date(0),
+    Object.assign(Object.create(new Proxy({}, {})), { items: deep })]) {
+    const { error, counts } = countReads(() => assertContractDepth({ leaf }, 'doc'));
+    assert.equal(error, undefined, String(error));
+    assert.equal(counts.ownKeys, 1, leaf.constructor?.name);
+    // Also as the root.
+    const root = countReads(() => assertContractDepth(leaf, 'doc'));
+    assert.equal(root.error, undefined, String(root.error));
+    assert.equal(root.counts.ownKeys, 0, leaf.constructor?.name);
+  }
+  for (const container of [{ items: deep }, Object.assign(Object.create(null), { items: deep }), [deep]]) {
+    assert.throws(() => assertContractDepth({ container }, 'doc'), ValidationError);
+  }
+});
+
 test('B-1: a semantic operation proposal with argument nesting deeper than 64 is accepted as before', () => {
   for (const levels of [100, 1000]) {
     const proposal = deepArgumentProposal(levels);
