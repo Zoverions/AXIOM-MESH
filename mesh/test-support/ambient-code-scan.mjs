@@ -46,23 +46,40 @@ export const HOST_GLOBAL = new RegExp(
 
 export const RAW_HOST_GLOBAL = new RegExp(`\\b(?:${HOST_GLOBALS.join('|')})\\b`);
 
-// Regex-versus-division. A '/' starts a regular expression after a punctuator
-// in REGEX_AFTER_PUNCTUATOR or a reserved word in REGEX_AFTER_KEYWORD (not used
-// as a property name, obj.return), where the grammar rules out division. It is
-// division, read as code, where the grammar rules out a regular expression:
-// after an identifier, number, string or template, ']', a postfix '++'/'--' or
-// obj.return. It is ambiguous after ')', '}' and the contextual words in
-// AMBIGUOUS_WORDS (if(x) /re/, a block then /re/, await /re/, of /re/,
-// yield /re/). An ambiguous '/' is read as division only when nothing on the
-// rest of its line could open a literal or comment under the wrong reading (no
-// later '/', quote or backtick; a regular expression always closes on its own
-// line); otherwise the scan throws. So the guarantee is: every byte is either
-// classified as the grammar allows or the scan fails, and a misread can only
-// over-report, never hide code.
+// Regex-versus-division, decided from the previous token. Tokens: comments
+// (and a '#!' hashbang line at offset 0) separate tokens and are blanked; an
+// identifier or keyword is a run of Unicode ID_Continue characters, '$', ZWNJ,
+// ZWJ or surrogate halves (so a non-ASCII prefix such as ñreturn is one word,
+// not the keyword return); a word right after '.', '?.' or '#' is a property
+// or private name, never a keyword.
+//
+// - Regular expression: at the start of input, after a punctuator in
+//   REGEX_AFTER_PUNCTUATOR (except a postfix '++'/'--'), or after a keyword in
+//   REGEX_AFTER_KEYWORD. These are every reserved word that can be followed by
+//   an expression: return typeof case do else in new delete void throw
+//   instanceof extends default, plus break, continue and debugger, after which
+//   a '/' can only begin the next statement (after automatic semicolon
+//   insertion at a line break; on the same line it is a syntax error).
+// - Division: after an identifier, number, string, template, regular
+//   expression, ']', a postfix '++'/'--', or any other reserved word (this,
+//   super, null, true, false end an expression; the rest cannot precede '/').
+// - Ambiguous: after ')', '}', the contextual words of, yield and await, and an
+//   identifier that directly follows break or continue (a label, so the next
+//   line may start a regular expression). Read as division only when the rest
+//   of its line has no '/', quote or backtick; otherwise the scan throws.
+//
+// Guarantee, for input that is valid JavaScript (script or module): every '/'
+// is either read as the grammar reads it or the scan throws. A regular
+// expression always closes on its own line, so an ambiguous '/' read as
+// division with no later '/' on its line cannot be one. Input that is not valid
+// JavaScript is not classified; it may be read either way or throw. A misread
+// of valid input can therefore only throw (fail closed); it cannot blank code.
 const REGEX_AFTER_KEYWORD = new Set([
   'return', 'typeof', 'case', 'do', 'else', 'in', 'new', 'delete', 'void',
-  'throw', 'instanceof'
+  'throw', 'instanceof', 'extends', 'default', 'break', 'continue', 'debugger'
 ]);
+const LABEL_AFTER = new Set(['break', 'continue']);
+const IDENTIFIER_CHAR = /^[\p{ID_Continue}$\u200c\u200d\ud800-\udfff]$/u;
 const REGEX_AFTER_PUNCTUATOR = new Set('(,=:[!&|?{;+-*%<>~^'.split(''));
 const AMBIGUOUS_PUNCTUATOR = new Set([')', '}']);
 const AMBIGUOUS_WORDS = new Set(['of', 'yield', 'await']);
@@ -84,10 +101,12 @@ export function codeOnly(text) {
   let word = '';
   let gap = false;
   let wordAfterDot = false;
+  let wordBefore = '';
   let doubled = false;
   const fail = what => { throw new SyntaxError(`ambient-code scan cannot tokenize: unterminated ${what} at ${index}`); };
   const ambiguousSlash = () => AMBIGUOUS_PUNCTUATOR.has(previous)
-    || (AMBIGUOUS_WORDS.has(word) && !wordAfterDot);
+    || (AMBIGUOUS_WORDS.has(word) && !wordAfterDot)
+    || (word !== '' && LABEL_AFTER.has(wordBefore));
   const regexAllowed = () => previous === ''
     || (REGEX_AFTER_PUNCTUATOR.has(previous) && !((previous === '+' || previous === '-') && doubled))
     || (REGEX_AFTER_KEYWORD.has(word) && !wordAfterDot);
@@ -117,10 +136,15 @@ export function codeOnly(text) {
       index += 1;
     }
   };
+  // A hashbang is a comment only as the very first two characters.
+  if (text.startsWith('#!')) {
+    while (index < text.length && text[index] !== '\n') { out.push(' '); index += 1; }
+  }
   while (index < text.length) {
     const char = text[index];
     const next = text[index + 1];
     if (char === '/' && next === '/') {
+      // The newline that ends it (or the end of input) separates tokens.
       while (index < text.length && text[index] !== '\n') { out.push(' '); index += 1; }
       continue;
     }
@@ -128,6 +152,7 @@ export function codeOnly(text) {
       const end = text.indexOf('*/', index + 2);
       if (end < 0) fail('comment');
       for (; index < end + 2; index += 1) out.push(blank(text[index]));
+      gap = true;
       continue;
     }
     if (char === '\'' || char === '"') { quoted(char); previous = 'literal'; word = ''; gap = false; continue; }
@@ -180,9 +205,14 @@ export function codeOnly(text) {
     out.push(char);
     index += 1;
     if (/\s/.test(char)) { gap = true; continue; }
-    if (/[\w$]/.test(char)) {
-      if (!gap && /^[\w$]$/.test(previous)) word += char;
-      else { wordAfterDot = previous === '.'; word = char; }
+    if (IDENTIFIER_CHAR.test(char)) {
+      if (!gap && IDENTIFIER_CHAR.test(previous)) word += char;
+      else {
+        // The word before this one, when only whitespace or comments separate them.
+        wordBefore = IDENTIFIER_CHAR.test(previous) ? word : '';
+        wordAfterDot = previous === '.' || previous === '#';
+        word = char;
+      }
       doubled = false;
     } else {
       // '++' or '--' with no gap: a postfix or prefix update, never followed

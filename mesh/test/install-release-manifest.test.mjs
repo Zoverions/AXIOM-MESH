@@ -568,7 +568,38 @@ test('boundary scan catches bare host globals and ignores property access, strin
     'if(x) /[//]/.test(s);navigator',
     'function g(){}\n/"/.test(a);self;/"/.test(b)',
     "while(x) /'/.exec(s)&&window&&/'/.exec(t)",
-    'async function h(){await /`/;Deno;/`/}'
+    'async function h(){await /`/;Deno;/`/}',
+    // #1918 R1 (Verifier on #1929): a regular expression after extends or default.
+    "class A extends /'/.x{};self;/'/.x",
+    "export default /'/.source;self;/'/",
+    'class B extends /"/.x{};self;/"/.x',
+    // Re-audit variants: after break, continue or debugger (next line, by
+    // automatic semicolon insertion), after a break/continue label, a keyword
+    // as a private name, a comment between tokens, and a non-ASCII identifier
+    // prefix that hides a keyword.
+    "for(;;){break\n/'/.test(s);window;/'/}",
+    "for(;;){continue\n/'/.test(s);window;/'/}",
+    "a:for(;;){break a\n/'/.test(s);window;/'/}",
+    "a:for(;;){continue a\n/'/.test(s);Deno;/'/}",
+    "debugger\n/'/.test(s);navigator;/'/",
+    'class C{#return=1;m(){return this.#return / window / 2}}',
+    "let x=1; x/**/in /'/.source;window;/'/",
+    'let ñreturn=1; ñreturn / window / 2',
+    'let 𝑥return=1; 𝑥return / Bun / 2',
+    // Every reserved word after which a regular expression may start.
+    "switch(1){case /'/.x:self;/'/}",
+    "throw /'/.x;window;/'/",
+    "void /'/.x;window;/'/",
+    "typeof /'/.x;window;/'/",
+    "delete /'/.x;window;/'/",
+    "new /'/.x;window;/'/",
+    "if(1){}else /'/.x;window;/'/",
+    "do /'/.x;while(0);window;/'/",
+    "'x' in /'/;window;/'/",
+    "1 instanceof /'/;window;/'/",
+    "function f(){return /'/.x;window;/'/}",
+    "function* g(){yield /'/;window;/'/}",
+    "for(const m of /'/.exec(s)||[]){};self;/'/"
   ]){
     // Both layers must catch every planted case on its own.
     const text=`export const ok=1;\n${planted}\n`;
@@ -609,10 +640,32 @@ test('boundary scan catches bare host globals and ignores property access, strin
     "if(x) /'/",'f() / 2 // half','{}/`/',
     // An ambiguous '/' followed by a quote or backtick fails closed even when
     // no later '/' is on the line (division here, but not proven lexically).
-    "f(a) / n + 'px'",'g() / `${n}`']){
+    "f(a) / n + 'px'",'g() / `${n}`',
+    // Double-quote must-fail cases (#1918 R1 test gap).
+    'if(x) /"/','f(a) / n + "px"','{}\n/"/.test(a)',
+    // A break/continue label followed by a '/' line.
+    "a:for(;;){break a\n/'/}"]){
     assert.throws(()=>codeOnly(broken),SyntaxError,broken);
   }
   assert.match('window',HOST_GLOBAL);
+});
+
+// #1918 R1: a '#!' hashbang line is a comment only at offset 0, so a quote,
+// backtick or comment opener in it cannot hide the code that follows.
+test('boundary scan treats a leading hashbang line as a comment',()=>{
+  for(const planted of [
+    '#!/usr/bin/env node `\nwindow; // `',
+    "#!/usr/bin/env node '\nwindow //'",
+    '#!/usr/bin/env node "\nself; // "',
+    '#!/x /*\nDeno; // */'
+  ]){
+    assert.throws(()=>assertNoAmbientOrDynamicCode(planted,'planted'),{code:'ERR_ASSERTION'},planted);
+    assert.throws(()=>assertNoAmbientOrDynamicCode(planted,'planted',{rawHostGlobals:false}),{code:'ERR_ASSERTION'},`code-only: ${planted}`);
+  }
+  assert.equal(codeOnly('#!/usr/bin/env node window\nconst a=1;'),' '.repeat(26)+'\nconst a=1;');
+  assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode('#!/usr/bin/env node self\nexport const a=1;','hashbang',{rawHostGlobals:false}));
+  // Anywhere else '#!' is code, not a comment.
+  assert.notEqual(codeOnly('a;#!x').trim(),'a;');
 });
 
 test('trusted signer inventory rejects private-key material before key conversion',()=>{
