@@ -78,45 +78,74 @@ export function canonicalize(value) {
 
 /**
  * Throws ValidationError when `value` nests more than
- * CANONICAL_JSON_MAX_CONTRACT_DEPTH container levels. It walks iteratively
- * (no recursion, so no stack limit), runs no caller code (Proxies are not
- * entered, and only own data descriptors are read, never getters), and
- * computes each shared object's height once. It enters only the containers
- * JSON.parse produces: arrays with the intrinsic Array prototype and records
- * whose prototype is Object.prototype or null. Anything else (typed arrays,
- * Map, Set, Date, class instances, Proxies) is a leaf, so rejecting it stays
- * cheap and is left to the caller's validator and canonicalize exactly as
- * before; for JSON input the walk is unchanged. Accessors and cycles are
- * likewise left to them.
+ * CANONICAL_JSON_MAX_CONTRACT_DEPTH container levels, or when it is (or
+ * contains) anything that is not plain JSON data. It walks iteratively (no
+ * recursion, so no stack limit), runs no caller code and computes each shared
+ * object's height once.
+ *
+ * It fails closed: the only containers are the ones JSON.parse produces
+ * (arrays with the intrinsic Array prototype, records whose prototype is
+ * Object.prototype or null). Any other object (a Proxy, typed array, Map, Set,
+ * Date, class instance, Array subclass or cross-realm object), at the root or
+ * anywhere below, and any accessor property, is rejected at once without being
+ * entered, read or invoked, so nothing it hides can escape the bound and the
+ * rejection costs O(1) for that node. For JSON input nothing changes. Cycles
+ * are not a depth question and are left to canonicalize.
  */
 export function assertContractDepth(value, name) {
-  if (contractHeight(value) > CANONICAL_JSON_MAX_CONTRACT_DEPTH) {
+  if (contractHeight(value, name) > CANONICAL_JSON_MAX_CONTRACT_DEPTH) {
     throw new ValidationError(`${name} nesting exceeds ${CANONICAL_JSON_MAX_CONTRACT_DEPTH} levels`);
   }
 }
 
+/**
+ * The O(own keys) part of assertContractDepth for one container: `value` must
+ * be a JSON container whose own properties are all data properties holding
+ * primitives or JSON containers. Validators call it on the containers they
+ * read before the full depth walk, so no getter or trap runs first.
+ */
+export function assertContractNode(value, name) {
+  assertJsonContainer(value, name);
+  contractChildren(value, name);
+}
+
 // The Proxy test runs first, so neither prototype read can reach a trap.
 function isJsonContainer(value) {
-  if (value === null || typeof value !== 'object' || types.isProxy(value)) return false;
+  if (types.isProxy(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return Array.isArray(value) ? prototype === Array.prototype : (prototype === Object.prototype || prototype === null);
 }
 
-function contractChildren(value) {
+function assertJsonContainer(value, name) {
+  if (!isJsonContainer(value)) {
+    throw new ValidationError(types.isProxy(value)
+      ? `${name} must be plain JSON data (found a Proxy)`
+      : `${name} must be plain JSON data (found a non-JSON object)`);
+  }
+}
+
+function contractChildren(value, name) {
   const children = [];
   for (const key of Reflect.ownKeys(value)) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    const item = descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
-    if (isJsonContainer(item)) children.push(item);
+    if (!Object.hasOwn(descriptor, 'value')) {
+      throw new ValidationError(`${name} must be plain JSON data (found an accessor property)`);
+    }
+    const item = descriptor.value;
+    if (item !== null && typeof item === 'object') {
+      assertJsonContainer(item, name);
+      children.push(item);
+    }
   }
   return children;
 }
 
-function contractHeight(root) {
-  if (!isJsonContainer(root)) return 0;
+function contractHeight(root, name) {
+  if (root === null || typeof root !== 'object') return 0;
+  assertJsonContainer(root, name);
   const heights = new Map();
   const onPath = new Set();
-  const stack = [{ node: root, children: contractChildren(root), next: 0, height: 1 }];
+  const stack = [{ node: root, children: contractChildren(root, name), next: 0, height: 1 }];
   onPath.add(root);
   while (stack.length) {
     const frame = stack[stack.length - 1];
@@ -132,7 +161,7 @@ function contractHeight(root) {
         continue;
       }
       onPath.add(child);
-      stack.push({ node: child, children: contractChildren(child), next: 0, height: 1 });
+      stack.push({ node: child, children: contractChildren(child, name), next: 0, height: 1 });
       continue;
     }
     stack.pop();

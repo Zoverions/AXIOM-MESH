@@ -2,6 +2,7 @@ import {
   CANONICAL_JSON_MAX_CONTRACT_DEPTH,
   ValidationError,
   assertContractDepth,
+  assertContractNode,
   assertPlainObject,
   assertString,
   digestObject
@@ -1168,6 +1169,10 @@ function validateSuppressedEntry(entry, index) {
 }
 
 export function validateSemanticOperationProposalShape(document) {
+  // Fail closed before any read: the root and every container read ahead of
+  // the depth walk below must be plain JSON data with data properties only,
+  // so no Proxy trap or getter runs and no non-JSON wrapper can hide depth.
+  if (document !== null && typeof document === 'object') assertContractNode(document, 'semantic operation proposal');
   const value = exact(document, DOCUMENT_FIELDS, 'semantic operation proposal');
   if (value.schema !== SEMANTIC_OPERATION_PROPOSAL_SCHEMA) {
     throw new ValidationError('semantic operation proposal schema is invalid');
@@ -1179,6 +1184,7 @@ export function validateSemanticOperationProposalShape(document) {
     throw new ValidationError('semantic operation proposal status is invalid');
   }
   identifier(value.proposal_id, 'proposal_id');
+  if (value.provider !== null && typeof value.provider === 'object') assertContractNode(value.provider, 'semantic operation proposal');
   normalizeProviderIdentity(value.provider);
   digest(value.operation_manifest_digest, 'operation_manifest_digest');
   digest(value.candidate_set_digest, 'candidate_set_digest');
@@ -1202,6 +1208,7 @@ export function validateSemanticOperationProposalShape(document) {
   // validator below uses). The depth bound then runs before any argument
   // digest or structuredClone copy, so JSON input deeper than the bound is
   // still a ValidationError before either.
+  for (const list of [value.proposed, value.withheld, value.suppressed]) assertContractNode(list, 'semantic operation proposal');
   value.proposed.forEach((entry, index) => exact(entry, PROPOSED_FIELDS, `proposed[${index}]`));
   value.withheld.forEach((entry, index) => exact(entry, WITHHELD_FIELDS, `withheld[${index}]`));
   value.suppressed.forEach((entry, index) => exact(entry, SUPPRESSED_FIELDS, `suppressed[${index}]`));

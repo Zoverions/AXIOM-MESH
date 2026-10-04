@@ -396,7 +396,7 @@ test('the contract depth bound is 1,400 levels, enforced iteratively as a Valida
   }
 });
 
-test('the contract depth walk runs no caller code and leaves other rejections to canonicalize', () => {
+test('the contract depth walk runs no caller code and rejects Proxies and accessors at once', () => {
   const { assertContractDepth } = canonical;
   let calls = 0;
   const traps = new Proxy({}, Object.fromEntries(
@@ -405,9 +405,21 @@ test('the contract depth walk runs no caller code and leaves other rejections to
   const getter = Object.defineProperty({}, 'deep', { enumerable: true, get() { calls += 1; return nest(5000); } });
   const { proxy: revoked, revoke } = Proxy.revocable({}, {});
   revoke();
-  assert.doesNotThrow(() => assertContractDepth({ traps, getter, revoked, list: [traps] }, 'x'));
-  assert.doesNotThrow(() => assertContractDepth(traps, 'x'));
+  // Fail closed: a Proxy (live or revoked) or an accessor anywhere, root
+  // included, is a ValidationError, and no trap or getter ever runs.
+  const notPlain = (pattern) => error => error instanceof canonical.ValidationError && pattern.test(error.message);
+  for (const input of [{ traps }, { list: [traps] }, { revoked }, traps, revoked, [[revoked]]]) {
+    assert.throws(() => assertContractDepth(input, 'x'), notPlain(/^x must be plain JSON data \(found a Proxy\)$/));
+  }
+  for (const input of [getter, { a: [getter] }]) {
+    assert.throws(() => assertContractDepth(input, 'x'), notPlain(/^x must be plain JSON data \(found an accessor property\)$/));
+  }
+  const setterOnly = Object.defineProperty([], 0, { enumerable: true, set() { calls += 1; } });
+  assert.throws(() => assertContractDepth({ setterOnly }, 'x'), notPlain(/accessor property/));
   assert.equal(calls, 0);
+  // Non-enumerable and symbol-keyed data stay canonicalize's to reject, as before.
+  assert.doesNotThrow(() => assertContractDepth(Object.defineProperty({}, 'hidden', { value: 1 }), 'x'));
+  assert.doesNotThrow(() => assertContractDepth({ [Symbol('s')]: [1] }, 'x'));
   // Cycles terminate and are not a depth question; canonicalize still rejects them.
   const cyclic = { a: {} };
   cyclic.a.back = cyclic;

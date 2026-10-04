@@ -70,10 +70,15 @@ Size and nesting bounds:
   sits about 24% below that lowest measured value, and the validator rejects
   deeper documents with a `ValidationError` before any digest or copy runs.
   The depth check runs after the document's and each entry's field-set checks,
-  so an unknown field is rejected without walking its value, and it walks only
-  JSON containers (plain arrays and records): typed arrays, `Map`, `Set`,
-  class instances and Proxies are not entered and are rejected by the
-  validator and canonical JSON as before.
+  so an unknown field is rejected without walking its value. It fails closed:
+  the document and everything in it must be plain JSON data (arrays with the
+  intrinsic `Array` prototype, records whose prototype is `Object.prototype` or
+  `null`, data properties only). Any other object (a Proxy, typed array, `Map`,
+  `Set`, `Date`, class instance, `Array` subclass or cross-realm object) and
+  any accessor property, at the root or below, is a `ValidationError` the
+  moment it is met, without entering it or running a getter or trap. The
+  validator checks the root, `provider` and the three entry lists this way
+  before it reads them, so no caller code runs before the depth check.
   JSON Schema cannot express a depth limit, so the wire schema states it in a
   `$comment`. Earlier releases sometimes accepted deeper arguments, but only up
   to wherever the stack ran out (about 2,900–3,290 levels on Linux at Node's
