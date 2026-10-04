@@ -75,8 +75,22 @@ const VERIFIED_RESULT_KEYS=Object.freeze([
   'host_plan_required_separately','host_mutation_authorized',
   'installation_authority_granted','mesh_authority_granted',
   'network_authority_granted','node_enrolled','services_started',
-  'authority_effect','network_effect'
+  'authority_effect','network_effect','trust_root_digest','trust_root_pinned'
 ]);
+
+// Trust-root record (A1, #1918 trust-root design). trust_root_digest is
+// digestObject of the canonical form of the whole trustedSigners inventory the
+// verifier accepted (not just the matching signer):
+//   {schema:TRUST_ROOT_SIGNER_SET_SCHEMA, signers:[{key_id, public_key, roles,
+//    status}, ...]}
+// with signers sorted by key_id (unique, so the order is total), each roles
+// array sorted, and each public_key in canonical PEM form (LF line endings and
+// one trailing newline, the same normalization the signature check uses).
+// It is therefore independent of signer order, roles order, object key order
+// and CRLF/trailing-newline spelling, and changes with any other difference.
+// No repository pin exists yet (A2), so trust_root_pinned is always false: the
+// digest records which caller-supplied root was used; it does not bind it.
+export const TRUST_ROOT_SIGNER_SET_SCHEMA='axiom-install-release-signer-set.v1';
 
 export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
   exactObject(policy,'Install release manifest policy',[
@@ -166,7 +180,7 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
   if(issuedAt>evaluationTime) throw new ValidationError('Install release manifest is future-issued');
   if(validUntil<=evaluationTime) throw new ValidationError('Install release manifest is expired');
 
-  const signer=trustedSignerFor(manifest.signing_key_id,trustedSigners,policy);
+  const {signer,trustRootDigest}=trustedSignerFor(manifest.signing_key_id,trustedSigners,policy);
   exactObject(packageValue.signature,'Install release manifest signature',[
     'algorithm','key_id','digest','signature'
   ]);
@@ -189,7 +203,7 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
   if(publicKey.asymmetricKeyType!=='ed25519'){
     throw new ValidationError('Trusted release signer must use Ed25519');
   }
-  const normalizedPem=`${signer.public_key.replace(/\r\n/g,'\n').replace(/\n?$/,'')}\n`;
+  const normalizedPem=canonicalPem(signer.public_key);
   if(publicKey.export({type:'spki',format:'pem'})!==normalizedPem){
     throw new ValidationError('Trusted release signer public key is not canonical SPKI PEM');
   }
@@ -244,12 +258,15 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
     node_enrolled:false,
     services_started:false,
     authority_effect:'none',
-    network_effect:'none'
+    network_effect:'none',
+    trust_root_digest:trustRootDigest,
+    trust_root_pinned:false
   });
   ISSUED_MANIFEST_RESULTS.set(result,Object.freeze({
     manifest_digest:bodyDigest,
     release_id:manifest.release_id,
     signer_key_id:manifest.signing_key_id,
+    trust_root_digest:trustRootDigest,
     artifacts:signedArtifacts
   }));
   return result;
@@ -273,12 +290,15 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
  * changes to the original package or manifest have no effect. `artifact_id`
  * must name exactly one signed artifact; an unknown or duplicated id is a
  * `ValidationError`. The bound form takes no options. The result carries
- * `manifest_bound: true`, the verified `manifest_digest`, `release_id` and
- * `signer_key_id`, and zero authority. Trust root: `manifest_bound: true` only
- * proves the bytes match the manifest that produced `verifiedResult`, which was
- * verified against whatever `trustedSigners` its caller supplied. A caller can
- * register its own key under the real key_id, so `release_id` and
- * `signer_key_id` are labels and comparing them does not bind the trust root.
+ * `manifest_bound: true`, the verified `manifest_digest`, `release_id`,
+ * `signer_key_id` and `trust_root_digest`, `trust_root_pinned: false`, and zero
+ * authority. Trust root: `manifest_bound: true` only proves the bytes match the
+ * manifest that produced `verifiedResult`, which was verified against whatever
+ * `trustedSigners` its caller supplied. A caller can register its own key under
+ * the real key_id, so `release_id` and `signer_key_id` are labels and comparing
+ * them does not bind the trust root. `trust_root_digest` records which signer
+ * inventory was used; it binds nothing until a gate compares it with a digest
+ * it trusts (no repository pin exists yet, so `trust_root_pinned` is false).
  * A consumer that gates on bytes must require `manifest_bound: true` and either
  * compare `manifest_digest` with an independently trusted expected digest, or
  * itself call `verifyInstallReleaseManifest` with a signer set it pins and pass
@@ -349,6 +369,8 @@ function verifyBoundArtifact(verifiedResult,artifactId,rest){
     manifest_digest:binding.manifest_digest,
     release_id:binding.release_id,
     signer_key_id:binding.signer_key_id,
+    trust_root_digest:binding.trust_root_digest,
+    trust_root_pinned:false,
     host_mutation_authorized:false,
     authority_effect:'none'
   });
@@ -580,6 +602,7 @@ function validateArtifact(artifact,profileIds,policy=manifestPolicy){
 function trustedSignerFor(keyId,trustedSigners,policy){
   plainArray(trustedSigners,'Trusted release signers',{min:1,max:256});
   const ids=new Set();
+  const entries=[];
   let found=null;
   for(const signer of trustedSigners){
     exactObject(signer,'Trusted release signer',[
@@ -596,12 +619,29 @@ function trustedSignerFor(keyId,trustedSigners,policy){
       ||!['active','retired','revoked'].includes(signer.status)
     ) throw new ValidationError('Trusted release signer inventory is invalid');
     ids.add(signer.key_id);
+    // The canonical entry is built from the values just validated, so the
+    // digest covers exactly the inventory this check accepted.
+    entries.push({
+      key_id:signer.key_id,
+      public_key:canonicalPem(signer.public_key),
+      roles:[...signer.roles].sort(),
+      status:signer.status
+    });
     if(signer.key_id===keyId) found=signer;
   }
   if(!found||found.status!=='active'||!found.roles.includes(policy.trusted_signer_role)){
     throw new ValidationError('Release signer is not actively trusted for install manifests');
   }
-  return found;
+  entries.sort((left,right)=>(left.key_id<right.key_id?-1:1));
+  return {
+    signer:found,
+    trustRootDigest:digestObject({schema:TRUST_ROOT_SIGNER_SET_SCHEMA,signers:entries})
+  };
+}
+
+// LF line endings and exactly one trailing newline.
+function canonicalPem(pem){
+  return `${pem.replace(/\r\n/g,'\n').replace(/\n?$/,'')}\n`;
 }
 
 function parseInstant(value,label){

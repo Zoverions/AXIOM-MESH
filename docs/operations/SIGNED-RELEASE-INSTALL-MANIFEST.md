@@ -86,6 +86,14 @@ The signing key must be active and carry the exact role:
 
 `release-installer-authority`
 
+**Trust-root record.** On success, the verified result also carries `trust_root_digest` and `trust_root_pinned`. These fields only record what was used: the accept and reject decisions are exactly as without them.
+
+- `trust_root_digest` is `digestObject` (canonical JSON, then SHA-256 hex, through the single `canonical.mjs` path) of the whole signer inventory the verifier accepted, not only the signer that matched. Its canonical form is `{schema: "axiom-install-release-signer-set.v1", signers: [{key_id, public_key, roles, status}, …]}`.
+- **It is order-independent.** Signers are sorted by `key_id` (ids are unique, so the order is total), each `roles` array is sorted (roles are a duplicate-free set checked with `includes`), and `public_key` uses canonical PEM: LF line endings and exactly one trailing newline, the same normalization the signature check uses.
+- So signer order, roles order, object key order, CRLF, or a missing trailing newline give the same digest. Any other difference in any signer gives a different one: a status, a role, the key, the id, or an added or removed signer.
+- `trust_root_pinned` is always `false`. No repository-pinned trust root exists yet, so the digest identifies the caller-supplied inventory but does not bind it.
+- A rejected inventory produces no result, and therefore no digest.
+
 No production release private key is committed by this work. Key generation, custody, ceremony, rotation, revocation publication, HSM/threshold policy, or production signing are separate operations gates.
 
 A valid signature proves only that a trusted signer approved the exact statement. It is not install authority.
@@ -174,18 +182,18 @@ Actual local bytes must separately pass `verifyInstallReleaseArtifact(...)`, whi
 **Bound form (the only form an install gate may use):** `verifyInstallReleaseArtifact(verifiedResult, artifact_id, bytes)`.
 
 - `verifiedResult` must be the exact object returned by `verifyInstallReleaseManifest`. It is checked fail-closed: a Proxy is rejected before anything else touches it; it must be a frozen plain record holding exactly the verified-result keys as own enumerable data properties (no accessors, symbol keys, or extra or missing keys); `valid`, `signature_verified`, `control_plane_bound`, and `artifact_metadata_bound` must all be `true`; and it must be registered in a module-private `WeakMap` that only `verifyInstallReleaseManifest` writes. A spread, `structuredClone`, or other structural copy of a genuine result is therefore rejected, as is any lookalike.
-- Artifact metadata comes only from a frozen snapshot of the signed manifest's `artifacts`, taken (with the shared plain-data snapshot helper) right after signature verification and bound to that result in the same `WeakMap`. The caller never supplies metadata, and later changes to the original package or manifest object cannot change the outcome. The verified result's existing fields and their meaning are unchanged; no field is added to it.
+- Artifact metadata comes only from a frozen snapshot of the signed manifest's `artifacts`, taken (with the shared plain-data snapshot helper) right after signature verification and bound to that result in the same `WeakMap`. The caller never supplies metadata, and later changes to the original package or manifest object cannot change the outcome. The verified result's existing fields and their meaning are unchanged. The bound form adds no field to it; the trust-root record fields come from manifest verification itself (see *External trust bootstrap*).
 - `artifact_id` must name exactly one artifact in that snapshot. An invalid, unknown, or duplicated id is a `ValidationError`. The bound form accepts no options.
-- On success it returns the artifact identity (`artifact_id`, `artifact_kind`, `sha256`, `byte_length`), `artifact_bytes_verified: true`, `manifest_bound: true`, the verified `manifest_digest`, `release_id`, and `signer_key_id`, plus `host_mutation_authorized: false` and `authority_effect: 'none'`.
+- On success it returns the artifact identity (`artifact_id`, `artifact_kind`, `sha256`, `byte_length`), `artifact_bytes_verified: true`, `manifest_bound: true`, the verified `manifest_digest`, `release_id`, `signer_key_id` and `trust_root_digest`, `trust_root_pinned: false`, plus `host_mutation_authorized: false` and `authority_effect: 'none'`.
 
 A consumer that gates on artifact bytes must require `manifest_bound: true`; `valid` or `artifact_bytes_verified` alone is not sufficient. A result from a different manifest or release names that other manifest, and an id that manifest did not sign is unknown to it.
 
-**Trust root.** `manifest_bound: true` proves only that the bytes match the manifest that produced `verifiedResult`. That manifest was verified against the `trustedSigners` its caller supplied, and the binding does not record that trust root. A caller can register its own key under the real `key_id` and obtain `manifest_bound: true` with the genuine `release_id` and `signer_key_id`, so those two fields are labels: comparing them does not strengthen a gate. Only one of these binds the trust root:
+**Trust root.** `manifest_bound: true` proves only that the bytes match the manifest that produced `verifiedResult`. That manifest was verified against the `trustedSigners` its caller supplied. The binding records that inventory as `trust_root_digest`, but nothing pins it yet (`trust_root_pinned: false`). A caller can register its own key under the real `key_id` and obtain `manifest_bound: true` with the genuine `release_id` and `signer_key_id`, so those two fields are labels: comparing them does not strengthen a gate. Only one of these binds the trust root:
 
 - compare `manifest_digest` with an independently trusted expected digest (one that does not come from the package or its caller-supplied signer set); or
 - call `verifyInstallReleaseManifest` itself with a signer set the gate pins (not from session input or caller code) and pass that exact result object to the bound form.
 
-A gate must never accept a verified result produced by other code. The install-session constructor (`docs/operations/INSTALL-SESSION-V0.md`) uses the first option because main has no repository-pinned release signer set (signer custody is external). Recording the trust root in the binding output is a separate follow-up.
+A gate must never accept a verified result produced by other code. The install-session constructor (`docs/operations/INSTALL-SESSION-V0.md`) uses the first option because main has no repository-pinned release signer set (signer custody is external). The trust root is recorded in the result and the binding output (`trust_root_digest`). Pinning it to a repository-owned root is a separate follow-up; until then, `trust_root_digest` binds nothing on its own.
 
 **Unbound form:** `verifyInstallReleaseArtifact(artifact, bytes, options)` checks bytes against a caller-supplied metadata record. It is not manifest-backed provenance: its result always carries `manifest_bound: false` and it must never be used as an install gate. `options` may contain only `policy`, as an own enumerable data property; arrays, Proxies, accessors, and inherited, symbol, or unknown fields are rejected without running caller code.
 

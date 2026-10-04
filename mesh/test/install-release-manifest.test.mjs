@@ -19,6 +19,7 @@ import { MIGRATIONS } from '../src/grid/migrations.mjs';
 import {
   INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA,
   INSTALL_RELEASE_MANIFEST_SCHEMA,
+  TRUST_ROOT_SIGNER_SET_SCHEMA,
   validateInstallReleaseManifestPolicy,
   verifyInstallReleaseArtifact,
   verifyInstallReleaseManifest
@@ -786,7 +787,7 @@ test('hostile-input contract: verifyInstallReleaseManifest rejects every hostile
 const BOUND_RESULT_KEYS=[
   'artifact_bytes_verified','artifact_id','artifact_kind','authority_effect',
   'byte_length','host_mutation_authorized','manifest_bound','manifest_digest',
-  'release_id','sha256','signer_key_id','valid'
+  'release_id','sha256','signer_key_id','trust_root_digest','trust_root_pinned','valid'
 ];
 
 function boundFixture(value=manifest()){
@@ -812,6 +813,8 @@ test('#1914 bound form verifies bytes against the signed manifest and carries it
     assert.equal(ok.manifest_digest,sha256(canonicalJson(packageValue.manifest)));
     assert.equal(ok.release_id,verified.release_id);
     assert.equal(ok.signer_key_id,KEY_ID);
+    assert.equal(ok.trust_root_digest,verified.trust_root_digest);
+    assert.equal(ok.trust_root_pinned,false);
     assert.equal(ok.host_mutation_authorized,false);
     assert.equal(ok.authority_effect,'none');
   }
@@ -855,6 +858,8 @@ test('#1914 unverified, forged, lookalike and modified verified results are reje
     ['forged flags',frozenCopy({...verified,manifest_digest:'f'.repeat(64)})],
     ['modified release_id',frozenCopy({...verified,release_id:'axiom-mesh/other'})],
     ['modified signer_key_id',frozenCopy({...verified,signer_key_id:'release:other'})],
+    ['modified trust_root_digest',frozenCopy({...verified,trust_root_digest:'e'.repeat(64)})],
+    ['trust_root_pinned:true',frozenCopy({...verified,trust_root_pinned:true})],
     ['valid:false',frozenCopy({...verified,valid:false})],
     ['signature_verified:false',frozenCopy({...verified,signature_verified:false})],
     ['control_plane_bound:false',frozenCopy({...verified,control_plane_bound:false})],
@@ -1136,4 +1141,92 @@ test('own option values and own undefined defaults behave exactly as before',()=
   assert.deepEqual(verifyInstallReleaseManifest(packageValue,undefinedDefaults),expected);
   assert.throws(()=>verifyInstallReleaseManifest(packageValue,{...explicit,currentHostInstallPolicy:{...hostInstallPolicy,kernel_version:'9.9.9'}}),/kernel version/);
   assert.throws(()=>verifyInstallReleaseManifest(packageValue,{...explicit,trustedSigners:undefined}),/Trusted release signers/);
+});
+
+// ---------------------------------------------------------------------------
+// A1 (#1918 trust-root design): the verifier records which trust root it used.
+
+const secondPair=generateKeyPairSync('ed25519');
+const secondPem=secondPair.publicKey.export({type:'spki',format:'pem'});
+
+// Independent restatement of the documented canonical form.
+function expectedTrustRootDigest(signers){
+  const pem=value=>`${value.replace(/\r\n/g,'\n').replace(/\n?$/,'')}\n`;
+  return digestObject({
+    schema:'axiom-install-release-signer-set.v1',
+    signers:signers
+      .map(item=>({key_id:item.key_id,public_key:pem(item.public_key),roles:[...item.roles].sort(),status:item.status}))
+      .sort((left,right)=>(left.key_id<right.key_id?-1:1))
+  });
+}
+
+test('A1: the verified result records the canonical digest of the whole signer inventory, unpinned',()=>{
+  assert.equal(TRUST_ROOT_SIGNER_SET_SCHEMA,'axiom-install-release-signer-set.v1');
+  const signers=[trustedSigner()];
+  const result=verify(signPackage(),{trustedSigners:signers});
+  assert.match(result.trust_root_digest,/^[a-f0-9]{64}$/);
+  assert.equal(result.trust_root_digest,expectedTrustRootDigest(signers));
+  assert.equal(result.trust_root_pinned,false);
+  assert.equal(Object.isFrozen(result),true);
+  // Every other field is exactly what the verifier returned before A1.
+  const {trust_root_digest:_digest,trust_root_pinned:_pinned,...rest}=result;
+  assert.equal(Object.hasOwn(rest,'trust_root_digest'),false);
+  assert.equal(rest.signer_key_id,KEY_ID);
+  assert.equal(rest.valid,true);
+});
+
+test('A1: the trust-root digest ignores signer order, roles order, key order and PEM line-ending spelling',()=>{
+  const primary=trustedSigner({roles:['release-installer-authority','audit-reader']});
+  const other={key_id:'release:test-key-2',public_key:secondPem,roles:['release-installer-authority'],status:'retired'};
+  const baseline=verify(signPackage(),{trustedSigners:[primary,other]}).trust_root_digest;
+  assert.equal(baseline,expectedTrustRootDigest([primary,other]));
+  const reorderedKeys=obj=>Object.fromEntries(Object.entries(obj).reverse());
+  for(const [name,signers] of [
+    ['signer order',[other,primary]],
+    ['roles order',[{...primary,roles:['audit-reader','release-installer-authority']},other]],
+    ['object key order',[reorderedKeys(primary),reorderedKeys(other)]],
+    ['CRLF PEM',[{...primary,public_key:publicPem.replace(/\n/g,'\r\n')},other]],
+    ['PEM without trailing newline',[{...primary,public_key:publicPem.replace(/\n$/,'')},{...other,public_key:secondPem.replace(/\n$/,'')}]],
+    ['null-prototype signer records',[Object.assign(Object.create(null),primary),Object.assign(Object.create(null),other)]]
+  ]){
+    assert.equal(verify(signPackage(),{trustedSigners:signers}).trust_root_digest,baseline,name);
+  }
+});
+
+test('A1: any other change to the accepted inventory changes the trust-root digest',()=>{
+  const primary=trustedSigner();
+  const other={key_id:'release:test-key-2',public_key:secondPem,roles:['release-installer-authority'],status:'retired'};
+  const baseline=verify(signPackage(),{trustedSigners:[primary,other]}).trust_root_digest;
+  const seen=new Set([baseline]);
+  for(const [name,signers] of [
+    ['other signer removed',[primary]],
+    ['other signer revoked',[primary,{...other,status:'revoked'}]],
+    ['other signer active',[primary,{...other,status:'active'}]],
+    ['other signer renamed',[primary,{...other,key_id:'release:test-key-3'}]],
+    ['other signer gains a role',[primary,{...other,roles:['release-installer-authority','x']}]],
+    ['other signer key swapped',[primary,{...other,public_key:publicPem}]],
+    ['primary gains a role',[trustedSigner({roles:['release-installer-authority','x']}),other]],
+    ['third signer added',[primary,other,{...other,key_id:'release:test-key-4'}]]
+  ]){
+    const result=verify(signPackage(),{trustedSigners:signers});
+    assert.equal(result.valid,true,name);
+    assert.equal(result.trust_root_digest,expectedTrustRootDigest(signers),name);
+    assert.equal(seen.has(result.trust_root_digest),false,name);
+    seen.add(result.trust_root_digest);
+  }
+});
+
+test('A1: a rejected inventory yields no digest and the same rejection as before',()=>{
+  const packageValue=signPackage();
+  for(const [name,trustedSigners,pattern] of [
+    ['empty',[],/Trusted release signers/],
+    ['unknown key id',[trustedSigner({key_id:'release:other'})],/not actively trusted/],
+    ['retired signer',[trustedSigner({status:'retired'})],/not actively trusted/],
+    ['wrong role',[trustedSigner({roles:['audit-reader']})],/not actively trusted/],
+    ['duplicate key id',[trustedSigner(),trustedSigner()],/inventory is invalid/],
+    ['extra signer field',[{...trustedSigner(),not_after:'2027-01-01T00:00:00.000Z'}],/key inventory drifted/]
+  ]){
+    assert.throws(()=>verifyInstallReleaseManifest(packageValue,{trustedSigners,evaluatedAt:EVALUATED_AT}),
+      error=>error instanceof ValidationError&&pattern.test(error.message),name);
+  }
 });
