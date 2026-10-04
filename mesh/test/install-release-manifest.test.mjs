@@ -5,7 +5,7 @@ import {
 } from 'node:crypto';
 import test from 'node:test';
 import { assertHostileInputContract } from '../test-support/hostile-input-contract.mjs';
-import { assertNoAmbientOrDynamicCode, codeOnly, HOST_GLOBAL, HOST_GLOBALS } from '../test-support/ambient-code-scan.mjs';
+import { assertNoAmbientOrDynamicCode, codeOnly, HOST_GLOBAL, HOST_GLOBALS, RAW_HOST_GLOBAL } from '../test-support/ambient-code-scan.mjs';
 import { readFile } from 'node:fs/promises';
 
 import installTargets from '../config/install-targets.json' with { type: 'json' };
@@ -470,13 +470,16 @@ test('release verifier has no host mutation process network or credential side-e
   assert.deepEqual(specifiers(canonical),['node:crypto','node:util']);
   const snapshot=await readFile(new URL('../src/lib/delegation-plain-snapshot.mjs',import.meta.url),'utf8');
   assert.deepEqual(specifiers(snapshot),['node:util','./canonical.mjs']);
-  for (const [name,text] of [
-    ['install-release-manifest',source],
+  for (const [name,text,options] of [
+    ['install-release-manifest',source,{rawHostGlobals:false}],
     ['migrations',migrations],
     ['canonical',canonical],
     ['delegation-plain-snapshot',snapshot]
   ]) {
-    assertNoAmbientOrDynamicCode(text,name);
+    // The raw-text host-global layer is on for every module except the
+    // manifest verifier, whose error text says 'validity window'; main had no
+    // raw host-global check there. Its code-only scan still runs.
+    assertNoAmbientOrDynamicCode(text,name,options);
   }
   assert.doesNotMatch(source,/\bimport\s*\(|node:fs|node:dgram|node:tls|node:dns|process\.env/);
   assert.doesNotMatch(source,/node:child_process|node:net|node:http|node:https/);
@@ -544,9 +547,33 @@ test('boundary scan catches bare host globals and ignores property access, strin
     'const x=\\u0077indow.location',
     'const x=\\u{77}indow',
     'const x=wind\\u006fw',
-    'const p=\\u0070rocess'
+    'const p=\\u0070rocess',
+    // #1929 B-1 (Verifier): a numeric literal's trailing dot is not property access.
+    'const q=1.\nwindow.postMessage(1)',
+    'let n=2.\nself',
+    'const q=10.\n  Deno.exit()',
+    'const q=[0.\n,Bun]',
+    // #1929 B-1: a regular expression after ')', '}', await, of or yield whose
+    // quote or backtick would open a fake string under the division reading.
+    "if(x) /'/.test(s)&&window&&/'/.test(t)",
+    'if(x) /`/.test(s);Deno.exit();/`/.test(t)',
+    "{}\n/'/.test(a)&&navigator&&/'/.test(b)",
+    'async function f(){await /"/.exec(s);Bun.spawn(1);/"/.exec(t)}',
+    "for(const m of /'/.exec(s)||[]){};self;/'/.exec(t)",
+    "function*g(){yield /'/;window;/'/}",
+    // Variants: a fake comment or a fake regex start under the division reading,
+    // a closing brace of a function body, and a while/for header.
+    'if(x) /a*/.test(s);WebAssembly;/b/.test(t)',
+    'if(x) /[//]/.test(s);navigator',
+    'function g(){}\n/"/.test(a);self;/"/.test(b)',
+    "while(x) /'/.exec(s)&&window&&/'/.exec(t)",
+    'async function h(){await /`/;Deno;/`/}'
   ]){
-    assert.throws(()=>assertNoAmbientOrDynamicCode(`export const ok=1;\n${planted}\n`,'planted'),{code:'ERR_ASSERTION'},planted);
+    // Both layers must catch every planted case on its own.
+    const text=`export const ok=1;\n${planted}\n`;
+    assert.throws(()=>assertNoAmbientOrDynamicCode(text,'planted'),{code:'ERR_ASSERTION'},planted);
+    assert.throws(()=>assertNoAmbientOrDynamicCode(text,'planted',{rawHostGlobals:false}),
+      error=>error.code==='ERR_ASSERTION'||error instanceof SyntaxError,`code-only: ${planted}`);
   }
   for(const allowed of [
     'obj.window=1;',
@@ -563,15 +590,25 @@ test('boundary scan catches bare host globals and ignores property access, strin
     'const r=/window|self/.test(s);',
     'const r=[/Bun/g];',
     'windowSize+selfTest+myDeno+$window+_self+Bunny+WebAssemblyX;',
-    'class A{#window=1;m(){return this.#window;}}'
+    'class A{#window=1;m(){return this.#window;}}',
+    // Unambiguous division keeps the rest of its line as code.
+    'const r=a[0] / b / c;',
+    "const r=n / 2 + 'px';",
+    'const r=x++ / 2 / y;'
   ]){
-    assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode(allowed,'allowed'),allowed);
+    assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode(allowed,'allowed',{rawHostGlobals:false}),allowed);
+    // The raw-text layer (on by default) still reports any of these that names a host global.
+    if(RAW_HOST_GLOBAL.test(allowed)) assert.throws(()=>assertNoAmbientOrDynamicCode(allowed,'allowed'),{code:'ERR_ASSERTION'},allowed);
   }
   // The code-only view keeps offsets, and untokenizable input fails closed.
   const sample="const a='window'; // self\nconst b=1;";
   assert.equal(codeOnly(sample).length,sample.length);
   assert.equal(codeOnly(sample).split('\n').length,2);
-  for(const broken of ["const a='window;",'const a=`${window','/* window','const r=/window']){
+  for(const broken of ["const a='window;",'const a=`${window','/* window','const r=/window',
+    "if(x) /'/",'f() / 2 // half','{}/`/',
+    // An ambiguous '/' followed by a quote or backtick fails closed even when
+    // no later '/' is on the line (division here, but not proven lexically).
+    "f(a) / n + 'px'",'g() / `${n}`']){
     assert.throws(()=>codeOnly(broken),SyntaxError,broken);
   }
   assert.match('window',HOST_GLOBAL);

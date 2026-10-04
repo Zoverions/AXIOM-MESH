@@ -13,9 +13,16 @@
 // regular-expression literal text blanked), so prose such as 'validity window'
 // does not match. It forbids a bare reference to a host global that is not a
 // property access: obj.window, obj?.self and a . Bun are allowed; window,
-// self.postMessage and typeof Deno are not. An object-literal key named like a
-// host global is also reported (fail closed). Computed-key tricks still pass a
-// lexical scan, so this is defense in depth, not containment.
+// self.postMessage and typeof Deno are not. A '.' that follows a digit (1.)
+// or another '.' (...) is not treated as property access, so x1.window and an
+// object-literal key named like a host global are also reported (fail closed).
+//
+// RAW_HOST_GLOBAL is the defense-in-depth layer: the same six names anywhere
+// in the raw text, strings, comments and property access included. Callers
+// enable it for every scanned module whose text is clean under it, so this
+// scan is never weaker than the raw-text check it replaced (#1929 B-1).
+// Computed-key tricks still pass a lexical scan, so this is defense in depth,
+// not containment.
 import assert from 'node:assert/strict';
 
 export const AMBIENT_OR_DYNAMIC_CODE = Object.freeze([
@@ -33,20 +40,33 @@ export const HOST_GLOBALS = Object.freeze(['navigator', 'self', 'window', 'Deno'
 
 export const HOST_GLOBAL = new RegExp(
   // A single '.' (optionally spaced, so also '?.') before the name is a
-  // property access; a spread '...' is not.
-  `(?<!(?<!\\.)\\.\\s*)(?<![\\w$#])(?:${HOST_GLOBALS.join('|')})(?![\\w$])`
+  // property access; a spread '...' or a numeric literal's dot (1.) is not.
+  `(?<!(?<![.\\d])\\.\\s*)(?<![\\w$#])(?:${HOST_GLOBALS.join('|')})(?![\\w$])`
 );
 
-// A '/' starts a regular expression only where it cannot be division. Where
-// it is ambiguous it stays code, so a misread can only over-report: after ')',
-// ']', '}' (block or expression), a postfix '++'/'--', an identifier or a
-// contextual word such as of, yield, await or let, and after a keyword used
-// as a property name (obj.return).
+export const RAW_HOST_GLOBAL = new RegExp(`\\b(?:${HOST_GLOBALS.join('|')})\\b`);
+
+// Regex-versus-division. A '/' starts a regular expression after a punctuator
+// in REGEX_AFTER_PUNCTUATOR or a reserved word in REGEX_AFTER_KEYWORD (not used
+// as a property name, obj.return), where the grammar rules out division. It is
+// division, read as code, where the grammar rules out a regular expression:
+// after an identifier, number, string or template, ']', a postfix '++'/'--' or
+// obj.return. It is ambiguous after ')', '}' and the contextual words in
+// AMBIGUOUS_WORDS (if(x) /re/, a block then /re/, await /re/, of /re/,
+// yield /re/). An ambiguous '/' is read as division only when nothing on the
+// rest of its line could open a literal or comment under the wrong reading (no
+// later '/', quote or backtick; a regular expression always closes on its own
+// line); otherwise the scan throws. So the guarantee is: every byte is either
+// classified as the grammar allows or the scan fails, and a misread can only
+// over-report, never hide code.
 const REGEX_AFTER_KEYWORD = new Set([
   'return', 'typeof', 'case', 'do', 'else', 'in', 'new', 'delete', 'void',
   'throw', 'instanceof'
 ]);
 const REGEX_AFTER_PUNCTUATOR = new Set('(,=:[!&|?{;+-*%<>~^'.split(''));
+const AMBIGUOUS_PUNCTUATOR = new Set([')', '}']);
+const AMBIGUOUS_WORDS = new Set(['of', 'yield', 'await']);
+const AMBIGUOUS_TAIL = /[/'"`]/;
 
 // Returns `text` with every comment and every string, template and regular
 // expression literal's text replaced by spaces (newlines kept), so offsets and
@@ -66,6 +86,8 @@ export function codeOnly(text) {
   let wordAfterDot = false;
   let doubled = false;
   const fail = what => { throw new SyntaxError(`ambient-code scan cannot tokenize: unterminated ${what} at ${index}`); };
+  const ambiguousSlash = () => AMBIGUOUS_PUNCTUATOR.has(previous)
+    || (AMBIGUOUS_WORDS.has(word) && !wordAfterDot);
   const regexAllowed = () => previous === ''
     || (REGEX_AFTER_PUNCTUATOR.has(previous) && !((previous === '+' || previous === '-') && doubled))
     || (REGEX_AFTER_KEYWORD.has(word) && !wordAfterDot);
@@ -132,6 +154,13 @@ export function codeOnly(text) {
       gap = false;
       continue;
     }
+    if (char === '/' && ambiguousSlash()) {
+      const lineEnd = text.indexOf('\n', index + 1);
+      const tail = text.slice(index + 1, lineEnd < 0 ? text.length : lineEnd);
+      if (AMBIGUOUS_TAIL.test(tail)) {
+        throw new SyntaxError(`ambient-code scan cannot tokenize: ambiguous '/' (regular expression or division) at ${index}`);
+      }
+    }
     if (templates.length) {
       if (char === '{') templates[templates.length - 1] += 1;
       if (char === '}') {
@@ -168,10 +197,14 @@ export function codeOnly(text) {
   return out.join('');
 }
 
-export function assertNoAmbientOrDynamicCode(text, name) {
+// `rawHostGlobals` adds RAW_HOST_GLOBAL on the raw text. It is on by default;
+// a caller turns it off only for a module whose literal text names a host
+// global (install-release-manifest.mjs: 'validity window').
+export function assertNoAmbientOrDynamicCode(text, name, { rawHostGlobals = true } = {}) {
   for (const pattern of AMBIENT_OR_DYNAMIC_CODE) {
     assert.doesNotMatch(text, pattern, `${name}: ${pattern}`);
   }
+  if (rawHostGlobals) assert.doesNotMatch(text, RAW_HOST_GLOBAL, `${name}: host global in raw text (${HOST_GLOBALS.join(', ')})`);
   const code = codeOnly(text);
   // Literal escapes are blanked, so a backslash left in code is an identifier
   // escape (\u0077indow is window, \u0070rocess is process): rejected outright
