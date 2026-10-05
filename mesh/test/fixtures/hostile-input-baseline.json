@@ -1972,6 +1972,9 @@
     "src/lib/semantic-action-consumption-lab.mjs#validateSemanticAuthorizationInstance": {
       "recording-proxy": "read-through"
     },
+    "src/lib/semantic-memory-lifecycle.mjs#verifySemanticMemoryLifecycle": {
+      "options-throwing-proxy": "sentinel"
+    },
     "src/lib/semantic-operation-proposal-core.mjs#validateCallAgainstManifest": {
       "undefined": "raw",
       "null": "raw",
