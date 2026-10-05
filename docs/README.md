@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-12
+**Updated:** 2026-09-20
 
 **Active build:** `0.12.0-dev.3`
 
@@ -31,16 +31,21 @@ AXIOM-MESH is simultaneously:
    invitation-based Circles;
 4. a replaceable-runtime programme with a byte-pinned Agent Runtime Adapter v1
    contract but no certified/exposed third-party runtime;
-5. a built evidence-first repository-document effect prototype that can reach a
+5. a draft Runtime & Connector Fabric programme with byte-frozen v1 catalog and
+   runtime-neutral task/handoff schema bytes, while preserving the separation
+   between certification, curation, orchestration, and local authorization;
+6. a built evidence-first repository-document effect prototype that can reach a
    deterministic **open draft pull request** in tests but remains deliberately
    **production-unreachable**; and
-6. an isolated frontier programme for distributed authority, settlement,
+7. an isolated frontier programme for distributed authority, settlement,
    autonomy, regulated domains, embodied systems, arbitrary code, zk,
-   post-quantum migration, plural governance, and protocol-neutral agent
-   interoperability.
+   post-quantum migration, plural governance, protocol-neutral agent
+   interoperability, compartmentalized personal-context systems, portable
+   private-companion continuity, resilient path-fabric research, and
+   provenance-bound path observations.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
-establishes what is currently runnable. The registry tracks 49 capabilities,
+establishes what is currently runnable. The registry tracks 50 capabilities,
 of which 31 are marked implemented.
 
 The lifecycle is explicit: **built -> enabled -> exposed -> production-promoted
@@ -59,7 +64,19 @@ roadmap, review, or migration documents. Link to the owner instead.
 | Can it be promoted? | [`PRODUCTION-READINESS-TRACKER.md`](PRODUCTION-READINESS-TRACKER.md) | Gate status, evidence, owner, and remaining action | Aspirational milestones |
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
-| How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), and their `rebuild/` specifications | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| What market evidence justifies a product experiment? | [`growth/DEMAND-EVIDENCE-GATE.md`](growth/DEMAND-EVIDENCE-GATE.md) and [`growth/ACQUISITION-EXPERIMENTS.md`](growth/ACQUISITION-EXPERIMENTS.md) | Provenance-bearing demand observations, deterministic `DISCOVERY -> PROBE -> VALIDATE -> BUILD` state, and bounded acquisition experiments | Runtime authority, capability promotion, deployment approval, or product-market-fit claims without owned evidence |
+| How are GTM accounts prioritized without turning signals into outreach authority? | [`growth/GTM-EVIDENCE-LOOP.md`](growth/GTM-EVIDENCE-LOOP.md) | Provenance-bearing `fit × timing × intent × confidence` account evidence, freshness, advisory lanes, and digest-bound outcome handoff | Contact authorization, CRM mutation, message sending, spending, or external-effect authority |
+| How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), their `rebuild/` specifications, and the subordinate [Runtime & Connector Fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md) | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| How are external/local security observations converted into bounded evidence? | [`superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md`](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [`superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md`](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), and [`MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md`](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md) | Inert threat evidence, offline normalization/applicability, later separately gated reproduction/monitoring/feed/containment stages | Live-feed, automatic-containment, vulnerability, or production-security claims |
+| How can research sources become agent-native without inheriting authority? | [`superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md`](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [`superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md`](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md) | Exact research-source provenance, source-bounded knowledge, inert operation candidates, and scoped reproduction evidence | Live paper fetching, remote MCP execution, scientific-truth guarantees, or runtime authority |
+| How is the arXiv Complete snapshot admitted without turning corpus availability into permission? | [`architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md`](architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md) | Metadata-first indexing, exact paper/version/digest provenance, conservative licence classification, and owner-local full-text admission for an explicit allowlist | Live fetching, training permission, redistribution permission, scientific truth, or live arXiv currentness |
+| How are future path observations attributed without becoming routing authority? | [`rebuild/PATH-OBSERVATION-EVIDENCE.md`](rebuild/PATH-OBSERVATION-EVIDENCE.md) | External signer roles, exact portfolio binding, freshness, source provenance, replay bounds, attribution-vs-truth semantics | Claims of live telemetry, regulatory truth, route authority, or production path selection |
+| How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
+| How should an ambient agent decide whether to answer, investigate, acknowledge, or stay silent? | [`architecture/AMBIENT-TEAMMATE-POLICY-V0.md`](architecture/AMBIENT-TEAMMATE-POLICY-V0.md) | Inert participation observations, threshold policy packages, fail-closed passive evaluation, task steering, silent investigation, and explicit separation from effect authority | Live proactivity, messaging, provider access, memory access, or execution authority |
+| How is a future host install release admitted without making a signature into install authority? | [`operations/SIGNED-RELEASE-INSTALL-MANIFEST.md`](operations/SIGNED-RELEASE-INSTALL-MANIFEST.md) | External Ed25519 trust, bounded manifest currentness, exact control-plane digests, profile/artifact binding, separate artifact-byte verification | Host mutation, signer custody, published release, node admission, service start, or production promotion |
+| How does a rerun distinguish install, verify, repair, upgrade, recovery, and hard-stop states before privilege exists? | [`operations/INSTALL-SESSION-V0.md`](operations/INSTALL-SESSION-V0.md) | Inert session candidate + self-digested installed-state observation + review/no-op/stop classifier; live-local plan evidence required for live review states | Host mutation, automatic repair/update/downgrade, credential creation, service start, runtime probing, or node admission |
+| How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
+| How does the private companion remain portable across models/providers? | [`architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md`](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md) | Pack v2 vault manifests, companion components, optional personalized model artifacts, adaptation authorization, selective recovery and migration | Claims of implemented Pack v2 import/export, training, model unlearning, or identity equivalence |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
 
 ### Reading paths
@@ -67,8 +84,21 @@ roadmap, review, or migration documents. Link to the owner instead.
 Use **status -> registry -> readiness -> white paper -> roadmap -> requirements**
 for a current technical decision. Use **white paper -> the relevant `rebuild/`
 specification -> roadmap extension -> master todo -> review** for agent
-interoperability or plural-authority design work. Use **migration -> dated audit
-or review** when the question is provenance or why a boundary exists.
+interoperability or plural-authority design work. For resilient-network work,
+continue through **agent-interoperability roadmap -> Resilient Path Fabric ->
+Path Observation Evidence** while keeping both layers as future laboratories,
+not current capability claims. For runtime/connector work, continue from the
+agent-interoperability materials into **Runtime & Connector Fabric -> Runtime &
+Connector Fabric queue -> candidate survey/pin**. Use **Personal Compute Fabric
+-> Sovereign Vaults -> Vault Lease and Context Request -> Personal Agent Pack
+v2** for private-companion, compartmentalized-memory, selective-disclosure, or
+continuity design. Use **Continuous Threat Intelligence Stage 5B -> A/B plan ->
+threat model -> gated master TODO** for adaptive defensive-learning work. For
+agent-native research work, use **Research Capsule v0 design -> implementation
+plan -> exact source/knowledge/operation/reproduction contracts** and keep any
+future retrieval or execution behind separate authority gates. Use **migration
+-> dated audit or review** when the question is provenance or why a boundary
+exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -82,6 +112,27 @@ The lower item may explain or challenge the higher item, but it must not silentl
 override it. A change to the current build must update the owning document and
 then its navigation links; it does not require rewriting historical reviews.
 
+## Documentation maintenance invariant
+
+Documentation is part of the supported build, not a cleanup step after code lands.
+Every protected Clean Kernel run verifies the canonical documentation boundary,
+current generated status, governing capability-registry markers, required
+content, and local links. Its dedicated `documentation-maintenance` job also
+runs the approved deterministic status generator and requires the repository to
+remain byte-clean afterwards.
+
+Machine-derived documentation may be rebuilt only from its canonical
+machine-readable source. Narrative documentation must be updated from current
+code, policy, evidence, and capability truth; automation must fail closed rather
+than inventing a capability, promotion state, security property, deployment
+state, or authority claim. Historical audits and dated reviews remain historical
+evidence and are not rewritten to look current.
+
+A documentation change is incomplete until both the rebuild proof and
+`docs:check` are green. A code, schema, policy, product, compatibility,
+security, operations, or release change is incomplete when an affected owning
+document is stale, even if the executable tests pass.
+
 ## Current evidence/authority semantics
 
 Current documentation must preserve these distinctions:
@@ -91,6 +142,10 @@ Current documentation must preserve these distinctions:
 - `/v1/machine-discovery` describes requestability, not permission;
 - a Grid-attested receipt proves the signed Grid statement, not arbitrary
   external-world truth;
+- a Path Observation Evidence signature proves attribution under the evaluator's
+  configured trust role and freshness policy; it does not establish RF,
+  regulatory, energy, maintenance, attestation, or failure-domain truth and it
+  grants no forwarding or radio authority;
 - local Grid hash-chain verification detects modification but does not by
   itself prove absence of a consistently deleted suffix with matching local
   head/checkpoint rewrite;
@@ -98,12 +153,28 @@ Current documentation must preserve these distinctions:
   externally retained `axiom-grid-continuity-anchor.v1` plus full-chain
   verification, and ends at the newest retained anchor;
 - Agent Runtime Adapter v1 synthetic conformance proves the contract boundary,
-  not OpenClaw/Hermes/Agent Zero/MCP/A2A/other-runtime certification;
+  not OpenClaw/Hermes/Agent Zero/Codex/MCP/A2A/other-runtime certification;
+- Runtime & Connector Fabric catalog presence, installation, certification,
+  curation, orchestration, task handoff, or schema byte pinning do not grant
+  AXIOM authority;
+- threat observations, threat hypotheses, build-fact mappings, lifecycle
+  projections, and threat-adaptation receipts are evidence only; Slices A-B add
+  no live feed, credential access, autonomous containment, or production
+  vulnerability/safety claim;
+- Research Source Manifests, Research Knowledge Projections, Research Operation
+  Candidates, and Research Reproduction Evidence are provenance/evidence
+  artifacts only: knowledge is not authority, operation is not authority, and
+  reproduction is not scientific truth;
+- Sovereign Vault, Context Request, Vault Access Lease, Context Capsule,
+  Personal Agent Pack v2, and personal-model adaptation schemas are
+  documentation-only draft contracts and do not create runtime vault isolation,
+  local lease authority, disclosure authority, personalized-model training, or
+  pack recovery authority;
 - the repository resolver/outbox/operator prototype proves a bounded
   evidence-first effect path, not current production reachability;
 - its GitHub operator independently verifies durable Grid preparation before
   any GitHub request, permits only exact planned docs changes on a deterministic
-  effect branch, and creates/recovers an **open draft PR**;
+  effect branch, and creates/recovers an **open draft pull request**;
 - that operator has **no merge/direct-main authority** and explicitly records
   `merge_performed: false` and `base_branch_content_changed: false`;
 - production activation remains closed because the executor registry has zero
@@ -121,6 +192,12 @@ Current documentation must preserve these distinctions:
   production-unreachable work, blockers, and non-claims.
 - [Roadmap](ROADMAP.md) — strategic phases and promotion gates.
 - [Master execution queue](MASTER-TODO.md) — active executable work ordering.
+- [Runtime & Connector Fabric execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
+  — subordinate runtime/catalog/task/connector implementation order; no
+  capability promotion.
+- [Continuous Threat Intelligence execution queue](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md)
+  — A/B evidence work plus separately gated C-G stages; no capability
+  promotion.
 - [Production-grade definition](PRODUCTION-GRADE.md) — production-grade meaning.
 - [Production-readiness tracker](PRODUCTION-READINESS-TRACKER.md) — gate evidence
   and authentic promotion blockers.
@@ -140,6 +217,9 @@ Current documentation must preserve these distinctions:
 - [Adaptive assurance and plural authority](rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md)
 - [Agent interoperability and capability substrate](rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md)
 - [Agent interoperability capability map](rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md)
+- [Path Observation Evidence](rebuild/PATH-OBSERVATION-EVIDENCE.md) — inert
+  provenance/freshness boundary for Resilient Path Fabric claims; no truth or
+  network-authority promotion.
 
 ### Roadmap extensions
 
@@ -147,39 +227,148 @@ Current documentation must preserve these distinctions:
 - [Plural-authority execution queue](MASTER-TODO-PLURAL-AUTHORITY.md)
 - [Agent-interoperability roadmap extension](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md)
 - [Agent-interoperability execution queue](MASTER-TODO-AGENT-INTEROPERABILITY.md)
+- [Runtime & Connector Fabric execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
 
-Roadmap extensions are future-compatible planning inputs; they do not override
-the capability registry or current production-readiness decision.
+Roadmap extensions and subordinate queues are future-compatible planning inputs;
+they do not override the capability registry or current production-readiness
+decision.
 
 ### Architecture
 
+- [Interrogation Plane v0](architecture/INTERROGATION-PLANE.md)
+  — deterministic read-only supervision graph across capability/evidence,
+  service-network, and documentation verification; conceptual authority is kept
+  separate from physical topology and inspection grants no authority.
+- [Semantic Operation Proposal v0](architecture/SEMANTIC-OPERATION-PROPOSAL.md)
+  — provider-neutral inert operation-proposal contract; Needle-shaped confidence
+  stays on the Operation plane and is never forced into #1588 probability
+  observations; authority/assurance/currentness/execution remain none.
+- [`semantic-operation-proposal.v0` schema](architecture/contracts/semantic-operation-proposal.v0.schema.json)
+- [Operation Proposal Binding v0 (O1)](architecture/OPERATION-PROPOSAL-BINDING.md)
+  — pure #1628 O1 verifier that recomputes manifest, selection, candidate-set
+  and offer digests from original objects before binding a proposal; a binding
+  is evidence, never permission; all effects remain none.
+- [`operation-proposal-binding.v0` schema](architecture/contracts/operation-proposal-binding.v0.schema.json)
+- [Specialist Harness Bridge v0](architecture/SPECIALIST-HARNESS-BRIDGE.md)
+  — inert, non-delegating #1610 C3 evidence/handoff binding of one bounded
+  specialist harness to one task by digest; ceilings must fit inside an
+  existing Autonomy Envelope; a recommendation or output never grants authority.
+- [Semantic Action Consumption Lab v0](architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md)
+  — inert #1576 reference model and RED/GREEN fixtures for semantic replay:
+  durable consumption keyed by authorization instance + canonical effect
+  identity + remaining budget. The supported native path now independently
+  blocks fresh-JTI replay for one exact signed invocation; the broader lab
+  mandate/canonical-effect/multi-budget model remains inert.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
+- [Runtime & Connector Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md)
+  — replaceable runtime/model/tool/protocol/compute/oracle coordination while
+  preserving AXIOM as the authority root.
+- [Ambient Teammate Policy v0](architecture/AMBIENT-TEAMMATE-POLICY-V0.md)
+  — inert participation-policy layer for answer/investigate/acknowledge/pass,
+  fail-closed passive proactivity, active-task steering, silent investigation,
+  and reuse of the existing Context Request/Vault Lease boundary.
 - [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
   payment-mandate architecture with a phased MVP and explicit non-claims.
+- [Mesh-Notarized Agreements](architecture/MESH-NOTARIZED-AGREEMENTS.md)
+  — inert v0 agreement/acceptance evidence contracts for mutual commitments:
+  content-addressed records, honest timestamp claims, digest-bound parties,
+  consent-grant evidence, later currentness separation, and private content
+  kept out of the record. Evidence, not enforcement.
+- [Sovereign Vaults and Local Context Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md)
+  — compartmentalized owner data, deterministic vault authority, privileged
+  owner-local context reasoning, minimized Context Capsules, companion
+  continuity, and selective backup/recovery architecture.
+- [Vault Access Lease and Context Request Protocol](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md)
+  — semantic requester needs, short-lived one-vault owner-local leases,
+  separation of need/access/disclosure/effect authority, and the protocol path
+  into minimized Context Capsules.
+- [Personal Agent Pack v2 and Companion Continuity](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md)
+  — portable vault/component manifests, replaceable base models, owner
+  correction/evaluation continuity, optional governed personalized artifacts,
+  and selective recovery/migration.
+- [Continuous Threat Intelligence & Defensive Adaptation Stage 5B](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md)
+  — provenance-preserving threat learning around the authority path; threat
+  intelligence is evidence, never authority.
+- [Continuous Threat Intelligence A/B implementation plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md)
+  — inert contracts, offline normalization/applicability, and authority-boundary
+  evidence only.
+- [Agent-Native Research Artifacts v0](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md)
+  — provenance-first Research Capsules that separate source-bounded knowledge,
+  inert operations, reproduction evidence, and later separately governed
+  authority/execution.
+- [Agent-Native Research Artifacts v0 implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md)
+  — zero-authority schemas, verifier, synthetic fixtures, and falsification
+  tests; no live paper fetching or MCP execution.
+- [arXiv Complete Research Source Profile v0](architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md)
+  — metadata-first, licence-aware source normalization over the existing Research
+  Capsule contracts; no live corpus fetch, training, redistribution, or authority.
 
 #### Draft architecture contracts
 
 - [Personal Agent Pack v1](architecture/contracts/personal-agent-pack.v1.schema.json)
+- [Personal Agent Pack v2](architecture/contracts/personal-agent-pack.v2.schema.json)
+- [Personal Model Adaptation Authorization v1](architecture/contracts/personal-model-adaptation-authorization.v1.schema.json)
 - [Agent Runtime Capsule v1](architecture/contracts/agent-runtime-capsule.v1.schema.json)
 - [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
 - [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
+- [Runtime Connector Catalog Entry v1](architecture/contracts/runtime-connector-catalog-entry.v1.schema.json)
+- [Task Artifact Handoff v1](architecture/contracts/task-artifact-handoff.v1.schema.json)
+- [Sovereign Vault v1](architecture/contracts/sovereign-vault.v1.schema.json)
+- [Context Request v1](architecture/contracts/context-request.v1.schema.json)
+- [Vault Access Lease v1](architecture/contracts/vault-access-lease.v1.schema.json)
+- [Context Capsule v1](architecture/contracts/context-capsule.v1.schema.json)
+- [Threat Observation v0](architecture/contracts/threat-observation.v0.schema.json)
+- [Threat Hypothesis v0](architecture/contracts/threat-hypothesis.v0.schema.json)
+- [Threat Reproduction Case v0](architecture/contracts/reproduction-case.v0.schema.json)
+- [Threat Regression Candidate v0](architecture/contracts/regression-candidate.v0.schema.json)
+- [Threat Adaptation Receipt v0](architecture/contracts/threat-adaptation-receipt.v0.schema.json)
+- [Research Source Manifest v0](architecture/contracts/research-source-manifest.v0.schema.json)
+- [Research Knowledge Projection v0](architecture/contracts/research-knowledge-projection.v0.schema.json)
+- [Research Operation Candidate v0](architecture/contracts/research-operation-candidate.v0.schema.json)
+- [Research Reproduction Evidence v0](architecture/contracts/research-reproduction-evidence.v0.schema.json)
+- [Research Contribution v0](architecture/contracts/research-contribution.v0.schema.json)
+- [Research Relation v0](architecture/contracts/research-relation.v0.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other four drafts or promote any capability or external compatibility claim.
+other drafts or promote any capability or external compatibility claim. Research
+Capsule v0 additionally has a zero-dependency semantic verifier and synthetic
+conformance tests, but it still adds no Gateway route, capability-registry entry,
+remote MCP connection, provider call, credential path, or scientific-truth
+claim. Research Composition Graph v0 adds immutable contribution/relation
+contracts plus a rebuildable local lineage/frontier diagnostic; its roots,
+frontier, concentration, disagreement, and attention views remain derived
+navigation evidence only and create no truth, reputation, execution, merge,
+or deployment authority. Future semantic-diversity judgments may add evidence to
+this graph, but do not become truth or authority. Lineage relations remain
+acyclic; support and contradiction may remain cyclic as visible disagreement.
+Research Claim Adjudication v0 records supported/corrected/contested/unsupported/insufficient_evidence assessments as source-preserving evidence only (`truth_established: false`, `authority_effect: none`); adverse adjudications referenced from composition contributions force-include those tips in attention without granting reputation or coverage suppression.
+The two Runtime & Connector Fabric v1 schema files are now raw-byte
+pinned by the zero-dependency frozen-contract verifier and protected test surface
+at:
+
+- catalog entry: `0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46`;
+- task/artifact handoff: `7a8cf7f7496d1794d74f70545e032fc3790d5eecc227f27040370023abf28e50`.
+
+This freezes those reviewed schema bytes only. The semantic instance validator
+remains intentionally scoped to `draft-critical-invariants`; the schemas are
+not loaded by the runtime, no external runtime is certified, no capability is
+promoted, and no external effect becomes reachable because of the byte freeze.
 
 ### Security
 
 - [Current-build threat model](security/CURRENT-BUILD-THREAT-MODEL.md)
+- [Continuous Threat Intelligence A/B threat model](security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md)
 - [Independent security review](security/INDEPENDENT-SECURITY-REVIEW.md)
 - [Credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
 - [Deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
 - [Incident response and tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
+- [Model Behavior Incident v0](architecture/MODEL-BEHAVIOR-INCIDENT-V0.md)
 
 ### Operations
 
@@ -195,13 +384,26 @@ other four drafts or promote any capability or external compatibility claim.
 - [Online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Deployment-independent providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
 - [Pilot deployment dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md)
+- [Foundational execution pack — 2026-09](operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md)
+- [Owner decision log — foundational progression 2026-09](operations/OWNER-DECISION-LOG-2026-09.md)
+- [Independent reviewer shortlist — 2026-09](operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md)
+- [Pilot external evidence checklist](operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md)
+- [AXIOM Verify MVP scope](operations/AXIOM-VERIFY-MVP-SCOPE.md)
+- [AXIOM Verify MVP how to run](operations/AXIOM-VERIFY-MVP-RUN.md)
+- [Runtime adapter first pin](operations/RUNTIME-ADAPTER-FIRST-PIN.md)
+- [Hermes RUNTIME-002 identity fixture](operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md)
+- [Hermes RUNTIME-002 identity threat inventory](operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md)
+- [AXIOM One provider wedge](operations/AXIOM-ONE-PROVIDER-WEDGE.md)
 
 ### Dated reviews/audits retained as evidence
 
+- [Foundational strength audit — 2026-09-05](reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md)
 - [Scalability audit — 2026-07-30](audits/SCALABILITY-AUDIT-2026-07-30.md)
 - [Audit hardening G5-G9 — 2026-08-10](audits/AUDIT-HARDENING-G5-G9-2026-08-10.md)
 - [Plural-authority architecture review — 2026-08-03](reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md)
 - [Agent-interoperability architecture review — 2026-08-09](reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md)
+- [Runtime candidate survey — 2026-08-21](reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md)
+- [Hermes RUNTIME-002 candidate pin — 2026-08-21](reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md)
 
 ### Repository/contributor governance
 
@@ -214,9 +416,13 @@ other four drafts or promote any capability or external compatibility claim.
 
 ## Runtime pin authority
 
-Do not collapse CI and production pins into one value. The current setup policy
-requires Node.js `>=24.14.0 <25`, pins protected CI and `.node-version` to
-**24.18.0**, and pins the candidate production image to **24.19.0**.
+Do not collapse hosted production, protected CI, and container-production pins
+into one value. The current source-setup policy supports Node.js `>=22.23.2
+<23 || >=24.14.0 <25`, separately approves exactly **22.23.2** for hosted
+production and its security-focused CI, pins protected CI and `.node-version`
+to **24.18.0**, and pins the candidate production image to **24.19.0**. No
+other Node.js 22 patch is approved for production; all existing credential,
+mutual-TLS, deny-egress, and promotion requirements remain unchanged.
 
 ## Supported documentation boundary
 
@@ -224,6 +430,12 @@ requires Node.js `>=24.14.0 <25`, pins protected CI and `.node-version` to
 fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
+The Runtime & Connector Fabric, Path Observation Evidence, Continuous Threat
+Intelligence A/B, and Research Capsule v0 work must be explicitly admitted to
+that allowlist, and their zero-authority/non-truth invariants must remain
+executable checks before a draft becomes merge-ready. Project-local installed
+skills under `.agents/` are deliberately outside the canonical Markdown corpus
+and are governed by their own skill/integrity surfaces.
 
 A dedicated current-state documentation regression suite additionally locks the
 machine-principal, Grid continuity, repository-effect production-reachability,
@@ -246,5 +458,15 @@ For a current technical assessment:
 8. [Technical white paper](whitepapers_and_research/WHITEPAPER.md)
 9. [Roadmap](ROADMAP.md) and [execution queue](MASTER-TODO.md)
 
-For future agent-runtime or plural-governance work, add the corresponding
-roadmap extension only after the current-state material above.
+For future personal-companion or privacy-context work, add [Personal Compute
+Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md),
+[Sovereign Vaults and Local Context
+Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md), [Vault Access
+Lease and Context Request](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md), and
+[Personal Agent Pack v2 and Companion
+Continuity](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md).
+For future resilient-network work, add the agent-interoperability roadmap and
+[Path Observation Evidence](rebuild/PATH-OBSERVATION-EVIDENCE.md); neither is a
+current routing capability. For future agent-runtime work, continue through the
+agent-interoperability roadmap/specification and then the [Runtime & Connector
+Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For continuous defensive-learning work, add the [Continuous Threat Intelligence Stage 5B design](superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md), [A/B plan](superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md), [A/B threat model](security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md), and [gated execution queue](MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md). For agent-native research work, add the [Research Capsule v0 design](superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md) and [implementation plan](superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md), plus the [arXiv Complete source profile](architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md) when working with that snapshot. For plural-governance work, add the corresponding roadmap extension only after the current-state material above.

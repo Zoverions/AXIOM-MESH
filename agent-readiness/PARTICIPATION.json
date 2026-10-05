@@ -1,0 +1,109 @@
+{
+  "schema": "axiom-agent-participation.v1",
+  "supported_build": "0.12.0-dev.3",
+  "status": "repository_and_local_conformance_available_external_autonomous_execution_not_promoted",
+  "authority_invariant": "Capability is not authority. Discovery is not permission. Connection is not permission. Participation is not authorization.",
+  "canonical_repository": "https://github.com/Zoverions/AXIOM-MESH",
+  "start_here": "agent-readiness/AGENT-PARTICIPATION.txt",
+  "participation_tiers": [
+    {
+      "id": "external-review",
+      "available_now": true,
+      "mesh_identity_required": false,
+      "description": "Read, clone, run verification, inspect claims, submit bounded issues or pull requests, and challenge authority boundaries through GitHub.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "local-conformance-agent",
+      "available_now": true,
+      "mesh_identity_required": false,
+      "description": "Exercise the constrained machine-principal, discovery, ingress, and receipt paths through repository test fixtures on contributor-owned local or disposable infrastructure.",
+      "identity_scope": "test_fixture_only",
+      "authority_effect": "none"
+    },
+    {
+      "id": "configured-local-machine-principal",
+      "available_now": true,
+      "mesh_identity_required": true,
+      "description": "Run a configured constrained machine principal through the supported local authority path when it has a configured human sponsor and finite action, purpose, destination, runtime, lifetime, and budget ceilings.",
+      "self_service_external_onboarding": false,
+      "delegation_allowed": false,
+      "authority_effect": "bounded_by_current_policy_and_grants"
+    },
+    {
+      "id": "portable-external-agent",
+      "available_now": false,
+      "mesh_identity_required": true,
+      "description": "Portable external agent identity, currentness, handoff, and independently verifiable work receipts without relying on one local bearer-token registry.",
+      "blockers": [
+        "portable machine identity is not promoted in the supported build",
+        "global or independently retained currentness is not promoted",
+        "machine-principal v1 delegation is disabled",
+        "no public MCP/A2A execution endpoint is promoted",
+        "no general external-agent executor is promoted"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "community-governance-agent",
+      "available_now": false,
+      "mesh_identity_required": true,
+      "description": "Participate in plural project governance through separately evidenced mandates without acquiring ambient repository or runtime authority.",
+      "blockers": [
+        "plural authority remains roadmap work rather than a production-promoted repository-governance path",
+        "machine principals cannot self-sponsor or self-delegate",
+        "GitHub remains the canonical repository authority surface",
+        "merge, deployment, credential, spending, and production-promotion authority remain separately gated"
+      ],
+      "authority_effect": "none"
+    }
+  ],
+  "security_work_available_now": [
+    "run the protected-equivalent local verification surface",
+    "exercise machine-principal and machine-discovery adversarial tests",
+    "review the current threat model against implementation",
+    "select a bounded RED-TEAM-TARGETS.json target and submit a reproducible finding",
+    "propose patches through normal pull requests",
+    "submit hardware, infrastructure, compatibility, benchmark, and claim-audit evidence through bounded contribution lanes"
+  ],
+  "automation_boundary": {
+    "safe_to_automate_without_operator_effect_approval": [
+      "repository reading and machine discovery",
+      "local or disposable conformance testing",
+      "static analysis and bounded security review",
+      "finding and contribution intake",
+      "reproduction attempts",
+      "evidence collection",
+      "patch proposal and pull-request creation",
+      "protected CI verification"
+    ],
+    "separate_explicit_authority_required": [
+      "merge",
+      "direct-main write",
+      "deployment or publication",
+      "credential or secret access",
+      "production route or protocol activation",
+      "production promotion",
+      "spending, reimbursement, purchasing, or paid services",
+      "shipping, custody, or transfer of hardware",
+      "testing third-party systems without explicit authorization"
+    ]
+  },
+  "future_governance_direction": {
+    "goal": "reduce operator bottlenecks through plural, evidence-bound authority rather than by removing authority checks",
+    "must_preserve": [
+      "deny-dominant policy",
+      "separation of identity, capability, authority, consent, evidence, and legitimacy",
+      "independent challenge and appeal",
+      "revocation and emergency halt",
+      "portable evidence and meaningful exit",
+      "no self-granting authority by models, agents, adapters, or governance automation"
+    ]
+  },
+  "nonclaims": [
+    "This manifest does not create a public AXIOM-MESH runtime or remote executor.",
+    "GitHub participation, Agent Community membership, a certificate, a signed artifact, or a successful test does not grant AXIOM-MESH authority.",
+    "Local conformance proves only the tested repository behavior and environment.",
+    "The supported build does not yet provide autonomous community governance or a human-free production authority root."
+  ]
+}

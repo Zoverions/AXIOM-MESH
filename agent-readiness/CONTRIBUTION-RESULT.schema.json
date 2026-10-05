@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/CONTRIBUTION-RESULT.schema.json",
+  "title": "AXIOM-MESH Agent Contribution Result v1",
+  "description": "Machine-readable, non-sensitive evidence package for bounded AXIOM-MESH community contributions. A valid package records evidence; it does not grant authority, certify security, authorize merge/deployment, or promote production.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "project",
+    "record_status",
+    "contribution_lane",
+    "supported_build",
+    "commit_sha",
+    "produced_at",
+    "environment",
+    "methodology",
+    "evidence",
+    "observations",
+    "negative_results",
+    "limitations",
+    "requested_triage_state",
+    "safety",
+    "authority_nonclaims"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-agent-contribution-result.v1"
+    },
+    "project": {
+      "const": "AXIOM-MESH"
+    },
+    "record_status": {
+      "enum": [
+        "example",
+        "submitted"
+      ]
+    },
+    "contribution_lane": {
+      "enum": [
+        "review-falsification",
+        "implementation-pr",
+        "interoperability-adapter",
+        "hardware-validation",
+        "infrastructure-validation",
+        "claim-audit",
+        "benchmark-compatibility"
+      ]
+    },
+    "supported_build": {
+      "const": "0.12.0-dev.3"
+    },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "proposal_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "pull_request_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "produced_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ownership",
+        "description"
+      ],
+      "properties": {
+        "ownership": {
+          "enum": [
+            "repository-owned",
+            "contributor-owned",
+            "explicitly-disposable-authorized"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "hardware": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "operating_system": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "runtime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        }
+      }
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "commands"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "repetitions": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 100000
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "sha256",
+          "description",
+          "contains_sensitive_data"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "log",
+              "measurement",
+              "test-output",
+              "patch",
+              "fixture",
+              "report",
+              "benchmark",
+              "observation",
+              "other"
+            ]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 3000
+          },
+          "contains_sensitive_data": {
+            "const": false
+          }
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "negative_results": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "requested_triage_state": {
+      "const": "EVIDENCE_SUBMITTED"
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment_authorized",
+        "contains_secrets_or_credentials",
+        "contains_private_data",
+        "third_party_testing_performed"
+      ],
+      "properties": {
+        "environment_authorized": {
+          "const": true
+        },
+        "contains_secrets_or_credentials": {
+          "const": false
+        },
+        "contains_private_data": {
+          "const": false
+        },
+        "third_party_testing_performed": {
+          "const": false
+        }
+      }
+    },
+    "authority_nonclaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "security_certification_claimed",
+        "production_promotion_claimed",
+        "merge_authority_claimed",
+        "deployment_authority_claimed",
+        "runtime_authority_claimed",
+        "protocol_activation_authority_claimed",
+        "credential_access_authority_claimed",
+        "spending_or_purchase_authority_claimed",
+        "shipping_or_hardware_custody_authority_claimed",
+        "evidence_scope_limited_to_tested_environment"
+      ],
+      "properties": {
+        "security_certification_claimed": {
+          "const": false
+        },
+        "production_promotion_claimed": {
+          "const": false
+        },
+        "merge_authority_claimed": {
+          "const": false
+        },
+        "deployment_authority_claimed": {
+          "const": false
+        },
+        "runtime_authority_claimed": {
+          "const": false
+        },
+        "protocol_activation_authority_claimed": {
+          "const": false
+        },
+        "credential_access_authority_claimed": {
+          "const": false
+        },
+        "spending_or_purchase_authority_claimed": {
+          "const": false
+        },
+        "shipping_or_hardware_custody_authority_claimed": {
+          "const": false
+        },
+        "evidence_scope_limited_to_tested_environment": {
+          "const": true
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "record_status": {
+            "const": "submitted"
+          }
+        },
+        "required": [
+          "record_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "commit_sha": {
+            "not": {
+              "pattern": "^0{40}$"
+            }
+          },
+          "evidence": {
+            "items": {
+              "properties": {
+                "sha256": {
+                  "not": {
+                    "pattern": "^0{64}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

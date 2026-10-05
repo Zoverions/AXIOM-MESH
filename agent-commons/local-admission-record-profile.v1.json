@@ -1,0 +1,44 @@
+{
+  "schema": "axiom-local-admission-record-profile.v1",
+  "status": "experimental deployment architecture; no production activation claim",
+  "purpose": "Create an explicit local record that identifies exactly which imported artifacts are accepted for a specific instance, under which authority source, policy, protection profiles, topology, review evidence, validity window, and rollback plan.",
+  "lifecycle": [
+    "quarantined_inert",
+    "reviewed",
+    "admitted_inert",
+    "eligible_for_activation_request",
+    "activated_by_separate_effect_admission",
+    "suspended_or_rolled_back",
+    "superseded_or_retired"
+  ],
+  "required_bindings": [
+    "target instance identity",
+    "source trust-package identity and manifest digest",
+    "approved artifact digests",
+    "explicit rejected artifact digests where applicable",
+    "local policy digest",
+    "protection profile identifiers",
+    "deployment topology",
+    "local authority source and evidence",
+    "reviewer identities and review evidence",
+    "quarantine and policy-check results",
+    "validity window",
+    "rollback plan and recovery objective",
+    "activation non-automaticity"
+  ],
+  "core_invariants": [
+    "local admission is instance-scoped",
+    "admitting an artifact for one instance does not admit it elsewhere",
+    "admission accepts exact digests, not floating names or latest versions",
+    "partial package admission is allowed and must be explicit",
+    "admission remains inert until a separate activation/effect decision",
+    "rollback is defined before activation eligibility",
+    "expiry or suspension removes future activation eligibility without rewriting historical evidence"
+  ],
+  "nonclaims": [
+    "Local admission does not imply legal or institutional approval outside the named authority scope.",
+    "An admitted artifact may still be denied at execution time by fresher local policy.",
+    "An admission record does not create a reusable cross-instance grant.",
+    "This profile does not define a universal organizational approval process."
+  ]
+}

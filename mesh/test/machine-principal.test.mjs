@@ -85,6 +85,36 @@ test('machine principal authority digest is stable across unordered sets', () =>
   assert.equal(left.authority_digest, right.authority_digest);
 });
 
+test('machine principal v1 revalidates supplied authority digests at use time', () => {
+  const principal = normalizeMachinePrincipalDefinition(fixture(), {
+    knownHumanPrincipals: humanSponsors,
+    now: new Date('2026-08-09T20:00:00.000Z')
+  });
+  const tampered = {
+    ...principal,
+    authority_digest: 'f'.repeat(64)
+  };
+  assert.throws(
+    () => evaluateMachineIntent(tampered, {
+      action: 'system.echo',
+      purpose: 'test.conformance',
+      destination: 'local'
+    }),
+    /authority_digest does not match normalized authority/
+  );
+  assert.throws(
+    () => machinePrincipalAuthorityFacts(tampered),
+    /authority_digest does not match normalized authority/
+  );
+  assert.throws(
+    () => normalizeMachinePrincipalDefinition({
+      ...principal,
+      schema: 'axiom-machine-principal.v2'
+    }),
+    /schema is unsupported/
+  );
+});
+
 test('machine principal v1 rejects ambient authority and invalid sponsorship', () => {
   const options = {
     knownHumanPrincipals: humanSponsors,

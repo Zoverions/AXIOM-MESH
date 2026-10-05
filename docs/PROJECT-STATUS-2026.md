@@ -1,12 +1,24 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-17
+**Status date:** 2026-09-23
 
 **Supported build:** `0.12.0-dev.3`
 
 **Development branch:** `main`
 
 **Deployment status:** production candidate; no live deployment claim
+
+## Claim labels
+
+New and updated status statements in this document carry explicit evidence
+labels:
+
+- **PROVEN** — capability-registry `implemented` plus protected CI evidence;
+- **LAB-GRADE** — built and tested in isolated or laboratory paths, not
+  production-reachable;
+- **DESIGN-ONLY** — specification, architecture, or isolated contract/mock
+  scaffolding with no integrated supported-runtime or production capability;
+- **UNVERIFIED** — stated direction with no supporting evidence yet.
 
 ## Current build
 
@@ -20,11 +32,26 @@ promotion. The last immutable published production-candidate release is
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 31 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 31 implemented, 4
 experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 Built source does not become a runnable capability merely because tests exist:
 production policy, registries, runtime wiring, and applicable promotion evidence
 remain independent gates.
+
+August 19 hardening closed three authority/evidence ambiguities without expanding
+the capability surface. Capability use is now durably consumed in Grid before
+Sandbox execution, with the signed consume receipt bound to the exact capability
+and current Sandbox process epoch; restart or uncertain execution burns the
+capability rather than making it replayable. Authority/evidence canonicalization
+is restricted to JSON-compatible plain data so class instances, accessors,
+non-enumerable or symbol-keyed state, sparse arrays, and custom array/object
+prototypes cannot silently collapse into misleading digests. Policy constraint
+merging now requires a declared monotonic tightening direction: permission- and
+requirement-style booleans use explicit operators, numeric min/max names tighten
+in their declared direction, finite allowlists intersect by canonical digest
+identity, and ambiguous differing constraints fail closed. These changes do not
+create exactly-once external effects, new capability status, or production
+promotion.
 
 ## Current authority model
 
@@ -57,8 +84,11 @@ boundaries.
 The production-candidate surface includes:
 
 - authenticated intent, deny-dominant policy, explicit plans, confirmation and
-  independent approval where required, short-lived single-use grants, bounded
-  deterministic execution, and signed evidence;
+  independent approval where required, short-lived capabilities durably consumed
+  in Grid before execution, bounded deterministic execution, and signed evidence;
+- a process-local Sandbox replay guard retained as a same-process fast path plus
+  Grid-backed at-most-once capability consumption across Sandbox/Grid restart,
+  with execution-epoch binding and explicit burn-on-uncertainty semantics;
 - human-sponsored constrained machine principals with finite scopes, actions,
   purposes, destinations, runtime identity, expiry, non-delegation,
   execution-time, request-size, request-rate, concurrency, and response-size
@@ -82,6 +112,18 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
+- an OCI-first, non-mutating Linux host planner for the specified personal/local
+  and infrastructure-node profiles; it emits deterministic compatibility,
+  blocker, and prerequisite evidence while creating no users, credentials,
+  services, network enrollment, or authority;
+- an externally trusted Ed25519 signed release/install-manifest verifier that
+  binds exact current install, capability, application, network, and setup
+  control-plane digests and keeps artifact-byte verification separate from host
+  mutation or installation authority;
+- an inert Install Session v0 state classifier that binds one desired plan/
+  release/artifact evidence set to a self-digested installed-state observation
+  and distinguishes install/no-op/repair/upgrade/recovery review from newer,
+  diverged, partial-secret, conflict, and uncertainty stops without host mutation;
 - a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
@@ -95,10 +137,12 @@ The production-candidate surface includes:
   projection, creates no remote-social schema, and performs no mutation,
   transport, federation, ranking, recommendation, or authority effect;
 - bounded-cardinality telemetry, readiness, operations reports, OpenMetrics,
-  and a host-side least-privilege OTLP/Alertmanager relay;
+  and a host-side least-privilege OTLP/Alertmanager relay (PROVEN as an
+  implemented `operations.observability` capability: HTTPS enforced for
+  non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 41-route application policy,
+  internal network segments, a default-deny 42-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
@@ -223,6 +267,31 @@ credential, opens no external runtime connection, reads no user file, performs
 no external effect, and does not certify OpenClaw, Hermes, Agent Zero, MCP,
 A2A, or any other runtime.
 
+## Repository-native agent participation and portable identity
+
+The repository now exposes a repository-native Security Agent Cell for public,
+non-sensitive security evidence work. Its bounded roles are scout, reproducer,
+verifier, patcher, and triage recorder. The cell reuses the canonical red-team
+finding lifecycle and explicitly separates evidence from authority: public
+agents may inspect code, reproduce in their own or disposable environments,
+prepare patches/PRs, and exercise protected CI, but merge, deployment,
+credentials, production promotion, spending, hardware custody, destructive
+recovery, and unauthorized third-party testing remain separately authorized.
+
+A portable machine-identity laboratory is also merged on `main` as the first
+runtime-facing precursor to Agent Contributor Mode. The
+`axiom-machine-identity-credential.v1` evidence binds principal identity,
+sponsor, issuer/key epoch, operational key, runtime binding, credential history,
+rotation/recovery, expiry, and issuer-signed revocation/currentness facts.
+That laboratory is **identity evidence only**. It does not modify the capability
+registry, enable self-service enrollment or machine delegation, create a bearer
+grant, expose a remote executor or MCP/A2A, establish legal identity or
+personhood, prove reputation/truth/global currentness, or grant repository,
+deployment, credential, spending, hardware, governance, or runtime authority.
+The next contributor-mode steps remain separately gated around currentness,
+bounded contributor sessions, attenuation/delegation, portable handoff/receipt,
+and plural governance.
+
 ## Human product state
 
 The implemented Gateway client contract supports the experimental AXIOM One
@@ -242,12 +311,54 @@ through the review route, and no federation, remote Following feed, public
 profile hosting, recommendation layer, messaging, or external distribution is
 claimed. AXIOM One UI integration remains separately gated.
 
+Axiom Education is a first-class independently released AXIOM application at
+[`Zoverions/Axiom-Education`](https://github.com/Zoverions/Axiom-Education).
+The current Mesh convergence contains the governed learner substrate for memory
+ownership, consent-bound learner records, provider contracts, Sandbox execution
+composition, and bounded learner self-read. The self-read path is mediated by
+Hypervisor and one exact authenticated Hypervisor-to-Grid POST edge; it does not
+give Sandbox direct Grid authority. Education actions remain unavailable in
+committed production policy and the separate Education repository must pin and
+verify compatibility against the merged Mesh contract before claiming adoption.
+Cross-subject educator/guardian authority, production provider activation,
+curriculum approval, school/institution authority, and educational compliance
+remain unclaimed.
+
 Corrections are new linked records; they do not silently replace their target.
 Cross-principal read/link/export/tombstone paths are denied in real-stack tests.
 The preview is not a supported product and does not claim general consequential
 plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
 ingestion, completed browser-session security, accessibility/usability evidence,
 or signed end-user packaging.
+
+### AXIOM One current slice state (2026-09-23)
+
+- **Item 7 — TWA/APK rehearsal** (merged PR #1776): **LAB-GRADE**. Local build
+  evidence plus a release runbook; strictly lab-grade and offline-verifiable.
+  Repeated build work moved to disposable scratch, CLI password exposure
+  removed, rehearsal notifications disabled, fail-closed on
+  trusted-origin/shortcut drift. Owner-gated production origin, signing, DAL,
+  and distribution steps are retained. No production distribution claim.
+- **Item 8 — Social write controls** (merged PR #1777): **LAB-GRADE**.
+  Review-only deterministic review evidence for the Social write-control
+  slice; browser-local authority minting and generic adapter execution were
+  removed, and a forged-scope-plus-adapter negative regression was added.
+  Executable authority remains in the existing authenticated kernel path.
+- **Item 9 — Feed contract** (merged PR #1769): **DESIGN-ONLY**. Typed feed
+  contract (JSON Schema + TypeScript types), synthetic fixtures across all
+  four audiences (public / circle / intimate / named) including a rescind
+  notice, a 127.0.0.1-only mock feed server, and 27 contract tests. Not wired
+  to the real relay; real wiring awaits the F-1..F-3 sequence (presence-post
+  registry proposal, registry adoption plumbing, scope-label migration).
+
+**LAB-GRADE identity/role posture.** Preview `/v1/` processing first enforces the
+configured maximum target length and returns 400 for an oversized target. For
+within-limit recognized Gateway routes and query shapes, browser-boundary
+failures return 403 before bearer-token authentication; a missing or invalid
+local bearer token returns 401. Within-limit unknown or unallowed routes or
+query shapes return 404 before the browser-boundary and token checks.
+Server-side identity is never invented: the preview UI's `local-owner` display
+default is a local label and carries no authority.
 
 AXIOM Verify, AXIOM Circles, AXIOM Studio, AXIOM Managed Node, bounded AI
 providers, useful personal workflows, selective sharing, and later external
@@ -260,14 +371,20 @@ external secrets, resource ceilings, bounded logs, permission-restricted local
 Gateway ingress, dependency-aware readiness, and compact/four-unit single-host
 topologies.
 
-The source-setup policy distinguishes protected-CI Node.js `24.18.0` from the
-candidate production image pin `24.19.0`; both remain within the supported
-`>=24.14.0 <25` engine range.
+The source-setup policy distinguishes exact hosted-production approval and
+security-focused CI on Node.js `22.23.2`, protected-CI Node.js `24.18.0`, and
+the candidate production image pin `24.19.0`. The supported source engine is
+`>=22.23.2 <23 || >=24.14.0 <25`; the production supervisor permits exactly
+Node.js `22.23.2` or the existing Node.js 24 range. Hosted production still
+requires private credentials, mutual TLS, verified deny-egress, and a separate
+promotion decision; runtime approval is not evidence of a live deployment.
 
 Protected evidence covers source setup, tests, release verification, network
 policy, container build/readiness, recovery, backup lifecycle, SLO, resilience,
 telemetry, transport, independent service units, node scheduling, causal
-exchange, provider startup, credential/data-key rotation, incident tabletop,
+exchange, provider startup, credential/data-key rotation, restart-safe
+capability consumption, plain-data authority/evidence canonicalization,
+explicit policy-constraint merge direction, incident tabletop,
 pilot dossier/package verification, independent-security-review verification,
 runtime-adapter synthetic conformance, and applicable CodeQL/Windows gates.
 
@@ -295,6 +412,31 @@ Pack, inference router, compute dispatcher, identity presentation, payment
 mandate, or settlement adapter has been implemented or added to the capability
 registry.
 
+## Mesh-notarized agreements (inert v0 contract candidate)
+
+The [mesh-notarized agreements specification](architecture/MESH-NOTARIZED-AGREEMENTS.md)
+(`0.1.0-draft.1`, now reconciled to prepared inert v0 contracts) defines a machine-verifiable record format for mutual
+commitments between principals: hash-chained ordering, honest `recorded_at`
+claims, digest-bound party identities, and metadata kept separate from private
+content. Notarization is evidence, not enforcement: it proves an agreement was
+recorded as stated, and claims nothing about fairness, legality, or truth.
+
+This is a product direction, recorded as design only. It changes no capability
+status, adds no registry entry, and grants no new authority. Any future
+implementation follows the normal capability, policy, registry, and promotion
+gates.
+
+## Orchestration provenance (planned; UNVERIFIED)
+
+Provenance for orchestrated work — durable task, event, artifact, and handoff
+records bound to principal, catalog entry, runtime/connector identity, and
+policy/grant state — is a stated direction, not a current claim. The planned
+queue lives in
+[`docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md`](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
+(P5 durable task/event/artifact/handoff model; P6 attenuation-only delegation
+with human-readable delegation and worker lineage in receipts). Nothing in
+that queue is implemented, enabled, or promoted.
+
 ## Promotion blockers
 
 Production promotion remains blocked by authentic external evidence, including:
@@ -316,9 +458,10 @@ Production promotion remains blocked by authentic external evidence, including:
 9. an authentic exact pilot evidence package and separate production-promotion
    decision.
 
-The repository-effect and runtime-adapter prototypes do not themselves block
-the current pilot because neither is exposed on the supported production
-surface. A future proposal to activate either creates its own promotion gates.
+The repository-effect, portable-identity, Security Agent Cell, and
+runtime-adapter work do not themselves block the current pilot because none
+expands the supported production-reachable authority surface. A future proposal
+to activate any new runtime/effect authority creates its own promotion gates.
 
 ## What is not claimed
 
@@ -326,7 +469,7 @@ The `0.12.0-dev.3` build does **not** claim:
 
 - a live public, customer, testnet, mainnet, or production service;
 - a completed authentic pilot or independent security approval;
-- a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
+- a supported AXIOM One, Education, Verify, Circles, Studio, or Managed Node release;
 - a supported wearable/companion product, portable Personal Agent Pack, Agent
   Runtime Capsule executor, compute-routing fabric, or Local Trust Plane;
 - a production AI, messaging, identity, storage-transfer, payment, repository,
@@ -334,6 +477,9 @@ The `0.12.0-dev.3` build does **not** claim:
 - production identity proofing, credential presentation, passkey authorization,
   payment authorization, funds availability, merchant acceptance, or
   settlement;
+- self-service portable machine enrollment, autonomous-machine delegation,
+  reputation/global-currentness proof, or authority derived from a portable
+  identity credential or Security Agent Cell result;
 - certification or production conformance of an external agent runtime;
 - MCP/A2A exposure, autonomous-machine delegation, remote workload execution,
   or hardware/runtime attestation;
@@ -343,6 +489,7 @@ The `0.12.0-dev.3` build does **not** claim:
 - federation, BFT consensus, replicated Grid finality, or global Sybil
   resistance;
 - arbitrary-code sandbox security;
+- exactly-once external side effects from durable capability consumption;
 - operational token, bridge, liquidity, staking, treasury, payroll, or chain
   settlement;
 - clinical, educational, governmental, legal, employment, or financial
@@ -354,24 +501,31 @@ The `0.12.0-dev.3` build does **not** claim:
 - proof that local Grid state alone detects a consistently deleted suffix after
   matching local metadata rewrite.
 
-Presence in the source tree, a passing synthetic drill, or a draft-PR operator
-test is not production promotion.
+Presence in the source tree, a passing synthetic drill, an identity credential,
+a Security Agent Cell result, or a draft-PR operator test is not production
+promotion.
 
 ## Current priorities
 
-1. preserve the exact authority/evidence boundary while completing the authentic
-   controlled pilot;
-2. finish AXIOM One browser/security/accessibility/package gates and one bounded
+1. preserve the completed authority-algebra hardening and converge overlapping
+   Agent Trust/semantic-memory laboratories into one selected progression rather
+   than accumulating parallel green branches;
+2. complete the authentic controlled pilot: dedicated hardware, external secret
+   and continuity-anchor custody, real telemetry/alerts, restore/rotation,
+   30-day observation, and exact independent security review;
+3. finish AXIOM One browser/security/accessibility/package gates and one bounded
    useful provider/workflow path, followed by one immutable single-agent Runtime
    Capsule, a secret-free Personal Agent Pack, and transparent policy-first
    compute routing;
-3. select and review one maintained external runtime for a deliberately bounded
-   read-only Agent Runtime Adapter v1 integration;
-4. keep the repository-effect chain production-unreachable while completing any
-   remaining promotion/rollback/operator-custody analysis needed before even
-   considering a first mapping activation; and
-5. continue multi-host, Circles/plural-authority, and frontier work behind their
-   own evidence gates.
+4. keep Axiom Education synchronized as an independently released first-class
+   application, including explicit Mesh compatibility/adoption evidence after
+   each relevant authority or data-contract change;
+5. select and review one maintained external runtime for a deliberately bounded
+   read-only Agent Runtime Adapter v1 integration before any remote execution or
+   broader interoperability claim; and
+6. continue Agent Contributor Mode, authenticated multi-host dispatch,
+   Circles/social exchange, plural authority, and frontier work incrementally
+   behind their own evidence and promotion gates.
 
 See the [roadmap](ROADMAP.md), [execution queue](MASTER-TODO.md),
 [production-readiness tracker](PRODUCTION-READINESS-TRACKER.md),

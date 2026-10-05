@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/regression-candidate.v0.schema.json",
+  "title": "AXIOM Threat Regression Candidate v0",
+  "description": "Evidence-only candidate for a future regression property. It carries no policy or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "candidate_id", "hypothesis_id", "reproduction_id", "property_to_preserve",
+    "negative_fixture_digest", "positive_control_digest", "expected_failure_semantics", "scope",
+    "owner_or_reviewer_state", "evidence_bindings", "expiry_or_reassessment", "candidate_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-threat-regression-candidate.v0" },
+    "candidate_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "hypothesis_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "reproduction_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "property_to_preserve": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "negative_fixture_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "positive_control_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "expected_failure_semantics": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "scope": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "owner_or_reviewer_state": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "maxLength": 128 },
+    "evidence_bindings": { "type": "array", "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "maxItems": 32, "uniqueItems": true },
+    "expiry_or_reassessment": { "type": "string", "format": "date-time", "pattern": "Z$", "maxLength": 64 },
+    "candidate_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

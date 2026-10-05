@@ -1,0 +1,7 @@
+# Debug keystores are machine-local rehearsal artifacts. NEVER commit a keystore.
+# Release signing uses a keystore created in Zov's key ceremony (see RUNBOOK.md),
+# which must also never be committed.
+*.keystore
+*.jks
+*.p12
+*.pfx

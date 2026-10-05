@@ -39,6 +39,13 @@ const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
   'mesh/package.json',
   'mesh/package-lock.json'
 ]);
+const LABORATORY_DEPENDENCY_MANIFESTS = new Set([
+  'labs/rust-trust-core/Cargo.toml',
+  'labs/rust-trust-core/Cargo.lock'
+]);
+const LABORATORY_WORKFLOWS = new Set([
+  'rust-trust-core-lab.yml'
+]);
 const UNSUPPORTED_RUNTIME_PREFIXES = [
   'certs/',
   'cli/',
@@ -340,11 +347,15 @@ export async function verifyReleaseReadiness() {
   const activeWorkflows = (await readdir(join(REPOSITORY_ROOT, '.github', 'workflows')))
     .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
     .sort();
-  const governedWorkflows = [
+  const governedProductionWorkflows = [
     'chain-verification-benchmark.yml',
     'kernel.yml',
     'windows.yml'
   ];
+  const governedWorkflows = [
+    ...governedProductionWorkflows,
+    ...LABORATORY_WORKFLOWS
+  ].sort();
   if (canonicalJson(activeWorkflows) !== canonicalJson(governedWorkflows)) {
     throw new ValidationError('Unsupported legacy GitHub workflows are still active');
   }
@@ -476,6 +487,19 @@ export async function verifyReleaseReadiness() {
   };
 }
 
+export function assertUnfilteredWorkflowTriggers(workflow, label) {
+  if (/^\s+paths(?:-ignore)?:/m.test(workflow)) {
+    throw new ValidationError(
+      `${label} must verify every change without path filters`
+    );
+  }
+  for (const trigger of ['  push:', '  pull_request:']) {
+    if (!workflow.includes(`\n${trigger}\n`)) {
+      throw new ValidationError(`${label} is missing trigger: ${trigger.trim()}`);
+    }
+  }
+}
+
 export function verifyWindowsWorkflow(workflow) {
   if (typeof workflow !== 'string') {
     throw new ValidationError('Windows compatibility workflow is missing');
@@ -494,6 +518,7 @@ export function verifyWindowsWorkflow(workflow) {
       throw new ValidationError(`Windows compatibility workflow is missing: ${required}`);
     }
   }
+  assertUnfilteredWorkflowTriggers(workflow, 'Windows compatibility workflow');
   const actionReferences = [...workflow.matchAll(/^\s*-\s+uses:\s+([^\s#]+)/gm)]
     .map(match => match[1]);
   if (
@@ -535,7 +560,7 @@ export function verifyProductionDeployment({
   validateResilienceDrillPolicy(resilienceDrillPolicy);
   const serviceNetwork = validateServiceNetworkPolicy(ACTIVE_SERVICE_NETWORK_POLICY);
   const pinnedBase = dockerfile.match(
-    /^FROM (node:24\.19\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
+    /^FROM (node:24\.21\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
   if (!pinnedBase) {
     throw new ValidationError('Production Dockerfile must use the approved digest-pinned Node.js base');
@@ -684,7 +709,7 @@ export function verifyProductionDeployment({
     'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
-    `${serviceNetwork.routes} exact caller/destination/method/route`,
+    `exactly ${serviceNetwork.routes} currently allowed internal`,
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',
@@ -705,8 +730,6 @@ export function verifyProductionDeployment({
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',
     'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7',
     'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7',
-    '- "apps/**"',
-    '- "packages/**"',
     'npm run setup:install',
     'fetch-depth: 0',
     'AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}',
@@ -765,10 +788,9 @@ export function verifyProductionDeployment({
       throw new ValidationError(`Kernel CI workflow is missing: ${required}`);
     }
   }
+  assertUnfilteredWorkflowTriggers(workflow, 'Kernel CI workflow');
   for (const [required, minimum] of [
-    ['runs-on: ubuntu-24.04', 2],
-    ['- "apps/**"', 2],
-    ['- "packages/**"', 2]
+    ['runs-on: ubuntu-24.04', 2]
   ]) {
     const count = workflow.split(required).length - 1;
     if (count < minimum) {
@@ -903,7 +925,11 @@ export function validateSupportedSourceBoundary(trackedPaths) {
   }
   const unsupported = trackedPaths.filter(path => (
     UNSUPPORTED_RUNTIME_PREFIXES.some(prefix => path.startsWith(prefix))
-    || (isDependencyManifest(path) && !SUPPORTED_DEPENDENCY_MANIFESTS.has(path))
+    || (
+      isDependencyManifest(path)
+      && !SUPPORTED_DEPENDENCY_MANIFESTS.has(path)
+      && !LABORATORY_DEPENDENCY_MANIFESTS.has(path)
+    )
   ));
   if (unsupported.length) {
     throw new ValidationError(
@@ -913,7 +939,8 @@ export function validateSupportedSourceBoundary(trackedPaths) {
   return {
     valid: true,
     tracked_paths: trackedPaths.length,
-    dependency_manifests: [...SUPPORTED_DEPENDENCY_MANIFESTS].sort()
+    dependency_manifests: [...SUPPORTED_DEPENDENCY_MANIFESTS].sort(),
+    laboratory_dependency_manifests: [...LABORATORY_DEPENDENCY_MANIFESTS].sort()
   };
 }
 

@@ -19,17 +19,28 @@ const STATIC_ASSETS = new Map([
   ['/index.html', asset('index.html', 'text/html; charset=utf-8')],
   ['/app.mjs', asset('app.mjs', 'text/javascript; charset=utf-8')],
   ['/presentation.mjs', asset('presentation.mjs', 'text/javascript; charset=utf-8')],
+  ['/local-organize.mjs', asset('local-organize.mjs', 'text/javascript; charset=utf-8')],
   ['/human-contract.json', asset('human-contract.json', 'application/json; charset=utf-8')],
   ['/styles.css', asset('styles.css', 'text/css; charset=utf-8')],
   ['/manifest.webmanifest', asset('manifest.webmanifest', 'application/manifest+json')],
   ['/sw.mjs', asset('sw.mjs', 'text/javascript; charset=utf-8')],
   ['/icon.svg', asset('icon.svg', 'image/svg+xml')],
+  ['/icons/icon-192.png', asset('icons/icon-192.png', 'image/png')],
+  ['/icons/icon-512.png', asset('icons/icon-512.png', 'image/png')],
+  ['/icons/icon-maskable-192.png', asset('icons/icon-maskable-192.png', 'image/png')],
+  ['/icons/icon-maskable-512.png', asset('icons/icon-maskable-512.png', 'image/png')],
+  ['/screenshots/screenshot-wide.png', asset('screenshots/screenshot-wide.png', 'image/png')],
+  ['/screenshots/screenshot-narrow.png', asset('screenshots/screenshot-narrow.png', 'image/png')],
   ['/vendor/axiom-client.mjs', {
     path: join(REPOSITORY_ROOT, 'packages', 'axiom-client', 'index.mjs'),
     contentType: 'text/javascript; charset=utf-8'
   }],
   ['/mesh/config/gateway-client-contract.json', {
     path: join(REPOSITORY_ROOT, 'mesh', 'config', 'gateway-client-contract.json'),
+    contentType: 'application/json; charset=utf-8'
+  }],
+  ['/mesh/config/circle-templates-v0.json', {
+    path: join(REPOSITORY_ROOT, 'mesh', 'config', 'circle-templates-v0.json'),
     contentType: 'application/json; charset=utf-8'
   }]
 ]);

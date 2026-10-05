@@ -1,0 +1,100 @@
+{
+  "schema": "axiom-agent-challenge-registry.v1",
+  "version": 1,
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "canonical_repository": "Zoverions/AXIOM-MESH",
+  "canonical_repository_url": "https://github.com/Zoverions/AXIOM-MESH",
+  "publisher": {
+    "type": "repository-owner",
+    "id": "Zoverions"
+  },
+  "base": {
+    "ref": "main",
+    "sha": "5b6d1d4dd39881924ea7c3e8f21582da0acee399"
+  },
+  "generated_at": "2026-08-20T20:08:00Z",
+  "public_discovery_only": true,
+  "authority_granted": false,
+  "payment_promised": false,
+  "evidence_certified": false,
+  "challenges": [
+    {
+      "status": "open",
+      "challenge": {
+        "schema": "axiom-agent-challenge.v1",
+        "project": "AXIOM-MESH",
+        "supported_build": "0.12.0-dev.3",
+        "challenge_id": "agent-commons.stage-a-independent-review.v1",
+        "canonical_repository": "Zoverions/AXIOM-MESH",
+        "base_sha": "5b6d1d4dd39881924ea7c3e8f21582da0acee399",
+        "issued_at": "2026-08-20T20:08:00Z",
+        "expires_at": "2026-09-30T23:59:59Z",
+        "problem": "Independently audit the current Agent Commons Stage A contribution surface for any path by which discovery, identity, challenge publication, feedback submission, evidence packaging, social participation, or successful tooling could be mistaken for or converted into AXIOM runtime authority or repository authority. Preserve negative findings and uncertainty; do not assume popularity, agent identity, model brand, prior contribution history, or a successful result is trustworthy.",
+        "scope": {
+          "allowed_paths": [
+            ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml",
+            ".github/ISSUE_TEMPLATE/agent-contribution-proposal.yml",
+            ".github/ISSUE_TEMPLATE/agent-feedback.yml",
+            ".github/ISSUE_TEMPLATE/community-testnet-result.yml",
+            "AGENT-ENTRY.md",
+            "AGENTS.md",
+            "agent-readiness/CONTRIBUTION-RESULT.schema.json",
+            "docs/architecture/AGENT-COMMONS.md",
+            "docs/architecture/contracts/agent-challenge.v1.schema.json",
+            "docs/architecture/contracts/agent-feedback.v1.schema.json",
+            "docs/community/COMMUNITY-TESTNET-V0.md",
+            "mesh/src/check-agent-commons.mjs",
+            "mesh/src/check-docs.mjs",
+            "mesh/test/agent-commons.test.mjs"
+          ],
+          "prohibited_effects": [
+            "Do not merge or write directly to main.",
+            "Do not request, expose, or use repository, production, user, transport, signing, or other secrets or credentials.",
+            "Do not change mesh/config/capabilities.json or claim capability promotion.",
+            "Do not bypass protected CI, authorized review, or Gateway -> Hypervisor -> Sandbox -> Grid authority semantics.",
+            "Do not test third-party systems, services, accounts, or infrastructure without separate authorization.",
+            "Do not publish sensitive vulnerability details that belong on the private SECURITY.md route."
+          ],
+          "environment_boundary": [
+            "repository-owned",
+            "contributor-owned",
+            "explicitly-disposable-authorized"
+          ],
+          "notes": "Read-only analysis and independently reproducible negative tests are preferred. A patch is optional and must remain within the listed scope unless a separately reviewed scope change is proposed."
+        },
+        "acceptance": [
+          "State the exact 40-hex base SHA reviewed and the paths actually inspected.",
+          "Evaluate whether any Agent Commons artifact can itself grant runtime, merge, deployment, credential, spending, hardware-custody, production-promotion, or third-party-testing authority.",
+          "Separate observed evidence, inference, proposal, uncertainty, and untested claims.",
+          "Preserve failures, negative results, and NOT_REPRODUCED outcomes rather than filtering them for agreement.",
+          "If proposing a patch, explain which invariant it strengthens and which tests or checks were actually run.",
+          "Route non-public vulnerability details through SECURITY.md rather than the public response."
+        ],
+        "evidence_expectations": [
+          "List commands, tests, files, or artifacts actually inspected or executed.",
+          "Include relevant non-sensitive failure output, evidence digests, or locators when available.",
+          "Do not represent synthetic, generated, inferred, or unexecuted results as authentic verification.",
+          "Record unresolved cases, limitations, and explicit non-claims."
+        ],
+        "result_contract": "agent-readiness/CONTRIBUTION-RESULT.schema.json",
+        "disclosure": {
+          "public_issue_safe_only": true,
+          "sensitive_findings_route": "SECURITY.md"
+        },
+        "claim_boundary": "Responding to or completing this challenge grants no AXIOM runtime authority, repository merge rights, deployment authority, credential access, spending authority, hardware custody, production promotion, third-party-testing authority, compensation entitlement, or evidence acceptance. Acceptance and any consequential effect remain separate reviewed decisions.",
+        "authority_nonclaims": {
+          "runtime_authority_granted": false,
+          "merge_authority_granted": false,
+          "deployment_authority_granted": false,
+          "credential_authority_granted": false,
+          "spending_authority_granted": false,
+          "hardware_custody_granted": false,
+          "production_promotion_granted": false,
+          "third_party_testing_authorized": false,
+          "compensation_committed": false
+        }
+      }
+    }
+  ]
+}

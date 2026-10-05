@@ -71,10 +71,24 @@ export class Router {
   }
 }
 
-export async function readBody(req, maxBytes) {
+export async function readBody(req, maxBytes, { limitError } = {}) {
+  const tooLarge = requestBytes => {
+    if (limitError) {
+      return new AxiomError(
+        limitError.code,
+        limitError.message,
+        limitError.status,
+        {
+          ...(limitError.details ?? {}),
+          request_bytes: requestBytes
+        }
+      );
+    }
+    return new AxiomError('body_too_large', 'Request body exceeds the configured limit', 413);
+  };
   const declared = Number(req.headers['content-length'] ?? 0);
   if (Number.isFinite(declared) && declared > maxBytes) {
-    throw new AxiomError('body_too_large', 'Request body exceeds the configured limit', 413);
+    throw tooLarge(declared);
   }
   const chunks = [];
   let size = 0;
@@ -82,7 +96,7 @@ export async function readBody(req, maxBytes) {
     size += chunk.length;
     if (size > maxBytes) {
       req.destroy();
-      throw new AxiomError('body_too_large', 'Request body exceeds the configured limit', 413);
+      throw tooLarge(size);
     }
     chunks.push(chunk);
   }
@@ -141,12 +155,17 @@ export function createServiceServer({
 }) {
   const logger = createStructuredLogger(name);
   const requestAdmission = admitRequest ?? authenticate?.admitRequest;
+  const requestBodyLimit = authenticate?.resolveBodyLimit ?? requestAdmission?.resolveBodyLimit;
   const responseInspection = inspectResponse ?? authenticate?.inspectResponse;
   const handleRequest = async (req, res) => {
     const started = performance.now();
     const traceId = validTraceId(req.headers['x-trace-id']) ? req.headers['x-trace-id'] : newId('trace');
     let requestError;
     let releaseAdmission;
+    let principal;
+    let url;
+    let route;
+    let applicationStarted = false;
     telemetry?.beginRequest();
     res.setHeader('x-trace-id', traceId);
     try {
@@ -166,7 +185,6 @@ export function createServiceServer({
           );
         }
       }
-      let url;
       try {
         url = new URL(req.url, 'http://127.0.0.1');
       } catch {
@@ -175,7 +193,7 @@ export function createServiceServer({
       if (url.origin !== 'http://127.0.0.1') {
         throw new ValidationError('Request target must use origin-form addressing');
       }
-      const route = router.match(req.method, url.pathname);
+      route = router.match(req.method, url.pathname);
       if (!route) throw new AxiomError('not_found', 'Route not found', 404);
       if (transportPeer && authorizeRequest) {
         await authorizeRequest({
@@ -186,8 +204,23 @@ export function createServiceServer({
           transportPeer
         });
       }
-      const body = ['GET', 'HEAD'].includes(req.method) ? Buffer.alloc(0) : await readBody(req, maxBodyBytes);
-      let principal;
+      let bodyLimit = { maxBytes: maxBodyBytes };
+      if (
+        !['GET', 'HEAD'].includes(req.method)
+        && route.options.auth !== false
+        && requestBodyLimit
+      ) {
+        bodyLimit = normalizeBodyLimitResolution(await requestBodyLimit({
+          req,
+          url,
+          route,
+          traceId,
+          maxBodyBytes
+        }), maxBodyBytes);
+      }
+      const body = ['GET', 'HEAD'].includes(req.method)
+        ? Buffer.alloc(0)
+        : await readBody(req, bodyLimit.maxBytes, { limitError: bodyLimit.limitError });
       if (route.options.auth !== false && authenticate) {
         principal = await authenticate({ req, body, traceId, route, url });
       }
@@ -227,6 +260,7 @@ export function createServiceServer({
       const routeResponse = boundedResponse
         ? directWriteRejectingResponse(res)
         : res;
+      applicationStarted = true;
       const result = await route.handler({
         req,
         res: routeResponse,
@@ -287,7 +321,35 @@ export function createServiceServer({
         });
       }
     } catch (error) {
-      requestError = error;
+      let responseError = error;
+      if (applicationStarted && principal && responseInspection) {
+        try {
+          const shouldInspect = responseInspection.requiresPreflight?.({
+            req,
+            url,
+            route,
+            traceId,
+            principal
+          }) !== false;
+          if (shouldInspect) {
+            // A handler error is still an application disclosure. Re-run the
+            // response fence with a zero-byte control payload so expiry or
+            // invalid machine authority can replace application-derived
+            // message/details without applying the application size budget.
+            await responseInspection({
+              req,
+              url,
+              route,
+              traceId,
+              principal,
+              responseBytes: 0
+            });
+          }
+        } catch (inspectionError) {
+          responseError = inspectionError;
+        }
+      }
+      requestError = responseError;
       if (!(error instanceof AxiomError) && !(error instanceof ValidationError)) {
         const diagnostic = {
           event: 'request.error',
@@ -298,9 +360,10 @@ export function createServiceServer({
         else logger.error(diagnostic);
       }
       if (!res.writableEnded) {
-        const response = errorResponse(error, traceId);
-        // Control/error responses bypass application response budgets so a
-        // bounded machine caller can always receive the reason it was denied.
+        const response = errorResponse(responseError, traceId);
+        // Pre-handler control errors bypass application response budgets. Once
+        // handler execution begins, constrained machine errors are lifetime-
+        // fenced above before any application-derived error payload is emitted.
         sendJson(res, response.status, response.body);
       }
     } finally {
@@ -363,6 +426,46 @@ export async function close(server) {
 
 function validTraceId(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_.:-]{8,160}$/.test(value);
+}
+
+function normalizeBodyLimitResolution(value, globalMaximum) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ValidationError('Request body-limit resolver must return an object');
+  }
+  const maxBytes = value.maxBytes;
+  if (
+    !Number.isSafeInteger(maxBytes)
+    || maxBytes < 1
+    || maxBytes > globalMaximum
+  ) {
+    throw new ValidationError('Request body-limit resolver cannot exceed the configured global limit');
+  }
+  let limitError;
+  if (value.limitError !== undefined) {
+    if (!value.limitError || typeof value.limitError !== 'object' || Array.isArray(value.limitError)) {
+      throw new ValidationError('Request body-limit error contract is invalid');
+    }
+    const { code, message, status, details } = value.limitError;
+    if (
+      typeof code !== 'string'
+      || !code.length
+      || typeof message !== 'string'
+      || !message.length
+      || !Number.isSafeInteger(status)
+      || status < 400
+      || status > 599
+      || (details !== undefined && (!details || typeof details !== 'object' || Array.isArray(details)))
+    ) {
+      throw new ValidationError('Request body-limit error contract is invalid');
+    }
+    limitError = {
+      code,
+      message,
+      status,
+      ...(details === undefined ? {} : { details: structuredClone(details) })
+    };
+  }
+  return { maxBytes, ...(limitError ? { limitError } : {}) };
 }
 
 async function sendApplicationJson(res, status, value, headers, context) {

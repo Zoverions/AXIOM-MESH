@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/ai-provider-invoke-v0.schema.json",
+  "title": "AXIOM AI Provider Invoke v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "provider_id",
+    "model",
+    "purpose",
+    "data_scope",
+    "budget",
+    "timeout_ms",
+    "cancel",
+    "retention",
+    "included_text",
+    "note_digest",
+    "draft_only",
+    "principal_id"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-ai-provider-invoke.v0" },
+    "provider_id": { "$ref": "#/$defs/identifier" },
+    "model": { "$ref": "#/$defs/identifier" },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.:-]{0,511}$"
+    },
+    "data_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "max_chars"],
+      "properties": {
+        "kind": { "const": "owner-selected-note-text" },
+        "max_chars": { "type": "integer", "minimum": 1, "maximum": 100000 }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_input_chars", "max_output_chars", "max_wall_ms"],
+      "properties": {
+        "max_input_chars": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "max_output_chars": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "max_wall_ms": { "type": "integer", "minimum": 1, "maximum": 600000 }
+      }
+    },
+    "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000 },
+    "cancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed", "signal"],
+      "properties": {
+        "allowed": { "const": true },
+        "signal": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "persist"],
+      "properties": {
+        "kind": { "const": "ephemeral-draft" },
+        "persist": { "const": false }
+      }
+    },
+    "included_text": { "type": "string", "minLength": 1, "maxLength": 100000 },
+    "note_digest": { "$ref": "#/$defs/digest" },
+    "draft_only": { "const": true },
+    "principal_id": { "$ref": "#/$defs/identifier" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

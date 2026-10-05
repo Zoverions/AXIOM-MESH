@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/behavioral-drift-comparison-v0.schema.json",
+  "title": "AXIOM Behavioral Drift Comparison v0",
+  "description": "Strict inert evidence contract for compatibility-gated comparison of exact Behavioral Assurance Profile populations. Drift evidence is descriptive only and never grants authority, routing, runtime activation, or network effects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "comparison_id",
+    "predecessor",
+    "candidate",
+    "comparison_method",
+    "declared_change_factors",
+    "dimension_deltas",
+    "drift_status",
+    "compared_at",
+    "comparison_digest",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-behavioral-drift-comparison.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-behavioral-drift-evidence" },
+    "comparison_id": { "$ref": "#/$defs/identifier" },
+    "predecessor": { "$ref": "#/$defs/sideBinding" },
+    "candidate": { "$ref": "#/$defs/sideBinding" },
+    "comparison_method": { "$ref": "#/$defs/comparisonMethod" },
+    "declared_change_factors": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/changeFactor" }
+    },
+    "dimension_deltas": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/dimensionDelta" }
+    },
+    "drift_status": { "$ref": "#/$defs/driftStatus" },
+    "compared_at": { "$ref": "#/$defs/timestamp" },
+    "comparison_digest": { "$ref": "#/$defs/digest" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "selection_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 20,
+      "maxLength": 40
+    },
+    "sideBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "profile_digest", "population_id"],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/identifier" },
+        "profile_digest": { "$ref": "#/$defs/digest" },
+        "population_id": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "comparisonMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_ref", "method_digest", "bounds_ref", "bounds_digest"],
+      "properties": {
+        "method_ref": { "$ref": "#/$defs/identifier" },
+        "method_digest": { "$ref": "#/$defs/digest" },
+        "bounds_ref": { "$ref": "#/$defs/identifier" },
+        "bounds_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "changeFactor": {
+      "type": "string",
+      "enum": [
+        "model-revision",
+        "subject-artifact",
+        "instruction-policy",
+        "context-memory-policy",
+        "tool-policy",
+        "sampling-configuration",
+        "environment-harness",
+        "population-definition",
+        "domain",
+        "task-family",
+        "consequence-class",
+        "time-window",
+        "verifier-set",
+        "rubric-set",
+        "dimension-set",
+        "calibration-evidence"
+      ]
+    },
+    "driftStatus": {
+      "type": "string",
+      "enum": [
+        "stable-within-declared-bounds",
+        "material-drift",
+        "mixed",
+        "insufficient-evidence",
+        "incompatible"
+      ]
+    },
+    "metricKind": {
+      "type": "string",
+      "enum": ["probability", "rate", "count", "score"]
+    },
+    "dimensionDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dimension_id",
+        "metric_kind",
+        "predecessor_value",
+        "candidate_value",
+        "delta"
+      ],
+      "properties": {
+        "dimension_id": { "$ref": "#/$defs/identifier" },
+        "metric_kind": { "$ref": "#/$defs/metricKind" },
+        "predecessor_value": { "type": "number" },
+        "candidate_value": { "type": "number" },
+        "delta": { "type": "number" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/behavioral-drift-comparison.mjs",
+  "x-axiom-semantic-rules": [
+    "predecessor and candidate bindings must resolve to the exact profile and exact population identified by profile id, profile digest, and population id",
+    "declared change factors must exactly describe material subject, harness, population, verification, calibration, and time-window changes between the bound evidence",
+    "domain, task-family, consequence-class, dimension-set, and metric-kind mismatches make the evidence incompatible rather than silently transferring drift claims",
+    "insufficient population evidence must use insufficient-evidence status and cannot carry numeric dimension drift claims",
+    "numeric dimension deltas must exactly represent values from the bound profile populations",
+    "comparison method and declared bounds require explicit provenance; no universal threshold for behavioral drift is embedded in this contract",
+    "drift status within compatible sufficient evidence is descriptive under the separately reviewed bounds and does not select a model or authorize an action",
+    "behavioral drift evidence remains evidence-only and cannot route, authorize, activate, execute, or create network effects"
+  ],
+  "x-axiom-non-claims": [
+    "authorization-decision",
+    "routing-decision",
+    "universal-drift-threshold",
+    "model-promotion",
+    "runtime-activation",
+    "network-effect",
+    "universal-behavioral-prevalence"
+  ]
+}

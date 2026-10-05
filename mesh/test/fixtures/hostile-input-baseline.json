@@ -1,0 +1,2404 @@
+{
+  "schema": "axiom-hostile-input-baseline.v1",
+  "generated_by": "node test-support/hostile-input-baseline.mjs --write",
+  "functions": {
+    "src/lib/agent-assurance-evidence.mjs#verifySealedAgentAssuranceEvidence": {},
+    "src/lib/agent-challenge-registry.mjs#validateAgentChallenge": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-challenge-registry.mjs#validateAgentChallengeRegistry": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "sentinel",
+      "throwing-getter": "sentinel",
+      "counting-getter": "read-through",
+      "cycle": "raw"
+    },
+    "src/lib/agent-challenge-registry.mjs#validateRepositoryPath": {
+      "string": "accept"
+    },
+    "src/lib/agent-commons-a2a-card-candidate.mjs#validateAgentCommonsA2aCardCandidateManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-a2a-card-candidate.mjs#validateAgentCommonsA2aCardCandidateProjection": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-mcp-readonly.mjs#validateAgentCommonsMcpReadonlyManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-mcp-readonly.mjs#validateAgentCommonsMcpReadonlyResponse": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-protocol-parity.mjs#validateAgentCommonsProtocolProjectionParity": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-readonly-lab.mjs#validateAgentCommonsReadonlyManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-readonly-lab.mjs#validateAgentCommonsReadonlyRequest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-commons-readonly-lab.mjs#validateAgentCommonsReadonlyResponse": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-composition.mjs#validateAgentComposition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-os-contracts.mjs#validateOutcome": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-os-contracts.mjs#validateSkillAdmission": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-os-contracts.mjs#validateTaskLifecycle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-provider-binding.mjs#validateAgentProviderBinding": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-provider-profile.mjs#validateAgentProviderProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-test-capacity-offer.mjs#validateAgentTestCapacityOffer": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-attenuation-proof.mjs#verifyAgentAttenuationProof": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-authority-manifest.mjs#verifyAgentAuthorityManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-contribution-history.mjs#verifyAgentContributionHistoryChain": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/agent-trust-contribution-history.mjs#verifyAgentContributionHistoryReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-currentness-checkpoint.mjs#verifyAgentCurrentnessCheckpoint": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-currentness-checkpoint.mjs#verifyAgentCurrentnessCheckpointChain": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-currentness-receipt-binding.mjs#verifyAgentPortableReceiptCurrentnessBinding": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-machine-identity.mjs#verifyMachineIdentityCredential": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-machine-identity.mjs#verifyMachineIdentityCredentialHistory": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/agent-trust-machine-identity.mjs#verifyMachineIdentityRevocation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-portable-work-receipt.mjs#verifyAgentPortableWorkReceipt": {},
+    "src/lib/agent-trust-promotion-preflight.mjs#verifyAgentTrustPromotionPreflight": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-signed-handoff.mjs#verifyAgentSignedHandoff": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agent-trust-verifier.mjs#verifyAgentTrustBundle": {
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agreement-record.mjs#validateAgreementAcceptanceEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agreement-record.mjs#validateAgreementRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/agreement-record.mjs#verifyAgreementLineage": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/ai-execution-provenance.mjs#validateAiExecutionProvenance": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/ai-provider-draft-attestation.mjs#verifyAiProviderDraftAttestation": {},
+    "src/lib/ai-provider-invoke.mjs#validateAiProviderInvoke": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/ambient-participation-policy.mjs#validateActiveTaskSteering": {},
+    "src/lib/ambient-participation-policy.mjs#validateParticipationCooldownEvidence": {},
+    "src/lib/ambient-participation-policy.mjs#validateParticipationDecision": {},
+    "src/lib/ambient-participation-policy.mjs#validateParticipationObservation": {},
+    "src/lib/ambient-participation-policy.mjs#validateParticipationPolicy": {},
+    "src/lib/ambient-participation-policy.mjs#validateSilentInvestigationResult": {},
+    "src/lib/ambient-participation-policy.mjs#verifyActiveTaskSteeringBinding": {},
+    "src/lib/ambient-participation-policy.mjs#verifySilentInvestigationBinding": {},
+    "src/lib/amn-trust-domain.mjs#verifyAmnTrustDomainBundle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/amn-trust-evidence.mjs#verifyAmnTrustStatement": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/arxiv-research-source-profile.mjs#verifyArxivIndexRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/assurance-graph.mjs#verifyAssuranceGraph": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/authority-composition-guard.mjs#verifyIntentAttenuation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/autonomy-envelope.mjs#validateAutonomyEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/beacon-observation-candidate.mjs#verifyBeaconObservationEnvelope": {
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/behavioral-assurance-profile.mjs#validateBehavioralAssuranceProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/behavioral-drift-comparison.mjs#validateBehavioralDriftComparison": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/bounded-decision-calibration-report.mjs#validateBoundedDecisionCalibrationReport": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/bounded-decision-cua-s1-forms-adapter.mjs#validateCuaS1FormsQuestion": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/bounded-decision-interpretation.mjs#validateBoundedDecisionInterpretationPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/bounded-decision-observation.mjs#validateBoundedDecisionObservation": {
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/bounded-decision-provider-profile.mjs#validateBoundedDecisionProviderProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/bounded-decision-question-schema.mjs#validateBoundedDecisionQuestionSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/canonical-shared-artifact.mjs#validateCanonicalSharedArtifact": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/capability-consumption.mjs#verifyCapabilityConsumptionReceipt": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/capability-surfaces.mjs#validateCapabilitySurfaceRegistry": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/causal-sync.mjs#verifyCausalBundle": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/causal-sync.mjs#verifyCausalUpdate": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/ci-checkout-freshness.mjs#verifyCiCheckoutFreshness": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-artifact-mutation-admission.mjs#validateCircleArtifactMutationAdmission": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-commitment-admission.mjs#validateCircleCommitmentAdmission": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-core.mjs#validateCircleCorePackage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-decision-request-evidence.mjs#validateCircleDecisionRequestEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-export-retention-evidence.mjs#validateCircleExportRetentionEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-membership-assurance.mjs#validateCircleMembershipAssurance": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-templates.mjs#validateCircleTemplate": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/circle-templates.mjs#validateCircleTemplateCatalog": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/co-creative-workspace.mjs#validateCoCreativeWorkspaceProposal": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-advisor-escalation.mjs#validateCognitiveAdvisorEscalationPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-advisor-escalation.mjs#validateCognitiveAdvisorEscalationRequest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-auto-routing.mjs#validateCognitiveRouteProposal": {},
+    "src/lib/cognitive-auto-routing.mjs#verifyCognitiveRouteProposal": {},
+    "src/lib/cognitive-availability-attestation.mjs#validateCognitiveAvailabilityAttestation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-capability-observation.mjs#validateCognitiveCapabilityObservation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-capability-profile.mjs#validateCognitiveCapabilityProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-capability-profile.mjs#validateCognitiveEligibilityRequest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-lineage-manifest.mjs#validateCognitiveLineageManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-selection-proposal.mjs#validateCognitiveSelectionPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/cognitive-topology.mjs#validateCognitiveTopology": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/command-intake.mjs#validateCommandIntake": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-authority-evidence.mjs#verifyContextAuthorityEvidence": {},
+    "src/lib/context-authority-evidence.mjs#verifyContextAuthorityEvidenceBundle": {
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-authority-lifecycle-command.mjs#verifyContextAuthorityLifecycleCommand": {},
+    "src/lib/context-broker-compiler.mjs#validateContextCapsule": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-broker-compiler.mjs#validateContextRequest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-broker-compiler.mjs#validateVaultAccessLease": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-retrieval-planner.mjs#validateContextVaultCatalogEntry": {},
+    "src/lib/context-semantic-review-evidence.mjs#validateLocalContextSemanticReviewEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-semantic-review-evidence.mjs#verifyAcceptedLocalContextSemanticReview": {},
+    "src/lib/context-semantic-review-evidence.mjs#verifyCompletedLocalContextSemanticReview": {
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-semantic-source-evidence.mjs#verifyLocalContextSemanticSourceEvidence": {
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/context-semantic-state.mjs#verifyLocalContextSemanticStateRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/context-semantic-trust.mjs#verifyLocalContextSemanticTrust": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/data-key-history.mjs#verifyDataKeyRotationManifestAttestation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-portable-grant.mjs#verifyPortableDelegationGrant": {},
+    "src/lib/delegation-root-attestation-key-currentness-anchor.mjs#verifyDelegationRootAttestationKeyCurrentnessAnchor": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-currentness-checkpoint.mjs#validateDelegationRootAttestationKeyCurrentnessCheckpointPath": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/delegation-root-attestation-key-currentness-checkpoint.mjs#validateDelegationRootAttestationKeyCurrentnessCheckpointTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-currentness-checkpoint.mjs#verifyDelegationRootAttestationKeyCurrentnessCheckpoint": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-currentness-checkpoint.mjs#verifyDelegationRootAttestationKeyLifecycleCurrentness": {
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-lifecycle.mjs#validateDelegationRootAttestationKeyCredentialPath": {},
+    "src/lib/delegation-root-attestation-key-lifecycle.mjs#validateDelegationRootAttestationKeyCredentialTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-lifecycle.mjs#verifyDelegationRootAttestationKeyCredential": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-lifecycle.mjs#verifyDelegationRootAttestationKeyRevocation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/delegation-root-attestation-key-lifecycle.mjs#verifyDelegationRootAttestationWithKeyLifecycle": {},
+    "src/lib/delegation-root-attestation.mjs#verifyDelegationRootAttestation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/deployment-transition-receipt.mjs#validateDeploymentTransitionReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/disclosure-review.mjs#validateDisclosureReview": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/effect-consequence-classification.mjs#validateEffectConsequenceClassification": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/epistemic-contracts.mjs#validateEpistemicProposal": {},
+    "src/lib/epistemic-reproducibility-closure.mjs#validateReproducibilityClosure": {},
+    "src/lib/execution-route-policy.mjs#validateExecutionRoutePolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/external-agent-ingress-request.mjs#validateExternalAgentIngressRequest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/external-operation-offer.mjs#validateExternalOperationOffer": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/external-operation-offer.mjs#validateExternalOperationOfferSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/external-operation-offer.mjs#validateExternalOperationSpendEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/flow-compiler.mjs#validateFlowPlan": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/flow-compiler.mjs#validateFlowProposal": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/flow-dispatch-projection.mjs#validateFlowDispatchInput": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/flow-dispatch-projection.mjs#validateFlowDispatchProjection": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/flow-dispatch-projection.mjs#verifyFlowDispatchProjection": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/founder-casting-vote-receipt.mjs#validateFounderCastingVoteReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/founder-genesis-council.mjs#validateFoundersCouncilFoundation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/founder-genesis-receipt.mjs#validateFounderGenesisReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/founders-console-projection.mjs#validateFoundersConsoleProjection": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/gateway-client-contract.mjs#validateGatewayClientContract": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/gateway-client-contract.mjs#validateGatewayClientContractSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/gateway-client-contract.mjs#validateGatewayClientRouteImplementation": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/generative-interface-proposal.mjs#validateGenerativeInterfaceProposal": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/governance-era-authority.mjs#validateGovernanceEraAuthorityPackage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/hermes-identity-fixture-adapter.mjs#validateHermesCodeIdentityObservation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/hermes-identity-fixture-adapter.mjs#validateHermesIdentityPinProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/hermes-identity-fixture-adapter.mjs#verifyHermesIdentityFixtureReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/host-install-plan.mjs#validateHostInstallPlan": {},
+    "src/lib/host-install-plan.mjs#validateHostInstallPolicy": {
+      "undefined": "accept"
+    },
+    "src/lib/identity.mjs#verifyCapability": {
+      "null-prototype": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel",
+      "to-string-throws": "sentinel"
+    },
+    "src/lib/identity.mjs#verifyObjectSignature": {
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/identity.mjs#verifySignedRequest": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw"
+    },
+    "src/lib/importer.mjs#validateImportBundle": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/inference-measurement-contracts.mjs#validateInferenceBenchmarkEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/inference-measurement-contracts.mjs#validateInferenceWorkloadProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/install-release-manifest.mjs#validateInstallReleaseManifestPolicy": {
+      "undefined": "accept"
+    },
+    "src/lib/install-release-manifest.mjs#verifyInstallReleaseArtifact": {},
+    "src/lib/install-release-manifest.mjs#verifyInstallReleaseManifest": {},
+    "src/lib/install-session.mjs#validateInstallSessionCandidate": {},
+    "src/lib/install-session.mjs#validateInstallSessionDecision": {},
+    "src/lib/install-session.mjs#validateInstalledStateObservation": {},
+    "src/lib/install-session.mjs#validateVerifiedInstallSession": {},
+    "src/lib/institutional-pattern-package.mjs#validateInstitutionalPatternPackage": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-contract.mjs#validateIntentGraph": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-execution-handoff-validation.mjs#validateIntentExecutionHandoffAgainstEligibility": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-admission-current.mjs#validateIntentExecutorAdmissionDossierCurrent": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-admission-current.mjs#verifyIntentExecutorPromotionCandidate": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-admission-current.mjs#verifyIntentExecutorReviewAttestation": {
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-admission.mjs#validateIntentExecutorAdmissionDossierCurrent": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-admission.mjs#verifyIntentExecutorPromotionCandidate": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-admission.mjs#verifyIntentExecutorReviewAttestation": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-string": "raw",
+      "options-throwing-proxy": "raw",
+      "options-throwing-getter": "raw"
+    },
+    "src/lib/intent-executor-application-receipt-current.mjs#verifyIntentExecutorApplicationReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-application-receipt.mjs#verifyIntentExecutorApplicationReceipt": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-input-resolution.mjs#verifyIntentExecutorInputResolution": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-input-resolution.mjs#verifyResolvedIntentExecutionHandoff": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-input-resolution.mjs#verifyResolverEligibleInputState": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-promotion-package-current.mjs#verifyIntentExecutorPromotionPackage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-promotion-package.mjs#verifyIntentExecutorPromotionPackage": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-resolver-admission.mjs#validateIntentResolverAdmissionDossierCurrent": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-executor-resolver-admission.mjs#verifyIntentResolverPromotionCandidate": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-resolver-admission.mjs#verifyIntentResolverReviewAttestation": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-string": "raw",
+      "options-throwing-proxy": "raw",
+      "options-throwing-getter": "raw"
+    },
+    "src/lib/intent-executor-resolver-application-receipt.mjs#verifyIntentResolverApplicationReceipt": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-executor-resolver-promotion-package.mjs#verifyIntentResolverPromotionPackage": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-grid-evidence.mjs#validateActivationSupersession": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-grid-evidence.mjs#validateAttestationAgainstActivation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-remediation.mjs#validateIntentRemediationProposalAgainstState": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/intent-resolver-prepared-effect.mjs#verifyResolvedIntentPreparedRepositoryDocsEffect": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/intent-resolver-prepared-effect.mjs#verifyResolvedIntentTargetAuthorization": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/invocation-envelope.mjs#validateInvocationEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/key-lifecycle-event.mjs#validateKeyLifecycleEvent": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/local-admission-record.mjs#validateLocalAdmissionRecord": {},
+    "src/lib/machine-discovery.mjs#validateMachineDiscovery": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/machine-holder-presentation.mjs#verifyMachineHolderPresentation": {},
+    "src/lib/machine-receipt.mjs#validateMachineIntentReceipt": {},
+    "src/lib/machine-receipt.mjs#verifyMachineIntentReceipt": {},
+    "src/lib/measurement-source-envelope.mjs#validateMeasurementSourceEnvelopes": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/mind-continuity-evidence.mjs#validateMindContinuityEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/model-acquisition-manifest.mjs#validateModelAcquisitionManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/model-behavior-incident.mjs#validateModelBehaviorIncident": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/negotiation-message.mjs#validateNegotiationMessage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/node-placement-policy.mjs#validateNodePlacementPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/node-runtime-version.mjs#validateVersionInRange": {
+      "null-prototype": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel",
+      "to-string-throws": "sentinel"
+    },
+    "src/lib/nodes.mjs#verifyNodeAdmission": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/nodes.mjs#verifyNodeRenewal": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/nodes.mjs#verifyStorageOffer": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/obligation-contract.mjs#validateObligationContract": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/operation-candidate-selection.mjs#validateOperationCandidateSelectionProposal": {},
+    "src/lib/operation-candidate-selection.mjs#verifyOperationCandidateSelectionProposal": {},
+    "src/lib/operation-proposal-binding.mjs#validateOperationProposalBinding": {},
+    "src/lib/operation-proposal-binding.mjs#verifyOperationProposalBinding": {},
+    "src/lib/outcome-completion-evidence.mjs#validateOutcomeCompletionEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/path-observation-evidence.mjs#validatePathObservationEvidence": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/persistence-attestation.mjs#validatePersistenceAttestation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/persistent-entity-bundle.mjs#validatePersistentEntityBundle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "sentinel",
+      "nested-proxy-in-array": "sentinel",
+      "throwing-getter": "sentinel",
+      "counting-getter": "read-through",
+      "cycle": "raw",
+      "array-cycle": "raw"
+    },
+    "src/lib/persona-journal-credential.mjs#validateCredentialedPublicJournalContinuity": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/persona-journal-credential.mjs#validatePersonaSigningCredentialPath": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/persona-journal-credential.mjs#validatePersonaSigningCredentialTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/persona-journal-credential.mjs#verifyCredentialedPublicJournalAttestation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/persona-journal-credential.mjs#verifyPersonaSigningCredential": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/persona-journal-credential.mjs#verifyPersonaSigningRevocation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/personal-agent-pack-v2.mjs#validatePersonalAgentPackV2": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/personal-agent-pack-v2.mjs#validatePersonalAgentPackV2Bindings": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/personal-agent-pack-v2.mjs#validatePersonalModelAdaptationAuthorization": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/plan.mjs#validatePlan": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/policy.mjs#validateAuthorityReducingPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/policy.mjs#validatePolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/portable-trust-package.mjs#validatePortableTrustPackage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/portable-verification-bundle.mjs#validatePortableVerificationBundle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/privacy-threat-profile.mjs#validatePrivacyThreatProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/project-continuity-package.mjs#verifyProjectContinuityPackage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/proof-bearing-assertion.mjs#validateProofBearingAssertion": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/protected-artifact.mjs#verifyProtectedArtifactState": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/provider-runtime.mjs#verifyProviderResponse": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-durable-store.mjs#verifyPublicWitnessDurableRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-ingress-trust.mjs#validatePublicWitnessIngressTrustBundle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-ingress-trust.mjs#validatePublicWitnessIngressTrustTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-ingress-trust.mjs#verifyPublicWitnessIngressTrustBundleAgainstReceiver": {
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-receiver-store.mjs#verifyPublicWitnessReceiverRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-service-key-lifecycle.mjs#validatePublicWitnessServiceKeyCredentialPath": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/public-witness-service-key-lifecycle.mjs#validatePublicWitnessServiceKeyCredentialTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-service-key-lifecycle.mjs#verifyPublicWitnessServiceKeyCredential": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-service-key-lifecycle.mjs#verifyPublicWitnessServiceKeyRevocation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-service.mjs#verifyPublicWitnessConflict": {},
+    "src/lib/public-witness-service.mjs#verifyPublicWitnessObservation": {},
+    "src/lib/public-witness-source-control-store.mjs#verifyPublicWitnessSourceControlRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-control.mjs#validatePublicWitnessSourceControl": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-control.mjs#validatePublicWitnessSourceControlTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-control.mjs#verifyPublicWitnessSourceControlAgainstReceiver": {
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-provisioning-journal-lifecycle.mjs#verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLifecycle": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-provisioning-journal-lifecycle.mjs#verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLifecycle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-provisioning-key-lifecycle.mjs#verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-provisioning-store.mjs#verifyPublicWitnessSourceProvisioningApplicationRecord": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-source-provisioning.mjs#verifyPublicWitnessSourceProvisioningCommand": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-transfer.mjs#validatePublicWitnessSourceAdmission": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness-transfer.mjs#validatePublicWitnessTransferContinuity": {},
+    "src/lib/public-witness-transfer.mjs#verifyPublicWitnessTransferEnvelope": {},
+    "src/lib/public-witness-transfer.mjs#verifyPublicWitnessTransferPackage": {},
+    "src/lib/public-witness-transfer.mjs#verifyPublicWitnessTransferReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness.mjs#validatePublicJournalContinuity": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness.mjs#validatePublicWitnessCheckpoint": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness.mjs#verifyPublicJournalAttestation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/public-witness.mjs#verifyPublicWitnessReceipt": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/reasoning-evaluation.mjs#validateReasoningEvaluationSuite": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/replacement-fidelity-evaluation.mjs#validateReplacementFidelityEvaluation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/repository-docs-effect.mjs#verifyPreparedRepositoryDocsEffect": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/repository-docs-effect.mjs#verifyRepositoryDocsEffectPlan": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/repository-docs-effect.mjs#verifyRepositoryDocsEffectReceipt": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/research-capsule-contracts.mjs#verifyResearchClaimAdjudication": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-capsule-contracts.mjs#verifyResearchClaimAdjudicationBinding": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-capsule-contracts.mjs#verifyResearchKnowledgeProjection": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-capsule-contracts.mjs#verifyResearchOperationCandidate": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-capsule-contracts.mjs#verifyResearchReproductionEvidence": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-capsule-contracts.mjs#verifyResearchSourceManifest": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-composition-graph.mjs#verifyResearchContribution": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/research-composition-graph.mjs#verifyResearchRelation": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/resilient-path-fabric.mjs#validateResilientPathFabric": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/resource-envelope.mjs#validateResourceEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/resource-observation.mjs#validateResourceObservation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/response-assurance-envelope.mjs#validateResponseAssuranceEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/reward-calibration-report.mjs#validateRewardCalibrationReport": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/reward-drift-comparison.mjs#validateRewardDriftComparison": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/reward-introspection-observation.mjs#validateRewardIntrospectionObservation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/reward-probe-manifest.mjs#validateRewardProbeManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/runtime-adapter-contract.mjs#verifyRuntimeAdapterContract": {
+      "undefined": "accept",
+      "null": "accept",
+      "number": "accept",
+      "nan": "accept",
+      "string": "accept",
+      "boolean": "accept",
+      "bigint": "accept",
+      "symbol": "accept",
+      "function": "accept",
+      "empty-array": "accept",
+      "empty-object": "accept",
+      "frozen-object": "accept",
+      "null-prototype": "accept",
+      "class-instance": "accept",
+      "date": "accept",
+      "map": "accept",
+      "typed-array": "accept",
+      "throwing-proxy": "accept",
+      "recording-proxy": "accept",
+      "revoked-proxy": "accept",
+      "nested-throwing-proxy": "accept",
+      "nested-proxy-in-array": "accept",
+      "hidden-mind-id": "accept",
+      "symbol-key": "accept",
+      "throwing-getter": "accept",
+      "counting-getter": "accept",
+      "own-proto-key": "accept",
+      "inherited-valid": "accept",
+      "cycle": "accept",
+      "array-cycle": "accept",
+      "depth-100": "accept",
+      "sparse-array": "accept",
+      "to-string-throws": "accept"
+    },
+    "src/lib/runtime-connector-fabric-contracts.mjs#validateRuntimeConnectorCatalogEntry": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/runtime-connector-fabric-contracts.mjs#validateRuntimeConnectorCatalogSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/runtime-connector-fabric-contracts.mjs#validateTaskArtifactHandoff": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/runtime-connector-fabric-contracts.mjs#validateTaskArtifactHandoffSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/runtime-connector-fabric-contracts.mjs#verifyRuntimeConnectorFabricContracts": {
+      "undefined": "accept",
+      "null": "accept",
+      "number": "accept",
+      "nan": "accept",
+      "string": "accept",
+      "boolean": "accept",
+      "bigint": "accept",
+      "symbol": "accept",
+      "function": "accept",
+      "empty-array": "accept",
+      "empty-object": "accept",
+      "frozen-object": "accept",
+      "null-prototype": "accept",
+      "class-instance": "accept",
+      "date": "accept",
+      "map": "accept",
+      "typed-array": "accept",
+      "throwing-proxy": "accept",
+      "recording-proxy": "accept",
+      "revoked-proxy": "accept",
+      "nested-throwing-proxy": "accept",
+      "nested-proxy-in-array": "accept",
+      "hidden-mind-id": "accept",
+      "symbol-key": "accept",
+      "throwing-getter": "accept",
+      "counting-getter": "accept",
+      "own-proto-key": "accept",
+      "inherited-valid": "accept",
+      "cycle": "accept",
+      "array-cycle": "accept",
+      "depth-100": "accept",
+      "sparse-array": "accept",
+      "to-string-throws": "accept"
+    },
+    "src/lib/runtime-connector-fabric-frozen-contract.mjs#verifyRuntimeConnectorFabricContractPins": {
+      "undefined": "accept",
+      "null": "raw",
+      "number": "accept",
+      "nan": "accept",
+      "string": "accept",
+      "boolean": "accept",
+      "bigint": "accept",
+      "symbol": "accept",
+      "function": "accept",
+      "empty-array": "accept",
+      "empty-object": "accept",
+      "frozen-object": "accept",
+      "null-prototype": "accept",
+      "class-instance": "accept",
+      "date": "accept",
+      "map": "accept",
+      "typed-array": "accept",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "accept",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "accept",
+      "nested-proxy-in-array": "accept",
+      "hidden-mind-id": "accept",
+      "symbol-key": "accept",
+      "throwing-getter": "accept",
+      "counting-getter": "accept",
+      "own-proto-key": "accept",
+      "inherited-valid": "accept",
+      "cycle": "accept",
+      "array-cycle": "accept",
+      "depth-100": "accept",
+      "sparse-array": "accept",
+      "to-string-throws": "accept"
+    },
+    "src/lib/runtime-connector-fabric-frozen-contract.mjs#verifyRuntimeConnectorFabricFrozenContract": {
+      "undefined": "accept",
+      "null": "accept",
+      "number": "accept",
+      "nan": "accept",
+      "string": "accept",
+      "boolean": "accept",
+      "bigint": "accept",
+      "symbol": "accept",
+      "function": "accept",
+      "empty-array": "accept",
+      "empty-object": "accept",
+      "frozen-object": "accept",
+      "null-prototype": "accept",
+      "class-instance": "accept",
+      "date": "accept",
+      "map": "accept",
+      "typed-array": "accept",
+      "throwing-proxy": "accept",
+      "recording-proxy": "accept",
+      "revoked-proxy": "accept",
+      "nested-throwing-proxy": "accept",
+      "nested-proxy-in-array": "accept",
+      "hidden-mind-id": "accept",
+      "symbol-key": "accept",
+      "throwing-getter": "accept",
+      "counting-getter": "accept",
+      "own-proto-key": "accept",
+      "inherited-valid": "accept",
+      "cycle": "accept",
+      "array-cycle": "accept",
+      "depth-100": "accept",
+      "sparse-array": "accept",
+      "to-string-throws": "accept"
+    },
+    "src/lib/runtime-task-continuity.mjs#verifyClosedTaskCausalGraph": {
+      "revoked-proxy": "raw",
+      "nested-proxy-in-array": "sentinel"
+    },
+    "src/lib/runtime-task-continuity.mjs#verifyTaskHandoffEdge": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/runtime-task-continuity.mjs#verifyTaskSnapshotTransition": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/self-bundle-index.mjs#validateSelfBundleIndex": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/semantic-action-consumption-lab.mjs#validateSemanticAuthorizationInstance": {
+      "recording-proxy": "read-through"
+    },
+    "src/lib/semantic-memory-lifecycle.mjs#verifySemanticMemoryLifecycle": {
+      "options-throwing-proxy": "sentinel"
+    },
+    "src/lib/semantic-operation-proposal-core.mjs#validateCallAgainstManifest": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-string": "raw",
+      "options-throwing-proxy": "raw",
+      "options-throwing-getter": "raw"
+    },
+    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposal": {},
+    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposalSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/semantic-operation-proposal-core.mjs#validateSemanticOperationProposalShape": {},
+    "src/lib/semantic-operation-proposal.mjs#validateCallAgainstManifest": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "raw",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-string": "raw",
+      "options-throwing-proxy": "raw",
+      "options-throwing-getter": "raw"
+    },
+    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposal": {},
+    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposalSchema": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/semantic-operation-proposal.mjs#validateSemanticOperationProposalShape": {},
+    "src/lib/service-network-policy.mjs#validateComposeNetworkSegmentation": {},
+    "src/lib/service-network-policy.mjs#validateServiceNetworkPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/service-network-policy.mjs#validateServiceRouteImplementation": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/service-units.mjs#validateServiceUnits": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-exchange-package.mjs#verifySocialExchangePackage": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-feed-ranking.mjs#validateSocialFeedCandidate": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-feed-ranking.mjs#validateSocialFeedObjectiveProfile": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-feed-semantic-signal.mjs#validateSocialFeedSemanticSignal": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-publication.mjs#validatePublicPersonaProjection": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-publication.mjs#validateSocialPublicationPersonaBinding": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-publication.mjs#validateSocialPublicationProjection": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-publication.mjs#validateSocialPublicationRetraction": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/social-transport-envelope.mjs#verifySocialTransportEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/source-continuity.mjs#verifySourceTransition": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/sovereign-information-portability.mjs#validateSovereignInformationBundle": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/specialist-harness-bridge.mjs#validateSpecialistHarnessBridge": {},
+    "src/lib/state-fabric-simulation.mjs#validateStateFabricSimulation": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/studio-artifact-manifest.mjs#validateStudioArtifactManifest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/task-continuity-policy.mjs#validateTaskContinuityPolicy": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/threat-applicability.mjs#verifyBuildFacts": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/threat-intelligence-contracts.mjs#verifyRegressionCandidate": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/threat-intelligence-contracts.mjs#verifyReproductionCase": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/threat-intelligence-contracts.mjs#verifyThreatAdaptationReceipt": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/threat-intelligence-contracts.mjs#verifyThreatHypothesis": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/threat-intelligence-contracts.mjs#verifyThreatObservation": {
+      "revoked-proxy": "raw"
+    },
+    "src/lib/transport-credentials.mjs#validateTransportCredentials": {
+      "undefined": "raw",
+      "null": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/lib/transport-credentials.mjs#verifyTransportServerIdentity": {
+      "undefined": "accept",
+      "null": "accept",
+      "number": "accept",
+      "nan": "accept",
+      "string": "accept",
+      "boolean": "accept",
+      "bigint": "accept",
+      "symbol": "accept",
+      "function": "accept",
+      "empty-array": "accept",
+      "empty-object": "accept",
+      "frozen-object": "accept",
+      "null-prototype": "accept",
+      "class-instance": "accept",
+      "date": "accept",
+      "map": "accept",
+      "typed-array": "accept",
+      "throwing-proxy": "accept",
+      "recording-proxy": "accept",
+      "revoked-proxy": "accept",
+      "nested-throwing-proxy": "accept",
+      "nested-proxy-in-array": "accept",
+      "hidden-mind-id": "accept",
+      "symbol-key": "accept",
+      "throwing-getter": "accept",
+      "counting-getter": "accept",
+      "own-proto-key": "accept",
+      "inherited-valid": "accept",
+      "cycle": "accept",
+      "array-cycle": "accept",
+      "depth-100": "accept",
+      "sparse-array": "accept",
+      "to-string-throws": "accept",
+      "options-null": "accept",
+      "options-string": "accept",
+      "options-throwing-proxy": "accept",
+      "options-throwing-getter": "accept"
+    },
+    "src/lib/vault-catalog-projection.mjs#validateSovereignVaultManifest": {
+      "null": "raw"
+    },
+    "src/lib/vault-catalog-projection.mjs#verifyVaultSemanticIndex": {
+      "null": "raw"
+    },
+    "src/lib/verified-work-graph.mjs#validateVerifiedWorkGraph": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/contextual-disclosure.mjs#validateContextualDisclosureRequest": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/contextual-disclosure.mjs#validateContextualDisclosureResult": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/delegated-gate-mandate.mjs#validateDelegatedGateMandate": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/education-contract.mjs#validateEducationContract": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw"
+    },
+    "src/domain/education-contract.mjs#validateEducationIntent": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-string": "raw",
+      "options-throwing-proxy": "raw",
+      "options-throwing-getter": "raw"
+    },
+    "src/domain/education-contract.mjs#validateEducationPolicy": {
+      "undefined": "raw",
+      "null": "raw",
+      "number": "raw",
+      "nan": "raw",
+      "string": "raw",
+      "boolean": "raw",
+      "bigint": "raw",
+      "symbol": "raw",
+      "function": "raw",
+      "empty-array": "raw",
+      "empty-object": "raw",
+      "frozen-object": "raw",
+      "null-prototype": "raw",
+      "class-instance": "raw",
+      "date": "raw",
+      "map": "raw",
+      "typed-array": "raw",
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "raw",
+      "revoked-proxy": "raw",
+      "nested-throwing-proxy": "raw",
+      "nested-proxy-in-array": "raw",
+      "hidden-mind-id": "raw",
+      "symbol-key": "raw",
+      "throwing-getter": "raw",
+      "counting-getter": "raw",
+      "own-proto-key": "raw",
+      "inherited-valid": "raw",
+      "cycle": "raw",
+      "array-cycle": "raw",
+      "depth-100": "raw",
+      "sparse-array": "raw",
+      "to-string-throws": "raw",
+      "options-null": "raw",
+      "options-string": "raw",
+      "options-throwing-proxy": "raw",
+      "options-throwing-getter": "raw"
+    },
+    "src/domain/education-learner-append-mutation.mjs#validateEducationLearnerEventRecordPayload": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/education-learner-progress-query.mjs#validateEducationLearnerProgressQuery": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/evidence-graph.mjs#validateEvidenceAssertion": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/evidence-graph.mjs#validateEvidenceLink": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/evidence-graph.mjs#validateEvidenceReviewState": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/information-access-decision.mjs#validateInformationAccessDecision": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    },
+    "src/domain/information-rights.mjs#validateInformationRightsEnvelope": {
+      "throwing-proxy": "sentinel",
+      "recording-proxy": "read-through",
+      "revoked-proxy": "raw"
+    }
+  }
+}

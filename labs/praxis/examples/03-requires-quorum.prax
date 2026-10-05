@@ -1,0 +1,6 @@
+requires quorum release_board: Approve @ Ledger threshold 2 of alice, bob, carol;
+observe decision = "release-2026-09-22" from "board:minutes";
+op approval = Approve(decision) @ Ledger;
+authorize approval using release_board as armed_approval;
+prepare armed_approval as prepared_approval;
+commit prepared_approval as approval_receipt;

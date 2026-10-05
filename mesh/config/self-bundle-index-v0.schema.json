@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schema/self-bundle-index-v0.schema.json",
+  "title": "AXIOM Self Bundle Index v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "bundle_id",
+    "principal_id",
+    "created_at",
+    "predecessor_bundle",
+    "agent_composition",
+    "personal_agent_pack",
+    "semantic_state",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-self-bundle-index.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-contract-laboratory" },
+    "bundle_id": { "$ref": "#/$defs/identifier" },
+    "principal_id": { "$ref": "#/$defs/identifier" },
+    "created_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "predecessor_bundle": {
+      "oneOf": [
+        { "$ref": "#/$defs/reference" },
+        { "type": "null" }
+      ]
+    },
+    "agent_composition": { "$ref": "#/$defs/reference" },
+    "personal_agent_pack": { "$ref": "#/$defs/reference" },
+    "semantic_state": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/semantic_state" }
+    },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/identifier" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "semantic_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "ref", "digest", "required_for_continuity"],
+      "properties": {
+        "claim_id": { "$ref": "#/$defs/identifier" },
+        "ref": { "$ref": "#/$defs/identifier" },
+        "digest": { "$ref": "#/$defs/digest" },
+        "required_for_continuity": { "type": "boolean" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/self-bundle-index.mjs",
+  "x-axiom-non-claims": [
+    "subjective-identity-proof",
+    "consciousness-continuity-proof",
+    "cross-model-equivalence-proof",
+    "authority-grant",
+    "secret-storage",
+    "vault-access-grant",
+    "runtime-activation",
+    "migration-execution",
+    "production-promotion"
+  ]
+}

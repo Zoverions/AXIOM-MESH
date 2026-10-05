@@ -1,0 +1,39 @@
+{
+  "schema": "axiom-negotiation-message.v1",
+  "message_id": "negotiation:counteroffer-002",
+  "thread_id": "negotiation:service-delivery-001",
+  "message_type": "counteroffer",
+  "sender": "party:recipient",
+  "recipients": [
+    "party:provider"
+  ],
+  "base_contract_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "prior_message_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "terms": [
+    {
+      "term_id": "term:deadline",
+      "operation": "replace",
+      "statement": "Deliver the report by 2026-09-04T13:20:00.000Z."
+    },
+    {
+      "term_id": "term:evidence",
+      "operation": "retain",
+      "statement": "Delivery requires artifact digest and delivery receipt."
+    }
+  ],
+  "accepted_term_ids": [],
+  "supersedes_message_ids": [],
+  "delegation_evidence_ref": null,
+  "issued_at": "2026-09-01T13:50:00.000Z",
+  "expires_at": "2026-09-02T13:50:00.000Z",
+  "authority": {
+    "message_grants_runtime_authority": false,
+    "acceptance_grants_runtime_authority": false,
+    "settlement_grants_effect_authority": false,
+    "amendment_grants_effect_authority": false
+  },
+  "limitations": [
+    "Counteroffer changes no active contract until separately accepted and recorded.",
+    "No negotiation message authorizes execution or settlement."
+  ]
+}

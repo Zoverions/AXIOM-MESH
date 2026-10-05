@@ -2,7 +2,7 @@
 
 **Status:** normative promotion criteria
 
-**Updated:** 2026-07-29
+**Updated:** 2026-08-23
 
 **Applies to:** `0.12.0-dev.3` supported clean-room kernel in
 [`mesh/`](../mesh/README.md)
@@ -24,7 +24,21 @@ Clean-checkout source setup is also implemented: one command validates the
 supported Node.js/npm toolchain, installs the two exact zero-dependency locks
 with lifecycle scripts disabled, proves they did not change, and runs the
 kernel and release gates. It creates no production credentials and makes no
-deployment claim.
+deployment claim. The current productization contract separately specifies
+personal/local and infrastructure fresh-host install profiles. A non-mutating,
+OCI-first Linux host planner now produces digest-bound compatibility,
+blocker, and prerequisite evidence for those profiles. Its target-host fact
+contract permits Node.js to be absent for OCI planning, but the current planner
+command itself is a Node.js program and is not the future Node-free bootstrapper.
+It modifies no host state. A separate signed release/install-manifest verifier
+now requires an externally trusted active Ed25519 signer, exact current
+control-plane digests, bounded validity, exact profile status, and required
+artifact/evidence metadata; artifact bytes still require a separate local
+length/digest check. Install Session v0 additionally classifies exact no-op,
+install/repair/upgrade/recovery review, and fail-closed newer/diverged/partial-
+secret/uncertain states from bounded installed-state evidence. None of these
+results authorizes host mutation. The profiles are still not supported fresh-
+host installers.
 
 The authenticated Gateway surface also has a versioned client contract covering
 all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
@@ -88,9 +102,13 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny 41-route policy permits only current internal
+readable default-deny 42-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
-mTLS peer allowlists.
+mTLS peer allowlists. The 42nd reviewed permission is the bounded
+Hypervisor-to-Grid `POST /internal/v1/education/learner-progress` edge used by
+the governed Axiom Education convergence. It does not expose Education publicly,
+give Sandbox direct Grid authority, activate an Education provider or
+curriculum, or create a second authorization path.
 Signed host evidence and a protected four-container check prove required-path
 operation, selected forbidden edges, Sandbox-loss readiness degradation
 without restarting Gateway, Grid, or Hypervisor, and state-preserving
@@ -131,6 +149,30 @@ restricted by the exact service-network policy and active mTLS peer identity.
 Each unit mounts only its own projected application and TLS private keys. See
 [independent service units](operations/INDEPENDENT-SERVICE-UNITS.md) and the
 [explicit service network policy](operations/EXPLICIT-SERVICE-NETWORK-POLICY.md).
+
+## First-class application and installation boundary
+
+Axiom Education is an integral AXIOM application but remains independently
+released at `Zoverions/Axiom-Education`. The Mesh-side governed learner substrate
+may be built and verified without promoting the Education application, enabling
+production Education actions, or proving the downstream repository has adopted
+the exact contract. Downstream adoption requires an exact merged Mesh pin,
+feature-adoption state, and Education's own verification.
+
+Likewise, source setup and host planning are not host installation. The
+current planner may establish only bounded host compatibility and prerequisites;
+it creates no users, credentials, services, network state, or install authority.
+The first supported fresh-host installer must begin from a supported clean Linux
+host, consume a compatible exact host plan, verify an immutable signed release
+against the current control plane and locally verify artifact bytes before
+privileged mutation, create unprivileged service/data/
+secret boundaries, preserve no-public-ingress and deny-egress defaults, and
+prove reboot, update, tampered/incompatible-update rejection, restore or safe
+rollback, uninstall, and non-secret receipts. Infrastructure-node installation
+adds explicit node-role admission, operations, rotation, quarantine,
+decommission, and community reproduction gates. Installing any profile or
+application grants no runtime, network, data, governance, provider, or external-
+effect authority.
 
 ## Security requirements
 

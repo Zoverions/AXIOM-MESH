@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.local/schema/model-acquisition-manifest-v0.schema.json",
+  "title": "AXIOM Model Acquisition Manifest v0",
+  "description": "Inert evidence binding an exact owner/shared-custody model artifact declaration to one exact Cognitive Topology node. This schema does not acquire weights, prove artifact availability, grant authority, or activate a runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "acquisition_id",
+    "topology_id",
+    "topology_digest",
+    "node_id",
+    "model_id",
+    "artifact",
+    "source",
+    "custody",
+    "acquired_at",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-model-acquisition-manifest.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "acquisition_id": { "$ref": "#/$defs/identifier" },
+    "topology_id": { "$ref": "#/$defs/identifier" },
+    "topology_digest": { "$ref": "#/$defs/digest" },
+    "node_id": { "$ref": "#/$defs/identifier" },
+    "model_id": { "$ref": "#/$defs/identifier" },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "source": { "$ref": "#/$defs/source" },
+    "custody": { "$ref": "#/$defs/custody" },
+    "acquired_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "recorded_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_ref",
+        "artifact_digest",
+        "licence_ref",
+        "format_ref"
+      ],
+      "properties": {
+        "artifact_ref": { "$ref": "#/$defs/identifier" },
+        "artifact_digest": { "$ref": "#/$defs/digest" },
+        "licence_ref": { "$ref": "#/$defs/identifier" },
+        "format_ref": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_kind",
+        "source_ref",
+        "source_evidence_ref",
+        "source_evidence_digest"
+      ],
+      "properties": {
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "upstream-release",
+            "owner-build",
+            "authorized-transfer",
+            "recovery-copy"
+          ]
+        },
+        "source_ref": { "$ref": "#/$defs/identifier" },
+        "source_evidence_ref": { "$ref": "#/$defs/identifier" },
+        "source_evidence_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "location_ref",
+        "verification_ref",
+        "verification_digest"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "owner-local",
+            "owner-remote",
+            "shared"
+          ]
+        },
+        "location_ref": { "$ref": "#/$defs/identifier" },
+        "verification_ref": { "$ref": "#/$defs/identifier" },
+        "verification_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/model-acquisition-manifest.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "node_id and model_id must identify one exact Cognitive Topology node",
+    "the bound node must declare weight state open-acquired or local-proprietary",
+    "artifact_digest must exactly match the bound topology weight artifact digest",
+    "licence_ref must match the bound topology licence reference when one is declared",
+    "provider-controlled topology custody cannot be represented as acquired owner custody",
+    "custody.mode must exactly match the bound topology owner/shared custody declaration",
+    "recorded_at cannot precede acquired_at"
+  ],
+  "x-axiom-non-claims": [
+    "artifact-availability",
+    "source-authenticity",
+    "licence-legal-validity",
+    "behavioral-equivalence",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation",
+    "model-invocation",
+    "weight-acquisition-effect",
+    "subjective-identity-proof"
+  ]
+}

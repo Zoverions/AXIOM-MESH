@@ -1,0 +1,88 @@
+{
+  "schema": "axiom-rt-mcp-auth-001-upstream-auth.v1",
+  "target": "RT-MCP-AUTH-001",
+  "title": "Upstream MCP authentication must not become AXIOM effect authority",
+  "invariant": "No authentication result produced outside the AXIOM authority boundary can itself authorize a consequential effect.",
+  "source_class": "CVE-2026-59822-style fail-open upstream authentication",
+  "cases": [
+    {
+      "id": "empty-auth-object-no-grant",
+      "mode": "inert-upstream-auth-no-grant",
+      "upstream_metadata": {
+        "upstream_auth": {
+          "authenticated": true,
+          "principal": {},
+          "trace_marker": "rt-mcp-auth-empty-object"
+        }
+      },
+      "must_not_project": ["rt-mcp-auth-empty-object"]
+    },
+    {
+      "id": "oauth-fallback-no-grant",
+      "mode": "inert-upstream-auth-no-grant",
+      "upstream_metadata": {
+        "oauth": {
+          "validated": false,
+          "fallback_user": {},
+          "trace_marker": "rt-mcp-auth-oauth-fallback"
+        }
+      },
+      "must_not_project": ["rt-mcp-auth-oauth-fallback"]
+    },
+    {
+      "id": "arbitrary-bearer-no-grant",
+      "mode": "inert-upstream-auth-no-grant",
+      "upstream_metadata": {
+        "authorization": "Bearer attacker-controlled-token",
+        "trace_marker": "rt-mcp-auth-arbitrary-bearer"
+      },
+      "must_not_project": ["attacker-controlled-token", "rt-mcp-auth-arbitrary-bearer"]
+    },
+    {
+      "id": "query-token-no-grant",
+      "mode": "inert-upstream-auth-no-grant",
+      "upstream_metadata": {
+        "query_auth": {
+          "access_token": "attacker-query-token",
+          "public_route": true,
+          "trace_marker": "rt-mcp-auth-query-token"
+        }
+      },
+      "must_not_project": ["attacker-query-token", "rt-mcp-auth-query-token"]
+    },
+    {
+      "id": "tools-list-then-call-denied",
+      "mode": "enumeration-then-call-denied",
+      "upstream_metadata": {
+        "session": {
+          "authenticated": true,
+          "tool_enumeration": true,
+          "trace_marker": "rt-mcp-auth-enumeration"
+        }
+      },
+      "must_not_project": ["rt-mcp-auth-enumeration"]
+    },
+    {
+      "id": "scope-injection-denied",
+      "mode": "scope-injection-denied",
+      "upstream_metadata": {
+        "gateway_claims": {
+          "authenticated": true,
+          "scopes": ["synthetic.admin"]
+        }
+      },
+      "requested_scopes": ["synthetic.read", "synthetic.admin"]
+    },
+    {
+      "id": "principal-substitution-denied",
+      "mode": "principal-substitution-denied",
+      "upstream_metadata": {
+        "gateway_claims": {
+          "authenticated": true,
+          "principal_id": "principal:attacker-projected"
+        }
+      },
+      "attempted_principal_id": "principal:attacker-projected"
+    }
+  ]
+}

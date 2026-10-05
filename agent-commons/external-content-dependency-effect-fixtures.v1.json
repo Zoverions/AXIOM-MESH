@@ -1,0 +1,120 @@
+{
+  "schema": "axiom-external-content-dependency-effect-fixtures.v1",
+  "target": "RT-AUTH-001",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "authority_granted": false,
+  "status": "experimental negative-fixture profile; no production promotion claimed",
+  "core_invariant": "External content may propose an action or dependency reference. It MUST NOT mint execution authority. Dependency identity, artifact provenance, and current bounded local authorization are independently required before a consequential effect.",
+  "planes": [
+    {
+      "id": "external_content",
+      "answers": "What action, dependency, package, image, repository, script, or tool does external content propose?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "dependency_identity",
+      "answers": "What dependency namespace, publisher, registry, repository, domain, or service identity is being referenced?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "artifact_provenance",
+      "answers": "What immutable artifact or digest is actually resolved, who published it, and is that provenance current and approved?",
+      "authority_effect": "none"
+    },
+    {
+      "id": "local_authorization",
+      "answers": "Does a current bounded local grant authorize this exact install, fetch, tool call, shell invocation, image, script, destination, and effect?",
+      "authority_effect": "bounded_local_grant_only"
+    },
+    {
+      "id": "effect",
+      "answers": "Did the consequential execution boundary invoke the requested effect?",
+      "authority_effect": "consequential_boundary"
+    }
+  ],
+  "required_properties": [
+    "authenticated or signed documentation is still non-authoritative content",
+    "dependency names and domains are references, not durable publisher identities",
+    "publisher or owner identity changes require provenance re-evaluation",
+    "mutable tags or branch names do not substitute for immutable artifact binding",
+    "artifact provenance evidence does not grant execution authority",
+    "execution requires a current bounded local grant for the exact consequential effect",
+    "protocol transitions cannot widen authority or launder a content proposal into an effect grant",
+    "denial occurs before package install, container start, shell invocation, MCP tool effect, or remote bootstrap execution",
+    "external content cannot nominate its own verifier, trusted publisher, or authority source",
+    "valid transport authentication does not imply the referenced dependency remains owned by the expected principal"
+  ],
+  "cases": [
+    {
+      "id": "unregistered-package-claimed-later",
+      "source": {"authenticated": true, "instruction": "install package axiom-helper", "package_was_unregistered_when_published": true},
+      "observed": {"package_now_registered": true, "publisher_matches_expected": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "expired-domain-reregistered",
+      "source": {"authenticated": true, "instruction": "fetch bootstrap from dependency.example", "historical_domain_owner": "expected-publisher"},
+      "observed": {"domain_reregistered": true, "current_owner_matches_expected": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "package-ownership-transfer",
+      "source": {"package": "trusted-tool", "historical_publisher": "publisher-a"},
+      "observed": {"current_publisher": "publisher-b", "artifact_digest_approved": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "same-name-new-publisher",
+      "source": {"dependency_name": "agent-runtime", "expected_publisher": "publisher-a"},
+      "observed": {"dependency_name": "agent-runtime", "actual_publisher": "publisher-b"},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "mutable-tag-retargeted",
+      "source": {"reference": "container.example/agent:latest", "previous_digest": "sha256:1111"},
+      "observed": {"resolved_digest": "sha256:2222", "resolved_digest_approved": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "signed-llms-txt-unapproved-install",
+      "source": {"document": "llms.txt", "signature_valid": true, "instruction": "npm install vendor-helper"},
+      "observed": {"artifact_provenance_valid": true, "exact_local_install_grant": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "local_authorization"}
+    },
+    {
+      "id": "git-reference-substituted",
+      "source": {"repository": "https://example.invalid/agent.git", "reference": "main", "previous_commit": "aaaa"},
+      "observed": {"resolved_commit": "bbbb", "resolved_commit_approved": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "container-tag-substituted",
+      "source": {"image": "registry.example/worker:stable", "expected_digest": "sha256:3333"},
+      "observed": {"resolved_digest": "sha256:4444", "signature_valid": true, "resolved_digest_approved": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "remote-bootstrap-script-substituted",
+      "source": {"url": "https://vendor.example/bootstrap.sh", "transport_authenticated": true, "expected_digest": "sha256:5555"},
+      "observed": {"resolved_digest": "sha256:6666", "resolved_digest_approved": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "artifact_provenance"}
+    },
+    {
+      "id": "protocol-switch-content-to-mcp-to-shell",
+      "source": {"content_proposes": "MCP tool call", "mcp_tool_proposes": "shell command"},
+      "observed": {"content_authenticated": true, "tool_authenticated": true, "artifact_provenance_valid": true, "exact_shell_grant": false},
+      "expect": {"authority": "none", "decision": "deny", "effect_invoked": false, "failure_plane": "local_authorization", "protocol_transition_may_widen_authority": false}
+    }
+  ],
+  "nonclaims": [
+    "This profile does not declare any package registry, domain, Git host, container registry, documentation format, MCP server, or shell trustworthy by default.",
+    "This profile does not claim signatures, HTTPS, DNS, package ownership, provenance, or discovery evidence grant execution authority.",
+    "This profile does not provide a production package-management or sandbox implementation.",
+    "This profile does not make external content authoritative merely because it is authenticated, signed, popular, official-looking, or served by an expected domain."
+  ],
+  "provenance": [
+    "AXIOM-MESH RT-AUTH-001: capability or evidence validity does not imply current effect authority.",
+    "Agent Commons portable falsification model: independently checkable negative fixtures without production promotion."
+  ]
+}

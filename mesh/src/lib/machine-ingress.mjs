@@ -60,6 +60,9 @@ export class MachineIngressGuard {
     if (!Number.isSafeInteger(responseBytes) || responseBytes < 0) {
       throw new ValidationError('responseBytes must be a non-negative safe integer');
     }
+    // Admission may precede response inspection. Recheck the declared lifetime;
+    // this does not establish current revocation state or atomic disclosure.
+    this.#assertUnexpired(principal, Date.now());
     const budgets = this.#budgets(principal);
     const maximum = budgets.max_response_bytes;
     if (

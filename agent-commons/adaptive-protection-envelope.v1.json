@@ -1,0 +1,92 @@
+{
+  "schema": "axiom-adaptive-protection-envelope.v1",
+  "status": "experimental profile model; not cryptographic implementation claim",
+  "principle": "Security, privacy, verification, contracting, retention, availability, and connectivity are separate policy dimensions. Profiles compose them according to consequence instead of forcing one universal tier.",
+  "dimensions": {
+    "encryption": {
+      "values": [
+        "transport_only",
+        "at_rest_local",
+        "end_to_end_scoped",
+        "selective_disclosure",
+        "hardware_backed_custody",
+        "split_or_threshold_custody",
+        "air_gapped_custody"
+      ],
+      "rule": "The selected mode must state algorithms/suites elsewhere through a versioned cryptographic profile; labels alone are not cryptographic assurance."
+    },
+    "verification": {
+      "values": [
+        "self_asserted_advisory",
+        "single_source_verified",
+        "multi_source_corroborated",
+        "cryptographically_verified",
+        "independently_reproducible",
+        "multi_party_or_threshold_verified"
+      ],
+      "rule": "Verification strength affects evidence confidence, not ambient execution authority."
+    },
+    "contracting": {
+      "values": [
+        "informational_terms",
+        "signed_bilateral",
+        "multi_party",
+        "policy_bound_machine_readable",
+        "jurisdiction_bound",
+        "escrow_or_conditional",
+        "threshold_or_quorum_governed"
+      ],
+      "rule": "Contract validity and enforceability remain jurisdiction/context dependent; a contract artifact does not mint kernel authority."
+    },
+    "retention": {
+      "values": [
+        "ephemeral",
+        "session",
+        "bounded_local",
+        "durable_local",
+        "replicated_encrypted",
+        "archival_or_legal_hold"
+      ],
+      "rule": "Retention must state deletion, recovery, disclosure, and challenge behavior."
+    },
+    "connectivity": {
+      "values": [
+        "online_required",
+        "online_preferred",
+        "intermittent",
+        "offline_first",
+        "air_gapped"
+      ],
+      "rule": "Loss of connectivity must have an explicit degraded-mode policy; absence of remote verification never silently becomes approval."
+    },
+    "availability": {
+      "values": [
+        "best_effort",
+        "redundant_local",
+        "multi_node_local",
+        "multi_site",
+        "disaster_recovery"
+      ],
+      "rule": "Availability mechanisms cannot weaken confidentiality, authority, or revocation."
+    },
+    "assurance": {
+      "values": [
+        "advisory",
+        "ordinary",
+        "elevated",
+        "high_consequence",
+        "critical"
+      ],
+      "rule": "Assurance is an obligation bundle, not a person-level trust score."
+    }
+  },
+  "composition_rules": [
+    "dimensions may be raised independently",
+    "a stricter local policy overrides a weaker artifact default",
+    "offline mode cannot silently skip freshness checks that were mandatory when last online; stale dependencies must be surfaced",
+    "air-gapped mode requires explicit import/export and revocation reconciliation procedures",
+    "threshold verification and threshold custody are independent choices",
+    "encryption strength does not substitute for authorization or provenance",
+    "contract signature does not substitute for comprehension, consent, legal validity, or effect admission"
+  ]
+}

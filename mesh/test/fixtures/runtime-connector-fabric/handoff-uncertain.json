@@ -1,0 +1,45 @@
+{
+  "schema": "axiom-task-artifact-handoff.v1",
+  "task_id": "task:uncertain-001",
+  "causal_id": "causal:uncertain-001",
+  "requester": {
+    "principal_id": "principal:owner"
+  },
+  "execution_target": {
+    "integration_id": "runtime:synthetic-reference",
+    "integration_class": "agent-runtime",
+    "catalog_entry_id": "runtime:synthetic-reference",
+    "catalog_entry_version": "0.1.0",
+    "adapter_contract": {
+      "contract_id": "axiom.agent-runtime-adapter",
+      "contract_version": "1.0.0",
+      "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"
+    }
+  },
+  "request": {
+    "runtime_operation": "echo",
+    "axiom_action": "system.echo",
+    "capability_id": "core.intent-loop",
+    "purpose": "synthetic-echo",
+    "destinations": ["local"]
+  },
+  "authority": {
+    "authority_source": "axiom-gateway",
+    "grant_required_before_effect": true,
+    "coordination_is_authorization": false,
+    "handoff_transfers_authority": false,
+    "delegation_required_for_independent_child_authority": true
+  },
+  "budgets": {
+    "timeout_ms": 5000
+  },
+  "lifecycle": {
+    "state": "uncertain",
+    "created_at": "2026-08-21T23:31:00Z",
+    "updated_at": "2026-08-21T23:31:05Z",
+    "state_reason": "Transport outcome could not be reconciled.",
+    "uncertainty_record_id": "uncertainty:task-001"
+  },
+  "inputs": [],
+  "outputs": []
+}

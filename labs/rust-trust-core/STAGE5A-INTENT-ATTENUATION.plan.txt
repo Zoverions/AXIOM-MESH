@@ -1,0 +1,232 @@
+Rust Trust-Core Stage 5A — Verified-Grant Intent Attenuation Conformance
+Date: 2026-09-06
+Status: approved design; implementation gate
+Base main: ad8c0bd92f74f328c1c7e86c3d6e2723119defb3
+
+GOAL
+
+Add a laboratory-only Rust candidate for the pure verified-grant/bound-intent attenuation predicate and prove exact behavioral parity with the supported Node implementation in mesh/src/lib/authority-composition-guard.mjs. Node remains authoritative. Stage 5A does not issue grants, verify signatures, consume capabilities, evaluate history/composition restrictions, call a runtime service, or exercise effects.
+
+ARCHITECTURE
+
+The supported Node function verifyIntentAttenuation(grant, intent) remains the executable oracle. A language-neutral TSV fixture admits only bounded ASCII scope identifiers so JavaScript and Rust ordering semantics are identical inside the evidence domain. The Rust laboratory parses the same rows, rejects malformed/unverified/unbound inputs, evaluates four set-containment checks, and exposes only the resulting boolean checks. Differential tests invoke the real Node oracle as a subprocess and compare the five booleans exactly.
+
+No code is added under trust-core/rust/. The Rust candidate remains under labs/rust-trust-core/ and has no production Cargo manifest, binary, FFI, WASM, service, subprocess call from supported runtime code, capability registration, Gateway route, credential access, state access, network access, or effect path.
+
+TECH STACK
+
+- Node 24.18.0 laboratory oracle
+- supported mesh/src/lib/authority-composition-guard.mjs
+- Rust 1.85.0, edition 2024
+- standard library only; zero third-party Rust dependencies
+- #![forbid(unsafe_code)]
+- GitHub Actions Rust Trust-Core Laboratory workflow
+
+GLOBAL CONSTRAINTS
+
+1. Node remains authoritative and is executed directly by the oracle.
+2. The protected authority path remains Gateway -> Hypervisor -> Sandbox -> Grid.
+3. Stage 5A may only answer whether a bound intent is a subset of an already independently verified grant.
+4. Stage 5A may not create, sign, verify, consume, persist, revoke, delegate, or exercise authority.
+5. No production Node call site may import or invoke the Rust candidate.
+6. No file under trust-core/rust/ may change in Stage 5A.
+7. Rust dependencies remain empty; unsafe remains forbidden.
+8. Unknown or malformed fixture data fails closed; no coercion or truncation.
+9. Exact-head acceptance is invalidated by any later commit.
+10. Cryptographic verification and full authority-composition evaluation are deferred to separate later gates.
+
+FIXTURE CONTRACT
+
+Path: labs/rust-trust-core/fixtures/intent-attenuation-v0.tsv
+
+Header columns, in order:
+case_id
+grant_verified
+intent_bound
+grant_actions
+grant_purposes
+grant_destinations
+grant_resources
+intent_actions
+intent_purposes
+intent_destinations
+intent_resources
+
+Rows are tab-separated. Set fields are comma-separated. Empty text means an empty set.
+
+Scope identifiers are restricted in the evidence grammar to:
+[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}
+
+Each set:
+- contains at most 128 items;
+- must already be ASCII-lexicographically sorted;
+- must contain no duplicates;
+- is compared by exact string equality.
+
+The scope-token restriction is a laboratory transport grammar, not a claim that the supported Node function accepts only these strings.
+
+Valid differential rows require grant_verified=true and intent_bound=true. They may evaluate either valid=true or valid=false depending on containment.
+
+Oracle output columns:
+case_id
+valid
+actions
+purposes
+destinations
+resources
+
+All result fields use literal true/false. Output order is fixed. Duplicate output case IDs fail closed in the Rust harness.
+
+INVALID CONTRACT
+
+Path: labs/rust-trust-core/fixtures/intent-attenuation-v0-invalid.tsv
+Header: case_id<TAB>encoded_row
+
+The invalid corpus must cover at minimum:
+- wrong TSV column count;
+- malformed case_id;
+- malformed grant_verified boolean;
+- malformed intent_bound boolean;
+- unverified grant;
+- unbound intent;
+- unsorted grant set;
+- duplicate grant set member;
+- unsorted intent set;
+- duplicate intent set member;
+- malformed scope identifier;
+- overlong scope identifier.
+
+For malformed grammar, both decoders must reject. For syntactically valid unverified/unbound cases, the Node oracle and Rust candidate must both fail closed before returning an attenuation result.
+
+GENERATED CONFORMANCE
+
+The Rust differential test deterministically generates 512 additional rows and sends the exact same serialized fixture text through the Node oracle and Rust parser/evaluator.
+
+The generator is test-only input generation and is not an authority implementation.
+
+Use xorshift32 with fixed seed 0x53544135 and explicit wrapping unsigned 32-bit transitions:
+state ^= state << 13
+state ^= state >> 17
+state ^= state << 5
+
+Generated evidence:
+- 256 subset cases: all four intent dimensions are subsets of their grant dimensions and must remain valid;
+- 128 single-dimension widening cases: exactly one of actions/purposes/destinations/resources contains one member absent from the grant and must be invalid, with only that corresponding check false;
+- 128 monotonic attenuation descendants derived from valid subset cases by removing admitted intent members; they must remain valid.
+
+Each generated result must match the real Node oracle exactly. The monotonic property is additionally asserted directly: removing requested scope from a valid intent cannot turn attenuation invalid.
+
+TDD IMPLEMENTATION PLAN
+
+Task 1 — RED: establish shared fixture and missing-surface test
+Files:
+- Create labs/rust-trust-core/fixtures/intent-attenuation-v0.tsv
+- Create labs/rust-trust-core/fixtures/intent-attenuation-v0-invalid.tsv
+- Create labs/rust-trust-core/tests/intent_attenuation_differential.rs
+
+Steps:
+1. Commit the fixtures and Rust integration test before any Rust attenuation module or Node attenuation oracle exists.
+2. The test imports parse_intent_attenuation_vector_row and verify_intent_attenuation from axiom_trust_core_lab and expects node/intent_attenuation_oracle.mjs.
+3. Verify Rust Trust-Core Laboratory fails specifically because the Stage 5A Rust/oracle surface is absent. Existing Stage 1-4 checks must not be the cause.
+
+Task 2 — GREEN: add minimal Rust attenuation candidate
+Files:
+- Create labs/rust-trust-core/src/intent_attenuation.rs
+- Modify labs/rust-trust-core/src/lib.rs
+
+Interfaces:
+- IntentAttenuationCase::case_id(&self) -> &str
+- parse_intent_attenuation_vector_row(&str) -> Result<IntentAttenuationCase, IntentAttenuationError>
+- parse_intent_attenuation_fixture(&str) -> Result<Vec<IntentAttenuationCase>, IntentAttenuationError>
+- verify_intent_attenuation(&IntentAttenuationCase) -> Result<IntentAttenuationResult, IntentAttenuationError>
+- IntentAttenuationResult { valid, checks }
+- IntentAttenuationChecks { actions, purposes, destinations, resources }
+
+Steps:
+1. Implement exact 11-column TSV parsing.
+2. Validate case_id and scope identifiers against the frozen ASCII grammar without regex dependencies.
+3. Validate booleans strictly.
+4. Validate each set at <=128 members, sorted and unique, with no silent normalization.
+5. Fail closed when grant_verified is false or intent_bound is false.
+6. Evaluate each dimension using exact subset containment.
+7. valid is the conjunction of the four checks.
+8. Re-export only the Stage 5A laboratory API from lib.rs.
+9. Run cargo fmt, clippy -D warnings, and locked tests.
+
+Task 3 — GREEN: real Node oracle and exact differential parity
+Files:
+- Create labs/rust-trust-core/node/intent_attenuation_oracle.mjs
+- Create labs/rust-trust-core/node/intent_attenuation_oracle.test.mjs
+- Modify labs/rust-trust-core/tests/intent_attenuation_differential.rs as needed only to complete the predeclared comparisons.
+
+Oracle behavior:
+1. Import verifyIntentAttenuation directly from ../../../mesh/src/lib/authority-composition-guard.mjs.
+2. Parse the frozen TSV grammar independently.
+3. Build a fixed synthetic valid grant envelope around the four scope sets; no real identities, credentials, state, receipts, or capabilities.
+4. Call the supported Node verifyIntentAttenuation.
+5. Emit exact tab-separated booleans in the declared order.
+6. Support fixture path and '-' stdin, concatenating all stdin chunks before parsing.
+7. Reject duplicates, malformed rows, unverified grants, and unbound intents with non-zero process exit.
+8. Unit-test direct exact/subset/widening semantics and malformed/sorted-unique rejection.
+
+Task 4 — RED/GREEN: generated adversarial and monotonic evidence
+File:
+- Modify labs/rust-trust-core/tests/intent_attenuation_differential.rs
+
+Steps:
+1. Add deterministic generation for 512 rows before adding any helper required for batch stdin oracle execution.
+2. Verify the test fails for the missing batch comparison helper, not for a changed production surface.
+3. Add the minimal stdin subprocess helper.
+4. Compare every generated Rust result with the real Node oracle output.
+5. Assert exact expected check patterns for single-dimension widening cases.
+6. Assert monotonic descendants remain valid.
+7. Reject duplicate/malformed Node output lines.
+
+Task 5 — CI and non-regression boundary
+Files:
+- Modify .github/workflows/rust-trust-core-lab.yml
+
+Steps:
+1. Add a dedicated Node Stage 5A oracle test step.
+2. Add an explicit diff guard proving trust-core/rust/canonical_value_v0.rs is unchanged from Stage 4 base ad8c0bd92f74f328c1c7e86c3d6e2723119defb3.
+3. Keep source-boundary, pinned toolchain, fmt, Clippy -D warnings, and cargo test --locked steps.
+4. Do not add a production Rust build or artifact publication.
+
+Task 6 — exact-head acceptance
+
+Acceptance requires one exact PR head with:
+- Rust Trust-Core Laboratory success;
+- Clean Kernel success, including container isolation/deny-egress and Node 22 compatibility;
+- Windows compatibility success;
+- macOS Apple Silicon compatibility success;
+- macOS Intel compatibility success;
+- CodeQL success if triggered for the PR/head;
+- no unresolved review finding that affects the boundary;
+- trust-core/rust/canonical_value_v0.rs unchanged;
+- Cargo.toml dependency section still empty;
+- no supported runtime import or call to the Stage 5A candidate.
+
+ROLLBACK
+
+Stage 5A rollback is laboratory-only. On any real Node/Rust semantic mismatch or authority-boundary violation:
+1. stop migration advancement;
+2. keep Node authoritative;
+3. record the failing exact head and case;
+4. revert Stage 5A lab source/tests/oracle/workflow changes;
+5. leave the accepted Stage 3/4 promoted canonical source untouched unless independent evidence separately reopens those stages.
+
+NON-CLAIMS
+
+A successful Stage 5A does not establish:
+- Rust authority in production;
+- full parity for authority-composition-guard.mjs;
+- grant verification parity;
+- grant issuance parity;
+- signature or key verification parity;
+- capability consumption parity;
+- expiry/time parity;
+- causal-history or composition-restriction parity;
+- policy enforcement parity;
+- Gateway, Hypervisor, Sandbox, or Grid replacement;
+- permission to promote this laboratory source under trust-core/rust/;
+- permission to add a cryptographic dependency.

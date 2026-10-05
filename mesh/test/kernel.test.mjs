@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,6 +41,7 @@ import {
   verifyGridBackup
 } from '../src/grid/backup.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import { verifyExportBundle } from '../src/verify-export.mjs';
 import { validateCapabilityRegistry } from '../src/check-registry.mjs';
 import {
@@ -91,16 +91,22 @@ test('governing claim documents are bound to the registry schema, version, and d
 });
 
 test('CLI validates input and preserves structured Gateway failure semantics', async () => {
+  const requests = [];
   const options = {
     config: meshConfig({ dataDir: '/unused', gatewayPort: 23456 }),
     env: { AXIOM_API_TOKEN: 'test-token' },
-    fetchImpl: async () => ({
-      ok: false,
-      status: 403,
-      async json() {
-        return { error: { code: 'policy_denied', message: 'Denied by policy' } };
-      }
-    })
+    now: () => 1_700_000_000_000,
+    randomUuid: () => '00000000-0000-4000-8000-000000000000',
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      return {
+        ok: false,
+        status: 403,
+        async json() {
+          return { error: { code: 'policy_denied', message: 'Denied by policy' } };
+        }
+      };
+    }
   };
   await assert.rejects(
     () => runCli(['intent', 'system.echo', '[]'], options),
@@ -114,7 +120,14 @@ test('CLI validates input and preserves structured Gateway failure semantics', a
     () => runCli(['intent', 'system.echo', '{}'], options),
     error => error.code === 'policy_denied' && error.status === 403
   );
+  assert.equal(requests.length, 1, 'denied CLI intent must issue exactly one Gateway request');
+  assert.equal(new URL(requests[0].url).pathname, '/v1/intents');
+  assert.equal(requests[0].init.method, 'POST');
+  assert.equal(requests[0].init.headers.authorization, 'Bearer test-token');
+  assert.equal(requests[0].init.headers['idempotency-key'], 'cli-1700000000000-00000000-0000-4000-8000-000000000000');
+  assert.deepEqual(JSON.parse(requests[0].init.body), { action: 'system.echo', input: {} });
   await assert.rejects(() => runCli(['unknown'], options), /Unknown command/);
+  assert.equal(requests.length, 1, 'unknown CLI command must not issue another Gateway request');
 });
 
 test('IAM-04 deterministic property cases never weaken higher policy authority', () => {
@@ -650,7 +663,8 @@ test('encrypted Grid backups verify, exclude live restore, preserve rollback, an
 
 test('full four-service path enforces auth, idempotency, consent, export, and audit', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-e2e-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('kernel four-service e2e');
+  const basePort = portLease.base_port;
   const operatorToken = `operator-${'o'.repeat(40)}`;
   const approverToken = `approver-${'a'.repeat(40)}`;
   const overrides = {
@@ -686,6 +700,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     try {
       await stack.stop();
     } finally {
+      await portLease.release();
       await rm(dataDir, { recursive: true, force: true });
     }
   });
@@ -935,7 +950,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     '/v1/memory?owner=local-operator'
   );
   assert.equal(hiddenMemory.objects.length, 0);
-  await api(gateway, token, '/v1/intents', {
+  const disclosureConsent = await api(gateway, token, '/v1/intents', {
     method: 'POST',
     body: {
       action: 'consent.grant',
@@ -954,6 +969,24 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   );
   assert.deepEqual(sharedMemory.objects.map(item => item.object_id), [memoryOne.object_id]);
   assert.equal(sharedMemory.edges.length, 0);
+
+  await api(gateway, token, '/v1/intents', {
+    method: 'POST',
+    body: {
+      action: 'consent.revoke',
+      input: {
+        consent_id: disclosureConsent.consent_id,
+        revocation_handle: disclosureConsent.revocation_handle
+      }
+    }
+  });
+  const afterDisclosureRevocation = await api(
+    gateway,
+    approverToken,
+    '/v1/memory?owner=local-operator'
+  );
+  assert.deepEqual(afterDisclosureRevocation.objects, []);
+  assert.deepEqual(afterDisclosureRevocation.edges, []);
 
   const nodeKeys = generateKeyPairSync('ed25519');
   const nodePublicKey = nodeKeys.publicKey.export({ type: 'spki', format: 'pem' });
@@ -1534,8 +1567,15 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
       }
     }
   });
-  const appeal = await api(gateway, token, '/v1/intents', {
+  // The appeal intent is submitted through the synchronous intent path, which
+  // is bounded by production service timeouts. On a slow runner the first
+  // attempt can time out gateway-side while the hypervisor still completes
+  // the intent, so wait for the terminal state deterministically instead of
+  // depending on runner speed (issue #1200). The stable idempotency key makes
+  // re-submission safe via the gateway's idempotent replay.
+  const appeal = await apiIntentCompleted(gateway, token, '/v1/intents', {
     method: 'POST',
+    idempotencyKey: `four-service-appeal-${proposal.proposal_id}`,
     body: {
       action: 'governance.appeal',
       input: {
@@ -1897,10 +1937,59 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   });
   assert.equal(wrongPlan.status, 403);
   assert.equal((await wrongPlan.json()).error.code, 'capability_plan_mismatch');
+
+  const sandboxOperationsUrl = `http://127.0.0.1:${basePort + 2}/internal/v1/operations`;
+  const sandboxOperations = await fetch(sandboxOperationsUrl, {
+    headers: signedRequestHeaders(hypervisorIdentity, {
+      method: 'GET',
+      url: sandboxOperationsUrl,
+      audience: 'sandbox'
+    })
+  });
+  assert.equal(sandboxOperations.status, 200);
+  const sandboxOperationsBody = await sandboxOperations.json();
+  assert.match(sandboxOperationsBody.execution_epoch, /^sandbox_epoch_/);
+
+  const capabilityCommitUrl = `http://127.0.0.1:${basePort + 3}/internal/v1/commit`;
+  const capabilityCommitBody = Buffer.from(JSON.stringify({
+    actor: boundedIntent.principal.id,
+    principal: boundedIntent.principal.id,
+    events: [{
+      kind: 'capability.consume.requested',
+      subject: verifyCapability(
+        boundedCapability,
+        hypervisorIdentity.publicKey,
+        { audience: 'sandbox', issuer: 'hypervisor' }
+      ).jti,
+      payload: {
+        capability: boundedCapability,
+        execution_epoch: sandboxOperationsBody.execution_epoch
+      }
+    }]
+  }));
+  const capabilityCommit = await fetch(capabilityCommitUrl, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...signedRequestHeaders(hypervisorIdentity, {
+        method: 'POST',
+        url: capabilityCommitUrl,
+        audience: 'grid',
+        body: capabilityCommitBody
+      })
+    },
+    body: capabilityCommitBody
+  });
+  assert.equal(capabilityCommit.status, 201);
+  const capabilityCommitResult = await capabilityCommit.json();
+  const consumptionReceipt = capabilityCommitResult.capability_consumptions?.[0]?.receipt;
+  assert.ok(consumptionReceipt);
+
   const validExecutionBody = Buffer.from(JSON.stringify({
     intent: boundedIntent,
     capability: boundedCapability,
-    plan: boundedPlan
+    plan: boundedPlan,
+    consumption_receipt: consumptionReceipt
   }));
   const validExecution = await fetch(sandboxUrl, {
     method: 'POST',
@@ -2018,6 +2107,58 @@ async function api(base, token, path, {
   return payload;
 }
 
+// Submits an intent and waits for it to reach a terminal state without
+// depending on runner speed.
+//
+// The synchronous intent path is bounded by production service timeouts
+// (gateway->hypervisor and hypervisor->sandbox, ~10s each). On a slow or
+// contended runner the first attempt can time out gateway-side while the
+// hypervisor still completes the intent server-side. Re-submitting with the
+// SAME idempotency key is safe: the gateway's idempotent replay returns the
+// existing intent record, so this polls until the intent is completed (or
+// fails terminally) instead of asserting that one synchronous round-trip
+// beats the production timeout. Production timeouts are unchanged; only the
+// test's waiting strategy is deterministic. (Issue #1200.)
+async function apiIntentCompleted(base, token, path, {
+  method = 'POST',
+  body,
+  idempotencyKey
+}, {
+  pollIntervalMs = 1000,
+  deadlineMs = 120_000
+} = {}) {
+  assert.ok(idempotencyKey, 'apiIntentCompleted requires a stable idempotencyKey');
+  const started = Date.now();
+  let attempts = 0;
+  for (;;) {
+    attempts += 1;
+    let payload = null;
+    try {
+      payload = await api(base, token, path, { method, body, idempotencyKey });
+    } catch (error) {
+      // A gateway-side timeout (or any transport failure) does not mean the
+      // intent failed: the hypervisor may still complete it. Fall through to
+      // the idempotent poll below. The deadline bounds the wait.
+      if (Date.now() - started >= deadlineMs) throw error;
+    }
+    if (payload) {
+      const status = payload.result_json?.status ?? payload.status;
+      if (status === 'completed') return payload;
+      if (status === 'failed' || status === 'denied' || payload.error) {
+        assert.fail(`intent reached terminal failure: ${JSON.stringify(payload.error ?? payload).slice(0, 500)}`);
+      }
+      // 'accepted' (or an idempotent replay of an in-flight intent): the
+      // hypervisor has it; keep polling for the terminal state.
+    }
+    if (Date.now() - started >= deadlineMs) {
+      throw new Error(
+        `intent did not complete within ${deadlineMs}ms after ${attempts} attempts`
+      );
+    }
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
 async function independentlyApprovedIntent({
   gateway,
   requesterToken,
@@ -2131,28 +2272,6 @@ function signedCausalBundle({
 async function waitUntil(isoTimestamp) {
   const delay = Math.max(0, new Date(isoTimestamp).valueOf() - Date.now() + 20);
   if (delay) await new Promise(resolve => setTimeout(resolve, delay));
-}
-
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new Error('Unable to reserve a local port block');
 }
 
 test('capsule manifest signature fixture is cryptographically sound', () => {

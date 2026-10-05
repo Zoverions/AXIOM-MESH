@@ -6,7 +6,7 @@
 
 **Status:** experimental local preview; not a supported product
 
-**Updated:** 2026-08-01
+**Updated:** 2026-09-24
 
 ## Purpose and exact claim
 
@@ -14,11 +14,12 @@ The current source includes an experimental AXIOM One browser/PWA shell under
 [`apps/axiom-one/`](../../apps/axiom-one/). It lets a developer or evaluator
 connect a browser to the local development node, see current node status,
 review and exercise five explicitly bounded actions, understand stable denials
-and uncertain outcomes, distinguish approval states, create and tombstone one
+and uncertain outcomes, distinguish approval states, inspect the authenticated
+owner-local Social actor/persona/publication snapshot, create and tombstone one
 private note at a time, record a fixed directional provenance link, create a
-selective local export, inspect a
-plain-language event timeline, and retain access to the exact raw Gateway
-responses without using the CLI for those interactions.
+selective local export, inspect a plain-language event timeline, and retain
+access to the exact raw Gateway responses without using the CLI for those
+interactions.
 
 The preview is executable evidence that the human-product layer can remain
 outside the trusted `mesh/` kernel and consume only the versioned
@@ -94,33 +95,59 @@ reverse tunnel, or production deployment.
 
 ## Implemented surfaces
 
-The preview has seven primary sections. Their labels describe the intended
+The preview has twelve primary sections. Their labels describe the intended
 product organization, but only the functions in this table are current.
 
 | Surface | Current behavior | Gateway routes | Current boundary |
 |---|---|---|---|
 | Overview | Reads kernel version, runtime summary, and capability counts | `status.get`, `capabilities.list` | Authenticated read; no promotion inference |
 | Ask | Reviews one `system.echo` request before sending, exposes effect/provider/destination/information/retention/timeout/cancellation/reversibility, then presents completion or a stable fail-closed outcome | `intents.submit` | Transparent deterministic test; review is not a kernel plan or grant; same-key recovery only when outcome is uncertain |
+| Vault organize | Reviews `ai.local-organize`, runs the local organizer stub on owner-selected text, shows a draft suggestion with provider/scope/budget/timeout/cancel/retention/digest fields, and only writes via a separate `memory.put` review | browser-local stub; optional later `memory.put` | Draft only; not production AI; not a Mesh grant; `ai.providers` remains `adapter_required` |
+| Social | Reads the authenticated owner's bounded local actor, persona, publication corpus, supersession/retraction status, transition count, truncation state, and raw snapshot | `social.get` | Read-only owner-local projection; owner is derived from authentication; `network_effect` must remain `none`; no federation, remote distribution, or browser Social mutation |
+| Circles | Reads the exact local built-in `axiom-circle-template-catalog.v0` as a public shell asset and explains its roles/decision defaults | none | Static inert templates only; works without a token; cannot create/join/invite, assign membership/roles, govern, delegate, execute, federate, or lower the raise-only protection floor |
+| Capabilities | Projects every returned registry entry into implementation, availability, and authorization dimensions while preserving the raw entry | `capabilities.list` | Registry implementation is descriptive only; availability and authorization remain explicitly unknown because this route supplies neither |
 | Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
-| Vault | Lists active owner-scoped memory objects and edges, creates one private note at a time, records one of three fixed directional provenance links, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get` | Bounded lifecycle only; no arbitrary relation, direct edge deletion, hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
+| Consent | Explains owner-scoped active, expired, revoked, and unknown consent records with purpose, scopes, controller, subject, and lifecycle timestamps | `consents.list` | Read-only; current consent is not execution authority and revoked/expired consent cannot authorize new use |
+| Vault | Lists active owner-scoped memory objects and edges, creates one private note at a time, optionally organizes owner-selected text into a local draft suggestion, records one of three fixed directional provenance links, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get`; local organizer stub | Bounded lifecycle only; organize drafts are ephemeral and non-authorizing; no arbitrary relation, direct edge deletion, hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
 | Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
-| Share | Displays explicit unavailable Selective Sharing and Circles states | none | Sends nothing; sharing and Circles remain disabled |
-| Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
+| Verify | Interprets the Grid evidence-chain verification result and preserves the exact event count, head digest, failing sequence, or reason where applicable | `audit.verify` | Chain integrity is evidence only; it grants no authority and does not prove an external claim is true |
+| Share | Displays explicit unavailable Selective Sharing state and points to the separate inert Circles template browser | none | Sends nothing; sharing and live Circles remain disabled |
+| Explore | Reads selected raw status, registry, operations, owner-local Social, node, capsule, import, and backup data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
-The policy lists exactly 14 client route identifiers. The checker requires
+The policy lists exactly 16 client route identifiers. The checker requires
 every identifier to exist in the active Gateway client contract. The loopback
 server independently matches method, path, and query names against that
 contract before proxying. `/internal/...`, unlisted `/v1/...`, a wrong method,
 or an undeclared query parameter is never forwarded.
 
-The Ask surface deliberately does not pretend to be an AI assistant. The
-current kernel has no implemented AI provider. The surface explains that it
-submits `system.echo` through Gateway, Hypervisor, Sandbox, and Grid so an
+The Circles surface is deliberately separate from live Circle capability. It
+serves the repository's exact `mesh/config/circle-templates-v0.json` through
+the loopback static-asset allowlist, validates the catalog again in the browser,
+and constructs all output with text-only DOM helpers. The catalog is a public,
+user-data-free shell asset and may be cached by the service worker for offline
+reference. It contains no invitations, memberships, credentials, grants, or
+runtime state. Template fields fix execution and membership authority to false,
+retain the raise-only policy floor, and provide only reusable roles and decision
+starting points. No control on that surface creates a Circle or sends a Gateway
+request.
+
+The Social surface calls only `social.get` with a bounded publication limit of
+100. The browser supplies no owner override; Gateway authentication determines
+the owner whose local snapshot may be returned. The UI preserves the returned
+publication state instead of rewriting append-only history and treats any
+`network_effect` value other than `none` as unexpected evidence requiring raw
+inspection. This tranche does not expose the kernel's existing local Social
+write actions, remote Social review, remote transport, recommendation/ranking,
+messaging, federation, or external egress.
+
+The Ask surface deliberately does not pretend to be an AI assistant. Ask still
+submits only `system.echo` through Gateway, Hypervisor, Sandbox, and Grid so an
 evaluator can observe the real authenticated policy and evidence path. The
 result, status, evidence, idempotent replay indication, error code, and trace
-identifier remain inspectable. A future AI workflow must be delivered through
-the separately governed provider contract and cannot silently replace this
-explicit behavior.
+identifier remain inspectable. Vault may run a **local organizer stub** that
+produces ephemeral draft suggestions from owner-selected text; drafts do not
+mutate Vault and never authorize Mesh effects. Production AI providers remain
+unconfigured (`ai.providers` stays `adapter_required`).
 
 Before any network request, **Review request** creates a human projection from
 the exact `system.echo` entry in
@@ -149,13 +176,16 @@ The machine-readable `axiom-one-human-contract.v1` and zero-dependency
 [`presentation.mjs`](../../apps/axiom-one/presentation.mjs) module are public
 shell assets. They contain no token, user record, remote origin, runtime policy
 override, or executable authority. The release checker independently verifies
-their exact action, error, event, approval, and non-claim inventories.
+their exact action, error, event, approval, capability, consent, verification,
+and non-claim boundaries.
 
-The current action inventory contains exactly `system.echo`, `memory.put`,
-`memory.link`, `memory.tombstone`, and `export.create`. The echo is labelled a
-`non-consequential-local-test`; the lifecycle actions are labelled a durable
-local memory write, durable local provenance write, durable local tombstone, or
-local selective-export write. All five declare no external provider or egress.
+The current action inventory contains `system.echo`, `memory.put`,
+`memory.link`, `memory.tombstone`, `export.create`, and `ai.local-organize`.
+The echo is labelled a `non-consequential-local-test`; the lifecycle actions are
+labelled a durable local memory write, durable local provenance write, durable
+local tombstone, or local selective-export write. `ai.local-organize` is a
+`non-consequential-local-draft` explanation for the deterministic organizer
+stub (not a Sandbox intent). All six declare no external provider or egress.
 `memory.tombstone` requires
 the exact `confirm:memory.tombstone` value; none declares an independent
 approval under the current kernel policy. The browser cannot use the contract
@@ -241,6 +271,25 @@ expiry is past; a `consumed` record shows the bound intent where available; an
 unknown status is never presented as active. The explanation repeats that the
 page is read-only and cannot grant, widen, renew, revoke, or self-approve the
 record. This is visibility into authority, not authority creation.
+
+Capability explanations use only the authenticated registry response. The
+registry's `status` becomes an implementation label, while **Availability** and
+**Authorization** remain explicitly **Unknown** because `capabilities.list`
+does not contain runtime-availability or per-principal authorization evidence.
+A capability marked `implemented` is therefore never presented as authorized.
+
+Consent explanations use only the owner-scoped `consents.list` response.
+Exact purpose, scope, subject, controller, expiry, creation, and revocation
+facts remain visible. A past expiry is displayed as expired, a revocation is
+displayed as revoked, and malformed or unknown state is never promoted to
+active consent. Even active consent is described as purpose/scoped evidence,
+not as a substitute for the ordinary execution-authority path.
+
+Verify explanations use the exact `audit.verify` result. A valid result means
+the local chain passed its sequence, payload digest, event hash, signature, and
+metadata-continuity checks. An invalid result preserves its exact reason and
+failing sequence where present. Neither state grants authority, and chain
+integrity does not prove that an external assertion or payload claim is true.
 
 Every explanation is rendered with `textContent`, fixed DOM construction, and
 an adjacent raw `<details>` view. Unknown Gateway codes retain the client's
@@ -388,13 +437,15 @@ browser boundary, semantic document markers, CSP server markers, service-worker
 API exclusion, reduced motion, manifest identity, exact human contract
 identity, all 20 stable outcome mappings, all 37 current event mappings, the
 five-action/no-generic-authority boundary, governed lifecycle policy, and
-secret-free asset digests. The normal
-source gate also runs this checker and the focused server and human
-presentation tests.
+secret-free asset digests. The normal source gate also runs this checker and
+the focused server and human presentation tests.
 
 The test suite proves:
 
-- exact policy status and seven-surface/fourteen-route inventory;
+- exact policy status and eight-surface/fifteen-route inventory;
+- owner-local Social route presence, `network_effect: none`/No-federation
+  presentation markers, publication status rendering, and absence of Social
+  mutation actions from the browser action inventory;
 - exact five-action human contract and all stable Gateway error/current event
   mappings;
 - frozen review bodies for private-note creation, three fixed directional
@@ -467,21 +518,28 @@ This increment does not complete or claim:
   consent administration, or authority revocation controls;
 - completed human comprehension/usability evidence for the experimental
   explanation mappings;
+- Social mutation/write controls, remote Social review, remote Social
+  transport, ranking/recommendation, messaging, federation, or cross-node
+  publication;
 - arbitrary provenance relationships or metadata, direct edge deletion, bulk
   memory ingestion, hard deletion, restore, export deletion, automatic bundle
   retrieval, or a safe download workflow;
 - selective sharing, remote recipients, or AXIOM Circles;
-- an external or local AI provider;
+- a production or external AI provider (local organizer stub drafts only);
 - useful AI workflows or model-output truth;
 - a complete accessibility or human-usability gate;
 - signed preview packaging, update, rollback automation, or support service;
 - production credentials, live deployment, federation, consensus, or
   production promotion.
 
-The next work is to complete the remaining governed-memory gates, including
-broader provenance and edge-deletion policy, deletion and restore policy,
-export retention and deletion, and a reviewed download boundary; design a
-separately bound consequential plan/execute and approval protocol; run keyboard, screen-reader,
-and comprehension fixtures; and design the separate browser session/device
-boundary. Share, Circles, and AI controls must remain visibly unavailable until
-their own contracts and negative evidence exist.
+The next Social product tranche is a separately reviewed browser write surface
+for the already-existing local Social actions, including human explanations,
+frozen requests, retraction confirmation, retry semantics, and adversarial UI
+tests. The broader next work also includes the remaining governed-memory gates,
+including broader provenance and edge-deletion policy, deletion and restore
+policy, export retention and deletion, and a reviewed download boundary;
+designing a separately bound consequential plan/execute and approval protocol;
+running keyboard, screen-reader, and comprehension fixtures; and designing the
+separate browser session/device boundary. Share, Circles, remote Social, and AI
+controls must remain visibly unavailable until their own contracts and negative
+evidence exist.
