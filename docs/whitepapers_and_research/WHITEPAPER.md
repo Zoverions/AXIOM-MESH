@@ -59,7 +59,7 @@ runtime.
 
 The governing rule is:
 
-> **Intelligence is not authority. Connectivity is not authority. Installation is not authority. Evidence must state exactly what it proves.**
+> **Intelligence is not authority. Connectivity is not authority. Installation is not authority. Scriptability is not authority. Evidence must state exactly what it proves.**
 
 ## 1. Problem and motivation
 
@@ -87,10 +87,13 @@ AXIOM-MESH treats these questions as the product boundary. A model output is
 data until an authenticated principal, valid authority profile, compatible
 policy, explicit plan, bounded grant/effect path, and durable evidence agree.
 
-This posture rejects two common shortcuts. A friendly user interface may
-simplify terminology, but it may not hide consequential authority. And green
-synthetic tests or source presence may not be marketed as production merely
-because code exists.
+This posture rejects common shortcuts. A friendly user interface may simplify
+terminology, but it may not hide consequential authority. A CLI, API, hook,
+macro, plugin, capsule, or agent surface may make a capability composable, but
+equivalent governed effects must still re-enter the same canonical AXIOM action
+and authority path; scriptability never inherits permission from discovery,
+installation, subscription, or composition. Green synthetic tests or source
+presence may not be marketed as production merely because code exists.
 
 ## 2. Governing development posture
 
@@ -115,7 +118,7 @@ period while its activation path, custody, and external evidence are reviewed.
 
 The machine-readable capability registry classifies tracked capabilities as
 `implemented`, `experimental`, `specified`, `adapter_required`, or `disabled`.
-The current registry tracks **49 capabilities, including 31 implemented**.
+The current registry tracks **50 capabilities, including 31 implemented**.
 Only registry-backed `implemented` status is a current runnable capability
 claim.
 
@@ -209,7 +212,7 @@ internal network segments.
 Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
 identities, DNS and SPIFFE-style URI identity checks, exact active-leaf
 fingerprint pinning, and signed replay-protected application envelopes. A
-machine-readable default-deny policy authorizes only 40 exact current-build
+machine-readable default-deny policy authorizes only 42 exact current-build
 caller, destination, method, and route combinations and derives allowed mTLS
 peers from that graph.
 
@@ -226,11 +229,17 @@ trusted computing base.
 
 ### 3.4 Runtime/source policy
 
-The supported engine range is Node.js `>=24.14.0 <25` with npm
-`>=11.0.0 <12` and zero third-party npm dependency packages.
+The primary production engine range is Node.js `>=24.14.0 <25` with npm
+`>=11.0.0 <12`. Exactly Node.js `22.23.2` is separately approved for hosted
+production with bundled npm `>=10.9.8 <11` or npm 11; no other Node.js 22
+patch can start the production supervisor. Source/shared-host compatibility
+also supports Node.js `>=22.23.2 <23`. Both production tracks retain zero
+third-party npm dependency packages and the same credential, mutual-TLS,
+deny-egress, and promotion requirements.
 
 Current machine-readable setup policy intentionally distinguishes:
 
+- separate approved hosted-runtime/security CI: **Node.js 22.23.2**;
 - protected CI and `.node-version`: **Node.js 24.18.0**;
 - candidate production image: **Node.js 24.19.0**.
 
@@ -643,14 +652,18 @@ certification, production repository activation, or production promotion.
 ### 14.1 AXIOM One
 
 AXIOM One is the planned private personal agent, vault, approval centre, and
-evidence record. Its concepts are Ask, Plan, Approvals, Vault, Receipts, Share,
-and Circles.
+evidence record. Its concepts are Ask, Plan, Capabilities, Approvals, Consent,
+Vault, Receipts, Verify, Share, and Circles.
 
 The experimental loopback slice currently provides bounded reviewed intent,
 owner-scoped private memory, three fixed directional provenance relations,
 correction-without-replacement, confirmation-bound tombstoning, selective local
-export, explicit bundle reveal, approval-state distinctions, same-idempotency-
-key uncertainty recovery, raw evidence, and cross-principal negative tests.
+export, explicit bundle reveal, approval-state distinctions, non-authorizing
+capability-status projection, current owner-scoped consent inspection, bounded
+local evidence-chain verification, same-idempotency-key uncertainty recovery,
+raw evidence, and cross-principal negative tests. Capability discovery never
+implies authorization, and the embedded Verify view is an integrity explanation,
+not promotion of the separate AXIOM Verify product or a truth oracle.
 
 It does not yet claim general consequential plan/execute, direct edge deletion,
 hard deletion, restore, bulk ingestion, completed browser-session security,

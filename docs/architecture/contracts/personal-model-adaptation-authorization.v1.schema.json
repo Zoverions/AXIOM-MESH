@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/personal-model-adaptation-authorization.v1.schema.json",
+  "title": "AXIOM Personal Model Adaptation Authorization v1",
+  "description": "Documentation-only draft for explicit owner authorization of a durable personalized model, adapter, or derived index. This object scopes source data and lifecycle obligations but does not itself execute training or grant kernel effect authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "authorization_id",
+    "owner_subject_ref",
+    "purpose",
+    "operation",
+    "source_scope",
+    "target",
+    "execution",
+    "source_data_retention",
+    "resulting_artifact",
+    "evaluation",
+    "licence_and_use",
+    "lifecycle",
+    "issued_at",
+    "expires_at",
+    "wildcard_source_authority",
+    "includes_secret_recovery_material",
+    "grants_vault_access_to_resulting_model",
+    "grants_execution_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-personal-model-adaptation-authorization.v1"
+    },
+    "authorization_id": {
+      "$ref": "#/$defs/id"
+    },
+    "owner_subject_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "operation": {
+      "enum": [
+        "lora-or-equivalent-adapter",
+        "fine-tune",
+        "distillation",
+        "durable-embedding-index",
+        "other-reviewed-adaptation"
+      ]
+    },
+    "source_scope": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "vault_id",
+          "resource_refs",
+          "purpose_authorized",
+          "maximum_sensitivity"
+        ],
+        "properties": {
+          "vault_id": {
+            "$ref": "#/$defs/id"
+          },
+          "resource_refs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4096,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "purpose_authorized": {
+            "const": true
+          },
+          "maximum_sensitivity": {
+            "$ref": "#/$defs/sensitivity"
+          },
+          "source_policy_decision_ref": {
+            "$ref": "#/$defs/id"
+          },
+          "owner_confirmation_ref": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_model_ref",
+        "base_model_digest_or_version_ref",
+        "output_artifact_class"
+      ],
+      "properties": {
+        "base_model_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "base_model_digest_or_version_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "output_artifact_class": {
+          "enum": [
+            "personalized-adapter",
+            "personalized-model",
+            "personalized-derived-index"
+          ]
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_location_ref",
+        "local_only",
+        "source_data_egress_allowed"
+      ],
+      "properties": {
+        "execution_location_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "provider_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "destination_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "local_only": {
+          "type": "boolean"
+        },
+        "source_data_egress_allowed": {
+          "type": "boolean"
+        },
+        "egress_policy_decision_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "source_data_retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_may_retain_source",
+        "max_source_retention_seconds",
+        "source_may_be_used_for_provider_training"
+      ],
+      "properties": {
+        "provider_may_retain_source": {
+          "type": "boolean"
+        },
+        "max_source_retention_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31536000
+        },
+        "source_may_be_used_for_provider_training": {
+          "const": false
+        }
+      }
+    },
+    "resulting_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "custody",
+        "allowed_execution_location_refs",
+        "exportable_by_owner",
+        "public_by_default"
+      ],
+      "properties": {
+        "custody": {
+          "enum": [
+            "owner-local-encrypted",
+            "owner-controlled-remote-encrypted",
+            "managed-encrypted"
+          ]
+        },
+        "allowed_execution_location_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "exportable_by_owner": {
+          "type": "boolean"
+        },
+        "public_by_default": {
+          "const": false
+        },
+        "retention_policy_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_refs",
+        "privacy_memorization_review_required",
+        "usefulness_regression_review_required"
+      ],
+      "properties": {
+        "baseline_refs": {
+          "$ref": "#/$defs/refList"
+        },
+        "privacy_memorization_review_required": {
+          "const": true
+        },
+        "usefulness_regression_review_required": {
+          "const": true
+        },
+        "additional_evaluation_refs": {
+          "$ref": "#/$defs/refList"
+        }
+      }
+    },
+    "licence_and_use": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["licence_refs", "allowed_use_scopes"],
+      "properties": {
+        "licence_refs": {
+          "$ref": "#/$defs/refList"
+        },
+        "allowed_use_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "personal",
+              "education",
+              "work",
+              "research",
+              "commercial-owner-use",
+              "restricted"
+            ]
+          }
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revocation_stops_future_adaptation",
+        "source_deletion_guarantees_weight_unlearning",
+        "deletion_retraining_consequence",
+        "artifact_deletion_supported"
+      ],
+      "properties": {
+        "revocation_stops_future_adaptation": {
+          "const": true
+        },
+        "source_deletion_guarantees_weight_unlearning": {
+          "const": false
+        },
+        "deletion_retraining_consequence": {
+          "enum": [
+            "destroy-artifact",
+            "retrain-without-revoked-source",
+            "replace-artifact",
+            "documented-mitigation-required"
+          ]
+        },
+        "artifact_deletion_supported": {
+          "type": "boolean"
+        },
+        "lifecycle_policy_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "wildcard_source_authority": {
+      "const": false
+    },
+    "includes_secret_recovery_material": {
+      "const": false
+    },
+    "grants_vault_access_to_resulting_model": {
+      "const": false
+    },
+    "grants_execution_authority": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sensitivity": {
+      "enum": [
+        "ordinary-private",
+        "sensitive",
+        "restricted",
+        "critical-secret"
+      ]
+    },
+    "refList": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    }
+  }
+}

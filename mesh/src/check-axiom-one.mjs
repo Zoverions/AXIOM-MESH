@@ -5,15 +5,21 @@ import { canonicalJson, digestObject, sha256, ValidationError } from './lib/cano
 import { MESH_ROOT } from './lib/config.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 import { validateHumanContract } from '../../apps/axiom-one/presentation.mjs';
+import { validateCircleTemplateCatalog } from './lib/circle-templates.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const APP_ROOT = join(REPOSITORY_ROOT, 'apps', 'axiom-one');
 const EXPECTED_SURFACES = Object.freeze([
   'overview',
   'ask',
+  'social',
+  'circles',
+  'capabilities',
   'approvals',
+  'consent',
   'vault',
   'receipts',
+  'verify',
   'share',
   'explore'
 ]);
@@ -22,7 +28,9 @@ const EXPECTED_ROUTES = Object.freeze([
   'capabilities.list',
   'operations.get',
   'intents.submit',
+  'social.get',
   'approvals.list',
+  'consents.list',
   'memory.list',
   'exports.get',
   'export_bundles.get',
@@ -38,7 +46,8 @@ const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'memory.put',
   'memory.link',
   'memory.tombstone',
-  'export.create'
+  'export.create',
+  'ai.local-organize'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -97,10 +106,18 @@ export async function checkAxiomOnePreview() {
     index,
     app,
     presentation,
+    localOrganize,
     styles,
     worker,
     server,
-    icon
+    icon,
+    icon192,
+    icon512,
+    iconMaskable192,
+    iconMaskable512,
+    screenshotWide,
+    screenshotNarrow,
+    circleTemplates
   ] = await Promise.all([
     readJson('app-policy.json'),
     readJson('human-contract.json'),
@@ -108,15 +125,30 @@ export async function checkAxiomOnePreview() {
     readText('index.html'),
     readText('app.mjs'),
     readText('presentation.mjs'),
+    readText('local-organize.mjs'),
     readText('styles.css'),
     readText('sw.mjs'),
     readText('server.mjs'),
-    readText('icon.svg')
+    readText('icon.svg'),
+    readBinary('icons/icon-192.png'),
+    readBinary('icons/icon-512.png'),
+    readBinary('icons/icon-maskable-192.png'),
+    readBinary('icons/icon-maskable-512.png'),
+    readBinary('screenshots/screenshot-wide.png'),
+    readBinary('screenshots/screenshot-narrow.png'),
+    readMeshConfigJson('circle-templates-v0.json')
   ]);
   validatePolicy(policy);
   validateExplanations(policy, humanContract);
+  validateCircleTemplateCatalog(circleTemplates);
   validateManifest(manifest);
-  validateAssets({ index, app, presentation, styles, worker, server, icon });
+  validateAssets({ index, app, presentation, localOrganize, styles, worker, server, icon });
+  validatePng(icon192, 'icons/icon-192.png', 192, 192);
+  validatePng(icon512, 'icons/icon-512.png', 512, 512);
+  validatePng(iconMaskable192, 'icons/icon-maskable-192.png', 192, 192);
+  validatePng(iconMaskable512, 'icons/icon-maskable-512.png', 512, 512);
+  validatePng(screenshotWide, 'screenshots/screenshot-wide.png', 1280, 720);
+  validatePng(screenshotNarrow, 'screenshots/screenshot-narrow.png', 390, 844);
   return {
     valid: true,
     schema: policy.schema,
@@ -137,6 +169,7 @@ export async function checkAxiomOnePreview() {
     explained_gateway_errors: Object.keys(humanContract.gateway_outcomes).length,
     explained_event_kinds: Object.keys(humanContract.event_kinds).length,
     explained_actions: Object.keys(humanContract.actions).length,
+    circle_templates: circleTemplates.templates.length,
     memory_lifecycle_status: policy.memory_lifecycle.status,
     provenance_relations: policy.memory_lifecycle.provenance_relations.length,
     self_links: policy.memory_lifecycle.self_links,
@@ -150,10 +183,18 @@ export async function checkAxiomOnePreview() {
       index: sha256(index),
       app: sha256(app),
       presentation: sha256(presentation),
+      local_organize: sha256(localOrganize),
       styles: sha256(styles),
       worker: sha256(worker),
       server: sha256(server),
       icon: sha256(icon),
+      icon_192_png: sha256(icon192),
+      icon_512_png: sha256(icon512),
+      icon_maskable_192_png: sha256(iconMaskable192),
+      icon_maskable_512_png: sha256(iconMaskable512),
+      screenshot_wide_png: sha256(screenshotWide),
+      screenshot_narrow_png: sha256(screenshotNarrow),
+      circle_templates: digestObject(circleTemplates),
       manifest: digestObject(manifest)
     })
   };
@@ -306,19 +347,86 @@ function validateExplanations(policy, humanContract) {
 }
 
 function validateManifest(manifest) {
+  const expectedIcons = [
+    { purpose: 'any', sizes: '192x192', src: '/icons/icon-192.png', type: 'image/png' },
+    { purpose: 'any', sizes: '512x512', src: '/icons/icon-512.png', type: 'image/png' },
+    { purpose: 'maskable', sizes: '192x192', src: '/icons/icon-maskable-192.png', type: 'image/png' },
+    { purpose: 'maskable', sizes: '512x512', src: '/icons/icon-maskable-512.png', type: 'image/png' },
+    { purpose: 'any', sizes: 'any', src: '/icon.svg', type: 'image/svg+xml' }
+  ];
+  const expectedScreenshots = [
+    {
+      form_factor: 'wide',
+      label: 'AXIOM One local preview (stylized mockup): Local Social and Vault sections.',
+      sizes: '1280x720',
+      src: '/screenshots/screenshot-wide.png',
+      type: 'image/png'
+    },
+    {
+      form_factor: 'narrow',
+      label: 'AXIOM One local preview (stylized mockup): compact mobile layout.',
+      sizes: '390x844',
+      src: '/screenshots/screenshot-narrow.png',
+      type: 'image/png'
+    }
+  ];
+  const expectedShortcuts = [
+    {
+      description: 'Open the owner-scoped local social feed.',
+      icons: [{ sizes: '192x192', src: '/icons/icon-192.png', type: 'image/png' }],
+      name: 'Local Social',
+      short_name: 'Social',
+      url: '/#social'
+    },
+    {
+      description: 'Open the partitioned local vault.',
+      icons: [{ sizes: '192x192', src: '/icons/icon-192.png', type: 'image/png' }],
+      name: 'Vault',
+      short_name: 'Vault',
+      url: '/#vault'
+    }
+  ];
+  exactObject(manifest, 'AXIOM One web manifest', [
+    'background_color',
+    'categories',
+    'description',
+    'dir',
+    'display',
+    'display_override',
+    'icons',
+    'id',
+    'lang',
+    'name',
+    'orientation',
+    'scope',
+    'screenshots',
+    'short_name',
+    'shortcuts',
+    'start_url',
+    'theme_color'
+  ]);
   if (
     manifest.name !== 'AXIOM One Local Preview'
+    || manifest.short_name !== 'AXIOM One'
+    || manifest.description !== 'Experimental local interface for an AXIOM-MESH personal node. Owner-scoped; no external AI, sharing, or federation is claimed.'
     || manifest.id !== '/'
     || manifest.start_url !== '/'
     || manifest.scope !== '/'
     || manifest.display !== 'standalone'
-    || manifest.icons?.length !== 1
-    || manifest.icons[0].src !== '/icon.svg'
-    || manifest.icons[0].type !== 'image/svg+xml'
+    || manifest.dir !== 'ltr'
+    || manifest.lang !== 'en'
+    || manifest.orientation !== 'any'
+    || manifest.background_color !== '#08111f'
+    || manifest.theme_color !== '#0b1526'
+    || canonicalJson(manifest.categories) !== canonicalJson(['productivity', 'utilities'])
+    || canonicalJson(manifest.display_override) !== canonicalJson(['window-controls-overlay', 'standalone'])
+    || canonicalJson(manifest.icons) !== canonicalJson(expectedIcons)
+    || canonicalJson(manifest.screenshots) !== canonicalJson(expectedScreenshots)
+    || canonicalJson(manifest.shortcuts) !== canonicalJson(expectedShortcuts)
   ) throw new ValidationError('AXIOM One web manifest is invalid');
 }
 
-function validateAssets({ index, app, presentation, styles, worker, server, icon }) {
+function validateAssets({ index, app, presentation, localOrganize, styles, worker, server, icon }) {
   const requiredIndex = [
     '<meta name="viewport"',
     '<link rel="manifest" href="/manifest.webmanifest">',
@@ -326,7 +434,12 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     'class="skip-link"',
     'id="main-content"',
     'aria-live="polite"',
-    'Experimental local preview'
+    'Experimental local preview',
+    'data-route="social"',
+    'data-route="circles"',
+    'data-route="capabilities"',
+    'data-route="consent"',
+    'data-route="verify"'
   ];
   if (requiredIndex.some(marker => !index.includes(marker))) {
     throw new ValidationError('AXIOM One document semantics are incomplete');
@@ -345,7 +458,7 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     /https?:\/\//
   ];
   if (forbiddenBrowserPatterns.some(pattern => pattern.test(
-    `${app}\n${presentation}\n${index}\n${styles}`
+    `${app}\n${presentation}\n${localOrganize}\n${index}\n${styles}`
   ))) {
     throw new ValidationError('AXIOM One browser assets cross a storage, injection, or remote-origin boundary');
   }
@@ -361,6 +474,11 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     'intentSuccess',
     'intentFailure',
     'retrySameRequest',
+    'human.capability',
+    'human.consent',
+    'human.verification',
+    "state.client.call('consents.list'",
+    "state.client.call('audit.verify'",
     'Raw result and evidence'
   ];
   if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {
@@ -381,6 +499,46 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (lifecycleMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One memory lifecycle surface is incomplete');
   }
+  const organizeMarkers = [
+    "action: 'ai.local-organize'",
+    "from '/local-organize.mjs'",
+    'buildBrowserOrganizeDraft',
+    'Local organizer stub',
+    'draft suggestion',
+    "'/local-organize.mjs'"
+  ];
+  if (organizeMarkers.some(marker => !`${app}\n${localOrganize}\n${server}\n${worker}`.includes(marker))) {
+    throw new ValidationError('AXIOM One local organize draft surface is incomplete');
+  }
+  if (
+    !localOrganize.includes('deterministic')
+    || !localOrganize.includes('LOCAL_ORGANIZE_PROVIDER_ID')
+    || !localOrganize.includes('INTEGRITY_VS_TRUTH')
+  ) {
+    throw new ValidationError('AXIOM One local organize module boundary is incomplete');
+  }
+  const socialMarkers = [
+    "state.client.call('social.get'",
+    "response.network_effect === 'none'",
+    "publication.status ?? 'unknown'",
+    'Owner-local Social corpus',
+    'No federation'
+  ];
+  if (socialMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One owner-local Social surface is incomplete');
+  }
+  const circleTemplateMarkers = [
+    "fetch('/mesh/config/circle-templates-v0.json'",
+    "catalog.schema !== 'axiom-circle-template-catalog.v0'",
+    "template.execution_authority !== false",
+    "template.membership_authority !== false",
+    "header('Circle templates'",
+    'Templates only'
+  ];
+  if (circleTemplateMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One Circle template surface is incomplete');
+  }
+
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
     || !worker.includes('!SHELL_ASSETS.includes(url.pathname)')
@@ -401,15 +559,42 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (
     !server.includes("'/presentation.mjs'")
     || !server.includes("'/human-contract.json'")
+    || !server.includes("'/local-organize.mjs'")
     || !worker.includes("'/presentation.mjs'")
     || !worker.includes("'/human-contract.json'")
+    || !worker.includes("'/local-organize.mjs'")
+    || !server.includes("'/mesh/config/circle-templates-v0.json'")
+    || !worker.includes("'/mesh/config/circle-templates-v0.json'")
   ) throw new ValidationError('AXIOM One public explanation assets are not exact');
+  const pwaAssets = [
+    '/icons/icon-192.png',
+    '/icons/icon-512.png',
+    '/icons/icon-maskable-192.png',
+    '/icons/icon-maskable-512.png',
+    '/screenshots/screenshot-wide.png',
+    '/screenshots/screenshot-narrow.png'
+  ];
+  if (pwaAssets.some(assetPath => (
+    !server.includes(`'${assetPath}'`)
+    || !worker.includes(`'${assetPath}'`)
+  ))) throw new ValidationError('AXIOM One installable shell asset inventory drifted');
   if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
     throw new ValidationError('AXIOM One reduced-motion behavior is missing');
   }
   if (!icon.includes('<svg') || /<script\b/i.test(icon)) {
     throw new ValidationError('AXIOM One icon is invalid');
   }
+}
+
+function validatePng(buffer, name, expectedWidth, expectedHeight) {
+  if (
+    !Buffer.isBuffer(buffer)
+    || buffer.length < 24
+    || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
+    || buffer.subarray(12, 16).toString('ascii') !== 'IHDR'
+    || buffer.readUInt32BE(16) !== expectedWidth
+    || buffer.readUInt32BE(20) !== expectedHeight
+  ) throw new ValidationError(`AXIOM One PNG asset is invalid: ${name}`);
 }
 
 function exactObject(value, name, keys) {
@@ -425,8 +610,16 @@ function readText(name) {
   return readFile(join(APP_ROOT, name), 'utf8');
 }
 
+function readBinary(name) {
+  return readFile(join(APP_ROOT, name));
+}
+
 async function readJson(name) {
   return JSON.parse(await readText(name));
+}
+
+async function readMeshConfigJson(name) {
+  return JSON.parse(await readFile(join(MESH_ROOT, 'config', name), 'utf8'));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

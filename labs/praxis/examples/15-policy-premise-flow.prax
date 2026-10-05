@@ -1,0 +1,8 @@
+requires permit tune_cluster: Tune @ Cluster;
+observe premise = "p99-latency-above-slo" from "monitor:latency";
+verify vetted_premise = premise with LatencyEvidencePolicy;
+assess decision = vetted_premise with AutoscalePolicy;
+op retune = Tune(decision) @ Cluster;
+authorize retune using tune_cluster as armed_retune;
+prepare armed_retune as prepared_retune;
+commit prepared_retune as retune_receipt;

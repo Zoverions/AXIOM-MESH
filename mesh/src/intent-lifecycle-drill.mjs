@@ -1,11 +1,11 @@
 import { createPublicKey } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { startDevelopmentStack } from './dev.mjs';
+import { reserveProductionPortBlock } from './lib/production-host.mjs';
 import {
   ValidationError,
   canonicalJson,
@@ -34,7 +34,8 @@ export async function runIntentLifecycleDrill({
   const normalizedRevision = commitBound ? sourceRevision : null;
   const sourceDigest = sha256(commitBound ? sourceRevision : UNBOUND_SOURCE);
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-lifecycle-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('intent lifecycle drill');
+  const basePort = portLease.base_port;
   const tokens = {
     operator: `intent-operator-${crypto.randomUUID()}-${'o'.repeat(24)}`,
     approver: `intent-approver-${crypto.randomUUID()}-${'a'.repeat(24)}`,
@@ -428,6 +429,7 @@ export async function runIntentLifecycleDrill({
     return evidence;
   } finally {
     if (stack) await stack.stop().catch(() => {});
+    await portLease.release();
     await rm(dataDir, { recursive: true, force: true });
   }
 }
@@ -652,28 +654,6 @@ async function waitUntil(isoTimestamp, {
     return;
   }
   await new Promise(resolve => setTimeout(resolve, delay));
-}
-
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new ValidationError('Unable to reserve a local four-port block for Intent lifecycle drill');
 }
 
 async function main() {

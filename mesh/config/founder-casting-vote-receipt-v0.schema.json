@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founder-casting-vote-receipt-v0.schema.json",
+  "title": "AXIOM Founder Casting Vote Receipt v0 inert evidence",
+  "description": "Evidence-only record for a manually confirmed Founder tie-break after a qualifying Founders Council tie. It creates no execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "receipt_id",
+    "proposal_id",
+    "founder_mind_id",
+    "foundation_digest",
+    "assessment_digest",
+    "pre_cast_votes_for",
+    "pre_cast_votes_against",
+    "casting_vote",
+    "manual_founder_confirmation_evidence_digest",
+    "cast_at",
+    "authority_effect",
+    "execution_authority",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founder-casting-vote-receipt.v0"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "founder_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "assessment_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "pre_cast_votes_for": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20
+    },
+    "pre_cast_votes_against": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20
+    },
+    "casting_vote": {
+      "enum": [
+        "for",
+        "against"
+      ]
+    },
+    "manual_founder_confirmation_evidence_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "cast_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "execution_authority": {
+      "const": false
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founder-casting-vote-receipt.mjs",
+  "x-axiom-non-claims": [
+    "live-casting-vote",
+    "human-presence-proof",
+    "supermajority-override",
+    "council-execution-authority",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/autonomy-envelope-v0.schema.json",
+  "title": "AXIOM Autonomy Envelope v0",
+  "description": "Inert owner-selected autonomy ceiling layered over current authority. It cannot mint actions, purposes, destinations, capabilities, budgets, delegation, credentials, or effect authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "envelope_id",
+    "owner_principal_id",
+    "subject_principal_id",
+    "authority_snapshot_ref",
+    "authority_digest",
+    "active_from",
+    "expires_at",
+    "actions",
+    "purposes",
+    "destinations",
+    "capability_ids",
+    "data_classes",
+    "effect_classes",
+    "consequence_ceiling",
+    "max_execution_ms",
+    "max_cost",
+    "confirmation_floor",
+    "independent_approval_floor",
+    "delegation_allowed",
+    "wildcard_authority",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-autonomy-envelope.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-owner-ceiling"
+    },
+    "envelope_id": {
+      "$ref": "#/$defs/id"
+    },
+    "owner_principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "subject_principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "authority_snapshot_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "authority_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "active_from": {
+      "$ref": "#/$defs/date"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/date"
+    },
+    "actions": {
+      "$ref": "#/$defs/idArrayNonEmpty"
+    },
+    "purposes": {
+      "$ref": "#/$defs/idArrayNonEmpty"
+    },
+    "destinations": {
+      "$ref": "#/$defs/textArray"
+    },
+    "capability_ids": {
+      "$ref": "#/$defs/idArray"
+    },
+    "data_classes": {
+      "$ref": "#/$defs/textArray"
+    },
+    "effect_classes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 9,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "none",
+          "read-external",
+          "write-external",
+          "publish-external",
+          "communication",
+          "financial",
+          "create-external-resource",
+          "delete-external-resource",
+          "physical"
+        ]
+      }
+    },
+    "consequence_ceiling": {
+      "enum": [
+        "C0",
+        "C1",
+        "C2",
+        "C3"
+      ]
+    },
+    "max_execution_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 300000
+    },
+    "max_cost": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "max_minor_units"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "max_minor_units": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      ]
+    },
+    "confirmation_floor": {
+      "enum": [
+        "inherit-existing",
+        "human-before-C2-C3",
+        "human-before-any-effect"
+      ]
+    },
+    "independent_approval_floor": {
+      "enum": [
+        "inherit-existing",
+        "require-C3",
+        "require-C2-C3"
+      ]
+    },
+    "delegation_allowed": {
+      "const": false
+    },
+    "wildcard_authority": {
+      "const": false
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "idArrayNonEmpty": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/autonomy-envelope.mjs",
+  "x-axiom-non-claims": [
+    "full-access",
+    "authority-grant",
+    "delegation",
+    "credential-access",
+    "confirmation-bypass",
+    "independent-approval-bypass",
+    "runtime-activation"
+  ]
+}

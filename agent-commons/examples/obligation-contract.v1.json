@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-obligation-contract.v1",
+  "contract_id": "contract:service-delivery-001",
+  "version": "0.1.0",
+  "status": "active_obligation_set",
+  "parties": [
+    {
+      "party_id": "party:provider",
+      "role": "service_provider",
+      "identity_evidence_refs": [
+        "evidence:provider-identity"
+      ]
+    },
+    {
+      "party_id": "party:recipient",
+      "role": "service_recipient",
+      "identity_evidence_refs": [
+        "evidence:recipient-identity"
+      ]
+    }
+  ],
+  "context": {
+    "jurisdiction_or_policy_refs": [
+      "policy:local-contract-review"
+    ],
+    "effective_from": "2026-09-01T13:20:00.000Z",
+    "expires_at": "2026-09-08T13:20:00.000Z",
+    "human_review_required": true
+  },
+  "obligations": [
+    {
+      "obligation_id": "obligation:deliver-report",
+      "obligor": "party:provider",
+      "beneficiary": "party:recipient",
+      "action_or_result": "Deliver the agreed report artifact.",
+      "conditions": [
+        "recipient request remains active"
+      ],
+      "deadline": "2026-09-03T13:20:00.000Z",
+      "evidence_required": [
+        "artifact digest",
+        "delivery receipt"
+      ],
+      "verification_mode": "independent_artifact_verification",
+      "automatic_execution": false
+    }
+  ],
+  "dispute": {
+    "challenge_allowed": true,
+    "review_required_for_breach": true,
+    "remedy_requires_separate_authority": true
+  },
+  "authority": {
+    "signature_grants_runtime_authority": false,
+    "contract_grants_runtime_authority": false,
+    "fulfillment_grants_runtime_authority": false,
+    "breach_grants_remedy_authority": false
+  },
+  "limitations": [
+    "Example only; it does not establish legal enforceability.",
+    "Any consequential execution or remedy requires separate local authority."
+  ]
+}

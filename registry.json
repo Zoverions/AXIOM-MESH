@@ -1,0 +1,30 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "axiom-mesh",
+  "homepage": "https://github.com/Zoverions/AXIOM-MESH",
+  "items": [
+    {
+      "name": "axiom-human-interface-foundation",
+      "type": "registry:item",
+      "title": "AXIOM Human Interface Foundation",
+      "description": "Experimental zero-authority interface contract and design tokens for human-facing AXIOM clients. This item does not grant authority, add network access, or activate runtime behavior.",
+      "files": [
+        {
+          "path": "registry/axiom-ui/interface-contract.json",
+          "type": "registry:file",
+          "target": "~/axiom-ui/interface-contract.json"
+        },
+        {
+          "path": "registry/axiom-ui/foundation.css",
+          "type": "registry:file",
+          "target": "~/axiom-ui/foundation.css"
+        },
+        {
+          "path": "registry/axiom-ui/INTERFACE-BOUNDARY.md",
+          "type": "registry:file",
+          "target": "~/axiom-ui/INTERFACE-BOUNDARY.md"
+        }
+      ]
+    }
+  ]
+}

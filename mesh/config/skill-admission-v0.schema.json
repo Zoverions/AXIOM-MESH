@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/skill-admission-v0.schema.json",
+  "title": "AXIOM Skill Admission v0 inert contract",
+  "description": "Provider-neutral admission metadata for a skill/workflow artifact. Validity, provenance or installation never grants execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "skill_id",
+    "format",
+    "source_ref",
+    "content_digest",
+    "provenance_refs",
+    "declared_dependencies",
+    "requested_capabilities",
+    "filesystem",
+    "network",
+    "process",
+    "data_classes",
+    "expected_effects",
+    "sandbox_profile_ref",
+    "consequence_class",
+    "review_refs",
+    "revocation_state",
+    "currentness",
+    "grants_authority",
+    "installation_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-skill-admission.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "skill_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "format": {
+      "enum": [
+        "agent-skills-skill-md",
+        "axiom-native",
+        "other-declared"
+      ]
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "content_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "provenance_refs": {
+      "$ref": "#/$defs/refArray"
+    },
+    "declared_dependencies": {
+      "$ref": "#/$defs/textArray"
+    },
+    "requested_capabilities": {
+      "$ref": "#/$defs/idArray"
+    },
+    "filesystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "paths"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "read-only",
+            "read-write"
+          ]
+        },
+        "paths": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "destinations"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "egress-bounded"
+          ]
+        },
+        "destinations": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "commands"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "spawn-bounded"
+          ]
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "data_classes": {
+      "$ref": "#/$defs/textArray"
+    },
+    "expected_effects": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "none",
+          "read-external",
+          "write-external",
+          "publish-external",
+          "communication",
+          "financial",
+          "create-external-resource",
+          "delete-external-resource",
+          "physical",
+          "unknown"
+        ]
+      }
+    },
+    "sandbox_profile_ref": {
+      "$ref": "#/$defs/identifier"
+    },
+    "consequence_class": {
+      "enum": [
+        "C0",
+        "C1",
+        "C2",
+        "C3"
+      ]
+    },
+    "review_refs": {
+      "$ref": "#/$defs/refArray"
+    },
+    "revocation_state": {
+      "enum": [
+        "active",
+        "revoked",
+        "unknown"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "checked_at",
+        "expires_at"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "current",
+            "stale",
+            "unknown"
+          ]
+        },
+        "checked_at": {
+          "$ref": "#/$defs/date"
+        },
+        "expires_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/date"
+            }
+          ]
+        }
+      }
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "installation_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "refArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/agent-os-contracts.mjs",
+  "x-axiom-non-claims": [
+    "skill-trust",
+    "installation-authority",
+    "effect-authority",
+    "sandbox-safety-proof",
+    "provider-certification",
+    "runtime-activation"
+  ]
+}

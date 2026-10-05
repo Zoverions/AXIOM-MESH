@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founder-genesis-council-v0.schema.json",
+  "title": "AXIOM Founder Genesis and Founders Council v0 inert foundation",
+  "description": "Pure non-authorizing founding-seat and bounded Founder Genesis reserve records. Cross-record semantics are enforced by mesh/src/lib/founder-genesis-council.mjs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "founder_mind_id",
+    "seats",
+    "genesis_authorizations",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founders-council-foundation.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "founder_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "seats": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/seat"
+      }
+    },
+    "genesis_authorizations": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/authorization"
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "nullableMindId": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        }
+      ]
+    },
+    "nullableDigest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "seat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "seat_id",
+        "seat_class",
+        "seat_number",
+        "designation",
+        "original_mind_id",
+        "current_mind_id",
+        "voting_status",
+        "genesis_slot",
+        "authority_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-founders-council-seat.v0"
+        },
+        "seat_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "seat_class": {
+          "enum": [
+            "biological",
+            "digital"
+          ]
+        },
+        "seat_number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "designation": {
+          "enum": [
+            "founder",
+            "founder-mother",
+            "founder-appointed",
+            "founder-genesis"
+          ]
+        },
+        "original_mind_id": {
+          "$ref": "#/$defs/nullableMindId"
+        },
+        "current_mind_id": {
+          "$ref": "#/$defs/nullableMindId"
+        },
+        "voting_status": {
+          "enum": [
+            "reserved",
+            "developing",
+            "active",
+            "inactive"
+          ]
+        },
+        "genesis_slot": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          ]
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "slot_number",
+        "holder_mind_id",
+        "state",
+        "manual_founder_confirmation_required",
+        "delegable",
+        "transferable",
+        "renewable",
+        "max_uses",
+        "recognized_mind_id",
+        "genesis_receipt_digest",
+        "authority_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-founder-genesis-authorization.v0"
+        },
+        "slot_number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "holder_mind_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "state": {
+          "enum": [
+            "unused",
+            "pending",
+            "consumed",
+            "frozen"
+          ]
+        },
+        "manual_founder_confirmation_required": {
+          "const": true
+        },
+        "delegable": {
+          "const": false
+        },
+        "transferable": {
+          "const": false
+        },
+        "renewable": {
+          "const": false
+        },
+        "max_uses": {
+          "const": 1
+        },
+        "recognized_mind_id": {
+          "$ref": "#/$defs/nullableMindId"
+        },
+        "genesis_receipt_digest": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founder-genesis-council.mjs",
+  "x-axiom-non-claims": [
+    "live-digital-mind-genesis",
+    "production-founders-council-governance",
+    "portable-personhood",
+    "sybil-resistant-personhood",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.local/schema/persistence-attestation-v0.schema.json",
+  "title": "AXIOM Persistence Attestation v0",
+  "description": "Inert point-in-time evidence about the persistence representation declared by one exact Cognitive Topology node. This schema does not contact providers, synchronize state, perform exports, verify external signatures, or activate a runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "attestation_id",
+    "topology_id",
+    "topology_digest",
+    "node_id",
+    "model_id",
+    "declared_persistence",
+    "observation",
+    "evidence",
+    "observed_at",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-persistence-attestation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "attestation_id": { "$ref": "#/$defs/identifier" },
+    "topology_id": { "$ref": "#/$defs/identifier" },
+    "topology_digest": { "$ref": "#/$defs/digest" },
+    "node_id": { "$ref": "#/$defs/identifier" },
+    "model_id": { "$ref": "#/$defs/identifier" },
+    "declared_persistence": { "$ref": "#/$defs/declaredPersistence" },
+    "observation": { "$ref": "#/$defs/observation" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "observed_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "recorded_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "declaredPersistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "provider_id",
+        "state_ref",
+        "exportability"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["none", "local", "provider-bound", "mirrored"]
+        },
+        "provider_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "state_ref": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "exportability": {
+          "type": "string",
+          "enum": ["none", "partial", "full", "unknown"]
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "observed_exportability",
+        "snapshot_ref",
+        "snapshot_digest"
+      ],
+      "properties": {
+        "availability": {
+          "type": "string",
+          "enum": ["available", "unavailable", "unknown"]
+        },
+        "observed_exportability": {
+          "type": "string",
+          "enum": ["none", "partial", "full", "unknown"]
+        },
+        "snapshot_ref": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "snapshot_digest": {
+          "anyOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_kind",
+        "evidence_ref",
+        "evidence_digest"
+      ],
+      "properties": {
+        "evidence_kind": {
+          "type": "string",
+          "enum": [
+            "local-observation",
+            "provider-statement",
+            "signed-provider-statement",
+            "export-test"
+          ]
+        },
+        "evidence_ref": { "$ref": "#/$defs/identifier" },
+        "evidence_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/persistence-attestation.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "node_id and model_id must identify one exact Cognitive Topology node",
+    "declared_persistence must exactly match the bound Cognitive Topology node persistence declaration",
+    "available observations may carry snapshot_ref and snapshot_digest only as a both-null or both-present pair",
+    "unavailable and unknown observations cannot carry snapshot_ref or snapshot_digest",
+    "recorded_at cannot precede observed_at"
+  ],
+  "x-axiom-non-claims": [
+    "provider-reachability",
+    "snapshot-availability",
+    "snapshot-integrity-beyond-recorded-digest",
+    "provider-statement-truth",
+    "external-signature-verification",
+    "persistence-synchronization",
+    "export-performance",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation",
+    "subjective-identity-proof"
+  ]
+}

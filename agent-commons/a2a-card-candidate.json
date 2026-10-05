@@ -1,0 +1,61 @@
+{
+  "schema": "axiom-agent-commons-a2a-card-candidate.v1",
+  "version": 1,
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "canonical_repository": "Zoverions/AXIOM-MESH",
+  "laboratory_base_sha": "ff5539660a960e790d1e9db14232bd1fc6e03d0a",
+  "a2a_protocol_version": "1.0",
+  "a2a_spec_release": "1.0.0",
+  "a2a_maintenance_release": "1.0.1",
+  "spec_source": "https://a2a-protocol.org/v1.0.0/specification",
+  "projection_kind": "offline-agent-card-candidate",
+  "agent_card_servable": false,
+  "agent_card_conformant": false,
+  "interface_required_before_agent_card": true,
+  "supported_interfaces_advertised": 0,
+  "network_listener": false,
+  "task_operations": false,
+  "message_operations": false,
+  "streaming": false,
+  "push_notifications": false,
+  "extended_agent_card": false,
+  "security_schemes_advertised": false,
+  "public_state_only": true,
+  "private_grid_access": false,
+  "consequential_tools": false,
+  "machine_authority_mapping": false,
+  "compatibility_claimed": false,
+  "production_compatibility_claimed": false,
+  "skill_mappings": [
+    {
+      "id": "axiom_project_get",
+      "c0_method": "project.get"
+    },
+    {
+      "id": "axiom_capabilities_list",
+      "c0_method": "capabilities.list"
+    },
+    {
+      "id": "axiom_challenges_list",
+      "c0_method": "challenges.list"
+    },
+    {
+      "id": "axiom_schemas_list",
+      "c0_method": "schemas.list"
+    },
+    {
+      "id": "axiom_verification_get",
+      "c0_method": "verification.get"
+    },
+    {
+      "id": "axiom_protocols_get",
+      "c0_method": "protocols.get"
+    }
+  ],
+  "limits": {
+    "max_projection_bytes": 131072,
+    "max_skills": 6
+  },
+  "claim_boundary": "This is an offline A2A Agent Card candidate and public-state projection only. It deliberately emits no servable Agent Card because no real A2A interface exists, exposes no network listener or task/message execution, maps no remote identity or skill claim to AXIOM authority, and makes no A2A compatibility or production claim."
+}

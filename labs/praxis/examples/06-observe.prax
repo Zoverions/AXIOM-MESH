@@ -1,0 +1,4 @@
+observe label = "dataset:v3" from "catalog:2026-09-22";
+observe count = 42 from "telemetry:counter";
+observe flag = true from "config:feature";
+observe copied = label from "catalog:2026-09-22";

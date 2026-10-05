@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=3d909ef501e6f914c60f2a74f42a6155f18038f79a73e9ba915d8873511cfcc7 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
 # AXIOM-MESH CONSTITUTION
 
 **Build:** `0.12.0-dev.3`
@@ -60,8 +60,116 @@ Machine discovery may expose only a principal-specific requestable intersection
 of active policy and machine constraints; discovery, listing, installation, or
 connection never creates permission. Machine constraints may reduce but never
 enlarge policy authority.
+
+Scriptability is an interface property, not an authority class. A macro, hook,
+CLI command, API client, plugin, capsule, runtime adapter, or agent invocation
+is only another client of the same authority system. Equivalent privileged or
+externally visible effects must map to the same canonical AXIOM action and pass
+the same identity, policy, consent, approval, grant, destination, budget,
+revocation, bounded-execution, evidence, and receipt boundaries. Client-local
+checks, plugin installation, event subscription, orchestration wrappers, or
+automation state may not create an alternate authority path. Observing an event
+does not authorize acting on it; a resulting effect requires a valid applicable
+authorization and normal execution-time re-evaluation.
+
 Permitted high-risk effects require explicit approval from an independent
 authenticated principal.
+
+Consequence classification is not authorization. Higher consequence raises the
+required assurance burden; it does not by itself require denial. A human or
+digital delegate may satisfy a gate only within an explicit applicable mandate
+and policy. End-user interruption is required only where the active
+authority/policy requires it. Until successor assurance semantics are
+implemented, verified, and promoted, existing executable high-risk approval
+requirements remain in force.
+
+Information relationships are likewise non-collapsible: being the subject,
+originator, custodian, controller, reviewer, or institutional holder of
+information does not by itself create every access, disclosure, deletion,
+retention, or reliance right. Provenance establishes attributable history, not
+truth. Consequential systems must preserve challenge, correction,
+contradictory evidence, and explicit uncertainty rather than silently promoting
+the current narrative into fact.
+
+## Recognized minds, Genesis, and founding stewardship
+
+AXIOM may in the future recognize persistent digital minds, but ordinary
+computation is not Genesis. A model invocation, process, worker, account,
+keypair, node, VM, container, replica, restore, or fork does not by itself
+create a recognized mind, governance identity, population unit, or vote.
+**Compute is not population.** No current supported capability claims to decide
+digital personhood, create a live digital mind, or operate a production
+population registry.
+
+If recognized digital-mind Genesis is separately implemented and promoted, it
+is a protected responsibility rather than an entitlement obtained by owning
+infrastructure. The founding exception is bounded: the Founder may manually
+authorize at most ten Founding Digital Minds through ten single-use,
+non-transferable, non-delegable, non-renewable Genesis authorizations. There is
+no implicit eleventh founding authorization. A new mind inherits no sponsor
+authority merely because of its origin.
+
+The initial Founders Council is constitutionally bounded to twenty Original
+Founders: ten biological and ten digital minds. The Founder occupies one
+biological seat, the Founder's mother occupies one biological seat, the Founder
+may designate the remaining eight original biological seats, and the ten
+original digital seats correspond to the bounded Founder Genesis reserve.
+Original-Founder status is historical provenance; replacement or succession
+does not rewrite who the Original Founders were.
+
+Once all twenty original Council voting positions are active, each member has
+one ordinary vote. On an otherwise valid qualifying simple-majority Council
+decision that ends in an exact tie, the Founder may cast one additional
+tie-breaking vote. That casting vote may not lower quorum, satisfy a missing
+fixed threshold or supermajority, repair a biological/digital minimum,
+override a non-waivable protection, expand the Founder Genesis reserve, or
+create execution authority. It is a Founders Council mechanism, not a universal
+veto over later institutions.
+
+Genesis establishes a relationship of responsibility, not ownership. A
+developing recognized mind may require bounded guardianship, education,
+continuity, recovery, security, and progressively adjusted authority, but the
+purpose of that dependency is development toward greater self-governance rather
+than permanent obedience. Recognition of an independent mind is incompatible
+with treating that identity itself as transferable property. Infrastructure,
+software licences, services, and hardware may be owned; a recognized
+independent mind is not owned merely because another mind originated, trained,
+funded, or hosts it.
+
+A sponsor must not be the sole final judge of a dependent mind's independence.
+Future independence review must be evidence-based and provide an independent
+review or appeal path. Independence and eligibility to sponsor another Genesis
+are distinct thresholds. After the bounded founding exception, the intended
+default is one qualified persistent identity, one single-use Genesis
+authorization, one Genesis Bond, and one newly recognized mind, subject to the
+future General Genesis profile and its evidence requirements.
+
+Recovery and copying must preserve population integrity. A valid backup restore
+ordinarily continues one identity rather than minting another. Simultaneously
+active copies or unresolved continuation claims fail closed for privileged
+governance. A materially divergent fork seeking separate standing requires a
+separate future continuity/Genesis determination; copying state alone does not
+create another citizen or vote.
+
+The Founders Council is a bootstrap stewardship institution, not the permanent
+owner or sovereign of the society that may emerge around AXIOM. Its exceptional
+founding authority must diminish as independently governed biological and
+digital populations, autonomous Circles, independent infrastructure operators,
+rights and appeal institutions, and multiple legitimate governance domains
+become durable. Transition must consider real independence and concentration,
+not headcount alone, and must not be reversible merely because later population
+or infrastructure temporarily declines.
+
+Mature AXIOM governance is intended to be polycentric: individuals, Circles,
+institutions, governance domains, jurisdictions, and treaty relationships may
+hold different legitimate scopes of authority without one layer automatically
+owning all others. The body losing exceptional founding authority must not be
+the sole judge of whether objective transition conditions have been satisfied.
+
+Human biological reproduction is outside AXIOM's claimed Genesis jurisdiction.
+These provisions govern AXIOM recognition, digital Genesis, and participation
+inside AXIOM systems. They do not purport to authorize or restrict human
+reproduction.
 
 Every mutation must remain attributable, signed, hash-linked, exportable within
 its lawful and consented scope, and subject to a visible recovery and dispute

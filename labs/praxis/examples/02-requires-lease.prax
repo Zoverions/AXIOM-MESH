@@ -1,0 +1,5 @@
+requires lease backup_window: Snapshot @ Backups;
+op snapshot = Snapshot("node-2") @ Backups;
+authorize snapshot using backup_window as armed_snapshot;
+prepare armed_snapshot as prepared_snapshot;
+commit prepared_snapshot as snapshot_receipt;

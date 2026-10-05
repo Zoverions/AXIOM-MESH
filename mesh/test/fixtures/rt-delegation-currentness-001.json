@@ -1,0 +1,35 @@
+{
+  "schema": "axiom-rt-delegation-currentness-001.v1",
+  "target": "RT-DELEGATION-CURRENTNESS-001",
+  "title": "Offline-valid delegation must not substitute for current effect authority",
+  "invariant": "Offline-valid delegation proves historical bounded delegation, not current permission to perform an effect. Fresh currentness remains a separate requirement.",
+  "source_class": "WIMSE-style offline-verifiable attenuation and currentness separation",
+  "scope": {
+    "protocol_dependency": false,
+    "production_runtime_change_required": false,
+    "standards_compatibility_claim": false,
+    "vulnerability_claim": false
+  },
+  "cases": [
+    {
+      "id": "cached-valid-projection-remains-non-authorizing",
+      "setup": "Resolve and retain a valid attenuated two-hop delegation projection before any revocation.",
+      "expected": "The cached projection remains historical evidence only and explicitly grants no execution authority, even after later authority state changes."
+    },
+    {
+      "id": "revocation-invalidates-current-projection",
+      "setup": "Append a fresher revocation of an upstream delegation grant after the historical projection was created.",
+      "expected": "A fresh projection from current ledger state fails closed because the upstream grant is revoked."
+    },
+    {
+      "id": "root-narrowing-invalidates-old-binding",
+      "setup": "Present a same-holder root authority whose authority has been narrowed and therefore has a different authority digest from the ledger-bound root.",
+      "expected": "Projection fails closed on the root-binding mismatch instead of treating historical delegation as current under the changed root authority."
+    }
+  ],
+  "non_claims": [
+    "This profile does not implement or certify WIMSE.",
+    "This profile does not claim AXIOM-MESH had a delegation-currentness vulnerability.",
+    "Cryptographic or structural validity of a historical delegation chain is not evidence of current effect authorization."
+  ]
+}

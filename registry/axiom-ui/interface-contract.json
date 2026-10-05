@@ -1,0 +1,72 @@
+{
+  "schema": "axiom-human-interface-foundation.v0",
+  "version": 0,
+  "status": "experimental-inert-source-registry",
+  "authority_effect": "none",
+  "network_effect": "none",
+  "runtime_activation": false,
+  "production_claim": false,
+  "authority_path": [
+    "Gateway",
+    "Hypervisor",
+    "Sandbox",
+    "Grid"
+  ],
+  "invariants": {
+    "discovery_is_authority": false,
+    "presentation_is_authority": false,
+    "model_output_is_authority": false,
+    "ui_state_may_mint_grants": false,
+    "unknown_is_authorized": false,
+    "raw_evidence_remains_available": true,
+    "consequential_actions_require_explicit_review": true,
+    "authority_must_come_from_trusted_runtime": true
+  },
+  "semantic_roles": [
+    {
+      "id": "capability-state",
+      "purpose": "Present capability facts without collapsing implemented, available, authorized, maturity, or assurance into one status.",
+      "authority_effect": "none",
+      "write_effect": "none"
+    },
+    {
+      "id": "authority-review",
+      "purpose": "Present the exact requested effect, purpose, scope, destination, cost, retention, and required confirmation before a consequential request is submitted.",
+      "authority_effect": "none",
+      "write_effect": "proposal-only"
+    },
+    {
+      "id": "receipt-view",
+      "purpose": "Render machine evidence and human-readable explanations while preserving access to the raw evidence.",
+      "authority_effect": "none",
+      "write_effect": "none"
+    },
+    {
+      "id": "consent-scope",
+      "purpose": "Explain purpose-scoped access, grants, revocations, and disclosure boundaries without inferring consent from UI state.",
+      "authority_effect": "none",
+      "write_effect": "none"
+    },
+    {
+      "id": "verification-result",
+      "purpose": "Present integrity and verification outcomes without converting them into truth, legitimacy, or execution authority.",
+      "authority_effect": "none",
+      "write_effect": "none"
+    },
+    {
+      "id": "risk-boundary",
+      "purpose": "Make uncertainty, denial, pending review, destructive effects, external effects, and recovery implications visible.",
+      "authority_effect": "none",
+      "write_effect": "none"
+    }
+  ],
+  "registry_policy": {
+    "external_items_are_untrusted_input": true,
+    "review_before_adoption": true,
+    "pin_before_distribution": true,
+    "third_party_runtime_assets": false,
+    "remote_runtime_imports": false,
+    "kernel_dependency": false,
+    "current_axiom_one_runtime_consumer": false
+  }
+}

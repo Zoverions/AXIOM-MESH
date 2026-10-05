@@ -1,0 +1,104 @@
+AXIOM One TWA release runbook — owner-gated steps
+
+STATUS: ceremony procedure, not yet executed.
+
+The rehearsal in this directory (README.txt, twa-manifest.json, build-log-2026-09-22.txt) proves the pipeline on a placeholder origin with a throwaway debug key. This runbook does not itself authorize production effects.
+
+Do not create a release key, publish a Digital Asset Links statement, upload to Play, change DNS, spend money, or deploy a production origin merely because this file exists. Those are separate owner-authorized steps.
+
+Cost note: Bubblewrap, keytool and Gradle are free. A Google Play developer account or other distribution/service costs remain outside this procedure and require separate approval.
+
+STEP 0 — PRECONDITIONS
+
+- The PWA is live at the chosen origin over HTTPS and serves the intended manifest, icons, start URL, standalone display mode and approved shortcuts.
+- The release path can run PWA validation against that real origin. The rehearsal's --skipPwaValidation exception must not carry into release.
+- The private release workstation has a supported Node runtime, JDK 17 and the approved/pinned Bubblewrap toolchain.
+- The repository working tree does not contain private-key material.
+
+STEP 1 — CHOOSE THE PRODUCTION ORIGIN
+
+The owner chooses the long-term HTTPS origin. Do not guess it from the rehearsal placeholder. Record the final decision in the release PR or release evidence, not by mutating this rehearsal fixture in place without review.
+
+STEP 2 — RELEASE-KEY CEREMONY ON A PRIVATE MACHINE
+
+The owner generates and stores the release key on a trusted private machine. Agents may provide procedure text but must not receive, copy, store, log, screenshot, or transmit passwords or keystore bytes.
+
+1. Choose strong credentials and store them in the owner's approved secret manager.
+2. Generate the key with interactive password prompts; do not use -storepass or -keypass command-line arguments:
+
+   keytool -genkeypair -v \
+     -keystore axiom-one-release.keystore -alias axiomone-release \
+     -keyalg RSA -keysize 2048 -validity 9125 \
+     -dname "CN=<owner-or-org>, OU=AXIOM One, O=<org>, L=<city>, ST=<state-or-province>, C=<country>"
+
+3. Back up the keystore through the owner's approved encrypted backup process. Do not place the file in the repository, CI, chat, shared workspace, email, screenshots, or ordinary project backups.
+4. Record only the public certificate fingerprint needed for Digital Asset Links:
+
+   keytool -list -v -keystore axiom-one-release.keystore -alias axiomone-release
+
+5. Treat loss or compromise of signing material as a release/security incident and follow the platform's supported key-rotation/recovery process rather than improvising a second authority path.
+
+STEP 3 — REGENERATE THE TWA CONFIG IN DISPOSABLE SCRATCH
+
+Never run Bubblewrap initialization from the tracked repository directory. Use disposable scratch outside the repository:
+
+   RELEASE_DIR="$(mktemp -d)"
+   cd "$RELEASE_DIR"
+   bubblewrap init --manifest https://<PRODUCTION-ORIGIN>/manifest.webmanifest
+
+Review all generated values. The package id must match the approved release identity. When Bubblewrap requests signing information, point it to the private keystore path outside the repository and enter secrets only through the interactive prompt or another reviewed secret-input mechanism that does not expose them in process arguments.
+
+Copy back only the reviewed release configuration or evidence files that the repository actually intends to track. Never copy the keystore, generated secret material, local SDK state, or entire generated Android project tree into the repository by default.
+
+STEP 4 — DIGITAL ASSET LINKS
+
+Digital Asset Links publication is a separate externally visible change.
+
+- Use the release certificate fingerprint and, if applicable, the Play App Signing certificate fingerprint shown by the distribution platform.
+- Publish only to the approved production origin at /.well-known/assetlinks.json.
+- Verify exact package id and fingerprints before relying on verified-TWA behavior.
+- Treat verification evidence as evidence only; it does not grant unrelated AXIOM authority.
+
+Example statement shape:
+
+  [{
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "<release-package-id>",
+      "sha256_cert_fingerprints": ["<COLON-DELIMITED-UPPERCASE-SHA256>"]
+    }
+  }]
+
+Confirm the production endpoint returns HTTP 200 with the intended JSON and that Bubblewrap/DAL validation succeeds without redirect or origin mismatch.
+
+STEP 5 — RELEASE BUILD
+
+Build only from the disposable release project directory:
+
+   cd <release-twa-scratch-dir>
+   bubblewrap build
+
+Release requirements:
+- no --skipPwaValidation;
+- no debug/rehearsal keystore;
+- no secret values in command-line arguments, repository files or logs;
+- verify the APK certificate, package identity, version and intended resources;
+- retain the AAB/APK only in approved release-artifact storage.
+
+STEP 6 — DISTRIBUTION
+
+Distribution is externally effectful and remains separately owner-gated. If Play distribution is chosen, use the platform's supported signing and testing workflow. First release should remain in the narrowest appropriate testing track until device-level launch, shortcuts, verified-TWA behavior, update behavior and rollback expectations are checked.
+
+Do not silently promote a testing build to production.
+
+STEP 7 — UPDATES
+
+For each approved release, regenerate/update from the private disposable release workspace using the same package identity and approved signing path. Version changes, signing changes, origin changes and distribution changes require fresh evidence appropriate to their blast radius.
+
+EXIT / REVERSAL NOTES
+
+- Before public origin/DAL/distribution effects, delete the disposable release workspace to roll back local preparation.
+- DAL publication is public/cached state; removal or correction must be coordinated.
+- Package identity becomes externally relied upon once distributed; do not change it without an explicit migration path.
+- The checked-in rehearsal manifest with .invalid origin and debug-key path must never be promoted as release input.

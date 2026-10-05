@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/cognitive-lineage-manifest-v0.schema.json",
+  "title": "AXIOM Cognitive Lineage Manifest v0",
+  "description": "Strict inert evidence contract describing a cognitive model relationship relative to one bound Cognitive Topology. It does not prove AXIOM principal lineage, activate a candidate, execute adaptation, substitute models, or grant authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "lineage_id",
+    "topology_id",
+    "topology_digest",
+    "reference",
+    "candidate",
+    "relationship",
+    "procedure",
+    "evidence",
+    "created_at",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-lineage-manifest.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "lineage_id": { "$ref": "#/$defs/identifier" },
+    "topology_id": { "$ref": "#/$defs/identifier" },
+    "topology_digest": { "$ref": "#/$defs/digest" },
+    "reference": { "$ref": "#/$defs/descriptor" },
+    "candidate": { "$ref": "#/$defs/descriptor" },
+    "relationship": {
+      "type": "string",
+      "enum": [
+        "successor",
+        "replacement",
+        "fine-tuned-descendant",
+        "distilled-descendant",
+        "quantized-derivative",
+        "adapter-derived",
+        "provider-version-successor",
+        "functionally-unrelated"
+      ]
+    },
+    "procedure": { "$ref": "#/$defs/procedure" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "nullableDigest": {
+      "anyOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "descriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "model_id",
+        "artifact_ref",
+        "artifact_digest",
+        "provider_version_ref"
+      ],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "model_id": { "$ref": "#/$defs/identifier" },
+        "artifact_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "artifact_digest": { "$ref": "#/$defs/nullableDigest" },
+        "provider_version_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "procedure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "procedure_kind",
+        "procedure_ref",
+        "procedure_digest",
+        "adaptation_authorization_ref"
+      ],
+      "properties": {
+        "procedure_kind": { "$ref": "#/$defs/identifier" },
+        "procedure_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "procedure_digest": { "$ref": "#/$defs/nullableDigest" },
+        "adaptation_authorization_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assurance_class",
+        "evidence_ref",
+        "evidence_digest",
+        "verification_ref",
+        "verification_digest"
+      ],
+      "properties": {
+        "assurance_class": {
+          "type": "string",
+          "enum": ["declared", "verified"]
+        },
+        "evidence_ref": { "$ref": "#/$defs/identifier" },
+        "evidence_digest": { "$ref": "#/$defs/digest" },
+        "verification_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "verification_digest": { "$ref": "#/$defs/nullableDigest" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-lineage-manifest.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "reference node_id and model_id must bind to one exact current topology node",
+    "candidate may be outside the current topology only when candidate.node_id is null",
+    "descriptor artifact_ref and artifact_digest must both be null or both be present",
+    "topology-bound descriptor artifact digests must exactly match the bound topology node artifact digest",
+    "descendant and provider-version successor relationships require procedure_ref and procedure_digest",
+    "declared assurance cannot carry verification evidence and verified assurance requires verification_ref and verification_digest",
+    "recorded_at cannot precede created_at",
+    "lineage evidence never activates or adopts the candidate"
+  ],
+  "x-axiom-non-claims": [
+    "principal-lineage-proof",
+    "principal-continuity-proof",
+    "subjective-identity-proof",
+    "candidate-activation",
+    "model-substitution",
+    "procedure-execution",
+    "training-or-adaptation-execution",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation"
+  ]
+}

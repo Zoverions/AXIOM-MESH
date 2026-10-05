@@ -1,0 +1,295 @@
+{
+  "schema": "axiom-circle-template-catalog.v0",
+  "version": 0,
+  "status": "inert-template-library",
+  "templates": [
+    {
+      "schema": "axiom-circle-template.v0",
+      "template_id": "circle-template.family-coordination.v0",
+      "label": "Family coordination",
+      "description": "A low-consequence coordination starting point for schedules, shared tasks and proposals. It does not encode legal guardianship, parental authority, custody, healthcare consent or financial authority.",
+      "circle_kind": "family-coordination",
+      "participation_model": "voluntary",
+      "roles": [
+        {
+          "role_id": "member",
+          "label": "Member",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "coordinator",
+          "label": "Coordinator",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        }
+      ],
+      "decision_rule": {
+        "quorum_basis_points": 5000,
+        "approval_basis_points": 6000,
+        "abstention_counts_toward_quorum": true
+      },
+      "appeal_enabled": true,
+      "member_exit_enabled": true,
+      "default_disclosure_class": "member-private",
+      "policy_floor": "raise-only",
+      "execution_authority": false,
+      "membership_authority": false,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "runtime_activation": false
+    },
+    {
+      "schema": "axiom-circle-template.v0",
+      "template_id": "circle-template.project-team.v0",
+      "label": "Project team",
+      "description": "A voluntary project collaboration starting point with contributor, coordinator and reviewer roles. Project decisions remain Circle-local evidence and do not execute external effects.",
+      "circle_kind": "project-team",
+      "participation_model": "voluntary",
+      "roles": [
+        {
+          "role_id": "contributor",
+          "label": "Contributor",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "coordinator",
+          "label": "Coordinator",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "reviewer",
+          "label": "Reviewer",
+          "declared_modes": [
+            "evidence",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        }
+      ],
+      "decision_rule": {
+        "quorum_basis_points": 5000,
+        "approval_basis_points": 6000,
+        "abstention_counts_toward_quorum": true
+      },
+      "appeal_enabled": true,
+      "member_exit_enabled": true,
+      "default_disclosure_class": "member-private",
+      "policy_floor": "raise-only",
+      "execution_authority": false,
+      "membership_authority": false,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "runtime_activation": false
+    },
+    {
+      "schema": "axiom-circle-template.v0",
+      "template_id": "circle-template.research-group.v0",
+      "label": "Research group",
+      "description": "A research collaboration starting point emphasizing evidence and independent review. It grants no research-system, publication, data-access or execution authority.",
+      "circle_kind": "research-group",
+      "participation_model": "voluntary",
+      "roles": [
+        {
+          "role_id": "researcher",
+          "label": "Researcher",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "reviewer",
+          "label": "Independent reviewer",
+          "declared_modes": [
+            "evidence",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        }
+      ],
+      "decision_rule": {
+        "quorum_basis_points": 5000,
+        "approval_basis_points": 6000,
+        "abstention_counts_toward_quorum": true
+      },
+      "appeal_enabled": true,
+      "member_exit_enabled": true,
+      "default_disclosure_class": "member-private",
+      "policy_floor": "raise-only",
+      "execution_authority": false,
+      "membership_authority": false,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "runtime_activation": false
+    },
+    {
+      "schema": "axiom-circle-template.v0",
+      "template_id": "circle-template.creator-collective.v0",
+      "label": "Creator collective",
+      "description": "A creator collaboration starting point for shared proposals, curation and review while keeping each member's state independently owned.",
+      "circle_kind": "creator-collective",
+      "participation_model": "voluntary",
+      "roles": [
+        {
+          "role_id": "creator",
+          "label": "Creator",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "curator",
+          "label": "Curator",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "reviewer",
+          "label": "Reviewer",
+          "declared_modes": [
+            "evidence",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        }
+      ],
+      "decision_rule": {
+        "quorum_basis_points": 5000,
+        "approval_basis_points": 6000,
+        "abstention_counts_toward_quorum": true
+      },
+      "appeal_enabled": true,
+      "member_exit_enabled": true,
+      "default_disclosure_class": "member-private",
+      "policy_floor": "raise-only",
+      "execution_authority": false,
+      "membership_authority": false,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "runtime_activation": false
+    },
+    {
+      "schema": "axiom-circle-template.v0",
+      "template_id": "circle-template.community-group.v0",
+      "label": "Community group",
+      "description": "A general community coordination starting point with facilitation and review roles. It is not a public-authority, eligibility, benefits, policing or legal-governance template.",
+      "circle_kind": "community-group",
+      "participation_model": "voluntary",
+      "roles": [
+        {
+          "role_id": "member",
+          "label": "Member",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "facilitator",
+          "label": "Facilitator",
+          "declared_modes": [
+            "propose",
+            "deliberate",
+            "evidence",
+            "vote",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        },
+        {
+          "role_id": "reviewer",
+          "label": "Reviewer",
+          "declared_modes": [
+            "evidence",
+            "review",
+            "appeal",
+            "observe"
+          ],
+          "execution_authority": false
+        }
+      ],
+      "decision_rule": {
+        "quorum_basis_points": 5000,
+        "approval_basis_points": 6000,
+        "abstention_counts_toward_quorum": true
+      },
+      "appeal_enabled": true,
+      "member_exit_enabled": true,
+      "default_disclosure_class": "member-private",
+      "policy_floor": "raise-only",
+      "execution_authority": false,
+      "membership_authority": false,
+      "authority_effect": "none",
+      "network_effect": "none",
+      "runtime_activation": false
+    }
+  ],
+  "authority_effect": "none",
+  "network_effect": "none",
+  "runtime_activation": false
+}

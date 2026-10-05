@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "3d909ef501e6f914c60f2a74f42a6155f18038f79a73e9ba915d8873511cfcc7",
+  "registry_digest": "2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -33,21 +33,17 @@
       "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
       "assertions": [
         "assert.equal(replay.idempotent_replay, true);",
+        "assert.equal(capabilityCommit.status, 201);",
+        "assert.ok(consumptionReceipt);",
         "assert.equal((await capabilityReplay.json()).error.code, 'capability_replayed');"
       ]
     },
     {
-      "capability_id": "core.machine-principals",
-      "path": "mesh/test/machine-principal-e2e.test.mjs",
-      "test": "constrained agent executes an authorized intent and returns bound authority evidence",
+      "capability_id": "core.layered-policy",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "layered policy merging is deny-dominant and only tightens requirements",
       "assertions": [
-        "assert.equal(result.status, 'completed');",
-        "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
-        "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
-        "assert.deepEqual(machineBoundary, expectedMachineBoundary);",
-        "assert.equal(error.code, 'machine_request_budget_exceeded');",
-        "assert.equal(error.code, 'machine_rate_budget_exceeded');",
-        "assert.equal(error.code, 'machine_response_budget_exceeded');"
+        "assert.equal(merged.actions['chain.submit'].decision, 'deny');"
       ]
     },
     {
@@ -65,6 +61,20 @@
       ]
     },
     {
+      "capability_id": "core.machine-principals",
+      "path": "mesh/test/machine-principal-e2e.test.mjs",
+      "test": "constrained agent executes an authorized intent and returns bound authority evidence",
+      "assertions": [
+        "assert.equal(result.status, 'completed');",
+        "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
+        "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
+        "assert.deepEqual(machineBoundary, expectedMachineBoundary);",
+        "assert.equal(error.code, 'machine_request_budget_exceeded');",
+        "assert.equal(error.code, 'machine_rate_budget_exceeded');",
+        "assert.equal(error.code, 'machine_response_budget_exceeded');"
+      ]
+    },
+    {
       "capability_id": "core.machine-receipts",
       "path": "mesh/test/machine-receipt-e2e.test.mjs",
       "test": "real Gateway returns an owner-scoped Grid-attested machine receipt that verifies independently",
@@ -77,14 +87,6 @@
         "assert.equal(receipt.statement.verification.owner_bound, true);",
         "assert.equal(JSON.stringify(receipt).includes('receipt-bound-output'), false);",
         "assert.equal(verification.valid, true);"
-      ]
-    },
-    {
-      "capability_id": "core.layered-policy",
-      "path": "mesh/test/kernel.test.mjs",
-      "test": "layered policy merging is deny-dominant and only tightens requirements",
-      "assertions": [
-        "assert.equal(merged.actions['chain.submit'].decision, 'deny');"
       ]
     },
     {
@@ -201,6 +203,17 @@
       ]
     },
     {
+      "capability_id": "operations.public-witness",
+      "path": "mesh/test/public-witness-currentness-anchor-publication.test.mjs",
+      "test": "public witness anchor store durably publishes a verified anchor without authority or global-currentness claims",
+      "assertions": [
+        "assert.equal(result.status, 'published');",
+        "assert.equal(result.durable_record.statement.global_currentness_claimed, false);",
+        "assert.equal(result.durable_record.statement.authority_effect, 'none');",
+        "assert.equal(result.execution_authority_granted, false);"
+      ]
+    },
+    {
       "capability_id": "operations.security-review-intake",
       "path": "mesh/test/independent-security-review.test.mjs",
       "test": "independent security review intake verifies a signed current-build ledger without promoting production",
@@ -215,7 +228,7 @@
       "test": "current service network policy is exact, default-deny, and segmented",
       "assertions": [
         "assert.equal(result.default_action, 'deny');",
-        "assert.equal(result.routes, 41);"
+        "assert.equal(result.routes, 42);"
       ]
     },
     {
@@ -267,7 +280,14 @@
       "path": "mesh/test/kernel.test.mjs",
       "test": "CLI validates input and preserves structured Gateway failure semantics",
       "assertions": [
-        "await assert.rejects(() => runCli(['unknown'], options), /Unknown command/);"
+        "assert.equal(requests.length, 1, 'denied CLI intent must issue exactly one Gateway request');",
+        "assert.equal(new URL(requests[0].url).pathname, '/v1/intents');",
+        "assert.equal(requests[0].init.method, 'POST');",
+        "assert.equal(requests[0].init.headers.authorization, 'Bearer test-token');",
+        "assert.equal(requests[0].init.headers['idempotency-key'], 'cli-1700000000000-00000000-0000-4000-8000-000000000000');",
+        "assert.deepEqual(JSON.parse(requests[0].init.body), { action: 'system.echo', input: {} });",
+        "await assert.rejects(() => runCli(['unknown'], options), /Unknown command/);",
+        "assert.equal(requests.length, 1, 'unknown CLI command must not issue another Gateway request');"
       ]
     },
     {

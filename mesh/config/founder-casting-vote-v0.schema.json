@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founder-casting-vote-v0.schema.json",
+  "title": "AXIOM Founder Casting Vote v0 inert assessment",
+  "description": "Pure non-authorizing assessment of whether the Founder casting vote is constitutionally available for one closed Founders Council ballot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "proposal_id",
+    "founder_mind_id",
+    "foundation_digest",
+    "decision_class",
+    "decision_rule",
+    "ballot_summary",
+    "ballot_closed",
+    "authority_effect",
+    "execution_authority",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founder-casting-vote-assessment.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "founder_mind_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "decision_class": {
+      "enum": [
+        "ordinary",
+        "significant",
+        "constitutional",
+        "protected",
+        "emergency"
+      ]
+    },
+    "decision_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "quorum_required",
+        "yes_threshold",
+        "casting_vote_permitted",
+        "biological_yes_minimum",
+        "digital_yes_minimum"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "simple-majority",
+            "fixed-threshold"
+          ]
+        },
+        "quorum_required": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "yes_threshold": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          ]
+        },
+        "casting_vote_permitted": {
+          "type": "boolean"
+        },
+        "biological_yes_minimum": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "digital_yes_minimum": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "ballot_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "biological_for",
+        "biological_against",
+        "biological_abstain",
+        "digital_for",
+        "digital_against",
+        "digital_abstain"
+      ],
+      "properties": {
+        "biological_for": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "biological_against": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "biological_abstain": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "digital_for": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "digital_against": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "digital_abstain": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "ballot_closed": {
+      "type": "boolean"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "execution_authority": {
+      "const": false
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founder-casting-vote.mjs",
+  "x-axiom-non-claims": [
+    "live-founder-casting-vote",
+    "council-execution-authority",
+    "supermajority-override",
+    "substrate-minimum-override",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

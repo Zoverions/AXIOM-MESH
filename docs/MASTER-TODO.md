@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-17
+**Updated:** 2026-09-20
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -35,7 +35,7 @@ explicitly opened.
 | REP-002 | Complete | Canonical docs + protected lowercase-`main` CI | Documentation and workflow gates |
 | REP-003 | Complete | Branch protection | Force-push/deletion disabled; required verification |
 | REP-004 | Complete | Remove unsupported legacy runtime/docs from supported branch | Legacy tag + locked `deprecated/pre-0.12-documentation-corpus` branch |
-| REP-005 | Complete | Exact source setup/dependency verification | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; production image 24.19.0; npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof |
+| REP-005 | Complete | Exact source setup/dependency verification | Node 22.23.2+ shared-host/source compatibility; exact hosted-production/security CI pin 22.23.2 or protected Node 24.14.0+; protected CI/.node-version 24.18.0; production image 24.19.0; Node 22 bundled npm 10.9.8+ or npm 11.x; unchanged private-credential, mutual-TLS, deny-egress, and promotion requirements; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof |
 | REL-001 | Complete | Publish clean-room 0.11 baseline | Immutable `v0.11.0` prerelease with checksum/SBOM/provenance |
 | REL-002 | Complete | Candidate image build/readiness | Protected container evidence |
 | SEC-001 | Complete for repository trust | Revoke deprecated-history credential candidates from supported trust | 32-entry keyed ledger + supported-tip reuse rejection; external dispositions still pending |
@@ -52,7 +52,20 @@ explicitly opened.
 | OPS-004 | Complete for candidate | Deny-egress + Unix-socket ingress | `network_mode:none`, route rejection, public TCP negative probe |
 | OPS-005 | Complete for candidate request path | Request pressure + dependency loss | Oversize/rate/dependency/fail-closed/restart/state evidence |
 | SEC-002 | Complete for intake; authentic review pending | Exact current-build independent-review contract | Threat model, signed findings/remediation/exception verifier |
+| SEC-003 | Complete for literal replay and exact native invocation replay | Make capability consumption restart-safe | Grid-backed consume-before-execute; deterministic per-JTI consumption plus a deterministic semantic marker over exact signed subject/issuer/audience/intent/plan/policy/invocation/tool bindings; atomic event-log serialization; fresh-JTI/restart/concurrency negatives; distinct authorization instances remain repeatable. Broader #1576 mandate binding, canonical effect equivalence, multi-execution budgets, delegated-child accounting, and exactly-once external effects remain separate work. |
+| SEC-004 | Complete | Restrict authority/evidence canonicalization to plain JSON data | Reject class/custom prototypes, accessors, non-enumerable/symbol state, sparse/custom arrays; preserve safe JSON `__proto__`; array/object hidden-state regressions |
+| SEC-005 | Complete | Make policy-constraint merge direction explicit | Declared monotonic boolean/numeric operators, finite allowlist intersection using canonical digest identity, ambiguous conflicts fail closed, exhaustive/property regressions; current production policy still has no action-level constraints |
 | SUP-001 | Complete | Reproducible release verification | Source/registry/docs/deployment/migration checks; no embedded secrets |
+
+## P0 — install and first-class application convergence
+
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| INSTALL-001 | In progress; planner + signed release verifier + inert rerun-state classifier implemented, mutating installer pending | Fresh Linux personal/local node installer | OCI-first host planning emits exact blockers/prerequisites; externally trusted Ed25519 manifests bind current control-plane digests; artifact bytes are separately verified; Install Session v0 distinguishes clean install, exact no-op, repair, upgrade, recovery, newer/diverged/uncertain hard stops without authorizing mutation; next gate is privileged-session design + disposable-host proof after first-node reconciliation |
+| INSTALL-002 | In progress; planning + signed release verification + inert rerun-state classification implemented, mutating installer pending | Infrastructure/support-node installer | Non-mutating planner reuses the service-unit topology, signed release verification cannot promote the profile, and Install Session v0 makes existing-state conflicts/newer/diverged/partial-secret conditions explicit; clean headless-host mutation, per-unit identities, observability, recovery, rotation, update/rollback, decommission, and community-testnet reproduction remain gated |
+| EDU-001 | In progress; Mesh convergence candidate | Keep Axiom Education first-class and independently releasable while synchronized to Mesh | Governed learner memory/write/self-read substrate on current Mesh; exact merged Mesh compatibility pin in `Zoverions/Axiom-Education`; feature-adoption ledger; downstream protected CI; no automatic production/provider/curriculum/cross-subject authority claim |
+| APP-001 | Complete for catalogue/specification; runtime adoption remains per application | Maintain first-class application catalogue and downstream compatibility discipline | Machine-readable application catalogue, application/release independence, change-impact classes, feature-adoption states, documentation synchronization, install-without-authority invariants |
+| BACKUP-ADAPTER-001 | Pending; architecture specified | Provider-neutral encrypted remote-backup adapter contract | Local signed/encrypted backup envelope; narrow provider credential reference; exact copy/list/read/delete scopes; Google Drive/OneDrive/S3-compatible or decentralized providers remain adapters; restore verified locally; provider never receives Grid plaintext/data key/general Gateway authority |
 
 ## P1 — single-node production pilot
 
@@ -84,21 +97,21 @@ explicitly opened.
 | UX-007 | Pending | Signed local packaging/onboarding | Safe update/rollback/recovery/uninstall/first-use evidence |
 | SOCIAL-001 | In progress | Owner-local actor/persona/publication + remote-review surface | Intent-authorized local create/supersede/retract; A2 non-raw publication projection; owner-derived `/v1/social`; owner-only read-only `/v1/social/remote-review` with no schema creation or social/network effect; no federation/network distribution; AXIOM One UI next |
 | ARCH-001 | Complete for draft specification; no runtime capability | Define Personal Compute Fabric and Local Trust Plane `1.0.0-draft.1` | Canonical architecture, explicit non-claims, phased MVP, and five JSON Schemas for Personal Agent Pack, Runtime Capsule, Runtime Adapter, Compute Node Profile, and Local Trust Envelope; documentation checks only |
-| AI-001 | Pending | One least-privilege AI provider | Exact provider/model/egress/data/purpose/budget/timeout/cancel/retention/receipt/failure tests |
+| AI-001 | In progress | One least-privilege AI provider | Local deterministic organize/summarize stub + invoke envelope + fail-closed tests + AXIOM One draft-only Vault path; capabilities.json `ai.providers` remains `adapter_required`; not production AI |
 | AI-002 | Pending | Local/user-supplied providers under same contract | Replacement/offline/degraded/no-authority-expansion conformance |
-| AI-003 | Pending | Bounded useful personal workflows | Usefulness/provenance/correction/privacy/cost/latency/cancellation/human-confirmation evaluation |
+| AI-003 | In progress; inert Flow Compiler v0 foundation | Bounded useful personal workflows | Structured proposal → deterministic content-addressed plan compiler; exact operation-manifest/schema/evidence bindings; dependency, retry/idempotency, uncertainty, and hard step/network/mutation/attempt budgets; required capabilities remain requests only; no execution/authority/network/persistence/credential/runtime activation. Human utility, live semantic decomposition/provider integration, authorization handoff, execution, receipts, correction, privacy, cost/latency, cancellation, and confirmation evaluation remain pending. |
 | PACK-001 | Pending | Implement secret-free Personal Agent Pack export/import | Supported memory, preferences, policy, consent, routing, evaluation, licences, recovery, cross-provider continuity, deletion, migration, and no plaintext credential evidence |
 | ORCH-001 | Pending | Implement one immutable bounded single-agent Runtime Capsule | Exact implementation/SBOM, interfaces, requested authority, step/call/unit/cost/time budgets, cancellation, stop, fallback, receipts, revocation, uninstall, rollback, and no self-authority expansion |
 | ROUTE-001 | Pending | Implement policy-first compute placement with Private, Balanced, Best, and Budget modes | Hard privacy/consent/destination/jurisdiction/licence/security/health/freshness/capability/deadline/budget filters, transparent ranking, forbidden-fallback tests, and local evaluation ledger |
 | DEVICE-001 | Pending | Prototype a phone-relayed push-to-talk personal endpoint | Unique revocable identity, authenticated pairing, signed firmware, physical mute, recording indication, bounded audio, update/rollback, loss/replacement, no Grid/provider/payment secrets, and honest prototype-only hardware claims |
 | TRUST-001 | Pending | Implement deterministic Local Trust access authorization with synthetic credentials | Canonical request, named verifiers, passkey/user-presence proof, status freshness, deny-dominant policy, one-use mandate, denial/uncertainty receipts, replay/tamper tests, and no model in allow/deny logic |
-| VERIFY-001 | Pending | AXIOM Verify | Independent local/static signature/digest/continuity/scope/non-claim verification |
-| CIRCLE-001 | Pending | Circle membership/device/role/consent/revocation | Escalation/stale/removed/cross-Circle negative tests |
-| CIRCLE-002 | Pending | Shared objects/proposals/tasks/commitments/approvals/conflicts | Multi-user owner scope, independent apply, concurrency, resolution, export/exit |
+| VERIFY-001 | In progress | AXIOM Verify | Independent local/static signature/digest/continuity/scope/non-claim verification; experimental offline scaffold under packages/axiom-verify/ (receipt + continuity-anchor chain-segment retained-head checks + selective-export digest substitution checks; unknown-schema fail-closed; integrity-vs-truth report). Not a released product. |
+| CIRCLE-001 | In progress; inert membership-assurance v0 | Circle membership/device/role/consent/revocation | Existing Circle Core membership + exact membership/charter/role digest binding, finite device policy with externally verified-current device refs, required consent-receipt currentness inputs, finite assurance expiry, effective-exit override, and escalation/stale/removed/cross-Circle negatives; no live admission or runtime authority |
+| CIRCLE-002 | In progress; inert shared-artifact + historical commitment + decision-request + export-retention evidence v0 | Shared objects/proposals/tasks/commitments/decisions/conflicts/exit/export | Canonical Shared Artifact mutation admission; historical Agreement/Circle evidence; accepted Circle decision -> ordinary AXIOM request evidence; and export/exit retention evidence binding exact Circle/export/member/snapshot plus separately observed included-record versions. Post-exit history is limited to records observed/effective no later than the participation cutoff. Disclosure authorization, actual bundle creation, persistence, live multi-node apply/export and human conflict/currentness UX remain pending; no portable or execution authority is created |
 | CIRCLE-003 | Pending | Bounded real Circle pilot | Consent, useful workflow, support log, revocation/export/deletion, trust-comprehension report |
 | MANAGED-001 | Specified | Managed Node design without platform data ownership | Tenant isolation, export/keys, operator least privilege, support receipts, recovery/migration/decommissioning |
 
-## P1M — machine principals, runtimes, and safe external effects
+## P1M — machine principals, runtimes, agent participation, and safe external effects
 
 Completion in this track does **not** automatically promote or expose a
 capability.
@@ -109,7 +122,14 @@ capability.
 | MACHINE-002 | Complete | Policy-filtered machine discovery | `/v1/machine-discovery` exposes requestability only; normal intent/policy re-evaluation remains required |
 | MACHINE-003 | Complete | Grid-attested terminal machine receipts | Request/machine-authority digests, accepted/terminal anchors, chain assurance, terminal outcome digest, independent Grid-key verification |
 | RUNTIME-001 | Complete for contract + synthetic reference | Agent Runtime Adapter v1 | Byte-pinned schema; 28-case grant/capability/credential/lifecycle/cancel/receipt/rollback drill; no external-runtime certification |
-| RUNTIME-002 | Pending | First bounded maintained external runtime integration | Exact upstream pin; source/licence/dependency/threat review; no-secret read-only Gateway path; native authorization/cancel/idempotency/receipt parity; direct-service denial; independent review |
+| RUNTIME-002 | In progress — Hermes identity-only research fixture | First bounded maintained external runtime integration | Provisional Hermes pin + fixture-backed `get_code_identity` profile/tests (pin binding, field bounding, mismatch/forged-build denial, contract/manifest receipt binding); pin remains provisional; no live Hermes spawn; not accepted; `capabilities.json` untouched |
+| AGENT-001 | Complete for repository-native evidence workflow | Security Agent Cell | Scout/reproducer/verifier/patcher/triage roles, fresh-evidence and independence rules, canonical red-team lifecycle, public/private safety split, protected CI; no merge/deploy/credential/protocol/production/spending/hardware/destructive authority |
+| AGENT-002 | Complete for identity-evidence laboratory only | Portable machine identity | Issuer-signed principal/sponsor/key/runtime/history/rotation/recovery/expiry/revocation/currentness evidence; zero capability-registry/authority effect; no self-service enrollment or delegation |
+| AGENT-003 | Pending | Converge Agent Contributor Mode progression | Select one currentness -> bounded contributor session -> attenuation/delegation -> signed handoff -> portable receipt -> independent verification path; supersede overlapping laboratory variants before activation |
+| AGENT-004 | Pending | Govern first consequential contributor effect | Exact sponsor/currentness/authority digest, finite action/data/destination/budget, late revalidation, disposable execution, durable receipt, revocation, independent review, no authority from identity/reputation/majority |
+| AGENT-005 | Complete for production-unreachable inert selection | System One operation-candidate selection v0 | Merged PR #1683; deterministic eligibility before semantic ranking; exact task/operation/manifest evidence binding; bounded Top-K and visibility-preserving fallback; hard context ceiling; trusted-input proposal verification; zero authority/network/credential/runtime/execution effect |
+| SUPERVISE-001 | Complete for production-unreachable read-only v0 | Interrogation Plane | Merged PR #1686; deterministic capability/evidence and service-network graph; canonical documentation verification; conceptual authority path remains separate from actual network edges; zero capability/network/credential/runtime/merge/deploy authority; future semantic attention signals remain advisory and grant no authority |
+| SELF-REPORT-001 | Complete for docs/local-regression acceptance boundary | Preserve substrate-neutral self-report evidence without authority promotion | [#1753](https://github.com/Zoverions/AXIOM-MESH/issues/1753); merged PR #1754 -> `0894b72e824c3aaeaa4b1b649b5b9a62ad3cffb7`; merged PR #1755 -> `94b30895936a9a62a4352b2ebf1c39c771dc1d59`; assertion/denial/uncertainty remain evidence-only; strict assurance rejects self-report-shaped authority fields; real authority-composition positive/negative controls prove evidence cannot substitute for or widen grants; canonical machine denial dimensions and authenticated human Grid consent/revocation remain authoritative; no consciousness detector, provider call, persistence, credential, network, or authority/capability promotion |
 | INTENT-001 | Complete for production-unreachable core | Signed dynamic repository-plan resolution | Fresh eligibility, exact repo/base/path/lifetime, signed plan, content-addressed resolution/handoff, staleness/tamper/substitution rejection |
 | INTENT-002 | Complete for production-unreachable core | Resolver admission/review/package/application observation | Independent implementation/security reviews, exact-one mapping package, exact before/after observation, no installation-as-authority |
 | INTENT-003 | Complete for production-unreachable core | Preserve target policy + atomically durable preparation | Resolved target policy/confirmation/independent approval; authenticated Grid read; one transaction `approval.consumed` + `external.effect.prepared`; one-winner concurrency proof |
@@ -139,13 +159,16 @@ production activation decision.
 | NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
 | NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
 | NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
-| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 41-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 42-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
 
 ## P3 — controlled adapters and product ecosystem
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | STUDIO-001 | Pending | AXIOM Studio | Manifest/schema/SBOM/permission/threat/fixtures/compatibility/conformance/signing/revocation/rollback generation |
+| SCRIPT-001 | Specified | Cross-surface scriptability conformance | GUI/CLI/API/hook/macro/plugin/capsule/runtime paths map equivalent governed effects to exact AXIOM actions and shared authority evaluation; install/discovery/subscription remain inert; client-bypass negatives; receipts identify the requesting surface without changing authority outcome |
+| SCRIPT-002 | Pending | Versioned event/hook substrate | Authenticated bounded subscriptions, versioned schemas, replay/backpressure/cancellation controls, observation-only default, callback effects re-enter intent/grant evaluation, no ambient credential/network/filesystem authority |
+| SCRIPT-003 | Pending | Bounded macro/workflow runner | Immutable workflow manifest; explicit principal/actions/purposes/data/destinations/budgets/lifetime; per-effect authorization/evidence; revocation/cancellation/idempotency; no wildcard or self-expanding authority |
 | ADAPTER-001 | Pending | One bounded messaging adapter | Account scope, recipient confirmation, impersonation/abuse controls, retention/deletion, retries/cancel/receipts/uninstall |
 | ADAPTER-002 | Specified | ActivityPub/email/webhook publishing bridges | Separate identities, exact destinations, previews/moderation/deletion limits/inbound trust/rate controls |
 | ID-001 | Specified | Named VC/selective-disclosure profile | Schemas, issuer/verifier trust, revocation, holder consent, correlation analysis, vectors, review |

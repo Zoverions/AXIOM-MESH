@@ -1,0 +1,75 @@
+{
+  "schema": "axiom-agent-authority-manifest-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a2-authority-manifest",
+  "scope": "Content-addressed projection of one constrained machine principal, one verified machine identity credential, one policy-derived machine discovery snapshot, and one exact capability-registry state.",
+  "core_invariant": "An Agent Passport describes an authority ceiling and requestability evidence but is never a bearer token, grant, delegation, approval, execution admission, reputation authority, or proof of global currentness.",
+  "attack_classes": [
+    {
+      "id": "identity-principal-substitution",
+      "risks": ["valid identity credential paired with a broader principal", "sponsor substitution", "runtime substitution", "authority-digest substitution"],
+      "controls": ["exact A1 credential verification", "principal-definition digest binding", "principal-authority digest binding", "sponsor/runtime equality checks", "issuer-key verification"]
+    },
+    {
+      "id": "manifest-authority-widening",
+      "risks": ["inserted action", "scope widening", "purpose widening", "destination widening", "budget widening", "approval-floor lowering", "assurance-floor lowering"],
+      "controls": ["canonical manifest digest", "full reproduction from bound evidence", "policy-derived requestability", "machine budget clamp", "strict field sets"]
+    },
+    {
+      "id": "self-digested-discovery-forgery",
+      "risks": ["attacker inserts an action and recomputes discovery digest", "forged risk or approval metadata", "forged timeout or destination"],
+      "controls": ["discovery digest is not trusted as authority", "requestability independently reconstructed from policy plus principal", "verified effect-destination mapping", "exact discovery projection equality"]
+    },
+    {
+      "id": "policy-or-registry-substitution",
+      "risks": ["weaker policy presented with old passport", "different capability registry presented as equivalent", "policy version confusion"],
+      "controls": ["exact policy digest/version binding", "exact capability-registry digest binding", "verification requires supplied evidence to reproduce the manifest", "live effect path must re-evaluate current policy"]
+    },
+    {
+      "id": "bearer-token-confusion",
+      "risks": ["passport presentation treated as permission", "passport cached as a reusable grant", "protocol adapter treats passport as authorization"],
+      "controls": ["bearer_token false", "presentation_grants_authority false", "execution_authorized false", "authority_effect none", "requires_live_revalidation true"]
+    },
+    {
+      "id": "delegation-confusion",
+      "risks": ["flip delegation flag to true", "child agent inherits passport", "runtime spawn treated as delegation"],
+      "controls": ["machine-principal v1 delegation remains false/depth zero", "passport verifier hard-rejects delegation elevation", "A3 requires a separately signed attenuation proof"]
+    },
+    {
+      "id": "staleness-and-replay",
+      "risks": ["authentic old passport used after identity revocation", "policy changed after passport creation", "capability status changed after passport creation", "credential rotated or compromised"],
+      "controls": ["15-minute laboratory lifetime ceiling", "cannot outlive identity/principal", "global_currentness_claimed false", "requires_live_revalidation true", "future effect admission must consult current revocation/policy evidence"]
+    },
+    {
+      "id": "assurance-and-approval-downgrade",
+      "risks": ["discovery omits required assurance", "confirmation count reduced", "independent approval removed"],
+      "controls": ["required assurance recovered from PolicyEngine evaluation", "confirmation and independent-approval floors copied from validated policy", "manifest reproduction rejects changed floors"]
+    },
+    {
+      "id": "protocol-authority-laundering",
+      "risks": ["MCP/A2A/vendor adapter treats discovery or passport as a grant", "protocol switch widens action set", "remote completion treated as trusted authority"],
+      "controls": ["protocol-neutral manifest semantics", "discovery_is_authorization false", "reputation_is_authority false", "no adapter or remote effect path in A2", "future parity tests required"]
+    }
+  ],
+  "next_gates": [
+    "A3 separately signed attenuation-only delegation with exact subset proof",
+    "A4 signed handoff envelope bound to an exact authority/delegation head",
+    "A5 portable work receipt bound to actual effect evidence",
+    "A6 descendant-aware revocation/currentness at effect admission",
+    "independent ATP conformance verification"
+  ],
+  "boundaries": {
+    "bearer_authority": false,
+    "execution_authorized": false,
+    "delegation_enabled": false,
+    "remote_execution_enabled": false,
+    "network_io_enabled": false,
+    "filesystem_mutation_enabled": false,
+    "credential_access_enabled": false,
+    "secret_access_enabled": false,
+    "reputation_authority_enabled": false,
+    "global_currentness_claimed": false,
+    "protocol_adapter_enabled": false,
+    "capability_promotion_enabled": false
+  }
+}

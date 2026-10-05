@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/bounded-decision-provider-profile-v0.schema.json",
+  "title": "AXIOM Bounded Decision Provider Profile v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "profile_id",
+    "catalog_entry_id",
+    "catalog_entry_version",
+    "catalog_entry_digest",
+    "offering_ref",
+    "offering_version_or_revision",
+    "offering_revision_evidence",
+    "provider_mode",
+    "supported_question_kinds",
+    "max_questions_per_request",
+    "max_choice_cardinality",
+    "max_score_levels",
+    "type_guarantee",
+    "probability_support",
+    "latency_class",
+    "calibration_claim",
+    "retention_posture_ref",
+    "training_use_posture_ref",
+    "created_at",
+    "review_at",
+    "authority_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect",
+    "assurance_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-bounded-decision-provider-profile.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-bounded-decision-metadata" },
+    "profile_id": { "$ref": "#/$defs/identifier" },
+    "catalog_entry_id": { "$ref": "#/$defs/identifier" },
+    "catalog_entry_version": { "$ref": "#/$defs/version" },
+    "catalog_entry_digest": { "$ref": "#/$defs/sha256" },
+    "offering_ref": { "$ref": "#/$defs/identifier" },
+    "offering_version_or_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "offering_revision_evidence": {
+      "type": "string",
+      "enum": ["exact-artifact", "provider-versioned", "mutable-alias", "unknown"]
+    },
+    "provider_mode": {
+      "type": "string",
+      "enum": ["owner-local", "owner-remote", "provider-remote", "hybrid"]
+    },
+    "supported_question_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["choice", "score", "binary-probability"]
+      }
+    },
+    "max_questions_per_request": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "max_choice_cardinality": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 256
+    },
+    "max_score_levels": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 64
+    },
+    "type_guarantee": {
+      "type": "string",
+      "enum": ["provider-native-closed-set", "adapter-constrained", "best-effort"]
+    },
+    "probability_support": {
+      "type": "string",
+      "enum": ["full-distribution", "binary-probability-only", "confidence-only", "none"]
+    },
+    "latency_class": {
+      "type": "string",
+      "enum": ["local-fast", "interactive", "slow", "batch", "unknown"]
+    },
+    "calibration_claim": {
+      "type": "string",
+      "enum": ["none", "provider-claimed", "local-experimental", "local-reviewed"]
+    },
+    "retention_posture_ref": { "$ref": "#/$defs/nullableBoundedString" },
+    "training_use_posture_ref": { "$ref": "#/$defs/nullableBoundedString" },
+    "created_at": { "$ref": "#/$defs/dateTime" },
+    "review_at": { "$ref": "#/$defs/dateTime" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "credential_visibility": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "selection_effect": { "const": "eligibility-only" },
+    "assurance_effect": { "const": "none" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableBoundedString": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "string", "minLength": 1, "maxLength": 512 }
+      ]
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/bounded-decision-provider-profile.mjs",
+  "x-axiom-semantic-rules": [
+    "profile catalog entry identity version and digest must match one exact validated runtime/provider catalog entry",
+    "owner-local provider mode requires a catalog entry with network_required false while remote or hybrid modes require network_required true",
+    "mutable-alias and unknown offering revision evidence remain explicitly weaker than exact-artifact or provider-versioned evidence",
+    "provider profile metadata never grants authority network access credential access runtime activation production routing or assurance promotion"
+  ],
+  "x-axiom-non-claims": [
+    "provider-availability",
+    "provider-invocation",
+    "credential-access",
+    "network-egress",
+    "semantic-correctness",
+    "calibration-truth",
+    "authority-grant",
+    "assurance-promotion",
+    "production-routing"
+  ]
+}

@@ -3,13 +3,19 @@ import {
   GatewayClientError
 } from '/vendor/axiom-client.mjs';
 import { createHumanPresenter } from '/presentation.mjs';
+import { buildBrowserOrganizeDraft } from '/local-organize.mjs';
 
 const ROUTES = new Set([
   'overview',
   'ask',
+  'social',
+  'circles',
+  'capabilities',
   'approvals',
+  'consent',
   'vault',
   'receipts',
+  'verify',
   'share',
   'explore'
 ]);
@@ -22,7 +28,9 @@ const state = {
   pendingIntent: null,
   vault: {
     pending: null,
-    last: null
+    last: null,
+    organizePending: null,
+    organizeDraft: null
   }
 };
 
@@ -102,16 +110,21 @@ async function renderRoute() {
   }
   setViewBusy(true, `Loading ${state.route}`);
   try {
-    if (!state.client && state.route !== 'share') {
+    if (!state.client && !['share', 'circles'].includes(state.route)) {
       renderDisconnected();
       return;
     }
     const renderer = {
       overview: renderOverview,
       ask: renderAsk,
+      social: renderSocial,
+      circles: renderCircles,
+      capabilities: renderCapabilities,
       approvals: renderApprovals,
+      consent: renderConsent,
       vault: renderVault,
       receipts: renderReceipts,
+      verify: renderVerify,
       share: renderShare,
       explore: renderExplore
     }[state.route];
@@ -130,7 +143,7 @@ function renderDisconnected() {
     grid([
       card('Local by default', 'This preview talks only to the same-origin loopback service. It loads no remote fonts, analytics, or third-party assets.'),
       card('Authority stays visible', 'Every request still passes through the authenticated Gateway and the kernel policy path. This page grants no authority.'),
-      card('No synthetic AI', 'External and local model adapters are not configured by this preview. Ask begins with a transparent echo test, not a simulated assistant.')
+      card('No production AI', 'External model adapters are not configured. A local organizer stub can draft suggestions only; Ask still begins with a transparent echo test.')
     ])
   );
 }
@@ -177,7 +190,7 @@ async function renderAsk() {
     }
   });
   form.append(
-    notice('AI is not enabled. This transparent workflow reviews and sends system.echo through Gateway → Hypervisor → Sandbox → Grid, then keeps its exact evidence available.'),
+    notice('AI is not enabled as a production provider. This Ask path reviews and sends system.echo through Gateway → Hypervisor → Sandbox → Grid. Vault can run a local organizer stub for draft suggestions only.'),
     field('Message', message, 'ask-message'),
     field('Purpose', purpose, 'ask-purpose'),
     element('div', { className: 'actions' }, [
@@ -328,6 +341,167 @@ async function renderAsk() {
   );
 }
 
+async function renderSocial() {
+  const response = await state.client.call('social.get', {
+    query: { publication_limit: 100 }
+  });
+  const actors = Array.isArray(response.actors) ? response.actors : [];
+  const personas = Array.isArray(response.personas) ? response.personas : [];
+  const publications = Array.isArray(response.corpus?.publications)
+    ? response.corpus.publications
+    : [];
+  const transitions = Array.isArray(response.corpus?.transitions)
+    ? response.corpus.transitions
+    : [];
+  const localOnly = response.network_effect === 'none';
+
+  const actorCards = actors.length
+    ? element('div', { className: 'stack' }, actors.map(actor => element('article', {
+      className: 'card full'
+    }, [
+      element('span', { className: 'badge good', text: actor.custody ?? 'owner-local' }),
+      element('h2', { text: actor.actor_id ?? 'Local actor' }),
+      element('p', { text: `Status: ${actor.status ?? 'unknown'}` }),
+      rawDetails('Inspect actor projection', actor)
+    ])))
+    : empty('No local social actor is visible to this authenticated principal.');
+
+  const personaCards = personas.length
+    ? element('div', { className: 'stack' }, personas.map(persona => {
+      const projection = persona.public_projection ?? {};
+      return element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: persona.status ?? 'unknown' }),
+        element('h2', { text: projection.display_name ?? persona.persona_id ?? 'Publication persona' }),
+        element('p', { text: `Actor: ${persona.actor_id ?? 'unknown'} · Attribution: ${projection.attribution_mode ?? persona.protected_persona?.attribution_mode ?? 'unspecified'}` }),
+        rawDetails('Inspect persona projection', persona)
+      ]);
+    }))
+    : empty('No publication persona is visible to this authenticated principal.');
+
+  const publicationCards = publications.length
+    ? element('div', { className: 'stack' }, publications.map(publication => {
+      const projection = publication.publication ?? {};
+      const status = publication.status ?? 'unknown';
+      const text = typeof projection.content?.text === 'string'
+        ? projection.content.text
+        : 'No text projection is available.';
+      return element('article', { className: 'card full' }, [
+        element('span', {
+          className: `badge ${status === 'active' ? 'good' : 'pending'}`,
+          text: status
+        }),
+        element('h2', { text: text }),
+        element('p', {
+          text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
+        }),
+        projection.supersedes_digest
+          ? element('p', { text: `Supersedes: ${projection.supersedes_digest}` })
+          : element('p', { text: 'Original local publication projection.' }),
+        rawDetails('Inspect exact publication projection', publication)
+      ]);
+    }))
+    : empty('No local publications are visible to this authenticated principal.');
+
+  view.replaceChildren(
+    header('Owner-local Social corpus',
+      'Inspect the social identity, persona, and append-only publication history already held by this node. This read surface derives the owner only from the authenticated principal.'),
+    grid([
+      metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
+      metricCard('Personas', String(personas.length), 'Publication personas'),
+      metricCard('Publications', String(publications.length), 'Bounded corpus entries'),
+      card('Network effect', localOnly ? 'None. No federation or remote distribution occurs.' : 'Unexpected network-effect value returned; inspect the raw response.', {
+        wide: true,
+        badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
+      })
+    ]),
+    notice('This tranche is read-only in AXIOM One. Local actor/persona/publication mutation already exists in the kernel, but browser write controls remain disabled until their human explanation and reviewed-request flows are separately bound and tested.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
+      element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
+      actorCards
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-personas-heading' } }, [
+      element('h2', { text: 'Publication personas', attrs: { id: 'social-personas-heading' } }),
+      personaCards
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-corpus-heading' } }, [
+      element('h2', { text: 'Append-only publication corpus', attrs: { id: 'social-corpus-heading' } }),
+      publicationCards
+    ]),
+    grid([
+      metricCard('Retraction records', String(transitions.length), 'Visible transitions for selected corpus entries'),
+      metricCard('Truncated', response.corpus?.truncated ? 'Yes' : 'No', 'Publication limit: 100')
+    ]),
+    rawDetails('Raw owner-local Social snapshot', response)
+  );
+}
+
+async function renderCircles() {
+  const catalog = await loadCircleTemplateCatalog();
+  const templates = catalog.templates;
+  const cards = templates.map(template => {
+    const roles = template.roles.map(role => role.label).join(' · ');
+    const quorum = template.decision_rule.quorum_basis_points / 100;
+    const approval = template.decision_rule.approval_basis_points / 100;
+    return element('article', { className: 'card full' }, [
+      element('span', { className: 'badge good', text: 'Template only · no authority' }),
+      element('h2', { text: template.label }),
+      element('p', { text: template.description }),
+      element('dl', { className: 'fact-list' }, [
+        element('dt', { text: 'Kind' }),
+        element('dd', { text: template.circle_kind }),
+        element('dt', { text: 'Participation' }),
+        element('dd', { text: template.participation_model }),
+        element('dt', { text: 'Roles' }),
+        element('dd', { text: roles }),
+        element('dt', { text: 'Decision starting point' }),
+        element('dd', { text: `${quorum}% quorum · ${approval}% approval` }),
+        element('dt', { text: 'Default disclosure' }),
+        element('dd', { text: template.default_disclosure_class }),
+        element('dt', { text: 'Protection floor' }),
+        element('dd', { text: 'Raise-only' })
+      ]),
+      rawDetails('Inspect exact inert template', template)
+    ]);
+  });
+
+  view.replaceChildren(
+    header('Circle templates',
+      'Browse reusable starting structures for future Circles. These local templates contain roles and decision defaults only; they do not create a Circle, invite anyone, assign membership, or grant execution authority.'),
+    grid([
+      metricCard('Templates', String(templates.length), 'Built-in inert starting points'),
+      card('Membership', 'None. A template never creates an invitation, member, role assignment, or delegation.', {
+        badge: ['Not enabled', 'pending']
+      }),
+      card('Execution authority', 'None. Template, role, decision, and membership authority fields are fixed closed.', {
+        badge: ['No authority', 'good']
+      })
+    ]),
+    notice('These are planning presets, not live Circle instances. Create/join/invite/governance controls remain unavailable until their separately reviewed runtime and human-authority paths exist.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'circle-templates-heading' } }, [
+      element('h2', { text: 'Built-in starting points', attrs: { id: 'circle-templates-heading' } }),
+      ...cards
+    ]),
+    rawDetails('Raw Circle template catalog', catalog)
+  );
+}
+
+async function renderCapabilities() {
+  const response = await state.client.call('capabilities.list');
+  const capabilities = response.capabilities ?? [];
+  view.replaceChildren(
+    header('Capabilities',
+      'Registry discovery describes what this build contains. It does not tell this page that a capability is currently available or authorized for use.'),
+    capabilities.length
+      ? element('div', { className: 'stack' }, capabilities.map(item => humanExplanation(
+        human.capability(item),
+        'Raw capability registry entry',
+        item
+      )))
+      : empty('No capability records were returned by the Gateway.'),
+    rawDetails('Raw capability registry response', response)
+  );
+}
+
 async function renderApprovals() {
   const response = await state.client.call('approvals.list');
   const approvals = response.approvals ?? [];
@@ -342,6 +516,24 @@ async function renderApprovals() {
       )))
       : empty('No approval records are visible to this principal.'),
     rawDetails('Raw approval response', response)
+  );
+}
+
+async function renderConsent() {
+  const response = await state.client.call('consents.list');
+  const consents = response.consents ?? [];
+  const now = new Date();
+  view.replaceChildren(
+    header('Consent',
+      'Current owner-scoped consent records are shown as evidence of purpose and scope, never as a substitute for execution authority.'),
+    consents.length
+      ? element('div', { className: 'stack' }, consents.map(item => humanExplanation(
+        human.consent(item, now),
+        'Raw consent evidence',
+        item
+      )))
+      : empty('No consent records are visible to this principal.'),
+    rawDetails('Raw consent response', response)
   );
 }
 
@@ -457,6 +649,185 @@ async function renderVault() {
       ? empty('Create at least two active memory records before linking provenance.')
       : element('div', { className: 'actions' }, [linkButton])
   );
+
+  const organizeForm = element('form', { className: 'stack' });
+  const organizeSource = element('select', {
+    attrs: { id: 'organize-source', name: 'organize_source' }
+  });
+  organizeSource.append(element('option', {
+    text: 'Paste or type selected text below',
+    attrs: { value: '' }
+  }));
+  const noteTextById = new Map();
+  for (const item of objects) {
+    const objectId = item.object_id ?? item.id;
+    if (typeof objectId !== 'string' || !objectId) continue;
+    const noteText = typeof item.payload_json?.content?.text === 'string'
+      ? item.payload_json.content.text
+      : '';
+    noteTextById.set(objectId, noteText.slice(0, 8000));
+    organizeSource.append(element('option', {
+      text: objectTitle(item),
+      attrs: { value: objectId }
+    }));
+  }
+  const organizeText = element('textarea', {
+    attrs: {
+      id: 'organize-text',
+      name: 'organize_text',
+      required: '',
+      maxlength: '8000',
+      placeholder: 'Owner-selected note text to organize locally as a draft suggestion.'
+    }
+  });
+  const organizePurpose = element('input', {
+    attrs: {
+      id: 'organize-purpose',
+      name: 'organize_purpose',
+      maxlength: '512',
+      value: 'owner-local-organize-draft'
+    }
+  });
+  const organizeSubmit = element('button', {
+    className: 'button button-primary',
+    text: 'Review local organize',
+    attrs: { type: 'submit' }
+  });
+  organizeForm.append(
+    notice('Local organizer stub only. AI is not enabled as a production provider. The result is a draft suggestion and does not mutate Vault until a separate confirmed memory.put write.'),
+    field('Include from active note (optional)', organizeSource, 'organize-source'),
+    field('Selected note text', organizeText, 'organize-text'),
+    field('Purpose', organizePurpose, 'organize-purpose'),
+    element('div', { className: 'actions' }, [organizeSubmit])
+  );
+  organizeSource.addEventListener('change', () => {
+    const fromNote = noteTextById.get(organizeSource.value) ?? '';
+    if (fromNote) organizeText.value = fromNote;
+  });
+
+  const organizeReview = element('div', { className: 'stack', attrs: { id: 'organize-review' } });
+  const organizeResult = element('div', { className: 'stack', attrs: { id: 'organize-result' } });
+
+  const renderOrganizeDraft = draft => {
+    organizeResult.replaceChildren();
+    if (!draft) return;
+    const facts = element('dl', { className: 'fact-list' }, [
+      element('dt', { text: 'Provider' }),
+      element('dd', { text: draft.provider_id }),
+      element('dt', { text: 'Model' }),
+      element('dd', { text: draft.model }),
+      element('dt', { text: 'Purpose' }),
+      element('dd', { text: draft.purpose }),
+      element('dt', { text: 'Data scope' }),
+      element('dd', { text: `${draft.data_scope.kind}; max ${draft.data_scope.max_chars} chars` }),
+      element('dt', { text: 'Budget' }),
+      element('dd', { text: `in ${draft.budget.max_input_chars} / out ${draft.budget.max_output_chars} / ${draft.budget.max_wall_ms}ms` }),
+      element('dt', { text: 'Timeout' }),
+      element('dd', { text: `${draft.timeout_ms}ms` }),
+      element('dt', { text: 'Cancel' }),
+      element('dd', { text: draft.cancel.allowed ? draft.cancel.signal : 'denied' }),
+      element('dt', { text: 'Retention' }),
+      element('dd', { text: `${draft.retention.kind}; persist=${draft.retention.persist}` }),
+      element('dt', { text: 'Note digest' }),
+      element('dd', { text: draft.note_digest }),
+      element('dt', { text: 'Integrity vs truth' }),
+      element('dd', { text: draft.integrity_vs_truth })
+    ]);
+    const save = element('button', {
+      className: 'button button-primary',
+      text: 'Review save draft as private note',
+      attrs: { type: 'button' }
+    });
+    const discard = element('button', {
+      className: 'button button-secondary',
+      text: 'Discard draft',
+      attrs: { type: 'button' }
+    });
+    save.addEventListener('click', () => {
+      startReview({
+        action: 'memory.put',
+        input: {
+          kind: 'note',
+          content: {
+            title: draft.suggestion.title.slice(0, 200),
+            text: draft.suggestion.summary_text.slice(0, 10000)
+          },
+          metadata: { source: 'axiom-one-local-preview' }
+        },
+        purpose: 'owner-memory-from-organize-draft'
+      });
+      announce('Draft save requires a separate reviewed memory.put path');
+    });
+    discard.addEventListener('click', () => {
+      state.vault.organizeDraft = null;
+      organizeResult.replaceChildren();
+      announce('Local organize draft discarded; Vault unchanged');
+    });
+    organizeResult.append(
+      element('article', { className: 'card full' }, [
+        element('span', { className: 'badge pending', text: 'Draft suggestion only' }),
+        element('h2', { text: draft.suggestion.title }),
+        element('p', { text: 'This local organizer stub draft is not a Mesh grant, approval, or production AI result.' }),
+        element('pre', { text: draft.suggestion.summary_text }),
+        facts,
+        element('div', { className: 'actions' }, [save, discard])
+      ])
+    );
+  };
+
+  organizeForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const pending = {
+      body: {
+        action: 'ai.local-organize',
+        input: { text: organizeText.value },
+        purpose: organizePurpose.value || 'owner-local-organize-draft'
+      }
+    };
+    state.vault.organizePending = pending;
+    const run = element('button', {
+      className: 'button button-primary',
+      text: 'Run local organizer stub',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Change selection',
+      attrs: { type: 'button' }
+    });
+    run.addEventListener('click', async () => {
+      try {
+        const draft = await buildBrowserOrganizeDraft({
+          includedText: pending.body.input.text,
+          purpose: pending.body.purpose,
+          principalId: state.session?.principal_id || 'local-owner'
+        });
+        state.vault.organizeDraft = draft;
+        state.vault.organizePending = null;
+        organizeReview.replaceChildren();
+        renderOrganizeDraft(draft);
+        announce('Local organize draft ready; Vault was not mutated');
+      } catch (error) {
+        organizeResult.replaceChildren(errorBox(error, 'Local organize draft failed closed'));
+        announce('Local organize draft failed closed');
+      }
+    });
+    change.addEventListener('click', () => {
+      state.vault.organizePending = null;
+      organizeReview.replaceChildren();
+      organizeText.focus();
+      announce('Local organize review closed without running');
+    });
+    organizeReview.replaceChildren(humanExplanation(
+      human.requestPreview(pending.body),
+      'Local organize request (not a Mesh intent)',
+      pending.body,
+      [run, change]
+    ));
+    announce('Local organize review is ready; nothing has been written');
+  });
+
+
   const review = element('div', { className: 'stack', attrs: { id: 'vault-review' } });
   const result = element('div', { className: 'stack', attrs: { id: 'vault-result' } });
   let activeController;
@@ -733,6 +1104,12 @@ async function renderVault() {
       element('h2', { text: 'Create a private note', attrs: { id: 'create-memory-heading' } }),
       form
     ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'organize-memory-heading' } }, [
+      element('h2', { text: 'Local organize (draft only)', attrs: { id: 'organize-memory-heading' } }),
+      organizeForm
+    ]),
+    organizeReview,
+    organizeResult,
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'link-memory-heading' } }, [
       element('h2', { text: 'Record provenance', attrs: { id: 'link-memory-heading' } }),
       provenanceForm
@@ -750,8 +1127,10 @@ async function renderVault() {
     rawDetails('Raw memory response', response)
   );
   create.disabled = Boolean(state.vault.pending);
+  organizeSubmit.disabled = Boolean(state.vault.pending);
   linkButton.disabled = Boolean(state.vault.pending) || objects.length < 2;
   if (state.vault.pending) renderReview();
+  if (state.vault.organizeDraft) renderOrganizeDraft(state.vault.organizeDraft);
   renderLast();
 }
 
@@ -772,16 +1151,29 @@ async function renderReceipts() {
   );
 }
 
+async function renderVerify() {
+  const response = await state.client.call('audit.verify');
+  view.replaceChildren(
+    header('Verify',
+      'Verify checks the integrity and continuity of this node\'s local evidence chain. It does not grant authority or prove an external claim is true.'),
+    humanExplanation(
+      human.verification(response),
+      'Raw audit verification',
+      response
+    )
+  );
+}
+
 async function renderShare() {
   view.replaceChildren(
-    header('Share and Circles',
-      'These surfaces are visible so the boundary is clear; they are not enabled by this preview.'),
+    header('Share',
+      'Sharing remains visible so the boundary is clear; it is not enabled by this preview.'),
     grid([
       card('Selective sharing', 'Pending owner-scope, consent, expiry, revocation, export, and deletion tests before a sharing control is enabled.', {
         badge: ['Unavailable', 'pending']
       }),
-      card('AXIOM Circles', 'Pending invitation, device, membership, role, removal, conflict, and cross-Circle denial evidence.', {
-        badge: ['Unavailable', 'pending']
+      card('AXIOM Circles', 'Inert templates are available in the Circles section. Live creation, invitation, membership, governance, removal, conflict handling, and cross-Circle effects remain unavailable.', {
+        badge: ['Templates only', 'pending']
       }),
       card('Remote recipients', 'No remote account, public federation, platform identity, or background transfer is configured.', {
         badge: ['No egress', 'good']
@@ -796,11 +1188,11 @@ async function renderExplore() {
     ['Node status', 'status.get'],
     ['Capabilities', 'capabilities.list'],
     ['Operations', 'operations.get'],
+    ['Owner-local Social', 'social.get'],
     ['Admitted nodes', 'nodes.list'],
     ['Capsules', 'capsules.list'],
     ['Imports', 'imports.list'],
-    ['Backups', 'backups.list'],
-    ['Audit continuity', 'audit.verify']
+    ['Backups', 'backups.list']
   ];
   const output = element('div', { className: 'stack' }, [
     empty('Choose a resource to inspect. Scope-protected resources may be denied; the denial will remain visible.')
@@ -1012,6 +1404,154 @@ function setViewBusy(busy, label = 'Loading') {
   if (busy && !view.childElementCount) {
     view.replaceChildren(element('div', { className: 'loading', text: label }));
   }
+}
+
+async function loadCircleTemplateCatalog() {
+  const response = await fetch('/mesh/config/circle-templates-v0.json', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'error'
+  });
+  if (!response.ok || response.redirected) {
+    throw new Error('AXIOM One Circle template catalog is unavailable');
+  }
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > 262_144) {
+    throw new Error('AXIOM One Circle template catalog is too large');
+  }
+  let catalog;
+  try {
+    catalog = JSON.parse(text);
+  } catch {
+    throw new Error('AXIOM One Circle template catalog is invalid');
+  }
+  validateCircleTemplateCatalog(catalog);
+  return catalog;
+}
+
+function validateCircleTemplateCatalog(catalog) {
+  const catalogKeys = [
+    'schema', 'version', 'status', 'templates',
+    'authority_effect', 'network_effect', 'runtime_activation'
+  ];
+  if (
+    !exactRecordKeys(catalog, catalogKeys)
+    || catalog.schema !== 'axiom-circle-template-catalog.v0'
+    || catalog.version !== 0
+    || catalog.status !== 'inert-template-library'
+    || catalog.authority_effect !== 'none'
+    || catalog.network_effect !== 'none'
+    || catalog.runtime_activation !== false
+    || !Array.isArray(catalog.templates)
+    || catalog.templates.length < 1
+    || catalog.templates.length > 64
+  ) throw new Error('AXIOM One Circle template catalog boundary is invalid');
+
+  const circleKinds = new Set([
+    'family-coordination', 'project-team', 'research-group',
+    'creator-collective', 'community-group'
+  ]);
+  const participationModels = new Set(['voluntary', 'contractual']);
+  const disclosureClasses = new Set(['public-safe', 'member-private']);
+  const roleModes = new Set([
+    'propose', 'deliberate', 'evidence', 'vote',
+    'approve', 'review', 'appeal', 'observe'
+  ]);
+  const templateKeys = [
+    'schema', 'template_id', 'label', 'description', 'circle_kind',
+    'participation_model', 'roles', 'decision_rule', 'appeal_enabled',
+    'member_exit_enabled', 'default_disclosure_class', 'policy_floor',
+    'execution_authority', 'membership_authority', 'authority_effect',
+    'network_effect', 'runtime_activation'
+  ];
+  const roleKeys = ['role_id', 'label', 'declared_modes', 'execution_authority'];
+  const decisionKeys = [
+    'quorum_basis_points',
+    'approval_basis_points',
+    'abstention_counts_toward_quorum'
+  ];
+
+  const templateIds = new Set();
+  for (const template of catalog.templates) {
+    if (
+      !exactRecordKeys(template, templateKeys)
+      || template.schema !== 'axiom-circle-template.v0'
+      || !validCircleIdentifier(template.template_id)
+      || templateIds.has(template.template_id)
+      || typeof template.label !== 'string'
+      || !template.label.length
+      || template.label.length > 160
+      || typeof template.description !== 'string'
+      || !template.description.length
+      || template.description.length > 1200
+      || !circleKinds.has(template.circle_kind)
+      || !participationModels.has(template.participation_model)
+      || !Array.isArray(template.roles)
+      || template.roles.length < 1
+      || template.roles.length > 32
+      || !exactRecordKeys(template.decision_rule, decisionKeys)
+      || template.appeal_enabled !== true
+      || template.member_exit_enabled !== true
+      || !disclosureClasses.has(template.default_disclosure_class)
+      || template.policy_floor !== 'raise-only'
+      || template.execution_authority !== false
+      || template.membership_authority !== false
+      || template.authority_effect !== 'none'
+      || template.network_effect !== 'none'
+      || template.runtime_activation !== false
+    ) throw new Error('AXIOM One Circle template is invalid');
+    templateIds.add(template.template_id);
+
+    const roleIds = new Set();
+    for (const role of template.roles) {
+      if (
+        !exactRecordKeys(role, roleKeys)
+        || !validCircleIdentifier(role.role_id)
+        || roleIds.has(role.role_id)
+        || typeof role.label !== 'string'
+        || !role.label.length
+        || role.label.length > 120
+        || !Array.isArray(role.declared_modes)
+        || role.declared_modes.length < 1
+        || role.declared_modes.length > 16
+        || new Set(role.declared_modes).size !== role.declared_modes.length
+        || role.declared_modes.some(mode => !roleModes.has(mode))
+        || role.execution_authority !== false
+      ) throw new Error('AXIOM One Circle template role is invalid');
+      roleIds.add(role.role_id);
+    }
+
+    for (const value of [
+      template.decision_rule.quorum_basis_points,
+      template.decision_rule.approval_basis_points
+    ]) {
+      if (!Number.isInteger(value) || value < 0 || value > 10_000) {
+        throw new Error('AXIOM One Circle template decision rule is invalid');
+      }
+    }
+    if (typeof template.decision_rule.abstention_counts_toward_quorum !== 'boolean') {
+      throw new Error('AXIOM One Circle template decision rule is invalid');
+    }
+  }
+}
+
+function exactRecordKeys(value, keys) {
+  if (!plainRecord(value)) return false;
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length
+    && actual.every((key, index) => key === expected[index]);
+}
+
+function validCircleIdentifier(value) {
+  return typeof value === 'string'
+    && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(value);
+}
+
+function plainRecord(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 async function loadHumanContract() {

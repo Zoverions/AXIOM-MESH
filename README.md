@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=3d909ef501e6f914c60f2a74f42a6155f18038f79a73e9ba915d8873511cfcc7 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -8,18 +8,38 @@ turns authenticated human or machine intent into an explicit policy-authorized
 plan, executes only approved effects through bounded interfaces, and records
 portable cryptographically linked evidence.
 
-The project is developing a defensible kernel plus human products and
-replaceable machine/runtime interfaces. AXIOM One, AXIOM Verify, AXIOM Circles,
-AXIOM Studio, managed-node operations, agent runtimes, and future protocol
-adapters are clients of the authority substrate; they do not become alternate
-authorities merely by being installed or connected.
+The project is developing a defensible kernel plus first-class applications and
+replaceable machine/runtime interfaces. AXIOM One,
+[Axiom Education](https://github.com/Zoverions/Axiom-Education), AXIOM Verify,
+AXIOM Circles, AXIOM Studio, managed-node operations, agent runtimes, and future
+protocol adapters are clients of the authority substrate; they do not become
+alternate authorities merely by being installed or connected. Axiom Education
+is independently releasable in its own repository while remaining an integral
+AXIOM application and declared downstream Mesh consumer.
+
+The machine-readable project/application boundary is recorded in
+[`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
+
+Zoverions writes and builds in the open: [zoverions.com](https://zoverions.com) ·
+[@zoverions on X](https://x.com/zoverions) · [YouTube](https://www.youtube.com/@zoverions)
 
 ## First 5 Minutes
 
-Requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`.
+Primary production requirements: Node.js `>=24.14.0 <25` and npm
+`>=11.0.0 <12`. The separately approved hosted-production runtime is exactly
+Node.js `22.23.2`, with bundled npm `>=10.9.8 <11` or npm 11. Source and
+shared-host setup also accepts Node.js `>=22.23.2 <23`; no other Node.js 22
+patch is approved to start the production supervisor.
 
 The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
 and **Node.js 24.19.0 for the candidate production image**.
+A separate hosted-runtime job pins **Node.js 22.23.2** and verifies the
+production guard, mutual TLS, network-boundary, and supervisor protections.
+Runtime approval never waives private credential storage, deny-egress
+enforcement, or the separate production-promotion decision.
+A reviewed Plesk/Passenger host can satisfy the same boundary only by running
+the kernel inside an unprivileged loopback-only Linux namespace and proxying
+through a private Unix socket; see [`mesh/PRODUCTION.md`](mesh/PRODUCTION.md).
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git
@@ -41,6 +61,14 @@ Use `npm run axiom -- --help` to discover commands. Append `--json` for the
 complete machine-readable response. Docker is not required for the basic local
 development path.
 
+This is a **clean source-checkout setup**, not yet a fresh-machine Linux
+installer. It assumes the supported Node.js/npm toolchain is already present and
+does not provision a complete personal or infrastructure node. The explicit
+personal/local and infrastructure-node targets, their security invariants, and
+the promotion gates for a real fresh-host installer are defined in
+[`mesh/config/install-targets.json`](mesh/config/install-targets.json) and the
+[Host Installation and Node Profiles](docs/operations/HOST-INSTALLATION-PROFILES.md).
+
 ## Current state
 
 **Supported build:** `0.12.0-dev.3`
@@ -56,7 +84,7 @@ authority for runnable capability status. Roadmap entries, demonstrations,
 laboratories, synthetic conformance, and built-but-production-unreachable source
 do not promote a capability beyond that registry.
 
-The current registry tracks 49 capabilities, of which 31 are marked
+The current registry tracks 50 capabilities, of which 31 are marked
 `implemented`.
 
 ### Implemented production-candidate kernel surface
@@ -169,16 +197,40 @@ authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
 ### AXIOM One
 
 AXIOM One remains an experimental loopback-only browser/PWA preview. The current
-slice provides node status, reversible review for five bounded actions,
+slice provides node status, reversible review for six bounded actions,
 owner-scoped private memory, three fixed directional provenance relations,
 confirmation-bound tombstoning, selective local export, explicit bundle reveal,
-raw evidence, approval-state distinctions, same-idempotency-key uncertainty
-recovery, and cross-principal negative tests.
+raw evidence, approval-state distinctions, non-authorizing capability-status
+projection, current consent-state inspection, bounded local evidence-chain
+verification, same-idempotency-key uncertainty recovery, and cross-principal
+negative tests.
 
 It is not a supported product and does not yet claim general consequential
 plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
 ingestion, completed browser-session security, accessibility/usability evidence,
 or signed end-user packaging.
+
+### Axiom Education
+
+[Axiom Education](https://github.com/Zoverions/Axiom-Education) is the
+independently releasable local-first lifelong education application/domain
+project. It is not confined to one grade band or curriculum: Ontario is the
+first supported jurisdiction while elementary, secondary, later learning, and
+future jurisdictional packs share the same governed application direction.
+
+Education can maintain local/offline application functionality under its own
+release boundary. Governed learner effects must bind to reviewed AXIOM-MESH
+contracts and preserve Gateway -> Hypervisor -> Sandbox -> Grid. The current
+Mesh convergence includes governed learner-memory ownership, consent-bound
+learner-record contracts, Education provider contracts, Sandbox composition,
+and a bounded learner self-read path mediated by Hypervisor and one exact
+Hypervisor-to-Grid Education edge. These are conformance/runtime foundations;
+they do not activate Education actions in committed production policy or make
+the independently released Education repository automatically compatible.
+Installing or listing Axiom Education grants no learner-record, curriculum,
+provider, network, school, guardian, or delegated-human authority. The cross-
+repository compatibility and feature-adoption rules are defined in
+[Application and Downstream Integration](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md).
 
 ## Development programme
 
@@ -197,6 +249,8 @@ telemetry/alert routes, and an independent security review.
 Build and promote only with their own evidence:
 
 - **AXIOM One** — private personal agent, vault, approvals, and receipts;
+- **Axiom Education** — independently released lifelong education application
+  and governed education-domain consumer of Mesh contracts;
 - **AXIOM Verify** — independent local/static evidence verification;
 - **AXIOM Circles** — invitation-based governed collaboration;
 - **AXIOM Studio** — capsule, adapter, policy, and conformance tooling;
@@ -267,6 +321,8 @@ chain that produces that authority.
 |---|---|---|
 | **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
 | **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
+| **Install planning** | Produce an inert, non-mutating Linux host plan for the personal/local or infrastructure-node profile; this is not a fresh-host installer | `npm run host-install:plan -- personal-local` -> `mesh/config/host-install-policy.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
+| **Applications** | Discover first-class in-tree and independently released applications and their authority boundaries | `mesh/config/application-catalog.json` -> `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` |
 | **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
 | **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |
 | **Frontier laboratory** | Reduce uncertainty without production exposure | Isolated identities/data/value; explicit halt; no promotion claim |
@@ -327,6 +383,8 @@ matches the question:
 
 - [Current project status](docs/PROJECT-STATUS-2026.md)
 - [Capability registry](mesh/config/capabilities.json)
+- [Application catalogue](mesh/config/application-catalog.json) and [application/downstream integration model](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md)
+- [Install target registry](mesh/config/install-targets.json) and [host installation profiles](docs/operations/HOST-INSTALLATION-PROFILES.md)
 - [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
 - [Normative requirements](docs/rebuild/REQUIREMENTS.md)
@@ -349,9 +407,11 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 41 current internal**
+machine-readable default-deny policy **permits only 42 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
-allowlists, and removes unrelated adjacency. This is single-host isolation, not
+allowlists, and removes unrelated adjacency. The 42nd reviewed permission is the
+bounded Hypervisor-to-Grid Education learner-progress edge; it is not public
+Education exposure or alternate authority. This is single-host isolation, not
 multi-host consensus or automatic failover.
 
 ## Security and contribution
@@ -370,6 +430,12 @@ The active build does not claim:
 
 - live production, testnet, mainnet, or public federation;
 - a completed authentic pilot or independent security approval;
+- a supported fresh-machine Linux installer, general infrastructure-node
+  installer, or automatic network enrollment;
+- implemented Google Drive, OneDrive, S3-compatible, decentralized, or other
+  remote-backup provider adapters beyond the existing local encrypted backup
+  foundation;
+- a production-ready governed Axiom Education deployment;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
 - supported wearable/companion hardware, Personal Agent Pack, Agent Runtime
   Capsule executor, Personal Compute Fabric, or Local Trust Plane;

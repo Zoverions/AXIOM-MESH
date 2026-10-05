@@ -1,0 +1,133 @@
+{
+  "schema": "axiom-demand-evidence.v0",
+  "gate_version": "axiom-demand-gate.v0",
+  "hypothesis_id": "majik.multi-ai-continuity.v0",
+  "created_at": "2026-09-18",
+  "persona": "A high-usage professional who pays for one or more frontier AI products and depends on continuity across long-running project work.",
+  "problem_hypothesis": "Provider-bound memory, unreliable long-project continuity, and fragmented multi-model workflows force users to spend time rebuilding context or maintaining their own transfer systems.",
+  "offer_probe": "A user-controlled continuity layer that preserves verifiable project state and can hand only the authorized context to whichever approved AI provider is best for the next task.",
+  "declared_status": "PROBE",
+  "observations": [
+    {
+      "id": "openai-plus-context-recovery-1395576",
+      "source_url": "https://community.openai.com/t/chatgpt-plus-recurring-context-loss-after-recovery-case-13820127/1395576/1",
+      "source_kind": "firsthand_report",
+      "published_at": "2026-09-07",
+      "independence_group": "openai-community-1395576",
+      "payer_confirmed": true,
+      "pain_tags": [
+        "context_loss",
+        "manual_context_transfer",
+        "continuity_recovery_overhead"
+      ],
+      "desired_outcome_tags": [
+        "reliable_persistent_context",
+        "verifiable_recovery"
+      ],
+      "commitment": "none",
+      "summary": "A ChatGPT Plus user reports repeated loss of recovered context, dozens of hours of manual recovery work, and a custom continuity-transfer process that still fails to preserve complete working state between chats.",
+      "owned_experiment_ref": null
+    },
+    {
+      "id": "openai-pro-long-project-1392597",
+      "source_url": "https://community.openai.com/t/why-does-gpt-5-6-lose-context-and-fail-long-running-tasks/1392597/2",
+      "source_kind": "firsthand_report",
+      "published_at": "2026-08-26",
+      "independence_group": "openai-community-1392597",
+      "payer_confirmed": true,
+      "pain_tags": [
+        "context_loss",
+        "workflow_interruption",
+        "source_retrieval_failure"
+      ],
+      "desired_outcome_tags": [
+        "reliable_persistent_context",
+        "reliable_long_running_execution"
+      ],
+      "commitment": "none",
+      "summary": "A ChatGPT Pro subscriber says a continuity-heavy long-form workflow became effectively unusable because established instructions, files, and prior project state were not applied reliably.",
+      "owned_experiment_ref": null
+    },
+    {
+      "id": "openai-persistent-project-memory-1379164",
+      "source_url": "https://community.openai.com/t/give-chatgpt-a-user-controlled-persistent-project-memory-rules-structured-state-so-it-can-behave-like-a-consistent-long-term-collaborator-instead-of-a-stateless-chat/1379164",
+      "source_kind": "firsthand_request",
+      "published_at": "2026-04-17",
+      "independence_group": "openai-community-1379164",
+      "payer_confirmed": false,
+      "pain_tags": [
+        "context_loss",
+        "manual_context_transfer",
+        "decision_drift"
+      ],
+      "desired_outcome_tags": [
+        "user_controlled_memory",
+        "structured_project_state",
+        "selective_context_loading"
+      ],
+      "commitment": "none",
+      "summary": "A feature request describes users maintaining control blocks and external notebooks because project rules and decisions do not persist reliably, and asks for visible, editable structured project memory.",
+      "owned_experiment_ref": null
+    },
+    {
+      "id": "openai-portable-context-layer-1390421",
+      "source_url": "https://community.openai.com/t/persistent-context-layer-beyond-session-retention-for-long-term-ai-conversations/1390421",
+      "source_kind": "firsthand_request",
+      "published_at": "2026-08-14",
+      "independence_group": "openai-community-1390421",
+      "payer_confirmed": false,
+      "pain_tags": [
+        "context_loss",
+        "manual_context_transfer",
+        "decision_drift"
+      ],
+      "desired_outcome_tags": [
+        "portable_context",
+        "user_controlled_memory",
+        "verifiable_history"
+      ],
+      "commitment": "none",
+      "summary": "A feature request proposes an AI-independent persistent context layer with automatic handoff, version history, user inspection and correction, and explicit portability from ChatGPT to Gemini, Claude, and future systems.",
+      "owned_experiment_ref": null
+    },
+    {
+      "id": "openai-pro20x-reliability-1397724",
+      "source_url": "https://community.openai.com/t/pro-20x-account-became-unusable-after-upgrade-severe-model-degradation-and-persistent-selected-model-is-at-capacity-errors/1397724",
+      "source_kind": "firsthand_report",
+      "published_at": "2026-09-15",
+      "independence_group": "openai-community-1397724",
+      "payer_confirmed": true,
+      "pain_tags": [
+        "provider_reliability",
+        "workflow_interruption",
+        "subscription_value_failure"
+      ],
+      "desired_outcome_tags": [
+        "reliable_provider_access",
+        "provider_optional_workflow"
+      ],
+      "commitment": "none",
+      "summary": "A heavy Pro 20x user reports that reliability and capacity failures disrupted AI development work after an upgrade; discussion participants describe purchasing an additional competing paid coding subscription when the primary service became unreliable.",
+      "owned_experiment_ref": null
+    },
+    {
+      "id": "reddit-subscription-stack-snapshot-20260225",
+      "source_url": "https://reddit.sentinel-team.org/posts/1rdek8c/snapshots/2026-02-25T19%3A30%3A46.605298Z",
+      "source_kind": "secondary_snapshot",
+      "published_at": "2026-02-25",
+      "independence_group": "reddit-snapshot-1rdek8c",
+      "payer_confirmed": true,
+      "pain_tags": [
+        "subscription_fragmentation",
+        "provider_switching_overhead"
+      ],
+      "desired_outcome_tags": [
+        "single_subscription_multi_model",
+        "provider_optional_workflow"
+      ],
+      "commitment": "none",
+      "summary": "An archived Reddit snapshot contains multiple users describing paid ChatGPT, Claude, Gemini, or aggregator stacks and debating consolidation because maintaining several subscriptions is costly or inefficient; it is retained only as secondary evidence.",
+      "owned_experiment_ref": null
+    }
+  ]
+}

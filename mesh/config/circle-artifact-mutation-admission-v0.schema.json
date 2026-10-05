@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-artifact-mutation-admission-v0.schema.json",
+  "title": "AXIOM Circle Artifact Mutation Admission v0",
+  "description": "Inert exact-binding record for evaluating one proposed appended revision to an existing Circle-domain Canonical Shared Artifact. Admission is evidence only and grants no artifact, Circle, governance, execution, network or runtime authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "admission_id",
+    "circle_id",
+    "artifact_id",
+    "previous_artifact_digest",
+    "candidate_artifact_digest",
+    "membership_assurance_digest",
+    "authorization_request_digest",
+    "authorization_evidence_ref",
+    "authorization_evidence_digest",
+    "requested_at",
+    "authority_effect",
+    "governance_effect",
+    "artifact_effect",
+    "execution_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-circle-artifact-mutation-admission.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-admission-laboratory"
+    },
+    "admission_id": {
+      "$ref": "#/$defs/id"
+    },
+    "circle_id": {
+      "$ref": "#/$defs/id"
+    },
+    "artifact_id": {
+      "$ref": "#/$defs/id"
+    },
+    "previous_artifact_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "candidate_artifact_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "membership_assurance_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "authorization_request_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "authorization_evidence_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "authorization_evidence_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "requested_at": {
+      "$ref": "#/$defs/date"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "governance_effect": {
+      "const": "none"
+    },
+    "artifact_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-artifact-mutation-admission.mjs",
+  "x-axiom-non-claims": [
+    "artifact-write",
+    "circle-authority",
+    "membership-authority",
+    "governance-authority",
+    "authorization-proof-verification",
+    "execution-authority",
+    "network-effect",
+    "runtime-activation"
+  ]
+}

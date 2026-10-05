@@ -1,0 +1,5 @@
+requires permit tune_cluster: Tune @ Cluster;
+op retune = Tune("p99-above-slo") @ Cluster;
+authorize retune using tune_cluster as armed_retune;
+prepare armed_retune as prepared_retune;
+commit prepared_retune as retune_receipt;

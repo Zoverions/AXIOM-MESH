@@ -24,6 +24,9 @@ export function normalizeMachinePrincipalDefinition(value, {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError('Machine principal definition must be an object');
   }
+  if (value.schema !== undefined && value.schema !== 'axiom-machine-principal.v1') {
+    throw new ValidationError('Machine principal schema is unsupported');
+  }
   const type = value.type;
   if (!MACHINE_TYPES.has(type)) {
     throw new ValidationError('Machine principal type must be agent or service');
@@ -65,9 +68,7 @@ export function normalizeMachinePrincipalDefinition(value, {
   const expiresAt = normalizeExpiry(value.expires_at, lifetime, now);
   const runtime = normalizeRuntimeBinding(value.runtime);
   const constraints = normalizeMachineConstraints(value.constraints);
-
-  return {
-    schema: 'axiom-machine-principal.v1',
+  const authorityProfile = {
     id,
     type,
     sponsor,
@@ -76,18 +77,24 @@ export function normalizeMachinePrincipalDefinition(value, {
     lifetime,
     ...(expiresAt ? { expires_at: expiresAt } : {}),
     runtime,
-    constraints,
-    authority_digest: digestObject({
-      id,
-      type,
-      sponsor,
-      roles,
-      scopes,
-      lifetime,
-      ...(expiresAt ? { expires_at: expiresAt } : {}),
-      runtime,
-      constraints
-    })
+    constraints
+  };
+  const authorityDigest = digestObject(authorityProfile);
+  if (value.authority_digest !== undefined) {
+    const suppliedDigest = requiredIdentifier(
+      value.authority_digest,
+      'machine principal authority_digest',
+      HEX_DIGEST
+    );
+    if (suppliedDigest !== authorityDigest) {
+      throw new ValidationError('Machine principal authority_digest does not match normalized authority');
+    }
+  }
+
+  return {
+    schema: 'axiom-machine-principal.v1',
+    ...authorityProfile,
+    authority_digest: authorityDigest
   };
 }
 
@@ -127,9 +134,7 @@ export function evaluateMachineIntent(principal, {
   request_bytes = 0,
   requested_execution_ms = 0
 } = {}) {
-  const normalized = principal?.schema === 'axiom-machine-principal.v1'
-    ? principal
-    : normalizeMachinePrincipalDefinition(principal);
+  const normalized = normalizeMachinePrincipalDefinition(principal);
   const constraints = normalized.constraints;
 
   if (!constraints.actions.includes(action)) {
@@ -165,9 +170,7 @@ export function evaluateMachineIntent(principal, {
 }
 
 export function machinePrincipalAuthorityFacts(principal) {
-  const normalized = principal?.schema === 'axiom-machine-principal.v1'
-    ? principal
-    : normalizeMachinePrincipalDefinition(principal);
+  const normalized = normalizeMachinePrincipalDefinition(principal);
   return {
     principal_id: normalized.id,
     principal_type: normalized.type,

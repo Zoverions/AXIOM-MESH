@@ -53,10 +53,12 @@ const REQUIRED_CAPABILITIES = new Set([
   'operations.service-network-policy',
   'operations.independent-service-units',
   'operations.provider-runtime',
+  'operations.public-witness',
   'operations.pilot-dossier-verification',
   'operations.security-review-intake',
   'operations.installer-observability-release'
 ]);
+const SERVICE_SCRIPT_ALLOWLIST = new Set(['dev']);
 
 export function validateCapabilityRegistry(registry) {
   if (!registry || !Array.isArray(registry.capabilities) || !registry.capabilities.length) {
@@ -80,6 +82,20 @@ export function validateCapabilityRegistry(registry) {
     if (!STATUSES.has(item.status)) throw new ValidationError(`Invalid status for ${item.id}`);
     if (typeof item.family !== 'string' || typeof item.summary !== 'string' || item.summary.length < 20) {
       throw new ValidationError(`Capability ${item.id} is missing family or summary metadata`);
+    }
+    if (item.surfaces !== undefined) {
+      if (!Array.isArray(item.surfaces) || !item.surfaces.length) {
+        throw new ValidationError(`Capability ${item.id} surfaces must be a non-empty array`);
+      }
+      const surfaces = item.surfaces.map(surface => {
+        if (typeof surface !== 'string' || !/^npm:[a-z0-9][a-z0-9:._-]{0,127}$/.test(surface)) {
+          throw new ValidationError(`Capability ${item.id} surface is invalid`);
+        }
+        return surface;
+      });
+      if (new Set(surfaces).size !== surfaces.length) {
+        throw new ValidationError(`Capability ${item.id} contains duplicate surfaces`);
+      }
     }
     if (item.evidence !== undefined) {
       if (!Array.isArray(item.evidence) || !item.evidence.length) {
@@ -112,6 +128,54 @@ export function validateCapabilityRegistry(registry) {
     digest: digestObject(registry),
     capabilities: registry.capabilities.length,
     counts
+  };
+}
+
+export function validateCapabilityServiceSurfaces(registry, packageManifest) {
+  if (!packageManifest || typeof packageManifest !== 'object' || Array.isArray(packageManifest)) {
+    throw new ValidationError('Package manifest must be an object');
+  }
+  if (!packageManifest.scripts || typeof packageManifest.scripts !== 'object' || Array.isArray(packageManifest.scripts)) {
+    throw new ValidationError('Package manifest scripts must be an object');
+  }
+
+  const scriptNames = Object.keys(packageManifest.scripts).sort();
+  const serviceScripts = scriptNames.filter(
+    name => name.startsWith('start:') || name.endsWith(':start')
+  );
+  const allowlistedScripts = [...SERVICE_SCRIPT_ALLOWLIST]
+    .filter(name => Object.hasOwn(packageManifest.scripts, name))
+    .sort();
+  const surfaceMap = {};
+  for (const capability of registry.capabilities ?? []) {
+    for (const surface of capability.surfaces ?? []) {
+      if (!surface.startsWith('npm:')) continue;
+      const script = surface.slice(4);
+      if (!Object.hasOwn(packageManifest.scripts, script)) {
+        throw new ValidationError(
+          `Capability ${capability.id} references unknown npm service surface: ${script}`
+        );
+      }
+      if (Object.hasOwn(surfaceMap, script)) {
+        throw new ValidationError(`Duplicate npm service surface mapping: ${script}`);
+      }
+      surfaceMap[script] = capability.id;
+    }
+  }
+
+  const unmapped = serviceScripts.filter(
+    script => !Object.hasOwn(surfaceMap, script) && !SERVICE_SCRIPT_ALLOWLIST.has(script)
+  );
+  if (unmapped.length) {
+    throw new ValidationError(`Unmapped runnable service scripts: ${unmapped.join(', ')}`);
+  }
+  return {
+    valid: true,
+    service_scripts: serviceScripts,
+    allowlisted_scripts: allowlistedScripts,
+    surface_map: Object.fromEntries(
+      Object.entries(surfaceMap).sort(([left], [right]) => left.localeCompare(right))
+    )
   };
 }
 
@@ -182,6 +246,11 @@ export async function validateCapabilityEvidenceBindings(registry, {
     }
   }
 
+  const bindable = new Map(
+    (registry.capabilities ?? [])
+      .filter(item => item.status === 'implemented' || item.status === 'experimental')
+      .map(item => [item.id, item])
+  );
   const implemented = new Map(
     (registry.capabilities ?? [])
       .filter(item => item.status === 'implemented')
@@ -192,10 +261,10 @@ export async function validateCapabilityEvidenceBindings(registry, {
 
   for (const binding of document.bindings) {
     validateBindingShape(binding);
-    const item = implemented.get(binding.capability_id);
+    const item = bindable.get(binding.capability_id);
     if (!item) {
       throw new ValidationError(
-        `Capability evidence binding names a non-implemented or unknown capability: ${binding.capability_id}`
+        `Capability evidence binding names a non-bindable or unknown capability: ${binding.capability_id}`
       );
     }
     if (seen.has(binding.capability_id)) {
@@ -241,7 +310,7 @@ export async function validateCapabilityEvidenceBindings(registry, {
       `Implemented capabilities are missing executable assertion bindings: ${missing.join(', ')}`
     );
   }
-  const extras = [...seen].filter(id => !implemented.has(id));
+  const extras = [...seen].filter(id => !bindable.has(id));
   if (extras.length) {
     throw new ValidationError(`Unexpected capability evidence bindings: ${extras.join(', ')}`);
   }
@@ -404,9 +473,12 @@ async function main() {
   const config = meshConfig();
   const registry = JSON.parse(await readFile(config.capabilitiesPath, 'utf8'));
   const registryResult = validateCapabilityRegistry(registry);
+  const packageManifest = JSON.parse(await readFile(resolve(MESH_ROOT, 'package.json'), 'utf8'));
+  const serviceSurfaceResult = validateCapabilityServiceSurfaces(registry, packageManifest);
   const evidenceResult = await validateCapabilityEvidenceBindings(registry);
   process.stdout.write(`${JSON.stringify({
     ...registryResult,
+    service_surfaces: serviceSurfaceResult,
     evidence: evidenceResult
   }, null, 2)}\n`);
 }

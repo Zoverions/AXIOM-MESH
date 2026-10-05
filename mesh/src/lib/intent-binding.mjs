@@ -5,6 +5,7 @@ import {
   assertStringArray,
   digestObject
 } from './canonical.mjs';
+import { normalizeAgentAssuranceEvidence } from './agent-assurance-evidence.mjs';
 
 const ACTION = /^[a-z][a-z0-9.-]+$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -42,6 +43,22 @@ export function intentRequestBinding(intent) {
     );
   }
 
+  // Assurance-relevant identity material must participate in request identity so
+  // idempotency and approval fingerprints cannot collide across different
+  // deny-only assurance decisions. Fail-closed: present evidence is normalized
+  // or rejected; assurance never authorizes.
+  let agentAssuranceDigest;
+  if (Object.hasOwn(value, 'assurance_evidence')) {
+    if (principal.schema !== 'axiom-machine-principal.v1') {
+      throw new ValidationError(
+        'Agent assurance evidence requires a constrained machine principal'
+      );
+    }
+    agentAssuranceDigest = digestObject(
+      normalizeAgentAssuranceEvidence(value.assurance_evidence)
+    );
+  }
+
   return {
     action,
     input,
@@ -49,6 +66,9 @@ export function intentRequestBinding(intent) {
     data_scopes: dataScopes,
     ...(machineAuthorityDigest
       ? { machine_authority_digest: machineAuthorityDigest }
+      : {}),
+    ...(agentAssuranceDigest
+      ? { agent_assurance_digest: agentAssuranceDigest }
       : {})
   };
 }

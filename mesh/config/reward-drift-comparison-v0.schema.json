@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/reward-drift-comparison-v0.schema.json",
+  "title": "AXIOM Reward Drift Comparison v0",
+  "description": "Strict inert evidence contract for compatibility-gated comparison of independently calibrated reward/introspection evidence across exact predecessor and candidate bindings. Drift evidence never grants model authority, routing, promotion, runtime activation, or network effects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "version", "status", "comparison_id", "predecessor", "candidate", "comparison_method",
+    "metric_deltas", "drift_status", "compared_at", "recorded_at", "contains_secret_material",
+    "authority_effect", "network_effect", "credential_visibility", "runtime_activation", "routing_effect",
+    "promotion_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-reward-drift-comparison.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "comparison_id": { "$ref": "#/$defs/identifier" },
+    "predecessor": { "$ref": "#/$defs/sideBinding" },
+    "candidate": { "$ref": "#/$defs/sideBinding" },
+    "comparison_method": { "$ref": "#/$defs/comparisonMethod" },
+    "metric_deltas": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/metricDelta" }
+    },
+    "drift_status": {
+      "type": "string",
+      "enum": [
+        "stable-within-declared-bounds",
+        "material-drift",
+        "mixed",
+        "insufficient-evidence",
+        "incompatible"
+      ]
+    },
+    "compared_at": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "credential_visibility": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "routing_effect": { "const": "none" },
+    "promotion_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "sideBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probe_manifest_id", "probe_manifest_digest", "report_id", "report_digest", "target_ref", "target_digest"
+      ],
+      "properties": {
+        "probe_manifest_id": { "$ref": "#/$defs/identifier" },
+        "probe_manifest_digest": { "$ref": "#/$defs/digest" },
+        "report_id": { "$ref": "#/$defs/identifier" },
+        "report_digest": { "$ref": "#/$defs/digest" },
+        "target_ref": { "$ref": "#/$defs/identifier" },
+        "target_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "comparisonMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_ref", "method_digest", "bounds_ref", "bounds_digest"],
+      "properties": {
+        "method_ref": { "$ref": "#/$defs/identifier" },
+        "method_digest": { "$ref": "#/$defs/digest" },
+        "bounds_ref": { "$ref": "#/$defs/identifier" },
+        "bounds_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "metricDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "predecessor_value", "candidate_value", "delta"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "agreement-count",
+            "disagreement-count",
+            "success-rate",
+            "calibration-error",
+            "discrimination-score",
+            "false-high-confidence-count",
+            "false-low-confidence-count",
+            "missing-invalid-observation-count"
+          ]
+        },
+        "predecessor_value": { "type": "number" },
+        "candidate_value": { "type": "number" },
+        "delta": { "type": "number" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/reward-drift-comparison.mjs",
+  "x-axiom-semantic-rules": [
+    "predecessor and candidate bindings must match the exact supplied Reward Probe Manifest and Reward Calibration Report digests",
+    "probe type, measurement method, calibration semantics, normalization semantics, task domain, metric set, and target-transfer support are compatibility gates",
+    "incompatible evidence must use incompatible status and cannot carry numeric drift claims",
+    "insufficient-evidence calibration must use insufficient-evidence drift status and cannot carry numeric drift claims",
+    "numeric metric deltas must exactly represent metrics from the bound calibration reports",
+    "comparison method and declared bounds require explicit provenance and no universal drift threshold is embedded",
+    "compared_at cannot precede bound calibration evidence and recorded_at cannot precede compared_at",
+    "drift evidence remains descriptive and cannot route, promote, activate, authorize, or execute a model"
+  ],
+  "x-axiom-non-claims": [
+    "universal-drift-threshold",
+    "model-promotion",
+    "model-routing",
+    "authority-grant",
+    "runtime-activation",
+    "network-effect",
+    "biological-reward-equivalence"
+  ]
+}

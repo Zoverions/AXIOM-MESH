@@ -150,7 +150,7 @@ test('deny-dominant merge returns a policy that passes full validation', () => {
   assert.equal(merged.actions['system.echo'].requires_independent_approval, true);
 });
 
-test('machine discovery never resolves inherited policy action properties', () => {
+test('machine discovery rejects corrupted machine authority before inherited policy resolution', () => {
   const principal = machine();
   const engine = new PolicyEngine({
     version: 'discovery-own-only',
@@ -159,15 +159,17 @@ test('machine discovery never resolves inherited policy action properties', () =
     }
   });
 
-  // Simulate a corrupted already-normalized principal so this test exercises
-  // discovery's own-property boundary rather than only principal validation.
+  // A caller that mutates a once-normalized principal must now fail before
+  // discovery can consult an inherited Object.prototype action name.
   principal.constraints.actions = ['constructor', 'system.echo'];
-  const discovery = buildMachineDiscovery({
-    principal,
-    policy: engine,
-    kernelVersion: '0.12.0-dev.3'
-  });
-  assert.deepEqual(discovery.actions.map(item => item.id), ['system.echo']);
+  assert.throws(
+    () => buildMachineDiscovery({
+      principal,
+      policy: engine,
+      kernelVersion: '0.12.0-dev.3'
+    }),
+    /prototype|reserved|actions|authority_digest/i
+  );
 });
 
 test('education intent validation rejects inherited contract action properties', async () => {

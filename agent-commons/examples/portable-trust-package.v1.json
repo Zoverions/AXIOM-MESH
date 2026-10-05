@@ -1,0 +1,61 @@
+{
+  "schema": "axiom-portable-trust-package.v1",
+  "package_id": "trust-package:institution-alpha-transfer-001",
+  "package_version": "0.1.0",
+  "created_at": "2026-09-01T12:40:00.000Z",
+  "expires_at": "2026-09-02T12:40:00.000Z",
+  "purpose": "Transfer a verifier bundle and inert institutional policy profile into an offline review enclave.",
+  "artifacts": [
+    {
+      "path": "verification/bundle.json",
+      "artifact_type": "portable_verification_bundle",
+      "content_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source": "institution-alpha/verifier-release-7",
+      "required": true,
+      "confidentiality": "internal"
+    },
+    {
+      "path": "policy/profile.json",
+      "artifact_type": "policy_bundle",
+      "content_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source": "institution-alpha/policy-2026-09",
+      "required": true,
+      "confidentiality": "internal"
+    }
+  ],
+  "signatures": [
+    {
+      "signer_id": "institution:alpha-release",
+      "key_id": "key:release-2026-q3",
+      "signature_profile": "signature:ed25519-example",
+      "signed_manifest_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "verified": true
+    }
+  ],
+  "witnesses": [
+    {
+      "witness_id": "witness:repro-build-01",
+      "witness_type": "independent_build_reproduction",
+      "statement_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "verified": true
+    }
+  ],
+  "import_policy": {
+    "default_state": "quarantined_inert",
+    "requires_quarantine_scan": true,
+    "requires_local_review": true,
+    "requires_fresh_policy_check": true,
+    "max_package_age_seconds": 86400
+  },
+  "authority": {
+    "signature_grants_authority": false,
+    "witness_grants_authority": false,
+    "import_grants_authority": false,
+    "installation_grants_authority": false,
+    "activation_requires_local_admission": true
+  },
+  "limitations": [
+    "Example package only; artifact digests are placeholders.",
+    "Signatures establish provenance/integrity under the named profile, not safety or authorization."
+  ]
+}

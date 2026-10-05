@@ -7,9 +7,12 @@ import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
+import { registerEducationGridRoutes } from './education-routes.mjs';
+import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
+import { createCapabilityConsumptionCommitter } from './capability-consumption-route.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -31,6 +34,7 @@ export async function createGridService(config = meshConfig()) {
   let identity;
   let protector;
   let store;
+  let consumeCapability;
   try {
     identity = await ensureMeshIdentity(config.dataDir, 'grid', { create: config.autoBootstrap });
     identity.transport = config.transport.enabled
@@ -47,6 +51,11 @@ export async function createGridService(config = meshConfig()) {
       protector
     });
     await recordPendingRecovery({ store, dataDir: config.dataDir, identity });
+    consumeCapability = await createCapabilityConsumptionCommitter({
+      config,
+      identity,
+      store
+    });
   } catch (error) {
     if (store) store.close();
     await releaseGridRuntimeLock(runtimeLock);
@@ -86,6 +95,8 @@ export async function createGridService(config = meshConfig()) {
 
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
 
+  registerEducationGridRoutes(router, store);
+
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
       throw new ValidationError('Only Hypervisor may commit state transitions');
@@ -97,18 +108,56 @@ export async function createGridService(config = meshConfig()) {
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     });
     if (actor !== claimedPrincipal) throw new ValidationError('Commit actor does not match the claimed principal');
-    const exports = Array.isArray(input.events)
-      ? input.events.filter(event => event?.kind === 'export.requested')
-      : [];
-    const backups = Array.isArray(input.events)
-      ? input.events.filter(event => event?.kind === 'backup.requested')
-      : [];
-    const schedules = Array.isArray(input.events)
-      ? input.events.filter(
-        event => event?.kind === 'node.schedule.requested'
-      )
-      : [];
+    if (!Array.isArray(input.events)) {
+      throw new ValidationError('Commit events must be an array');
+    }
+    if (input.events.some(event => (
+      event?.kind === 'capability.consumed'
+      || event?.kind === 'capability.semantic-consumed'
+    ))) {
+      throw new ValidationError(
+        'Caller-supplied capability consumption events are forbidden; Grid derives them from exact consumption requests'
+      );
+    }
+    const consumptionRequests = input.events.filter(
+      event => event?.kind === 'capability.consume.requested'
+    );
+    if (consumptionRequests.length) {
+      if (input.events.length !== 1 || consumptionRequests.length !== 1) {
+        throw new ValidationError(
+          'Capability consumption must be the only event in its Grid commit'
+        );
+      }
+      const consumed = consumeCapability({
+        traceId,
+        actor,
+        event: consumptionRequests[0]
+      });
+      return {
+        httpStatus: 201,
+        body: {
+          events: [consumed.event],
+          capability_consumptions: [{
+            receipt: consumed.receipt,
+            receipt_digest: consumed.receipt_digest,
+            event_id: consumed.event.event_id,
+            event_hash: consumed.event.event_hash
+          }],
+          exports: [],
+          backups: [],
+          schedules: []
+        }
+      };
+    }
+    const exports = input.events.filter(event => event?.kind === 'export.requested');
+    const backups = input.events.filter(event => event?.kind === 'backup.requested');
+    const schedules = input.events.filter(
+      event => event?.kind === 'node.schedule.requested'
+    );
     for (const event of exports) store.preflightExportRequest(actor, event);
+    for (const event of input.events) {
+      preflightEducationLearnerGridEvent(store, event, actor);
+    }
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
     const completedBackups = [];

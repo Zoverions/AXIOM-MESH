@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/personal-agent-pack.v2.schema.json",
+  "title": "AXIOM Personal Agent Pack v2",
+  "description": "Documentation-only draft manifest for portable companion continuity across independently governed Sovereign Vaults, runtimes, models, and recovery providers. The Pack contains no raw vault contents or secret material and grants no vault or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "pack_id",
+    "pack_version",
+    "owner_subject_ref",
+    "created_at",
+    "vaults",
+    "companion_components",
+    "runtime_preferences",
+    "recovery",
+    "portability",
+    "raw_vault_content_included",
+    "secret_material_included",
+    "grants_vault_access",
+    "grants_execution_authority",
+    "personalized_weights_are_verified_identity"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-personal-agent-pack.v2"
+    },
+    "pack_id": {
+      "$ref": "#/$defs/id"
+    },
+    "pack_version": {
+      "$ref": "#/$defs/version"
+    },
+    "owner_subject_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "minimum_kernel_version": {
+      "$ref": "#/$defs/version"
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "signature_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "vaults": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "vault_id",
+          "domain",
+          "vault_manifest_ref",
+          "vault_manifest_sha256",
+          "recovery_policy_ref",
+          "selective_restore_supported"
+        ],
+        "properties": {
+          "vault_id": {
+            "$ref": "#/$defs/id"
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "vault_manifest_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "vault_manifest_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "recovery_policy_ref": {
+            "$ref": "#/$defs/id"
+          },
+          "backup_refs": {
+            "$ref": "#/$defs/refList"
+          },
+          "selective_restore_supported": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "companion_components": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "component_id",
+          "role",
+          "media_type",
+          "content_ref",
+          "sha256",
+          "encryption",
+          "required_for_minimum_continuity"
+        ],
+        "properties": {
+          "component_id": {
+            "$ref": "#/$defs/id"
+          },
+          "role": {
+            "enum": [
+              "agent-runtime-capsule",
+              "correction-ledger",
+              "evaluation-ledger",
+              "preferences-accessibility",
+              "owner-policy",
+              "consent",
+              "routing-policy",
+              "voice-configuration",
+              "avatar-persona-configuration",
+              "semantic-index-metadata",
+              "personalized-model-artifact",
+              "recovery-metadata",
+              "licence"
+            ]
+          },
+          "media_type": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 160
+          },
+          "content_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "encryption": {
+            "enum": [
+              "owner-local-encrypted",
+              "recipient-encrypted",
+              "public"
+            ]
+          },
+          "schema_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "licence_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "required_for_minimum_continuity": {
+            "type": "boolean"
+          },
+          "training_authorization_ref": {
+            "$ref": "#/$defs/id"
+          },
+          "base_model_ref": {
+            "$ref": "#/$defs/id"
+          },
+          "allowed_execution_location_refs": {
+            "$ref": "#/$defs/refList"
+          },
+          "known_privacy_limitations": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "deletion_retraining_consequences": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "role": {
+                  "const": "personalized-model-artifact"
+                }
+              },
+              "required": ["role"]
+            },
+            "then": {
+              "required": [
+                "training_authorization_ref",
+                "base_model_ref",
+                "allowed_execution_location_refs",
+                "known_privacy_limitations",
+                "deletion_retraining_consequences"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "runtime_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing_mode",
+        "allowed_capsule_ids",
+        "allowed_provider_ids",
+        "base_model_replaceable"
+      ],
+      "properties": {
+        "routing_mode": {
+          "enum": ["private", "balanced", "best", "budget"]
+        },
+        "allowed_capsule_ids": {
+          "$ref": "#/$defs/refList"
+        },
+        "denied_capsule_ids": {
+          "$ref": "#/$defs/refList"
+        },
+        "allowed_provider_ids": {
+          "$ref": "#/$defs/refList"
+        },
+        "denied_provider_ids": {
+          "$ref": "#/$defs/refList"
+        },
+        "pinned_model_ids": {
+          "$ref": "#/$defs/refList"
+        },
+        "base_model_replaceable": {
+          "const": true
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pack_backup_refs",
+        "selective_restore_supported",
+        "cross_vault_key_dependency",
+        "recovery_secret_material_in_pack"
+      ],
+      "properties": {
+        "pack_backup_refs": {
+          "$ref": "#/$defs/refList"
+        },
+        "selective_restore_supported": {
+          "const": true
+        },
+        "cross_vault_key_dependency": {
+          "const": false
+        },
+        "recovery_secret_material_in_pack": {
+          "const": false
+        },
+        "recovery_policy_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "portability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subscription_required_for_export",
+        "single_provider_required",
+        "single_model_family_required",
+        "missing_optional_component_may_be_silently_substituted"
+      ],
+      "properties": {
+        "subscription_required_for_export": {
+          "const": false
+        },
+        "single_provider_required": {
+          "const": false
+        },
+        "single_model_family_required": {
+          "const": false
+        },
+        "missing_optional_component_may_be_silently_substituted": {
+          "const": false
+        }
+      }
+    },
+    "raw_vault_content_included": {
+      "const": false
+    },
+    "secret_material_included": {
+      "const": false
+    },
+    "grants_vault_access": {
+      "const": false
+    },
+    "grants_execution_authority": {
+      "const": false
+    },
+    "personalized_weights_are_verified_identity": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "refList": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    }
+  }
+}

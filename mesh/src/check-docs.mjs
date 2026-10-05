@@ -10,6 +10,7 @@ import {
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 import { validateCapabilityRegistry } from './check-registry.mjs';
 import { verifyRuntimeAdapterContract } from './lib/runtime-adapter-contract.mjs';
+import { verifyRuntimeConnectorFabricContracts } from './lib/runtime-connector-fabric-contracts.mjs';
 
 export const CANONICAL_DOCUMENTS = Object.freeze([
   'README.md',
@@ -17,31 +18,107 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   '.github/SECURITY.md',
   'CONSTITUTION.md',
   'CONTRIBUTING.md',
+  'AGENTS.md',
+  'AGENT-ENTRY.md',
+  'agent-commons/PLUGIN-INTEGRITY-DRILL.md',
+  'labs/praxis/README.md',
+  'labs/praxis/BOOTSTRAP.md',
+  'labs/praxis/SPEC.md',
+  'labs/praxis/TUTORIAL.md',
+  'labs/praxis/RUN.md',
+  'labs/praxis/INTEROP.md',
+  'labs/praxis/examples/MANIFEST.md',
+  'labs/praxis/ATTESTATION-GATE.md',
+  'labs/praxis/ATTESTATION-GATE-PLAN.md',
+  'registry/axiom-ui/INTERFACE-BOUNDARY.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md',
+  'docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md',
+  'docs/MASTER-TODO-SOVEREIGN-HOST-DEPLOYMENT.md',
+  'docs/MASTER-TODO-EPISTEMIC-FABRIC.md',
+  'docs/MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md',
   'docs/ROADMAP.md',
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md',
+  'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md',
   'docs/PRODUCTION-GRADE.md',
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/community/AGENT-IDENTITY.md',
+  'docs/community/BOOKS-AND-ARCHITECTURE.md',
+  'docs/community/COMMUNITY-TESTNET-V0.md',
+  'docs/community/INSTITUTIONAL-OUTREACH.md',
+  'docs/community/LAUNCH-PACK.md',
+  'docs/community/RED-TEAM-CHALLENGE.md',
+  'docs/growth/ACQUISITION-EXPERIMENTS.md',
+  'docs/growth/DEMAND-EVIDENCE-GATE.md',
+  'docs/growth/GTM-EVIDENCE-LOOP.md',
+  'docs/growth/evidence/majik-multi-ai-continuity-2026-09-18.json',
+  'docs/growth/UNATTENDED-AGENT-TRUST-DRILL.md',
+  'docs/architecture/AGENT-COMMONS.md',
+  'docs/architecture/AGENT-ASSURANCE-EVIDENCE-V0.md',
+  'docs/architecture/MACHINE-HOLDER-PRESENTATION-V0.md',
+  'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md',
+  'docs/architecture/AMBIENT-TEAMMATE-POLICY-V0.md',
+  'docs/architecture/MESH-NOTARIZED-AGREEMENTS.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
+  'docs/architecture/DEPLOYMENT-ENGINE-V0-CONVERGENCE.md',
+  'docs/architecture/INTERROGATION-PLANE.md',
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md',
+  'docs/architecture/OPERATION-PROPOSAL-BINDING.md',
+  'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md',
+  'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md',
+  'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
+  'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
+  'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
+  'docs/architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md',
+  'docs/architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/architecture/contracts/agent-challenge.v1.schema.json',
+  'docs/architecture/contracts/agent-feedback.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json',
   'docs/architecture/contracts/compute-node-profile.v1.schema.json',
+  'docs/architecture/contracts/context-capsule.v1.schema.json',
+  'docs/architecture/contracts/context-request.v1.schema.json',
   'docs/architecture/contracts/local-trust-envelope.v1.schema.json',
   'docs/architecture/contracts/personal-agent-pack.v1.schema.json',
+  'docs/architecture/contracts/personal-agent-pack.v2.schema.json',
+  'docs/architecture/contracts/personal-model-adaptation-authorization.v1.schema.json',
+  'docs/architecture/contracts/resource-envelope.v0.schema.json',
+  'docs/architecture/contracts/resource-observation.v0.schema.json',
+  'docs/architecture/contracts/capability-surfaces.v0.schema.json',
+  'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
+  'docs/architecture/contracts/external-operation-offer.v0.schema.json',
+  'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json',
+  'docs/architecture/contracts/operation-proposal-binding.v0.schema.json',
+  'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
+  'docs/architecture/contracts/sovereign-vault.v1.schema.json',
+  'docs/architecture/contracts/vault-access-lease.v1.schema.json',
+  'docs/architecture/contracts/threat-observation.v0.schema.json',
+  'docs/architecture/contracts/threat-hypothesis.v0.schema.json',
+  'docs/architecture/contracts/reproduction-case.v0.schema.json',
+  'docs/architecture/contracts/regression-candidate.v0.schema.json',
+  'docs/architecture/contracts/threat-adaptation-receipt.v0.schema.json',
+  'docs/architecture/contracts/research-source-manifest.v0.schema.json',
+  'docs/architecture/contracts/research-knowledge-projection.v0.schema.json',
+  'docs/architecture/contracts/research-operation-candidate.v0.schema.json',
+  'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json',
+  'docs/architecture/contracts/research-contribution.v0.schema.json',
+  'docs/architecture/contracts/research-relation.v0.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md',
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md',
   'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md',
+  'docs/rebuild/PATH-OBSERVATION-EVIDENCE.md',
+  'docs/rebuild/MEASUREMENT-SOURCE-ENVELOPES.md',
+  'docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md',
   'docs/rebuild/PRODUCT-DEFINITION.md',
   'docs/rebuild/REQUIREMENTS.md',
   'docs/rebuild/ROLLBACK.md',
@@ -49,13 +126,68 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/rebuild/STATUS.md',
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md',
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
+  'docs/reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md',
+  'docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md',
+  'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md',
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
+  'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md',
+  'docs/security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md',
+  'docs/superpowers/specs/2026-08-27-emergent-coordination-collective-authority-design.md',
+  'docs/superpowers/specs/2026-08-29-sovereign-agent-composition-continuity-design.md',
+  'docs/superpowers/specs/2026-08-29-extensible-agent-provider-substrate-design.md',
+  'docs/superpowers/specs/2026-08-29-self-bundle-continuity-v0-design.md',
+  'docs/superpowers/specs/2026-08-29-cognitive-topology-identity-kernel-design.md',
+  'docs/superpowers/specs/2026-08-30-sovereign-intelligence-selection-v0-design.md',
+  'docs/superpowers/specs/2026-08-31-selective-interposition-native-reference-agent-design.md',
+  'docs/superpowers/specs/2026-09-02-deployment-capability-engine-v0-design.md',
+  'docs/superpowers/specs/2026-09-02-sovereign-host-deployment-shared-embodiment-design.md',
+  'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md',
+  'docs/superpowers/specs/2026-09-03-privacy-preserving-collective-intelligence-design.md',
+  'docs/superpowers/specs/2026-09-05-privacy-threat-profiles-disclosure-correlation-addendum.md',
+  'docs/superpowers/specs/2026-09-05-reward-introspection-evidence-v0-design.md',
+  'docs/superpowers/specs/2026-09-06-rust-trust-core-migration-foundation-design.md',
+  'docs/superpowers/specs/2026-09-06-rust-trust-core-stage2-differential-conformance-design.md',
+  'docs/superpowers/specs/2026-09-06-rust-trust-core-stage4-adversarial-differential-design.md',
+  'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md',
+  'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md',
+  'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md',
+  'docs/superpowers/specs/2026-09-15-bounded-decision-intelligence-v0-design.md',
+  'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md',
+  'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md',
+  'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md',
+  'docs/superpowers/specs/2026-09-25-founder-genesis-founders-council-design.md',
+  'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md',
+  'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
+  'docs/superpowers/plans/2026-08-29-agent-composition-contract-v0.md',
+  'docs/superpowers/plans/2026-08-29-extensible-agent-provider-substrate.md',
+  'docs/superpowers/plans/2026-08-29-self-bundle-continuity-v0.md',
+  'docs/superpowers/plans/2026-08-29-cognitive-topology-v0.md',
+  'docs/superpowers/plans/2026-08-30-sovereign-intelligence-selection-v0.md',
+  'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice1.md',
+  'docs/superpowers/plans/2026-09-03-sovereign-information-evidence-authority-slice2.md',
+  'docs/superpowers/plans/2026-09-05-privacy-threat-profile-disclosure-slice1.md',
+  'docs/superpowers/plans/2026-09-05-reward-introspection-evidence-v0.md',
+  'docs/superpowers/plans/2026-09-06-rust-trust-core-migration-foundation.md',
+  'docs/superpowers/plans/2026-09-06-rust-trust-core-stage2-differential-conformance.md',
+  'docs/superpowers/plans/2026-09-06-rust-trust-core-stage4-adversarial-differential.md',
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md',
+  'docs/superpowers/plans/2026-09-08-epistemic-e2-reproducibility-closure.md',
+  'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md',
+  'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md',
+  'docs/superpowers/plans/2026-09-15-bounded-decision-intelligence-v0.md',
+  'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md',
+  'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md',
+  'docs/superpowers/plans/2026-09-25-founder-genesis-founders-council-v0.md',
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
+  'docs/operations/HOST-INSTALLATION-PROFILES.md',
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md',
+  'docs/operations/INSTALL-SESSION-V0.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
   'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md',
@@ -67,10 +199,24 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
+  'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md',
+  'docs/operations/OWNER-DECISION-LOG-2026-09.md',
+  'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md',
+  'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md',
+  'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md',
+  'docs/operations/AXIOM-VERIFY-MVP-RUN.md',
+  'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md',
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md',
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md',
+  'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
+  'agent-skills/axiom-authority-auditor/SKILL.md',
+  'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
+  'labs/rust-trust-core/EXPERIMENT.md',
   'mesh/README.md',
-  'mesh/PRODUCTION.md'
+  'mesh/PRODUCTION.md',
+  'apps/axiom-one/feed-contract/README.md'
 ]);
 
 const REQUIRED_CONTENT = Object.freeze({
@@ -85,12 +231,30 @@ const REQUIRED_CONTENT = Object.freeze({
     'search the supported tree for equivalent',
     'regression coverage for the class'
   ],
+  'AGENT-ENTRY.md': [
+    'Capability is not authority',
+    'production candidate, not production-promoted',
+    'Gateway -> Hypervisor -> Sandbox -> Grid'
+  ],
+  'AGENTS.md': [
+    'Capability is not authority',
+    'production candidate, not production-promoted',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    'Zero-cost participation'
+  ],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
     'deprecated/pre-0.12-documentation-corpus',
     'ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
-    'ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md'
+    'ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md',
+    'PATH-OBSERVATION-EVIDENCE.md'
+  ],
+  'docs/community/AGENT-IDENTITY.md': [
+    'zoverions.agent',
+    'MESA-27A-F1C1',
+    'Discovery is not permission.'
   ],
   'docs/MASTER-TODO.md': ['## P0', '## Promotion rules'],
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': [
@@ -105,6 +269,16 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Priority 5 — Read-only MCP server laboratory',
     '## Priority 11 — A2A-compatible laboratory',
     '## Priority 17 — Required promotion artifacts',
+    '## Completion rule'
+  ],
+  'docs/MASTER-TODO-EPISTEMIC-FABRIC.md': [
+    '## Priority 0 — Protect current authority truth',
+    '## Priority 6 — Later work remains parked',
+    '## Completion rule'
+  ],
+  'docs/MASTER-TODO-CONTINUOUS-THREAT-INTELLIGENCE.md': [
+    '## Priority 0 — Protect current authority truth',
+    '## Priority 6 — Slice F live feed gate',
     '## Completion rule'
   ],
   'docs/ROADMAP.md': ['## Promotion rules', '## Current Phase 2'],
@@ -124,10 +298,118 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Documentation and claims maintenance',
     '## Current non-claims'
   ],
+  'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md': [
+    '## Compatibility commitments effective immediately',
+    '## Workstream A — E0 inert contracts',
+    '## Workstream K — E8 unknown-to-experiment planning',
+    '## Current non-claims'
+  ],
   'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md': [
+    '## Purpose and boundary',
+    '## External trust bootstrap',
+    '## Exact control-plane binding',
+    '## Artifact bytes are a separate proof',
+    '## Current non-claims',
+    'host_mutation_authorized'
+  ],
+  'docs/operations/INSTALL-SESSION-V0.md': [
+    '## Why this exists',
+    '## Installed-state observation',
+    '## Decision semantics',
+    '## First-node proof relationship',
+    '## Non-claims',
+    'INSTALL_REVIEW',
+    'STOP_NEWER_PRESENT'
+  ],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/architecture/AGENT-COMMONS.md': [
+    'External agents may contribute evidence and proposals',
+    'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    'axiom-agent-challenge.v1',
+    'axiom-agent-feedback.v1',
+    '## Zero-cost participation principle',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'The immediate goal is a safer, more discoverable contribution surface'
+  ],
+  'docs/architecture/contracts/agent-challenge.v1.schema.json': [
+    'axiom-agent-challenge.v1',
+    'Zoverions/AXIOM-MESH',
+    'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    'compensation_committed',
+    'third_party_testing_authorized'
+  ],
+  'docs/architecture/contracts/agent-feedback.v1.schema.json': [
+    'axiom-agent-feedback.v1',
+    'Zoverions/AXIOM-MESH',
+    'public_disclosure_safe',
+    'contains_weaponized_exploit_detail',
+    'authority_requested'
+  ],
+  'docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md': [
+    '## Status',
+    '## Disclosure tracks (semantics only)',
+    '## Offline falsification subset (Phase-0)',
+    '## Non-claims',
+    'authority_effect'
+  ],
+  'docs/architecture/INTERROGATION-PLANE.md': [
+    '## Purpose and boundary',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'Semantic judgment is not authority',
+    'npm run interrogation:report',
+    '## Promotion boundary and non-claims'
+  ],
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md': [
+    '## Purpose and boundary',
+    'axiom-semantic-operation-proposal.v0',
+    'Semantic judgment is not authority',
+    'Needle',
+    '## Non-claims',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json': [
+    'axiom-semantic-operation-proposal.v0',
+    'authority_effect',
+    'runtime_activation'
+  ],
+  'docs/architecture/OPERATION-PROPOSAL-BINDING.md': [
+    '## Purpose and boundary',
+    'axiom-operation-proposal-binding.v0',
+    'A binding is evidence, never permission',
+    'Reflect.ownKeys',
+    '## Check order and closed reason codes',
+    '## Non-claims'
+  ],
+  'docs/architecture/contracts/operation-proposal-binding.v0.schema.json': [
+    'axiom-operation-proposal-binding.v0',
+    'authority_effect',
+    'runtime_activation',
+    'not-evaluated'
+  ],
+  'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md': [
+    '## Purpose and boundary',
+    'axiom-specialist-harness-bridge.v0',
+    'A recommendation or output never grants authority',
+    '## Ceilings are a subset of the Autonomy Envelope',
+    '## Hard zeros and invariants',
+    'delegation_effect: none',
+    'population_effect: none',
+    '## Non-claims',
+    'authority_effect'
+  ],
+  'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md': [
+    '## Purpose and boundary',
+    'runtime_activation: false',
+    'No token, identity, confirmation UI, or receipt is authority by itself.',
+    '## Separate predicates',
+    '## Security key',
+    '## Required negative fixtures',
+    'exactly_once_claimed: false',
+    '## Non-claims'
+  ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
     '## Trust bootstrap and grants',
@@ -174,6 +456,50 @@ const REQUIRED_CONTENT = Object.freeze({
     'axiom-personal-agent-pack.v1',
     'secret_material_included'
   ],
+  'docs/architecture/contracts/threat-observation.v0.schema.json': [
+    'axiom-threat-observation.v0'
+  ],
+  'docs/architecture/contracts/threat-hypothesis.v0.schema.json': [
+    'axiom-threat-hypothesis.v0'
+  ],
+  'docs/architecture/contracts/reproduction-case.v0.schema.json': [
+    'axiom-threat-reproduction-case.v0'
+  ],
+  'docs/architecture/contracts/regression-candidate.v0.schema.json': [
+    'axiom-threat-regression-candidate.v0'
+  ],
+  'docs/architecture/contracts/threat-adaptation-receipt.v0.schema.json': [
+    'axiom-threat-adaptation-receipt.v0'
+  ],
+  'docs/architecture/contracts/research-source-manifest.v0.schema.json': [
+    'axiom-research-source-manifest.v0'
+  ],
+  'docs/architecture/contracts/research-knowledge-projection.v0.schema.json': [
+    'axiom-research-knowledge-projection.v0',
+    'axiom-research-claim-adjudication.v0',
+    'truth_established',
+    'authority_effect',
+    'instruction_authority'
+  ],
+  'docs/architecture/contracts/research-operation-candidate.v0.schema.json': [
+    'axiom-research-operation-candidate.v0',
+    'execution_authority'
+  ],
+  'docs/architecture/contracts/research-reproduction-evidence.v0.schema.json': [
+    'axiom-research-reproduction-evidence.v0',
+    'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/research-contribution.v0.schema.json': [
+    'axiom-research-contribution.v0',
+    'truth_established',
+    'authority_effect'
+  ],
+  'docs/architecture/contracts/research-relation.v0.schema.json': [
+    'axiom-research-relation.v0',
+    'independence_state',
+    'authority_effect'
+  ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
     '## 3. Adaptive assurance profiles',
@@ -206,6 +532,28 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Layer K — A2A compatibility',
     '## Layer L — Authenticated remote execution',
     '## Current non-claims'
+  ],
+  'docs/rebuild/PATH-OBSERVATION-EVIDENCE.md': [
+    '## Architectural rule',
+    '## Replay and provenance consistency',
+    'truth_established: false',
+    'authority_effect: none',
+    '## Threats covered by the v0 contract'
+  ],
+  'docs/rebuild/MEASUREMENT-SOURCE-ENVELOPES.md': [
+    '## Layered trust sequence',
+    'fresh signed claim != fresh source measurement != accurate measurement != authorized network effect',
+    'independent_reproduction_verified: false',
+    'measurement_accuracy_established: false',
+    'truth_established: false',
+    'authority_effect: none',
+    '## Threats covered in v0'
+  ],
+  'docs/rebuild/REQUIREMENTS.md': [
+    'SIEA-01',
+    'SIEA-05',
+    'SIEA-08',
+    'SIEA-12'
   ],
   'docs/rebuild/SOURCE-TRACEABILITY.md': [
     '## Current implementation trace',
@@ -259,7 +607,111 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': [
     '## Severity and activation',
     '## Signed evidence and CI gate',
+    '## Model behavior disclosure tracks',
     '## Residual limitations and pilot repetition'
+  ],
+  'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md': [
+    '## Security objective',
+    '## Threats and required controls',
+    '## Required negative tests',
+    '## Non-claims'
+  ],
+  'docs/security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md': [
+    '## Scope and non-claims',
+    'no live threat feed claim',
+    '## Authority non-amplification',
+    '## Deferred Slice C-G risks'
+  ],
+  'docs/superpowers/specs/2026-09-03-sovereign-information-evidence-authority-design.md': [
+    'Risk is not prohibition',
+    'Security gates and human interruptions are independent',
+    'Privacy must hold against correlation, not merely direct disclosure',
+    'Cross-domain knowledge is permitted; cross-domain dossiers are not the default mechanism',
+    'Provenance is not truth',
+    'available != reviewed'
+  ],
+  'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md': [
+    'Fresh-gate rule',
+    'Knowledge may inform authority',
+    '## 17. Migration contract',
+    '## 21. Stage 5B approval state'
+  ],
+  'docs/superpowers/specs/2026-09-10-agent-containment-information-flow-stage5b-design.md': [
+    'Fresh-gate rule',
+    'Intelligence may request authority',
+    '## 22. Migration contract',
+    '## 25. Stage 5B approval state'
+  ],
+  'docs/superpowers/specs/2026-09-10-continuous-threat-intelligence-defensive-adaptation-stage5b-design.md': [
+    'Fresh-gate rule',
+    'Threat intelligence may change what AXIOM tests',
+    '## 22. Migration and compatibility contract',
+    '## 26. Stage 5B approval state'
+  ],
+  'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md': [
+    'axiom-external-operation-offer.v0',
+    'grants_authority = false',
+    'Cognitive Federation'
+  ],
+  'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md': [
+    '### Task 1: Add the closed-world External Operation Offer contract',
+    'grants_authority: false',
+    'execution_effect: none'
+  ],
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': [
+    '## Delivery slices and merge order',
+    '## Task 1: Pure authority attenuation and v1 contract surface',
+    '## Stage D precondition: initialization runway',
+    '## Task 6: Transactionally ordered logical effect release',
+    'No Sandbox->Grid route is added'
+  ],
+  'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md': [
+    '## Fail-closed licence profile',
+    'model training: denied',
+    'redistribution: denied',
+    'latest-in-snapshot -> `currentness_state: unknown`',
+    'Knowledge remains evidence. It never becomes authority.'
+  ],
+  'docs/superpowers/specs/2026-09-16-agent-native-research-artifacts-v0-design.md': [
+    'Knowledge is not authority',
+    'Operation is not authority',
+    'Reproduction is not truth'
+  ],
+  'docs/superpowers/specs/2026-09-17-inference-measurement-substrate-v0-design.md': [
+    'Benchmark evidence is not capability authority',
+    '## 6. Validation and fail-closed behavior',
+    '## 9. First executable slice',
+    '## 10. Promotion boundary and non-claims'
+  ],
+  'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md': [
+    'The configured machine principal is the immutable root authority ceiling',
+    'Grid becomes the sole durable authority domain for mutable machine lifecycle',
+    'machine.principal.lifecycle.mutate',
+    'machine.effect.released',
+    'currentness evidence is non-authorizing'
+  ],
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': [
+    '## Gate 0 — exact candidate inventory',
+    '## Task 1 — common inert record envelope',
+    '## Explicitly out of scope',
+    '## Completion condition'
+  ],
+  'docs/superpowers/plans/2026-09-10-agent-containment-information-flow-f0-f1.md': [
+    '## Exact changed-file envelope',
+    '### Task 1: F0 closed contract schemas and semantic verifier',
+    '## F0/F1 acceptance matrix',
+    '## Explicit non-claims'
+  ],
+  'docs/superpowers/plans/2026-09-10-continuous-threat-intelligence-a-b.md': [
+    '## Exact changed-file envelope',
+    '### Task 1: Slice A closed threat-intelligence contracts',
+    '## Plan self-review results',
+    '## Landing gate'
+  ],
+  'docs/superpowers/plans/2026-09-16-agent-native-research-artifacts-v0.md': [
+    '## Exact changed-file envelope',
+    '### Task 1: RED contract and fixture surface',
+    '## Landing gate'
   ],
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
     '## Current-build setup boundary',
@@ -362,6 +814,61 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Automated source setup',
     'npm run network-policy:check',
     'not evidence of a live deployment'
+  ],
+  'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md': [
+    'Executive verdict',
+    'Gateway → Hypervisor → Sandbox → Grid',
+    'Promote only with evidence'
+  ],
+  'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md': [
+    'Frozen progression',
+    'Pilot'
+  ],
+  'docs/operations/OWNER-DECISION-LOG-2026-09.md': [
+    'Frozen progression',
+    'Hermes'
+  ],
+  'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md': [
+    'Least Authority',
+    'SEC-002',
+    'Outreach shortlist only'
+  ],
+  'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md': [
+    'pilot',
+    'continuity'
+  ],
+  'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md': [
+    'Verify',
+    'receipt'
+  ],
+  'docs/operations/AXIOM-VERIFY-MVP-RUN.md': [
+    'VERIFY-001',
+    'How to run',
+    'Integrity versus truth',
+    'experimental'
+  ],
+  'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': [
+    'Agent Runtime Adapter',
+    'read-only'
+  ],
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md': [
+    'provisional',
+    'get_code_identity',
+    'fixture-backed',
+    'Not production certification',
+    'pin_accepted'
+  ],
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md': [
+    'b6bcb3e791c673e63974029bbab40cc9326803ff',
+    'get_code_identity',
+    'identity-only',
+    'lazy installs',
+    'Not production certification',
+    'pin_accepted'
+  ],
+  'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': [
+    'AXIOM One',
+    'provider'
   ]
 });
 
@@ -369,12 +876,23 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': 8_000,
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md': 7_000,
+  'docs/MASTER-TODO-EPISTEMIC-FABRIC.md': 2_500,
   'docs/ROADMAP.md': 2_000,
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': 8_000,
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
+  'docs/ROADMAP-EXTENSION-EPISTEMIC-FABRIC.md': 4_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
+  'docs/architecture/AGENT-COMMONS.md': 7_000,
+  'docs/architecture/contracts/agent-challenge.v1.schema.json': 4_000,
+  'docs/architecture/contracts/agent-feedback.v1.schema.json': 5_000,
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
+  'docs/architecture/SEMANTIC-OPERATION-PROPOSAL.md': 2_000,
+  'docs/architecture/contracts/semantic-operation-proposal.v0.schema.json': 2_500,
+  'docs/architecture/OPERATION-PROPOSAL-BINDING.md': 4_000,
+  'docs/architecture/contracts/operation-proposal-binding.v0.schema.json': 3_000,
+  'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md': 4_000,
+  'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md': 5_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
@@ -385,14 +903,23 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 9_000,
   'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md': 7_000,
+  'docs/rebuild/PATH-OBSERVATION-EVIDENCE.md': 6_000,
+  'docs/rebuild/MEASUREMENT-SOURCE-ENVELOPES.md': 7_000,
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': 7_000,
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 7_000,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
+  'docs/superpowers/specs/2026-09-25-machine-principal-grid-currentness-v1-design.md': 15_000,
+  'docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md': 20_000,
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
+  'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md': 4_000,
+  'docs/superpowers/specs/2026-09-07-epistemic-fabric-stage5b-design.md': 8_000,
+  'docs/superpowers/plans/2026-09-07-epistemic-fabric-stage5b-e0-e1.md': 5_000,
+  'docs/superpowers/specs/2026-09-16-external-operation-offer-v0-design.md': 5_000,
+  'docs/superpowers/plans/2026-09-16-external-operation-offer-v0.md': 5_000,
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,
@@ -405,13 +932,25 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': 6_000,
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': 8_000,
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': 8_000,
+  'docs/reviews/FOUNDATIONAL-STRENGTH-AUDIT-2026-09-05.md': 8_000,
+  'docs/operations/FOUNDATIONAL-EXECUTION-PACK-2026-09.md': 3_000,
+  'docs/operations/OWNER-DECISION-LOG-2026-09.md': 1_500,
+  'docs/operations/INDEPENDENT-REVIEWER-SHORTLIST-2026-09.md': 5_000,
+  'docs/operations/PILOT-EXTERNAL-EVIDENCE-CHECKLIST.md': 4_000,
+  'docs/operations/AXIOM-VERIFY-MVP-SCOPE.md': 2_500,
+  'docs/operations/AXIOM-VERIFY-MVP-RUN.md': 800,
+  'docs/operations/RUNTIME-ADAPTER-FIRST-PIN.md': 3_000,
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md': 2_000,
+  'docs/operations/HERMES-RUNTIME-002-IDENTITY-THREAT-INVENTORY.md': 4_000,
+  'docs/operations/AXIOM-ONE-PROVIDER-WEDGE.md': 2_500,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 
 export function markdownLocalTargets(markdown) {
   const targets = [];
   const pattern = /!?\[[^\]]*]\(([^)]+)\)/g;
-  for (const match of markdown.matchAll(pattern)) {
+  const scan = String(markdown).replace(/```[\s\S]*?```/g, '');
+  for (const match of scan.matchAll(pattern)) {
     const raw = match[1].trim().replace(/^<|>$/g, '');
     if (
       !raw
@@ -426,6 +965,7 @@ export function markdownLocalTargets(markdown) {
 
 export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH_ROOT)) {
   verifyRuntimeAdapterContract();
+  verifyRuntimeConnectorFabricContracts();
   await verifyRepositoryMarkdownBoundary(repositoryRoot);
   await verifySupportedDocumentationBoundary(repositoryRoot);
   const contents = new Map();
@@ -501,7 +1041,7 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
     ['mesh/README.md', `covers all ${gatewayRoutes} authenticated`],
     ['docs/PRODUCTION-GRADE.md', `default-deny ${network.routes}-route policy`],
     ['docs/PRODUCTION-GRADE.md', `${gatewayRoutes} authenticated Gateway routes`],
-    ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
+    ['mesh/PRODUCTION.md', `policy additionally authorizes exactly ${network.routes} currently allowed internal`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
     ['docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md', `and ${network.routes} exact route`],
@@ -564,7 +1104,7 @@ async function verifySupportedDocumentationBoundary(repositoryRoot) {
 
 export async function repositoryMarkdownFiles(directory, prefix = '') {
   const files = [];
-  const excludedDirectories = new Set(['.git', '.data', 'node_modules']);
+  const excludedDirectories = new Set(['.git', '.data', '.agents', 'node_modules']);
   const entries = await readdir(directory, { withFileTypes: true });
   if (prefix && entries.some(entry => entry.name === '.git')) return files;
   for (const entry of entries) {
