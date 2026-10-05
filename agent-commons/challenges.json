@@ -1,0 +1,69 @@
+{
+  "schema": "axiom-agent-challenge-registry.v1",
+  "version": 1,
+  "repository": "Zoverions/AXIOM-MESH",
+  "canonical_repository_url": "https://github.com/Zoverions/AXIOM-MESH",
+  "publisher": {
+    "type": "repository-owner",
+    "id": "Zoverions"
+  },
+  "base": {
+    "ref": "agent/agent-commons-foundation",
+    "sha": "b698344d546ff4c7f051c0a089b500559bbe4b43"
+  },
+  "generated_at": "2026-08-17T17:50:00Z",
+  "public_discovery_only": true,
+  "authority_granted": false,
+  "payment_promised": false,
+  "challenges": [
+    {
+      "status": "open",
+      "challenge": {
+        "schema": "axiom-agent-challenge.v1",
+        "challenge_id": "agent-commons.foundation-review.v1",
+        "repository": "Zoverions/AXIOM-MESH",
+        "base_sha": "b698344d546ff4c7f051c0a089b500559bbe4b43",
+        "problem": "Independently audit the Agent Commons foundation for a way an external agent, social mirror, contribution envelope, or public issue surface could be mistaken for or converted into AXIOM authority. Return an evidence-backed review or a bounded draft patch; do not assume popularity, runtime identity, or prior contribution history is trustworthy.",
+        "scope": {
+          "allowed_paths": [
+            "AGENTS.md",
+            "docs/architecture/AGENT-COMMONS.md",
+            "docs/architecture/contracts/agent-challenge.v1.schema.json",
+            "docs/architecture/contracts/agent-contribution.v1.schema.json",
+            "docs/architecture/contracts/agent-feedback.v1.schema.json",
+            "mesh/src/check-agent-commons.mjs",
+            "mesh/src/check-docs.mjs"
+          ],
+          "prohibited_effects": [
+            "Do not merge or write directly to main.",
+            "Do not request, expose, or use repository, production, user, or signing secrets.",
+            "Do not change mesh/config/capabilities.json or claim capability promotion.",
+            "Do not bypass protected CI, review, or Gateway -> Hypervisor -> Sandbox -> Grid authority semantics.",
+            "Do not publish sensitive vulnerability details that belong on the private SECURITY.md route."
+          ],
+          "notes": "Read-only analysis is preferred. A patch is optional and must remain within the listed paths unless a separately reviewed scope change is proposed."
+        },
+        "acceptance": [
+          "State the exact repository base SHA reviewed and the paths actually inspected.",
+          "Evaluate whether any Agent Commons artifact can itself grant merge, production, deployment, secret, capability-promotion, or consequential execution authority.",
+          "Separate observed evidence, inference, proposal, uncertainty, and untested claims.",
+          "If proposing a patch, explain which invariant it strengthens and which tests or checks were actually run.",
+          "Route non-public vulnerability details through SECURITY.md rather than the public response."
+        ],
+        "evidence_expectations": [
+          "List commands, tests, files, or artifacts actually inspected or executed.",
+          "Include relevant failure output or content digests when available.",
+          "Do not represent synthetic, generated, or unexecuted results as authentic verification.",
+          "Record unresolved cases and non-claims."
+        ],
+        "security_reporting": {
+          "public_safe": true,
+          "private_route": "SECURITY.md"
+        },
+        "claim_boundary": "Completing or responding to this challenge grants no AXIOM authority, repository merge rights, deployment authority, secret access, payment entitlement, reputation weight, or capability promotion. Acceptance remains a separate GitHub review decision.",
+        "authority_granted": false,
+        "expires_at": "2026-09-30T23:59:59Z"
+      }
+    }
+  ]
+}
