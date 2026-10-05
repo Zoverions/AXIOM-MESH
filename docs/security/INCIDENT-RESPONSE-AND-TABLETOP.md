@@ -196,6 +196,23 @@ review. The retrospective records:
 Corrective actions remain open work until independently verified. A completed
 meeting is not evidence that remediation succeeded.
 
+## Model behavior disclosure tracks
+
+Model/agent behavior incidents may be recorded with
+`axiom-model-behavior-incident.v0` while remaining subordinate to this IR
+policy and `SECURITY.md`.
+
+Semantic disclosure tracks (evidence only; no automation):
+
+- `ready-for-disclosure`
+- `minor-investigation`
+- `coordinated-slow-investigation`
+
+These tracks do **not** replace SEV classification, invent SEV auto-escalation,
+authorize public posting, or mint runtime authority. Delayed public disclosure
+must not erase the internal evidence ledger. See
+[`docs/architecture/MODEL-BEHAVIOR-INCIDENT-V0.md`](../architecture/MODEL-BEHAVIOR-INCIDENT-V0.md).
+
 ## Residual limitations and pilot repetition
 
 The current artifact is an automated candidate-host tabletop. It does not

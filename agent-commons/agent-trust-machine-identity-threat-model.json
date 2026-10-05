@@ -1,0 +1,65 @@
+{
+  "schema": "axiom-agent-machine-identity-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a1-machine-identity",
+  "scope": "Portable issuer-signed machine identity credentials, key epochs, rotation/recovery history, revocation records and supplied-evidence currentness. This model does not promote legal identity, global currentness, reputation or runtime authority.",
+  "core_invariant": "A machine identity credential proves only the reviewed issuer/key/principal continuity encoded by the credential and supplied lifecycle evidence. It does not grant authority, prove legal personhood, truth, reputation or global currentness.",
+  "attack_classes": [
+    {
+      "id": "issuer-or-operational-key-substitution",
+      "risks": ["replace issuer trust root", "replace operational public key", "sign with a different operational private key"],
+      "controls": ["Ed25519 issuer signature", "issuer key digest", "operational key digest", "principal/credential digest binding", "strict expected-principal verification"]
+    },
+    {
+      "id": "stale-epoch-resurrection",
+      "risks": ["reuse retired credential", "present predecessor as current after rotation", "skip key epochs"],
+      "controls": ["contiguous key epochs", "predecessor credential digest", "monotonic valid_from", "history verification", "A6 retained latest-head currentness for new-effect decisions"]
+    },
+    {
+      "id": "forbidden-key-reuse",
+      "risks": ["reuse operational key across rotation epochs", "recovery silently restores compromised key"],
+      "controls": ["credential-history operational-key uniqueness", "rotation/recovery predecessor linkage", "revocation disposition evidence"]
+    },
+    {
+      "id": "principal-definition-substitution",
+      "risks": ["bind credential to broader principal definition", "change sponsor/runtime/authority digest while preserving identity label"],
+      "controls": ["exact principal-definition digest", "principal-authority digest", "sponsor/runtime/software bindings", "A2 reproduces the same canonical principal commitment"]
+    },
+    {
+      "id": "revocation-or-compromise-omission",
+      "risks": ["drop issuer revocation", "treat compromised credential as active", "rollback local currentness evidence"],
+      "controls": ["issuer-signed revocation record", "exact credential/key epoch binding", "A6 retained checkpoint chain detects omitted retained revocation evidence", "known-active vs global-currentness distinction"]
+    },
+    {
+      "id": "identity-overclaim",
+      "risks": ["credential presented as authority", "credential presented as legal identity/personhood", "credential presented as reputation/truth"],
+      "controls": ["authority_effect=none", "delegation_effect=none", "legal_identity_claimed=false", "personhood_claimed=false", "reputation_claimed=false", "truth_claimed=false", "global_currentness_claimed=false"]
+    }
+  ],
+  "known_nonclaims": [
+    "A1 does not grant execution or delegation authority.",
+    "A1 does not prove legal identity or personhood.",
+    "A1 does not prove reputation, competence or truth.",
+    "A1 currentness is limited to the exact supplied issuer evidence.",
+    "A1 alone does not detect retained-head rollback across independent restart; A6a supplies a laboratory primitive for that purpose.",
+    "A1 does not modify the production capability registry."
+  ],
+  "next_gates": [
+    "independent security review of identity lifecycle and canonicalization",
+    "recovery/rotation operator runbook exercise",
+    "authoritative capability-registry entry only after ATP promotion review",
+    "bind independently retained currentness evidence before consequential effects"
+  ],
+  "boundaries": {
+    "authority_granted": false,
+    "delegation_authority_granted": false,
+    "legal_identity_claimed": false,
+    "personhood_claimed": false,
+    "reputation_claimed": false,
+    "truth_claimed": false,
+    "global_currentness_claimed": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "capability_promotion_enabled": false
+  }
+}

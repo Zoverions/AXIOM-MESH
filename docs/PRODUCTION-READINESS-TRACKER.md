@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-08-17
+**Updated:** 2026-09-22
 
 **Active build:** `0.12.0-dev.3`
 
@@ -22,10 +22,14 @@ frontier laboratories do not replace production-pilot evidence.
 | Gate | Status | Evidence | Remaining action |
 |---|---|---|---|
 | Source integrity | Pass | Clean-room tree, source checksum, SBOM, provenance, exact zero-dependency locks | Maintain for every candidate/release |
-| Capability claims | Pass | Registry/generated status/claim markers; 49 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
+| Capability claims | Pass | Registry/generated status/claim markers; 50 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
 | Kernel tests | Pass | Protected Clean Kernel suite | Require on protected `main` |
+| Machine response-lifetime recheck (#1840) | Pass for declared-lifetime boundary | Request admission plus response inspection revalidate declared machine expiry; successful outputs and handler-derived controlled errors are suppressed after expiry | Preserve direct/HTTP regressions; this does not establish live revocation currentness, trusted time, atomic release, rollback, or worker termination |
+| Capability single-use durability | Pass for literal replay and one exact native invocation | Grid-backed consume-before-execute; deterministic per-JTI consume event plus deterministic semantic marker over exact signed subject/issuer/audience/intent/plan/policy/invocation/tool bindings; Grid-signed receipt; same-process, fresh-JTI, restart and concurrency negatives | Preserve the two independent predicates. This does not yet establish cross-intent mandate binding, canonical-equivalent effect deduplication, multi-execution budgets, delegated-child accounting, exactly-once external effects, or automatic retry. |
+| Authority/evidence canonical input domain | Pass for current kernel | Canonical hashing accepts JSON-compatible plain data only and rejects class/custom prototypes, accessors, non-enumerable or symbol-keyed state, sparse/custom arrays, with dedicated negative regressions | Maintain call-site normalization and plain-data invariants on every authority/evidence schema change |
 | Cross-platform verification | Pass for current source | Linux/container + hosted Windows path/clock/documentation verification | Keep both protected surfaces green |
-| Source setup and dependency audit | Pass | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; candidate production image 24.19.0; npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof | Maintain exact machine-readable policy and negative tests |
+| Source setup and dependency audit | Pass | Node 22.23.2+ shared-host/source compatibility; exact hosted-production/security CI pin 22.23.2 or protected Node 24.14.0+; protected CI/.node-version 24.18.0; candidate production image 24.19.0; Node 22 bundled npm 10.9.8+ or npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof | Maintain exact machine-readable hosted-production pin, negative tests, private credentials, mutual TLS, verified deny-egress, and separate production-promotion authority |
+| Fresh-host installation | Non-mutating planner + signed release verifier + inert Install Session v0 classifier implemented; mutating installer not implemented | Exact targets/policy; OCI-first blockers/prerequisites; external Ed25519 release trust; separate artifact-byte verification; live-local versus supplied/synthetic plan provenance; explicit INSTALL/VERIFY/REPAIR/UPGRADE/RECOVERY review states and newer/diverged/partial-secret/uncertain hard stops; all outputs zero-mutation | Reconcile with first-node proof, define separately authorized privileged install-session/resume/rollback boundary, then run disposable clean-Linux install lifecycle evidence; do not treat any current review state as mutation permission |
 | Container source policy | Pass | Digest-pinned Dockerfile/Compose release checks | Maintain exact production image/base digest |
 | Container build/readiness | Pass for candidate | Protected image build, readiness, authenticated operations, teardown | Repeat for promoted pilot image/platform |
 | Container network boundary | Pass for candidate topology | `network_mode: none`, Unix-socket ingress, route rejection, public TCP negative probe | Repeat and independently inspect pilot host/daemon policy |
@@ -41,7 +45,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Resilience | Pass for automated candidate | Oversized-body, rate-limit, dependency suspension/loss, fail-closed exit, state-preserving restart | Pilot cgroup/disk/traffic/replacement scenarios |
 | Internal transport | Pass for single-host candidate | TLS 1.3, Ed25519 identities, active-leaf pinning, rotation, retired-leaf rejection, rollback | Pilot CA custody/rollout/compromise recovery/independent review |
 | Independent service units | Pass for single-host candidate | Per-unit identities, Grid-only state, segmented internal networks, Sandbox-only recovery | Pilot orchestrator resource/network/update/rollback evidence |
-| Service network policy | Pass for reference single-host topology | Exact default-deny 41-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding | Reproduce on pilot and future independent hosts |
+| Service network policy | Pass for reference single-host topology | Exact default-deny 42-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding; Education contributes one exact Hypervisor-to-Grid POST edge only | Reproduce on pilot and future independent hosts; preserve wrong-caller/wrong-method Education denials |
 | Node discovery/scheduling | Pass for single-Grid reservation candidate | Signed admissions, filtered discovery, deterministic encrypted leases, capacity/security/owner/domain/expiry/quarantine | Remote dispatch, measured resources, endpoint health, result provenance |
 | Online causal exchange | Pass for two-Grid candidate | Pinned Grid evidence, signed bundles, encrypted ordered queues, duplicate preflight, independent approval, visible conflicts/convergence | Independent-host WAN loss/delay/clock/backlog/custody evidence |
 | Secret/policy providers | Pass for signed protocol/reference adapter | Independent signers, pinned artifacts, nonce-bound inventories, private generation, invalid-signer rejection | Pilot vault/orchestrator adapter/workload identity |
@@ -52,25 +56,30 @@ frontier laboratories do not replace production-pilot evidence.
 | Incident response | Pass for automated candidate | Deterministic severity, independent roles, authority-reducing containment, linked controls | Facilitated pilot exercise with named roster |
 | Pilot evidence intake | Pass for verifier contracts; authentic package pending | Exact authority policy, five roles, 720-hour contract, 13 canonical envelopes, semantic/signature checks | Collect authentic evidence and separate promotion decision |
 | Agent Runtime Adapter v1 | Pass for contract + synthetic reference only | Byte-pinned v1 schema, contract verifier, 28-case synthetic drill, commit-bound evidence | Select/review one maintained runtime and prove bounded real adapter before exposure |
+| Repository-native Security Agent Cell | Pass for bounded evidence workflow; not runtime authority | Public scout/reproducer/verifier/patcher/triage roles, canonical red-team lifecycle, fresh-evidence/independence rules, sensitive-report diversion, protected CI | Run bounded pilots and measure evidence quality; merge/deploy/credential/protocol/production/spending/hardware/destructive authority remains separately authorized |
+| Portable machine identity | Pass for identity-evidence laboratory only | Issuer-signed principal/sponsor/key/runtime/history/rotation/recovery/expiry/revocation/currentness evidence with explicit zero-authority semantics | Add separately reviewed currentness/contributor-session/delegation/handoff steps before any runtime authority proposal; no self-service enrollment or delegation claimed |
 | Resolver-backed dynamic input | Pass for production-unreachable core | Fresh eligibility, signed repository plan, resolver admission/review, exact-one mapping package, application observation, target gates | Keep production mapping/policy/runtime closed pending explicit activation review |
 | Prepared-effect authority | Pass for production-unreachable core | Authenticated Grid approval read; one transaction records `approval.consumed` + `external.effect.prepared`; concurrency yields one durable winner | Maintain exact binding; activation remains separate |
 | External-effect outbox | Pass for production-unreachable core | Requires durable prepare before operator invocation; uncertain operator/receipt remains prepared; verified receipt required before `external.effect.completed`; restart/idempotency/completion-failure tests | No production route/mapping; retain evidence-first semantics for future adapters |
 | GitHub docs repository operator | Pass for production-unreachable prototype | Independently verifies durable Grid prepare before any GitHub request; fixed repo; exact planned docs paths/content; deterministic effect branch; creates/recovers **open draft PR**; stale-main/path/content/proof/idempotency/transport-loss tests | Production mapping/policy/runtime/credential/egress/rollback/review gate remains closed; **no merge/direct-main authority** |
 | Release governance | Pass for development line | Protected `main`, release verifier, canonical docs boundary, immutable v0.11 baseline | Publish new immutable dossier only after 0.12 promotion |
 
-The runtime-adapter and repository-effect rows intentionally record **built
-safety mechanisms without capability promotion**. The GitHub operator can be
-real source and tests while the supported runtime has no
-`repository.docs.pull-request.create` policy/registry/route that can invoke it.
+The runtime-adapter, repository-effect, Security Agent Cell, and portable-identity
+rows intentionally record **built safety/evidence mechanisms without capability
+or production-authority promotion**. The GitHub operator can be real source and
+tests while the supported runtime has no `repository.docs.pull-request.create`
+policy/registry/route that can invoke it; likewise, a machine identity credential
+or agent security result does not itself authorize any AXIOM effect.
 
 ## Human-product preview status
 
 | Product gate | Current state | Required before exposure/promotion |
 |---|---|---|
 | Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 31-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
+| Axiom Education | In progress; independent downstream application with Mesh convergence candidate | Governed learner memory/write/self-read substrate is being converged onto current Mesh without production policy activation; after Mesh merge, pin exact compatibility in `Zoverions/Axiom-Education`, update feature-adoption ledger, and require downstream protected CI before claiming adoption |
 | Owner-local social substrate | In progress: intent-authorized local actor/persona/publication create/supersede/retract plus owner-derived `/v1/social`; A2 publication projection; no federation or network distribution | Complete exact-head owner-read evidence, then AXIOM One UI; later exchange/federation requires a separate protocol/security gate |
 | Remote social review inspection | Candidate mechanism implemented; not production-promoted: owner-only `/v1/social/remote-review`, owner derived from authenticated principal, query overrides rejected, minimized G5A projection, accepted `SocialGridStore`, no remote-schema creation and no social/network/authority effect | Same-head Clean Kernel/Windows/chain evidence is required before PR readiness; any staging/admission/follow/transport/federation remains a separate gate |
-| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete local social UI, onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
+| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views; LAB-GRADE installable manifest with exact local PNG/maskable icons, stylized screenshots, shortcuts, and shell-cache verification | Complete local social write UI, onboarding, session/device security, production browser evidence, accessibility/usability, signed packaging, safe update/rollback/recovery/uninstall, and support |
 | Human authority explanations | Experimental bounded slice (`UX-003`): five-action review, stable outcomes/events, approval states, raw evidence, uncertainty recovery | Authoritative policy-bound broader consequential plan/execute, reversible approval actions, consent/revocation journeys, comprehension evidence |
 | Governed memory lifecycle | Experimental (`UX-004`): owner create/list, three fixed provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives | Edge deletion, bounded bulk ingest, authorized hard deletion, restore/recovery, download threat analysis, human lifecycle evidence |
 | Browser security | Planned (`UX-005`) | CSP, CSRF, origin, session/cookie/token, clickjacking, device revocation, storage inspection |
@@ -123,9 +132,11 @@ The following block production promotion of the currently exposed kernel:
    deployment/pilot configuration; and
 9. authentic exact pilot evidence package plus separate promotion decision.
 
-The repository-effect and runtime-adapter prototypes are not current pilot
-blockers because they are production-unreachable. They become separate
-promotion gates if a future change proposes to activate them.
+The repository-effect, runtime-adapter, Security Agent Cell, and portable-machine-
+identity mechanisms are not current pilot blockers because they do not expand
+the supported production-reachable authority surface. They become separate
+promotion gates if a future change proposes to activate new runtime/effect or
+delegated authority through them.
 
 ## Gate owners
 
@@ -156,12 +167,14 @@ See the [pilot dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md) and
 
 ## Reassessment rule
 
-Any change to authentication, machine ceilings, policy, grants, Sandbox
+Any change to authentication, machine ceilings, policy, capability-consumption
+or single-use semantics, authority/evidence canonicalization, grants, Sandbox
 execution, Grid schema/evidence/continuity semantics, encryption, backup,
 service topology, container base, secret handling, browser sessions, adapter
 egress, provider scope, resolver activation, outbox/operator execution,
-external runtime integration, remote execution, settlement, domain authority,
-or release gates reopens the applicable gate.
+external runtime integration, portable/delegated identity authority, remote
+execution, settlement, domain authority, downstream application contracts, or
+release gates reopens the applicable gate.
 
 Production promotion is never inherited automatically by later commits,
 deployments, applications, adapters, runtimes, resolver mappings, or

@@ -16,8 +16,8 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.schema, 'axiom-one-preview.v1');
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.status, 'experimental-local-preview');
-  assert.equal(result.surfaces, 7);
-  assert.equal(result.gateway_routes, 14);
+  assert.equal(result.surfaces, 12);
+  assert.equal(result.gateway_routes, 16);
   assert.equal(result.bind_host, '127.0.0.1');
   assert.equal(result.gateway_target, 'same-origin-relative-v1');
   assert.equal(result.token_persistence, 'memory-only');
@@ -25,7 +25,8 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.public_shell_cache, true);
   assert.equal(result.api_cache, false);
   assert.equal(result.remote_origins_allowed, false);
-  assert.equal(result.explained_actions, 5);
+  assert.equal(result.explained_actions, 6);
+  assert.equal(result.circle_templates, 5);
   assert.equal(result.memory_lifecycle_status, 'experimental-bounded-lifecycle');
   assert.equal(result.provenance_relations, 3);
   assert.equal(result.self_links, false);
@@ -37,7 +38,23 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.match(result.assets_digest, /^[a-f0-9]{64}$/);
 
   const app = await readFile(new URL('../../apps/axiom-one/app.mjs', import.meta.url), 'utf8');
+  assert.match(app, /state\.client\.call\('social\.get'/);
+  assert.match(app, /state\.client\.call\('consents\.list'/);
+  assert.match(app, /state\.client\.call\('audit\.verify'/);
+  assert.match(app, /human\.capability/);
+  assert.match(app, /human\.consent/);
+  assert.match(app, /human\.verification/);
+  assert.match(app, /response\.network_effect === 'none'/);
+  assert.match(app, /circle-templates-v0\.json/);
+  assert.match(app, /membership_authority !== false/);
+  assert.doesNotMatch(app, /action:\s*'social\./);
+  assert.doesNotMatch(app, /action:\s*'circle\./);
   assert.doesNotMatch(app, /localStorage|sessionStorage|indexedDB|document\.cookie|innerHTML/);
+  assert.match(app, /action:\s*'ai\.local-organize'/);
+  assert.match(app, /buildBrowserOrganizeDraft/);
+  const organize = await readFile(new URL('../../apps/axiom-one/local-organize.mjs', import.meta.url), 'utf8');
+  assert.match(organize, /LOCAL_ORGANIZE_PROVIDER_ID/);
+  assert.match(organize, /INTEGRITY_VS_TRUTH/);
 });
 
 test('AXIOM One preview rejects non-loopback and weakened policy', async () => {
@@ -141,6 +158,34 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     kernel_version: '0.12.0-dev.3',
     support: 'experimental-local-preview'
   });
+
+  const circleTemplates = await fetch(`${preview.url}/mesh/config/circle-templates-v0.json`);
+  assert.equal(circleTemplates.status, 200);
+  assert.match(circleTemplates.headers.get('content-type') ?? '', /^application\/json/);
+  const circleCatalog = await circleTemplates.json();
+  assert.equal(circleCatalog.schema, 'axiom-circle-template-catalog.v0');
+  assert.equal(circleCatalog.status, 'inert-template-library');
+  assert.equal(circleCatalog.authority_effect, 'none');
+  assert.equal(circleCatalog.network_effect, 'none');
+  assert.equal(circleCatalog.runtime_activation, false);
+  assert.ok(circleCatalog.templates.length >= 5);
+  assert.ok(circleCatalog.templates.every(template => (
+    template.execution_authority === false
+    && template.membership_authority === false
+    && template.policy_floor === 'raise-only'
+  )));
+  assert.equal(observed.length, 0, 'static Circle templates must not reach Gateway');
+
+  const circleRuntime = await fetch(`${preview.url}/v1/circles`, {
+    headers: {
+      authorization: 'Bearer preview-fixture-token',
+      origin: preview.url,
+      'sec-fetch-site': 'same-origin'
+    }
+  });
+  assert.equal(circleRuntime.status, 404);
+  assert.equal((await circleRuntime.json()).error.code, 'not_found');
+  assert.equal(observed.length, 0, 'unlisted Circle runtime path must not reach Gateway');
 
   const status = await fetch(`${preview.url}/v1/status`, {
     headers: {

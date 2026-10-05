@@ -1,0 +1,13 @@
+case_id	encoded_row
+wrong_columns	wrong_columns\ttrue\ttrue\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a
+malformed_case_id	!bad\ttrue\ttrue\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+bad_grant_bool	bad_grant_bool\tyes\ttrue\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+bad_intent_bool	bad_intent_bool\ttrue\tyes\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+unverified_grant	unverified_grant\tfalse\ttrue\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+unbound_intent	unbound_intent\ttrue\tfalse\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+unsorted_grant_set	unsorted_grant_set\ttrue\ttrue\taction:b,action:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+duplicate_grant_set	duplicate_grant_set\ttrue\ttrue\taction:a,action:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a
+unsorted_intent_set	unsorted_intent_set\ttrue\ttrue\taction:a,action:b\tpurpose:a\tdestination:a\tresource:a\taction:b,action:a\tpurpose:a\tdestination:a\tresource:a
+duplicate_intent_set	duplicate_intent_set\ttrue\ttrue\taction:a\tpurpose:a\tdestination:a\tresource:a\taction:a\tpurpose:a\tdestination:a\tresource:a,resource:a
+malformed_scope_token	malformed_scope_token\ttrue\ttrue\taction bad\tpurpose:a\tdestination:a\tresource:a\t\t\t\t
+overlong_scope_token	overlong_scope_token\ttrue\ttrue\taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tpurpose:a\tdestination:a\tresource:a\t\t\t\t

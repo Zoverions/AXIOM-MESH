@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-epistemic-reproducibility-closure.v0",
+  "title": "AXIOM Epistemic Reproducibility Closure v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "version", "status", "closure_id", "target", "verifier", "environment",
+    "dependencies", "dependency_closure_digest", "coverage_claim", "replay", "result",
+    "limitations", "recorded_at", "contains_secret_material", "canonical_state",
+    "content_digest", "authority_effect", "network_effect", "execution_authority"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-epistemic-reproducibility-closure.v0" },
+    "version": { "const": "0.1.0" },
+    "status": { "const": "inert-evidence" },
+    "closure_id": { "$ref": "#/$defs/id160" },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_ref", "target_kind", "target_digest"],
+      "properties": {
+        "target_ref": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "target_kind": {
+          "enum": [
+            "epistemic_claim", "formal_statement", "software_build", "experiment",
+            "simulation", "benchmark", "dataset", "other"
+          ]
+        },
+        "target_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verifier_id", "verifier_version", "implementation_digest", "profile_digest"],
+      "properties": {
+        "verifier_id": { "$ref": "#/$defs/id160" },
+        "verifier_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "implementation_digest": { "$ref": "#/$defs/digest" },
+        "profile_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment_digest"],
+      "properties": {
+        "environment_digest": { "$ref": "#/$defs/digest" },
+        "runtime_ref": { "$ref": "#/$defs/id160" }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/dependency" }
+    },
+    "dependency_closure_digest": { "$ref": "#/$defs/digest" },
+    "coverage_claim": {
+      "enum": ["target_only", "partial_closure", "declared_closure_checked", "fresh_rebuild"]
+    },
+    "replay": { "$ref": "#/$defs/replay" },
+    "result": { "enum": ["pass", "fail", "indeterminate", "error"] },
+    "limitations": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    },
+    "recorded_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "contains_secret_material": { "const": false },
+    "canonical_state": { "const": "proposal" },
+    "content_digest": { "$ref": "#/$defs/digest" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "execution_authority": { "const": false }
+  },
+  "$defs": {
+    "id160": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dependency_kind", "dependency_ref", "dependency_digest", "disposition"],
+      "properties": {
+        "dependency_kind": {
+          "enum": [
+            "formal_library", "software_package", "dataset", "artifact",
+            "configuration", "environment", "source", "other"
+          ]
+        },
+        "dependency_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "dependency_digest": { "$ref": "#/$defs/digest" },
+        "disposition": {
+          "enum": [
+            "freshly_checked", "reused_with_bound_verification",
+            "reused_without_recheck", "unavailable"
+          ]
+        },
+        "verification_evidence_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "child_closure_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "child_closure_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "replay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "actor_ref", "run_id", "input_digest", "output_digest"],
+      "properties": {
+        "mode": {
+          "enum": [
+            "original", "same_context_replay", "separate_context_replay", "unknown_context_replay"
+          ]
+        },
+        "actor_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "run_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "input_digest": { "$ref": "#/$defs/digest" },
+        "output_digest": { "$ref": "#/$defs/digest" },
+        "prior_run_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "prior_actor_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "prior_environment_digest": { "$ref": "#/$defs/digest" },
+        "separation_evidence_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+        }
+      }
+    }
+  }
+}

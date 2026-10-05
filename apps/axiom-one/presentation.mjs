@@ -32,6 +32,10 @@ const ACTION_BOUNDARIES = Object.freeze({
   'export.create': Object.freeze({
     consequence: 'local-selective-export-write',
     confirmations: Object.freeze([])
+  }),
+  'ai.local-organize': Object.freeze({
+    consequence: 'non-consequential-local-draft',
+    confirmations: Object.freeze([])
   })
 });
 
@@ -44,7 +48,10 @@ export function createHumanPresenter(contract) {
     intentSuccess: input => intentSuccess(stableContract, input),
     intentFailure: input => intentFailure(stableContract, input),
     approval: (record, now) => approval(stableContract, record, now),
-    receipt: event => receipt(stableContract, event)
+    receipt: event => receipt(stableContract, event),
+    capability: entry => capability(entry),
+    consent: (record, now) => consent(record, now),
+    verification: result => verification(result)
   });
 }
 
@@ -166,7 +173,7 @@ function requestPreview(contract, request) {
     kind: 'request-preview',
     state: 'review',
     tone: 'pending',
-    badge: 'Review before sending',
+    badge: request.action === 'ai.local-organize' ? 'Review before organizing' : 'Review before sending',
     title: action.label,
     summary: 'This is a browser explanation of the exact request, not an authoritative kernel plan or grant.',
     facts: [
@@ -187,11 +194,17 @@ function requestPreview(contract, request) {
         : []),
       fact('Independent approval', action.independent_approval ? 'Required' : 'Not required')
     ],
-    guidance: [
-      'Selecting Send authorizes only submission of the request shown here.',
-      'The Gateway and active node policy remain authoritative and may deny it.',
-      'Change request returns to editing without sending network traffic.'
-    ],
+    guidance: request.action === 'ai.local-organize'
+      ? [
+        'Selecting Run produces a local draft suggestion only; it does not submit a Mesh intent.',
+        'The draft cannot approve, grant, or authorize Vault writes or other Mesh effects.',
+        'Saving requires a separate reviewed memory.put path.'
+      ]
+      : [
+        'Selecting Send authorizes only submission of the request shown here.',
+        'The Gateway and active node policy remain authoritative and may deny it.',
+        'Change request returns to editing without sending network traffic.'
+      ],
     retrySameRequest: false
   });
 }
@@ -348,6 +361,261 @@ function receipt(contract, event) {
     guidance: [
       'Integrity-linked evidence shows what this node recorded; it does not prove an external statement is true.',
       'Raw event payload and chain identifiers remain available below.'
+    ],
+    retrySameRequest: false
+  });
+}
+
+function capability(entry) {
+  if (!plainObject(entry)) throw new TypeError('Capability record is invalid');
+  for (const field of ['id', 'family', 'status', 'summary']) {
+    requireText(entry[field], `capability ${field}`);
+  }
+  if (!IDENTIFIER.test(entry.id)) throw new TypeError('Capability identifier is invalid');
+  const labels = {
+    implemented: 'Implemented',
+    adapter_required: 'Adapter required',
+    disabled: 'Disabled',
+    specified: 'Specified',
+    experimental: 'Experimental'
+  };
+  const implementation = labels[entry.status] ?? 'Unknown';
+  const knownStatus = Object.hasOwn(labels, entry.status);
+  const state = knownStatus ? entry.status : 'unknown';
+  const tone = !knownStatus
+    ? 'uncertain'
+    : entry.status === 'disabled'
+      ? 'blocked'
+      : 'pending';
+  const evidenceCount = Array.isArray(entry.evidence)
+    ? entry.evidence.filter(value => typeof value === 'string' && value.length).length
+    : 0;
+  return model({
+    kind: 'capability',
+    state,
+    tone,
+    badge: implementation,
+    title: entry.id,
+    summary: entry.summary,
+    facts: [
+      fact('Capability', entry.id),
+      fact('Family', entry.family),
+      fact('Implementation', implementation),
+      fact('Availability', 'Unknown — registry status is not runtime availability'),
+      fact('Authorization', 'Unknown — discovery does not grant authority'),
+      fact('Evidence sources', String(evidenceCount))
+    ],
+    guidance: [
+      'Capability discovery and implementation status do not grant authority.',
+      'Any consequential request must still pass the authenticated Gateway and active node policy.',
+      'Raw registry evidence remains available below.'
+    ],
+    retrySameRequest: false
+  });
+}
+
+function consent(record, now = new Date()) {
+  if (!plainObject(record)) return unknownConsent();
+  const current = now instanceof Date ? now : new Date(now);
+  if (Number.isNaN(current.valueOf())) return unknownConsent();
+
+  const requiredText = ['consent_id', 'subject', 'controller', 'purpose', 'created_at'];
+  const malformedCore = requiredText.some(field => (
+    typeof record[field] !== 'string'
+    || record[field].length === 0
+    || record[field].length > 1000
+  ));
+  const malformedScopes = (
+    !Array.isArray(record.scopes_json)
+    || record.scopes_json.length === 0
+    || record.scopes_json.some(scope => (
+      typeof scope !== 'string'
+      || scope.length === 0
+      || scope.length > 1000
+    ))
+  );
+  if (malformedCore || malformedScopes || !validDate(record.created_at)) {
+    return unknownConsent();
+  }
+
+  const createdAt = new Date(record.created_at);
+  const expiry = validDate(record.expires_at) ? new Date(record.expires_at) : null;
+  const revokedAt = validDate(record.revoked_at) ? new Date(record.revoked_at) : null;
+  if (
+    createdAt > current
+    || (expiry && expiry <= createdAt)
+    || (
+      record.status === 'active'
+      && record.revoked_at != null
+      && (!revokedAt || revokedAt > current)
+    )
+  ) {
+    return unknownConsent();
+  }
+  let state = record.status === 'revoked'
+    ? 'revoked'
+    : record.status === 'active'
+      ? 'active'
+      : 'unknown';
+  if (revokedAt && revokedAt <= current) state = 'revoked';
+  if (state === 'active' && (!expiry || expiry <= current)) {
+    state = expiry ? 'expired' : 'unknown';
+  }
+
+  const display = {
+    active: {
+      tone: 'pending',
+      badge: 'Active consent',
+      title: 'Consent is active',
+      summary: 'This record currently permits its stated purpose and scopes subject to the rest of AXIOM policy.'
+    },
+    revoked: {
+      tone: 'denied',
+      badge: 'Revoked',
+      title: 'Consent was revoked',
+      summary: 'This consent record is no longer active.'
+    },
+    expired: {
+      tone: 'denied',
+      badge: 'Expired',
+      title: 'Consent expired',
+      summary: 'This consent record is no longer active.'
+    },
+    unknown: {
+      tone: 'uncertain',
+      badge: 'Unknown',
+      title: 'Consent state is not understood',
+      summary: 'This preview cannot safely interpret the consent as active.'
+    }
+  }[state];
+
+  const facts = [];
+  for (const [label, value] of [
+    ['Consent', record.consent_id],
+    ['Subject', record.subject],
+    ['Controller', record.controller],
+    ['Purpose', record.purpose],
+    ['Expires', record.expires_at],
+    ['Created', record.created_at],
+    ['Revoked', record.revoked_at]
+  ]) if (typeof value === 'string' && value.length) facts.push(fact(label, value));
+  if (Array.isArray(record.scopes_json)) {
+    facts.push(fact('Scopes', record.scopes_json.join(', ')));
+  }
+
+  const guidance = state === 'active'
+    ? [
+      'This page inspects consent state; the record is not execution authority.',
+      'Each use must still satisfy its exact purpose, scopes, active policy, and ordinary authorization path.',
+      'Inspect the raw record for exact identifiers and timestamps.'
+    ]
+    : state === 'revoked' || state === 'expired'
+      ? [
+        'This record cannot authorize new use.',
+        'Do not treat prior consent as continuing permission.',
+        'Inspect the raw record for exact identifiers and timestamps.'
+      ]
+      : [
+        'Do not treat this record as active consent or authority.',
+        'Inspect the raw record before relying on it.'
+      ];
+
+  return model({
+    kind: 'consent',
+    state,
+    tone: display.tone,
+    badge: display.badge,
+    title: display.title,
+    summary: display.summary,
+    facts,
+    guidance,
+    retrySameRequest: false
+  });
+}
+
+function unknownConsent() {
+  return model({
+    kind: 'consent',
+    state: 'unknown',
+    tone: 'uncertain',
+    badge: 'Unknown',
+    title: 'Consent state is not understood',
+    summary: 'The record is malformed or incomplete, so this preview makes no active-consent claim.',
+    facts: [],
+    guidance: ['Do not treat this record as active consent or authority.'],
+    retrySameRequest: false
+  });
+}
+
+function verification(result) {
+  if (!plainObject(result)) return unknownVerification('Verification result was not an object.');
+
+  if (
+    result.valid === true
+    && Number.isSafeInteger(result.events)
+    && result.events >= 0
+    && DIGEST.test(result.head ?? '')
+  ) {
+    return model({
+      kind: 'verification',
+      state: 'valid',
+      tone: 'complete',
+      badge: 'Valid chain',
+      title: 'Evidence chain verified',
+      summary: 'The local evidence chain passed its sequence, digest, signature, and metadata continuity checks.',
+      facts: [
+        fact('Events', String(result.events)),
+        fact('Head', result.head)
+      ],
+      guidance: [
+        'A valid evidence chain does not authorize any action.',
+        'Integrity evidence does not prove external truth or the truth of an external claim.',
+        'Raw verification output remains available below.'
+      ],
+      retrySameRequest: false
+    });
+  }
+
+  if (
+    result.valid === false
+    && typeof result.reason === 'string'
+    && /^[a-z0-9_]{1,80}$/.test(result.reason)
+  ) {
+    const facts = [fact('Reason', result.reason)];
+    if (Number.isSafeInteger(result.seq) && result.seq > 0) {
+      facts.unshift(fact('Sequence', String(result.seq)));
+    }
+    return model({
+      kind: 'verification',
+      state: 'invalid',
+      tone: 'denied',
+      badge: 'Invalid chain',
+      title: 'Evidence chain verification failed',
+      summary: 'The local evidence chain did not pass verification.',
+      facts,
+      guidance: [
+        'Do not treat this chain as verified evidence; inspect and repair the reported failure before relying on it.',
+        'An invalid or valid verification result grants no authority.'
+      ],
+      retrySameRequest: false
+    });
+  }
+
+  return unknownVerification('The response did not contain a recognized valid or invalid verification result.');
+}
+
+function unknownVerification(reason) {
+  return model({
+    kind: 'verification',
+    state: 'uncertain',
+    tone: 'uncertain',
+    badge: 'Unverified',
+    title: 'Verification result not understood',
+    summary: reason,
+    facts: [],
+    guidance: [
+      'Do not treat this result as valid evidence or authority.',
+      'Inspect the raw verification response.'
     ],
     retrySameRequest: false
   });

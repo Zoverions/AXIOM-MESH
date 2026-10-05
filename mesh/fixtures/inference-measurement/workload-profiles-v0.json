@@ -1,0 +1,312 @@
+{
+  "schema": "axiom-inference-workload-fixtures.v0",
+  "profiles": [
+    {
+      "schema": "axiom-inference-workload-profile.v0",
+      "version": 0,
+      "profile_id": "inference.w0.interactive-agent",
+      "profile_version": "0.1.0",
+      "task_family": "interactive-agent",
+      "purpose": "Synthetic interactive agent latency profile.",
+      "fixture_digest": "b635558a25f985cf0850fa199b751b0aef5172f5bf2b925709b8f105502fdd7b",
+      "created_at": "2026-09-18T03:00:00.000Z",
+      "token_shape": {
+        "input_min": 768,
+        "input_nominal": 1024,
+        "input_max": 1536,
+        "output_min": 100,
+        "output_nominal": 200,
+        "output_max": 300,
+        "context_tiers": [
+          2048
+        ],
+        "concurrency_values": [
+          1,
+          2,
+          4,
+          8,
+          16
+        ],
+        "arrival_rate_rps": null,
+        "batch_sizes": [
+          1
+        ],
+        "streaming": true,
+        "repeated_prefix_tokens": 0,
+        "expected_request_count": 128
+      },
+      "objectives": {
+        "ttft_ms_p95": 750,
+        "itl_ms_p95": 75,
+        "e2e_ms_p95": 8000,
+        "throughput_tokens_s": null,
+        "locality": "owner-local",
+        "quality_evidence_required": false,
+        "measure_power": false,
+        "measure_cost": false
+      },
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-workload-profile.v0",
+      "version": 0,
+      "profile_id": "inference.w1.long-context-research",
+      "profile_version": "0.1.0",
+      "task_family": "long-context-research",
+      "purpose": "Synthetic long-context prefill and memory-pressure profile.",
+      "fixture_digest": "30cf0b03313ac029974f9111ab3871ee588ade841acd4c4c56142be7e38868a3",
+      "created_at": "2026-09-18T03:00:00.000Z",
+      "token_shape": {
+        "input_min": 16000,
+        "input_nominal": 32000,
+        "input_max": 128000,
+        "output_min": 200,
+        "output_nominal": 500,
+        "output_max": 1000,
+        "context_tiers": [
+          16000,
+          32000,
+          64000,
+          128000
+        ],
+        "concurrency_values": [
+          1,
+          2,
+          4
+        ],
+        "arrival_rate_rps": null,
+        "batch_sizes": [
+          1
+        ],
+        "streaming": true,
+        "repeated_prefix_tokens": 0,
+        "expected_request_count": 32
+      },
+      "objectives": {
+        "ttft_ms_p95": 5000,
+        "itl_ms_p95": null,
+        "e2e_ms_p95": 30000,
+        "throughput_tokens_s": null,
+        "locality": "owner-local",
+        "quality_evidence_required": false,
+        "measure_power": true,
+        "measure_cost": false
+      },
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-workload-profile.v0",
+      "version": 0,
+      "profile_id": "inference.w2.repeated-personalized-prefix",
+      "profile_version": "0.1.0",
+      "task_family": "repeated-prefix",
+      "purpose": "Synthetic repeated-prefix profile without personal data.",
+      "fixture_digest": "ba03c7beae7b0465bccc8874a4fc2d344722870dc5f21477a6fe59604f2bb119",
+      "created_at": "2026-09-18T03:00:00.000Z",
+      "token_shape": {
+        "input_min": 4096,
+        "input_nominal": 8192,
+        "input_max": 16384,
+        "output_min": 100,
+        "output_nominal": 250,
+        "output_max": 500,
+        "context_tiers": [
+          8192,
+          16384
+        ],
+        "concurrency_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "arrival_rate_rps": null,
+        "batch_sizes": [
+          1
+        ],
+        "streaming": true,
+        "repeated_prefix_tokens": 4096,
+        "expected_request_count": 128
+      },
+      "objectives": {
+        "ttft_ms_p95": 1000,
+        "itl_ms_p95": 100,
+        "e2e_ms_p95": null,
+        "throughput_tokens_s": null,
+        "locality": "owner-local",
+        "quality_evidence_required": false,
+        "measure_power": false,
+        "measure_cost": false
+      },
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-workload-profile.v0",
+      "version": 0,
+      "profile_id": "inference.w3.structured-agent-operation",
+      "profile_version": "0.1.0",
+      "task_family": "structured-agent",
+      "purpose": "Synthetic typed short-output agent operation profile.",
+      "fixture_digest": "701560d7cc41d249de7804e3c59382b8c1d94990753d9dcc34495ebbae439d57",
+      "created_at": "2026-09-18T03:00:00.000Z",
+      "token_shape": {
+        "input_min": 256,
+        "input_nominal": 512,
+        "input_max": 1024,
+        "output_min": 10,
+        "output_nominal": 40,
+        "output_max": 100,
+        "context_tiers": [
+          1024
+        ],
+        "concurrency_values": [
+          1,
+          4,
+          8,
+          16
+        ],
+        "arrival_rate_rps": null,
+        "batch_sizes": [
+          1
+        ],
+        "streaming": false,
+        "repeated_prefix_tokens": 0,
+        "expected_request_count": 256
+      },
+      "objectives": {
+        "ttft_ms_p95": 500,
+        "itl_ms_p95": null,
+        "e2e_ms_p95": 3000,
+        "throughput_tokens_s": null,
+        "locality": "owner-local",
+        "quality_evidence_required": true,
+        "measure_power": false,
+        "measure_cost": false
+      },
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-workload-profile.v0",
+      "version": 0,
+      "profile_id": "inference.w4.code-agent",
+      "profile_version": "0.1.0",
+      "task_family": "code-agent",
+      "purpose": "Synthetic repository-context code-agent profile.",
+      "fixture_digest": "9b5981b9046ff6512a3a6bed9474f98b0cb1f62a39c66eb1f964dfecd1663bde",
+      "created_at": "2026-09-18T03:00:00.000Z",
+      "token_shape": {
+        "input_min": 4000,
+        "input_nominal": 12000,
+        "input_max": 32000,
+        "output_min": 200,
+        "output_nominal": 800,
+        "output_max": 2000,
+        "context_tiers": [
+          8000,
+          16000,
+          32000
+        ],
+        "concurrency_values": [
+          1,
+          2,
+          4
+        ],
+        "arrival_rate_rps": null,
+        "batch_sizes": [
+          1
+        ],
+        "streaming": true,
+        "repeated_prefix_tokens": 0,
+        "expected_request_count": 64
+      },
+      "objectives": {
+        "ttft_ms_p95": 2000,
+        "itl_ms_p95": null,
+        "e2e_ms_p95": 60000,
+        "throughput_tokens_s": null,
+        "locality": "owner-local",
+        "quality_evidence_required": true,
+        "measure_power": false,
+        "measure_cost": false
+      },
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    },
+    {
+      "schema": "axiom-inference-workload-profile.v0",
+      "version": 0,
+      "profile_id": "inference.w5.batch-intelligence",
+      "profile_version": "0.1.0",
+      "task_family": "batch-intelligence",
+      "purpose": "Synthetic batch classification and ranking profile.",
+      "fixture_digest": "7d565a5469106b93b81dd0774f3f21b6775fdc2fae29f063ff52997f667fd71c",
+      "created_at": "2026-09-18T03:00:00.000Z",
+      "token_shape": {
+        "input_min": 64,
+        "input_nominal": 256,
+        "input_max": 1024,
+        "output_min": 1,
+        "output_nominal": 20,
+        "output_max": 128,
+        "context_tiers": [
+          1024
+        ],
+        "concurrency_values": [
+          1,
+          8,
+          32,
+          64
+        ],
+        "arrival_rate_rps": null,
+        "batch_sizes": [
+          1,
+          8,
+          32
+        ],
+        "streaming": false,
+        "repeated_prefix_tokens": 0,
+        "expected_request_count": 4096
+      },
+      "objectives": {
+        "ttft_ms_p95": null,
+        "itl_ms_p95": null,
+        "e2e_ms_p95": null,
+        "throughput_tokens_s": 5000,
+        "locality": "owner-local",
+        "quality_evidence_required": true,
+        "measure_power": true,
+        "measure_cost": true
+      },
+      "authority_effect": "none",
+      "network_effect": "none",
+      "credential_visibility": "none",
+      "runtime_activation": false,
+      "selection_effect": "none",
+      "capability_promotion": false
+    }
+  ]
+}

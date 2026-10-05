@@ -31,10 +31,13 @@ import {
 import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
-  evaluateMachineIntent,
   machinePrincipalAuthorityFacts,
   normalizeMachinePrincipalDefinition
 } from '../lib/machine-principal.mjs';
+import { normalizeAgentAssuranceEvidence } from '../lib/agent-assurance-evidence.mjs';
+import {
+  evaluateMachineIntentWithAssurance
+} from '../lib/agent-assurance-authority-binding.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import {
   buildNativeInvocationEnvelope,
@@ -42,6 +45,8 @@ import {
 } from '../lib/invocation-envelope.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
+import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
+import { projectExecutionMutationEvent } from '../lib/execution-mutation.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -62,6 +67,7 @@ export async function createHypervisorService(config = meshConfig()) {
       })
     : null;
   const sandboxKey = await loadTrustedKey(config.dataDir, 'sandbox');
+  const gridKey = await loadTrustedKey(config.dataDir, 'grid');
   const requestReplay = new ReplayGuard();
   const basePolicy = await loadPolicyStack(config.policyPaths);
   const router = new Router();
@@ -77,6 +83,23 @@ export async function createHypervisorService(config = meshConfig()) {
 
   async function gridGet(path, traceId) {
     return signedFetch(identity, 'grid', `${config.urls.grid}${path}`, { traceId });
+  }
+
+  async function executeGridQuery(traceId, principalId, query) {
+    return signedFetch(
+      identity,
+      'grid',
+      `${config.urls.grid}/internal/v1/education/learner-progress`,
+      {
+        method: 'POST',
+        traceId,
+        body: {
+          actor: principalId,
+          principal: principalId,
+          query
+        }
+      }
+    );
   }
 
   async function activePolicy(traceId) {
@@ -162,11 +185,14 @@ export async function createHypervisorService(config = meshConfig()) {
       ? machinePrincipalAuthorityFacts(intent.principal)
       : null;
     let effectDestination;
+    let machineAssurance;
     if (machineAuthority) {
-      const machineDecision = evaluateMachineIntent(intent.principal, {
+      const machineDecision = evaluateMachineIntentWithAssurance(intent.principal, {
         action: intent.action,
-        purpose: intent.purpose
+        purpose: intent.purpose,
+        assurance_evidence: intent.assurance_evidence
       });
+      machineAssurance = machineDecision.assurance ?? null;
       if (!machineDecision.allow) {
         decision = {
           ...decision,
@@ -233,7 +259,8 @@ export async function createHypervisorService(config = meshConfig()) {
         policy_digest: decision.policy_digest,
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
-        ...(machineAuthority ? { machine_authority: machineAuthority } : {})
+        ...(machineAuthority ? { machine_authority: machineAuthority } : {}),
+        ...(machineAssurance ? { machine_assurance: machineAssurance } : {})
       }
     }]);
     if (!decision.allow) {
@@ -323,7 +350,7 @@ export async function createHypervisorService(config = meshConfig()) {
     const plan = buildPlan(intent, decision, { approval });
     const boundPlanDigest = planDigest(plan);
     const now = Math.floor(Date.now() / 1000);
-    const capability = issueCapability(identity, {
+    const capabilityClaims = {
       iss: identity.service,
       aud: 'sandbox',
       subject: intent.principal.id,
@@ -343,12 +370,66 @@ export async function createHypervisorService(config = meshConfig()) {
         authority_digest: machineAuthority.authority_digest,
         runtime_id: machineAuthority.runtime_id
       } : {})
-    });
+    };
+    const capability = issueCapability(identity, capabilityClaims);
     try {
+      const sandboxOperations = await signedFetch(
+        identity,
+        'sandbox',
+        `${config.urls.sandbox}/internal/v1/operations`,
+        { traceId, timeoutMs: 2_000 }
+      );
+      if (!reportHasReadyServices(sandboxOperations, ['sandbox'])) {
+        throw new AxiomError(
+          'sandbox_unavailable',
+          'Sandbox is not ready for capability consumption',
+          503
+        );
+      }
+      const executionEpoch = assertString(
+        sandboxOperations.execution_epoch,
+        'Sandbox execution epoch',
+        { max: 160, pattern: PRINCIPAL_ID }
+      );
+      const consumptionCommit = await commit(traceId, intent.principal.id, [{
+        kind: 'capability.consume.requested',
+        subject: capabilityClaims.jti,
+        payload: {
+          capability,
+          execution_epoch: executionEpoch
+        }
+      }]);
+      const consumed = consumptionCommit.capability_consumptions?.[0];
+      if (!consumed) {
+        throw new AxiomError(
+          'capability_consumption_missing',
+          'Grid did not return the durable capability consumption receipt',
+          502
+        );
+      }
+      const consumption = verifyCapabilityConsumptionReceipt(consumed.receipt, {
+        gridPublicKey: gridKey,
+        capability,
+        claims: capabilityClaims,
+        executionEpoch
+      });
+      if (consumed.receipt_digest !== consumption.receipt_digest) {
+        throw new AxiomError(
+          'capability_consumption_mismatch',
+          'Grid capability consumption response digest is invalid',
+          502
+        );
+      }
+
       const execution = await signedFetch(identity, 'sandbox', `${config.urls.sandbox}/internal/v1/execute`, {
         method: 'POST',
         traceId,
-        body: { intent, capability, plan }
+        body: {
+          intent,
+          capability,
+          plan,
+          consumption_receipt: consumption.receipt
+        }
       });
       const statement = execution.attestation?.statement;
       const signature = execution.attestation?.signature;
@@ -359,38 +440,63 @@ export async function createHypervisorService(config = meshConfig()) {
         statement.intent_digest !== digestObject(intent)
         || statement.invocation_digest !== invocationDigest
         || statement.effect_destination !== effectDestination
+        || statement.capability_consumption_receipt_digest !== consumption.receipt_digest
+        || statement.sandbox_execution_epoch !== executionEpoch
         || statement.result_digest !== digestObject(execution.result)
       ) {
         throw new AxiomError('sandbox_attestation_mismatch', 'Sandbox attestation does not match the execution result', 502);
       }
+      if (execution.result.mutation && execution.result.query) {
+        throw new AxiomError(
+          'sandbox_effect_ambiguous',
+          'Sandbox execution may not return both a mutation and a query effect',
+          502
+        );
+      }
+      let queryResult = null;
+      if (execution.result.query) {
+        queryResult = await executeGridQuery(
+          traceId,
+          intent.principal.id,
+          execution.result.query
+        );
+        if (
+          queryResult.query_input_digest !== execution.result.query.input_digest
+          || queryResult.result_digest !== digestObject(queryResult.result)
+        ) {
+          throw new AxiomError(
+            'grid_query_result_mismatch',
+            'Grid query result is not bound to the attested Sandbox query',
+            502
+          );
+        }
+      }
       const events = [];
       if (execution.result.mutation) {
-        events.push({
-          ...execution.result.mutation,
-          payload: {
-            ...execution.result.mutation.payload,
-            evidence: {
-              plan_digest: digestObject(plan),
-              invocation_digest: invocationDigest,
-              ...(effectDestination ? { effect_destination: effectDestination } : {}),
-              execution: execution.attestation,
-              ...(machineAuthority ? {
-                machine_authority_digest: machineAuthority.authority_digest
-              } : {})
-            }
-          }
-        });
+        events.push(projectExecutionMutationEvent(execution.result.mutation, {
+          plan_digest: digestObject(plan),
+          invocation_digest: invocationDigest,
+          capability_consumption_receipt_digest: consumption.receipt_digest,
+          ...(effectDestination ? { effect_destination: effectDestination } : {}),
+          execution: execution.attestation,
+          ...(machineAuthority ? {
+            machine_authority_digest: machineAuthority.authority_digest
+          } : {})
+        }));
       }
       const result = {
         ...execution.result.output,
+        ...(queryResult ? { provider_result: queryResult } : {}),
         intent_id: intent.intent_id,
         trace_id: traceId,
         status: 'completed',
         evidence: {
           plan_digest: boundPlanDigest,
           invocation_digest: invocationDigest,
+          capability_consumption_receipt_digest: consumption.receipt_digest,
           ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
+          ...(queryResult ? { query_result_digest: digestObject(queryResult) } : {}),
           policy_digest: decision.policy_digest,
           ...(machineAuthority ? {
             machine_authority_digest: machineAuthority.authority_digest,
@@ -524,6 +630,12 @@ function normalizeIntent(raw) {
   };
   if (Number.isNaN(new Date(normalized.submitted_at).valueOf())) {
     throw new ValidationError('intent.submitted_at must be an ISO timestamp');
+  }
+  if (value.assurance_evidence !== undefined) {
+    if (normalizedPrincipal.schema !== 'axiom-machine-principal.v1') {
+      throw new ValidationError('Agent assurance evidence requires a constrained machine principal');
+    }
+    normalized.assurance_evidence = normalizeAgentAssuranceEvidence(value.assurance_evidence);
   }
   return normalized;
 }

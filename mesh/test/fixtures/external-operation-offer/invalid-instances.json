@@ -1,0 +1,191 @@
+[
+  {
+    "name": "unknown-top-level-field",
+    "patch": {
+      "extra": true
+    }
+  },
+  {
+    "name": "grants-authority-true",
+    "patch": {
+      "grants_authority": true
+    }
+  },
+  {
+    "name": "execution-effect-not-none",
+    "patch": {
+      "execution_effect": "run"
+    }
+  },
+  {
+    "name": "malformed-digest",
+    "patch": {
+      "catalog_entry": {
+        "entry_id": "connector:synthetic-search",
+        "entry_version": "0.1.0",
+        "entry_digest": "not-a-digest"
+      }
+    }
+  },
+  {
+    "name": "current-without-valid-until",
+    "patch": {
+      "freshness": {
+        "state": "current"
+      }
+    }
+  },
+  {
+    "name": "unknown-freshness-with-deadline",
+    "patch": {
+      "freshness": {
+        "state": "unknown",
+        "valid_until": "2026-09-16T20:05:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "invalid-effect",
+    "patch": {
+      "operation": {
+        "broker_operation_id": "synthetic#search",
+        "axiom_action": "external.search.read",
+        "schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "provider_ref": "provider:synthetic-search",
+        "effect_class": "hack-the-planet",
+        "input_data_classes": [
+          "query.text"
+        ],
+        "output_data_classes": [
+          "search.results"
+        ],
+        "network_required": true,
+        "description": "x"
+      }
+    }
+  },
+  {
+    "name": "hosted-without-broker-destination",
+    "patch": {
+      "topology": {
+        "broker_location": "hosted",
+        "broker_destination": null,
+        "downstream_location": "provider-remote",
+        "provider_destination": "https://api.example.invalid"
+      }
+    }
+  },
+  {
+    "name": "remote-provider-without-destination",
+    "patch": {
+      "topology": {
+        "broker_location": "hosted",
+        "broker_destination": "https://broker.example.invalid",
+        "downstream_location": "provider-remote",
+        "provider_destination": null
+      }
+    }
+  },
+  {
+    "name": "owner-local-with-broker-destination",
+    "patch": {
+      "topology": {
+        "broker_location": "owner-local",
+        "broker_destination": "https://broker.example.invalid",
+        "downstream_location": "provider-remote",
+        "provider_destination": "https://api.example.invalid"
+      }
+    }
+  },
+  {
+    "name": "free-with-nonzero-cost",
+    "patch": {
+      "quote": {
+        "kind": "free",
+        "currency": null,
+        "quoted_amount_minor_units": 1,
+        "max_amount_minor_units": 1,
+        "pricing_unit": "call",
+        "valid_until": "2026-09-16T20:05:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "exact-unequal-amounts",
+    "patch": {
+      "quote": {
+        "kind": "exact",
+        "currency": "USD",
+        "quoted_amount_minor_units": 1,
+        "max_amount_minor_units": 2,
+        "pricing_unit": "call",
+        "valid_until": "2026-09-16T20:05:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "bounded-max-below-quoted",
+    "patch": {
+      "quote": {
+        "kind": "bounded",
+        "currency": "USD",
+        "quoted_amount_minor_units": 10,
+        "max_amount_minor_units": 5,
+        "pricing_unit": "call",
+        "valid_until": "2026-09-16T20:05:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "variable-with-guaranteed-max",
+    "patch": {
+      "quote": {
+        "kind": "variable",
+        "currency": "USD",
+        "quoted_amount_minor_units": 1,
+        "max_amount_minor_units": 50,
+        "pricing_unit": "call",
+        "valid_until": "2026-09-16T20:05:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "negative-latency",
+    "patch": {
+      "health": {
+        "state": "available",
+        "observed_at": "2026-09-16T20:00:00.000Z",
+        "p50_ms": -1,
+        "p95_ms": 10
+      }
+    }
+  },
+  {
+    "name": "p95-below-p50",
+    "patch": {
+      "health": {
+        "state": "available",
+        "observed_at": "2026-09-16T20:00:00.000Z",
+        "p50_ms": 200,
+        "p95_ms": 100
+      }
+    }
+  },
+  {
+    "name": "reconciliation-required-without-path",
+    "patch": {
+      "execution_semantics": {
+        "timeout_ms": 1000,
+        "cancellation": "best-effort",
+        "idempotency": "none",
+        "reconciliation": "required"
+      }
+    }
+  },
+  {
+    "name": "malformed-timestamp",
+    "patch": {
+      "observed_at": "2026-09-16T20:00:00Z"
+    }
+  }
+]

@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/canonical-shared-artifact-v0.schema.json",
+  "title": "AXIOM Canonical Shared Artifact v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "artifact_id",
+    "owner_ref",
+    "authority_domain",
+    "content_type",
+    "revisions",
+    "current_heads",
+    "state",
+    "current_content_digest",
+    "sharing",
+    "created_at",
+    "updated_at",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-canonical-shared-artifact.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-shared-artifact-contract" },
+    "artifact_id": { "$ref": "#/$defs/identifier" },
+    "owner_ref": { "$ref": "#/$defs/identifier" },
+    "authority_domain": { "$ref": "#/$defs/authorityDomain" },
+    "content_type": { "enum": ["text/plain", "application/json"] },
+    "revisions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/revision" }
+    },
+    "current_heads": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "state": { "enum": ["active", "conflict", "retracted"] },
+    "current_content_digest": {
+      "oneOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "sharing": { "$ref": "#/$defs/sharing" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "authorityDomain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": { "enum": ["owner", "circle"] },
+        "ref": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "sharing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "projection_refs"],
+      "properties": {
+        "state": { "enum": ["private", "projected"] },
+        "projection_refs": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "private" } }, "required": ["state"] },
+          "then": { "properties": { "projection_refs": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "projected" } }, "required": ["state"] },
+          "then": { "properties": { "projection_refs": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_digest", "evidence_ref", "evidence_digest"],
+      "properties": {
+        "request_digest": { "$ref": "#/$defs/digest" },
+        "evidence_ref": { "$ref": "#/$defs/identifier" },
+        "evidence_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "workGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graph_id", "graph_digest"],
+      "properties": {
+        "graph_id": { "$ref": "#/$defs/identifier" },
+        "graph_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision_id",
+        "parents",
+        "operation",
+        "actor_principal",
+        "actor_kind",
+        "authorization",
+        "payload",
+        "content_digest",
+        "resolves",
+        "work_graph",
+        "occurred_at"
+      ],
+      "properties": {
+        "revision_id": { "$ref": "#/$defs/identifier" },
+        "parents": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "operation": { "enum": ["put", "retract", "resolve"] },
+        "actor_principal": { "$ref": "#/$defs/identifier" },
+        "actor_kind": { "enum": ["human", "agent", "service"] },
+        "authorization": { "$ref": "#/$defs/authorization" },
+        "payload": { "$ref": "#/$defs/payload" },
+        "content_digest": {
+          "oneOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        },
+        "resolves": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "work_graph": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/workGraph" }
+          ]
+        },
+        "occurred_at": { "$ref": "#/$defs/timestamp" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "operation": { "const": "retract" } }, "required": ["operation"] },
+          "then": {
+            "properties": {
+              "payload": { "type": "null" },
+              "content_digest": { "type": "null" },
+              "resolves": { "maxItems": 0 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "enum": ["put", "resolve"] } }, "required": ["operation"] },
+          "then": {
+            "properties": {
+              "payload": { "not": { "type": "null" } },
+              "content_digest": { "$ref": "#/$defs/digest" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "put" } }, "required": ["operation"] },
+          "then": { "properties": { "resolves": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "resolve" } }, "required": ["operation"] },
+          "then": {
+            "properties": {
+              "parents": { "minItems": 2 },
+              "resolves": { "minItems": 2 }
+            }
+          }
+        }
+      ]
+    },
+    "payload": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "string", "maxLength": 65536 },
+        { "$ref": "#/$defs/jsonValue" }
+      ]
+    },
+    "jsonValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/jsonValue" }
+        },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/canonical-shared-artifact.mjs",
+  "x-axiom-validation-requirement": "semantic-validator-required",
+  "x-axiom-semantic-invariants": [
+    "timestamp calendar validity and canonical ISO round-trip are enforced by the semantic validator",
+    "declared current_heads exactly match derived causal heads",
+    "conflicts remain explicit until a resolution names every current head",
+    "state and current_content_digest are derived from current causal heads",
+    "authorization and verified-work bindings are evidence only and create no authority effect"
+  ]
+}

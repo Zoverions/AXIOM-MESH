@@ -2,7 +2,7 @@
 
 **Applies to:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-23
 
 The candidate production package runs Gateway, Hypervisor, Sandbox, and Grid as
 four supervised Node.js processes inside one hardened container. Only Gateway
@@ -28,18 +28,27 @@ full clean-kernel and release gates. Protected CI uses
 
 The machine-readable setup policy intentionally uses separate exact pins:
 
+- approved hosted production: Node.js **22.23.2** exactly;
 - protected CI and `.node-version`: Node.js **24.18.0**;
-- candidate production Dockerfile/image: Node.js **24.19.0**.
+- candidate production Dockerfile/image: Node.js **24.21.0**.
 
-Both remain inside the supported `>=24.14.0 <25` engine range. Source setup
-does not provision the credentials or state required below and does not start
-or deploy the runtime. See
+The container and protected CI remain inside the `>=24.14.0 <25` primary
+range. Only the exact hosted-production Node.js 22 pin is additionally
+approved; other Node.js 22 versions remain source-compatibility only. A hosted
+deployment must reproduce the same private application/data/secret boundaries,
+mutually authenticated TLS, loopback-only namespace, deny-egress enforcement,
+and explicit ingress. Ordinary shared hosting with a public application root
+or a routable network namespace is not an approved production topology.
+Source setup does not provision the credentials or state required below and
+does not start or deploy the runtime. See
 [`docs/operations/AUTOMATED-SOURCE-SETUP.md`](../docs/operations/AUTOMATED-SOURCE-SETUP.md)
 for the exact dependency, receipt, failure, and non-claim boundary.
 
 ## 1. Provision outside the repository
 
-Choose two empty, access-controlled host directories. The data directory must
+Choose two empty, disjoint, access-controlled host directories. Neither may be
+inside the other, including through a symlink; provisioning rejects overlap
+before writing credentials. The data directory must
 be writable by numeric UID `10001`; the secret directory must not be stored in
 source control, container layers, backups without encryption, or release
 archives.
@@ -79,7 +88,7 @@ a coordinated trust update makes signed internal traffic fail closed.
 
 ## 2. Build and start
 
-The image uses the digest-pinned official Node.js **`24.19.0-alpine3.23`** base.
+The image uses the digest-pinned official Node.js **`24.21.0-alpine3.23`** base.
 Set absolute host paths explicitly:
 
 ```bash
@@ -101,6 +110,8 @@ and readiness-based health checks. Compose enforces deny-egress with
 `network_mode: "none"` and no attached Docker network. The production
 supervisor rejects every active non-loopback interface or IPv4/IPv6 default
 route before it launches a service.
+The local ingress bridge refuses to replace a socket with an active listener;
+only an unconnected stale socket can be removed during restart.
 
 Only the public CA certificate, active manifest, and service-leaf directory are
 mounted read-only; the CA signing key remains host-only. Internal URLs require
@@ -138,14 +149,16 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes only 41 exact caller/destination/method/route
-combinations at both sending and receiving services and derives inbound mTLS
-peer allowlists. Because internal routes must exist, this topology does not use
-the single-container supervisor's `network_mode: none` route check; segmented
-internal networks plus application and transport allowlists are the boundary.
-Protected CI proves the required path, Gateway-to-Sandbox denial,
-Sandbox-to-Grid denial, Grid-to-Sandbox denial, and public TCP failure from a
-running unit.
+policy additionally authorizes exactly 42 currently allowed internal
+method/path permissions at both sending and receiving services and derives
+inbound mTLS peer allowlists. The additional governed Education permission is
+Hypervisor-to-Grid `POST /internal/v1/education/learner-progress`; it does not
+create public ingress or a second authority path. Because internal routes must
+exist, this topology does not use the single-container supervisor's
+`network_mode: none` route check; segmented internal networks plus application
+and transport allowlists are the boundary. Protected CI proves the required
+path, Gateway-to-Sandbox denial, Sandbox-to-Grid denial, Grid-to-Sandbox denial,
+and public TCP failure from a running unit.
 
 Verify exact policy and Compose membership before startup:
 
@@ -172,6 +185,52 @@ See
 [`docs/operations/INDEPENDENT-SERVICE-UNITS.md`](../docs/operations/INDEPENDENT-SERVICE-UNITS.md).
 This topology remains a single-host candidate. It does not claim Grid
 replication, automatic failover, or a live deployment.
+
+### 2.2 Run behind an isolated Plesk/Passenger ingress
+
+The exact approved Node.js **22.23.2** hosted runtime may also run the existing
+four-service supervisor inside an unprivileged Linux user/network namespace.
+This topology is valid only when the provider permits `unshare --user
+--map-root-user --net` and the namespace can bring up loopback with
+`ip link set lo up`. The namespace bootstrap then executes the unchanged
+deny-egress route verifier before starting the unchanged production supervisor;
+the supervisor independently repeats the same route check.
+
+Use a private application root with these sibling boundaries:
+
+```text
+application-root/
+  app.js                         reviewed Passenger bootstrap only
+  public/                        only HTTP-readable discovery assets
+  runtime/                       reviewed AXIOM-MESH source checkout
+  private/data/                  mode 0700
+  private/secrets/               mode 0700; key/token files mode 0600
+  private/secrets/transport/     mode 0700; existing mutual-TLS material
+  private/run/gateway.sock       private Unix-domain ingress only
+```
+
+The public document root must be `application-root/public`, never the
+application root. Deploy reviewed source into `application-root/runtime`,
+provision `private/data` and `private/secrets` through the unchanged
+`src/provision-production.mjs` command, and copy
+`runtime/mesh/src/hosted-passenger.cjs` to `application-root/app.js`.
+
+The outer Passenger process serves only files inside the canonical public
+document root and forwards `/ready` plus `/v1/*` only to the fixed private Unix
+socket. It never forwards to a caller-selected host or URL. Passenger's reverse
+port binding does not require a `PORT` environment variable; the ingress uses a
+local ephemeral port when it is absent and never binds outside `127.0.0.1`.
+The four AXIOM
+services run in the isolated child namespace with loopback only, mutual TLS,
+disabled automatic bootstrap, private file-based credentials, and
+`AXIOM_REQUIRE_DENY_EGRESS=true`. Passenger ports and unrelated host/provider
+credentials do not cross the namespace boundary.
+
+Any missing user namespace, public/private overlap, permissive secret mode,
+missing production credential, non-loopback route, default route, loopback
+failure, or supervisor failure stops deployment. Do not replace namespace
+isolation with ordinary shared-host networking, weaken Gateway authentication,
+or treat this candidate topology as automatic production promotion.
 
 ## 3. Verify readiness
 

@@ -51,6 +51,22 @@ export function normalizeLineEndings(value) {
   return String(value).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 }
 
+export function firstLineDifference(actual, expected) {
+  const actualLines = normalizeLineEndings(actual).split('\n');
+  const expectedLines = normalizeLineEndings(expected).split('\n');
+  const limit = Math.max(actualLines.length, expectedLines.length);
+  for (let index = 0; index < limit; index += 1) {
+    if (actualLines[index] !== expectedLines[index]) {
+      return {
+        line: index + 1,
+        actual: actualLines[index] ?? '<missing>',
+        expected: expectedLines[index] ?? '<missing>'
+      };
+    }
+  }
+  return null;
+}
+
 async function main() {
   const config = meshConfig();
   const registry = JSON.parse(await readFile(config.capabilitiesPath, 'utf8'));
@@ -65,7 +81,11 @@ async function main() {
   }
   const existing = await readFile(outputPath, 'utf8');
   if (normalizeLineEndings(existing) !== normalizeLineEndings(rendered)) {
-    throw new Error('docs/rebuild/STATUS.md is stale; run npm run status:generate');
+    const difference = firstLineDifference(existing, rendered);
+    const detail = difference
+      ? ` first difference at line ${difference.line}; actual=${JSON.stringify(difference.actual)}; expected=${JSON.stringify(difference.expected)}`
+      : '';
+    throw new Error(`docs/rebuild/STATUS.md is stale; run npm run status:generate;${detail}`);
   }
   await verifyRegistryMarkers(repositoryRoot, registry);
   process.stdout.write(`${JSON.stringify({ valid: true, path: outputPath })}\n`);

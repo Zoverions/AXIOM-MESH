@@ -1,0 +1,272 @@
+// labs/praxis/bench.mjs
+//
+// Deterministic performance benchmarks for the Praxis front end
+// (lexer, parser, formatter, compiler front end).
+//
+// Pure: takes source strings as input and returns measurements. No I/O,
+// no network, no wall-clock mocking beyond performance.now(). The caller
+// (test or CLI) supplies the corpus. Safe for the interpreter transport-surface
+// conformance scan.
+//
+// Budgets encode "non-pathological": the front end must stay roughly linear.
+// A 10x input must remain within the unchanged 20x scaling ceiling, measured
+// from five alternating comparable-work wall-time rounds and their median ratio.
+// Absolute parse/format wall-clock caps remain unchanged. Per-corpus CPU timing
+// is still collected as bounded diagnostic evidence, but it no longer decides
+// the scaling verdict because short process-CPU samples proved too coarse and
+// runner-sensitive near the threshold.
+
+import { performance } from 'node:perf_hooks';
+
+import { lex } from './lexer.mjs';
+import { parse } from './parser.mjs';
+import { formatProgram } from './format.mjs';
+import { compile } from './compiler.mjs';
+
+const BENCHMARK_WARMUPS = 1;
+const BENCHMARK_SAMPLES = 5;
+const BENCHMARK_CPU_TARGET_SAMPLES = 5;
+const BENCHMARK_CPU_MIN_SAMPLES = 3;
+const BENCHMARK_MAX_CPU_RUNS = 80;
+const BENCHMARK_CPU_TARGET_SOURCE_UNITS = 500_000;
+const BENCHMARK_CPU_MAX_BASE_RUNS = Math.floor(
+  BENCHMARK_MAX_CPU_RUNS / BENCHMARK_CPU_TARGET_SAMPLES
+);
+const BENCHMARK_SCALING_METHOD = 'paired-comparable-work-wall-median-v1';
+const BENCHMARK_SCALING_SAMPLES = 5;
+
+export function syntheticProgram(lines) {
+  let src = '';
+  for (let i = 0; i < lines; i++) {
+    src += `observe bench_o${i} = "value${i}" from "bench-src${i}";\n`;
+  }
+  return src;
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+export function benchmarkCpuRunsPerSample(sourceUnits) {
+  if (!Number.isInteger(sourceUnits) || sourceUnits < 0) {
+    throw new TypeError('benchmark source size must be a non-negative integer');
+  }
+  const normalizedUnits = Math.max(sourceUnits, 1);
+  return Math.max(
+    1,
+    Math.min(
+      BENCHMARK_CPU_MAX_BASE_RUNS,
+      Math.ceil(BENCHMARK_CPU_TARGET_SOURCE_UNITS / normalizedUnits)
+    )
+  );
+}
+
+function measureCpuPerRun(fn, { baseRuns }) {
+  const samples = [];
+  let runs = 0;
+  let nextBatch = baseRuns;
+
+  while (samples.length < BENCHMARK_CPU_TARGET_SAMPLES && runs < BENCHMARK_MAX_CPU_RUNS) {
+    const batch = Math.min(nextBatch, BENCHMARK_MAX_CPU_RUNS - runs);
+    const cpuStart = process.cpuUsage();
+    for (let i = 0; i < batch; i++) fn();
+    runs += batch;
+
+    const cpu = process.cpuUsage(cpuStart);
+    const cpuMicros = cpu.user + cpu.system;
+    if (cpuMicros > 0) {
+      samples.push((cpuMicros / 1000) / batch);
+      nextBatch = baseRuns;
+    } else {
+      nextBatch *= 2;
+    }
+  }
+
+  return samples.length >= BENCHMARK_CPU_MIN_SAMPLES ? median(samples) : 0;
+}
+
+function measure(fn, {
+  requireCpuEvidence = false,
+  cpuRunsPerSample = BENCHMARK_CPU_MAX_BASE_RUNS
+} = {}) {
+  for (let i = 0; i < BENCHMARK_WARMUPS; i++) fn();
+
+  const wallSamples = [];
+  let result;
+  for (let i = 0; i < BENCHMARK_SAMPLES; i++) {
+    const wallStart = performance.now();
+    result = fn();
+    wallSamples.push(performance.now() - wallStart);
+  }
+
+  return {
+    ms: median(wallSamples),
+    cpuMs: requireCpuEvidence ? measureCpuPerRun(fn, { baseRuns: cpuRunsPerSample }) : null,
+    result
+  };
+}
+
+export function benchmarkSource(label, source) {
+  const lines = source.split('\n').length;
+  const bytes = source.length;
+  const lexed = measure(() => lex(source));
+  const cpuRunsPerSample = benchmarkCpuRunsPerSample(bytes);
+  const parsed = measure(() => parse(source), { requireCpuEvidence: true, cpuRunsPerSample });
+  const formatted = measure(() => formatProgram(parsed.result));
+  let compileMs = null;
+  try {
+    compileMs = measure(() => compile(source)).ms;
+  } catch {
+    compileMs = null; // semantically invalid corpus: front end still timed
+  }
+  return {
+    label,
+    lines,
+    bytes,
+    lexMs: lexed.ms,
+    parseMs: parsed.ms,
+    parseCpuMs: parsed.cpuMs,
+    formatMs: formatted.ms,
+    compileMs
+  };
+}
+
+export function runBenchmarks(corpus) {
+  // corpus: [{ label, source }]
+  return corpus.map(({ label, source }) => benchmarkSource(label, source));
+}
+
+export function benchmarkScalingEvidence(corpus) {
+  if (!Array.isArray(corpus)) {
+    throw new TypeError('benchmark scaling corpus must be an array');
+  }
+  const small = corpus.filter(entry => entry?.label === 'synthetic-1k');
+  const large = corpus.filter(entry => entry?.label === 'synthetic-10k');
+  if (small.length !== 1 || large.length !== 1) {
+    throw new TypeError(
+      'paired scaling evidence requires exactly one synthetic-1k and one synthetic-10k source'
+    );
+  }
+  if (typeof small[0].source !== 'string' || typeof large[0].source !== 'string') {
+    throw new TypeError('paired scaling benchmark sources must be strings');
+  }
+
+  const smallSource = small[0].source;
+  const largeSource = large[0].source;
+  const smallRuns = benchmarkCpuRunsPerSample(smallSource.length);
+  const largeRuns = benchmarkCpuRunsPerSample(largeSource.length);
+
+  // Warm both shapes before paired evidence collection so compilation/JIT setup
+  // does not belong only to whichever corpus happens to run first.
+  parse(smallSource);
+  parse(largeSource);
+
+  const ratios = [];
+  for (let sample = 0; sample < BENCHMARK_SCALING_SAMPLES; sample++) {
+    let smallMs;
+    let largeMs;
+    if (sample % 2 === 0) {
+      smallMs = measureWallPerRun(() => parse(smallSource), smallRuns);
+      largeMs = measureWallPerRun(() => parse(largeSource), largeRuns);
+    } else {
+      largeMs = measureWallPerRun(() => parse(largeSource), largeRuns);
+      smallMs = measureWallPerRun(() => parse(smallSource), smallRuns);
+    }
+    ratios.push(
+      Number.isFinite(smallMs) && smallMs > 0 && Number.isFinite(largeMs) && largeMs > 0
+        ? largeMs / smallMs
+        : Number.NaN
+    );
+  }
+
+  return Object.freeze({
+    method: BENCHMARK_SCALING_METHOD,
+    sample_count: BENCHMARK_SCALING_SAMPLES,
+    wall_ratio: median(ratios)
+  });
+}
+
+function measureWallPerRun(fn, runs) {
+  const start = performance.now();
+  for (let i = 0; i < runs; i++) fn();
+  return (performance.now() - start) / runs;
+}
+
+// Absolute wall-clock budgets (ms) and paired wall-scaling budget for the
+// standard corpus.
+export const BUDGETS = {
+  maxParseMs10k: 5000,
+  maxFormatMs10k: 5000,
+  // 10x input must cost no more than 20x under paired wall evidence.
+  maxScalingRatio: 20
+};
+
+// Standard-budget verification requires exactly one synthetic-1k and one
+// synthetic-10k result plus explicit paired scaling evidence. Missing or
+// duplicate required rows cannot prove a pass. Per-corpus CPU and wall values
+// remain diagnostic/absolute-budget evidence. Scaling uses five alternating
+// small/large comparable-work rounds and the median paired wall ratio so a
+// runner/process-state shift cannot belong entirely to one corpus phase.
+export function checkBudgets(results, scalingEvidence = null) {
+  const failures = [];
+  const byLabel = new Map(results.map((r) => [r.label, r]));
+  for (const label of ['synthetic-1k', 'synthetic-10k']) {
+    let matches = 0;
+    for (const row of results) {
+      if (row.label === label) matches += 1;
+    }
+    if (matches === 0) {
+      failures.push(`missing required benchmark evidence for ${label}`);
+    } else if (matches > 1) {
+      failures.push(`duplicate required benchmark evidence for ${label}`);
+    }
+  }
+  const small = byLabel.get('synthetic-1k');
+  const large = byLabel.get('synthetic-10k');
+  if (large) {
+    if (!Number.isFinite(large.parseMs) || large.parseMs < 0) {
+      failures.push('10k-line parse wall timing is missing or invalid');
+    } else if (large.parseMs > BUDGETS.maxParseMs10k) {
+      failures.push(`10k-line parse took ${large.parseMs}ms (budget ${BUDGETS.maxParseMs10k}ms)`);
+    }
+    if (!Number.isFinite(large.formatMs) || large.formatMs < 0) {
+      failures.push('10k-line format wall timing is missing or invalid');
+    } else if (large.formatMs > BUDGETS.maxFormatMs10k) {
+      failures.push(`10k-line format took ${large.formatMs}ms (budget ${BUDGETS.maxFormatMs10k}ms)`);
+    }
+  }
+  if (small && large) {
+    if (!Number.isFinite(small.parseCpuMs) || small.parseCpuMs <= 0 ||
+        !Number.isFinite(large.parseCpuMs) || large.parseCpuMs <= 0) {
+      failures.push('parse CPU timing is missing or invalid');
+    }
+
+    const validScalingEvidence =
+      scalingEvidence
+      && scalingEvidence.method === BENCHMARK_SCALING_METHOD
+      && scalingEvidence.sample_count === BENCHMARK_SCALING_SAMPLES
+      && Number.isFinite(scalingEvidence.wall_ratio)
+      && scalingEvidence.wall_ratio > 0;
+
+    if (!validScalingEvidence) {
+      failures.push('paired scaling evidence is missing or invalid');
+    } else if (scalingEvidence.wall_ratio > BUDGETS.maxScalingRatio) {
+      failures.push(
+        `paired parse wall scaling ratio 1k->10k is ${scalingEvidence.wall_ratio.toFixed(1)}x ` +
+        `(budget ${BUDGETS.maxScalingRatio}x)`
+      );
+    }
+  }
+  return failures;
+}
+export function formatReport(results) {
+  const header = 'label           lines    bytes  lex(ms) parse(ms) parseCPU(ms) format(ms) compile(ms)';
+  const rows = results.map((r) =>
+    `${r.label.padEnd(15)} ${String(r.lines).padStart(6)} ${String(r.bytes).padStart(7)} ` +
+    `${String(r.lexMs).padStart(7)} ${String(r.parseMs).padStart(9)} ${String(r.parseCpuMs).padStart(12)} ` +
+    `${String(r.formatMs).padStart(10)} ` +
+    `${r.compileMs === null ? '   n/a'.padStart(11) : String(r.compileMs).padStart(11)}`
+  );
+  return [header, ...rows].join('\n');
+}

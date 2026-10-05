@@ -1,0 +1,83 @@
+{
+  "schema": "axiom-institutional-domain-projections.v1",
+  "status": "examples only; not legal or operational profiles",
+  "rule": "Each projection reuses the same primitives while allowing local terminology, procedure, assurance, retention, appeal, and legal constraints.",
+  "domains": {
+    "education": {
+      "institution": "school/university/training body",
+      "mappings": {
+        "relationship": ["enrollment", "faculty affiliation"],
+        "role_or_office": ["teacher", "registrar", "dean"],
+        "credential": ["course completion", "degree", "microcredential"],
+        "eligibility": ["prerequisite", "program admission"],
+        "proposal_or_request": ["enrollment request", "grade review"],
+        "approval_or_decision": ["admission", "grade decision", "credential issuance"],
+        "challenge_or_appeal": ["academic appeal"],
+        "effect_admission": ["issue credential", "change official record"]
+      }
+    },
+    "government": {
+      "institution": "agency/municipality/department/public body",
+      "mappings": {
+        "relationship": ["employment", "constituency/service relationship"],
+        "role_or_office": ["public office", "case officer", "auditor"],
+        "term_or_appointment": ["election", "appointment", "acting authority"],
+        "proposal_or_request": ["application", "petition", "administrative request"],
+        "approval_or_decision": ["permit decision", "administrative determination"],
+        "challenge_or_appeal": ["review", "appeal", "ombuds complaint"],
+        "retention_or_disclosure": ["public/protected record"],
+        "effect_admission": ["publish binding decision", "alter official register"]
+      }
+    },
+    "research": {
+      "institution": "university/lab/research consortium",
+      "mappings": {
+        "relationship": ["investigator affiliation", "collaboration"],
+        "role_or_office": ["principal investigator", "data steward", "ethics reviewer"],
+        "credential": ["training certification", "facility qualification"],
+        "consent_or_acknowledgement": ["participant consent", "data-use consent"],
+        "proposal_or_request": ["protocol submission", "data-access request"],
+        "approval_or_decision": ["ethics approval", "data-access decision"],
+        "evidence_or_attestation": ["method provenance", "dataset lineage", "analysis receipt"],
+        "effect_admission": ["release protected dataset", "publish authoritative result package"]
+      }
+    },
+    "healthcare_like": {
+      "institution": "care organization or regulated service",
+      "caution": "Illustrative only; real clinical deployment requires dedicated safety, privacy, legal, and medical review.",
+      "mappings": {
+        "relationship": ["care relationship", "employment"],
+        "role_or_office": ["clinician", "proxy", "records officer"],
+        "credential": ["professional qualification"],
+        "consent_or_acknowledgement": ["care/data consent"],
+        "delegation": ["proxy authority"],
+        "challenge_or_appeal": ["record correction", "review"],
+        "retention_or_disclosure": ["protected record rules"],
+        "effect_admission": ["release protected record", "perform regulated consequential action"]
+      }
+    },
+    "associations_and_businesses": {
+      "institution": "company/nonprofit/union/club/standards body",
+      "mappings": {
+        "relationship": ["membership", "employment", "contractor relationship"],
+        "role_or_office": ["director", "manager", "auditor", "committee member"],
+        "quorum_or_threshold": ["board vote", "committee threshold"],
+        "proposal_or_request": ["purchase", "policy proposal", "membership action"],
+        "succession_or_recovery": ["officer succession", "custodian recovery"],
+        "effect_admission": ["spend funds", "publish binding policy", "change protected membership state"]
+      }
+    },
+    "machine_organizations": {
+      "institution": "operator-defined machine/service organization",
+      "mappings": {
+        "relationship": ["service membership", "runtime sponsorship"],
+        "role_or_office": ["planner", "verifier", "executor", "custodian"],
+        "credential": ["machine identity credential"],
+        "delegation": ["bounded agent delegation"],
+        "evidence_or_attestation": ["execution receipt", "verification report"],
+        "succession_or_recovery": ["runtime/key replacement"],
+        "effect_admission": ["consequential external tool or state effect"]
+      }
+    }
+  }
+}

@@ -8,12 +8,13 @@
 
 ## Priority 0 — Protect current truth
 
-- [ ] Close capability-to-evidence binding before adding new implemented governance claims.
-- [ ] Require capability IDs to bind to named assertions rather than only shared file paths.
-- [ ] Reject missing, non-existent, non-executable, stale, or capability-irrelevant evidence.
+- [x] Close capability-to-evidence binding before adding new implemented governance claims. Current `validateCapabilityEvidenceBindings` requires implemented capabilities to have executable bindings before validation passes.
+- [x] Require capability IDs to bind to named assertions rather than only shared file paths. Bindings name the capability, runnable test declaration, and exact assertion lines.
+- [x] Reject missing, non-existent, non-executable, stale, or capability-irrelevant evidence. The current checker rejects missing paths, non-files/symlinks, non-runnable binding paths, absent named tests, absent exact assertion anchors, duplicate bindings, and registry/binding digest disagreement.
 - [ ] Keep registry digest synchronized across every digest-bearing canonical document.
 - [ ] Complete the authentic current-build pilot and independent security review.
 - [ ] Update the current threat model for every new human, Circle, delegation, or assurance entry point.
+- [ ] Require the PHASEONE emergent-coordination campaign before any live machine-agent Circle authority or machine-to-machine delegation is promoted; ordinary human/local Circle development is not blocked by this gate.
 - [ ] Preserve current non-claims for public federation, consensus, settlement, national infrastructure, and sovereign adoption.
 
 ## Priority 1 — Documentation integration
@@ -102,19 +103,31 @@
 - [ ] Define emergency authority that can reduce risk but not create unbounded permanent authority.
 - [ ] Define appeals, stays, reconsideration, remedies, and human review.
 - [ ] Define Circle assurance floors and member-level stronger protections.
+- [ ] Treat Circle votes, assignments, charter decisions, and shared state as governance evidence for local authority evaluation; no collective result directly mints Sandbox authority.
 - [ ] Build human explanations and comprehension tests before real pilots.
+
+**Founders Council / recognized-mind Genesis checkpoint (2026-09-25):** Issue #1855 and draft PR #1856 establish a bounded constitutional laboratory for the initial 20-seat Founders Council (10 biological / 10 digital), the Founder's ten manual single-use non-delegable/non-transferable/non-renewable Founder Genesis authorizations, and a Founder casting-vote evaluator that is available only after all 20 original voting positions are active and only for a qualifying ordinary tie. The laboratory also adds monotonic governance-era / authority-window evidence semantics and an explicit Genesis/population-integrity threat-model boundary. All current records remain inert (`authority_effect: none`, `runtime_activation: false`); no Gateway route, Grid mutation, live Genesis, Council execution authority, portable personhood, or capability-registry promotion is claimed. General Circle decisions remain evidence for local authority evaluation and do not directly mint Sandbox authority.
 
 ## Priority 8 — Circle workflows and pilot
 
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
 - [ ] Implement selective object and evidence sharing over approved causal exchange.
 - [ ] Make concurrent updates and unresolved conflicts visible.
+- [ ] Require every consequential Circle effect to re-enter the ordinary local AXIOM authority path; a task, proposal result, receipt, or shared object is not an execution grant.
 - [ ] Implement Circle export, backup, recovery, succession, and shutdown.
 - [ ] Choose one low-risk pilot domain.
 - [ ] Obtain explicit participant consent and named operator/reviewer roles.
 - [ ] Define success, support, accessibility, revocation, comprehension, and harm metrics.
 - [ ] Complete security and privacy review.
 - [ ] Do not include public authority, payroll, treasury, coercive eligibility, or regulated decisions in the first pilot.
+
+**CIRCLE-002 shared-object checkpoint (2026-09-24):** Canonical Shared Artifact v0 already keeps stale-parent concurrent edits as explicit multiple heads and requires complete conflict resolution. The first Circle-specific composition adds only a pure admission verifier for one appended revision: exact Circle authority-domain binding, current membership assurance, immutable prior revisions/owner/domain/sharing, exact external authorization-evidence binding, and zero artifact/governance/execution/network effect. It does not persist or apply a revision. Commitments, Circle-specific approvals, live causal exchange, export/exit retention and human conflict-resolution workflows remain open.
+
+**CIRCLE-002 historical commitment checkpoint (2026-09-24):** The generic Agreement Record v0 remains Circle-neutral. The Circle adapter binds one exact agreement/digest to one exact historical Circle Core package/charter digest plus independently evidenced historical membership-assurance/context bindings for every agreement party at `agreement.recorded_at`. Later consent or membership revocation does not rewrite a historically valid record, but currentness remains separate. The adapter validates evidence shape and exact bindings only; historical snapshot/evidence authenticity remains separately verified and no agreement/Circle record grants enforcement or execution authority.
+
+**CIRCLE-002 decision-to-request checkpoint (2026-09-25):** Reuse `axiom-circle-decision.v0` as the sole collective result record. A separate inert request-evidence layer may treat only an exact `accepted` + `circle-local-accepted` decision as support for asking ordinary AXIOM policy to evaluate one exact request. The proposal must contain the content-addressed binding for the exact resource/action/purpose/destination/data/effect/consequence descriptor; the current Circle package/charter/proposal/decision and externally supplied snapshot evidence must match; open or accepted decision appeals block requestability. The result never submits the request and explicitly creates no grant, approval, prepared effect, execution, networking, or runtime authority. Every consequential effect still re-enters Gateway -> Hypervisor -> Sandbox -> Grid.
+
+**CIRCLE-002 exit/export-retention checkpoint (2026-09-25):** Reuse `axiom-circle-export.v0` as the Circle-local export declaration and keep actual portable bundle construction separate. A pure retention-evidence layer binds the exact export record, exporter membership, Circle package/charter snapshot, and one independently evidenced observation for every included record digest. Active-member history may proceed only to disclosure review. After an effective exit/revocation/non-active membership cutoff, an included record must both be effective and have its exact digest observed no later than that cutoff; later package state cannot launder a post-exit version into retained history. Snapshot and per-record evidence authenticity remain externally verified, disclosure authorization remains mandatory, and the result creates no portable authority, bundle, Grid mutation, networking, governance, or execution effect.
 
 ## Priority 9 — Institutional authority model
 
@@ -217,6 +230,7 @@ Do not prototype with real people or live authority in the following areas until
 
 ## Priority 17 — Threat model expansion
 
+- [ ] Emergent collective authority / unauthorized coordination: communication, consensus, assignment, shared evidence, or collective membership must not become an authority root.
 - [ ] Assurance downgrade and mislabelling.
 - [ ] Provisional-result laundering.
 - [ ] Retrospective evidence forgery.
@@ -243,6 +257,7 @@ For every future capability promoted beyond planning:
 - [ ] normative requirements;
 - [ ] schemas and migration rules;
 - [ ] positive, negative, adversarial, recovery, and compatibility tests;
+- [ ] PHASEONE emergent-coordination evidence for machine-agent Circle authority, machine delegation, remote execution, or another promoted cross-principal machine coordination surface;
 - [ ] current-build threat model update;
 - [ ] security and privacy review;
 - [ ] domain legal/governance review where applicable;

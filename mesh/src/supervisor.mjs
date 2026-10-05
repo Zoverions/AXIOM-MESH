@@ -7,6 +7,7 @@ import { meshConfig } from './lib/config.mjs';
 import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { startLocalIngressBridge } from './local-ingress.mjs';
 import { assertDenyEgressBoundary } from './network-boundary.mjs';
+import { assertProductionRuntime } from './setup.mjs';
 import {
   loadTransportRuntime,
   serviceDnsName,
@@ -26,6 +27,7 @@ const STARTUP_ORDER = Object.freeze([
   },
   { service: 'gateway', module: 'src/gateway/server.mjs', port: 'gateway', probe: '/ready', expected: 'ready' }
 ]);
+const FORCED_EXIT_TIMEOUT_MS = 3_000;
 
 export async function runProductionSupervisor({
   config = meshConfig(),
@@ -41,6 +43,7 @@ export async function runProductionSupervisor({
   if (config.environment !== 'production' || config.autoBootstrap) {
     throw new ValidationError('The production supervisor requires NODE_ENV=production and disabled auto-bootstrap');
   }
+  assertProductionRuntime();
   if (config.requireDenyEgress) await denyEgressCheck();
   const supervisorTransport = config.transport?.enabled
     ? await loadTransportRuntime({
@@ -295,20 +298,53 @@ async function stopChildren(children) {
     } else {
       child.kill('SIGTERM');
     }
-    pending.push(waitForExit(child, 5_000));
+    pending.push(waitForSupervisorChildExit(child, 5_000));
   }
   await Promise.all(pending);
 }
 
-async function waitForExit(child, timeoutMs) {
-  const timeout = new Promise(resolve => {
-    const timer = setTimeout(() => {
-      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
-      resolve();
-    }, timeoutMs);
-    timer.unref();
-  });
-  await Promise.race([once(child, 'exit'), timeout]);
+export async function waitForSupervisorChildExit(
+  child,
+  timeoutMs,
+  { forcedExitTimeoutMs = FORCED_EXIT_TIMEOUT_MS } = {}
+) {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000) {
+    throw new ValidationError('Supervisor child graceful-exit timeout is invalid');
+  }
+  if (
+    !Number.isSafeInteger(forcedExitTimeoutMs)
+    || forcedExitTimeoutMs < 1
+    || forcedExitTimeoutMs > 60_000
+  ) {
+    throw new ValidationError('Supervisor child forced-exit timeout is invalid');
+  }
+  if (child.exitCode !== null || child.signalCode !== null) return;
+
+  const exited = once(child, 'exit').then(() => true);
+  if (await settleWithin(exited, timeoutMs)) return;
+
+  if (child.exitCode === null && child.signalCode === null) {
+    child.kill('SIGKILL');
+  }
+  if (await settleWithin(exited, forcedExitTimeoutMs)) return;
+
+  throw new ValidationError(
+    'Supervisor child did not exit after forced termination'
+  );
+}
+
+async function settleWithin(promise, timeoutMs) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise(resolve => {
+        timer = setTimeout(() => resolve(false), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

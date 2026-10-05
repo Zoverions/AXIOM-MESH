@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24.14.0 <25"
+    "node": ">=22.23.2 <23 || >=24.14.0 <25"
   },
   "scripts": {
     "setup": "node src/setup.mjs install --verify",
@@ -13,6 +13,13 @@
     "network-policy:check": "node src/check-service-network-policy.mjs",
     "gateway-client:check": "node src/check-gateway-client-contract.mjs",
     "axiom-one:check": "node src/check-axiom-one.mjs",
+    "agent-readiness:check": "node src/check-agent-readiness.mjs",
+    "agent-commons:check": "node src/check-agent-commons.mjs",
+    "agent-commons:challenges:check": "node src/check-agent-challenge-registry.mjs",
+    "agent-commons:readonly:check": "node src/check-agent-commons-readonly-lab.mjs",
+    "agent-commons:mcp-readonly:check": "node src/check-agent-commons-mcp-readonly.mjs",
+    "agent-commons:a2a-card:check": "node src/check-agent-commons-a2a-card-candidate.mjs",
+    "emergent-coordination:check": "node src/check-emergent-coordination.mjs",
     "axiom": "node src/cli.mjs",
     "intent:compile": "node src/intentctl.mjs compile",
     "intent:assess": "node src/intentctl.mjs assess",
@@ -63,12 +70,17 @@
     "verify-export": "node src/verify-export.mjs",
     "verify-sync": "node src/verify-sync.mjs",
     "check-registry": "node src/check-registry.mjs",
+    "interrogation:report": "node src/interrogation-plane.mjs",
     "docs:check": "node src/check-docs.mjs",
     "status:generate": "node src/status.mjs --write",
     "status:check": "node src/status.mjs",
     "release:verify": "node src/release.mjs",
     "release:evidence": "npm run check && node src/release.mjs --write",
     "test": "node --test --test-reporter=spec",
-    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
+    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node src/check-demand-evidence.mjs && node --test --test-reporter=spec",
+    "growth:demand:check": "node src/check-demand-evidence.mjs",
+    "growth:gtm:check": "node --test --test-reporter=spec test/gtm-evidence.test.mjs test/gtm-outcome-receipt.test.mjs",
+    "host-install:policy": "node src/host-install.mjs policy-check",
+    "host-install:plan": "node src/host-install.mjs plan"
   }
 }

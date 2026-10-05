@@ -1,17 +1,22 @@
 import https from 'node:https';
-import { AxiomError } from './canonical.mjs';
+import { AxiomError, ValidationError } from './canonical.mjs';
 import { signedRequestHeaders } from './identity.mjs';
+import { evaluateMachineIntentWithAssurance } from './agent-assurance-authority-binding.mjs';
+import { validatePlan } from './plan.mjs';
 import {
   serviceDnsName,
   verifyTransportServerIdentity
 } from './transport-credentials.mjs';
 import { authorizeServiceRequest } from './service-network-policy.mjs';
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const MAX_REQUEST_TIMEOUT_MS = 300_000;
+
 export async function signedFetch(identity, audience, url, {
   method = 'GET',
   body,
   traceId,
-  timeoutMs = 10_000,
+  timeoutMs,
   headers = {}
 } = {}) {
   authorizeServiceRequest({
@@ -19,6 +24,12 @@ export async function signedFetch(identity, audience, url, {
     destination: audience,
     method,
     url
+  });
+  const effectiveTimeoutMs = resolveSignedFetchTimeoutMs({
+    audience,
+    url,
+    body,
+    timeoutMs
   });
   const encoded = body === undefined ? Buffer.alloc(0) : Buffer.from(JSON.stringify(body));
   const authHeaders = signedRequestHeaders(identity, { method, url, audience, body: encoded });
@@ -41,14 +52,14 @@ export async function signedFetch(identity, audience, url, {
         method,
         body: encoded,
         headers: requestHeaders,
-        timeoutMs
+        timeoutMs: effectiveTimeoutMs
       })
     : await ordinaryRequest({
         url,
         method,
         body: encoded,
         headers: requestHeaders,
-        timeoutMs
+        timeoutMs: effectiveTimeoutMs
       });
   if (!response.ok) {
     const payload = response.payload;
@@ -61,6 +72,94 @@ export async function signedFetch(identity, audience, url, {
     );
   }
   return response.payload;
+}
+
+export function resolveSignedFetchTimeoutMs({
+  audience,
+  url,
+  body,
+  timeoutMs
+} = {}) {
+  const explicitTimeoutMs = normalizeTimeout(timeoutMs);
+  const target = new URL(url);
+  const isSandboxExecution = (
+    audience === 'sandbox'
+    && target.pathname === '/internal/v1/execute'
+  );
+  if (!isSandboxExecution) {
+    return explicitTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  }
+
+  const plan = validatePlan(body?.plan);
+  const executionSteps = plan.steps.filter(step => (
+    step.id === 'execute'
+    && step.audience === 'sandbox'
+  ));
+  if (executionSteps.length !== 1) {
+    throw new ValidationError(
+      'Sandbox execution requires exactly one plan-bound execute timeout'
+    );
+  }
+  const planTimeoutMs = executionSteps[0].timeout_ms;
+  if (explicitTimeoutMs !== null && explicitTimeoutMs !== planTimeoutMs) {
+    throw new ValidationError(
+      'Sandbox execution timeout must match the digest-bound plan timeout'
+    );
+  }
+
+  const principal = body?.intent?.principal;
+  const assuranceRules = plan.decision_provenance.rules.filter(rule => (
+    typeof rule === 'string' && rule.startsWith('agent-assurance:')
+  ));
+  if (principal?.schema === 'axiom-machine-principal.v1') {
+    const machineDecision = evaluateMachineIntentWithAssurance(principal, {
+      action: body?.intent?.action,
+      purpose: body?.intent?.purpose,
+      requested_execution_ms: planTimeoutMs,
+      assurance_evidence: body?.intent?.assurance_evidence
+    });
+    if (!machineDecision.allow) {
+      throw new AxiomError(
+        machineDecision.code,
+        machineDecision.reason,
+        403
+      );
+    }
+    if (machineDecision.assurance) {
+      const expectedRule = `agent-assurance:${machineDecision.assurance.evidence_digest}`;
+      if (
+        assuranceRules.length !== 1
+        || assuranceRules[0] !== expectedRule
+      ) {
+        throw new ValidationError(
+          'Sandbox assurance evidence does not match the digest-bound plan provenance'
+        );
+      }
+    } else if (assuranceRules.length > 0) {
+      throw new ValidationError(
+        'Sandbox plan requires agent assurance evidence that is missing from the intent'
+      );
+    }
+  } else if (assuranceRules.length > 0) {
+    throw new ValidationError(
+      'Non-machine sandbox plan cannot carry agent assurance provenance'
+    );
+  }
+  return planTimeoutMs;
+}
+
+function normalizeTimeout(value) {
+  if (value === undefined || value === null) return null;
+  if (
+    !Number.isSafeInteger(value)
+    || value < 1
+    || value > MAX_REQUEST_TIMEOUT_MS
+  ) {
+    throw new ValidationError(
+      `Signed request timeout must be an integer between 1 and ${MAX_REQUEST_TIMEOUT_MS}`
+    );
+  }
+  return value;
 }
 
 async function ordinaryRequest({

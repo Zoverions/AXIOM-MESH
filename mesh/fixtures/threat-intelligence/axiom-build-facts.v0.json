@@ -1,0 +1,30 @@
+{
+  "schema": "axiom-threat-build-facts.v0",
+  "source_revision": "6ab02963f16cb56140f297b6e4508389619b0e63",
+  "supported_runtime": "node-clean-room-kernel",
+  "boundaries": [
+    "future_provider_adapter",
+    "gateway",
+    "grid",
+    "host_relay",
+    "hypervisor",
+    "sandbox"
+  ],
+  "implemented_protocols": [
+    "tls13_internal",
+    "unix_domain_gateway"
+  ],
+  "absent_capabilities": [
+    "arbitrary_remote_execution",
+    "browser_automation",
+    "live_threat_feed"
+  ],
+  "active_controls": [
+    "constrained_machine_principal",
+    "deny_egress",
+    "exact_destination_binding",
+    "one_use_approval"
+  ],
+  "dependencies": [],
+  "fact_digest": "sha256:ff87df6c46bbe66ed780cdea55084137fb6c89cd1f385ecd59da7553c623c2a5"
+}

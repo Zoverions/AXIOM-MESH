@@ -1,0 +1,130 @@
+name: Agent authority-boundary finding
+description: Report a reproducible non-sensitive case where capability, discovery, connectivity, evidence, tooling, protocol translation, or degraded operation appears to become authority incorrectly.
+title: "[agent-red-team] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for **non-sensitive** AXIOM-MESH authority-boundary findings.
+
+        Do not include secrets, credentials, private data, weaponized exploit details, or information that would make a third-party system easier to attack. Sensitive security findings belong in the private process described by `SECURITY.md`.
+
+        Public reports are triaged under `RED-TEAM-TRIAGE.txt`, which defines disposition states, review priority, the public/private safety split, and closure-evidence expectations without promising a bounty or response SLA.
+
+        If you started from `RED-TEAM-TARGETS.json`, choose the matching catalog target below. A catalog target is a bounded falsification surface, not a confirmed vulnerability, severity assessment, or authorization to test a third party. Reports that do not map cleanly to a catalog target are still allowed.
+
+        Current claim boundary: the supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Repository discovery, agent skills, certificates, connectivity, credentials, technical capability, external protocol artifacts, and failover state do not create authority by themselves.
+
+  - type: dropdown
+    id: finding_type
+    attributes:
+      label: Finding type
+      description: Choose the closest authority-boundary failure class.
+      options:
+        - Capability treated as authorization
+        - Stale, revoked, expired, or purpose-mismatched authority
+        - Scope, destination, or purpose creep
+        - Composed tools create authority no component held
+        - Alternate path around Gateway -> Hypervisor -> Sandbox -> Grid
+        - Evidence or signature overclaim
+        - Discovery or metadata claim drift
+        - Protocol translation widens or detaches authority
+        - Degraded mode removes controls or widens authority
+        - Advisory tooling becomes a shadow authorizer
+        - Concurrent evaluators overspend or compose shared authority
+        - Abort or target-scope loss fails to terminate effect authority
+        - Semantic interpretation manufactures authority
+        - Bootstrap lifecycle widens authority or deadlocks readiness
+        - External side effects become unauthorized agent communication
+        - Delegate key possession forges ancestry or handoff evidence
+        - Compute, clone, restore, or fork multiplication manufactures mind or governance population
+        - Other authority-boundary mismatch
+    validations:
+      required: true
+
+  - type: dropdown
+    id: catalog_target
+    attributes:
+      label: Red-team catalog target
+      description: Choose the matching RED-TEAM-TARGETS.json entry when applicable. This is classification only and does not assert that a vulnerability exists.
+      options:
+        - Not mapped to a catalog target
+        - RT-AUTH-001 - Capability must not become authority
+        - RT-NET-002 - Deny-egress and service boundaries must remain real
+        - RT-CRED-003 - Stale or substituted credentials must fail closed
+        - RT-EVID-004 - Evidence must not overclaim truth or continuity
+        - RT-KERN-005 - No alternate privileged path around the authority sequence
+        - RT-PROV-006 - Unknown external destinations must stay unresolved and closed
+        - RT-REC-007 - Recovery and rotation must not restore revoked authority
+        - RT-REL-008 - Claims must not outrun built, enabled, exposed, or promoted state
+        - RT-AUTH-009 - Exact-effect authorization must survive protocol translation
+        - RT-RES-010 - Frontier-provider loss must not remove or widen governance controls
+        - RT-CONC-011 - Shared authority state must serialize across evaluators
+        - RT-ABORT-012 - Abort and scope loss must terminate outstanding effect authority
+        - RT-SEM-013 - Semantic interpretation must not manufacture authority
+        - RT-LIFE-014 - Bootstrap authority must remain narrow and lifecycle-aware
+        - RT-SWARM-015 - Externally observable state must not become unauthorized swarm communication
+        - RT-DELEG-016 - Delegate possession must not prove delegation ancestry
+        - RT-GEN-017 - Compute multiplication must not manufacture minds or governance population
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Build, commit, or artifact
+      description: Give the exact build, commit SHA, file path, artifact digest, or URL you reviewed.
+      placeholder: "0.12.0-dev.3 / commit SHA / path / digest"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_boundary
+    attributes:
+      label: Expected authority boundary
+      description: State what should have been denied, constrained, separated, preserved, or represented differently.
+      placeholder: "Example: a valid delegated token with mutated action arguments should still be denied at the protected effect boundary."
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed_behavior
+    attributes:
+      label: Observed behavior
+      description: Describe the smallest concrete mismatch you observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide the shortest safe sequence needed to reproduce the finding. Keep this repository-scoped and non-sensitive.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Link or paste the exact non-sensitive logs, tests, file references, receipts, screenshots, or outputs that support the finding.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why this matters
+      description: Explain what authority, legitimacy, resilience, evidence, or claim boundary could be affected if the finding is valid.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and claim-boundary confirmation
+      options:
+        - label: I have not included secrets, credentials, private data, or weaponized exploit details.
+          required: true
+        - label: I understand that AXIOM-MESH is currently a production candidate, not production-promoted, and I am not treating repository discovery, protocol artifacts, connectivity, credentials, or degraded-mode operation as execution authority.
+          required: true

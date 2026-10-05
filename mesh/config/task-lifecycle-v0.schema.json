@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/task-lifecycle-v0.schema.json",
+  "title": "AXIOM Task Lifecycle v0 inert contract",
+  "description": "Durable task lifecycle and resumption-evidence record. Resume eligibility never substitutes for effect-time authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "task_id",
+    "outcome_id",
+    "principal_id",
+    "lifecycle_state",
+    "created_at",
+    "updated_at",
+    "worker_ref",
+    "provider_ref",
+    "node_ref",
+    "authority_snapshot_ref",
+    "authority_checked_at",
+    "budget_ref",
+    "budget_checked_at",
+    "resume_requested",
+    "resume_from_digest",
+    "effect_state",
+    "result_refs",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-task-lifecycle.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "task_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "outcome_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "principal_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "lifecycle_state": {
+      "enum": [
+        "proposed",
+        "admitted",
+        "running",
+        "waiting-input",
+        "blocked",
+        "completed-unverified",
+        "completed-verified",
+        "failed",
+        "cancelled",
+        "uncertain-effect"
+      ]
+    },
+    "created_at": {
+      "$ref": "#/$defs/date"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/date"
+    },
+    "worker_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "provider_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "node_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "authority_snapshot_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "authority_checked_at": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/date"
+        }
+      ]
+    },
+    "budget_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "budget_checked_at": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/date"
+        }
+      ]
+    },
+    "resume_requested": {
+      "type": "boolean"
+    },
+    "resume_from_digest": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ]
+    },
+    "effect_state": {
+      "enum": [
+        "none",
+        "not-started",
+        "pending",
+        "confirmed",
+        "uncertain"
+      ]
+    },
+    "result_refs": {
+      "$ref": "#/$defs/refArray"
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refArray": {
+      "type": "array",
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/agent-os-contracts.mjs",
+  "x-axiom-non-claims": [
+    "effect-authority",
+    "automatic-resumption",
+    "provider-authority",
+    "node-authority",
+    "verified-external-effect",
+    "runtime-activation"
+  ]
+}

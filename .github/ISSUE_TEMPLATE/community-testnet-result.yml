@@ -1,0 +1,168 @@
+name: Community Testnet v0 result
+description: Submit a non-sensitive exact-revision result from an independently controlled AXIOM-MESH test environment.
+title: "[testnet-v0] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for **Community Testnet v0** results from your own, repository-owned, or explicitly disposable environment.
+
+        v0 is a distributed evidence network, not a federated AXIOM runtime. A result does not grant repository, runtime, merge, deployment, credential, protocol, or production authority.
+
+        Do not include secrets, credentials, personal data, unpublished sensitive vulnerabilities, or third-party infrastructure details. Route sensitive findings through `SECURITY.md`.
+
+        Prefer the existing `agent-readiness/CONTRIBUTION-RESULT.schema.json` when you can provide a machine-readable package. This form is a human-friendly wrapper around the same evidence discipline.
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Participation role
+      options:
+        - Operator
+        - Breaker
+        - Builder
+        - Operator + Breaker
+        - Operator + Builder
+        - Breaker + Builder
+        - Operator + Breaker + Builder
+    validations:
+      required: true
+
+  - type: dropdown
+    id: lane
+    attributes:
+      label: Testnet lane
+      options:
+        - T0 - baseline reproducibility
+        - T1 - authority-boundary negatives
+        - T2 - lifecycle and restart
+        - T3 - evidence and chain verification
+        - T4 - portability and platform variation
+        - T5 - constrained hardware / soak candidate
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Exact tested commit
+      description: Provide the exact 40-hex Git commit. Do not provide only a moving branch name.
+      placeholder: "0123456789abcdef0123456789abcdef01234567"
+    validations:
+      required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: Reported build/version
+      description: Optional human-readable build/version paired with the exact commit.
+      placeholder: "0.12.0-dev.3"
+    validations:
+      required: false
+
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: "macOS 16.x / arm64; Ubuntu 26.04 / x86_64; Windows 11 / x64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Runtime and hardware environment
+      description: Include Node/npm versions and hardware/resource details relevant to the result. Do not include secrets or private infrastructure identifiers.
+      placeholder: |
+        Node: 24.18.0
+        npm: 11.x
+        CPU/architecture:
+        RAM/resource limit:
+        container/runtime/filesystem notes:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: custody
+    attributes:
+      label: Environment custody
+      options:
+        - Contributor-owned
+        - Repository-owned
+        - Explicitly disposable environment
+    validations:
+      required: true
+
+  - type: textarea
+    id: method
+    attributes:
+      label: Exact commands or procedure
+      description: Provide enough detail for another operator to repeat the run.
+      placeholder: |
+        git checkout <exact commit>
+        npm run doctor
+        npm run setup:check
+        npm run check
+    validations:
+      required: true
+
+  - type: dropdown
+    id: disposition
+    attributes:
+      label: Your observed disposition
+      description: This is the submitter's observation, not project adjudication or certification.
+      options:
+        - Reproduced expected behavior
+        - Reproduced a failure/mismatch
+        - Not reproduced under this environment
+        - Partial / inconclusive
+    validations:
+      required: true
+
+  - type: textarea
+    id: observations
+    attributes:
+      label: Observations
+      description: Report successes, failures, warnings, unexpected behavior, and relevant timings/resource observations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Non-sensitive evidence
+      description: Provide contribution-result JSON, evidence digests, logs, artifact locators, screenshots, or links when useful. Redact or omit secrets.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: independence
+    attributes:
+      label: Independent reproduction status
+      options:
+        - Fresh independent attempt
+        - Repeating my own prior result
+        - Following another participant's procedure
+        - Not applicable / exploratory
+    validations:
+      required: true
+
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and uncertainty
+      description: State what was not tested, what remains uncertain, and any environment-specific caveats.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and authority confirmation
+      options:
+        - label: I tested only this repository and systems I own or am explicitly authorized to use.
+          required: true
+        - label: I have not included secrets, credentials, personal data, or sensitive exploit material in this public result.
+          required: true
+        - label: I understand that Testnet participation and a successful result do not grant AXIOM-MESH or repository authority.
+          required: true

@@ -1,0 +1,36 @@
+{
+  "schema": "axiom-deployment-transition-profile.v1",
+  "status": "experimental deployment architecture; no production controller claim",
+  "purpose": "Record activation, suspension, rollback, resume, and retirement as explicit state transitions bound to exact artifacts, local admission, current policy/authority evidence, health checks, rollback targets, and offline currentness.",
+  "states": [
+    "admitted_inert",
+    "staging",
+    "active",
+    "suspended",
+    "rolled_back",
+    "retired"
+  ],
+  "invariants": [
+    "activation is a transition, not a property inferred from installation",
+    "every active state is bound to exact artifact digests and one admission record",
+    "effect-increasing transitions require fresh authority at transition time",
+    "preauthorized fail-safe authority may only suspend, roll back, or retire",
+    "rollback target and rollback plan are known before effect-increasing transitions",
+    "offline operation cannot perform an effect-increasing transition when required external currentness is unsatisfied",
+    "transition receipts are evidence and never become reusable grants",
+    "health checks and transition evidence are retained without pretending health proves semantic safety"
+  ],
+  "recovery_rules": [
+    "suspension should preserve enough state for investigation where policy permits",
+    "rollback restores a previously admitted known target, not an arbitrary latest version",
+    "resume from suspension requires a fresh effect-increasing transition decision",
+    "rolled-back instances re-enter staging before becoming active again",
+    "retirement is terminal for that activation lineage; a new deployment uses a new lineage"
+  ],
+  "nonclaims": [
+    "A successful health check does not prove an artifact is safe.",
+    "A transition receipt is not a deployment authority token.",
+    "This profile does not define a universal orchestrator or scheduler.",
+    "Automated fail-safe rollback is allowed only when preauthorized by local policy."
+  ]
+}

@@ -143,6 +143,47 @@ export async function stopProductionHost(child, timeoutMs = 10_000) {
   };
 }
 
+export function assertCleanProductionStop(
+  result,
+  boundary = 'stopped-host operation'
+) {
+  if (
+    typeof boundary !== 'string'
+    || !/^[A-Za-z0-9][A-Za-z0-9 .:_-]{0,95}$/.test(boundary)
+  ) {
+    throw new ValidationError('Production stop boundary label is invalid');
+  }
+  if (
+    !result
+    || typeof result !== 'object'
+    || result.code !== 0
+    || result.signal !== null
+  ) {
+    const code = Number.isInteger(result?.code) ? String(result.code) : 'unknown';
+    const signal = typeof result?.signal === 'string' ? result.signal : 'none';
+    throw new ValidationError(
+      `${boundary} requires a clean production supervisor stop; code=${code}; signal=${signal}`
+    );
+  }
+  return result;
+}
+
+export async function stopProductionHostStrict(
+  child,
+  {
+    timeoutMs = 10_000,
+    boundary = 'stopped-host operation'
+  } = {}
+) {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000) {
+    throw new ValidationError('Production supervisor stop timeout is invalid');
+  }
+  return assertCleanProductionStop(
+    await stopProductionHost(child, timeoutMs),
+    boundary
+  );
+}
+
 const PORT_BLOCK_SIZE = 4;
 const PORT_BLOCK_MINIMUM = 20_000;
 const PORT_BLOCK_COUNT = 5_000;

@@ -1,0 +1,3 @@
+observe claim = "node-2-disk-ok" from "agent:node-2";
+verify vetted_claim = claim with DiskHealthPolicy;
+verify double_checked = vetted_claim with DiskHealthPolicy;

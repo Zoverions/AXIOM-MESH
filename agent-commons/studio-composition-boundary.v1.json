@@ -1,0 +1,120 @@
+{
+  "schema": "axiom-studio-composition-boundary.v1",
+  "status": "experimental architecture/conformance surface; no production promotion",
+  "decision": "Studio is the universal authoring and composition workbench, not the universal authority, verifier, deployment controller, secret custodian, or execution runtime.",
+  "planes": [
+    {
+      "id": "studio",
+      "role": "authoring_and_composition",
+      "may": [
+        "create inert contracts",
+        "compose capsules",
+        "define institutional patterns",
+        "author adapters",
+        "define deployment manifests",
+        "select protection profiles",
+        "simulate",
+        "run conformance checks",
+        "produce signed/publishable candidate artifacts"
+      ],
+      "must_not": [
+        "mint runtime authority",
+        "hold ambient production secrets",
+        "self-approve deployment",
+        "self-certify verification",
+        "directly execute consequential effects",
+        "silently activate imported artifacts"
+      ]
+    },
+    {
+      "id": "verify",
+      "role": "independent_verification",
+      "may": [
+        "verify artifact integrity",
+        "verify proofs",
+        "verify signatures",
+        "verify policy/profile conformance",
+        "verify receipts",
+        "verify provenance and transparency evidence"
+      ],
+      "must_not": [
+        "authoritatively approve execution by itself",
+        "rewrite source artifact",
+        "grant deployment authority"
+      ]
+    },
+    {
+      "id": "deployment_controller",
+      "role": "installation_and_activation",
+      "may": [
+        "resolve target topology",
+        "check prerequisites",
+        "stage artifacts",
+        "apply approved configuration",
+        "activate/deactivate bounded instances",
+        "record exact installed state"
+      ],
+      "must_not": [
+        "expand declared permissions",
+        "bypass local policy",
+        "treat Studio publication as deployment approval"
+      ]
+    },
+    {
+      "id": "runtime_node",
+      "role": "execution_and_local_state",
+      "may": [
+        "execute admitted capabilities",
+        "enforce local policy",
+        "operate offline where topology permits",
+        "emit receipts and evidence"
+      ],
+      "must_not": [
+        "edit its own approved policy envelope to gain authority",
+        "treat connectivity as required for local authority unless policy explicitly requires remote proof"
+      ]
+    },
+    {
+      "id": "custody",
+      "role": "keys_secrets_and_recovery",
+      "may": [
+        "hold or broker secret handles",
+        "rotate keys",
+        "release purpose-bound material at approved effect boundaries",
+        "support recovery"
+      ],
+      "must_not": [
+        "expose secret material to Studio by default",
+        "allow authoring convenience to become secret access"
+      ]
+    }
+  ],
+  "artifact_classes": [
+    "organizational_contract",
+    "institutional_pattern",
+    "agent_runtime_capsule",
+    "skill_or_tool_capsule",
+    "adapter_or_connector",
+    "deployment_manifest",
+    "protection_profile",
+    "verification_profile",
+    "encryption_profile",
+    "data_retention_profile",
+    "offline_sync_profile",
+    "policy_bundle",
+    "test_fixture",
+    "simulation_scenario",
+    "recovery_plan"
+  ],
+  "governing_invariants": [
+    "authoring is not authority",
+    "publication is not installation",
+    "installation is not authorization",
+    "verification is not authorization",
+    "connectivity is not authority",
+    "offline operation must preserve the same local security invariants",
+    "protection dimensions remain orthogonal rather than collapsed into one global security level",
+    "higher-assurance profiles may require stronger evidence but do not imply greater runtime authority",
+    "Studio compromise must not automatically compromise runtime keys, active grants, or protected state"
+  ]
+}

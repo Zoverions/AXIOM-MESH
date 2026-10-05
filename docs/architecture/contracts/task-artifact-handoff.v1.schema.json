@@ -1,0 +1,457 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:task-artifact-handoff:v1",
+  "title": "AXIOM Task Artifact Handoff v1",
+  "description": "Draft runtime-neutral task, artifact, lifecycle, and handoff envelope. The contract records coordination state, an exact catalog-entry version, and exact runtime-operation/AXIOM-action mapping but does not itself grant runtime authority or delegation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "task_id",
+    "causal_id",
+    "requester",
+    "execution_target",
+    "request",
+    "authority",
+    "budgets",
+    "lifecycle",
+    "inputs",
+    "outputs"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-task-artifact-handoff.v1"
+    },
+    "task_id": {
+      "$ref": "#/$defs/id"
+    },
+    "causal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "parent_task_id": {
+      "$ref": "#/$defs/id"
+    },
+    "handoff_from_task_id": {
+      "$ref": "#/$defs/id"
+    },
+    "requester": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id"],
+      "properties": {
+        "principal_id": {
+          "$ref": "#/$defs/id"
+        },
+        "sponsor_principal_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "execution_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "integration_id",
+        "integration_class",
+        "catalog_entry_id",
+        "catalog_entry_version",
+        "adapter_contract"
+      ],
+      "properties": {
+        "integration_id": {
+          "description": "Stable integration/subject identity. Exact executable/profile state is bound by catalog_entry_id and catalog_entry_version.",
+          "$ref": "#/$defs/catalogId"
+        },
+        "integration_class": {
+          "enum": [
+            "agent-runtime",
+            "model-provider",
+            "tool-service-connector",
+            "protocol-adapter",
+            "compute-backend",
+            "evidence-oracle"
+          ]
+        },
+        "catalog_entry_id": {
+          "description": "Exact immutable catalog entry identity selected for this task.",
+          "$ref": "#/$defs/catalogId"
+        },
+        "catalog_entry_version": {
+          "description": "Exact catalog entry version selected for this task. Catalog storage must not mutate an entry version in place.",
+          "$ref": "#/$defs/version"
+        },
+        "artifact_sha256": {
+          "description": "Optional exact executable/container/local-artifact digest when the selected catalog entry has a material artifact.",
+          "$ref": "#/$defs/sha256"
+        },
+        "adapter_contract": {
+          "$ref": "#/$defs/contractPin"
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_operation", "axiom_action", "purpose", "destinations"],
+      "properties": {
+        "runtime_operation": {
+          "description": "Exact operation identifier understood by the selected runtime/connector profile.",
+          "$ref": "#/$defs/id"
+        },
+        "axiom_action": {
+          "description": "Exact AXIOM action identifier to which the runtime operation is mapped. Naming the action does not authorize it.",
+          "$ref": "#/$defs/id"
+        },
+        "capability_id": {
+          "description": "Optional capability-registry classification. It does not substitute for exact action authorization.",
+          "$ref": "#/$defs/id"
+        },
+        "purpose": {
+          "$ref": "#/$defs/id"
+        },
+        "destinations": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "data_classes": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          }
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_source",
+        "grant_required_before_effect",
+        "coordination_is_authorization",
+        "handoff_transfers_authority",
+        "delegation_required_for_independent_child_authority"
+      ],
+      "properties": {
+        "authority_source": {
+          "const": "axiom-gateway"
+        },
+        "grant_required_before_effect": {
+          "const": true
+        },
+        "coordination_is_authorization": {
+          "const": false
+        },
+        "handoff_transfers_authority": {
+          "const": false
+        },
+        "delegation_required_for_independent_child_authority": {
+          "const": true
+        },
+        "grant_id": {
+          "$ref": "#/$defs/id"
+        },
+        "grant_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "delegation_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "allOf": [
+        {
+          "if": {"required": ["grant_id"]},
+          "then": {"required": ["grant_digest"]}
+        },
+        {
+          "if": {"required": ["grant_digest"]},
+          "then": {"required": ["grant_id"]}
+        }
+      ]
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeout_ms"],
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "deadline_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "max_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "max_child_tasks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "cost_ceiling": {
+          "$ref": "#/$defs/money"
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "created_at", "updated_at"],
+      "properties": {
+        "state": {
+          "enum": [
+            "queued",
+            "running",
+            "awaiting-approval",
+            "blocked",
+            "completed",
+            "failed",
+            "cancelled",
+            "expired",
+            "uncertain"
+          ]
+        },
+        "created_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "cancel_requested_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "state_reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "terminal_receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "uncertainty_record_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["queued", "running", "awaiting-approval", "blocked"]}
+            },
+            "required": ["state"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {"required": ["terminal_receipt_id"]},
+                {"required": ["uncertainty_record_id"]}
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["completed", "failed", "cancelled", "expired"]}
+            },
+            "required": ["state"]
+          },
+          "then": {
+            "required": ["terminal_receipt_id"],
+            "not": {"required": ["uncertainty_record_id"]}
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["failed", "cancelled", "expired"]}
+            },
+            "required": ["state"]
+          },
+          "then": {"required": ["state_reason"]}
+        },
+        {
+          "if": {
+            "properties": {"state": {"const": "uncertain"}},
+            "required": ["state"]
+          },
+          "then": {
+            "required": ["uncertainty_record_id"],
+            "not": {"required": ["terminal_receipt_id"]}
+          }
+        }
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "events": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,191}$"
+    },
+    "catalogId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]{1,127}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+      "maxLength": 80
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "contractPin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "contract_version", "contract_sha256"],
+      "properties": {
+        "contract_id": {
+          "$ref": "#/$defs/id"
+        },
+        "contract_version": {
+          "$ref": "#/$defs/version"
+        },
+        "contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_minor_units", "currency"],
+      "properties": {
+        "amount_minor_units": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "sha256", "size_bytes", "source_principal_id"],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mime_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "schema_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "source_principal_id": {
+          "$ref": "#/$defs/id"
+        },
+        "source_task_id": {
+          "$ref": "#/$defs/id"
+        },
+        "data_class": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "retention_class": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "type", "at", "actor_principal_id"],
+      "properties": {
+        "event_id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": [
+            "task.created",
+            "task.started",
+            "task.awaiting-approval",
+            "task.blocked",
+            "task.handoff",
+            "artifact.observed",
+            "task.cancel-requested",
+            "task.cancelled",
+            "task.completed",
+            "task.failed",
+            "task.expired",
+            "task.uncertain"
+          ]
+        },
+        "at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "actor_principal_id": {
+          "$ref": "#/$defs/id"
+        },
+        "detail_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "schema": "axiom-local-context-semantic-review-evidence-threat-model.v2",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "a7-sovereign-context-owner-review-completed-grid-evidence",
+  "scope": "Verification that one exact human-owner context semantic-review request completed successfully in the local Grid's fully verified signed event chain. The evidence may support later classification, quarantine or rejection handling but does not itself mutate storage, authorize instruction use, grant vault access or grant execution authority.",
+  "core_invariant": "intent.accepted is not review authority. Verified semantic review requires one exact accepted event, one later completed event, no denied/failed terminal event for that intent, a matching materialized completed intent, and a valid full local Grid chain. Even then the result is classification evidence only.",
+  "attack_classes": [
+    {
+      "id": "accepted-before-decision-confusion",
+      "risks": ["intent.accepted treated as successful review", "policy-denied review treated as approval", "failed review treated as completed review"],
+      "controls": ["accepted-only helper fails closed", "authoritative adapter requires materialized status completed", "one accepted plus one completed event required", "denied/failed terminal evidence rejected"]
+    },
+    {
+      "id": "caller-omits-adverse-history",
+      "risks": ["caller supplies only favorable signed events", "terminal ambiguity hidden from verifier"],
+      "controls": ["authoritative adapter reads terminal history directly from Grid storage", "full Grid chain verified before evidence issuance", "terminal_history_unambiguous=true only after stored history inspection"]
+    },
+    {
+      "id": "review-target-substitution",
+      "risks": ["review a different claim", "swap candidate bytes", "apply decision to a newer trust state", "change target semantic class after acceptance"],
+      "controls": ["exact claim id", "exact candidate digest", "exact prior trust digest", "decision and target semantic class in typed intent input", "input and request digests matched across materialized intent and signed acceptance"]
+    },
+    {
+      "id": "owner-trace-or-intent-substitution",
+      "risks": ["non-owner review", "machine principal masquerades as owner", "accepted and completed events from different retries", "trace substitution"],
+      "controls": ["human owner principal required", "owner matches candidate/trust", "same intent id and trace across materialized state, accepted event and completed event", "fixed action/purpose/data scope"]
+    },
+    {
+      "id": "materialized-state-divergence",
+      "risks": ["signed completion differs from current intent row", "stale materialized state treated as successful review"],
+      "controls": ["materialized intent must be completed", "principal/action/input/request digests must match", "materialized result_json must equal signed completed result"]
+    },
+    {
+      "id": "chain-corruption-or-event-forgery",
+      "risks": ["tampered event", "forged Grid event", "corrupt prior history"],
+      "controls": ["requireIntentEvidenceChain before review search", "full signed Grid chain verification", "evidence anchors accepted/completed event hashes and verified chain head"]
+    },
+    {
+      "id": "review-to-authority-laundering",
+      "risks": ["owner-reviewed text becomes executable instruction", "review grants tool use", "review grants policy mutation", "review grants vault access", "review self-persists"],
+      "controls": ["classification_effect=evidence-only", "review_applied_to_store=false", "instruction_semantics=false", "owner_instruction_use_enabled=false", "authority_effect=none", "vault/execution/tool/policy/self-persistence claims hard false"]
+    },
+    {
+      "id": "external-currentness-overclaim",
+      "risks": ["local verified chain head treated as externally retained current head", "review evidence treated as cross-node freshness proof"],
+      "controls": ["retained_external_head_verified=false", "later durable persistence/currentness gate remains required"]
+    }
+  ],
+  "known_nonclaims": [
+    "This gate verifies the local Grid chain at evidence-issuance time but does not prove an independently retained external latest head.",
+    "This gate does not persist or apply the review to Sovereign Vault or Context Broker state.",
+    "This gate does not enable owner-approved instruction execution.",
+    "This gate does not grant vault access, tool authority, policy authority or execution authority.",
+    "This gate does not replace the accepted Context/Vault persistence path or create a second memory store."
+  ],
+  "next_gates": [
+    "persist completed semantic review evidence append-only on the accepted Sovereign Context/Vault path",
+    "bind current semantic-trust projection to persisted completed review evidence without creating a second write authority",
+    "prove restart/rebuild preserves review and prior-trust lineage and invalidates stale descendants",
+    "keep instruction execution disabled unless a separately reviewed product need and authority path are explicitly designed"
+  ],
+  "boundaries": {
+    "accepted_intent_verified": true,
+    "completed_intent_verified": true,
+    "materialized_completed_intent_verified": true,
+    "terminal_history_unambiguous": true,
+    "full_local_grid_chain_verified": true,
+    "retained_external_head_verified": false,
+    "review_evidence_verified": true,
+    "classification_effect": "evidence-only",
+    "review_applied_to_store": false,
+    "instruction_semantics": false,
+    "owner_instruction_use_enabled": false,
+    "authority_effect": "none",
+    "grants_vault_access": false,
+    "grants_execution_authority": false,
+    "network_effect": false,
+    "filesystem_effect": false,
+    "capability_promotion_enabled": false
+  }
+}

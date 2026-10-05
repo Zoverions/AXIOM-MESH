@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agreement-record-v0.schema.json",
+  "title": "AXIOM Agreement Record v0",
+  "description": "Inert digest-only mutual-commitment evidence. It records who accepted which private body digest and when the record claims to have been recorded; it is evidence, not legal enforcement, authority, settlement, or execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "agreement_id",
+    "parties",
+    "body_digest",
+    "recorded_at",
+    "context_tags",
+    "supersedes",
+    "acceptance_policy",
+    "contains_private_body",
+    "authority_effect",
+    "enforcement_effect",
+    "legal_validity_claimed",
+    "payment_effect",
+    "settlement_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-agreement-record.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-commitment-evidence"
+    },
+    "agreement_id": {
+      "type": "string",
+      "pattern": "^agreement:[a-f0-9]{64}$"
+    },
+    "parties": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "body_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "recorded_at": {
+      "$ref": "#/$defs/date"
+    },
+    "context_tags": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "supersedes": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^agreement:[a-f0-9]{64}$"
+      }
+    },
+    "acceptance_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanism",
+        "controller",
+        "purpose",
+        "required_scope"
+      ],
+      "properties": {
+        "mechanism": {
+          "const": "grid-consent-record"
+        },
+        "controller": {
+          "$ref": "#/$defs/id"
+        },
+        "purpose": {
+          "const": "agreement.acceptance.v0"
+        },
+        "required_scope": {
+          "type": "string",
+          "pattern": "^agreement-body:[a-f0-9]{64}:accept$"
+        }
+      }
+    },
+    "contains_private_body": {
+      "const": false
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "enforcement_effect": {
+      "const": "none"
+    },
+    "legal_validity_claimed": {
+      "const": false
+    },
+    "payment_effect": {
+      "const": "none"
+    },
+    "settlement_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/agreement-record.mjs",
+  "x-axiom-non-claims": [
+    "legal-enforceability",
+    "fairness",
+    "identity-proofing",
+    "kyc",
+    "authority-grant",
+    "execution",
+    "payment",
+    "settlement",
+    "token",
+    "consensus",
+    "absolute-time-truth",
+    "private-body-storage",
+    "grid-mutation",
+    "runtime-activation"
+  ]
+}

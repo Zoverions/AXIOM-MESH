@@ -1,0 +1,52 @@
+{
+  "schema": "axiom-negotiation-and-amendment-profile.v1",
+  "status": "experimental coordination architecture; no legal-enforceability or autonomous-settlement claim",
+  "purpose": "Represent negotiation, counteroffers, partial acceptance, amendment, withdrawal, mediation, and settlement proposals between humans, institutions, and agents without allowing negotiation state to mint authority or coerce execution.",
+  "message_types": [
+    "offer",
+    "counteroffer",
+    "clarification_request",
+    "partial_acceptance",
+    "conditional_acceptance",
+    "rejection",
+    "withdrawal",
+    "reservation",
+    "amendment_proposal",
+    "amendment_acceptance",
+    "mediation_proposal",
+    "settlement_proposal",
+    "settlement_acceptance"
+  ],
+  "principles": [
+    "negotiation is communication, not authority",
+    "silence is not acceptance unless a separately valid local rule explicitly says otherwise",
+    "partial acceptance binds only the explicitly accepted terms",
+    "counteroffers supersede nothing automatically",
+    "withdrawal ends the offer state prospectively but does not erase prior evidence",
+    "amendments are versioned deltas over exact prior agreement digests",
+    "material amendments require renewed acceptance by every party whose obligations, rights, risk, data exposure, or authority-relevant context changes",
+    "agent proposals cannot bind sponsors, organizations, or humans beyond delegated authority",
+    "mediators may facilitate or propose but do not become adjudicators or authority roots merely by being selected",
+    "settlement acceptance does not itself authorize payments, transfers, releases, suspensions, or other consequential effects"
+  ],
+  "anti_coercion": [
+    "explicit withdrawal path",
+    "time-bounded offers",
+    "no hidden penalty for requesting clarification",
+    "no automatic escalation from rejection to punishment",
+    "materially changed terms must be surfaced",
+    "high-consequence acceptance may require human-readable summary and independent review",
+    "pressure, urgency, or reputation signals cannot substitute for consent or authority"
+  ],
+  "compatibility_rules": [
+    "existing intent-contract remediation proposals remain separate from bilateral/multilateral negotiation",
+    "existing governance amendment flows may consume negotiation evidence but remain authoritative only through their own charter/policy process",
+    "version negotiation for protocols remains a technical compatibility function, not contractual assent"
+  ],
+  "nonclaims": [
+    "This profile does not determine whether an offer or amendment is legally binding.",
+    "This profile does not implement arbitration, courts, or enforcement.",
+    "This profile does not create a universal bargaining strategy.",
+    "This profile does not authorize financial settlement or external asset transfer."
+  ]
+}
