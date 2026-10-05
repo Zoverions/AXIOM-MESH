@@ -1,0 +1,36 @@
+{
+  "schema": "axiom-bilateral-recognition-profile.v1",
+  "status": "experimental interoperability architecture; no treaty/legal-recognition claim",
+  "purpose": "Allow two institutions or trust domains to explicitly recognize bounded classes of credentials, proofs, roles, or attestations for defined purposes without creating automatic transitive trust, imported authority, or universal equivalence.",
+  "required_elements": [
+    "parties",
+    "recognized_claim_classes",
+    "purposes",
+    "assurance floors",
+    "accepted evidence/verifier profiles",
+    "trust-anchor references",
+    "data minimization restrictions",
+    "jurisdiction/policy context",
+    "currentness/revocation requirements",
+    "reservations/exceptions",
+    "amendment process",
+    "expiry/withdrawal/termination",
+    "dispute/review/remedy path"
+  ],
+  "core_invariants": [
+    "recognition is bilateral and purpose-bound",
+    "recognition of a credential or proof does not create execution authority",
+    "recognition does not imply legal equivalence outside the declared scope",
+    "transitive trust is denied unless separately and explicitly established",
+    "recognition may narrow but never silently widen local assurance or privacy requirements",
+    "each party retains local revocation, refusal, and consequence-specific policy",
+    "withdrawal affects future reliance prospectively without erasing historical evidence",
+    "amendments that widen recognized claim classes, purposes, assurance, data scope, or authority-relevant context require explicit renewed acceptance"
+  ],
+  "nonclaims": [
+    "This profile does not create an international treaty, accreditation, license portability guarantee, or legal recognition regime.",
+    "Recognition of evidence is not recognition of every claim by the issuing institution.",
+    "Recognition does not grant membership, office, eligibility, benefits, or runtime authority.",
+    "This profile does not require a blockchain, DID method, PKI, or credential standard."
+  ]
+}
