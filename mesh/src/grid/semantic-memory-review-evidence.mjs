@@ -5,6 +5,8 @@ import {
 } from '../lib/semantic-memory-provenance.mjs';
 import { verifySemanticMemoryGridEvidence } from '../lib/semantic-memory-grid-evidence.mjs';
 
+const VERIFIED_GRID_REVIEW_EVIDENCE = new WeakSet();
+
 export function verifySemanticMemoryReviewFromGrid(store, record) {
   if (!store || typeof store.requireIntentEvidenceChain !== 'function') {
     throw new TypeError('Semantic memory review verification requires a Grid store');
@@ -51,11 +53,13 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
       ORDER BY seq
     `).all(intent.intent_id).map(eventRow => store.decodeEventRow(eventRow));
 
-    return verifySemanticMemoryGridEvidence(normalized, {
+    const evidence = verifySemanticMemoryGridEvidence(normalized, {
       intent,
       events,
       chain
     });
+    VERIFIED_GRID_REVIEW_EVIDENCE.add(evidence);
+    return evidence;
   }
 
   if (matchingRequestSeen) {
@@ -70,4 +74,8 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
     'No completed Grid evidence exists for this semantic memory review',
     404
   );
+}
+
+export function isVerifiedSemanticMemoryReviewEvidence(value) {
+  return Boolean(value && typeof value === 'object' && VERIFIED_GRID_REVIEW_EVIDENCE.has(value));
 }
