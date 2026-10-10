@@ -10,7 +10,8 @@ import {
   SEMANTIC_MEMORY_REVIEW_ACTION,
   SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
   SEMANTIC_MEMORY_REVIEW_PURPOSE,
-  normalizeSemanticMemoryProvenance
+  normalizeSemanticMemoryProvenance,
+  verifySemanticMemoryReviewedFromProvenance
 } from './semantic-memory-provenance.mjs';
 
 export const SEMANTIC_MEMORY_GRID_EVIDENCE_SCHEMA =
@@ -64,6 +65,8 @@ export function verifySemanticMemoryGridEvidence(record, {
   const chain = own(options, 'chain');
   const normalized = normalizeSemanticMemoryProvenance(record);
   requireExplicitReview(normalized);
+  // The claimed pre-review digest must be the record's own (#1937).
+  verifySemanticMemoryReviewedFromProvenance(normalized);
   const reviewIntent = recordedSemanticMemoryReviewIntent(normalized);
   const expectedRequestDigest = intentRequestDigest(reviewIntent);
   if (expectedRequestDigest !== normalized.review_request_digest) {
