@@ -317,3 +317,180 @@ test('grid evidence rejects a Proxy or accessor record before any trap or getter
   assert.throws(() => verifySemanticMemoryGridEvidence(accessor, {}), /found an accessor property/);
   assert.equal(getterRuns, 0);
 });
+
+// #1918 residual (b): every field the verifier reads from options, chain,
+// intent, events, payloads and the result must be an own property. Each case
+// removes one own field, plants the correct value on a polluted prototype,
+// and expects a deny (or, for output-only fields, the inherited value ignored).
+function withPrototypeValue(prototype, key, value, run) {
+  const saved = Object.getOwnPropertyDescriptor(prototype, key);
+  Object.defineProperty(prototype, key, { value, configurable: true, writable: true, enumerable: false });
+  try {
+    return run();
+  } finally {
+    if (saved) Object.defineProperty(prototype, key, saved);
+    else delete prototype[key];
+  }
+}
+
+test('grid evidence reads options, chain, intent and event fields as own properties only', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { intentId, traceId } = appendAccepted(store, record);
+  appendCompleted(store, record, { intentId, traceId });
+  const json = value => JSON.parse(JSON.stringify(value));
+  const intent = json(store.getIntent(intentId));
+  const events = json(intentEvents(store, intentId));
+  const chain = json(store.verifyFullChain());
+  const fresh = () => ({ intent: json(intent), events: json(events), chain: json(chain) });
+  const verify = options => verifySemanticMemoryGridEvidence(record, options);
+  const ok = verify(fresh());
+  assert.equal(ok.intent_id, intentId);
+  assert.ok(Array.isArray(chain.events) || chain.events !== undefined);
+
+  const denied = [];
+  const thrown = run => { try { run(); } catch (error) { return error; } assert.fail('expected a deny'); };
+  // Polluted, the input is denied like the same input with the field absent:
+  // a ValidationError, or the CanonicalJsonError a missing result_json raises.
+  // (Polluting a key the provenance record also reads, such as
+  // request_digest, can deny earlier, inside the record normalizer.)
+  const expectDeny = (label, options, prototype, key, value) => {
+    const absent = thrown(() => verify(json(options)));
+    const polluted = withPrototypeValue(prototype, key, value, () => thrown(() => verify(options)));
+    assert.equal(polluted.name, absent.name, label);
+    assert.ok(['ValidationError', 'CanonicalJsonError'].includes(polluted.name), label);
+    denied.push(label);
+  };
+  // The reported hole: chain.valid inherited from Object.prototype.
+  for (const key of ['valid', 'head']) {
+    const options = fresh();
+    delete options.chain[key];
+    expectDeny(`chain.${key}`, options, Object.prototype, key, chain[key]);
+  }
+  for (const key of ['intent', 'events', 'chain']) {
+    const options = fresh();
+    const value = options[key];
+    delete options[key];
+    expectDeny(`options.${key}`, options, Object.prototype, key, value);
+  }
+  for (const key of ['intent_id', 'trace_id', 'principal', 'action', 'status', 'request_digest', 'input_digest', 'result_json']) {
+    const options = fresh();
+    delete options.intent[key];
+    expectDeny(`intent.${key}`, options, Object.prototype, key, intent[key]);
+  }
+  for (const [index, name] of [[0, 'accepted'], [1, 'completed']]) {
+    for (const key of ['kind', 'seq', 'actor', 'trace_id', 'subject', 'payload']) {
+      const options = fresh();
+      delete options.events[index][key];
+      expectDeny(`${name}.${key}`, options, Object.prototype, key, events[index][key]);
+    }
+  }
+  for (const key of ['intent_id', 'principal', 'principal_type', 'action', 'request_digest', 'input_digest']) {
+    const options = fresh();
+    delete options.events[0].payload[key];
+    expectDeny(`accepted.payload.${key}`, options, Object.prototype, key, events[0].payload[key]);
+  }
+  for (const key of ['intent_id', 'result']) {
+    const options = fresh();
+    delete options.events[1].payload[key];
+    expectDeny(`completed.payload.${key}`, options, Object.prototype, key, events[1].payload[key]);
+  }
+  for (const key of ['intent_id', 'trace_id', 'status']) {
+    const options = fresh();
+    delete options.events[1].payload.result[key];
+    expectDeny(`result.${key}`, options, Object.prototype, key, events[1].payload.result[key]);
+    // The same field also absent from the materialized result_json, so the
+    // canonical comparison agrees and only the own read can deny.
+    const matched = fresh();
+    delete matched.events[1].payload.result[key];
+    delete matched.intent.result_json[key];
+    expectDeny(`result.${key} (result_json matched)`, matched, Object.prototype, key, events[1].payload.result[key]);
+  }
+  {
+    // A hole in the events array filled from a polluted Array.prototype.
+    const options = fresh();
+    const completed = options.events[1];
+    options.events.length = 1;
+    options.events.length = 2;
+    expectDeny('events[1] inherited', options, Array.prototype, 1, completed);
+  }
+  {
+    const options = fresh();
+    const accepted = options.events[0];
+    delete options.events[0];
+    expectDeny('events[0] inherited', options, Array.prototype, 0, accepted);
+  }
+  assert.equal(denied.length, 41);
+
+  // Output-only fields: an inherited value is ignored, never copied out.
+  for (const [label, mutate, key, value, read] of [
+    ['chain.events', options => delete options.chain.events, 'events', ['forged'], result => result.chain.events],
+    ['accepted.event_id', options => delete options.events[0].event_id, 'event_id', 'evt.forged', result => result.accepted.event_id],
+    ['accepted.event_hash', options => delete options.events[0].event_hash, 'event_hash', 'f'.repeat(64), result => result.accepted.event_hash],
+    ['completed.event_id', options => delete options.events[1].event_id, 'event_id', 'evt.forged', result => result.completed.event_id],
+    ['completed.event_hash', options => delete options.events[1].event_hash, 'event_hash', 'f'.repeat(64), result => result.completed.event_hash]
+  ]) {
+    const options = fresh();
+    mutate(options);
+    const result = withPrototypeValue(Object.prototype, key, value, () => verify(options));
+    assert.equal(read(result), undefined, label);
+  }
+  // Unpolluted own data verifies exactly as before.
+  assert.deepEqual(verify(fresh()), ok);
+});
+
+test('grid evidence own reads do not depend on Object.prototype and can only add denies', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { intentId, traceId } = appendAccepted(store, record);
+  appendCompleted(store, record, { intentId, traceId });
+  const json = value => JSON.parse(JSON.stringify(value));
+  const intent = json(store.getIntent(intentId));
+  const events = json(intentEvents(store, intentId));
+  const chain = json(store.verifyFullChain());
+  const fresh = () => ({ intent: json(intent), events: json(events), chain: json(chain) });
+  const verify = options => verifySemanticMemoryGridEvidence(record, options);
+  const ok = verify(fresh());
+  // A field inherited from an object's own prototype (no global pollution;
+  // request_digest is also a provenance-record field, so it is tested here).
+  const inheritOne = (object, key) => {
+    const { [key]: value, ...rest } = object;
+    return Object.assign(Object.create({ [key]: value }), rest);
+  };
+  for (const [label, build] of [
+    ['intent.request_digest', options => { options.intent = inheritOne(options.intent, 'request_digest'); }],
+    ['accepted.payload.request_digest', options => { options.events[0].payload = inheritOne(options.events[0].payload, 'request_digest'); }],
+    ['chain.valid', options => { options.chain = inheritOne(options.chain, 'valid'); }],
+    ['accepted.kind', options => { options.events[0] = inheritOne(options.events[0], 'kind'); }]
+  ]) {
+    const options = fresh();
+    build(options);
+    assert.throws(() => verify(options), { name: 'ValidationError' }, label);
+  }
+  // Inherited entries and kinds still count toward the single accepted and
+  // completed event and the adverse-event check, so they can only deny.
+  for (const [label, extra] of [
+    ['extra inherited accepted', Object.create({ kind: 'intent.accepted' })],
+    ['extra inherited completed', Object.create({ kind: 'intent.completed' })],
+    ['extra inherited failed', Object.create({ kind: 'intent.failed' })],
+    ['extra inherited denied', Object.create({ kind: 'intent.denied' })]
+  ]) {
+    const options = fresh();
+    options.events.push(extra);
+    assert.throws(() => verify(options), { name: 'ValidationError' }, label);
+  }
+  {
+    const options = fresh();
+    options.events.length = 3;
+    withPrototypeValue(Array.prototype, 2, { kind: 'intent.failed' }, () => {
+      assert.throws(() => verify(options), /denied or failed terminal event/);
+    });
+  }
+  // Own data in any container the old reads accepted still verifies exactly,
+  // including a function object carrying own event fields.
+  const asFunction = Object.assign(function event() {}, json(events[0]));
+  const options = fresh();
+  options.events[0] = asFunction;
+  assert.deepEqual(verify(options), ok);
+  assert.deepEqual(verify({ ...fresh(), chain: Object.assign(Object.create(null), json(chain)) }), ok);
+});
