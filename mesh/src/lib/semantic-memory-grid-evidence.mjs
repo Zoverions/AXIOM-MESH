@@ -29,8 +29,8 @@ export function recordedSemanticMemoryReviewIntent(record) {
       schema: SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
       object_id: normalized.object_id,
       content_digest: normalized.content_digest,
-      current_provenance_digest: normalized.reviewed_from_provenance_digest,
-      decision: normalized.review_decision
+      current_provenance_digest: own(normalized, 'reviewed_from_provenance_digest'),
+      decision: own(normalized, 'review_decision')
     }),
     purpose: SEMANTIC_MEMORY_REVIEW_PURPOSE,
     data_scopes: Object.freeze([`memory.semantic:${normalized.object_id}`])
@@ -66,7 +66,7 @@ export function verifySemanticMemoryGridEvidence(record, {
   requireExplicitReview(normalized);
   const reviewIntent = recordedSemanticMemoryReviewIntent(normalized);
   const expectedRequestDigest = intentRequestDigest(reviewIntent);
-  if (expectedRequestDigest !== normalized.review_request_digest) {
+  if (expectedRequestDigest !== own(normalized, 'review_request_digest')) {
     throw new ValidationError('Semantic memory recorded review request digest is invalid');
   }
   if (!chain || own(chain, 'valid') !== true) {
@@ -170,7 +170,7 @@ export function verifySemanticMemoryGridEvidence(record, {
     schema: SEMANTIC_MEMORY_GRID_EVIDENCE_SCHEMA,
     owner: normalized.owner,
     object_id: normalized.object_id,
-    review_decision: normalized.review_decision,
+    review_decision: own(normalized, 'review_decision'),
     verified_review_request_digest: expectedRequestDigest,
     intent_id: intentId,
     trace_id: traceId,
@@ -193,12 +193,15 @@ export function verifySemanticMemoryGridEvidence(record, {
   });
 }
 
+// Normalized records omit the review keys when there is no review, so these
+// are read own-only (#1918 F-1): an unreviewed record must never pick review
+// evidence up from a polluted Object.prototype.
 function requireExplicitReview(record) {
   if (
-    record.review_actor !== record.owner
-    || typeof record.review_request_digest !== 'string'
-    || typeof record.reviewed_from_provenance_digest !== 'string'
-    || typeof record.review_decision !== 'string'
+    own(record, 'review_actor') !== own(record, 'owner')
+    || typeof own(record, 'review_request_digest') !== 'string'
+    || typeof own(record, 'reviewed_from_provenance_digest') !== 'string'
+    || typeof own(record, 'review_decision') !== 'string'
   ) {
     throw new ValidationError('Semantic memory record has no explicit owner review evidence');
   }
