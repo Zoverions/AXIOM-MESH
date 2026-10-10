@@ -67,28 +67,32 @@ const TOP_LEVEL_KEYS = new Set([
 ]);
 
 export function normalizeSemanticMemoryProvenance(value) {
+  return withOwnFieldReads(read => normalizeProvenanceWith(value, read));
+}
+
+function normalizeProvenanceWith(value, read) {
   const source = plainObject(value, 'Semantic memory provenance');
   rejectUnknownKeys(source, TOP_LEVEL_KEYS);
 
   if (
-    source.schema !== undefined
-    && source.schema !== SEMANTIC_MEMORY_PROVENANCE_SCHEMA
+    read(source, 'schema') !== undefined
+    && read(source, 'schema') !== SEMANTIC_MEMORY_PROVENANCE_SCHEMA
   ) {
     throw new ValidationError('Semantic memory provenance schema is unsupported');
   }
 
-  const objectId = requiredId(source.object_id, 'object_id');
-  const owner = requiredId(source.owner, 'owner');
-  const contentDigest = requiredDigest(source.content_digest, 'content_digest');
-  const originClass = requiredEnum(source.origin_class, ORIGINS, 'origin_class');
-  const originPrincipal = optionalId(source.origin_principal, 'origin_principal');
-  const originRuntimeId = optionalId(source.origin_runtime_id, 'origin_runtime_id');
+  const objectId = requiredId(read(source, 'object_id'), 'object_id');
+  const owner = requiredId(read(source, 'owner'), 'owner');
+  const contentDigest = requiredDigest(read(source, 'content_digest'), 'content_digest');
+  const originClass = requiredEnum(read(source, 'origin_class'), ORIGINS, 'origin_class');
+  const originPrincipal = optionalId(read(source, 'origin_principal'), 'origin_principal');
+  const originRuntimeId = optionalId(read(source, 'origin_runtime_id'), 'origin_runtime_id');
   const originArtifactDigest = optionalDigest(
-    source.origin_artifact_digest,
+    read(source, 'origin_artifact_digest'),
     'origin_artifact_digest'
   );
   const semanticClass = requiredEnum(
-    source.semantic_class,
+    read(source, 'semantic_class'),
     SEMANTIC_CLASSES,
     'semantic_class'
   );
@@ -114,7 +118,7 @@ export function normalizeSemanticMemoryProvenance(value) {
     ? 'owner-memory'
     : 'untrusted-data';
   const authorityTier = requiredEnum(
-    source.authority_tier ?? defaultAuthority,
+    read(source, 'authority_tier') ?? defaultAuthority,
     AUTHORITY_TIERS,
     'authority_tier'
   );
@@ -123,22 +127,22 @@ export function normalizeSemanticMemoryProvenance(value) {
     ? 'owner-reviewed'
     : 'unreviewed';
   const reviewState = requiredEnum(
-    source.review_state ?? defaultReview,
+    read(source, 'review_state') ?? defaultReview,
     REVIEW_STATES,
     'review_state'
   );
-  const reviewActor = optionalId(source.review_actor, 'review_actor');
+  const reviewActor = optionalId(read(source, 'review_actor'), 'review_actor');
   const reviewRequestDigest = optionalDigest(
-    source.review_request_digest,
+    read(source, 'review_request_digest'),
     'review_request_digest'
   );
   const reviewedFromProvenanceDigest = optionalDigest(
-    source.reviewed_from_provenance_digest,
+    read(source, 'reviewed_from_provenance_digest'),
     'reviewed_from_provenance_digest'
   );
-  const reviewDecision = source.review_decision === undefined
+  const reviewDecision = read(source, 'review_decision') === undefined
     ? undefined
-    : requiredEnum(source.review_decision, REVIEW_DECISIONS, 'review_decision');
+    : requiredEnum(read(source, 'review_decision'), REVIEW_DECISIONS, 'review_decision');
 
   const reviewEvidenceValues = [
     reviewActor,
@@ -208,14 +212,14 @@ export function normalizeSemanticMemoryProvenance(value) {
       throw new ValidationError('Quarantined or rejected memory must remain untrusted-data');
     }
   }
-  if (source.may_affect_authority !== undefined && source.may_affect_authority !== false) {
+  if (read(source, 'may_affect_authority') !== undefined && read(source, 'may_affect_authority') !== false) {
     throw new ValidationError('Memory provenance may_affect_authority must remain false');
   }
 
-  const parentObjectId = optionalId(source.parent_object_id, 'parent_object_id');
-  const parentContentDigest = optionalDigest(source.parent_content_digest, 'parent_content_digest');
+  const parentObjectId = optionalId(read(source, 'parent_object_id'), 'parent_object_id');
+  const parentContentDigest = optionalDigest(read(source, 'parent_content_digest'), 'parent_content_digest');
   const parentProvenanceDigest = optionalDigest(
-    source.parent_provenance_digest,
+    read(source, 'parent_provenance_digest'),
     'parent_provenance_digest'
   );
   const parentValues = [parentObjectId, parentContentDigest, parentProvenanceDigest];
@@ -255,18 +259,18 @@ export function normalizeSemanticMemoryProvenance(value) {
     ...(parentObjectId ? { parent_object_id: parentObjectId } : {}),
     ...(parentContentDigest ? { parent_content_digest: parentContentDigest } : {}),
     ...(parentProvenanceDigest ? { parent_provenance_digest: parentProvenanceDigest } : {}),
-    ...(source.ingestion_intent_id
-      ? { ingestion_intent_id: requiredId(source.ingestion_intent_id, 'ingestion_intent_id') }
+    ...(read(source, 'ingestion_intent_id')
+      ? { ingestion_intent_id: requiredId(read(source, 'ingestion_intent_id'), 'ingestion_intent_id') }
       : {}),
-    ...(source.request_digest
-      ? { request_digest: requiredDigest(source.request_digest, 'request_digest') }
+    ...(read(source, 'request_digest')
+      ? { request_digest: requiredDigest(read(source, 'request_digest'), 'request_digest') }
       : {}),
     may_affect_authority: false
   };
   const provenanceDigest = digestObject(normalized);
 
-  if (source.provenance_digest !== undefined) {
-    const suppliedDigest = requiredDigest(source.provenance_digest, 'provenance_digest');
+  if (read(source, 'provenance_digest') !== undefined) {
+    const suppliedDigest = requiredDigest(read(source, 'provenance_digest'), 'provenance_digest');
     if (suppliedDigest !== provenanceDigest) {
       throw new ValidationError('Semantic memory provenance digest does not match normalized content');
     }
@@ -279,7 +283,11 @@ export function normalizeSemanticMemoryProvenance(value) {
 }
 
 export function semanticMemoryReviewIntent(record, decision) {
-  const normalized = normalizeSemanticMemoryProvenance(record);
+  return withOwnFieldReads(read => reviewIntentWith(record, decision, read));
+}
+
+function reviewIntentWith(record, decision, read) {
+  const normalized = normalizeProvenanceWith(record, read);
   return semanticMemoryReviewIntentFromState({
     owner: normalized.owner,
     object_id: normalized.object_id,
@@ -290,15 +298,32 @@ export function semanticMemoryReviewIntent(record, decision) {
 }
 
 export function semanticMemoryReviewRequestDigest(record, decision) {
-  return intentRequestDigest(semanticMemoryReviewIntent(record, decision));
+  return withOwnFieldReads(read => reviewRequestDigestWith(record, decision, read));
+}
+
+function reviewRequestDigestWith(record, decision, read) {
+  return intentRequestDigest(reviewIntentWith(record, decision, read));
 }
 
 export function ownerReviewSemanticMemory(record, {
-  actor_id,
-  review_request_digest,
-  decision
+  actor_id: _actorId,
+  review_request_digest: _reviewRequestDigest,
+  decision: _decision
 } = {}) {
-  const normalized = normalizeSemanticMemoryProvenance(record);
+  // The destructuring above is kept only so null/non-coercible options throw
+  // exactly the TypeError main throws; fields are re-read own-property only.
+  const options = optionsArgument(arguments[1]);
+  return withOwnFieldReads(read => ownerReviewWith(
+    record,
+    read(options, 'actor_id'),
+    read(options, 'review_request_digest'),
+    read(options, 'decision'),
+    read
+  ));
+}
+
+function ownerReviewWith(record, actor_id, review_request_digest, decision, read) {
+  const normalized = normalizeProvenanceWith(record, read);
   const actorId = requiredId(actor_id, 'review actor_id');
   if (actorId !== normalized.owner) {
     throw new ValidationError('Only the memory owner can apply this review transition');
@@ -307,7 +332,7 @@ export function ownerReviewSemanticMemory(record, {
     review_request_digest,
     'review_request_digest'
   );
-  const expectedRequestDigest = semanticMemoryReviewRequestDigest(normalized, decision);
+  const expectedRequestDigest = reviewRequestDigestWith(normalized, decision, read);
   if (suppliedRequestDigest !== expectedRequestDigest) {
     throw new ValidationError('Semantic memory review request digest does not match the exact transition');
   }
@@ -334,7 +359,7 @@ export function ownerReviewSemanticMemory(record, {
   }
 
   const { provenance_digest: _ignored, ...base } = normalized;
-  return normalizeSemanticMemoryProvenance({
+  return normalizeProvenanceWith({
     ...base,
     authority_tier: authorityTier,
     review_state: reviewState,
@@ -342,24 +367,37 @@ export function ownerReviewSemanticMemory(record, {
     review_request_digest: suppliedRequestDigest,
     reviewed_from_provenance_digest: normalized.provenance_digest,
     review_decision: decision
-  });
+  }, read);
 }
 
 export function deriveSemanticMemoryProvenance(parent, {
-  object_id,
-  content_digest,
-  semantic_class = 'knowledge',
-  ingestion_intent_id,
-  request_digest
+  object_id: _objectId,
+  content_digest: _contentDigest,
+  semantic_class: _semanticClass = 'knowledge',
+  ingestion_intent_id: _ingestionIntentId,
+  request_digest: _requestDigest
 } = {}) {
-  const normalized = normalizeSemanticMemoryProvenance(parent);
-  return normalizeSemanticMemoryProvenance({
+  // Destructuring kept for main's exact TypeError on null options; fields are
+  // re-read own-property only.
+  const options = optionsArgument(arguments[1]);
+  return withOwnFieldReads(read => deriveProvenanceWith(parent, options, read));
+}
+
+function deriveProvenanceWith(parent, options, read) {
+  const object_id = read(options, 'object_id');
+  const content_digest = read(options, 'content_digest');
+  const suppliedSemanticClass = read(options, 'semantic_class');
+  const semantic_class = suppliedSemanticClass === undefined ? 'knowledge' : suppliedSemanticClass;
+  const ingestion_intent_id = read(options, 'ingestion_intent_id');
+  const request_digest = read(options, 'request_digest');
+  const normalized = normalizeProvenanceWith(parent, read);
+  return normalizeProvenanceWith({
     object_id,
     owner: normalized.owner,
     content_digest,
     origin_class: 'system-derived',
-    origin_principal: normalized.origin_principal ?? normalized.owner,
-    origin_runtime_id: normalized.origin_runtime_id,
+    origin_principal: read(normalized, 'origin_principal') ?? normalized.owner,
+    origin_runtime_id: read(normalized, 'origin_runtime_id'),
     origin_artifact_digest: normalized.provenance_digest,
     semantic_class,
     authority_tier: 'untrusted-data',
@@ -370,13 +408,25 @@ export function deriveSemanticMemoryProvenance(parent, {
     ...(ingestion_intent_id ? { ingestion_intent_id } : {}),
     ...(request_digest ? { request_digest } : {}),
     may_affect_authority: false
-  });
+  }, read);
 }
 
 export function evaluateSemanticMemoryUse(record, usage, {
-  verified_review_request_digest
+  verified_review_request_digest: _verifiedReviewRequestDigest
 } = {}) {
-  const normalized = normalizeSemanticMemoryProvenance(record);
+  // Destructuring kept for main's exact TypeError on null options; the field is
+  // re-read own-property only.
+  const options = optionsArgument(arguments[2]);
+  return withOwnFieldReads(read => evaluateUseWith(
+    record,
+    usage,
+    read(options, 'verified_review_request_digest'),
+    read
+  ));
+}
+
+function evaluateUseWith(record, usage, verified_review_request_digest, read) {
+  const normalized = normalizeProvenanceWith(record, read);
   if (normalized.review_state === 'quarantined') {
     return { allow: false, code: 'semantic_memory_quarantined' };
   }
@@ -395,9 +445,9 @@ export function evaluateSemanticMemoryUse(record, usage, {
     const structurallyEligible = normalized.semantic_class === 'instruction-candidate'
       && normalized.authority_tier === 'owner-approved-instruction'
       && normalized.review_state === 'owner-reviewed'
-      && normalized.review_actor === normalized.owner
-      && normalized.review_decision === 'approve-instruction'
-      && typeof normalized.review_request_digest === 'string';
+      && read(normalized, 'review_actor') === normalized.owner
+      && read(normalized, 'review_decision') === 'approve-instruction'
+      && typeof read(normalized, 'review_request_digest') === 'string';
     if (!structurallyEligible) {
       return { allow: false, code: 'semantic_memory_instruction_denied' };
     }
@@ -408,20 +458,61 @@ export function evaluateSemanticMemoryUse(record, usage, {
       verified_review_request_digest,
       'verified_review_request_digest'
     );
-    if (verifiedDigest !== normalized.review_request_digest) {
+    if (verifiedDigest !== read(normalized, 'review_request_digest')) {
       return { allow: false, code: 'semantic_memory_review_evidence_mismatch' };
     }
     return {
       allow: true,
       code: 'semantic_memory_instruction_allowed',
       provenance_digest: normalized.provenance_digest,
-      review_request_digest: normalized.review_request_digest
+      review_request_digest: read(normalized, 'review_request_digest')
     };
   }
   if (usage === 'authority-mutation') {
     return { allow: false, code: 'semantic_memory_cannot_mutate_authority' };
   }
   throw new ValidationError('Semantic memory usage is unsupported');
+}
+
+// Own-property field reads (#1918). A caller-supplied field that is visible
+// only through the prototype chain (e.g. Object.prototype pollution) reads as
+// absent, so inherited data can never supply review evidence, authority or a
+// verified digest. Deny dominance: whenever any inherited field was visible,
+// the same computation is re-run with main's ordinary (inherited) reads and any
+// deny it raises is thrown, so inherited data may only add denies.
+// NOTE: private copy; consolidate with the private own() in
+// semantic-memory-grid-evidence.mjs (#1936) into one canonical helper in
+// canonical.mjs once both have merged.
+function withOwnFieldReads(run) {
+  let inheritedVisible = false;
+  const ownRead = (target, key) => {
+    if (target === null || target === undefined) return undefined;
+    if (Object.hasOwn(target, key)) return target[key];
+    if (key in Object(target)) inheritedVisible = true;
+    return undefined;
+  };
+  let result;
+  let ownError;
+  let ownThrew = false;
+  try {
+    result = run(ownRead);
+  } catch (error) {
+    ownThrew = true;
+    ownError = error;
+  }
+  if (inheritedVisible) {
+    run(inheritedRead);
+  }
+  if (ownThrew) throw ownError;
+  return result;
+}
+
+function inheritedRead(target, key) {
+  return target === null || target === undefined ? undefined : target[key];
+}
+
+function optionsArgument(value) {
+  return value === undefined ? {} : value;
 }
 
 function semanticMemoryReviewIntentFromState({
