@@ -1,8 +1,5 @@
 import { ValidationError, assertContractNode, digestObject } from './canonical.mjs';
-import {
-  evaluateSemanticMemoryUse,
-  normalizeSemanticMemoryProvenance
-} from './semantic-memory-provenance.mjs';
+import { withSemanticMemoryOwnReads } from './semantic-memory-provenance.mjs';
 
 export const SEMANTIC_MEMORY_LIFECYCLE_SCHEMA = 'axiom-semantic-memory-lifecycle.v1';
 
@@ -84,17 +81,17 @@ function inheritancePolicy(value) {
   return value;
 }
 
-function normalizedLifecycleBody(raw, provenance) {
+function normalizedLifecycleBody(raw, provenance, read) {
   const source = plainObject(raw, 'Semantic memory lifecycle');
   rejectUnknown(source, TOP_LEVEL_KEYS, 'Semantic memory lifecycle');
-  if (source.schema !== undefined && source.schema !== SEMANTIC_MEMORY_LIFECYCLE_SCHEMA) {
+  if (read(source, 'schema') !== undefined && read(source, 'schema') !== SEMANTIC_MEMORY_LIFECYCLE_SCHEMA) {
     throw new ValidationError('Semantic memory lifecycle schema is unsupported');
   }
 
-  const objectId = id(source.object_id, 'Semantic memory lifecycle object_id');
-  const owner = id(source.owner, 'Semantic memory lifecycle owner');
-  const provenanceDigest = digest(source.provenance_digest, 'Semantic memory lifecycle provenance_digest');
-  const originClass = id(source.origin_class, 'Semantic memory lifecycle origin_class');
+  const objectId = id(read(source, 'object_id'), 'Semantic memory lifecycle object_id');
+  const owner = id(read(source, 'owner'), 'Semantic memory lifecycle owner');
+  const provenanceDigest = digest(read(source, 'provenance_digest'), 'Semantic memory lifecycle provenance_digest');
+  const originClass = id(read(source, 'origin_class'), 'Semantic memory lifecycle origin_class');
 
   if (
     objectId !== provenance.object_id
@@ -105,27 +102,27 @@ function normalizedLifecycleBody(raw, provenance) {
     throw new ValidationError('Semantic memory lifecycle does not match its exact provenance record');
   }
 
-  const mode = retentionMode(source.retention_mode);
+  const mode = retentionMode(read(source, 'retention_mode'));
   let expiresAt = null;
   if (mode === 'bounded') {
-    expiresAt = canonicalTimestamp(source.expires_at, 'Semantic memory lifecycle expires_at');
-  } else if (source.expires_at !== null) {
+    expiresAt = canonicalTimestamp(read(source, 'expires_at'), 'Semantic memory lifecycle expires_at');
+  } else if (read(source, 'expires_at') !== null) {
     throw new ValidationError('Owner-controlled semantic memory retention requires expires_at null');
   }
 
   const expectedInheritance = provenance.origin_class === 'system-derived'
     ? 'provenance-only-no-authority'
     : 'not-derived';
-  const inheritance = inheritancePolicy(source.inheritance_policy);
+  const inheritance = inheritancePolicy(read(source, 'inheritance_policy'));
   if (inheritance !== expectedInheritance) {
     throw new ValidationError('Semantic memory inheritance_policy does not match provenance origin');
   }
 
   const expectedParent = provenance.origin_class === 'system-derived'
-    ? provenance.parent_provenance_digest
+    ? read(provenance, 'parent_provenance_digest')
     : null;
   const parentDigest = nullableDigest(
-    source.parent_provenance_digest,
+    read(source, 'parent_provenance_digest'),
     'Semantic memory lifecycle parent_provenance_digest'
   );
   if (parentDigest !== expectedParent) {
@@ -133,7 +130,7 @@ function normalizedLifecycleBody(raw, provenance) {
   }
 
   for (const [key, expected] of Object.entries(FIXED_NON_AUTHORITY)) {
-    if (source[key] !== expected) {
+    if (read(source, key) !== expected) {
       throw new ValidationError(`Semantic memory lifecycle ${key} must remain ${expected}`);
     }
   }
@@ -153,10 +150,20 @@ function normalizedLifecycleBody(raw, provenance) {
 }
 
 export function createSemanticMemoryLifecycle(record, {
-  retention_mode = 'owner-controlled',
-  expires_at = null
+  // Destructured only so null options throw main's TypeError; the values are
+  // re-read below as own properties (#1918).
+  retention_mode: _retentionMode = 'owner-controlled',
+  expires_at: _expiresAt = null
 } = {}) {
-  const provenance = normalizeSemanticMemoryProvenance(record);
+  const options = optionsArgument(arguments[1]);
+  return withSemanticMemoryOwnReads(reader => createLifecycleWith(reader, record, options));
+}
+
+function createLifecycleWith(reader, record, options) {
+  const { read } = reader;
+  const retention_mode = defaulted(read(options, 'retention_mode'), 'owner-controlled');
+  const expires_at = defaulted(read(options, 'expires_at'), null);
+  const provenance = reader.normalize(record);
   const body = normalizedLifecycleBody({
     schema: SEMANTIC_MEMORY_LIFECYCLE_SCHEMA,
     object_id: provenance.object_id,
@@ -169,22 +176,29 @@ export function createSemanticMemoryLifecycle(record, {
       ? 'provenance-only-no-authority'
       : 'not-derived',
     parent_provenance_digest: provenance.origin_class === 'system-derived'
-      ? provenance.parent_provenance_digest
+      ? read(provenance, 'parent_provenance_digest')
       : null,
     ...FIXED_NON_AUTHORITY
-  }, provenance);
+  }, provenance, read);
   return Object.freeze({ ...body, lifecycle_digest: digestObject(body) });
 }
 
 export function verifySemanticMemoryLifecycle(rawLifecycle, record) {
-  const provenance = normalizeSemanticMemoryProvenance(record);
+  return withSemanticMemoryOwnReads(reader => verifyLifecycleWith(reader, rawLifecycle, record));
+}
+
+function verifyLifecycleWith(reader, rawLifecycle, record) {
+  const provenance = reader.normalize(record);
   // Same non-reading container check as the provenance record (#1918).
   if (rawLifecycle !== null && typeof rawLifecycle === 'object') {
     assertContractNode(rawLifecycle, 'Semantic memory lifecycle');
   }
   const value = plainObject(rawLifecycle, 'Semantic memory lifecycle');
-  const body = normalizedLifecycleBody(value, provenance);
-  const suppliedDigest = digest(value.lifecycle_digest, 'Semantic memory lifecycle lifecycle_digest');
+  const body = normalizedLifecycleBody(value, provenance, reader.read);
+  const suppliedDigest = digest(
+    reader.read(value, 'lifecycle_digest'),
+    'Semantic memory lifecycle lifecycle_digest'
+  );
   if (suppliedDigest !== digestObject(body)) {
     throw new ValidationError('Semantic memory lifecycle digest mismatch');
   }
@@ -192,11 +206,30 @@ export function verifySemanticMemoryLifecycle(rawLifecycle, record) {
 }
 
 export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
-  now = new Date(),
-  verified_review_request_digest
+  // Destructured only so null options throw main's TypeError. The values are
+  // re-read below as own properties: an inherited verified digest or clock
+  // reads as absent (#1918). The default clock is only constructed when
+  // there is no own `now`.
+  now: _now,
+  verified_review_request_digest: _verifiedReviewRequestDigest
 } = {}) {
-  const provenance = normalizeSemanticMemoryProvenance(record);
-  const verifiedLifecycle = verifySemanticMemoryLifecycle(lifecycle, provenance);
+  const options = optionsArgument(arguments[3]);
+  return withSemanticMemoryOwnReads(reader => evaluateLifecycleUseWith(
+    reader,
+    record,
+    lifecycle,
+    usage,
+    options
+  ));
+}
+
+function evaluateLifecycleUseWith(reader, record, lifecycle, usage, options) {
+  const { read } = reader;
+  const suppliedNow = read(options, 'now');
+  const now = suppliedNow === undefined ? new Date() : suppliedNow;
+  const verifiedReviewRequestDigest = read(options, 'verified_review_request_digest');
+  const provenance = reader.normalize(record);
+  const verifiedLifecycle = verifyLifecycleWith(reader, lifecycle, provenance);
   const currentTime = now instanceof Date ? now : new Date(now);
   if (Number.isNaN(currentTime.valueOf())) {
     throw new ValidationError('Semantic memory lifecycle evaluation now is invalid');
@@ -212,9 +245,7 @@ export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
       lifecycle_digest: verifiedLifecycle.lifecycle_digest
     };
   }
-  const decision = evaluateSemanticMemoryUse(provenance, usage, {
-    verified_review_request_digest
-  });
+  const decision = reader.evaluateUse(provenance, usage, verifiedReviewRequestDigest);
   return {
     ...decision,
     lifecycle_digest: verifiedLifecycle.lifecycle_digest
@@ -222,18 +253,34 @@ export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
 }
 
 export function deriveSemanticMemoryLifecycle(parentRecord, parentLifecycle, childRecord, {
-  retention_mode,
-  expires_at
+  // Destructured only so null options throw main's TypeError; re-read below
+  // as own properties (#1918).
+  retention_mode: _retentionMode,
+  expires_at: _expiresAt
 } = {}) {
-  const parent = normalizeSemanticMemoryProvenance(parentRecord);
-  const child = normalizeSemanticMemoryProvenance(childRecord);
-  const parentState = verifySemanticMemoryLifecycle(parentLifecycle, parent);
+  const options = optionsArgument(arguments[3]);
+  return withSemanticMemoryOwnReads(reader => deriveLifecycleWith(
+    reader,
+    parentRecord,
+    parentLifecycle,
+    childRecord,
+    options
+  ));
+}
+
+function deriveLifecycleWith(reader, parentRecord, parentLifecycle, childRecord, options) {
+  const { read } = reader;
+  const retention_mode = read(options, 'retention_mode');
+  const expires_at = read(options, 'expires_at');
+  const parent = reader.normalize(parentRecord);
+  const child = reader.normalize(childRecord);
+  const parentState = verifyLifecycleWith(reader, parentLifecycle, parent);
 
   if (
     child.origin_class !== 'system-derived'
-    || child.parent_object_id !== parent.object_id
-    || child.parent_content_digest !== parent.content_digest
-    || child.parent_provenance_digest !== parent.provenance_digest
+    || read(child, 'parent_object_id') !== parent.object_id
+    || read(child, 'parent_content_digest') !== parent.content_digest
+    || read(child, 'parent_provenance_digest') !== parent.provenance_digest
   ) {
     throw new ValidationError('Derived semantic memory lifecycle requires exact parent provenance linkage');
   }
@@ -259,8 +306,18 @@ export function deriveSemanticMemoryLifecycle(parentRecord, parentLifecycle, chi
     childExpiry = childMode === 'owner-controlled' ? null : childExpiry;
   }
 
-  return createSemanticMemoryLifecycle(child, {
+  return createLifecycleWith(reader, child, {
     retention_mode: childMode,
     expires_at: childExpiry
   });
+}
+
+function optionsArgument(value) {
+  return value === undefined ? {} : value;
+}
+
+// Parameter-default semantics: the default applies only when the value is
+// undefined (an absent own field), exactly as destructuring defaults do.
+function defaulted(value, fallback) {
+  return value === undefined ? fallback : value;
 }

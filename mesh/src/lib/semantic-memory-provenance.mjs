@@ -475,14 +475,16 @@ function evaluateUseWith(record, usage, verified_review_request_digest, read) {
 }
 
 // Own-property field reads (#1918). A caller-supplied field that is visible
-// only through the prototype chain (e.g. Object.prototype pollution) reads as
-// absent, so inherited data can never supply review evidence, authority or a
-// verified digest. Deny dominance: whenever any inherited field was visible,
-// the same computation is re-run with main's ordinary (inherited) reads and any
-// deny it raises is thrown, so inherited data may only add denies.
+// only through the prototype chain (at any depth, e.g. Object.prototype
+// pollution) reads as absent, so inherited data can never supply review
+// evidence, authority, a verified digest or a clock. Deny dominance: whenever
+// any inherited field was visible, the same computation is re-run with main's
+// ordinary (inherited) reads; a deny from that run, whether thrown or returned
+// as { allow: false }, is what the caller gets. Inherited data may therefore
+// only add denies, never remove them.
 // NOTE: private copy; consolidate with the private own() in
 // semantic-memory-grid-evidence.mjs (#1936) into one canonical helper in
-// canonical.mjs once both have merged.
+// canonical.mjs (tracked separately; not consolidated here).
 function withOwnFieldReads(run) {
   let inheritedVisible = false;
   const ownRead = (target, key) => {
@@ -501,10 +503,39 @@ function withOwnFieldReads(run) {
     ownError = error;
   }
   if (inheritedVisible) {
-    run(inheritedRead);
+    const inheritedResult = run(inheritedRead);
+    if (isReturnedDeny(inheritedResult)) return inheritedResult;
   }
   if (ownThrew) throw ownError;
   return result;
+}
+
+function isReturnedDeny(value) {
+  return value !== null
+    && typeof value === 'object'
+    && Object.hasOwn(value, 'allow')
+    && value.allow === false;
+}
+
+/**
+ * Internal to the semantic-memory modules (used by semantic-memory-lifecycle):
+ * runs `run` under the own-read / deny-dominance discipline above. `run`
+ * receives a reader whose `read(target, key)` and provenance cores must be
+ * used for every caller-supplied read, so both passes see one consistent mode.
+ * Not a verify or validate entry point; callers should use the public
+ * functions.
+ */
+export function withSemanticMemoryOwnReads(run) {
+  return withOwnFieldReads(read => run(Object.freeze({
+    read,
+    normalize: value => normalizeProvenanceWith(value, read),
+    evaluateUse: (record, usage, verifiedReviewRequestDigest) => evaluateUseWith(
+      record,
+      usage,
+      verifiedReviewRequestDigest,
+      read
+    )
+  })));
 }
 
 function inheritedRead(target, key) {
