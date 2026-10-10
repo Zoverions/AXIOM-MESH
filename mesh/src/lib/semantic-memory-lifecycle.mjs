@@ -1,4 +1,4 @@
-import { ValidationError, digestObject } from './canonical.mjs';
+import { ValidationError, assertContractNode, digestObject } from './canonical.mjs';
 import {
   evaluateSemanticMemoryUse,
   normalizeSemanticMemoryProvenance
@@ -178,6 +178,10 @@ export function createSemanticMemoryLifecycle(record, {
 
 export function verifySemanticMemoryLifecycle(rawLifecycle, record) {
   const provenance = normalizeSemanticMemoryProvenance(record);
+  // Same non-reading container check as the provenance record (#1918).
+  if (rawLifecycle !== null && typeof rawLifecycle === 'object') {
+    assertContractNode(rawLifecycle, 'Semantic memory lifecycle');
+  }
   const value = plainObject(rawLifecycle, 'Semantic memory lifecycle');
   const body = normalizedLifecycleBody(value, provenance);
   const suppliedDigest = digest(value.lifecycle_digest, 'Semantic memory lifecycle lifecycle_digest');

@@ -287,3 +287,33 @@ test('recorded review intent reconstructs the exact owner request from post-revi
   assert.equal(intent.input.decision, record.review_decision);
   assert.equal(intentRequestDigest(intent), record.review_request_digest);
 });
+
+// #1918 standing rule (new exports enter the hostile-input baseline at 0):
+// the record is rejected on first contact, before any trap, getter or
+// Array.isArray can run. These are the 3 pairs #1144 had listed.
+test('grid evidence rejects a Proxy or accessor record before any trap or getter runs', async () => {
+  const { throwingProxy, recordingProxy, revokedProxy, createCounter } = await import('../test-support/hostile-input-contract.mjs');
+  const valid = reviewedInstruction();
+  for (const [name, make] of [
+    ['throwing-proxy', counter => throwingProxy({}, counter)],
+    ['recording-proxy', counter => recordingProxy({}, counter)],
+    ['revoked-proxy', () => revokedProxy({})],
+    // The same wrappers around a valid reviewed record: rejection does not
+    // depend on the wrapped content being invalid.
+    ['recording-proxy(valid record)', counter => recordingProxy({ ...valid }, counter)],
+    ['revoked-proxy(valid record)', () => revokedProxy({ ...valid })]
+  ]) {
+    const counter = createCounter();
+    assert.throws(
+      () => verifySemanticMemoryGridEvidence(make(counter), {}),
+      error => error.name === 'ValidationError' && /found a Proxy/.test(error.message),
+      name
+    );
+    assert.equal(counter.traps, 0, `${name}: no trap may run`);
+  }
+  let getterRuns = 0;
+  const accessor = { ...valid };
+  Object.defineProperty(accessor, 'owner', { enumerable: true, get() { getterRuns += 1; return valid.owner; } });
+  assert.throws(() => verifySemanticMemoryGridEvidence(accessor, {}), /found an accessor property/);
+  assert.equal(getterRuns, 0);
+});
