@@ -295,3 +295,59 @@ test('unknown lifecycle fields and invalid evaluation clock fail closed', () => 
     /evaluation now is invalid/
   );
 });
+
+// #1918 standing rule (new exports enter the hostile-input baseline at 0):
+// the provenance record (the pair #1140 had listed) and the lifecycle
+// document are both rejected on first contact, before any trap or getter.
+test('lifecycle verification rejects Proxy or accessor inputs before any trap or getter runs', async () => {
+  const { throwingProxy, recordingProxy, revokedProxy, createCounter } = await import('../test-support/hostile-input-contract.mjs');
+  const record = remoteInstruction();
+  const lifecycle = createSemanticMemoryLifecycle(record);
+  const cases = [
+    // The baseline pair: options-throwing-proxy is the record argument.
+    ['record throwing-proxy', counter => [{}, throwingProxy({}, counter)]],
+    ['record recording-proxy(valid)', counter => [lifecycle, recordingProxy({ ...record }, counter)]],
+    ['record revoked-proxy', () => [lifecycle, revokedProxy({ ...record })]],
+    ['lifecycle throwing-proxy', counter => [throwingProxy({}, counter), record]],
+    ['lifecycle recording-proxy(valid)', counter => [recordingProxy({ ...lifecycle }, counter), record]],
+    ['lifecycle revoked-proxy', () => [revokedProxy({ ...lifecycle }), record]]
+  ];
+  for (const [name, make] of cases) {
+    const counter = createCounter();
+    assert.throws(
+      () => verifySemanticMemoryLifecycle(...make(counter)),
+      error => error.name === 'ValidationError' && /found a Proxy/.test(error.message),
+      name
+    );
+    assert.equal(counter.traps, 0, `${name}: no trap may run`);
+  }
+  let getterRuns = 0;
+  const accessorLifecycle = { ...lifecycle };
+  Object.defineProperty(accessorLifecycle, 'lifecycle_digest', {
+    enumerable: true,
+    get() { getterRuns += 1; return lifecycle.lifecycle_digest; }
+  });
+  assert.throws(() => verifySemanticMemoryLifecycle(accessorLifecycle, record), /found an accessor property/);
+  const accessorRecord = { ...record };
+  Object.defineProperty(accessorRecord, 'owner', { enumerable: true, get() { getterRuns += 1; return record.owner; } });
+  assert.throws(() => verifySemanticMemoryLifecycle(lifecycle, accessorRecord), /found an accessor property/);
+  assert.equal(getterRuns, 0);
+  // The record is still checked first, as on main: a hostile lifecycle with a
+  // missing record reports the record, and runs no trap.
+  const first = createCounter();
+  assert.throws(
+    () => verifySemanticMemoryLifecycle(throwingProxy({}, first)),
+    error => error.name === 'ValidationError' && /^Semantic memory provenance must be an object$/.test(error.message)
+  );
+  assert.equal(first.traps, 0);
+  // null and primitives keep their existing typed message.
+  for (const top of [null, undefined, 7, 'x', []]) {
+    assert.throws(
+      () => verifySemanticMemoryLifecycle(top, record),
+      error => error.name === 'ValidationError' && error.message === 'Semantic memory lifecycle must be an object',
+      String(top)
+    );
+  }
+  // Plain copies, including a null-prototype record, still verify exactly.
+  assert.deepEqual(verifySemanticMemoryLifecycle({ ...lifecycle }, Object.assign(Object.create(null), record)), lifecycle);
+});

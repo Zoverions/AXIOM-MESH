@@ -1,4 +1,4 @@
-import { ValidationError, digestObject } from './canonical.mjs';
+import { ValidationError, assertContractNode, digestObject } from './canonical.mjs';
 import { intentRequestDigest } from './intent-binding.mjs';
 
 export const SEMANTIC_MEMORY_PROVENANCE_SCHEMA = 'axiom-semantic-memory-provenance.v1';
@@ -494,6 +494,10 @@ function assertReviewOutcome({
 }
 
 function plainObject(value, label) {
+  // A Proxy, a non-plain prototype or an accessor property is rejected from
+  // its descriptors before any read, so no trap or getter runs (#1918). It
+  // runs first because Array.isArray throws on a revoked Proxy.
+  if (value !== null && typeof value === 'object') assertContractNode(value, label);
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError(`${label} must be an object`);
   }
