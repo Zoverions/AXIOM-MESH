@@ -308,6 +308,19 @@ const PRE_REVIEW_STATES = Object.freeze([
   'rejected'
 ]);
 
+// The stripped keys are passed as own properties set to undefined, which the
+// own-property read treats exactly like absent keys (and which never reach the
+// normalized output, so the digest is unchanged). Leaving them out instead
+// would let a polluted Object.prototype supply them to the deny-dominance
+// rerun of withOwnFieldReads and deny a genuine reviewed record.
+const PRE_REVIEW_ABSENT_KEYS = Object.freeze({
+  review_actor: undefined,
+  review_request_digest: undefined,
+  reviewed_from_provenance_digest: undefined,
+  review_decision: undefined,
+  provenance_digest: undefined
+});
+
 function preReviewProvenanceDigest(normalized) {
   const {
     review_actor: _actor,
@@ -324,7 +337,8 @@ function preReviewProvenanceDigest(normalized) {
         candidate = normalizeSemanticMemoryProvenance({
           ...fields,
           authority_tier: PRE_REVIEW_AUTHORITY_TIERS[tier],
-          review_state: PRE_REVIEW_STATES[state]
+          review_state: PRE_REVIEW_STATES[state],
+          ...PRE_REVIEW_ABSENT_KEYS
         });
       } catch (error) {
         if (error instanceof ValidationError) continue;
