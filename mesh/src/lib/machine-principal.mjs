@@ -21,6 +21,29 @@ export function normalizeMachinePrincipalDefinition(value, {
   knownHumanPrincipals = null,
   now = new Date()
 } = {}) {
+  return normalizeMachinePrincipal(value, {
+    knownHumanPrincipals,
+    now,
+    requireFutureExpiry: true
+  });
+}
+
+export function normalizeMachinePrincipalAuthoritySnapshot(value, {
+  knownHumanPrincipals = null
+} = {}) {
+  assertMachineAuthoritySnapshotFields(value);
+  return normalizeMachinePrincipal(value, {
+    knownHumanPrincipals,
+    now: null,
+    requireFutureExpiry: false
+  });
+}
+
+function normalizeMachinePrincipal(value, {
+  knownHumanPrincipals,
+  now,
+  requireFutureExpiry
+}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError('Machine principal definition must be an object');
   }
@@ -65,7 +88,9 @@ export function normalizeMachinePrincipalDefinition(value, {
   if (!MACHINE_LIFETIMES.has(lifetime)) {
     throw new ValidationError('Machine principal lifetime is invalid');
   }
-  const expiresAt = normalizeExpiry(value.expires_at, lifetime, now);
+  const expiresAt = normalizeExpiry(value.expires_at, lifetime, now, {
+    requireFuture: requireFutureExpiry
+  });
   const runtime = normalizeRuntimeBinding(value.runtime);
   const constraints = normalizeMachineConstraints(value.constraints);
   const authorityProfile = {
@@ -184,6 +209,49 @@ export function machinePrincipalAuthorityFacts(principal) {
   };
 }
 
+function assertMachineAuthoritySnapshotFields(value) {
+  assertAllowedFields(value, [
+    'schema',
+    'id',
+    'type',
+    'sponsor',
+    'roles',
+    'scopes',
+    'lifetime',
+    'expires_at',
+    'runtime',
+    'constraints',
+    'authority_digest'
+  ], 'Machine principal authority snapshot');
+  assertAllowedFields(value.runtime, [
+    'id',
+    'kind',
+    'software_digest'
+  ], 'Machine principal runtime');
+  assertAllowedFields(value.constraints, [
+    'actions',
+    'purposes',
+    'destinations',
+    'budgets',
+    'delegation'
+  ], 'Machine principal constraints');
+  assertAllowedFields(value.constraints?.budgets ?? {}, Object.keys(DEFAULT_BUDGETS),
+    'Machine principal budgets');
+  assertAllowedFields(value.constraints?.delegation ?? {}, ['allowed', 'max_depth'],
+    'Machine principal delegation');
+}
+
+function assertAllowedFields(value, allowedFields, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const allowed = new Set(allowedFields);
+  const unknown = Object.keys(value).filter(key => !allowed.has(key));
+  if (unknown.length) {
+    throw new ValidationError(`${label} fields are invalid: ${unknown.join(', ')}`);
+  }
+}
+
 function normalizeRuntimeBinding(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError('Machine principal runtime binding must be an object');
@@ -267,7 +335,7 @@ function normalizeDelegation(value) {
   return { allowed: false, max_depth: 0 };
 }
 
-function normalizeExpiry(value, lifetime, now) {
+function normalizeExpiry(value, lifetime, now, { requireFuture = true } = {}) {
   if (lifetime === 'persistent') {
     if (value !== undefined && value !== null) {
       throw new ValidationError('Persistent machine principals must not set expires_at');
@@ -281,7 +349,7 @@ function normalizeExpiry(value, lifetime, now) {
   if (Number.isNaN(date.valueOf())) {
     throw new ValidationError('Machine principal expires_at must be an ISO timestamp');
   }
-  if (date <= now) {
+  if (requireFuture && date <= now) {
     throw new ValidationError('Machine principal expires_at must be in the future');
   }
   return date.toISOString();
