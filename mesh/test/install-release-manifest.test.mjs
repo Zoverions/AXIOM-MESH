@@ -568,7 +568,61 @@ test('boundary scan catches bare host globals and ignores property access, strin
     'if(x) /[//]/.test(s);navigator',
     'function g(){}\n/"/.test(a);self;/"/.test(b)',
     "while(x) /'/.exec(s)&&window&&/'/.exec(t)",
-    'async function h(){await /`/;Deno;/`/}'
+    'async function h(){await /`/;Deno;/`/}',
+    // #1918 R1 (Verifier on #1929): a regular expression after extends or default.
+    "class A extends /'/.x{};self;/'/.x",
+    "export default /'/.source;self;/'/",
+    'class B extends /"/.x{};self;/"/.x',
+    // Re-audit variants: after break, continue or debugger (next line, by
+    // automatic semicolon insertion), after a break/continue label, a keyword
+    // as a private name, a comment between tokens, and a non-ASCII identifier
+    // prefix that hides a keyword.
+    "for(;;){break\n/'/.test(s);window;/'/}",
+    "for(;;){continue\n/'/.test(s);window;/'/}",
+    "a:for(;;){break a\n/'/.test(s);window;/'/}",
+    "a:for(;;){continue a\n/'/.test(s);Deno;/'/}",
+    "debugger\n/'/.test(s);navigator;/'/",
+    'class C{#return=1;m(){return this.#return / window / 2}}',
+    "let x=1; x/**/in /'/.source;window;/'/",
+    'let ñreturn=1; ñreturn / window / 2',
+    'let 𝑥return=1; 𝑥return / Bun / 2',
+    // Every reserved word after which a regular expression may start.
+    "switch(1){case /'/.x:self;/'/}",
+    "throw /'/.x;window;/'/",
+    "void /'/.x;window;/'/",
+    "typeof /'/.x;window;/'/",
+    "delete /'/.x;window;/'/",
+    "new /'/.x;window;/'/",
+    "if(1){}else /'/.x;window;/'/",
+    "do /'/.x;while(0);window;/'/",
+    "'x' in /'/;window;/'/",
+    "1 instanceof /'/;window;/'/",
+    "function f(){return /'/.x;window;/'/}",
+    "function* g(){yield /'/;window;/'/}",
+    "for(const m of /'/.exec(s)||[]){};self;/'/",
+    // #1931 B-1 (Verifier): a line comment ends at any line terminator.
+    'x=1//c\rwindow',
+    'x=1//c\u2028window',
+    'x=1//c\u2029self',
+    'x=1//c\r\nDeno',
+    // An identifier part ZWJ or ZWNJ keeps a\u200dreturn one word, not return.
+    'let a\u200dreturn=1; a\u200dreturn / window / 2',
+    'let a\u200creturn=1; a\u200creturn / self / 2',
+    'a\u200dreturn / window / 2',
+    'a\u200creturn / window / 2',
+    // #1931: a '/' after prefix or postfix ++/-- is ambiguous (fail closed).
+    "let x=1; x=++/'/.lastIndex;window;/'/",
+    "x=++/'/.lastIndex;window;/'/",
+    "x=--/'/.lastIndex;self;/'/",
+    "a\n++/'/.x;window;/'/.x",
+    "a\n--/'/.x;self;/'/.x",
+    // Mutation-audit additions: '$' is an identifier part, a regular
+    // expression at the start of a line after ';', ']' ends an expression, and
+    // a template expression counts its own braces.
+    'let $return=1; $return / window / 2',
+    "/'/.test(s);window;/'/",
+    'let a=[1]; a[0] / window / 2',
+    'x=`${{}[window]}`'
   ]){
     // Both layers must catch every planted case on its own.
     const text=`export const ok=1;\n${planted}\n`;
@@ -595,7 +649,17 @@ test('boundary scan catches bare host globals and ignores property access, strin
     // Unambiguous division keeps the rest of its line as code.
     'const r=a[0] / b / c;',
     "const r=n / 2 + 'px';",
-    'const r=x++ / 2 / y;'
+    // An ambiguous '/' looks only to the end of its line, at any terminator.
+    "const r=f() / 2\rconst s='a/b';",
+    "const r=f() / 2\u2028const s='a/b';",
+    // A string may hold U+2028/U+2029 and a \r\n line continuation.
+    "const m='a\u2028window\u2029';",
+    "const m='a\\\r\nb';",
+    // A gap or a third '+'/'-' ends the update, so a regular expression may
+    // follow; of after a '.' is a property name.
+    'const r=a+ +/x/.lastIndex;','const r=a- -/x/.lastIndex;',
+    'const r=a+++/x/.lastIndex;','const r=a---/x/.lastIndex;',
+    'const r=obj.of / 2 / y;'
   ]){
     assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode(allowed,'allowed',{rawHostGlobals:false}),allowed);
     // The raw-text layer (on by default) still reports any of these that names a host global.
@@ -609,10 +673,56 @@ test('boundary scan catches bare host globals and ignores property access, strin
     "if(x) /'/",'f() / 2 // half','{}/`/',
     // An ambiguous '/' followed by a quote or backtick fails closed even when
     // no later '/' is on the line (division here, but not proven lexically).
-    "f(a) / n + 'px'",'g() / `${n}`']){
+    "f(a) / n + 'px'",'g() / `${n}`',
+    // Double-quote must-fail cases (#1918 R1 test gap).
+    'if(x) /"/','f(a) / n + "px"','{}\n/"/.test(a)',
+    // A break/continue label followed by a '/' line.
+    "a:for(;;){break a\n/'/}",
+    // #1931: '/' after ++/-- is ambiguous, so a later '/' or quote throws.
+    'const r=x++ / 2 / y;','const r=x-- / 2 / y;',"x=++/'/.lastIndex","a\n++/'/.x",
+    // A regular expression or string cannot cross a line terminator.
+    'x=/a\rb/','x=/a\u2028b/','x=/a\\\rb/',"const a='x\rwindow'","const a='x\nwindow'",
+    // An unterminated template fails closed.
+    'const t=`abc']){
     assert.throws(()=>codeOnly(broken),SyntaxError,broken);
   }
   assert.match('window',HOST_GLOBAL);
+});
+
+// #1918 R1: a '#!' hashbang line is a comment only at offset 0, so a quote,
+// backtick or comment opener in it cannot hide the code that follows.
+test('boundary scan treats a leading hashbang line as a comment',()=>{
+  for(const planted of [
+    '#!/usr/bin/env node `\nwindow; // `',
+    "#!/usr/bin/env node '\nwindow //'",
+    '#!/usr/bin/env node "\nself; // "',
+    '#!/x /*\nDeno; // */',
+    // #1931 B-1 (Verifier): the hashbang line ends at any line terminator.
+    '#!/usr/bin/env node\rwindow',
+    '#!/usr/bin/env node\u2028window',
+    '#!/usr/bin/env node\u2029self',
+    '#!/usr/bin/env node\r\nDeno',
+    // A '#!' anywhere but offset 0 is not a hashbang, so it hides nothing.
+    "window;'#!'",
+    "self\n#!x"
+  ]){
+    assert.throws(()=>assertNoAmbientOrDynamicCode(planted,'planted'),{code:'ERR_ASSERTION'},planted);
+    assert.throws(()=>assertNoAmbientOrDynamicCode(planted,'planted',{rawHostGlobals:false}),{code:'ERR_ASSERTION'},`code-only: ${planted}`);
+  }
+  assert.equal(codeOnly('#!/usr/bin/env node window\nconst a=1;'),' '.repeat(26)+'\nconst a=1;');
+  assert.doesNotThrow(()=>assertNoAmbientOrDynamicCode('#!/usr/bin/env node self\nexport const a=1;','hashbang',{rawHostGlobals:false}));
+  // Anywhere else '#!' is code, not a comment.
+  assert.equal(codeOnly('a;#!x'),'a;#!x');
+  // Blanking keeps every line terminator in place.
+  assert.equal(codeOnly('a//x\u2028b//y\rc'),'a   \u2028b   \rc');
+  assert.equal(codeOnly('#!x\u2029a'),'   \u2029a');
+  // Strings, templates and block comments keep every line terminator too.
+  assert.equal(codeOnly("'a\u2028b'+`c\rd\u2029`/*\r\u2028*/"),"' \u2028 '+` \r \u2029`  \r\u2028  ");
+  // A '#!' after leading whitespace is not a hashbang; a regular expression
+  // may start the input; flags are kept as code.
+  assert.equal(codeOnly(' #!x'),' #!x');
+  assert.equal(codeOnly("/'/.x"),'/ /.x');
+  assert.equal(codeOnly("x=/'/gu;"),'x=/ /gu;');
 });
 
 test('trusted signer inventory rejects private-key material before key conversion',()=>{
