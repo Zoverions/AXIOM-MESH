@@ -10,7 +10,12 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
     throw new TypeError('Semantic memory review verification requires a Grid store');
   }
   const normalized = normalizeSemanticMemoryProvenance(record);
-  if (typeof normalized.review_request_digest !== 'string') {
+  // Own-only (#1918 F-1): unreviewed records omit review_request_digest, so an
+  // inherited (polluted) value must not select review evidence.
+  const reviewRequestDigest = Object.hasOwn(normalized, 'review_request_digest')
+    ? normalized.review_request_digest
+    : undefined;
+  if (typeof reviewRequestDigest !== 'string') {
     throw new ValidationError('Semantic memory record has no explicit review request');
   }
 
@@ -24,7 +29,7 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
   let matchingRequestSeen = false;
   for (const row of acceptedRows) {
     const accepted = store.decodeEventRow(row);
-    if (accepted.payload?.request_digest !== normalized.review_request_digest) continue;
+    if (accepted.payload?.request_digest !== reviewRequestDigest) continue;
     matchingRequestSeen = true;
     if (
       accepted.payload?.principal !== normalized.owner
