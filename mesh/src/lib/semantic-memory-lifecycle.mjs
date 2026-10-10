@@ -247,6 +247,10 @@ function evaluateLifecycleUseWith(reader, record, lifecycle, usage, options) {
   const legacyVerifiedDigest = read(options, 'verified_review_request_digest');
   const provenance = reader.normalize(record);
   const verifiedLifecycle = verifyLifecycleWith(reader, lifecycle, provenance);
+  // An own `now` must be a Date or an ISO-8601 string; null, numbers and
+  // other forms used to coerce (null became the epoch) and are now rejected.
+  // An absent `now` keeps the real clock.
+  if (suppliedNow !== undefined) evaluationClock(suppliedNow);
   const currentTime = now instanceof Date ? now : new Date(now);
   if (Number.isNaN(currentTime.valueOf())) {
     throw new ValidationError('Semantic memory lifecycle evaluation now is invalid');
@@ -332,6 +336,54 @@ function deriveLifecycleWith(reader, parentRecord, parentLifecycle, childRecord,
     retention_mode: childMode,
     expires_at: childExpiry
   });
+}
+
+// ISO-8601 calendar date, optionally followed by a time of day with an
+// optional UTC designator or offset (the ECMAScript date-time string format,
+// full date required before a time). Fields are range-checked so that
+// Date's rollover (2026-02-30 -> 2026-03-02, 24:00) is not accepted.
+const ISO_8601_INSTANT = /^(\d{4}|[+-]\d{6})(?:-(\d{2})(?:-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-](\d{2}):(\d{2}))?)?)?)?$/;
+
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isDateObject(value) {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    // Brand check: true only for objects with a [[DateValue]] slot (any
+    // realm, subclasses included); a Proxy or Object.create(Date.prototype)
+    // has none.
+    Date.prototype.getTime.call(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isIso8601Instant(value) {
+  const match = ISO_8601_INSTANT.exec(value);
+  if (!match) return false;
+  const [, yearText, month, day, hour, minute, second, offsetHour, offsetMinute] = match;
+  if (yearText === '-000000') return false;
+  const inRange = (text, low, high) => text === undefined || (Number(text) >= low && Number(text) <= high);
+  if (!inRange(month, 1, 12) || !inRange(hour, 0, 23) || !inRange(minute, 0, 59) || !inRange(second, 0, 59)) {
+    return false;
+  }
+  if (!inRange(offsetHour, 0, 23) || !inRange(offsetMinute, 0, 59)) return false;
+  if (day !== undefined) {
+    const year = Number(yearText);
+    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const lastDay = Number(month) === 2 ? (leap ? 29 : 28) : DAYS_IN_MONTH[Number(month) - 1];
+    if (!inRange(day, 1, lastDay)) return false;
+  }
+  return true;
+}
+
+// Deny-only gate for an own `now`; the clock value itself is still computed
+// by the caller exactly as before.
+function evaluationClock(value) {
+  if (isDateObject(value)) return;
+  if (typeof value === 'string' && isIso8601Instant(value)) return;
+  throw new ValidationError('Semantic memory lifecycle evaluation now is invalid');
 }
 
 function optionsArgument(value) {
