@@ -37,11 +37,31 @@ export function recordedSemanticMemoryReviewIntent(record) {
   });
 }
 
+// Own data only (#1918): a field that is not an own property of its object,
+// such as one inherited from a polluted Object.prototype, reads as absent.
+function own(value, key) {
+  return value !== null
+    && (typeof value === 'object' || typeof value === 'function')
+    && Object.hasOwn(value, key)
+    ? value[key]
+    : undefined;
+}
+
+function ownEntry(array, item) {
+  return array.some((entry, index) => entry === item && Object.hasOwn(array, index));
+}
+
 export function verifySemanticMemoryGridEvidence(record, {
-  intent,
-  events,
-  chain
+  // Destructured only so that a null options argument throws exactly as
+  // before; the values are read below as own properties.
+  intent: _intent,
+  events: _events,
+  chain: _chain
 } = {}) {
+  const options = arguments[1];
+  const intent = own(options, 'intent');
+  const events = own(options, 'events');
+  const chain = own(options, 'chain');
   const normalized = normalizeSemanticMemoryProvenance(record);
   requireExplicitReview(normalized);
   const reviewIntent = recordedSemanticMemoryReviewIntent(normalized);
@@ -49,25 +69,25 @@ export function verifySemanticMemoryGridEvidence(record, {
   if (expectedRequestDigest !== normalized.review_request_digest) {
     throw new ValidationError('Semantic memory recorded review request digest is invalid');
   }
-  if (!chain || chain.valid !== true) {
+  if (!chain || own(chain, 'valid') !== true) {
     throw new ValidationError('Semantic memory review requires a valid Grid evidence chain');
   }
 
   const intentRow = assertPlainObject(intent, 'semantic review intent');
-  const intentId = assertString(intentRow.intent_id, 'semantic review intent_id', {
+  const intentId = assertString(own(intentRow, 'intent_id'), 'semantic review intent_id', {
     max: 160,
     pattern: ID
   });
-  const traceId = assertString(intentRow.trace_id, 'semantic review trace_id', {
+  const traceId = assertString(own(intentRow, 'trace_id'), 'semantic review trace_id', {
     max: 160,
     pattern: ID
   });
   if (
-    intentRow.principal !== normalized.owner
-    || intentRow.action !== SEMANTIC_MEMORY_REVIEW_ACTION
-    || intentRow.status !== 'completed'
-    || intentRow.request_digest !== expectedRequestDigest
-    || intentRow.input_digest !== digestObject(reviewIntent.input)
+    own(intentRow, 'principal') !== normalized.owner
+    || own(intentRow, 'action') !== SEMANTIC_MEMORY_REVIEW_ACTION
+    || own(intentRow, 'status') !== 'completed'
+    || own(intentRow, 'request_digest') !== expectedRequestDigest
+    || own(intentRow, 'input_digest') !== digestObject(reviewIntent.input)
   ) {
     throw new ValidationError('Semantic memory materialized intent does not match the exact review');
   }
@@ -89,44 +109,59 @@ export function verifySemanticMemoryGridEvidence(record, {
 
   const accepted = acceptedEvents[0];
   const completed = completedEvents[0];
+  // The counts above keep the original reads, so an inherited entry or kind
+  // can only add a deny. The one accepted and one completed event must also
+  // be own array entries with an own kind (#1918).
   if (
-    !Number.isSafeInteger(accepted.seq)
-    || !Number.isSafeInteger(completed.seq)
-    || accepted.seq >= completed.seq
-    || accepted.actor !== normalized.owner
-    || completed.actor !== normalized.owner
-    || accepted.trace_id !== traceId
-    || completed.trace_id !== traceId
-    || accepted.subject !== intentId
-    || completed.subject !== intentId
+    !ownEntry(events, accepted)
+    || !ownEntry(events, completed)
+    || own(accepted, 'kind') !== 'intent.accepted'
+    || own(completed, 'kind') !== 'intent.completed'
+  ) {
+    throw new ValidationError('Semantic memory review requires one accepted and one completed event');
+  }
+  const acceptedSeq = own(accepted, 'seq');
+  const completedSeq = own(completed, 'seq');
+  if (
+    !Number.isSafeInteger(acceptedSeq)
+    || !Number.isSafeInteger(completedSeq)
+    || acceptedSeq >= completedSeq
+    || own(accepted, 'actor') !== normalized.owner
+    || own(completed, 'actor') !== normalized.owner
+    || own(accepted, 'trace_id') !== traceId
+    || own(completed, 'trace_id') !== traceId
+    || own(accepted, 'subject') !== intentId
+    || own(completed, 'subject') !== intentId
   ) {
     throw new ValidationError('Semantic memory review event ordering or actor/trace binding is invalid');
   }
+  const acceptedPayload = own(accepted, 'payload');
   if (
-    accepted.payload?.intent_id !== intentId
-    || accepted.payload?.principal !== normalized.owner
-    || accepted.payload?.principal_type !== 'human'
-    || accepted.payload?.action !== SEMANTIC_MEMORY_REVIEW_ACTION
-    || accepted.payload?.request_digest !== expectedRequestDigest
-    || accepted.payload?.input_digest !== digestObject(reviewIntent.input)
+    own(acceptedPayload, 'intent_id') !== intentId
+    || own(acceptedPayload, 'principal') !== normalized.owner
+    || own(acceptedPayload, 'principal_type') !== 'human'
+    || own(acceptedPayload, 'action') !== SEMANTIC_MEMORY_REVIEW_ACTION
+    || own(acceptedPayload, 'request_digest') !== expectedRequestDigest
+    || own(acceptedPayload, 'input_digest') !== digestObject(reviewIntent.input)
   ) {
     throw new ValidationError('Semantic memory accepted event does not match the exact review request');
   }
 
-  const result = assertPlainObject(completed.payload?.result, 'semantic review result');
+  const completedPayload = own(completed, 'payload');
+  const result = assertPlainObject(own(completedPayload, 'result'), 'semantic review result');
   if (
-    completed.payload?.intent_id !== intentId
-    || result.intent_id !== intentId
-    || result.trace_id !== traceId
-    || result.status !== 'completed'
+    own(completedPayload, 'intent_id') !== intentId
+    || own(result, 'intent_id') !== intentId
+    || own(result, 'trace_id') !== traceId
+    || own(result, 'status') !== 'completed'
   ) {
     throw new ValidationError('Semantic memory completed event does not match the exact review request');
   }
-  if (canonicalJson(intentRow.result_json) !== canonicalJson(result)) {
+  if (canonicalJson(own(intentRow, 'result_json')) !== canonicalJson(result)) {
     throw new ValidationError('Semantic memory materialized completion does not match signed evidence');
   }
 
-  const chainHead = assertString(chain.head, 'semantic review chain head', {
+  const chainHead = assertString(own(chain, 'head'), 'semantic review chain head', {
     min: 64,
     max: 64,
     pattern: DIGEST
@@ -140,19 +175,19 @@ export function verifySemanticMemoryGridEvidence(record, {
     intent_id: intentId,
     trace_id: traceId,
     accepted: Object.freeze({
-      seq: accepted.seq,
-      event_id: accepted.event_id,
-      event_hash: accepted.event_hash
+      seq: acceptedSeq,
+      event_id: own(accepted, 'event_id'),
+      event_hash: own(accepted, 'event_hash')
     }),
     completed: Object.freeze({
-      seq: completed.seq,
-      event_id: completed.event_id,
-      event_hash: completed.event_hash
+      seq: completedSeq,
+      event_id: own(completed, 'event_id'),
+      event_hash: own(completed, 'event_hash')
     }),
     chain: Object.freeze({
       valid: true,
       head: chainHead,
-      events: chain.events
+      events: own(chain, 'events')
     }),
     downstream_effect_authorized: false
   });
