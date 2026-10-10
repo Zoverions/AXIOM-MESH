@@ -12,7 +12,8 @@ import {
   evaluateSemanticMemoryUse,
   normalizeSemanticMemoryProvenance,
   ownerReviewSemanticMemory,
-  semanticMemoryReviewRequestDigest
+  semanticMemoryReviewRequestDigest,
+  verifySemanticMemoryReviewedFromProvenance
 } from '../src/lib/semantic-memory-provenance.mjs';
 import {
   recordedSemanticMemoryReviewIntent,
@@ -493,4 +494,312 @@ test('grid evidence own reads do not depend on Object.prototype and can only add
   options.events[0] = asFunction;
   assert.deepEqual(verify(options), ok);
   assert.deepEqual(verify({ ...fresh(), chain: Object.assign(Object.create(null), json(chain)) }), ok);
+});
+
+// ---------------------------------------------------------------------------
+// #1937: the review binds the claimed reviewed_from_provenance_digest; the
+// reviewed record's own pre-review fields must reproduce it.
+
+const REATTRIBUTIONS = [
+  ['origin_principal', { origin_principal: 'agent.remote.evil' }],
+  ['origin_artifact_digest', { origin_artifact_digest: sha256('forged receipt') }],
+  ['origin_class (tool-output)', { origin_class: 'tool-output' }],
+  ['origin_class (retrieved-external)', { origin_class: 'retrieved-external' }],
+  ['origin_class (owner-authored)', { origin_class: 'owner-authored', origin_principal: 'owner.alice', origin_artifact_digest: undefined }],
+  ['ingestion_intent_id', { ingestion_intent_id: 'intent.ingest.forged' }],
+  ['origin_runtime_id', { origin_runtime_id: 'runtime.forged' }],
+  ['request_digest', { request_digest: sha256('forged request') }],
+  ['origin_principal + origin_artifact_digest', { origin_principal: 'agent.remote.evil', origin_artifact_digest: sha256('forged receipt') }],
+  ['origin_class + origin_principal + ingestion_intent_id', { origin_class: 'tool-output', origin_principal: 'agent.remote.evil', ingestion_intent_id: 'intent.ingest.forged' }],
+  ['all four origin fields', { origin_class: 'retrieved-external', origin_principal: 'agent.remote.evil', origin_artifact_digest: sha256('forged receipt'), ingestion_intent_id: 'intent.ingest.forged' }]
+];
+const PROVENANCE_MISMATCH = /reviewed_from_provenance_digest does not match the record's own pre-review provenance/;
+
+function reattributed(record, change) {
+  const { provenance_digest: _digest, ...fields } = record;
+  const next = { ...fields, ...change };
+  for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
+  // Still a self-consistent record with the original review evidence.
+  const normalized = normalizeSemanticMemoryProvenance(next);
+  assert.equal(normalized.review_request_digest, record.review_request_digest);
+  assert.equal(normalized.reviewed_from_provenance_digest, record.reviewed_from_provenance_digest);
+  return normalized;
+}
+
+test('#1937: a real GridStore review still verifies and recomputes its pre-review provenance', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { intentId, traceId } = appendAccepted(store, record);
+  appendCompleted(store, record, { intentId, traceId });
+  assert.deepEqual(verifySemanticMemoryReviewedFromProvenance(record), {
+    object_id: record.object_id,
+    reviewed_from_provenance_digest: record.reviewed_from_provenance_digest,
+    pre_review_provenance_verified: true
+  });
+  const evidence = verifySemanticMemoryReviewFromGrid(store, record);
+  assert.equal(evidence.verified_review_request_digest, record.review_request_digest);
+  assert.equal(evaluateSemanticMemoryUse(record, 'privileged-instruction', {
+    verified_review_request_digest: evidence.verified_review_request_digest
+  }).allow, true);
+});
+
+test('#1937: a reviewed record whose origin was changed after review is denied by Grid verification and use', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { intentId, traceId } = appendAccepted(store, record);
+  appendCompleted(store, record, { intentId, traceId });
+  const evidence = verifySemanticMemoryReviewFromGrid(store, record);
+  const events = intentEvents(store, intentId);
+  const intent = store.getIntent(intentId);
+  const chain = store.requireIntentEvidenceChain();
+  for (const [label, change] of REATTRIBUTIONS) {
+    const forged = reattributed(record, change);
+    assert.throws(() => verifySemanticMemoryReviewedFromProvenance(forged),
+      error => error.name === 'ValidationError' && PROVENANCE_MISMATCH.test(error.message), label);
+    assert.throws(() => verifySemanticMemoryReviewFromGrid(store, forged),
+      error => error.name === 'ValidationError' && PROVENANCE_MISMATCH.test(error.message), label);
+    assert.throws(() => verifySemanticMemoryGridEvidence(forged, { intent, events, chain }),
+      error => error.name === 'ValidationError' && PROVENANCE_MISMATCH.test(error.message), label);
+    // Even with the genuine record's verified request digest, use is denied.
+    assert.deepEqual(evaluateSemanticMemoryUse(forged, 'privileged-instruction', {
+      verified_review_request_digest: evidence.verified_review_request_digest
+    }), { allow: false, code: 'semantic_memory_review_provenance_mismatch' }, label);
+  }
+});
+
+test('#1937: semantic_class changes after review are denied (control, and approve-memory)', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { provenance_digest: _digest, ...fields } = record;
+  // Already caught before #1937 for approve-instruction, by the outcome check.
+  assert.throws(() => normalizeSemanticMemoryProvenance({ ...fields, semantic_class: 'knowledge' }),
+    /Approve-instruction review evidence does not match the resulting state/);
+
+  const base = normalizeSemanticMemoryProvenance({
+    object_id: 'memory.remote.knowledge-fixture',
+    owner: 'owner.alice',
+    content_digest: sha256('knowledge content'),
+    origin_class: 'remote-agent',
+    origin_principal: 'agent.remote.1',
+    origin_artifact_digest: sha256('remote receipt'),
+    semantic_class: 'knowledge'
+  });
+  const approved = ownerReviewSemanticMemory(base, {
+    actor_id: base.owner,
+    review_request_digest: semanticMemoryReviewRequestDigest(base, 'approve-memory'),
+    decision: 'approve-memory'
+  });
+  appendAccepted(store, approved, { intentId: 'intent.semantic.review.mem', traceId: 'trace.semantic.review.mem' });
+  appendCompleted(store, approved, { intentId: 'intent.semantic.review.mem', traceId: 'trace.semantic.review.mem' });
+  assert.equal(verifySemanticMemoryReviewFromGrid(store, approved).review_decision, 'approve-memory');
+  for (const [label, change] of [
+    ['semantic_class', { semantic_class: 'procedure' }],
+    ['origin_principal', { origin_principal: 'agent.remote.evil' }]
+  ]) {
+    const forged = reattributed(approved, change);
+    assert.throws(() => verifySemanticMemoryReviewFromGrid(store, forged), PROVENANCE_MISMATCH, label);
+  }
+});
+
+test('#1937: every consistent first review verifies; a re-review of a reviewed record fails closed', () => {
+  let count = 0;
+  for (const origin of ['owner-authored', 'local-model-generated', 'remote-agent', 'tool-output', 'system-derived']) {
+    for (const semantic of ['knowledge', 'instruction-candidate']) {
+      for (const explicitUntrusted of [false, true]) {
+        const base = normalizeSemanticMemoryProvenance({
+          object_id: `memory.${origin}.${semantic}`,
+          owner: 'owner.alice',
+          content_digest: sha256(`content ${origin} ${semantic}`),
+          origin_class: origin,
+          semantic_class: semantic,
+          ...(origin === 'owner-authored' ? {} : { origin_artifact_digest: sha256('artifact') }),
+          ...(origin === 'local-model-generated' ? { origin_runtime_id: 'runtime.local.1' } : {}),
+          ...(origin === 'remote-agent' ? { origin_principal: 'agent.remote.1' } : {}),
+          ...(origin === 'system-derived' ? {
+            parent_object_id: 'memory.parent',
+            parent_content_digest: sha256('parent'),
+            parent_provenance_digest: sha256('parent provenance')
+          } : {}),
+          ingestion_intent_id: 'intent.ingest.1',
+          request_digest: sha256('request'),
+          ...(explicitUntrusted ? { authority_tier: 'untrusted-data', review_state: 'unreviewed' } : {})
+        });
+        for (const decision of ['approve-memory', 'approve-instruction', 'quarantine', 'reject']) {
+          if (decision === 'approve-instruction' && semantic !== 'instruction-candidate') continue;
+          const reviewed = ownerReviewSemanticMemory(base, {
+            actor_id: 'owner.alice',
+            review_request_digest: semanticMemoryReviewRequestDigest(base, decision),
+            decision
+          });
+          assert.equal(verifySemanticMemoryReviewedFromProvenance(reviewed).pre_review_provenance_verified, true);
+          count += 1;
+        }
+      }
+    }
+  }
+  assert.equal(count, 70);
+  // A re-review is still created and normalizes, but its reviewed_from digest
+  // is the earlier reviewed record's, whose review evidence the new record
+  // does not carry, so it cannot be recomputed and fails closed.
+  const first = reviewedInstruction();
+  const again = ownerReviewSemanticMemory(first, {
+    actor_id: first.owner,
+    review_request_digest: semanticMemoryReviewRequestDigest(first, 'quarantine'),
+    decision: 'quarantine'
+  });
+  assert.equal(again.reviewed_from_provenance_digest, first.provenance_digest);
+  assert.throws(() => verifySemanticMemoryReviewedFromProvenance(again), PROVENANCE_MISMATCH);
+  assert.equal(evaluateSemanticMemoryUse(again, 'ordinary-retrieval').code, 'semantic_memory_quarantined');
+  // A record without explicit review evidence has nothing to recompute.
+  assert.throws(() => verifySemanticMemoryReviewedFromProvenance(normalizeSemanticMemoryProvenance({
+    object_id: 'memory.unreviewed', owner: 'owner.alice', content_digest: sha256('x'),
+    origin_class: 'tool-output', origin_artifact_digest: sha256('y'), semantic_class: 'knowledge'
+  })), /no explicit owner review evidence/);
+});
+
+// ---------------------------------------------------------------------------
+// #1939: the pre-review candidates are built without the reviewed record's
+// review evidence and provenance_digest. Those keys must still be own (and
+// undefined) on each candidate, so that a polluted Object.prototype cannot
+// supply them to the #1938 deny-dominance rerun and deny a genuine record.
+
+const PRE_REVIEW_STRIPPED_KEYS = [
+  'review_actor',
+  'review_request_digest',
+  'reviewed_from_provenance_digest',
+  'review_decision',
+  'provenance_digest'
+];
+
+function withPrototypeValues(entries, run) {
+  const saved = [];
+  try {
+    for (const [key, value, enumerable] of entries) {
+      saved.push([key, Object.getOwnPropertyDescriptor(Object.prototype, key)]);
+      Object.defineProperty(Object.prototype, key, { value, configurable: true, writable: true, enumerable });
+    }
+    return run();
+  } finally {
+    for (const [key, descriptor] of saved.reverse()) {
+      if (descriptor) Object.defineProperty(Object.prototype, key, descriptor);
+      else delete Object.prototype[key];
+    }
+  }
+}
+
+test('#1939: a genuine reviewed record still verifies with any stripped pre-review key polluted on Object.prototype', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { intentId, traceId } = appendAccepted(store, record);
+  appendCompleted(store, record, { intentId, traceId });
+  const intent = store.getIntent(intentId);
+  const events = intentEvents(store, intentId);
+  const chain = store.requireIntentEvidenceChain();
+  const expectedPreReview = verifySemanticMemoryReviewedFromProvenance(record);
+  const expectedEvidence = verifySemanticMemoryGridEvidence(record, { intent, events, chain });
+  const expectedGrid = verifySemanticMemoryReviewFromGrid(store, record);
+  const expectedUse = evaluateSemanticMemoryUse(record, 'privileged-instruction', {
+    verified_review_request_digest: expectedGrid.verified_review_request_digest
+  });
+  assert.equal(expectedUse.allow, true);
+  const forged = reattributed(record, { origin_principal: 'agent.remote.evil' });
+
+  // Polluted values: the genuine record's own values, and another genuine
+  // review's values (a different, self-consistent review).
+  const otherBase = normalizeSemanticMemoryProvenance({
+    object_id: 'memory.remote.other', owner: 'owner.alice', content_digest: sha256('other'),
+    origin_class: 'tool-output', origin_artifact_digest: sha256('other artifact'), semantic_class: 'instruction-candidate'
+  });
+  const otherReviewed = ownerReviewSemanticMemory(otherBase, {
+    actor_id: otherBase.owner,
+    review_request_digest: semanticMemoryReviewRequestDigest(otherBase, 'approve-instruction'),
+    decision: 'approve-instruction'
+  });
+  const sources = [['own values', record], ['other review values', otherReviewed]];
+  const subsets = [...PRE_REVIEW_STRIPPED_KEYS.map(key => [key]), PRE_REVIEW_STRIPPED_KEYS];
+  let runs = 0;
+  for (const [sourceLabel, source] of sources) {
+    for (const keys of subsets) {
+      for (const enumerable of [false, true]) {
+        const label = `${sourceLabel}: ${keys.join('+')} (enumerable ${enumerable})`;
+        withPrototypeValues(keys.map(key => [key, source[key], enumerable]), () => {
+          assert.deepEqual(verifySemanticMemoryReviewedFromProvenance(record), expectedPreReview, label);
+          assert.deepEqual(verifySemanticMemoryGridEvidence(record, { intent, events, chain }), expectedEvidence, label);
+          assert.deepEqual(verifySemanticMemoryReviewFromGrid(store, record), expectedGrid, label);
+          assert.deepEqual(evaluateSemanticMemoryUse(record, 'privileged-instruction', {
+            verified_review_request_digest: expectedGrid.verified_review_request_digest
+          }), expectedUse, label);
+          // Still deny-only: a re-attributed record stays denied.
+          assert.throws(() => verifySemanticMemoryReviewFromGrid(store, forged), PROVENANCE_MISMATCH, label);
+          assert.deepEqual(evaluateSemanticMemoryUse(forged, 'privileged-instruction', {
+            verified_review_request_digest: expectedGrid.verified_review_request_digest
+          }), { allow: false, code: 'semantic_memory_review_provenance_mismatch' }, label);
+        });
+        for (const key of PRE_REVIEW_STRIPPED_KEYS) {
+          assert.equal(Object.hasOwn(Object.prototype, key), false, label);
+        }
+        runs += 1;
+      }
+    }
+  }
+  assert.equal(runs, 24);
+});
+
+test('#1939: own undefined review keys leave the pre-review candidate digest byte-identical', () => {
+  const record = reviewedInstruction();
+  const {
+    review_actor: _actor,
+    review_request_digest: _request,
+    reviewed_from_provenance_digest: claimed,
+    review_decision: _decision,
+    provenance_digest: _digest,
+    ...fields
+  } = record;
+  const absent = Object.fromEntries(PRE_REVIEW_STRIPPED_KEYS.map(key => [key, undefined]));
+  let matched = 0;
+  let accepted = 0;
+  for (const authority_tier of ['untrusted-data', 'owner-memory', 'owner-approved-instruction']) {
+    for (const review_state of ['unreviewed', 'owner-reviewed', 'quarantined', 'rejected']) {
+      const outcome = value => {
+        try {
+          return normalizeSemanticMemoryProvenance(value);
+        } catch (error) {
+          return { error: `${error.name}: ${error.message}` };
+        }
+      };
+      const without = outcome({ ...fields, authority_tier, review_state });
+      const withOwnUndefined = outcome({ ...fields, authority_tier, review_state, ...absent });
+      assert.deepEqual(withOwnUndefined, without, `${authority_tier}/${review_state}`);
+      if (!without.error) {
+        accepted += 1;
+        assert.equal(JSON.stringify(withOwnUndefined), JSON.stringify(without));
+        if (without.provenance_digest === claimed) matched += 1;
+      }
+    }
+  }
+  assert.equal(accepted, 1);
+  assert.equal(matched, 1);
+});
+
+test('#1939 (M16): the verified-request-digest denies precede the pre-review provenance deny', () => {
+  const record = reviewedInstruction();
+  const forged = reattributed(record, { origin_principal: 'agent.remote.evil' });
+  // The forged record fails the provenance recompute, but an absent or
+  // mismatched verified digest is reported first, with its own code.
+  assert.deepEqual(evaluateSemanticMemoryUse(forged, 'privileged-instruction'),
+    { allow: false, code: 'semantic_memory_review_evidence_unverified' });
+  assert.deepEqual(evaluateSemanticMemoryUse(forged, 'privileged-instruction', {
+    verified_review_request_digest: sha256('some other review request')
+  }), { allow: false, code: 'semantic_memory_review_evidence_mismatch' });
+  assert.throws(() => evaluateSemanticMemoryUse(forged, 'privileged-instruction', {
+    verified_review_request_digest: 'not-a-digest'
+  }), { name: 'ValidationError' });
+  // Only with the matching verified digest does the provenance deny apply.
+  assert.deepEqual(evaluateSemanticMemoryUse(forged, 'privileged-instruction', {
+    verified_review_request_digest: record.review_request_digest
+  }), { allow: false, code: 'semantic_memory_review_provenance_mismatch' });
+  // And the genuine record with the same verified digest is allowed.
+  assert.equal(evaluateSemanticMemoryUse(record, 'privileged-instruction', {
+    verified_review_request_digest: record.review_request_digest
+  }).code, 'semantic_memory_instruction_allowed');
 });
