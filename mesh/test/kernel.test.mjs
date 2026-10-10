@@ -1567,8 +1567,15 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
       }
     }
   });
-  const appeal = await api(gateway, token, '/v1/intents', {
+  // The appeal intent is submitted through the synchronous intent path, which
+  // is bounded by production service timeouts. On a slow runner the first
+  // attempt can time out gateway-side while the hypervisor still completes
+  // the intent, so wait for the terminal state deterministically instead of
+  // depending on runner speed (issue #1200). The stable idempotency key makes
+  // re-submission safe via the gateway's idempotent replay.
+  const appeal = await apiIntentCompleted(gateway, token, '/v1/intents', {
     method: 'POST',
+    idempotencyKey: `four-service-appeal-${proposal.proposal_id}`,
     body: {
       action: 'governance.appeal',
       input: {
@@ -2098,6 +2105,58 @@ async function api(base, token, path, {
   const payload = await response.json();
   assert.equal(response.status, expectedStatus, JSON.stringify(payload));
   return payload;
+}
+
+// Submits an intent and waits for it to reach a terminal state without
+// depending on runner speed.
+//
+// The synchronous intent path is bounded by production service timeouts
+// (gateway->hypervisor and hypervisor->sandbox, ~10s each). On a slow or
+// contended runner the first attempt can time out gateway-side while the
+// hypervisor still completes the intent server-side. Re-submitting with the
+// SAME idempotency key is safe: the gateway's idempotent replay returns the
+// existing intent record, so this polls until the intent is completed (or
+// fails terminally) instead of asserting that one synchronous round-trip
+// beats the production timeout. Production timeouts are unchanged; only the
+// test's waiting strategy is deterministic. (Issue #1200.)
+async function apiIntentCompleted(base, token, path, {
+  method = 'POST',
+  body,
+  idempotencyKey
+}, {
+  pollIntervalMs = 1000,
+  deadlineMs = 120_000
+} = {}) {
+  assert.ok(idempotencyKey, 'apiIntentCompleted requires a stable idempotencyKey');
+  const started = Date.now();
+  let attempts = 0;
+  for (;;) {
+    attempts += 1;
+    let payload = null;
+    try {
+      payload = await api(base, token, path, { method, body, idempotencyKey });
+    } catch (error) {
+      // A gateway-side timeout (or any transport failure) does not mean the
+      // intent failed: the hypervisor may still complete it. Fall through to
+      // the idempotent poll below. The deadline bounds the wait.
+      if (Date.now() - started >= deadlineMs) throw error;
+    }
+    if (payload) {
+      const status = payload.result_json?.status ?? payload.status;
+      if (status === 'completed') return payload;
+      if (status === 'failed' || status === 'denied' || payload.error) {
+        assert.fail(`intent reached terminal failure: ${JSON.stringify(payload.error ?? payload).slice(0, 500)}`);
+      }
+      // 'accepted' (or an idempotent replay of an in-flight intent): the
+      // hypervisor has it; keep polling for the terminal state.
+    }
+    if (Date.now() - started >= deadlineMs) {
+      throw new Error(
+        `intent did not complete within ${deadlineMs}ms after ${attempts} attempts`
+      );
+    }
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
 }
 
 async function independentlyApprovedIntent({
