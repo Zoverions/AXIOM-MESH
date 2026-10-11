@@ -176,12 +176,14 @@ Changing any of them is new design work, not a residual:
   fails closed. Making such records reviewable would grant something denied
   today and needs a CoS decision; it is not a residual fix.
 - **Derive from a reviewed parent.** `deriveSemanticMemoryProvenance` copies
-  the parent's `origin_principal` and `origin_runtime_id` into the child. For
-  a parent with explicit review evidence it first recomputes the parent's
-  pre-review provenance (#1937) and throws a `ValidationError` when it does not
+  the parent's `origin_principal` and `origin_runtime_id` into the child, and
+  `deriveSemanticMemoryLifecycle` binds the parent's provenance digest. For
+  a parent with explicit review evidence both first recompute the parent's
+  pre-review provenance (#1937) and throw a `ValidationError` when it does not
   reproduce `reviewed_from_provenance_digest`, so an origin changed after
   review never reaches a child. A re-reviewed parent cannot be recomputed and
-  fails closed, as in Grid verification. An unreviewed parent's origin is its
+  fails closed, as in Grid verification; this is an intended deny-only
+  narrowing (CoS). An unreviewed parent's origin is its
   own unbound claim and is copied as before. The child stays `untrusted-data`
   and `unreviewed` either way.
 

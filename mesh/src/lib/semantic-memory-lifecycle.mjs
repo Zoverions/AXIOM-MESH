@@ -365,6 +365,9 @@ function deriveLifecycleWith(reader, parentRecord, parentLifecycle, childRecord,
   const retention_mode = read(options, 'retention_mode');
   const expires_at = read(options, 'expires_at');
   const parent = reader.normalize(parentRecord);
+  // Same tampered-reviewed-parent check as deriveSemanticMemoryProvenance
+  // (#1918): a reviewed parent must reproduce its pre-review provenance.
+  reader.assertDerivableParent(parent);
   const child = reader.normalize(childRecord);
   const parentState = verifyLifecycleWith(reader, parentLifecycle, parent);
 

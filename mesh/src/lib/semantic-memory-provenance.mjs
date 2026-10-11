@@ -492,21 +492,7 @@ function deriveProvenanceWith(parent, options, read) {
   const ingestion_intent_id = read(options, 'ingestion_intent_id');
   const request_digest = read(options, 'request_digest');
   const normalized = normalizeProvenanceWith(parent, read);
-  // The child copies the parent's origin_principal and origin_runtime_id. For a
-  // parent with explicit review evidence those fields are bound by the
-  // reviewed-from digest, so they are copied only when the parent's own
-  // pre-review provenance reproduces it (#1937). A parent whose origin was
-  // changed after review, or a re-review (whose earlier review evidence is not
-  // carried), cannot be recomputed and is rejected (deny-only, #1918). An
-  // unreviewed parent's origin is its own unbound claim and is copied as is.
-  if (
-    typeof read(normalized, 'reviewed_from_provenance_digest') === 'string'
-    && preReviewProvenanceDigest(normalized) === undefined
-  ) {
-    throw new ValidationError(
-      'Derived semantic memory requires a reviewed parent whose own pre-review provenance reproduces its reviewed_from_provenance_digest'
-    );
-  }
+  assertDerivableParent(normalized, read);
   return normalizeProvenanceWith({
     object_id,
     owner: normalized.owner,
@@ -525,6 +511,26 @@ function deriveProvenanceWith(parent, options, read) {
     ...(request_digest ? { request_digest } : {}),
     may_affect_authority: false
   }, read);
+}
+
+// The one derive-parent check, used by deriveSemanticMemoryProvenance and
+// deriveSemanticMemoryLifecycle (#1918). A child copies its parent's
+// origin_principal and origin_runtime_id and binds the parent's provenance
+// digest. For a parent with explicit review evidence those fields are bound by
+// the reviewed-from digest, so derivation is allowed only when the parent's own
+// pre-review provenance reproduces it (#1937). A parent whose origin was
+// changed after review, or a re-review (whose earlier review evidence is not
+// carried), cannot be recomputed and is rejected (deny-only). An unreviewed
+// parent's origin is its own unbound claim and is accepted as before.
+function assertDerivableParent(normalized, read) {
+  if (
+    typeof read(normalized, 'reviewed_from_provenance_digest') === 'string'
+    && preReviewProvenanceDigest(normalized) === undefined
+  ) {
+    throw new ValidationError(
+      'Derived semantic memory requires a reviewed parent whose own pre-review provenance reproduces its reviewed_from_provenance_digest'
+    );
+  }
 }
 
 /**
@@ -720,6 +726,7 @@ export function withSemanticMemoryOwnReads(run) {
   return withOwnFieldReads(read => run(Object.freeze({
     read,
     normalize: value => normalizeProvenanceWith(value, read),
+    assertDerivableParent: normalized => assertDerivableParent(normalized, read),
     evaluateUse: (record, usage, verifiedReviewEvidence, legacyVerifiedDigest) => evaluateUseWith(
       record,
       usage,

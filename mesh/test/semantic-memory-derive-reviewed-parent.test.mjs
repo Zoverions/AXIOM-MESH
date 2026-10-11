@@ -9,6 +9,10 @@ import {
   semanticMemoryReviewRequestDigest,
   verifySemanticMemoryReviewedFromProvenance
 } from '../src/lib/semantic-memory-provenance.mjs';
+import {
+  createSemanticMemoryLifecycle,
+  deriveSemanticMemoryLifecycle
+} from '../src/lib/semantic-memory-lifecycle.mjs';
 
 // #1918 residual (from the #1939 review): deriveSemanticMemoryProvenance copied
 // a reviewed parent's origin_principal (and origin_runtime_id) into the child
@@ -129,7 +133,7 @@ test('derive from unreviewed, implicitly owner-reviewed and derived parents is u
   assert.equal(grandchild.parent_provenance_digest, child.provenance_digest);
 });
 
-test('derive from a re-reviewed parent fails closed, like Grid verification of a re-review (#1939)', () => {
+test('derive from a re-reviewed parent fails closed, like Grid verification of a re-review (#1939; intended deny-only narrowing)', () => {
   const once = review(base(), 'approve-memory');
   const twice = review(once, 'quarantine');
   assert.throws(() => verifySemanticMemoryReviewedFromProvenance(twice), ValidationError);
@@ -148,4 +152,81 @@ test('a null reviewed_from_provenance_digest on Object.prototype does not deny d
   }
   assert.equal(Object.hasOwn(Object.prototype, 'reviewed_from_provenance_digest'), false);
   assert.deepEqual(derived, expected);
+});
+
+// deriveSemanticMemoryLifecycle gets the same check (#1918, CoS). Its child
+// record is caller-supplied, so a child is linked by hand to the tampered
+// parent's own (recomputed) provenance digest, exactly as the old provenance
+// derive would have produced it.
+function linkedChild(parent) {
+  return normalizeSemanticMemoryProvenance({
+    object_id: 'memory.child.1',
+    owner: parent.owner,
+    content_digest: C,
+    origin_class: 'system-derived',
+    ...(parent.origin_principal ? { origin_principal: parent.origin_principal } : {}),
+    ...(parent.origin_runtime_id ? { origin_runtime_id: parent.origin_runtime_id } : {}),
+    origin_artifact_digest: parent.provenance_digest,
+    semantic_class: 'knowledge',
+    parent_object_id: parent.object_id,
+    parent_content_digest: parent.content_digest,
+    parent_provenance_digest: parent.provenance_digest
+  });
+}
+
+const LIFECYCLES = {
+  'owner-controlled': {},
+  bounded: { retention_mode: 'bounded', expires_at: '2099-01-01T00:00:00.000Z' }
+};
+
+function assertLifecycleDeriveDenied(parent, label) {
+  for (const [mode, options] of Object.entries(LIFECYCLES)) {
+    const parentLifecycle = createSemanticMemoryLifecycle(parent, options);
+    assert.throws(
+      () => deriveSemanticMemoryLifecycle(parent, parentLifecycle, linkedChild(parent)),
+      error => error instanceof ValidationError
+        && /pre-review provenance reproduces/.test(error.message),
+      `${label} (${mode})`
+    );
+  }
+}
+
+test('lifecycle derive rejects a reviewed parent whose origin was changed after review, for every decision', () => {
+  for (const decision of DECISIONS) {
+    const reviewed = review(base(), decision);
+    assertLifecycleDeriveDenied(tamper(reviewed, { origin_principal: 'agent.attacker' }), `principal ${decision}`);
+    assertLifecycleDeriveDenied(tamper(reviewed, { origin_class: 'tool-output' }), `origin_class ${decision}`);
+  }
+  const local = review(base({
+    origin_class: 'local-model-generated',
+    origin_principal: undefined,
+    origin_runtime_id: 'runtime.local.1'
+  }), 'approve-memory');
+  assertLifecycleDeriveDenied(tamper(local, { origin_runtime_id: 'runtime.attacker' }), 'runtime');
+});
+
+test('lifecycle derive from a re-reviewed parent fails closed (intended deny-only narrowing)', () => {
+  const twice = review(review(base(), 'approve-memory'), 'quarantine');
+  assertLifecycleDeriveDenied(twice, 're-review');
+});
+
+test('lifecycle derive from genuine reviewed, unreviewed and owner-authored parents is unchanged', () => {
+  const ownerKnowledge = normalizeSemanticMemoryProvenance({
+    object_id: 'memory.owner.1',
+    owner: OWNER,
+    content_digest: A,
+    origin_class: 'owner-authored',
+    semantic_class: 'knowledge'
+  });
+  const parents = [base(), ownerKnowledge, ...DECISIONS.map(decision => review(base(), decision))];
+  for (const parent of parents) {
+    for (const [mode, options] of Object.entries(LIFECYCLES)) {
+      const parentLifecycle = createSemanticMemoryLifecycle(parent, options);
+      const child = deriveSemanticMemoryProvenance(parent, CHILD);
+      const derived = deriveSemanticMemoryLifecycle(parent, parentLifecycle, child);
+      assert.equal(derived.parent_provenance_digest, parent.provenance_digest, mode);
+      assert.equal(derived.inheritance_policy, 'provenance-only-no-authority', mode);
+      assert.equal(derived.retention_mode, mode, mode);
+    }
+  }
 });
