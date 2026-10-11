@@ -70,11 +70,19 @@ Two inputs are trusted by contract, so they are listed here explicitly:
 - `verified_review_request_digest` is taken as given. Passing the record's own
   `review_request_digest`, or any value from a retrieval result, is exactly
   the forbidden use described above.
-- `verifySemanticMemoryGridEvidence(record, { intent, events, chain })` checks
-  that the rows it is handed are consistent with the review. It does not read
-  the Grid. Rows a caller builds from the record itself pass, so its output is
-  Grid evidence only when the rows came from `GridStore`, which is what
-  `verifySemanticMemoryReviewFromGrid` does.
+- The `store` passed to `verifySemanticMemoryReviewFromGrid` is the trust
+  root. It must be a `GridStore` instance (anything else, such as a
+  store-shaped object serving caller-built rows, is rejected with a
+  `TypeError`), and the function proves what that store holds, not which
+  store the caller chose.
+
+No export accepts Grid rows. The row checker that binds the intent row, the
+accepted and completed events and the chain summary to the exact review
+(formerly the exported `verifySemanticMemoryGridEvidence`) does not read the
+Grid, and rows a caller builds from the record itself pass it. It is
+therefore a non-exported function inside
+`mesh/src/grid/semantic-memory-review-evidence.mjs`, reachable only through
+`verifySemanticMemoryReviewFromGrid`, which reads the rows from the store.
 
 ## Consumer audit
 
@@ -85,8 +93,8 @@ modules. In particular:
 - no consumer reads retrieval output to grant anything;
 - `evaluateSemanticMemoryLifecycleUse` only forwards the caller's verified
   digest;
-- `verifySemanticMemoryReviewFromGrid` is the only src caller of
-  `verifySemanticMemoryGridEvidence`, and it passes rows read from the store.
+- `verifySemanticMemoryReviewFromGrid` is the only caller of the internal
+  Grid row checker, and it passes rows read from the store.
 
 The `context-semantic-*` modules are a separate subsystem with their own trust
 records. They do not import the semantic-memory modules.
@@ -113,9 +121,16 @@ boundary:
   restored in `finally`. The inherited-options case (`verified_review_request_digest`
   and `now` on `Object.prototype`) runs unconditionally; the lifecycle
   own-reads change (#1940) is what closes it.
+- **Store-bound Grid evidence.**
+  `mesh/test/semantic-memory-grid-evidence-store-bound.test.mjs` drives every
+  semantic-memory export with Grid rows fabricated from a forged record alone
+  (directly and behind a store-shaped object) and requires that none returns
+  verified evidence or leads to `semantic_memory_instruction_allowed`, and
+  that a genuine `GridStore` review still verifies and grants.
 - **Consumer allowlist.** A static scan of every `src` tree fails when a new
   module imports the semantic-memory modules, supplies
-  `verified_review_request_digest`, or calls `verifySemanticMemoryGridEvidence`.
+  `verified_review_request_digest`, or calls the Grid row checker
+  (`verifySemanticMemoryGridEvidence`, now internal to the Grid adapter).
   Such a change must be audited against this document first.
 
 ## Non-claims
@@ -125,4 +140,7 @@ boundary:
   not quarantined or rejected.
 - This boundary does not authenticate records. It only fixes which path may
   turn a record into authority.
-- `verifySemanticMemoryGridEvidence` is not a Grid check on its own.
+- The internal Grid row checker is not a Grid check on its own, which is why
+  it is not exported.
+- A caller that subverts the `GridStore` object it passes (or passes a store
+  it controls) is outside this boundary.

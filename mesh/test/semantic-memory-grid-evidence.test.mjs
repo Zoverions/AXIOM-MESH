@@ -15,10 +15,7 @@ import {
   semanticMemoryReviewRequestDigest,
   verifySemanticMemoryReviewedFromProvenance
 } from '../src/lib/semantic-memory-provenance.mjs';
-import {
-  recordedSemanticMemoryReviewIntent,
-  verifySemanticMemoryGridEvidence
-} from '../src/lib/semantic-memory-grid-evidence.mjs';
+import { recordedSemanticMemoryReviewIntent } from '../src/lib/semantic-memory-grid-evidence.mjs';
 import { verifySemanticMemoryReviewFromGrid } from '../src/grid/semantic-memory-review-evidence.mjs';
 import { GridStore } from '../src/grid/store.mjs';
 
@@ -137,6 +134,31 @@ function intentEvents(store, intentId) {
   `).all(intentId).map(row => store.decodeEventRow(row));
 }
 
+// The row checks inside verifySemanticMemoryReviewFromGrid are not exported
+// (rows built from a record alone pass them). To keep exercising them with
+// hand-made rows, this double serves the given intent row, events array and
+// chain summary from a genuine GridStore: an object that inherits the store and
+// shadows the three reads the adapter makes after it has found the accepted
+// event for the exact review request. It simulates a corrupted store; the
+// store is the adapter's trust root, so this is not a caller-reachable input.
+function storeServing(store, { intent, events, chain }) {
+  const db = store.db;
+  return Object.assign(Object.create(store), {
+    requireIntentEvidenceChain: () => chain,
+    getIntent: () => intent,
+    db: {
+      prepare: sql => (/WHERE subject = \?/.test(sql)
+        // The exact array (holes, inherited entries and all), not a copy.
+        ? { all: () => ({ map: () => events }) }
+        : db.prepare(sql))
+    }
+  });
+}
+
+function verifyServedRows(store, record, rows) {
+  return verifySemanticMemoryReviewFromGrid(storeServing(store, rows), record);
+}
+
 test('completed owner review becomes verified Grid evidence and can unlock semantic instruction use', async t => {
   const store = await storeFixture(t);
   const record = reviewedInstruction();
@@ -235,7 +257,7 @@ test('event trace substitution is rejected even when materialized intent is comp
   );
 });
 
-test('low-level verifier rejects caller-supplied terminal ambiguity', async t => {
+test('the row checks reject terminal ambiguity served by a corrupted store', async t => {
   const store = await storeFixture(t);
   const record = reviewedInstruction();
   const { intentId, traceId } = appendAccepted(store, record);
@@ -252,13 +274,38 @@ test('low-level verifier rejects caller-supplied terminal ambiguity', async t =>
     }
   });
   assert.throws(
-    () => verifySemanticMemoryGridEvidence(record, {
+    () => verifyServedRows(store, record, {
       intent,
       events,
       chain: store.verifyFullChain()
     }),
     /denied or failed terminal event/
   );
+});
+
+test('the row checks require the accepted event strictly before the completed event', async t => {
+  const store = await storeFixture(t);
+  const record = reviewedInstruction();
+  const { intentId, traceId } = appendAccepted(store, record);
+  appendCompleted(store, record, { intentId, traceId });
+  const intent = store.getIntent(intentId);
+  const chain = store.requireIntentEvidenceChain();
+  const [accepted, completed] = intentEvents(store, intentId);
+  assert.equal(verifyServedRows(store, record, { intent, events: [accepted, completed], chain }).intent_id, intentId);
+  for (const [label, acceptedSeq, completedSeq] of [
+    ['equal seq', completed.seq, completed.seq],
+    ['reversed seq', completed.seq, accepted.seq]
+  ]) {
+    assert.throws(
+      () => verifyServedRows(store, record, {
+        intent,
+        events: [{ ...accepted, seq: acceptedSeq }, { ...completed, seq: completedSeq }],
+        chain
+      }),
+      /ordering or actor\/trace binding is invalid/,
+      label
+    );
+  }
 });
 
 test('full-chain corruption prevents the Grid adapter from issuing verified review evidence', async t => {
@@ -292,7 +339,8 @@ test('recorded review intent reconstructs the exact owner request from post-revi
 // #1918 standing rule (new exports enter the hostile-input baseline at 0):
 // the record is rejected on first contact, before any trap, getter or
 // Array.isArray can run. These are the 3 pairs #1144 had listed.
-test('grid evidence rejects a Proxy or accessor record before any trap or getter runs', async () => {
+test('grid evidence rejects a Proxy or accessor record before any trap or getter runs', async t => {
+  const store = await storeFixture(t);
   const { throwingProxy, recordingProxy, revokedProxy, createCounter } = await import('../test-support/hostile-input-contract.mjs');
   const valid = reviewedInstruction();
   for (const [name, make] of [
@@ -306,7 +354,7 @@ test('grid evidence rejects a Proxy or accessor record before any trap or getter
   ]) {
     const counter = createCounter();
     assert.throws(
-      () => verifySemanticMemoryGridEvidence(make(counter), {}),
+      () => verifySemanticMemoryReviewFromGrid(store, make(counter)),
       error => error.name === 'ValidationError' && /found a Proxy/.test(error.message),
       name
     );
@@ -315,7 +363,7 @@ test('grid evidence rejects a Proxy or accessor record before any trap or getter
   let getterRuns = 0;
   const accessor = { ...valid };
   Object.defineProperty(accessor, 'owner', { enumerable: true, get() { getterRuns += 1; return valid.owner; } });
-  assert.throws(() => verifySemanticMemoryGridEvidence(accessor, {}), /found an accessor property/);
+  assert.throws(() => verifySemanticMemoryReviewFromGrid(store, accessor), /found an accessor property/);
   assert.equal(getterRuns, 0);
 });
 
@@ -334,7 +382,7 @@ function withPrototypeValue(prototype, key, value, run) {
   }
 }
 
-test('grid evidence reads options, chain, intent and event fields as own properties only', async t => {
+test('grid evidence reads chain, intent and event fields as own properties only', async t => {
   const store = await storeFixture(t);
   const record = reviewedInstruction();
   const { intentId, traceId } = appendAccepted(store, record);
@@ -344,7 +392,7 @@ test('grid evidence reads options, chain, intent and event fields as own propert
   const events = json(intentEvents(store, intentId));
   const chain = json(store.verifyFullChain());
   const fresh = () => ({ intent: json(intent), events: json(events), chain: json(chain) });
-  const verify = options => verifySemanticMemoryGridEvidence(record, options);
+  const verify = options => verifyServedRows(store, record, options);
   const ok = verify(fresh());
   assert.equal(ok.intent_id, intentId);
   assert.ok(Array.isArray(chain.events) || chain.events !== undefined);
@@ -358,6 +406,16 @@ test('grid evidence reads options, chain, intent and event fields as own propert
   const expectDeny = (label, options, prototype, key, value) => {
     const absent = thrown(() => verify(json(options)));
     const polluted = withPrototypeValue(prototype, key, value, () => thrown(() => verify(options)));
+    if (label === 'intent.status') {
+      // The adapter skips an intent row without status 'completed' before the
+      // row checks run, so the absent field reads as "not completed" (409);
+      // polluted, the adapter's ordinary read continues and the row checker's
+      // own read denies. Both deny.
+      assert.equal(absent.code, 'semantic_memory_review_not_completed', label);
+      assert.equal(polluted.name, 'ValidationError', label);
+      denied.push(label);
+      return;
+    }
     assert.equal(polluted.name, absent.name, label);
     assert.ok(['ValidationError', 'CanonicalJsonError'].includes(polluted.name), label);
     denied.push(label);
@@ -368,12 +426,9 @@ test('grid evidence reads options, chain, intent and event fields as own propert
     delete options.chain[key];
     expectDeny(`chain.${key}`, options, Object.prototype, key, chain[key]);
   }
-  for (const key of ['intent', 'events', 'chain']) {
-    const options = fresh();
-    const value = options[key];
-    delete options[key];
-    expectDeny(`options.${key}`, options, Object.prototype, key, value);
-  }
+  // options.intent/events/chain (3 cases) are gone: the row checker is no
+  // longer exported and takes no options object; the adapter passes the rows
+  // it read from the store.
   for (const key of ['intent_id', 'trace_id', 'principal', 'action', 'status', 'request_digest', 'input_digest', 'result_json']) {
     const options = fresh();
     delete options.intent[key];
@@ -421,7 +476,7 @@ test('grid evidence reads options, chain, intent and event fields as own propert
     delete options.events[0];
     expectDeny('events[0] inherited', options, Array.prototype, 0, accepted);
   }
-  assert.equal(denied.length, 41);
+  assert.equal(denied.length, 38);
 
   // Output-only fields: an inherited value is ignored, never copied out.
   for (const [label, mutate, key, value, read] of [
@@ -450,7 +505,7 @@ test('grid evidence own reads do not depend on Object.prototype and can only add
   const events = json(intentEvents(store, intentId));
   const chain = json(store.verifyFullChain());
   const fresh = () => ({ intent: json(intent), events: json(events), chain: json(chain) });
-  const verify = options => verifySemanticMemoryGridEvidence(record, options);
+  const verify = options => verifyServedRows(store, record, options);
   const ok = verify(fresh());
   // A field inherited from an object's own prototype (no global pollution;
   // request_digest is also a provenance-record field, so it is tested here).
@@ -558,7 +613,7 @@ test('#1937: a reviewed record whose origin was changed after review is denied b
       error => error.name === 'ValidationError' && PROVENANCE_MISMATCH.test(error.message), label);
     assert.throws(() => verifySemanticMemoryReviewFromGrid(store, forged),
       error => error.name === 'ValidationError' && PROVENANCE_MISMATCH.test(error.message), label);
-    assert.throws(() => verifySemanticMemoryGridEvidence(forged, { intent, events, chain }),
+    assert.throws(() => verifyServedRows(store, forged, { intent, events, chain }),
       error => error.name === 'ValidationError' && PROVENANCE_MISMATCH.test(error.message), label);
     // Even with the genuine record's verified request digest, use is denied.
     assert.deepEqual(evaluateSemanticMemoryUse(forged, 'privileged-instruction', {
@@ -696,7 +751,7 @@ test('#1939: a genuine reviewed record still verifies with any stripped pre-revi
   const events = intentEvents(store, intentId);
   const chain = store.requireIntentEvidenceChain();
   const expectedPreReview = verifySemanticMemoryReviewedFromProvenance(record);
-  const expectedEvidence = verifySemanticMemoryGridEvidence(record, { intent, events, chain });
+  const expectedEvidence = verifyServedRows(store, record, { intent, events, chain });
   const expectedGrid = verifySemanticMemoryReviewFromGrid(store, record);
   const expectedUse = evaluateSemanticMemoryUse(record, 'privileged-instruction', {
     verified_review_request_digest: expectedGrid.verified_review_request_digest
@@ -724,7 +779,7 @@ test('#1939: a genuine reviewed record still verifies with any stripped pre-revi
         const label = `${sourceLabel}: ${keys.join('+')} (enumerable ${enumerable})`;
         withPrototypeValues(keys.map(key => [key, source[key], enumerable]), () => {
           assert.deepEqual(verifySemanticMemoryReviewedFromProvenance(record), expectedPreReview, label);
-          assert.deepEqual(verifySemanticMemoryGridEvidence(record, { intent, events, chain }), expectedEvidence, label);
+          assert.deepEqual(verifyServedRows(store, record, { intent, events, chain }), expectedEvidence, label);
           assert.deepEqual(verifySemanticMemoryReviewFromGrid(store, record), expectedGrid, label);
           assert.deepEqual(evaluateSemanticMemoryUse(record, 'privileged-instruction', {
             verified_review_request_digest: expectedGrid.verified_review_request_digest
