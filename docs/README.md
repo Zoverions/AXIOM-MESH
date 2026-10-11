@@ -259,6 +259,10 @@ decision.
   identity + remaining budget. The supported native path now independently
   blocks fresh-JTI replay for one exact signed invocation; the broader lab
   mandate/canonical-effect/multi-budget model remains inert.
+- [Semantic Memory Retrieval Authority Boundary](architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md)
+  — semantic-memory retrieval is a Knowledge path: an `ordinary-retrieval`
+  allow is content, never authority; instruction use requires a
+  `verifySemanticMemoryReviewFromGrid` owner review.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)

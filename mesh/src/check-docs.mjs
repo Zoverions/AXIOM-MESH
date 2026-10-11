@@ -71,6 +71,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/OPERATION-PROPOSAL-BINDING.md',
   'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md',
   'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md',
+  'docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md',
   'docs/architecture/ARXIV-RESEARCH-SOURCE-PROFILE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
@@ -399,6 +400,15 @@ const REQUIRED_CONTENT = Object.freeze({
     'population_effect: none',
     '## Non-claims',
     'authority_effect'
+  ],
+  'docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md': [
+    '## Purpose and boundary',
+    'Retrieval allow is content, never authority.',
+    'A claimed review field coming out of retrieval must never feed an authority decision.',
+    '## The Grid-verified path',
+    'verifySemanticMemoryReviewFromGrid',
+    'semantic-memory-retrieval-authority-boundary.test.mjs',
+    '## Non-claims'
   ],
   'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md': [
     '## Purpose and boundary',
@@ -893,6 +903,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/architecture/contracts/operation-proposal-binding.v0.schema.json': 3_000,
   'docs/architecture/SPECIALIST-HARNESS-BRIDGE.md': 4_000,
   'docs/architecture/SEMANTIC-ACTION-CONSUMPTION-LAB.md': 5_000,
+  'docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md': 4_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
