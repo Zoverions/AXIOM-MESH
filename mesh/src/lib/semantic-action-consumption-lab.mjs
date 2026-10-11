@@ -531,7 +531,12 @@ export function createSemanticActionConsumptionLab({
         }
         const last = record.admissions.at(-1);
         // Predicate 1: token_unused. A literal replay never consumes budget.
-        if (record.presentations.includes(jtiDigest)) {
+        // Only the presenter of the last admission (the one whose jti digest
+        // the replay receipt reveals) is told `token_replayed` here; any other
+        // replayed jti falls through to the same reason a never-seen jti would
+        // get, so the reason cannot confirm a guessed earlier jti (#1894 N-2).
+        const replayed = record.presentations.includes(jtiDigest);
+        if (replayed && last && last.presentation_jti_digest === jtiDigest) {
           return { output: priorOrDeny(record, last, 'token_replayed', jtiDigest) };
         }
         // Predicate 2: semantic_action_not_yet_consumed, independent of predicate 1.
@@ -540,6 +545,11 @@ export function createSemanticActionConsumptionLab({
         }
         if (last && ['admission_consumed', 'dispatch_started', 'effect_uncertain'].includes(last.state)) {
           return { output: priorOrDeny(record, last, 'prior_admission_unresolved', jtiDigest) };
+        }
+        // Predicate 1 still dominates: a replayed jti is never admitted. Here a
+        // never-seen jti would be admitted, so no uniform reason is possible.
+        if (replayed) {
+          return { output: priorOrDeny(record, last, 'token_replayed', jtiDigest) };
         }
         // presentations only grow on admission, so their length is bounded by execution_budget (<= 16).
         const ordinal = record.consumed + 1;
