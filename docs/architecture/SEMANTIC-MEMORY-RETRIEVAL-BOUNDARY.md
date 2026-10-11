@@ -283,7 +283,10 @@ unexpired; nothing here makes the clock tamper-proof. Use the absent form
 
 The audit of every src tree in the repository (`mesh/src` and
 `labs/rust-trust-core/src`) found no consumer outside the four semantic-memory
-modules. In particular:
+modules. Widened to every non-test source file (#1918), it finds one more
+importer, `mesh/test-support/semantic-memory-grid-review.mjs`. It is imported
+only by `mesh/test` and mints evidence from a `GridStore` it opens itself, which
+is the documented self-made-store trust boundary. In particular:
 
 - no consumer reads retrieval output to grant anything;
 - `evaluateSemanticMemoryLifecycleUse` only forwards the caller's verified
@@ -368,12 +371,16 @@ boundary:
   patches do not widen the ISO-8601 check. It also requires
   `Object.prototype.now` pollution to deny as documented above. Globals are
   restored in `finally`.
-- **Consumer allowlist.** A static scan of every `src` tree fails when a new
-  module imports the semantic-memory modules, supplies
+- **Consumer allowlist.** A static scan of every non-test source file in the
+  repository (everything except `test`/`tests`, `node_modules`, `.git` and
+  `.data` directories: src trees, root scripts, `apps`, `labs`, `packages`,
+  `mesh/test-support`, ...) fails when a new module imports the semantic-memory
+  modules, supplies
   `verified_review_evidence` or names the removed
   `verified_review_request_digest`, or calls the Grid row checker
   (`verifySemanticMemoryGridEvidence`, now internal to the Grid adapter).
-  Such a change must be audited against this document first.
+  Such a change must be audited against this document first. A computed
+  dynamic import or computed key is not detected by this text scan.
 
 ## Non-claims
 
