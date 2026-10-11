@@ -23,6 +23,43 @@ const TOP_LEVEL_KEYS = new Set([
   'lifecycle_digest'
 ]);
 
+// ---------------------------------------------------------------------------
+// Clock primitives captured at module load (deny-only hardening, same pattern
+// as the Grid review-evidence adapter, #1942). Every time this module reads,
+// from an evaluation `now`, from the system clock or from a stored
+// expires_at, goes through these captures invoked with the captured
+// Reflect.apply, so a later swap of Date.prototype.getTime/valueOf/
+// toISOString, Date.parse, Date.now, the global Date constructor,
+// RegExp.prototype.exec or Function.prototype.call/apply cannot change it.
+// Built-ins patched BEFORE this module loads are out of scope.
+const {
+  apply,
+  getPrototypeOf
+} = Reflect;
+const hasOwn = Object.hasOwn;
+const NUMBER = Number;
+const isFiniteNumber = Number.isFinite;
+const isNaNNumber = Number.isNaN;
+const DATE = Date;
+const DATE_GET_TIME = Date.prototype.getTime;
+const DATE_TO_ISO_STRING = Date.prototype.toISOString;
+const DATE_PARSE = Date.parse;
+const DATE_NOW = Date.now;
+const REGEXP_EXEC = RegExp.prototype.exec;
+const TO_PRIMITIVE = Symbol.toPrimitive;
+
+// Time value of a genuine Date: reads the [[DateValue]] slot directly. Throws
+// TypeError for anything without the slot (primitives, plain objects, a Proxy
+// around a Date, Object.create(Date.prototype)).
+function dateTime(value) {
+  return apply(DATE_GET_TIME, value, []);
+}
+
+// Time value of a canonical timestamp string this module has validated.
+function timestampTime(value) {
+  return dateTime(new DATE(value));
+}
+
 const FIXED_NON_AUTHORITY = Object.freeze({
   authority_inheritance: 'none',
   instruction_inheritance: 'none',
@@ -62,8 +99,8 @@ function canonicalTimestamp(value, label) {
   if (typeof value !== 'string' || value.length !== 24) {
     throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
   }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== value) {
+  const parsed = new DATE(value);
+  if (isNaNNumber(dateTime(parsed)) || apply(DATE_TO_ISO_STRING, parsed, []) !== value) {
     throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
   }
   return value;
@@ -220,12 +257,45 @@ function verifyLifecycleWith(reader, rawLifecycle, record) {
  * ValidationError, exactly as in evaluateSemanticMemoryUse. This is the Grid-verified
  * lifecycle path that any authority decision about a semantic memory record
  * must go through. See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
+ *
+ * Evaluation clock (`options.now`). `now` is CALLER-TRUSTED, not secure: the
+ * rules below only reject malformed values, and a caller can still pass any
+ * valid past time and so evaluate an expired bounded lifecycle as unexpired.
+ * - Absent (no own `now`, or own `now: undefined`): the system clock, read
+ *   through Date.now captured at module load.
+ * - A Date: the time is read from its [[DateValue]] slot through
+ *   Date.prototype.getTime captured at module load (never valueOf, getTime or
+ *   Symbol.toPrimitive on the value). Dates from other realms and plain
+ *   subclasses are accepted.
+ * - A string: only the strict ISO-8601 forms (date, optional time, optional
+ *   `Z` or `±hh:mm` offset; fields range-checked, no rollover), parsed with
+ *   the Date.parse captured at module load.
+ * - Rejected with ValidationError 'Semantic memory lifecycle evaluation now
+ *   is invalid': every other type (null, numbers, booleans, plain objects,
+ *   arrays, functions, boxed strings, Date look-alikes without the slot such
+ *   as a Proxy around a Date or Object.create(Date.prototype)); a Date that
+ *   defines valueOf, getTime, toISOString or Symbol.toPrimitive on itself or
+ *   on a subclass prototype; any other string; and any time that is not
+ *   finite or not after the epoch (time <= 0: new Date(0), new Date(NaN),
+ *   '1970-01-01T00:00:00Z', pre-1970 Dates). No later lower bound is applied:
+ *   records carry no creation time to anchor one to, and any fixed floor
+ *   would be arbitrary while a caller can still pass a valid past time.
+ * - Patching Date.prototype, Date.parse, Date.now or the global Date after
+ *   this module loads does not change any time it reads.
+ * - Prototype pollution: an inherited `now` (e.g. Object.prototype.now) is
+ *   never used as the clock; the call still uses the system clock. Deny
+ *   dominance applies: if main's ordinary reads would see the inherited
+ *   value and deny (it is invalid under these rules, so the call throws the
+ *   ValidationError above; or it is a valid time at or after expires_at, so
+ *   semantic_memory_expired is returned), that deny is the result.
  */
 export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
   // Destructured only so null options throw main's TypeError. The values are
-  // re-read below as own properties: inherited verified evidence or clock
-  // reads as absent (#1918). The default clock is only constructed when
-  // there is no own `now`.
+  // re-read below as own properties (#1918). Inherited verified evidence or
+  // clock is never used, but it is not simply ignored: the deny-dominance
+  // pass re-reads it as main would, so an inherited `now` that is invalid
+  // makes the call throw, and one at or after a bounded expires_at returns
+  // semantic_memory_expired. Otherwise the system clock is used.
   now: _now,
   verified_review_evidence: _verifiedReviewEvidence
 } = {}) {
@@ -242,22 +312,16 @@ export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
 function evaluateLifecycleUseWith(reader, record, lifecycle, usage, options) {
   const { read } = reader;
   const suppliedNow = read(options, 'now');
-  const now = suppliedNow === undefined ? new Date() : suppliedNow;
   const verifiedReviewEvidence = read(options, 'verified_review_evidence');
   const legacyVerifiedDigest = read(options, 'verified_review_request_digest');
   const provenance = reader.normalize(record);
   const verifiedLifecycle = verifyLifecycleWith(reader, lifecycle, provenance);
-  // An own `now` must be a Date or an ISO-8601 string; null, numbers and
-  // other forms used to coerce (null became the epoch) and are now rejected.
-  // An absent `now` keeps the real clock.
-  if (suppliedNow !== undefined) evaluationClock(suppliedNow);
-  const currentTime = now instanceof Date ? now : new Date(now);
-  if (Number.isNaN(currentTime.valueOf())) {
-    throw new ValidationError('Semantic memory lifecycle evaluation now is invalid');
-  }
+  // An absent `now` reads the real clock; an own `now` must pass the input
+  // rules on evaluationTime (see the JSDoc above) or throws a ValidationError.
+  const currentTime = evaluationTime(suppliedNow);
   if (
     verifiedLifecycle.retention_mode === 'bounded'
-    && currentTime.valueOf() >= new Date(verifiedLifecycle.expires_at).valueOf()
+    && currentTime >= timestampTime(verifiedLifecycle.expires_at)
   ) {
     return {
       allow: false,
@@ -323,7 +387,7 @@ function deriveLifecycleWith(reader, parentRecord, parentLifecycle, childRecord,
       childExpiry,
       'Derived semantic memory lifecycle expires_at'
     );
-    if (new Date(normalizedExpiry).valueOf() > new Date(parentState.expires_at).valueOf()) {
+    if (timestampTime(normalizedExpiry) > timestampTime(parentState.expires_at)) {
       throw new ValidationError('Derived memory cannot outlive bounded parent retention');
     }
     childExpiry = normalizedExpiry;
@@ -346,44 +410,97 @@ const ISO_8601_INSTANT = /^(\d{4}|[+-]\d{6})(?:-(\d{2})(?:-(\d{2})(?:T(\d{2}):(\
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-function isDateObject(value) {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    // Brand check: true only for objects with a [[DateValue]] slot (any
-    // realm, subclasses included); a Proxy or Object.create(Date.prototype)
-    // has none.
-    Date.prototype.getTime.call(value);
-    return true;
-  } catch {
-    return false;
+// Methods through which ordinary code reads a Date's time. A Date that
+// overrides any of them on itself or on a subclass prototype presents a
+// different time to ordinary readers than its [[DateValue]], so it is
+// rejected rather than silently read one way or the other.
+const DATE_TIME_READERS = ['valueOf', 'getTime', 'toISOString', TO_PRIMITIVE];
+const MAX_PROTOTYPE_DEPTH = 64;
+
+// True when the Date or a prototype below its realm's base Date.prototype
+// defines a time reader. The base prototype is the first object whose own
+// prototype is a chain root (Object.prototype of any realm), so genuine Dates
+// from any realm and plain subclasses pass, and a post-load patch of the base
+// Date.prototype is ignored here (the time is read from the slot anyway).
+function overridesDateTimeReader(value) {
+  if (ownsDateTimeReader(value)) return true;
+  let current = value;
+  for (let depth = 0; depth < MAX_PROTOTYPE_DEPTH; depth += 1) {
+    const next = getPrototypeOf(current);
+    if (next === null) return false;
+    const afterNext = getPrototypeOf(next);
+    // next is a chain root, or the realm's base prototype (child of a root).
+    if (afterNext === null || getPrototypeOf(afterNext) === null) return false;
+    if (ownsDateTimeReader(next)) return true;
+    current = next;
   }
+  return true;
+}
+
+function ownsDateTimeReader(target) {
+  for (let index = 0; index < DATE_TIME_READERS.length; index += 1) {
+    if (hasOwn(target, DATE_TIME_READERS[index])) return true;
+  }
+  return false;
 }
 
 function isIso8601Instant(value) {
-  const match = ISO_8601_INSTANT.exec(value);
+  const match = apply(REGEXP_EXEC, ISO_8601_INSTANT, [value]);
   if (!match) return false;
-  const [, yearText, month, day, hour, minute, second, offsetHour, offsetMinute] = match;
+  // Indexed reads, not array destructuring (which goes through the patchable
+  // Array.prototype[Symbol.iterator]).
+  const yearText = match[1];
+  const month = match[2];
+  const day = match[3];
+  const hour = match[4];
+  const minute = match[5];
+  const second = match[6];
+  const offsetHour = match[7];
+  const offsetMinute = match[8];
   if (yearText === '-000000') return false;
-  const inRange = (text, low, high) => text === undefined || (Number(text) >= low && Number(text) <= high);
+  const inRange = (text, low, high) => text === undefined || (NUMBER(text) >= low && NUMBER(text) <= high);
   if (!inRange(month, 1, 12) || !inRange(hour, 0, 23) || !inRange(minute, 0, 59) || !inRange(second, 0, 59)) {
     return false;
   }
   if (!inRange(offsetHour, 0, 23) || !inRange(offsetMinute, 0, 59)) return false;
   if (day !== undefined) {
-    const year = Number(yearText);
+    const year = NUMBER(yearText);
     const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-    const lastDay = Number(month) === 2 ? (leap ? 29 : 28) : DAYS_IN_MONTH[Number(month) - 1];
+    const lastDay = NUMBER(month) === 2 ? (leap ? 29 : 28) : DAYS_IN_MONTH[NUMBER(month) - 1];
     if (!inRange(day, 1, lastDay)) return false;
   }
   return true;
 }
 
-// Deny-only gate for an own `now`; the clock value itself is still computed
-// by the caller exactly as before.
-function evaluationClock(value) {
-  if (isDateObject(value)) return;
-  if (typeof value === 'string' && isIso8601Instant(value)) return;
-  throw new ValidationError('Semantic memory lifecycle evaluation now is invalid');
+// The evaluation time in epoch milliseconds (see the input rules in the
+// evaluateSemanticMemoryLifecycleUse JSDoc). Never reads valueOf, getTime or
+// Symbol.toPrimitive through the value: a Date is read from its slot with the
+// captured getTime, a string through the captured Date.parse after the strict
+// ISO-8601 check, and an absent `now` through the captured Date.now.
+function evaluationTime(value) {
+  let time;
+  if (value === undefined) {
+    time = apply(DATE_NOW, DATE, []);
+  } else if (typeof value === 'string') {
+    if (!isIso8601Instant(value)) throw invalidNow();
+    time = apply(DATE_PARSE, DATE, [value]);
+  } else {
+    try {
+      time = dateTime(value);
+      if (overridesDateTimeReader(value)) time = NaN;
+    } catch {
+      // No [[DateValue]] slot (TypeError), or a hostile prototype chain.
+      throw invalidNow();
+    }
+  }
+  // Non-positive covers new Date(0), '1970-01-01T00:00:00Z' and every
+  // pre-1970 time; non-finite covers Invalid Date and out-of-range strings.
+  if (!isFiniteNumber(time) || time <= 0) throw invalidNow();
+  return time;
+}
+
+function invalidNow() {
+  return new ValidationError('Semantic memory lifecycle evaluation now is invalid');
 }
 
 function optionsArgument(value) {

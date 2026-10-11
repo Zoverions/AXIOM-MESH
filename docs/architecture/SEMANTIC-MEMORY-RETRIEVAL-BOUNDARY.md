@@ -197,6 +197,64 @@ therefore a non-exported function inside
   them can create evidence. Pass the evidence object itself as
   `verified_review_evidence`; the digest is informational only.
 
+### Lifecycle evaluation clock (`now`): caller-trusted
+
+`evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, { now })` decides
+bounded-retention expiry against `now`. **`now` is caller-trusted, not
+secure.** The rules below only reject malformed values. A caller can still
+pass any valid past time and so evaluate an expired bounded lifecycle as
+unexpired; nothing here makes the clock tamper-proof. Use the absent form
+(the system clock) unless you have a reason to evaluate at another time.
+
+- **Absent.** No own `now`, or an own `now: undefined`, reads the system
+  clock through `Date.now`, captured when the module loads.
+- **Accepted: a Date.** The time is read from the Date's internal
+  `[[DateValue]]` slot through `Date.prototype.getTime`, captured when the
+  module loads and invoked through the captured `Reflect.apply`. It is never
+  read through `valueOf`, `getTime`, `Symbol.toPrimitive`, `+now` or
+  `Number(now)` on the value. Dates from another realm (`vm`) and plain
+  subclasses are accepted.
+- **Accepted: a strict ISO-8601 string.** A calendar date, optionally followed
+  by a time of day with an optional `Z` or `±hh:mm` offset (the ECMAScript
+  date-time string format, for example `2026-10-11`, `2026-10-11T05:31:00Z`,
+  `2026-10-11T01:31:00.123-04:00`). Fields are range-checked, so rollover
+  forms such as `2026-02-30` or `24:00` are rejected. The string is parsed
+  with the captured `Date.parse`.
+- **Rejected** with `ValidationError` `Semantic memory lifecycle evaluation now
+  is invalid`:
+  - any other type: `null`, numbers, booleans, bigints, symbols, plain objects,
+    arrays, functions and boxed strings;
+  - Date look-alikes with no `[[DateValue]]` slot, such as a Proxy around a
+    Date or `Object.create(Date.prototype)`;
+  - a Date that defines `valueOf`, `getTime`, `toISOString` or
+    `Symbol.toPrimitive` on itself or on a subclass prototype, because it shows
+    ordinary readers a different time than its slot holds;
+  - any other string;
+  - any time that is not finite or not after the epoch (time `<= 0`):
+    `new Date(NaN)`, `new Date(0)`, `'1970'`, `'1970-01-01T00:00:00Z'`,
+    negative-time Dates and pre-1970 strings.
+- **No later lower bound.** Neither the provenance record nor the lifecycle
+  records a creation time, so there is no record-relative floor to apply. Any
+  fixed floor (for example "not before 2000") would be arbitrary, could deny
+  genuine back-dated evaluations, and would not remove the caller trust, since
+  any valid past time after the floor still works. The rule is therefore only
+  "finite and `> 0`".
+- **Patched globals.** Patching `Date.prototype.getTime`, `valueOf`,
+  `toISOString` or `Symbol.toPrimitive`, `Date.parse`, `Date.now`,
+  `RegExp.prototype.exec` or the global `Date` after the module loads does not
+  change any time it reads. That covers `now`, the system clock and the stored
+  `expires_at`. A genuine Date passed under such a patch behaves as genuine.
+  Built-ins patched before the module loads are out of scope.
+- **Prototype pollution.** An inherited `now` (for example
+  `Object.prototype.now`) is never used as the clock. The call still uses the
+  system clock. Deny dominance (#1940) still applies, because the second pass
+  sees the inherited value the way main's ordinary reads would:
+  - if that value is invalid under the rules above, the call throws the
+    `ValidationError`;
+  - if it is a valid time at or after a bounded `expires_at`, the call returns
+    `semantic_memory_expired`;
+  - otherwise the inherited value has no effect.
+
 ## Consumer audit
 
 The audit of every src tree in the repository (`mesh/src` and
@@ -271,6 +329,18 @@ boundary:
   also calls every export of every semantic-memory and `mesh/src/grid` module
   and requires that none mints or registers evidence, and that genuine reviews
   (including on the server's store class) verify and grant exactly as before.
+- **Evaluation clock.**
+  `mesh/test/semantic-memory-lifecycle-now-clock.test.mjs` requires a
+  `ValidationError` for each of these: a real Date with an own
+  `valueOf`/`getTime`/`Symbol.toPrimitive`, a Date subclass overriding
+  `valueOf`/`getTime`, a Proxy around a Date, `Object.create(Date.prototype)`,
+  `new Date(0)`, `new Date(NaN)`, negative-time Dates, and
+  `'1970-01-01T00:00:00Z'` and other epoch or pre-epoch strings. It requires
+  genuine behaviour for a genuine Date or ISO string after a post-load patch of
+  `Date.prototype.valueOf`/`getTime`/`Symbol.toPrimitive`/`toISOString`, of
+  `Date.parse` and `Date.now`, and of the global `Date`. It also requires
+  `Object.prototype.now` pollution to deny as documented above. Globals are
+  restored in `finally`.
 - **Consumer allowlist.** A static scan of every `src` tree fails when a new
   module imports the semantic-memory modules, supplies
   `verified_review_evidence` or names the removed
@@ -280,6 +350,9 @@ boundary:
 
 ## Non-claims
 
+- The lifecycle evaluation clock is caller-trusted. The `now` checks reject
+  malformed values only; they do not stop a caller from passing a valid past
+  time.
 - Retrieval semantics are unchanged: `ordinary-retrieval` still returns
   `allow: true` with the claimed tier for any record that normalizes and is
   not quarantined or rejected.
