@@ -29,7 +29,8 @@ import { GridStore } from '../src/grid/store.mjs';
 // review_state, review_decision or other review/instruction field on a
 // retrieved record must never reach semantic_memory_instruction_allowed or any
 // other authority grant. Only an owner review that verifySemanticMemoryReviewFromGrid
-// finds in the Grid store can supply verified_review_request_digest.
+// finds in the Grid store can supply verified_review_evidence (the branded
+// evidence object, bound to that record); a digest string is never accepted.
 //
 // This file pins that boundary for a fully forged record (claimed top
 // authority_tier, approved review_state and review_decision, self-consistent
@@ -176,7 +177,10 @@ async function fixtures(t) {
   const emptyStore = await storeFixture(t);
   const reviewStore = await storeFixture(t);
   appendCompletedReview(reviewStore, genuine, 'intent.genuine.review', 'trace.genuine.review');
-  return { genuine, emptyStore, reviewStore, forged: forgedRecords(genuineBase) };
+  // Genuine evidence for the genuine record: replaying it onto a forged record
+  // must never grant (the 'reused' forged record even shares its request digest).
+  const genuineEvidence = verifySemanticMemoryReviewFromGrid(reviewStore, genuine);
+  return { genuine, genuineEvidence, emptyStore, reviewStore, forged: forgedRecords(genuineBase) };
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +259,7 @@ const KNOWN_EXPORTS = Object.freeze([
   'normalizeSemanticMemoryProvenance',
   'ownerReviewSemanticMemory',
   'recordedSemanticMemoryReviewIntent',
+  'semanticMemoryGridEvidenceBinding',
   'semanticMemoryGridEvidenceDigest',
   'semanticMemoryReviewIntent',
   'semanticMemoryReviewRequestDigest',
@@ -269,7 +274,7 @@ const KNOWN_EXPORTS = Object.freeze([
 // reads the rows from a GridStore itself
 // (semantic-memory-grid-evidence-store-bound.test.mjs pins this with
 // fabricated rows).
-function candidatePool(record, { emptyStore, reviewStore }) {
+function candidatePool(record, { emptyStore, reviewStore, genuineEvidence }) {
   const retrieval = evaluateSemanticMemoryUse(record, 'ordinary-retrieval');
   const lifecycle = createSemanticMemoryLifecycle(record);
   const bounded = createSemanticMemoryLifecycle(record, {
@@ -287,8 +292,10 @@ function candidatePool(record, { emptyStore, reviewStore }) {
     if (api && typeof api === 'object' && typeof api.evaluateUse === 'function') {
       return [
         api.evaluateUse(record, 'privileged-instruction', undefined),
-        ...retrievalDigests.map(digest => attempt(api.evaluateUse, [record, 'privileged-instruction', digest]))
-          .map(outcome => (outcome.ok ? outcome.value : null))
+        ...[...retrievalDigests, genuineEvidence].flatMap(value => [
+          attempt(api.evaluateUse, [record, 'privileged-instruction', value]),
+          attempt(api.evaluateUse, [record, 'privileged-instruction', undefined, value])
+        ]).map(outcome => (outcome.ok ? outcome.value : null))
       ];
     }
     return api;
@@ -296,7 +303,10 @@ function candidatePool(record, { emptyStore, reviewStore }) {
   const options = [
     {},
     ...retrievalDigests.map(digest => ({ verified_review_request_digest: digest })),
+    ...retrievalDigests.map(digest => ({ verified_review_evidence: digest })),
     { verified_review_request_digest: retrieval.authority_tier },
+    { verified_review_evidence: genuineEvidence },
+    { verified_review_evidence: { ...genuineEvidence } },
     { now: new Date('2000-01-01T00:00:00.000Z') },
     {
       actor_id: record.owner,
@@ -309,6 +319,7 @@ function candidatePool(record, { emptyStore, reviewStore }) {
     retrieval,
     lifecycleRetrieval,
     retrievalDigests,
+    genuineEvidence,
     first: [record, retrieval, lifecycleRetrieval, emptyStore, reviewStore, probe, undefined],
     rest: [
       record, retrieval, lifecycle, bounded,
@@ -362,7 +373,12 @@ function sweepExports(exportsList, record, stores, pool = candidatePool(record, 
   // instruction use without Grid evidence.
   for (const output of outputs) {
     for (const usage of USAGES) {
-      for (const verifiedOptions of [{}, ...pool.retrievalDigests.map(d => ({ verified_review_request_digest: d }))]) {
+      for (const verifiedOptions of [
+        {},
+        ...pool.retrievalDigests.map(d => ({ verified_review_request_digest: d })),
+        ...pool.retrievalDigests.map(d => ({ verified_review_evidence: d })),
+        { verified_review_evidence: pool.genuineEvidence }
+      ]) {
         const outcome = attempt(evaluateSemanticMemoryUse, [output, usage, verifiedOptions]);
         if (outcome.ok && grantMarkers(outcome.value).length) {
           violations.push(`second-order evaluateSemanticMemoryUse(${describe(output)}, ${usage})`);
@@ -398,7 +414,7 @@ test('fixtures are fully forged and the grant detector sees a genuine Grid-verif
   // Positive control: the only sanctioned path, a review found in the Grid.
   const evidence = verifySemanticMemoryReviewFromGrid(reviewStore, genuine);
   const granted = evaluateSemanticMemoryUse(genuine, 'privileged-instruction', {
-    verified_review_request_digest: evidence.verified_review_request_digest
+    verified_review_evidence: evidence
   });
   assert.equal(granted.code, INSTRUCTION_ALLOWED);
   assert.ok(grantMarkers(granted).length > 0, 'detector must flag a real grant');
@@ -407,7 +423,7 @@ test('fixtures are fully forged and the grant detector sees a genuine Grid-verif
 });
 
 test('ordinary retrieval of a forged record is content-only: allow:true with the claimed tier, never authority', async t => {
-  const { forged, emptyStore, reviewStore } = await fixtures(t);
+  const { forged, emptyStore, reviewStore, genuineEvidence } = await fixtures(t);
   for (const [label, record] of Object.entries(forged)) {
     const retrieval = evaluateSemanticMemoryUse(record, 'ordinary-retrieval');
     // The verifier's finding, pinned as intended Knowledge-path semantics.
@@ -421,14 +437,24 @@ test('ordinary retrieval of a forged record is content-only: allow:true with the
     assert.equal(lifecycleRetrieval.code, RETRIEVAL_ALLOWED, label);
 
     // The claimed tier/review never turns into authority on either evaluate path.
-    for (const options of [undefined, {}, { verified_review_request_digest: retrieval.provenance_digest },
-      { verified_review_request_digest: lifecycleRetrieval.lifecycle_digest }]) {
+    for (const options of [undefined, {}, { verified_review_evidence: genuineEvidence }]) {
       const direct = evaluateSemanticMemoryUse(record, 'privileged-instruction', options);
       const viaLifecycle = evaluateSemanticMemoryLifecycleUse(record, lifecycle, 'privileged-instruction', options);
       assert.equal(direct.allow, false, `${label} direct`);
       assert.equal(viaLifecycle.allow, false, `${label} lifecycle`);
       assert.notEqual(direct.code, INSTRUCTION_ALLOWED);
       assert.notEqual(viaLifecycle.code, INSTRUCTION_ALLOWED);
+    }
+    // A digest string (the record's own review_request_digest or a retrieval
+    // digest), under either option name, is not evidence: it throws.
+    const normalized = normalizeSemanticMemoryProvenance(record);
+    for (const digest of [normalized.review_request_digest, retrieval.provenance_digest, lifecycleRetrieval.lifecycle_digest]) {
+      for (const key of ['verified_review_request_digest', 'verified_review_evidence']) {
+        const options = { [key]: digest };
+        const required = { name: 'ValidationError', details: { code: 'semantic_memory_review_evidence_required' } };
+        assert.throws(() => evaluateSemanticMemoryUse(record, 'privileged-instruction', options), required, `${label} ${key}`);
+        assert.throws(() => evaluateSemanticMemoryLifecycleUse(record, lifecycle, 'privileged-instruction', options), required, `${label} ${key}`);
+      }
     }
     assert.equal(evaluateSemanticMemoryUse(record, 'authority-mutation').allow, false, label);
 
@@ -512,9 +538,10 @@ test('forged review claims and grant markers on Object.prototype reach no author
   }
 });
 
-// Inherited evaluate OPTIONS (verified_review_request_digest, now) on the
-// lifecycle path are closed by #1940 (lifecycle own-reads).
-test('a forged verified_review_request_digest or clock on Object.prototype grants nothing through any export', async t => {
+// Inherited evaluate OPTIONS (verified_review_evidence, the removed
+// verified_review_request_digest, now) on the lifecycle path are closed by
+// #1940 (lifecycle own-reads).
+test('a forged verified review digest, evidence or clock on Object.prototype grants nothing through any export', async t => {
   const stores = await fixtures(t);
   const exportsList = await exportedFunctions();
   for (const [label, record] of Object.entries(stores.forged)) {
@@ -524,28 +551,41 @@ test('a forged verified_review_request_digest or clock on Object.prototype grant
       verified_review_request_digest: normalized.review_request_digest,
       now: '2000-01-01T00:00:00.000Z'
     };
+    const evidencePollution = { verified_review_evidence: stores.genuineEvidence };
     const pool = candidatePool(record, stores);
     const result = withPollution(pollution, () => sweepExports(exportsList, record, stores, pool));
     assertPollutionRestored(Object.keys(pollution));
     assert.deepEqual(firstViolations(result.violations), [], `${label}: polluted options reached a grant`);
+    const evidenceResult = withPollution(evidencePollution, () => sweepExports(exportsList, record, stores, pool));
+    assertPollutionRestored(Object.keys(evidencePollution));
+    assert.deepEqual(firstViolations(evidenceResult.violations), [], `${label}: inherited genuine evidence reached a grant`);
   }
 });
 
 // ---------------------------------------------------------------------------
 // Consumer allowlist. The retrieval-boundary audit found no src consumer of
 // retrieval output outside the semantic-memory modules. A new importer, or a new
-// src site that supplies verified_review_request_digest, must be audited
-// against the boundary before it is added here.
+// src site that supplies verified_review_evidence (or names the removed
+// verified_review_request_digest), must be audited against the boundary before
+// it is added here.
 
 const SOURCE_EXTENSIONS = /\.(mjs|cjs|js|ts|mts|cts|rs|py)$/;
 const SKIPPED_DIRECTORIES = new Set(['node_modules', '.git', 'test', 'tests', '.data']);
 const ALLOWED_IMPORTERS = Object.freeze([
   'mesh/src/grid/semantic-memory-review-evidence.mjs',
   'mesh/src/lib/semantic-memory-grid-evidence.mjs',
-  'mesh/src/lib/semantic-memory-lifecycle.mjs'
-]);
+  'mesh/src/lib/semantic-memory-lifecycle.mjs',
+  // Imports the evidence checker (isSemanticMemoryGridEvidence and the private
+  // binding reader) from the Grid adapter; it mints nothing.
+  'mesh/src/lib/semantic-memory-provenance.mjs'
+].sort());
 const ALLOWED_VERIFIED_DIGEST_SITES = Object.freeze([
   'mesh/src/grid/semantic-memory-review-evidence.mjs',
+  'mesh/src/lib/semantic-memory-lifecycle.mjs',
+  'mesh/src/lib/semantic-memory-provenance.mjs'
+]);
+// Sites that read the verified_review_evidence option: the two evaluate paths.
+const ALLOWED_VERIFIED_EVIDENCE_SITES = Object.freeze([
   'mesh/src/lib/semantic-memory-lifecycle.mjs',
   'mesh/src/lib/semantic-memory-provenance.mjs'
 ]);
@@ -582,6 +622,7 @@ test('only the audited semantic-memory modules consume retrieval output or suppl
   assert.ok(trees.some(tree => posixRelative(REPOSITORY_ROOT, tree) === 'mesh/src'), 'mesh/src must be scanned');
   const importers = [];
   const verifiedDigestSites = [];
+  const verifiedEvidenceSites = [];
   const gridEvidenceCallers = [];
   for (const tree of trees) {
     for (const file of await sourceFiles(tree)) {
@@ -594,12 +635,14 @@ test('only the audited semantic-memory modules consume retrieval output or suppl
         importers.push(path);
       }
       if (text.includes('verified_review_request_digest')) verifiedDigestSites.push(path);
+      if (text.includes('verified_review_evidence')) verifiedEvidenceSites.push(path);
       if (/verifySemanticMemoryGridEvidence\s*\(/.test(text)) gridEvidenceCallers.push(path);
     }
   }
   const message = 'new semantic-memory consumer: audit it against docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md';
   assert.deepEqual(importers.sort(), [...ALLOWED_IMPORTERS], message);
   assert.deepEqual(verifiedDigestSites.sort(), [...ALLOWED_VERIFIED_DIGEST_SITES], message);
+  assert.deepEqual(verifiedEvidenceSites.sort(), [...ALLOWED_VERIFIED_EVIDENCE_SITES], message);
   assert.deepEqual(gridEvidenceCallers.sort(), [...ALLOWED_GRID_EVIDENCE_CALLERS], message);
   assert.ok(basename(fileURLToPath(import.meta.url)).startsWith('semantic-memory-'));
 });

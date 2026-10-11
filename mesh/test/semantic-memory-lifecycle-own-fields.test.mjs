@@ -14,6 +14,7 @@ import {
   evaluateSemanticMemoryLifecycleUse,
   verifySemanticMemoryLifecycle
 } from '../src/lib/semantic-memory-lifecycle.mjs';
+import { semanticMemoryGridReviewEvidence } from '../test-support/semantic-memory-grid-review.mjs';
 
 // #1918: semantic-memory-lifecycle.mjs reads every option and caller-supplied
 // field own-property only. Inherited values read as absent; whenever any
@@ -71,6 +72,9 @@ const lcExpired = createSemanticMemoryLifecycle(ownerKnowledge, { retention_mode
 const lcFuture = createSemanticMemoryLifecycle(ownerKnowledge, { retention_mode: 'bounded', expires_at: FUTURE });
 const lcDerivedParent = createSemanticMemoryLifecycle(ownerKnowledge, { retention_mode: 'bounded', expires_at: FUTURE });
 const lcDerived = deriveSemanticMemoryLifecycle(ownerKnowledge, lcDerivedParent, derived);
+// Genuine Grid evidence for the same record (a real GridStore review of it).
+const [approvedEvidence] = await semanticMemoryGridReviewEvidence(selfApproved);
+const EVIDENCE_REQUIRED = { name: 'ValidationError', details: { code: 'semantic_memory_review_evidence_required' } };
 
 function withPollution(target, entries, fn) {
   const restores = [];
@@ -95,19 +99,25 @@ function outcome(fn) {
 }
 const denied = result => !result.ok || result.value?.allow === false;
 
-test('red/green: inherited verified_review_request_digest cannot allow a self-asserted review with no Grid review', () => {
-  withPollution(Object.prototype, [['verified_review_request_digest', selfApproved.review_request_digest]], () => {
-    // On main 1c21fc49 this returned semantic_memory_instruction_allowed.
+test('red/green: inherited verified review evidence or digest cannot allow a self-asserted review with no own evidence', () => {
+  withPollution(Object.prototype, [['verified_review_evidence', approvedEvidence]], () => {
     assert.equal(evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction').code,
       'semantic_memory_review_evidence_unverified');
     assert.equal(evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', {}).code,
       'semantic_memory_review_evidence_unverified');
-    // An own option still works exactly as before.
+    // Own genuine evidence still works.
     assert.equal(evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', {
-      verified_review_request_digest: selfApproved.review_request_digest
+      verified_review_evidence: approvedEvidence
     }).code, 'semantic_memory_instruction_allowed');
   });
+  // On main 1c21fc49 an inherited digest returned semantic_memory_instruction_allowed;
+  // the digest option is removed, so it now raises the own-equivalent deny.
+  withPollution(Object.prototype, [['verified_review_request_digest', selfApproved.review_request_digest]], () => {
+    assert.throws(() => evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction'), EVIDENCE_REQUIRED);
+    assert.throws(() => evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', {}), EVIDENCE_REQUIRED);
+  });
   assert.equal(Object.hasOwn(Object.prototype, 'verified_review_request_digest'), false);
+  assert.equal(Object.hasOwn(Object.prototype, 'verified_review_evidence'), false);
 });
 
 test('red/green: an inherited now cannot revive an expired bounded lifecycle; absent now keeps the real clock', () => {
@@ -145,14 +155,19 @@ test('red/green: a returned allow:false under pollution dominates (consistent qu
 });
 
 test('deeper prototype chains are detected, not only the direct prototype', () => {
-  const deep = value => Object.create(Object.create({ verified_review_request_digest: value }));
-  // Inherited two levels down, a malformed digest still raises main's deny...
-  assert.throws(() => evaluateSemanticMemoryUse(selfApproved, 'privileged-instruction', deep('bad')), /verified_review_request_digest/);
-  assert.throws(() => evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', deep('bad')), /verified_review_request_digest/);
-  // ...and a well-formed one reads as absent.
-  assert.equal(evaluateSemanticMemoryUse(selfApproved, 'privileged-instruction', deep(selfApproved.review_request_digest)).code,
+  const deep = (value, key = 'verified_review_evidence') => Object.create(Object.create({ [key]: value }));
+  // Inherited two levels down, non-evidence or the removed digest option still
+  // raises the own-equivalent deny...
+  assert.throws(() => evaluateSemanticMemoryUse(selfApproved, 'privileged-instruction', deep('bad')), /verified_review_evidence/);
+  assert.throws(() => evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', deep('bad')), /verified_review_evidence/);
+  for (const digest of ['bad', selfApproved.review_request_digest]) {
+    assert.throws(() => evaluateSemanticMemoryUse(selfApproved, 'privileged-instruction', deep(digest, 'verified_review_request_digest')), EVIDENCE_REQUIRED);
+    assert.throws(() => evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', deep(digest, 'verified_review_request_digest')), EVIDENCE_REQUIRED);
+  }
+  // ...and inherited genuine evidence reads as absent.
+  assert.equal(evaluateSemanticMemoryUse(selfApproved, 'privileged-instruction', deep(approvedEvidence)).code,
     'semantic_memory_review_evidence_unverified');
-  assert.equal(evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', deep(selfApproved.review_request_digest)).code,
+  assert.equal(evaluateSemanticMemoryLifecycleUse(selfApproved, lcApproved, 'privileged-instruction', deep(approvedEvidence)).code,
     'semantic_memory_review_evidence_unverified');
   const deepNow = Object.create(Object.create({ now: new Date('2025-01-01T00:00:00.000Z') }));
   assert.equal(evaluateSemanticMemoryLifecycleUse(ownerKnowledge, lcExpired, 'ordinary-retrieval', deepNow).code, 'semantic_memory_expired');
@@ -209,6 +224,7 @@ test('dominance sweep: options on the prototype read as absent, and own-equivale
   const optionDonors = {
     now: [new Date('2025-01-01T00:00:00.000Z'), new Date('2100-01-01T00:00:00.000Z'), 'not a time', PAST],
     verified_review_request_digest: [selfApproved.review_request_digest, C, 'bad'],
+    verified_review_evidence: [approvedEvidence, selfApproved.review_request_digest, 'bad', { ...approvedEvidence }],
     retention_mode: ['bounded', 'owner-controlled', 'bad'],
     expires_at: [FUTURE, PAST, null, 'bad']
   };

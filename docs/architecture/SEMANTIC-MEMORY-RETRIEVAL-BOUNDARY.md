@@ -6,7 +6,8 @@ Status: supported boundary for the semantic-memory library in
 `mesh/src/lib/semantic-memory-grid-evidence.mjs` and
 `mesh/src/grid/semantic-memory-review-evidence.mjs`. This document records a
 Chief of Staff decision and the evidence behind it. It does not change any
-retrieval semantics.
+retrieval semantics. It does define, deny-only, what counts as the Grid
+evidence that the privileged-instruction path requires.
 
 ## Purpose and boundary
 
@@ -53,23 +54,63 @@ that looks reviewed is a claim, not a review.
 
 The only authority-bearing outcome in the semantic-memory library is
 `semantic_memory_instruction_allowed`, returned for `privileged-instruction`.
-It requires `verified_review_request_digest`, and that value must come from
-`verifySemanticMemoryReviewFromGrid(store, record)`. That function finds the
-completed `memory.semantic.review` intent for the record's exact review request
-in the store's verified evidence chain. It also requires the record's own
-pre-review provenance to reproduce the reviewed-from digest (#1937). Any
-authority decision about a semantic memory record goes through
-`verifySemanticMemoryReviewFromGrid` and then
-`evaluateSemanticMemoryLifecycleUse` (or `evaluateSemanticMemoryUse`) with the
-digest it returned.
+It requires the `verified_review_evidence` option: the evidence object that
+`verifySemanticMemoryReviewFromGrid(store, record)` returned for that same
+record. That function finds the completed `memory.semantic.review` intent for
+the record's exact review request in the store's verified evidence chain. It
+also requires the record's own pre-review provenance to reproduce the
+reviewed-from digest (#1937). Any authority decision about a semantic memory
+record goes through `verifySemanticMemoryReviewFromGrid` and then
+`evaluateSemanticMemoryLifecycleUse` (or `evaluateSemanticMemoryUse`) with
+`{ verified_review_evidence: evidence }`:
+
+```
+const evidence = verifySemanticMemoryReviewFromGrid(store, record);
+evaluateSemanticMemoryLifecycleUse(record, lifecycle, 'privileged-instruction', {
+  verified_review_evidence: evidence
+});
+```
 
 `authority-mutation` is always denied.
 
-Two inputs are trusted by contract, so they are listed here explicitly:
+### Evidence, not a digest
 
-- `verified_review_request_digest` is taken as given. Passing the record's own
-  `review_request_digest`, or any value from a retrieval result, is exactly
-  the forbidden use described above.
+The evaluate functions used to take a bare `verified_review_request_digest`
+string. That string equals the record's own `review_request_digest`, which
+anyone can compute from the record, so a forged self-asserted record plus its
+own digest was granted with no Grid review at all. The option is removed. For
+`privileged-instruction`:
+
+- **Only genuine evidence counts.** `verified_review_evidence` is recognised
+  only by the evidence's private brand (`isSemanticMemoryGridEvidence`), never
+  by its shape. A string (including the record's own digest), a hand-built,
+  copied, spread, structured-cloned, `Object.create`-wrapped or Proxy-wrapped
+  object, `null` or any other non-evidence value throws a `ValidationError`
+  with `details.code` `semantic_memory_review_evidence_required`.
+- **The removed option throws.** A `verified_review_request_digest` option,
+  alone or next to genuine evidence, throws the same `ValidationError`, so an
+  old string caller fails loudly instead of being silently downgraded. The new
+  name is deliberately different: an option called `..._digest` that requires
+  an object would be ambiguous.
+- **Bound to the record.** At mint time the evidence's private brand records
+  the verified record's `owner`, `object_id`, `content_digest`,
+  `review_request_digest` and `review_decision` (readable, frozen, through
+  `semanticMemoryGridEvidenceBinding(evidence)`). All five must equal the
+  evaluated record's; otherwise the result is
+  `{ allow: false, code: 'semantic_memory_review_evidence_mismatch' }`. Evidence
+  for record A therefore never verifies record B, and evidence for an
+  `approve-memory` review never verifies an `approve-instruction` record.
+- **No evidence** still returns
+  `{ allow: false, code: 'semantic_memory_review_evidence_unverified' }`.
+- **Own reads and deny dominance (#1938/#1940)** apply to both option names:
+  an inherited `verified_review_evidence` (genuine or not) reads as absent, and
+  an inherited value that would deny as an own value (non-evidence, or the
+  removed digest option) raises that same deny.
+- `ordinary-retrieval` and `authority-mutation` ignore both options.
+
+The `store` passed to `verifySemanticMemoryReviewFromGrid` is trusted by
+contract, so it is listed here explicitly:
+
 - The `store` passed to `verifySemanticMemoryReviewFromGrid` is the trust
   root: the function proves what that store holds, not which store the caller
   chose. `GridStore` opens its own `DatabaseSync` from `options.path` (it never
@@ -109,16 +150,16 @@ therefore a non-exported function inside
   prototypes. A later method swap on those prototypes throws, and
   `Object.setPrototypeOf(GridStore, ...)` (the "super returns an arbitrary
   object" route to stamping a private brand) throws.
-- **Evidence** is a frozen plain object stamped with a private `#digest` by an
+- **Evidence** is a frozen plain object stamped with a private `#binding` by an
   unexported class; the mint and the check live only in the adapter file.
-  `isSemanticMemoryGridEvidence(value)` is true only for that exact object, and
-  `semanticMemoryGridEvidenceDigest(evidence)` returns the verified review
-  request digest from the brand, never from the object's fields, and throws a
-  `ValidationError` for a hand-built, copied, spread, structured-cloned,
-  `Object.create`-wrapped or Proxy-wrapped object. Neither can create
-  evidence. A consumer that receives an evidence object should read the digest
-  through `semanticMemoryGridEvidenceDigest` before passing it as
-  `verified_review_request_digest`.
+  `isSemanticMemoryGridEvidence(value)` is true only for that exact object.
+  `semanticMemoryGridEvidenceBinding(evidence)` returns the frozen record
+  binding and `semanticMemoryGridEvidenceDigest(evidence)` the verified review
+  request digest, both from the brand, never from the object's fields; both
+  throw a `ValidationError` for a hand-built, copied, spread,
+  structured-cloned, `Object.create`-wrapped or Proxy-wrapped object. None of
+  them can create evidence. Pass the evidence object itself as
+  `verified_review_evidence`; the digest is informational only.
 
 ## Consumer audit
 
@@ -128,7 +169,11 @@ modules. In particular:
 
 - no consumer reads retrieval output to grant anything;
 - `evaluateSemanticMemoryLifecycleUse` only forwards the caller's verified
-  digest;
+  evidence (and the removed digest option, so it throws) to the
+  `evaluateSemanticMemoryUse` core;
+- `semantic-memory-provenance.mjs` imports only the evidence checkers
+  (`isSemanticMemoryGridEvidence`, `semanticMemoryGridEvidenceBinding`) from the
+  Grid adapter; it cannot mint evidence;
 - `verifySemanticMemoryReviewFromGrid` is the only caller of the internal
   Grid row checker, and it passes rows read from the store.
 
@@ -151,12 +196,26 @@ boundary:
   are fed back in a second round.
 - **No grant.** No call may produce `semantic_memory_instruction_allowed`, an
   `allow: true` other than content retrieval, verified Grid evidence, or
-  `downstream_effect_authorized: true`.
+  `downstream_effect_authorized: true`. The candidate options include digest
+  strings under both option names and the genuine evidence of a different,
+  genuinely reviewed record (replay).
 - **Prototype pollution.** The same sweep runs with the forged review claims
   and grant markers placed on `Object.prototype`, and every pollution is
-  restored in `finally`. The inherited-options case (`verified_review_request_digest`
-  and `now` on `Object.prototype`) runs unconditionally; the lifecycle
-  own-reads change (#1940) is what closes it.
+  restored in `finally`. The inherited-options cases (`verified_review_request_digest`
+  and `now`, and separately genuine evidence as `verified_review_evidence`, on
+  `Object.prototype`) run unconditionally; the lifecycle own-reads change
+  (#1940) is what closes them.
+- **Evidence required.**
+  `mesh/test/semantic-memory-evaluate-requires-grid-evidence.test.mjs` requires,
+  on both evaluate paths: a `ValidationError` for a forged self-asserted record
+  plus its own digest string, for a genuinely reviewed record's digest string
+  without the evidence object, and for hand-built, copied, Proxy-wrapped or
+  `Object.create`'d evidence; `semantic_memory_review_evidence_mismatch` for
+  evidence replayed from another record (other object, content, owner or
+  origin) or from an `approve-memory` review; a deny for evidence reachable
+  only through an inherited option; and an unchanged grant for every genuine
+  `GridStore` flow (including the server's store class and bounded
+  lifecycles).
 - **Store-bound Grid evidence.**
   `mesh/test/semantic-memory-grid-evidence-store-bound.test.mjs` fabricates
   Grid rows from a forged record alone and requires a `ValidationError` deny
@@ -171,6 +230,7 @@ boundary:
   (including on the server's store class) verify and grant exactly as before.
 - **Consumer allowlist.** A static scan of every `src` tree fails when a new
   module imports the semantic-memory modules, supplies
+  `verified_review_evidence` or names the removed
   `verified_review_request_digest`, or calls the Grid row checker
   (`verifySemanticMemoryGridEvidence`, now internal to the Grid adapter).
   Such a change must be audited against this document first.
@@ -192,5 +252,8 @@ boundary:
   are not frozen by the adapter; the captured `GridStore` methods are called
   directly, but their internal `this` dispatch on a subclass instance still
   goes through the subclass's own overrides.
-- `evaluateSemanticMemoryUse` and `evaluateSemanticMemoryLifecycleUse` still
-  take `verified_review_request_digest` as a bare digest (unchanged).
+- Evidence is bound to the record it was minted for, not to a caller, a time
+  or a single use: whoever holds genuine evidence for a record can reuse it
+  for that record until the record changes. The Grid review it reflects is
+  not re-read at evaluate time (a later Grid event does not revoke evidence
+  already minted).

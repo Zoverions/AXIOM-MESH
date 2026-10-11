@@ -148,7 +148,7 @@ test('red/green: the Grid adapter and recordedSemanticMemoryReviewIntent read re
     assert.deepEqual(verifySemanticMemoryReviewFromGrid(store, reviewed), expected);
     assert.deepEqual(
       evaluateSemanticMemoryUse(unreviewed, 'privileged-instruction', {
-        verified_review_request_digest: reviewed.review_request_digest
+        verified_review_evidence: expected
       }),
       { allow: false, code: 'semantic_memory_instruction_denied' }
     );

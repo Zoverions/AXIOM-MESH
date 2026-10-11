@@ -33,9 +33,9 @@ import { AcceptedSocialGridStore } from '../src/grid/accepted-social-store.mjs';
 //   the Grid through GridStore and node:sqlite methods captured at load,
 //   through a captured Reflect.apply, and the GridStore class chain and the
 //   node:sqlite classes are frozen when it loads.
-// - Evidence is a frozen object carrying a private #digest stamped by an
-//   unexported class; consumers read the digest with
-//   semanticMemoryGridEvidenceDigest, which admits that exact object only.
+// - Evidence is a frozen object carrying a private #binding stamped by an
+//   unexported class; the evaluate functions accept that exact object only
+//   (as verified_review_evidence), never a digest string or a look-alike.
 //
 // Every must-fail case below is red on b8762186 (main before this change) and
 // a deny on this head. Each test restores every global it patches.
@@ -178,12 +178,12 @@ function attempt(fn) {
   }
 }
 
-// Every way a caller could turn evidence into instruction use.
+// Every way a caller could turn evidence into instruction use: the evidence
+// object itself as verified_review_evidence (the digest-string option is
+// removed and throws).
 function grantsInstruction(record, evidence) {
-  const digest = attempt(() => evidenceDigest(evidence));
-  if (!digest.ok) return false;
   const lifecycle = createSemanticMemoryLifecycle(record);
-  const options = { verified_review_request_digest: digest.value };
+  const options = { verified_review_evidence: evidence };
   return [
     attempt(() => evaluateSemanticMemoryUse(record, 'privileged-instruction', options)),
     attempt(() => evaluateSemanticMemoryLifecycleUse(record, lifecycle, 'privileged-instruction', options))
@@ -529,8 +529,15 @@ test('green: a genuine GridStore review still verifies and grants exactly as bef
     downstream_effect_authorized: false
   });
   assert.ok(Object.isFrozen(evidence));
+  assert.deepEqual(Adapter.semanticMemoryGridEvidenceBinding(evidence), {
+    owner: record.owner,
+    object_id: record.object_id,
+    content_digest: record.content_digest,
+    review_request_digest: record.review_request_digest,
+    review_decision: 'approve-instruction'
+  });
   assert.deepEqual(evaluateSemanticMemoryUse(record, 'privileged-instruction', {
-    verified_review_request_digest: evidence.verified_review_request_digest
+    verified_review_evidence: evidence
   }), {
     allow: true,
     code: INSTRUCTION_ALLOWED,
@@ -539,7 +546,7 @@ test('green: a genuine GridStore review still verifies and grants exactly as bef
   });
   const lifecycle = createSemanticMemoryLifecycle(record);
   assert.deepEqual(evaluateSemanticMemoryLifecycleUse(record, lifecycle, 'privileged-instruction', {
-    verified_review_request_digest: evidenceDigest(evidence)
+    verified_review_evidence: evidence
   }), {
     allow: true,
     code: INSTRUCTION_ALLOWED,
@@ -592,5 +599,6 @@ test('red/green: the Grid row checker is exported by no semantic-memory module',
   assert.deepEqual(Object.keys(await import('../src/lib/semantic-memory-grid-evidence.mjs')).sort(),
     ['SEMANTIC_MEMORY_GRID_EVIDENCE_SCHEMA', 'recordedSemanticMemoryReviewIntent']);
   assert.deepEqual(Object.keys(Adapter).sort(),
-    ['isSemanticMemoryGridEvidence', 'semanticMemoryGridEvidenceDigest', 'verifySemanticMemoryReviewFromGrid']);
+    ['isSemanticMemoryGridEvidence', 'semanticMemoryGridEvidenceBinding', 'semanticMemoryGridEvidenceDigest',
+      'verifySemanticMemoryReviewFromGrid']);
 });
