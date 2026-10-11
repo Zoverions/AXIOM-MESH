@@ -114,7 +114,10 @@ own digest was granted with no Grid review at all. The option is removed. For
   from the record's own fields and returns
   `semantic_memory_review_provenance_mismatch`.
   `mesh/test/semantic-memory-evidence-owner-binding.test.mjs` pins the first on
-  both evaluate paths.
+  both evaluate paths. Adding the owner to the review request digest is
+  deliberately not done: it would change the `review_request_digest` of every
+  reviewed record, so every stored reviewed record would fail to normalize and
+  every recorded Grid review would stop verifying (#1918).
 - **No evidence** still returns
   `{ allow: false, code: 'semantic_memory_review_evidence_unverified' }`.
 - **Own reads and deny dominance (#1938/#1940)** apply to both option names:
@@ -146,13 +149,32 @@ protects against data (records, retrieval results, digest strings, copied or
 hand-built evidence, prototype pollution), not against code running in the
 same process with access to a store.
 
-Known residuals, tracked on #1918
-(https://github.com/Zoverions/AXIOM-MESH/issues/1918#issuecomment-6105608155):
+The three #1943 limits below are documented trust boundaries, not defects
+queued for a fix (CoS, #1918,
+https://github.com/Zoverions/AXIOM-MESH/issues/1918#issuecomment-6105608155).
+Changing any of them is new design work, not a residual:
 
-- Evidence is reusable for its own record. It is bound to one record, not to a
-  caller, a time or a single use.
-- Later Grid events do not revoke evidence that has already been minted. The
-  review is not re-read at evaluate time.
+- **Self-made store.** An in-process caller can open its own `GridStore`
+  (for example in a temp directory) and mint genuine evidence for a record it
+  made up, as described above. A possible future hardening is to mint evidence
+  only from a store opened at a pinned data path or identity key.
+- **Reuse for its own record.** Evidence is bound to one record, not to a
+  caller, a time or a single use. Whoever holds it can present it again for
+  that same record.
+- **No revocation.** Later Grid events do not revoke evidence that has already
+  been minted. The review is not re-read at evaluate time.
+
+### Review limits
+
+- **Long object ids cannot be reviewed.** The review intent's data scope is
+  `memory.semantic:<object_id>`, and `intentRequestBinding` caps each data scope
+  at 160 characters. A record whose `object_id` is 145 to 160 characters long
+  (the provenance id limit is 160) normalizes, is retrieved as content, takes a
+  lifecycle and can be derived from, but `semanticMemoryReviewRequestDigest`,
+  `ownerReviewSemanticMemory` and Grid verification throw a `ValidationError`
+  for it, so it can never reach `semantic_memory_instruction_allowed`. This
+  fails closed. Making such records reviewable would grant something denied
+  today and needs a CoS decision; it is not a residual fix.
 
 ### Store-bound, unforgeable Grid evidence
 
