@@ -1,25 +1,28 @@
-import {
-  ValidationError,
-  assertPlainObject,
-  assertString,
-  canonicalJson,
-  digestObject
-} from './canonical.mjs';
-import { intentRequestDigest } from './intent-binding.mjs';
+import { ValidationError } from './canonical.mjs';
 import {
   SEMANTIC_MEMORY_REVIEW_ACTION,
   SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
   SEMANTIC_MEMORY_REVIEW_PURPOSE,
-  normalizeSemanticMemoryProvenance,
-  verifySemanticMemoryReviewedFromProvenance
+  normalizeSemanticMemoryProvenance
 } from './semantic-memory-provenance.mjs';
 
 export const SEMANTIC_MEMORY_GRID_EVIDENCE_SCHEMA =
   'axiom-semantic-memory-grid-evidence.v1';
 
-const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
-const DIGEST = /^[a-f0-9]{64}$/;
+// This module derives the exact owner review request a reviewed record claims.
+// It grants nothing. The check that Grid rows prove that request completed is
+// deliberately not exported from any module: it lives inside
+// mesh/src/grid/semantic-memory-review-evidence.mjs and runs only on rows that
+// verifySemanticMemoryReviewFromGrid reads from a GridStore itself. Rows built
+// from a record alone pass that consistency check, so exporting it would let a
+// caller turn a forged record into verified review evidence.
 
+/**
+ * The owner review intent a reviewed semantic memory record claims, rebuilt
+ * from the record's own review fields. Deny-only: it throws for a record
+ * without explicit owner review evidence and never verifies that the review
+ * happened. Use verifySemanticMemoryReviewFromGrid(store, record) for that.
+ */
 export function recordedSemanticMemoryReviewIntent(record) {
   const normalized = normalizeSemanticMemoryProvenance(record);
   requireExplicitReview(normalized);
@@ -46,163 +49,6 @@ function own(value, key) {
     && Object.hasOwn(value, key)
     ? value[key]
     : undefined;
-}
-
-function ownEntry(array, item) {
-  return array.some((entry, index) => entry === item && Object.hasOwn(array, index));
-}
-
-/**
- * Checks that the supplied intent row, events and chain summary are consistent
- * with the record's exact owner review request. It does not read the Grid.
- * Rows a caller assembles from the record itself pass this check, so its
- * output is Grid evidence only when the rows came from GridStore, which is what
- * verifySemanticMemoryReviewFromGrid does. Authority decisions must use
- * verifySemanticMemoryReviewFromGrid, not this function with caller-built rows.
- * See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
- */
-export function verifySemanticMemoryGridEvidence(record, {
-  // Destructured only so that a null options argument throws exactly as
-  // before; the values are read below as own properties.
-  intent: _intent,
-  events: _events,
-  chain: _chain
-} = {}) {
-  const options = arguments[1];
-  const intent = own(options, 'intent');
-  const events = own(options, 'events');
-  const chain = own(options, 'chain');
-  const normalized = normalizeSemanticMemoryProvenance(record);
-  requireExplicitReview(normalized);
-  // The claimed pre-review digest must be the record's own (#1937).
-  verifySemanticMemoryReviewedFromProvenance(normalized);
-  const reviewIntent = recordedSemanticMemoryReviewIntent(normalized);
-  const expectedRequestDigest = intentRequestDigest(reviewIntent);
-  if (expectedRequestDigest !== own(normalized, 'review_request_digest')) {
-    throw new ValidationError('Semantic memory recorded review request digest is invalid');
-  }
-  if (!chain || own(chain, 'valid') !== true) {
-    throw new ValidationError('Semantic memory review requires a valid Grid evidence chain');
-  }
-
-  const intentRow = assertPlainObject(intent, 'semantic review intent');
-  const intentId = assertString(own(intentRow, 'intent_id'), 'semantic review intent_id', {
-    max: 160,
-    pattern: ID
-  });
-  const traceId = assertString(own(intentRow, 'trace_id'), 'semantic review trace_id', {
-    max: 160,
-    pattern: ID
-  });
-  if (
-    own(intentRow, 'principal') !== normalized.owner
-    || own(intentRow, 'action') !== SEMANTIC_MEMORY_REVIEW_ACTION
-    || own(intentRow, 'status') !== 'completed'
-    || own(intentRow, 'request_digest') !== expectedRequestDigest
-    || own(intentRow, 'input_digest') !== digestObject(reviewIntent.input)
-  ) {
-    throw new ValidationError('Semantic memory materialized intent does not match the exact review');
-  }
-
-  if (!Array.isArray(events)) {
-    throw new ValidationError('Semantic memory review events must be an array');
-  }
-  const acceptedEvents = events.filter(event => event?.kind === 'intent.accepted');
-  const completedEvents = events.filter(event => event?.kind === 'intent.completed');
-  const adverseEvents = events.filter(event =>
-    event?.kind === 'intent.denied' || event?.kind === 'intent.failed'
-  );
-  if (acceptedEvents.length !== 1 || completedEvents.length !== 1) {
-    throw new ValidationError('Semantic memory review requires one accepted and one completed event');
-  }
-  if (adverseEvents.length) {
-    throw new ValidationError('Semantic memory review contains a denied or failed terminal event');
-  }
-
-  const accepted = acceptedEvents[0];
-  const completed = completedEvents[0];
-  // The counts above keep the original reads, so an inherited entry or kind
-  // can only add a deny. The one accepted and one completed event must also
-  // be own array entries with an own kind (#1918).
-  if (
-    !ownEntry(events, accepted)
-    || !ownEntry(events, completed)
-    || own(accepted, 'kind') !== 'intent.accepted'
-    || own(completed, 'kind') !== 'intent.completed'
-  ) {
-    throw new ValidationError('Semantic memory review requires one accepted and one completed event');
-  }
-  const acceptedSeq = own(accepted, 'seq');
-  const completedSeq = own(completed, 'seq');
-  if (
-    !Number.isSafeInteger(acceptedSeq)
-    || !Number.isSafeInteger(completedSeq)
-    || acceptedSeq >= completedSeq
-    || own(accepted, 'actor') !== normalized.owner
-    || own(completed, 'actor') !== normalized.owner
-    || own(accepted, 'trace_id') !== traceId
-    || own(completed, 'trace_id') !== traceId
-    || own(accepted, 'subject') !== intentId
-    || own(completed, 'subject') !== intentId
-  ) {
-    throw new ValidationError('Semantic memory review event ordering or actor/trace binding is invalid');
-  }
-  const acceptedPayload = own(accepted, 'payload');
-  if (
-    own(acceptedPayload, 'intent_id') !== intentId
-    || own(acceptedPayload, 'principal') !== normalized.owner
-    || own(acceptedPayload, 'principal_type') !== 'human'
-    || own(acceptedPayload, 'action') !== SEMANTIC_MEMORY_REVIEW_ACTION
-    || own(acceptedPayload, 'request_digest') !== expectedRequestDigest
-    || own(acceptedPayload, 'input_digest') !== digestObject(reviewIntent.input)
-  ) {
-    throw new ValidationError('Semantic memory accepted event does not match the exact review request');
-  }
-
-  const completedPayload = own(completed, 'payload');
-  const result = assertPlainObject(own(completedPayload, 'result'), 'semantic review result');
-  if (
-    own(completedPayload, 'intent_id') !== intentId
-    || own(result, 'intent_id') !== intentId
-    || own(result, 'trace_id') !== traceId
-    || own(result, 'status') !== 'completed'
-  ) {
-    throw new ValidationError('Semantic memory completed event does not match the exact review request');
-  }
-  if (canonicalJson(own(intentRow, 'result_json')) !== canonicalJson(result)) {
-    throw new ValidationError('Semantic memory materialized completion does not match signed evidence');
-  }
-
-  const chainHead = assertString(own(chain, 'head'), 'semantic review chain head', {
-    min: 64,
-    max: 64,
-    pattern: DIGEST
-  });
-  return Object.freeze({
-    schema: SEMANTIC_MEMORY_GRID_EVIDENCE_SCHEMA,
-    owner: normalized.owner,
-    object_id: normalized.object_id,
-    review_decision: own(normalized, 'review_decision'),
-    verified_review_request_digest: expectedRequestDigest,
-    intent_id: intentId,
-    trace_id: traceId,
-    accepted: Object.freeze({
-      seq: acceptedSeq,
-      event_id: own(accepted, 'event_id'),
-      event_hash: own(accepted, 'event_hash')
-    }),
-    completed: Object.freeze({
-      seq: completedSeq,
-      event_id: own(completed, 'event_id'),
-      event_hash: own(completed, 'event_hash')
-    }),
-    chain: Object.freeze({
-      valid: true,
-      head: chainHead,
-      events: own(chain, 'events')
-    }),
-    downstream_effect_authorized: false
-  });
 }
 
 // Normalized records omit the review keys when there is no review, so these

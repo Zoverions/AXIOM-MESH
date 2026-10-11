@@ -14,10 +14,7 @@ import {
   ownerReviewSemanticMemory,
   semanticMemoryReviewRequestDigest
 } from '../src/lib/semantic-memory-provenance.mjs';
-import {
-  recordedSemanticMemoryReviewIntent,
-  verifySemanticMemoryGridEvidence
-} from '../src/lib/semantic-memory-grid-evidence.mjs';
+import { recordedSemanticMemoryReviewIntent } from '../src/lib/semantic-memory-grid-evidence.mjs';
 import { verifySemanticMemoryReviewFromGrid } from '../src/grid/semantic-memory-review-evidence.mjs';
 import { GridStore } from '../src/grid/store.mjs';
 
@@ -133,23 +130,22 @@ test('red/green: a polluted unreviewed record fails the Grid adapter end-to-end'
   for (const key of REVIEW_KEYS) assert.equal(Object.hasOwn(Object.prototype, key), false);
 });
 
-test('red/green: verifySemanticMemoryGridEvidence and recordedSemanticMemoryReviewIntent read review keys own-only', async t => {
+// The Grid row checker is no longer exported (it is internal to
+// verifySemanticMemoryReviewFromGrid), so the own-only review-key reads are
+// pinned through the adapter and through recordedSemanticMemoryReviewIntent.
+test('red/green: the Grid adapter and recordedSemanticMemoryReviewIntent read review keys own-only', async t => {
   const store = await storeFixture(t);
   const { unreviewed, reviewed } = fixtures();
-  const intentId = recordCompletedReview(store, reviewed);
-  const intent = store.getIntent(intentId);
-  const events = store.db.prepare(`SELECT * FROM events WHERE subject = ? ORDER BY seq`).all(intentId)
-    .map(row => store.decodeEventRow(row));
-  const chain = store.requireIntentEvidenceChain();
-  const expected = verifySemanticMemoryGridEvidence(reviewed, { intent, events, chain });
+  recordCompletedReview(store, reviewed);
+  const expected = verifySemanticMemoryReviewFromGrid(store, reviewed);
 
   withReviewPollution(reviewed, () => {
     assert.throws(
-      () => verifySemanticMemoryGridEvidence(unreviewed, { intent, events, chain }),
-      /no explicit owner review evidence/
+      () => verifySemanticMemoryReviewFromGrid(store, unreviewed),
+      /no explicit review request/
     );
     assert.throws(() => recordedSemanticMemoryReviewIntent(unreviewed), /no explicit owner review evidence/);
-    assert.deepEqual(verifySemanticMemoryGridEvidence(reviewed, { intent, events, chain }), expected);
+    assert.deepEqual(verifySemanticMemoryReviewFromGrid(store, reviewed), expected);
     assert.deepEqual(
       evaluateSemanticMemoryUse(unreviewed, 'privileged-instruction', {
         verified_review_request_digest: reviewed.review_request_digest
@@ -162,7 +158,8 @@ test('red/green: verifySemanticMemoryGridEvidence and recordedSemanticMemoryRevi
 test('null options keep the TypeError main throws (pinned)', () => {
   const { reviewed } = fixtures();
   for (const options of [null]) {
-    assert.throws(() => verifySemanticMemoryGridEvidence(reviewed, options), TypeError);
+    // verifySemanticMemoryGridEvidence(reviewed, null) is no longer pinned: the
+    // row checker is not exported and takes no options argument.
     assert.throws(() => ownerReviewSemanticMemory(reviewed, options), TypeError);
     assert.throws(() => evaluateSemanticMemoryUse(reviewed, 'privileged-instruction', options), TypeError);
   }

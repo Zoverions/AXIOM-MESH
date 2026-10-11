@@ -251,22 +251,24 @@ const KNOWN_EXPORTS = Object.freeze([
   'deriveSemanticMemoryProvenance',
   'evaluateSemanticMemoryLifecycleUse',
   'evaluateSemanticMemoryUse',
+  'isSemanticMemoryGridEvidence',
   'normalizeSemanticMemoryProvenance',
   'ownerReviewSemanticMemory',
   'recordedSemanticMemoryReviewIntent',
+  'semanticMemoryGridEvidenceDigest',
   'semanticMemoryReviewIntent',
   'semanticMemoryReviewRequestDigest',
-  'verifySemanticMemoryGridEvidence',
   'verifySemanticMemoryLifecycle',
   'verifySemanticMemoryReviewFromGrid',
   'verifySemanticMemoryReviewedFromProvenance'
 ]);
 
 // Candidate arguments built ONLY from the forged record, what retrieval returns
-// for it, and Grid stores that hold no review of it. Caller-fabricated Grid
-// rows are deliberately absent: verifySemanticMemoryGridEvidence checks the
-// consistency of rows it is handed and is not itself a Grid check (see the
-// audit and the doc); src only feeds it rows read from GridStore.
+// for it, and Grid stores that hold no review of it. No export takes Grid rows:
+// the row checker is internal to verifySemanticMemoryReviewFromGrid, which
+// reads the rows from a GridStore itself
+// (semantic-memory-grid-evidence-store-bound.test.mjs pins this with
+// fabricated rows).
 function candidatePool(record, { emptyStore, reviewStore }) {
   const retrieval = evaluateSemanticMemoryUse(record, 'ordinary-retrieval');
   const lifecycle = createSemanticMemoryLifecycle(record);
@@ -543,13 +545,14 @@ const ALLOWED_IMPORTERS = Object.freeze([
   'mesh/src/lib/semantic-memory-lifecycle.mjs'
 ]);
 const ALLOWED_VERIFIED_DIGEST_SITES = Object.freeze([
-  'mesh/src/lib/semantic-memory-grid-evidence.mjs',
+  'mesh/src/grid/semantic-memory-review-evidence.mjs',
   'mesh/src/lib/semantic-memory-lifecycle.mjs',
   'mesh/src/lib/semantic-memory-provenance.mjs'
 ]);
+// The row checker is a non-exported function of the Grid adapter (#1941
+// follow-up); it is defined and called only there.
 const ALLOWED_GRID_EVIDENCE_CALLERS = Object.freeze([
-  'mesh/src/grid/semantic-memory-review-evidence.mjs',
-  'mesh/src/lib/semantic-memory-grid-evidence.mjs'
+  'mesh/src/grid/semantic-memory-review-evidence.mjs'
 ]);
 
 async function sourceTrees(directory = REPOSITORY_ROOT) {

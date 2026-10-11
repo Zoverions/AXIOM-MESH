@@ -1972,7 +1972,6 @@
     "src/lib/semantic-action-consumption-lab.mjs#validateSemanticAuthorizationInstance": {
       "recording-proxy": "read-through"
     },
-    "src/lib/semantic-memory-grid-evidence.mjs#verifySemanticMemoryGridEvidence": {},
     "src/lib/semantic-memory-lifecycle.mjs#verifySemanticMemoryLifecycle": {},
     "src/lib/semantic-memory-provenance.mjs#verifySemanticMemoryReviewedFromProvenance": {},
     "src/lib/semantic-operation-proposal-core.mjs#validateCallAgainstManifest": {

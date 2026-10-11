@@ -70,11 +70,55 @@ Two inputs are trusted by contract, so they are listed here explicitly:
 - `verified_review_request_digest` is taken as given. Passing the record's own
   `review_request_digest`, or any value from a retrieval result, is exactly
   the forbidden use described above.
-- `verifySemanticMemoryGridEvidence(record, { intent, events, chain })` checks
-  that the rows it is handed are consistent with the review. It does not read
-  the Grid. Rows a caller builds from the record itself pass, so its output is
-  Grid evidence only when the rows came from `GridStore`, which is what
-  `verifySemanticMemoryReviewFromGrid` does.
+- The `store` passed to `verifySemanticMemoryReviewFromGrid` is the trust
+  root: the function proves what that store holds, not which store the caller
+  chose. `GridStore` opens its own `DatabaseSync` from `options.path` (it never
+  accepts a database object), so a caller-supplied file is trusted only as far
+  as the evidence-chain verification goes, together with the `dataDir`,
+  `identity` and `protector` the store was constructed with.
+
+### Store-bound, unforgeable Grid evidence
+
+No export accepts Grid rows. The row checker that binds the intent row, the
+accepted and completed events and the chain summary to the exact review
+(formerly the exported `verifySemanticMemoryGridEvidence`) does not read the
+Grid, and rows a caller builds from the record itself pass it. It is
+therefore a non-exported function inside
+`mesh/src/grid/semantic-memory-review-evidence.mjs`, reachable only through
+`verifySemanticMemoryReviewFromGrid`, which reads the rows from the store.
+
+- **Store genuineness** comes only from `GridStore`'s private `#brand`
+  (`#brand in store`, exposed as `GridStore.isGridStore`), never from
+  `instanceof`, the prototype or the object's shape. A store-shaped object,
+  `Object.create(GridStore.prototype)` and a Proxy around a real store (private
+  names do not pass through a Proxy) are rejected with a `ValidationError`.
+  Instances of every repository store class (all extend `GridStore`, including
+  the server's `AcceptedSocialGridStore`) carry the brand.
+- **Reads captured at load.** The adapter captures `Reflect.apply`, the
+  `GridStore` methods it uses (`requireIntentEvidenceChain`, `getIntent`,
+  `decodeEventRow`, `GridStore.isGridStore`, `GridStore.openedDatabase`) and
+  `DatabaseSync.prototype.prepare` / `StatementSync.prototype.all` when it
+  loads, and calls them only through the captured `Reflect.apply`. It queries
+  the database the store opened, read from the private `#db` field, never the
+  public `db` property. A branded store with an own property shadowing any
+  inherited method or accessor (an instance method swap), or whose public `db`
+  is no longer the database it opened, is rejected with a `ValidationError`.
+- **Frozen at load.** When the adapter loads it freezes the `GridStore` class
+  chain (`GridStore` and its base classes), the evidence brand classes and the
+  `node:sqlite` `DatabaseSync` / `StatementSync` classes together with their
+  prototypes. A later method swap on those prototypes throws, and
+  `Object.setPrototypeOf(GridStore, ...)` (the "super returns an arbitrary
+  object" route to stamping a private brand) throws.
+- **Evidence** is a frozen plain object stamped with a private `#digest` by an
+  unexported class; the mint and the check live only in the adapter file.
+  `isSemanticMemoryGridEvidence(value)` is true only for that exact object, and
+  `semanticMemoryGridEvidenceDigest(evidence)` returns the verified review
+  request digest from the brand, never from the object's fields, and throws a
+  `ValidationError` for a hand-built, copied, spread, structured-cloned,
+  `Object.create`-wrapped or Proxy-wrapped object. Neither can create
+  evidence. A consumer that receives an evidence object should read the digest
+  through `semanticMemoryGridEvidenceDigest` before passing it as
+  `verified_review_request_digest`.
 
 ## Consumer audit
 
@@ -85,8 +129,8 @@ modules. In particular:
 - no consumer reads retrieval output to grant anything;
 - `evaluateSemanticMemoryLifecycleUse` only forwards the caller's verified
   digest;
-- `verifySemanticMemoryReviewFromGrid` is the only src caller of
-  `verifySemanticMemoryGridEvidence`, and it passes rows read from the store.
+- `verifySemanticMemoryReviewFromGrid` is the only caller of the internal
+  Grid row checker, and it passes rows read from the store.
 
 The `context-semantic-*` modules are a separate subsystem with their own trust
 records. They do not import the semantic-memory modules.
@@ -113,9 +157,22 @@ boundary:
   restored in `finally`. The inherited-options case (`verified_review_request_digest`
   and `now` on `Object.prototype`) runs unconditionally; the lifecycle
   own-reads change (#1940) is what closes it.
+- **Store-bound Grid evidence.**
+  `mesh/test/semantic-memory-grid-evidence-store-bound.test.mjs` fabricates
+  Grid rows from a forged record alone and requires a `ValidationError` deny
+  and no `semantic_memory_instruction_allowed` for: a store built via
+  `Object.create(GridStore.prototype)`, a Proxy over a real store, an instance
+  method or `db` swap on a genuine store, a `GridStore.prototype` or
+  `node:sqlite` method swap after load, re-parenting the store classes, patched
+  `WeakSet`/`WeakMap.prototype.has`, a post-load `Function.prototype.call` /
+  `apply` patch, hand-built evidence and mutated or re-wrapped evidence. It
+  also calls every export of every semantic-memory and `mesh/src/grid` module
+  and requires that none mints or registers evidence, and that genuine reviews
+  (including on the server's store class) verify and grant exactly as before.
 - **Consumer allowlist.** A static scan of every `src` tree fails when a new
   module imports the semantic-memory modules, supplies
-  `verified_review_request_digest`, or calls `verifySemanticMemoryGridEvidence`.
+  `verified_review_request_digest`, or calls the Grid row checker
+  (`verifySemanticMemoryGridEvidence`, now internal to the Grid adapter).
   Such a change must be audited against this document first.
 
 ## Non-claims
@@ -125,4 +182,15 @@ boundary:
   not quarantined or rejected.
 - This boundary does not authenticate records. It only fixes which path may
   turn a record into authority.
-- `verifySemanticMemoryGridEvidence` is not a Grid check on its own.
+- The internal Grid row checker is not a Grid check on its own, which is why
+  it is not exported.
+- A caller that constructs or controls the store it passes (its file,
+  `dataDir`, identity or protector) is outside this boundary; anyone holding a
+  `GridStore` can append signed events to it.
+- Built-ins patched before the adapter module loads are out of scope.
+  Subclass prototypes of `GridStore` (the repository's other store classes)
+  are not frozen by the adapter; the captured `GridStore` methods are called
+  directly, but their internal `this` dispatch on a subclass instance still
+  goes through the subclass's own overrides.
+- `evaluateSemanticMemoryUse` and `evaluateSemanticMemoryLifecycleUse` still
+  take `verified_review_request_digest` as a bare digest (unchanged).
