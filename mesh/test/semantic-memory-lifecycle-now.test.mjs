@@ -27,7 +27,7 @@ const lcOwner = createSemanticMemoryLifecycle(record);
 const evaluate = (lifecycle, options) => evaluateSemanticMemoryLifecycleUse(record, lifecycle, 'ordinary-retrieval', options);
 
 test('red/green: own now: null cannot revive an expired bounded lifecycle', () => {
-  // On 169e3e8b (and main 1c21fc49) this returned semantic_memory_retrieval_allowed.
+  // On main (through cda91160) this returned semantic_memory_retrieval_allowed.
   assert.throws(() => evaluate(lcExpired, { now: null }), { name: 'ValidationError', message: INVALID });
   assert.throws(() => evaluate(lcFuture, { now: null }), { name: 'ValidationError', message: INVALID });
   assert.throws(() => evaluate(lcOwner, { now: null }), { name: 'ValidationError', message: INVALID });

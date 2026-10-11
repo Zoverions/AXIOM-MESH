@@ -80,6 +80,9 @@ const STATEMENT_ALL = StatementSync.prototype.all;
 // of what the review verified (owner, object_id, content_digest,
 // review_request_digest, review_decision); consumers read it only through
 // semanticMemoryGridEvidenceBinding, never from the evidence's public fields.
+// The owner is a separate binding field because review_request_digest does
+// not cover it (intentRequestBinding drops principal.id for a human principal);
+// it is otherwise bound only by the #1937 pre-review provenance recompute.
 class EvidenceBase {
   constructor(target) {
     return target;
@@ -227,7 +230,13 @@ function queryAll(db, sql, parameter) {
  *
  * The returned evidence is a frozen plain object carrying a private brand
  * that binds it to this record (owner, object_id, content_digest,
- * review_request_digest, review_decision). The evidence object itself, passed
+ * review_request_digest, review_decision). review_request_digest does not
+ * cover the owner (a human principal's id is not in the request binding); the
+ * owner is bound by the binding's owner clause and the #1937 pre-review
+ * recompute. In-process code is trusted and the store is the trust root: an
+ * in-process caller can open its own GridStore, review a forged record and
+ * mint genuine evidence for it (the documented boundary).
+ * The evidence object itself, passed
  * as `verified_review_evidence`, is the only input that lets
  * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse grant
  * instruction use, and only for the record it is bound to. A digest string, a
