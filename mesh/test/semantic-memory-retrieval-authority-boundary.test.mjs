@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 
@@ -41,6 +41,8 @@ import { GridStore } from '../src/grid/store.mjs';
 const MESH_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPOSITORY_ROOT = resolve(MESH_ROOT, '..');
 const SRC_ROOT = join(MESH_ROOT, 'src');
+// Relative paths with '/' separators on every platform (Windows uses '\\').
+const posixRelative = (from, to) => relative(from, to).split(sep).join('/');
 const OWNER = 'owner.alice';
 const INSTRUCTION_ALLOWED = 'semantic_memory_instruction_allowed';
 const RETRIEVAL_ALLOWED = 'semantic_memory_retrieval_allowed';
@@ -236,7 +238,7 @@ async function exportedFunctions() {
     const namespace = await import(pathToFileURL(file).href);
     for (const [name, value] of Object.entries(namespace)) {
       if (typeof value === 'function') {
-        functions.push({ id: `${relative(MESH_ROOT, file)}#${name}`, name, fn: value });
+        functions.push({ id: `${posixRelative(MESH_ROOT, file)}#${name}`, name, fn: value });
       }
     }
   }
@@ -574,7 +576,7 @@ async function sourceFiles(directory) {
 
 test('only the audited semantic-memory modules consume retrieval output or supply a verified review digest', async () => {
   const trees = await sourceTrees();
-  assert.ok(trees.some(tree => relative(REPOSITORY_ROOT, tree) === 'mesh/src'), 'mesh/src must be scanned');
+  assert.ok(trees.some(tree => posixRelative(REPOSITORY_ROOT, tree) === 'mesh/src'), 'mesh/src must be scanned');
   const importers = [];
   const verifiedDigestSites = [];
   const gridEvidenceCallers = [];
@@ -584,7 +586,7 @@ test('only the audited semantic-memory modules consume retrieval output or suppl
       const text = (await readFile(file, 'utf8'))
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '');
-      const path = relative(REPOSITORY_ROOT, file).split('\\').join('/');
+      const path = posixRelative(REPOSITORY_ROOT, file);
       if (/semantic-memory-(provenance|lifecycle|grid-evidence|review-evidence)(\.mjs)?['"]/.test(text)) {
         importers.push(path);
       }
