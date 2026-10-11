@@ -30,7 +30,8 @@ const TOP_LEVEL_KEYS = new Set([
 // expires_at, goes through these captures invoked with the captured
 // Reflect.apply, so a later swap of Date.prototype.getTime/valueOf/
 // toISOString, Date.parse, Date.now, the global Date constructor,
-// RegExp.prototype.exec or Function.prototype.call/apply cannot change it.
+// RegExp.prototype.exec, Number, Array.prototype[Symbol.iterator] or
+// Function.prototype.call/apply cannot change it.
 // Built-ins patched BEFORE this module loads are out of scope.
 const {
   apply,

@@ -340,7 +340,10 @@ boundary:
   `'1970-01-01T00:00:00Z'` and other epoch or pre-epoch strings. It requires
   genuine behaviour for a genuine Date or ISO string after a post-load patch of
   `Date.prototype.valueOf`/`getTime`/`Symbol.toPrimitive`/`toISOString`, of
-  `Date.parse` and `Date.now`, and of the global `Date`. It also requires
+  `Date.parse` and `Date.now`, and of the global `Date` (including stored
+  `expires_at` reads in create, verify and derive), and it requires that
+  `RegExp.prototype.exec`, `Number` and `Array.prototype[Symbol.iterator]`
+  patches do not widen the ISO-8601 check. It also requires
   `Object.prototype.now` pollution to deny as documented above. Globals are
   restored in `finally`.
 - **Consumer allowlist.** A static scan of every `src` tree fails when a new

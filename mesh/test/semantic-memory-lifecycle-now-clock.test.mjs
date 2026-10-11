@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 
-import { normalizeSemanticMemoryProvenance } from '../src/lib/semantic-memory-provenance.mjs';
+import {
+  deriveSemanticMemoryProvenance,
+  normalizeSemanticMemoryProvenance
+} from '../src/lib/semantic-memory-provenance.mjs';
 import {
   createSemanticMemoryLifecycle,
+  deriveSemanticMemoryLifecycle,
   evaluateSemanticMemoryLifecycleUse
 } from '../src/lib/semantic-memory-lifecycle.mjs';
 
@@ -169,6 +173,22 @@ test('red/green: post-load patches of Date.parse, Date.now and the global Date d
     assert.equal(evaluate(lcFuture, { now: LATE }).code, ALLOWED);
     assert.equal(evaluate(lcFuture, {}).code, ALLOWED);
   });
+  // Stored expires_at values are also read through the captures: a global Date
+  // that misreads the expiry changes neither create, verify nor the decision.
+  class ExpiryDate extends RealDate {
+    constructor(...args) {
+      super(...(args[0] === EXPIRY ? [1] : args));
+    }
+  }
+  const outcomes = withPatched([[globalThis, 'Date', ExpiryDate]], () => {
+    try {
+      const created = createSemanticMemoryLifecycle(record, { retention_mode: 'bounded', expires_at: EXPIRY });
+      return { created, code: evaluate(lcExpired, { now: LATE }).code };
+    } catch (error) {
+      return { error: `${error.name}: ${error.message}` };
+    }
+  });
+  assert.deepEqual(outcomes, { created: lcExpired, code: EXPIRED });
   assert.equal(globalThis.Date, RealDate);
   assert.notEqual(Date.parse(LATE), 1);
 });
@@ -191,6 +211,38 @@ test('red/green: post-load patches of RegExp.prototype.exec and Number do not wi
   for (const [now, result] of outcomes) {
     assert.equal(result, 'ValidationError: Semantic memory lifecycle evaluation now is invalid', now);
   }
+});
+
+test('post-load Date.prototype patches cannot let derived memory outlive a bounded parent', () => {
+  const child = deriveSemanticMemoryProvenance(record, { object_id: 'memory.derived.now-clock', content_digest: 'd'.repeat(64) });
+  const outcome = withPatched([[Date.prototype, 'valueOf', () => 0], [Date.prototype, 'getTime', () => 0]], () => {
+    try {
+      deriveSemanticMemoryLifecycle(record, lcExpired, child, { retention_mode: 'bounded', expires_at: FUTURE });
+      return 'derived';
+    } catch (error) {
+      return `${error.name}: ${error.message}`;
+    }
+  });
+  assert.equal(outcome, 'ValidationError: Derived memory cannot outlive bounded parent retention');
+});
+
+test('a post-load Array iterator patch cannot forge ISO-8601 fields (no rollover dates)', () => {
+  const realIterator = Array.prototype[Symbol.iterator];
+  // Forges the year of RegExp match arrays only; every other array iterates normally.
+  const forged = function () {
+    if (Object.hasOwn(this, 'index') && Object.hasOwn(this, 'input')) {
+      return Reflect.apply(realIterator, [this[0], '2024', ...Reflect.apply(Array.prototype.slice, this, [2])], []);
+    }
+    return Reflect.apply(realIterator, this, []);
+  };
+  const outcome = withPatched([[Array.prototype, Symbol.iterator, forged]], () => {
+    try {
+      return evaluate(lcFuture, { now: '2025-02-29' }).code;
+    } catch (error) {
+      return `${error.name}: ${error.message}`;
+    }
+  });
+  assert.equal(outcome, 'ValidationError: Semantic memory lifecycle evaluation now is invalid');
 });
 
 test('red/green: Object.prototype.now pollution never supplies the clock; invalid or expiring values deny', () => {
