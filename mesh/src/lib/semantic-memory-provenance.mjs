@@ -534,7 +534,10 @@ function deriveProvenanceWith(parent, options, read) {
  * (isSemanticMemoryGridEvidence), never by its shape, and its private binding
  * (owner, object_id, content_digest, review_request_digest, review_decision)
  * must match the record; evidence for another record returns
- * 'semantic_memory_review_evidence_mismatch'.
+ * 'semantic_memory_review_evidence_mismatch'. These fields are not all covered
+ * by review_request_digest: for a human principal intentRequestBinding drops
+ * principal.id, so the owner is bound only by the evidence binding's owner
+ * clause and by the #1937 pre-review provenance recompute, not by the digest.
  *
  * For 'privileged-instruction' these throw a ValidationError (details.code
  * 'semantic_memory_review_evidence_required'): a
@@ -628,7 +631,9 @@ function evaluateUseWith(record, usage, verified_review_evidence, legacy_verifie
       return { allow: false, code: 'semantic_memory_review_evidence_mismatch' };
     }
     // The verified request digest binds only the claimed pre-review digest;
-    // the record's own origin must reproduce it (#1937).
+    // the record's own origin must reproduce it (#1937). The digest does not
+    // cover the owner (intentRequestBinding drops principal.id for a human
+    // principal): the owner clause above and this recompute bind it.
     if (preReviewProvenanceDigest(normalized) === undefined) {
       return { allow: false, code: 'semantic_memory_review_provenance_mismatch' };
     }

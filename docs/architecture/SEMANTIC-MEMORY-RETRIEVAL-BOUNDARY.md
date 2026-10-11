@@ -100,6 +100,21 @@ own digest was granted with no Grid review at all. The option is removed. For
   `{ allow: false, code: 'semantic_memory_review_evidence_mismatch' }`. Evidence
   for record A therefore never verifies record B, and evidence for an
   `approve-memory` review never verifies an `approve-instruction` record.
+- **The owner is not in the request digest.** The five binding fields are not
+  all covered by `review_request_digest`. For a human principal
+  `intentRequestBinding` (`mesh/src/lib/intent-binding.mjs`) keeps only
+  `action`, `input`, `purpose` and `data_scopes` and drops `principal.id`, and
+  the review input carries `object_id`, `content_digest`, the claimed
+  pre-review provenance digest and the decision, not the owner. A record that
+  differs from a genuinely reviewed record only in `owner` (and `review_actor`)
+  therefore has the same `review_request_digest`. The owner is bound in two
+  places only: the evidence binding's `owner` clause, checked first, which
+  returns `semantic_memory_review_evidence_mismatch`; and the #1937 pre-review
+  check, which recomputes the pre-review provenance digest (owner included)
+  from the record's own fields and returns
+  `semantic_memory_review_provenance_mismatch`.
+  `mesh/test/semantic-memory-evidence-owner-binding.test.mjs` pins the first on
+  both evaluate paths.
 - **No evidence** still returns
   `{ allow: false, code: 'semantic_memory_review_evidence_unverified' }`.
 - **Own reads and deny dominance (#1938/#1940)** apply to both option names:
@@ -117,6 +132,27 @@ contract, so it is listed here explicitly:
   accepts a database object), so a caller-supplied file is trusted only as far
   as the evidence-chain verification goes, together with the `dataDir`,
   `identity` and `protector` the store was constructed with.
+
+### Trust boundary: in-process code is trusted (CoS decision)
+
+This is a Chief of Staff decision. In-process code is trusted, and the store
+is the trust root. "Unforgeable" means that evidence can only be minted by
+`verifySemanticMemoryReviewFromGrid` reading a completed review from a genuine
+`GridStore`. It does not mean that in-process code cannot obtain evidence for a
+record it made up. Any in-process caller can open its own `GridStore`, append
+a completed owner review of a forged record, and mint genuine evidence for that
+record. That is the documented trust boundary, not a defect: the boundary
+protects against data (records, retrieval results, digest strings, copied or
+hand-built evidence, prototype pollution), not against code running in the
+same process with access to a store.
+
+Known residuals, tracked on #1918
+(https://github.com/Zoverions/AXIOM-MESH/issues/1918#issuecomment-6105608155):
+
+- Evidence is reusable for its own record. It is bound to one record, not to a
+  caller, a time or a single use.
+- Later Grid events do not revoke evidence that has already been minted. The
+  review is not re-read at evaluate time.
 
 ### Store-bound, unforgeable Grid evidence
 
@@ -216,6 +252,13 @@ boundary:
   only through an inherited option; and an unchanged grant for every genuine
   `GridStore` flow (including the server's store class and bounded
   lifecycles).
+- **Owner binding.**
+  `mesh/test/semantic-memory-evidence-owner-binding.test.mjs` changes only
+  `owner` and `review_actor` on a genuinely reviewed record, presents the
+  original's genuine evidence, and requires an unchanged
+  `review_request_digest` and `semantic_memory_review_evidence_mismatch` on
+  both evaluate paths. Without the evidence owner clause the result would be
+  the #1937 `semantic_memory_review_provenance_mismatch`, so the test fails.
 - **Store-bound Grid evidence.**
   `mesh/test/semantic-memory-grid-evidence-store-bound.test.mjs` fabricates
   Grid rows from a forged record alone and requires a `ValidationError` deny
