@@ -276,7 +276,7 @@ function verifyLifecycleWith(reader, rawLifecycle, record) {
  *   arrays, functions, boxed strings, Date look-alikes without the slot such
  *   as a Proxy around a Date or Object.create(Date.prototype)); a Date that
  *   defines valueOf, getTime, toISOString or Symbol.toPrimitive on itself or
- *   on a subclass prototype (or whose chain has more than 64 prototypes
+ *   on a subclass prototype (or whose chain has 64 or more prototypes
  *   before its base Date.prototype); any other string; and any time that is not
  *   finite or not after the epoch (time <= 0: new Date(0), new Date(NaN),
  *   '1970-01-01T00:00:00Z', pre-1970 Dates). No later lower bound is applied:
