@@ -1,3 +1,5 @@
+import { DatabaseSync, StatementSync } from 'node:sqlite';
+
 import {
   AxiomError,
   ValidationError,
@@ -21,52 +23,216 @@ import { GridStore } from './store.mjs';
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 
+// ---------------------------------------------------------------------------
+// Captured at module load (deny-only hardening). Everything the adapter uses
+// to read the Grid is taken now and invoked through the captured Reflect.apply,
+// so a later swap of an instance method, of a GridStore.prototype method, of
+// DatabaseSync/StatementSync methods or of Function.prototype.call/apply
+// cannot change what it reads. Built-ins patched BEFORE this module loads are
+// out of scope.
+const {
+  apply,
+  getOwnPropertyDescriptor,
+  getPrototypeOf,
+  ownKeys
+} = Reflect;
+const freeze = Object.freeze;
+const hasOwn = Object.hasOwn;
+const SET_HAS = Set.prototype.has;
+const OBJECT_PROTOTYPE = Object.prototype;
+const SET_ADD = Set.prototype.add;
+
+// The GridStore class chain (GridStore and every base class), the evidence
+// brand classes below and the node:sqlite classes are frozen together with
+// their prototypes, so after load no method can be replaced and no class can
+// be re-parented (Object.setPrototypeOf(GridStore, ...) throws), which closes
+// the "super returns an arbitrary object" route to stamping a private brand.
+const STORE_CLASSES = [];
+for (let current = GridStore; typeof current === 'function' && current !== Function.prototype; current = getPrototypeOf(current)) {
+  STORE_CLASSES.push(current);
+}
+const GRID_STORE_PROTOTYPE = GridStore.prototype;
+const STORE_METHOD_NAMES = new Set();
+for (let index = 0; index < STORE_CLASSES.length; index += 1) {
+  const prototype = STORE_CLASSES[index].prototype;
+  const keys = ownKeys(prototype);
+  for (let k = 0; k < keys.length; k += 1) {
+    const descriptor = getOwnPropertyDescriptor(prototype, keys[k]);
+    if (keys[k] !== 'constructor' && (typeof descriptor.value === 'function' || descriptor.get || descriptor.set)) {
+      apply(SET_ADD, STORE_METHOD_NAMES, [keys[k]]);
+    }
+  }
+}
+const IS_GRID_STORE = GridStore.isGridStore;
+const OPENED_DATABASE = GridStore.openedDatabase;
+const REQUIRE_INTENT_EVIDENCE_CHAIN = GRID_STORE_PROTOTYPE.requireIntentEvidenceChain;
+const GET_INTENT = GRID_STORE_PROTOTYPE.getIntent;
+const DECODE_EVENT_ROW = GRID_STORE_PROTOTYPE.decodeEventRow;
+const PREPARE = DatabaseSync.prototype.prepare;
+const STATEMENT_ALL = StatementSync.prototype.all;
+
+// Evidence brand. SemanticMemoryGridEvidence stamps a private #digest onto a
+// plain evidence object (the base constructor returns that object), so the
+// evidence keeps its plain-object shape while only objects minted here carry
+// the brand. Neither class is exported or reachable from an evidence object
+// (whose prototype is Object.prototype); the mint (mintGridEvidence) and the
+// checks (#digest in value) are all in this file.
+class EvidenceBase {
+  constructor(target) {
+    return target;
+  }
+}
+class SemanticMemoryGridEvidence extends EvidenceBase {
+  #digest;
+
+  constructor(target, digest) {
+    super(target);
+    this.#digest = digest;
+  }
+
+  static has(value) {
+    return value !== null && typeof value === 'object' && #digest in value;
+  }
+
+  static digest(value) {
+    return value.#digest;
+  }
+}
+
+for (const frozen of [
+  ...STORE_CLASSES,
+  EvidenceBase,
+  SemanticMemoryGridEvidence,
+  DatabaseSync,
+  StatementSync
+]) {
+  freeze(frozen);
+  freeze(frozen.prototype);
+}
+freeze(STORE_METHOD_NAMES);
+
+// The only place evidence is created. The fields are stamped before freezing.
+function mintGridEvidence(fields) {
+  const evidence = new SemanticMemoryGridEvidence(fields, fields.verified_review_request_digest);
+  return freeze(evidence);
+}
+
+/**
+ * True only for an evidence object returned by
+ * verifySemanticMemoryReviewFromGrid (it carries this module's private
+ * #digest brand). A copy, a spread, a Proxy, Object.create(evidence), a JSON
+ * round-trip or a hand-built object with identical fields is false. It reads
+ * nothing from `value`, cannot create evidence and grants nothing by itself.
+ */
+export function isSemanticMemoryGridEvidence(value) {
+  return SemanticMemoryGridEvidence.has(value);
+}
+
+/**
+ * The verified_review_request_digest of genuine Grid evidence, read from the
+ * evidence's private brand, never from its fields. Throws ValidationError for
+ * anything isSemanticMemoryGridEvidence rejects. Pass the result as
+ * `verified_review_request_digest` to evaluateSemanticMemoryUse or
+ * evaluateSemanticMemoryLifecycleUse.
+ */
+export function semanticMemoryGridEvidenceDigest(evidence) {
+  if (!SemanticMemoryGridEvidence.has(evidence)) {
+    throw new ValidationError('Semantic memory Grid evidence was not issued by verifySemanticMemoryReviewFromGrid');
+  }
+  return SemanticMemoryGridEvidence.digest(evidence);
+}
+
+// Genuineness comes only from GridStore's private brand (#brand in store),
+// never from instanceof, the prototype or the object's shape; a Proxy never
+// carries it. Every Grid store class in the repository (including the
+// server's AcceptedSocialGridStore) extends GridStore, so its instances carry
+// the brand. The remaining checks only detect a branded store that was
+// modified so that its own reads would no longer be its own: an own property
+// shadowing a method or accessor anywhere on its prototype chain (an instance
+// method swap), or a public `db` that is no longer the database it opened.
+function shadowsInheritedMember(store, key) {
+  if (apply(SET_HAS, STORE_METHOD_NAMES, [key])) return true;
+  // Object.prototype is not a store class; pollution there is not a swap.
+  for (let prototype = getPrototypeOf(store); prototype !== null && prototype !== OBJECT_PROTOTYPE; prototype = getPrototypeOf(prototype)) {
+    if (getOwnPropertyDescriptor(prototype, key) !== undefined) return true;
+  }
+  return false;
+}
+
+function openedGridDatabase(store) {
+  if (!apply(IS_GRID_STORE, GridStore, [store])) {
+    throw new ValidationError('Semantic memory review verification requires a Grid store');
+  }
+  const db = apply(OPENED_DATABASE, GridStore, [store]);
+  const keys = ownKeys(store);
+  for (let index = 0; index < keys.length; index += 1) {
+    if (shadowsInheritedMember(store, keys[index])) {
+      throw new ValidationError('Semantic memory review verification requires an unmodified Grid store');
+    }
+  }
+  const publicDb = getOwnPropertyDescriptor(store, 'db');
+  if (!publicDb || publicDb.value !== db) {
+    throw new ValidationError('Semantic memory review verification requires an unmodified Grid store');
+  }
+  return db;
+}
+
+function queryAll(db, sql, parameter) {
+  return apply(STATEMENT_ALL, apply(PREPARE, db, [sql]), [parameter]);
+}
+
 /**
  * The Grid-verified owner review for a semantic memory record, and the only
- * exported way to obtain verified semantic-memory review evidence. It reads
+ * function that creates verified semantic-memory review evidence. It reads
  * the completed 'memory.semantic.review' intent for the record's exact
  * review_request_digest, its accepted/completed events and the verified
  * evidence chain from `store` itself, then checks those rows against the
- * record (including the record's own pre-review provenance, #1937). This is
- * the only sanctioned source of `verified_review_request_digest` for
- * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse. A record's
- * claimed authority_tier, review_state, review_decision or review digests, and
- * any retrieval result, are never a substitute.
+ * record (including the record's own pre-review provenance, #1937).
  *
- * `store` must be a GridStore instance. Anything else, such as a plain
- * object with store-shaped methods serving caller-built rows, is rejected
- * with a TypeError. The store itself is the trust root: this function proves
- * what the given GridStore holds, not which store a caller chose, and it does
- * not defend against a caller that subverts the GridStore object it passes.
+ * `store` must be a constructed GridStore, recognised only by its private
+ * brand (instances of the repository's GridStore subclasses carry it too). A
+ * store-shaped object, Object.create(GridStore.prototype), a Proxy around a
+ * real GridStore and a GridStore whose methods or `db` were shadowed on the
+ * instance are rejected with a ValidationError.
+ * The Grid is read through GridStore and node:sqlite methods captured when
+ * this module loaded, so later method swaps do not change the result. The
+ * store's database, identity and protector are the trust root: a file the
+ * caller chose is trusted as far as the evidence-chain verification goes.
+ *
+ * The returned evidence is a frozen plain object carrying a private brand.
+ * Its verified_review_request_digest is the sanctioned input for
+ * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse; consumers
+ * that receive evidence objects should read it with
+ * semanticMemoryGridEvidenceDigest, which rejects any copy or look-alike. A
+ * record's claimed review fields and any retrieval result are never a
+ * substitute.
  *
  * Throws when no completed review exists (404), when a matching review did
  * not complete (409), or when the rows do not bind the exact review.
  * See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
  */
 export function verifySemanticMemoryReviewFromGrid(store, record) {
-  if (!(store instanceof GridStore) || typeof store.requireIntentEvidenceChain !== 'function') {
-    throw new TypeError('Semantic memory review verification requires a Grid store');
-  }
+  const db = openedGridDatabase(store);
   const normalized = normalizeSemanticMemoryProvenance(record);
   // Own-only (#1918 F-1): unreviewed records omit review_request_digest, so an
   // inherited (polluted) value must not select review evidence.
-  const reviewRequestDigest = Object.hasOwn(normalized, 'review_request_digest')
+  const reviewRequestDigest = hasOwn(normalized, 'review_request_digest')
     ? normalized.review_request_digest
     : undefined;
   if (typeof reviewRequestDigest !== 'string') {
     throw new ValidationError('Semantic memory record has no explicit review request');
   }
 
-  const chain = store.requireIntentEvidenceChain();
-  const acceptedRows = store.db.prepare(`
+  const chain = apply(REQUIRE_INTENT_EVIDENCE_CHAIN, store, []);
+  const acceptedRows = queryAll(db, `
     SELECT * FROM events
     WHERE kind = 'intent.accepted' AND actor = ?
     ORDER BY seq DESC
-  `).all(normalized.owner);
+  `, normalized.owner);
 
   let matchingRequestSeen = false;
-  for (const row of acceptedRows) {
-    const accepted = store.decodeEventRow(row);
+  for (let index = 0; index < acceptedRows.length; index += 1) {
+    const accepted = apply(DECODE_EVENT_ROW, store, [acceptedRows[index]]);
     if (accepted.payload?.request_digest !== reviewRequestDigest) continue;
     matchingRequestSeen = true;
     if (
@@ -78,7 +244,7 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
 
     let intent;
     try {
-      intent = store.getIntent(accepted.payload.intent_id);
+      intent = apply(GET_INTENT, store, [accepted.payload.intent_id]);
     } catch (error) {
       if (error?.code === 'intent_not_found') {
         throw new ValidationError('Semantic memory review acceptance has no materialized intent');
@@ -87,12 +253,16 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
     }
     if (intent.status !== 'completed') continue;
 
-    const events = store.db.prepare(`
+    const eventRows = queryAll(db, `
       SELECT * FROM events
       WHERE subject = ?
         AND kind IN ('intent.accepted', 'intent.completed', 'intent.denied', 'intent.failed')
       ORDER BY seq
-    `).all(intent.intent_id).map(eventRow => store.decodeEventRow(eventRow));
+    `, intent.intent_id);
+    const events = [];
+    for (let eventIndex = 0; eventIndex < eventRows.length; eventIndex += 1) {
+      events[eventIndex] = apply(DECODE_EVENT_ROW, store, [eventRows[eventIndex]]);
+    }
 
     return verifySemanticMemoryGridEvidence(normalized, intent, events, chain);
   }
@@ -116,13 +286,13 @@ export function verifySemanticMemoryReviewFromGrid(store, record) {
 function own(value, key) {
   return value !== null
     && (typeof value === 'object' || typeof value === 'function')
-    && Object.hasOwn(value, key)
+    && hasOwn(value, key)
     ? value[key]
     : undefined;
 }
 
 function ownEntry(array, item) {
-  return array.some((entry, index) => entry === item && Object.hasOwn(array, index));
+  return array.some((entry, index) => entry === item && hasOwn(array, index));
 }
 
 // Checks that the intent row, events and chain summary read from the store
@@ -242,7 +412,7 @@ function verifySemanticMemoryGridEvidence(record, intent, events, chain) {
     max: 64,
     pattern: DIGEST
   });
-  return Object.freeze({
+  return mintGridEvidence({
     schema: SEMANTIC_MEMORY_GRID_EVIDENCE_SCHEMA,
     owner: normalized.owner,
     object_id: normalized.object_id,
@@ -250,17 +420,17 @@ function verifySemanticMemoryGridEvidence(record, intent, events, chain) {
     verified_review_request_digest: expectedRequestDigest,
     intent_id: intentId,
     trace_id: traceId,
-    accepted: Object.freeze({
+    accepted: freeze({
       seq: acceptedSeq,
       event_id: own(accepted, 'event_id'),
       event_hash: own(accepted, 'event_hash')
     }),
-    completed: Object.freeze({
+    completed: freeze({
       seq: completedSeq,
       event_id: own(completed, 'event_id'),
       event_hash: own(completed, 'event_hash')
     }),
-    chain: Object.freeze({
+    chain: freeze({
       valid: true,
       head: chainHead,
       events: own(chain, 'events')
