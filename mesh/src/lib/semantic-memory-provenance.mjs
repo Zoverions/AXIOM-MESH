@@ -282,6 +282,100 @@ function normalizeProvenanceWith(value, read) {
   };
 }
 
+// Review evidence binds reviewed_from_provenance_digest (the provenance digest
+// of the record as it was when the owner reviewed it), but that digest is only
+// a claim unless it is recomputed from the reviewed record's own fields
+// (#1937). ownerReviewSemanticMemory keeps every non-review field of the
+// reviewed-from record and changes only authority_tier, review_state and the
+// four review evidence fields, so the pre-review record is the reviewed record
+// without its review evidence, with the pre-review tier and state. That tier
+// and state are not recorded; they can only be one of the evidence-free
+// states normalizeSemanticMemoryProvenance accepts, so each candidate is
+// normalized with the same function, and the claimed digest must equal one of
+// those normalized provenance digests (the exact digest
+// ownerReviewSemanticMemory recorded). A record reviewed from an
+// already-reviewed record (a re-review) cannot be recomputed this way, because
+// the earlier review evidence is not carried, and fails closed.
+const PRE_REVIEW_AUTHORITY_TIERS = Object.freeze([
+  'untrusted-data',
+  'owner-memory',
+  'owner-approved-instruction'
+]);
+const PRE_REVIEW_STATES = Object.freeze([
+  'unreviewed',
+  'owner-reviewed',
+  'quarantined',
+  'rejected'
+]);
+
+// The stripped keys are passed as own properties set to undefined, which the
+// own-property read treats exactly like absent keys (and which never reach the
+// normalized output, so the digest is unchanged). Leaving them out instead
+// would let a polluted Object.prototype supply them to the deny-dominance
+// rerun of withOwnFieldReads and deny a genuine reviewed record.
+const PRE_REVIEW_ABSENT_KEYS = Object.freeze({
+  review_actor: undefined,
+  review_request_digest: undefined,
+  reviewed_from_provenance_digest: undefined,
+  review_decision: undefined,
+  provenance_digest: undefined
+});
+
+function preReviewProvenanceDigest(normalized) {
+  const {
+    review_actor: _actor,
+    review_request_digest: _request,
+    reviewed_from_provenance_digest: claimed,
+    review_decision: _decision,
+    provenance_digest: _digest,
+    ...fields
+  } = normalized;
+  for (let tier = 0; tier < PRE_REVIEW_AUTHORITY_TIERS.length; tier += 1) {
+    for (let state = 0; state < PRE_REVIEW_STATES.length; state += 1) {
+      let candidate;
+      try {
+        candidate = normalizeSemanticMemoryProvenance({
+          ...fields,
+          authority_tier: PRE_REVIEW_AUTHORITY_TIERS[tier],
+          review_state: PRE_REVIEW_STATES[state],
+          ...PRE_REVIEW_ABSENT_KEYS
+        });
+      } catch (error) {
+        if (error instanceof ValidationError) continue;
+        throw error;
+      }
+      if (candidate.provenance_digest === claimed) return claimed;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Recomputes the pre-review provenance digest of an explicitly reviewed
+ * semantic memory record from its own fields and requires it to equal the
+ * recorded reviewed_from_provenance_digest (#1937). Throws ValidationError on
+ * a record without explicit review evidence or on a mismatch, for example a
+ * changed origin_class, origin_principal, origin_runtime_id,
+ * origin_artifact_digest, semantic_class, ingestion_intent_id or
+ * request_digest after review.
+ */
+export function verifySemanticMemoryReviewedFromProvenance(record) {
+  const normalized = normalizeSemanticMemoryProvenance(record);
+  if (typeof normalized.reviewed_from_provenance_digest !== 'string') {
+    throw new ValidationError('Semantic memory record has no explicit owner review evidence');
+  }
+  if (preReviewProvenanceDigest(normalized) === undefined) {
+    throw new ValidationError(
+      'Semantic memory reviewed_from_provenance_digest does not match the record\'s own pre-review provenance'
+    );
+  }
+  return Object.freeze({
+    object_id: normalized.object_id,
+    reviewed_from_provenance_digest: normalized.reviewed_from_provenance_digest,
+    pre_review_provenance_verified: true
+  });
+}
+
 export function semanticMemoryReviewIntent(record, decision) {
   return withOwnFieldReads(read => reviewIntentWith(record, decision, read));
 }
@@ -460,6 +554,11 @@ function evaluateUseWith(record, usage, verified_review_request_digest, read) {
     );
     if (verifiedDigest !== read(normalized, 'review_request_digest')) {
       return { allow: false, code: 'semantic_memory_review_evidence_mismatch' };
+    }
+    // The verified request digest binds only the claimed pre-review digest;
+    // the record's own origin must reproduce it (#1937).
+    if (preReviewProvenanceDigest(normalized) === undefined) {
+      return { allow: false, code: 'semantic_memory_review_provenance_mismatch' };
     }
     return {
       allow: true,
