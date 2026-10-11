@@ -71,31 +71,34 @@ const DECODE_EVENT_ROW = GRID_STORE_PROTOTYPE.decodeEventRow;
 const PREPARE = DatabaseSync.prototype.prepare;
 const STATEMENT_ALL = StatementSync.prototype.all;
 
-// Evidence brand. SemanticMemoryGridEvidence stamps a private #digest onto a
+// Evidence brand. SemanticMemoryGridEvidence stamps a private #binding onto a
 // plain evidence object (the base constructor returns that object), so the
 // evidence keeps its plain-object shape while only objects minted here carry
 // the brand. Neither class is exported or reachable from an evidence object
 // (whose prototype is Object.prototype); the mint (mintGridEvidence) and the
-// checks (#digest in value) are all in this file.
+// checks (#binding in value) are all in this file. #binding is a frozen record
+// of what the review verified (owner, object_id, content_digest,
+// review_request_digest, review_decision); consumers read it only through
+// semanticMemoryGridEvidenceBinding, never from the evidence's public fields.
 class EvidenceBase {
   constructor(target) {
     return target;
   }
 }
 class SemanticMemoryGridEvidence extends EvidenceBase {
-  #digest;
+  #binding;
 
-  constructor(target, digest) {
+  constructor(target, binding) {
     super(target);
-    this.#digest = digest;
+    this.#binding = binding;
   }
 
   static has(value) {
-    return value !== null && typeof value === 'object' && #digest in value;
+    return value !== null && typeof value === 'object' && #binding in value;
   }
 
-  static digest(value) {
-    return value.#digest;
+  static binding(value) {
+    return value.#binding;
   }
 }
 
@@ -111,16 +114,28 @@ for (const frozen of [
 }
 freeze(STORE_METHOD_NAMES);
 
-// The only place evidence is created. The fields are stamped before freezing.
-function mintGridEvidence(fields) {
-  const evidence = new SemanticMemoryGridEvidence(fields, fields.verified_review_request_digest);
+// The only place evidence is created. The fields and the private binding are
+// stamped before freezing; the binding is built by the caller from the
+// verified record, never from the public fields.
+function mintGridEvidence(fields, binding) {
+  const evidence = new SemanticMemoryGridEvidence(fields, freeze(binding));
   return freeze(evidence);
+}
+
+function requireGridEvidence(value) {
+  if (!SemanticMemoryGridEvidence.has(value)) {
+    throw new ValidationError(
+      'Semantic memory Grid evidence was not issued by verifySemanticMemoryReviewFromGrid',
+      { code: 'semantic_memory_review_evidence_not_genuine' }
+    );
+  }
+  return value;
 }
 
 /**
  * True only for an evidence object returned by
  * verifySemanticMemoryReviewFromGrid (it carries this module's private
- * #digest brand). A copy, a spread, a Proxy, Object.create(evidence), a JSON
+ * #binding brand). A copy, a spread, a Proxy, Object.create(evidence), a JSON
  * round-trip or a hand-built object with identical fields is false. It reads
  * nothing from `value`, cannot create evidence and grants nothing by itself.
  */
@@ -130,16 +145,27 @@ export function isSemanticMemoryGridEvidence(value) {
 
 /**
  * The verified_review_request_digest of genuine Grid evidence, read from the
- * evidence's private brand, never from its fields. Throws ValidationError for
- * anything isSemanticMemoryGridEvidence rejects. Pass the result as
- * `verified_review_request_digest` to evaluateSemanticMemoryUse or
- * evaluateSemanticMemoryLifecycleUse.
+ * evidence's private binding, never from its fields. Throws ValidationError for
+ * anything isSemanticMemoryGridEvidence rejects. Informational only: the
+ * evaluate functions no longer accept a digest; pass the evidence object itself
+ * as `verified_review_evidence`.
  */
 export function semanticMemoryGridEvidenceDigest(evidence) {
-  if (!SemanticMemoryGridEvidence.has(evidence)) {
-    throw new ValidationError('Semantic memory Grid evidence was not issued by verifySemanticMemoryReviewFromGrid');
-  }
-  return SemanticMemoryGridEvidence.digest(evidence);
+  return SemanticMemoryGridEvidence.binding(requireGridEvidence(evidence)).review_request_digest;
+}
+
+/**
+ * The record binding of genuine Grid evidence, read from the evidence's
+ * private brand (never from its public fields): a frozen
+ * { owner, object_id, content_digest, review_request_digest, review_decision }
+ * of the record whose review verifySemanticMemoryReviewFromGrid verified.
+ * Throws ValidationError for anything isSemanticMemoryGridEvidence rejects.
+ * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse compare it
+ * with the record they evaluate, so evidence for one record never verifies
+ * another.
+ */
+export function semanticMemoryGridEvidenceBinding(evidence) {
+  return SemanticMemoryGridEvidence.binding(requireGridEvidence(evidence));
 }
 
 // Genuineness comes only from GridStore's private brand (#brand in store),
@@ -199,13 +225,14 @@ function queryAll(db, sql, parameter) {
  * store's database, identity and protector are the trust root: a file the
  * caller chose is trusted as far as the evidence-chain verification goes.
  *
- * The returned evidence is a frozen plain object carrying a private brand.
- * Its verified_review_request_digest is the sanctioned input for
- * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse; consumers
- * that receive evidence objects should read it with
- * semanticMemoryGridEvidenceDigest, which rejects any copy or look-alike. A
- * record's claimed review fields and any retrieval result are never a
- * substitute.
+ * The returned evidence is a frozen plain object carrying a private brand
+ * that binds it to this record (owner, object_id, content_digest,
+ * review_request_digest, review_decision). The evidence object itself, passed
+ * as `verified_review_evidence`, is the only input that lets
+ * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse grant
+ * instruction use, and only for the record it is bound to. A digest string, a
+ * copy or look-alike of the evidence, a record's claimed review fields and any
+ * retrieval result are never a substitute.
  *
  * Throws when no completed review exists (404), when a matching review did
  * not complete (409), or when the rows do not bind the exact review.
@@ -436,5 +463,11 @@ function verifySemanticMemoryGridEvidence(record, intent, events, chain) {
       events: own(chain, 'events')
     }),
     downstream_effect_authorized: false
+  }, {
+    owner: normalized.owner,
+    object_id: normalized.object_id,
+    content_digest: normalized.content_digest,
+    review_request_digest: expectedRequestDigest,
+    review_decision: own(normalized, 'review_decision')
   });
 }

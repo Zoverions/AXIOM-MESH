@@ -214,18 +214,20 @@ function verifyLifecycleWith(reader, rawLifecycle, record) {
  * function is content-only, exactly as for evaluateSemanticMemoryUse. Its
  * authority_tier is the record's unverified claim, and a lifecycle is not
  * review evidence. Instruction use is granted only for 'privileged-instruction'
- * with a verified_review_request_digest taken from
- * verifySemanticMemoryReviewFromGrid(store, record). This is the Grid-verified
+ * with `verified_review_evidence`, the genuine evidence object
+ * verifySemanticMemoryReviewFromGrid(store, record) returned for this record;
+ * a `verified_review_request_digest` option or non-genuine evidence throws a
+ * ValidationError, exactly as in evaluateSemanticMemoryUse. This is the Grid-verified
  * lifecycle path that any authority decision about a semantic memory record
  * must go through. See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
  */
 export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
   // Destructured only so null options throw main's TypeError. The values are
-  // re-read below as own properties: an inherited verified digest or clock
+  // re-read below as own properties: inherited verified evidence or clock
   // reads as absent (#1918). The default clock is only constructed when
   // there is no own `now`.
   now: _now,
-  verified_review_request_digest: _verifiedReviewRequestDigest
+  verified_review_evidence: _verifiedReviewEvidence
 } = {}) {
   const options = optionsArgument(arguments[3]);
   return withSemanticMemoryOwnReads(reader => evaluateLifecycleUseWith(
@@ -241,7 +243,8 @@ function evaluateLifecycleUseWith(reader, record, lifecycle, usage, options) {
   const { read } = reader;
   const suppliedNow = read(options, 'now');
   const now = suppliedNow === undefined ? new Date() : suppliedNow;
-  const verifiedReviewRequestDigest = read(options, 'verified_review_request_digest');
+  const verifiedReviewEvidence = read(options, 'verified_review_evidence');
+  const legacyVerifiedDigest = read(options, 'verified_review_request_digest');
   const provenance = reader.normalize(record);
   const verifiedLifecycle = verifyLifecycleWith(reader, lifecycle, provenance);
   const currentTime = now instanceof Date ? now : new Date(now);
@@ -259,7 +262,12 @@ function evaluateLifecycleUseWith(reader, record, lifecycle, usage, options) {
       lifecycle_digest: verifiedLifecycle.lifecycle_digest
     };
   }
-  const decision = reader.evaluateUse(provenance, usage, verifiedReviewRequestDigest);
+  const decision = reader.evaluateUse(
+    provenance,
+    usage,
+    verifiedReviewEvidence,
+    legacyVerifiedDigest
+  );
   return {
     ...decision,
     lifecycle_digest: verifiedLifecycle.lifecycle_digest

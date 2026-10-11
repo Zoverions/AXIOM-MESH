@@ -11,6 +11,7 @@ import {
   semanticMemoryReviewIntent,
   semanticMemoryReviewRequestDigest
 } from '../src/lib/semantic-memory-provenance.mjs';
+import { semanticMemoryGridReviewEvidence } from '../test-support/semantic-memory-grid-review.mjs';
 
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
@@ -106,7 +107,7 @@ test('external memory cannot self-promote instruction authority', () => {
   );
 });
 
-test('only the owner can explicitly approve an instruction candidate', () => {
+test('only the owner can explicitly approve an instruction candidate', async t => {
   const record = normalizeSemanticMemoryProvenance(remoteInstruction());
   assert.throws(
     () => ownerReviewSemanticMemory(
@@ -133,18 +134,31 @@ test('only the owner can explicitly approve an instruction candidate', () => {
     allow: false,
     code: 'semantic_memory_review_evidence_unverified'
   });
+  const otherBase = normalizeSemanticMemoryProvenance(remoteInstruction({ object_id: 'memory.remote.2' }));
+  const other = ownerReviewSemanticMemory(otherBase, reviewArgs(otherBase, 'approve-instruction'));
+  const [evidence, otherEvidence] = await semanticMemoryGridReviewEvidence(approved, other);
   assert.equal(
     evaluateSemanticMemoryUse(approved, 'privileged-instruction', {
-      verified_review_request_digest: approved.review_request_digest
+      verified_review_evidence: evidence
     }).allow,
     true
   );
+  // Evidence for another record does not verify this one.
   assert.deepEqual(
     evaluateSemanticMemoryUse(approved, 'privileged-instruction', {
-      verified_review_request_digest: D
+      verified_review_evidence: otherEvidence
     }),
     { allow: false, code: 'semantic_memory_review_evidence_mismatch' }
   );
+  // A digest string is not evidence, not even the record's own digest.
+  for (const digest of [approved.review_request_digest, D]) {
+    assert.throws(
+      () => evaluateSemanticMemoryUse(approved, 'privileged-instruction', {
+        verified_review_request_digest: digest
+      }),
+      { name: 'ValidationError', details: { code: 'semantic_memory_review_evidence_required' } }
+    );
+  }
 });
 
 test('review request substitution fails closed', () => {

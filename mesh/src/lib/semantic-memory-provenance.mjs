@@ -1,5 +1,12 @@
 import { ValidationError, assertContractNode, digestObject } from './canonical.mjs';
 import { intentRequestDigest } from './intent-binding.mjs';
+// Circular by design and safe: neither module reads the other's bindings while
+// it is being evaluated (only inside functions). The Grid adapter owns the
+// evidence brand; this module only checks it.
+import {
+  isSemanticMemoryGridEvidence,
+  semanticMemoryGridEvidenceBinding
+} from '../grid/semantic-memory-review-evidence.mjs';
 
 export const SEMANTIC_MEMORY_PROVENANCE_SCHEMA = 'axiom-semantic-memory-provenance.v1';
 export const SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA = 'axiom-semantic-memory-review-input.v1';
@@ -521,15 +528,26 @@ function deriveProvenanceWith(parent, options, read) {
  * capability authority, privilege, writes or escalation.
  *
  * The only authority-bearing outcome is 'semantic_memory_instruction_allowed'
- * for usage 'privileged-instruction', and it requires
- * `verified_review_request_digest`. That value must come from
- * verifySemanticMemoryReviewFromGrid(store, record) (the Grid-verified owner
- * review), never from the record, from a retrieval result, or from Grid rows
- * the caller assembled itself. 'authority-mutation' is always denied.
+ * for usage 'privileged-instruction', and it requires `verified_review_evidence`:
+ * the evidence object verifySemanticMemoryReviewFromGrid(store, record)
+ * returned for THIS record. It is recognised only by its private brand
+ * (isSemanticMemoryGridEvidence), never by its shape, and its private binding
+ * (owner, object_id, content_digest, review_request_digest, review_decision)
+ * must match the record; evidence for another record returns
+ * 'semantic_memory_review_evidence_mismatch'.
+ *
+ * For 'privileged-instruction' these throw a ValidationError (details.code
+ * 'semantic_memory_review_evidence_required'): a
+ * `verified_review_request_digest` option (the removed digest-string API; a
+ * record's review_request_digest is computable by anyone, so it is not
+ * evidence), and a `verified_review_evidence` that is not genuine Grid
+ * evidence (a string, a hand-built, copied, Proxy-wrapped or
+ * Object.create'd object, null, ...). Other usages ignore both options.
+ * 'authority-mutation' is always denied.
  * See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
  */
 export function evaluateSemanticMemoryUse(record, usage, {
-  verified_review_request_digest: _verifiedReviewRequestDigest
+  verified_review_evidence: _verifiedReviewEvidence
 } = {}) {
   // Destructuring kept for main's exact TypeError on null options; the field is
   // re-read own-property only.
@@ -537,12 +555,39 @@ export function evaluateSemanticMemoryUse(record, usage, {
   return withOwnFieldReads(read => evaluateUseWith(
     record,
     usage,
-    read(options, 'verified_review_request_digest'),
+    read(options, 'verified_review_evidence'),
+    read(options, LEGACY_VERIFIED_DIGEST_OPTION),
     read
   ));
 }
 
-function evaluateUseWith(record, usage, verified_review_request_digest, read) {
+// The removed digest-string option. Read like every other option (own-only,
+// with deny dominance): an own value throws, and an inherited value can only
+// add that same deny, never a grant.
+const LEGACY_VERIFIED_DIGEST_OPTION = 'verified_review_request_digest';
+
+function evidenceRequired(message) {
+  return new ValidationError(message, { code: 'semantic_memory_review_evidence_required' });
+}
+
+// Deny-only. Returns the private binding of genuine Grid evidence, undefined
+// when no evidence was supplied, and throws for anything else.
+function verifiedReviewBinding(evidence, legacyDigest) {
+  if (legacyDigest !== undefined) {
+    throw evidenceRequired(
+      'verified_review_request_digest is not accepted; pass verified_review_evidence from verifySemanticMemoryReviewFromGrid'
+    );
+  }
+  if (evidence === undefined) return undefined;
+  if (!isSemanticMemoryGridEvidence(evidence)) {
+    throw evidenceRequired(
+      'verified_review_evidence must be Grid evidence issued by verifySemanticMemoryReviewFromGrid'
+    );
+  }
+  return semanticMemoryGridEvidenceBinding(evidence);
+}
+
+function evaluateUseWith(record, usage, verified_review_evidence, legacy_verified_digest, read) {
   const normalized = normalizeProvenanceWith(record, read);
   if (normalized.review_state === 'quarantined') {
     return { allow: false, code: 'semantic_memory_quarantined' };
@@ -559,6 +604,7 @@ function evaluateUseWith(record, usage, verified_review_request_digest, read) {
     };
   }
   if (usage === 'privileged-instruction') {
+    const binding = verifiedReviewBinding(verified_review_evidence, legacy_verified_digest);
     const structurallyEligible = normalized.semantic_class === 'instruction-candidate'
       && normalized.authority_tier === 'owner-approved-instruction'
       && normalized.review_state === 'owner-reviewed'
@@ -568,14 +614,17 @@ function evaluateUseWith(record, usage, verified_review_request_digest, read) {
     if (!structurallyEligible) {
       return { allow: false, code: 'semantic_memory_instruction_denied' };
     }
-    if (verified_review_request_digest === undefined) {
+    if (binding === undefined) {
       return { allow: false, code: 'semantic_memory_review_evidence_unverified' };
     }
-    const verifiedDigest = requiredDigest(
-      verified_review_request_digest,
-      'verified_review_request_digest'
-    );
-    if (verifiedDigest !== read(normalized, 'review_request_digest')) {
+    // The evidence must be for this exact record and decision.
+    if (
+      binding.review_request_digest !== read(normalized, 'review_request_digest')
+      || binding.object_id !== normalized.object_id
+      || binding.owner !== normalized.owner
+      || binding.content_digest !== normalized.content_digest
+      || binding.review_decision !== read(normalized, 'review_decision')
+    ) {
       return { allow: false, code: 'semantic_memory_review_evidence_mismatch' };
     }
     // The verified request digest binds only the claimed pre-review digest;
@@ -651,10 +700,11 @@ export function withSemanticMemoryOwnReads(run) {
   return withOwnFieldReads(read => run(Object.freeze({
     read,
     normalize: value => normalizeProvenanceWith(value, read),
-    evaluateUse: (record, usage, verifiedReviewRequestDigest) => evaluateUseWith(
+    evaluateUse: (record, usage, verifiedReviewEvidence, legacyVerifiedDigest) => evaluateUseWith(
       record,
       usage,
-      verifiedReviewRequestDigest,
+      verifiedReviewEvidence,
+      legacyVerifiedDigest,
       read
     )
   })));

@@ -8,6 +8,7 @@ import {
   semanticMemoryReviewIntent,
   semanticMemoryReviewRequestDigest
 } from '../src/lib/semantic-memory-provenance.mjs';
+import { semanticMemoryGridReviewEvidence } from '../test-support/semantic-memory-grid-review.mjs';
 
 // #1918: every caller-supplied field in semantic-memory-provenance.mjs is read
 // own-property only. Inherited (prototype-polluted) fields read as absent and
@@ -26,7 +27,7 @@ const FIELDS = [
 ];
 const OPTION_FIELDS = [
   'actor_id', 'decision', 'semantic_class', 'ingestion_intent_id', 'request_digest',
-  'object_id', 'content_digest', 'review_request_digest', 'verified_review_request_digest'
+  'object_id', 'content_digest', 'review_request_digest', 'verified_review_request_digest', 'verified_review_evidence'
 ];
 
 function remoteInstruction() {
@@ -81,6 +82,8 @@ for (const field of ['parent_object_id', 'parent_content_digest', 'parent_proven
   FIXTURES[`derivedMissing_${field}`] = rest;
 }
 const approvedDigest = approved.review_request_digest;
+// Genuine Grid evidence for `approved` (a real GridStore review).
+const [approvedEvidence] = await semanticMemoryGridReviewEvidence(approved);
 
 // Values an attacker might plant: a genuine reviewed record's values (the
 // escalation payload), other valid-looking values, and invalid values.
@@ -125,7 +128,7 @@ test('red/green: Object.prototype review fields cannot promote an unreviewed rec
     review_request_digest: approved.review_request_digest,
     reviewed_from_provenance_digest: approved.reviewed_from_provenance_digest,
     review_decision: approved.review_decision,
-    verified_review_request_digest: approvedDigest
+    verified_review_evidence: approvedEvidence
   });
   withPollution(Object.prototype, entries, () => {
     // On main 04eccbbd this normalized to owner-approved-instruction / owner-reviewed
@@ -177,7 +180,7 @@ test('every field on Object.prototype reads as absent, or adds the deny an own f
 test('all fields on Object.prototype at once never change an accepted result or escalate any export', () => {
   for (const donor of [approved, derived, quarantined]) {
     const entries = FIELDS.filter(field => donor[field] !== undefined).map(field => [field, donor[field]])
-      .concat([['verified_review_request_digest', approvedDigest], ['actor_id', 'owner.alice'], ['decision', 'approve-instruction']]);
+      .concat([['verified_review_request_digest', approvedDigest], ['verified_review_evidence', approvedEvidence], ['actor_id', 'owner.alice'], ['decision', 'approve-instruction']]);
     withPollution(Object.prototype, entries, () => {
       for (const fixture of [unreviewed, FIXTURES.rawRemote, localModel]) {
         const result = outcome(() => normalizeSemanticMemoryProvenance({ ...fixture }));
@@ -194,14 +197,14 @@ test('Array.prototype pollution (fields and indices) does not change any export'
   const entries = [...FIELDS, ...OPTION_FIELDS, '0', '1', '2', '3'].map(key => [key, approved[key] ?? 'owner.alice']);
   const expected = Object.fromEntries(Object.entries(FIXTURES).map(([name, fixture]) => [name, [
     outcome(() => normalizeSemanticMemoryProvenance({ ...fixture })),
-    outcome(() => evaluateSemanticMemoryUse({ ...fixture }, 'privileged-instruction', { verified_review_request_digest: approvedDigest })),
+    outcome(() => evaluateSemanticMemoryUse({ ...fixture }, 'privileged-instruction', { verified_review_evidence: approvedEvidence })),
     outcome(() => semanticMemoryReviewIntent({ ...fixture }, 'approve-memory'))
   ]]));
   withPollution(Array.prototype, entries, () => {
     for (const [name, fixture] of Object.entries(FIXTURES)) {
       assert.deepEqual([
         outcome(() => normalizeSemanticMemoryProvenance({ ...fixture })),
-        outcome(() => evaluateSemanticMemoryUse({ ...fixture }, 'privileged-instruction', { verified_review_request_digest: approvedDigest })),
+        outcome(() => evaluateSemanticMemoryUse({ ...fixture }, 'privileged-instruction', { verified_review_evidence: approvedEvidence })),
         outcome(() => semanticMemoryReviewIntent({ ...fixture }, 'approve-memory'))
       ], expected[name], name);
     }
@@ -209,18 +212,26 @@ test('Array.prototype pollution (fields and indices) does not change any export'
   for (const [key] of entries) assert.equal(Object.hasOwn(Array.prototype, key), false);
 });
 
-test('inherited verified_review_request_digest cannot authorize privileged instruction use', () => {
-  withPollution(Object.prototype, [['verified_review_request_digest', approvedDigest]], () => {
+test('inherited verified_review_evidence (or the removed digest option) cannot authorize privileged instruction use', () => {
+  withPollution(Object.prototype, [['verified_review_evidence', approvedEvidence]], () => {
     assert.deepEqual(evaluateSemanticMemoryUse(approved, 'privileged-instruction'),
       { allow: false, code: 'semantic_memory_review_evidence_unverified' });
     assert.deepEqual(evaluateSemanticMemoryUse(approved, 'privileged-instruction', {}),
       { allow: false, code: 'semantic_memory_review_evidence_unverified' });
-    // Own option still works.
-    assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction', { verified_review_request_digest: approvedDigest }).allow, true);
+    // Own genuine evidence still works.
+    assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction', { verified_review_evidence: approvedEvidence }).allow, true);
   });
-  // Deny dominance: an inherited malformed digest still raises main's deny.
-  withPollution(Object.prototype, [['verified_review_request_digest', 'not-a-digest']], () => {
-    assert.throws(() => evaluateSemanticMemoryUse(approved, 'privileged-instruction'), /verified_review_request_digest/);
+  // Deny dominance: inherited non-evidence, or the removed digest option on the
+  // prototype, raises the deny the same own option raises.
+  const required = { name: 'ValidationError', details: { code: 'semantic_memory_review_evidence_required' } };
+  withPollution(Object.prototype, [['verified_review_evidence', approvedDigest]], () => {
+    assert.throws(() => evaluateSemanticMemoryUse(approved, 'privileged-instruction'), required);
+    // An own option shadows the inherited one.
+    assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction', { verified_review_evidence: approvedEvidence }).allow, true);
+  });
+  withPollution(Object.prototype, [['verified_review_request_digest', approvedDigest]], () => {
+    assert.throws(() => evaluateSemanticMemoryUse(approved, 'privileged-instruction'), required);
+    assert.throws(() => evaluateSemanticMemoryUse(approved, 'privileged-instruction', { verified_review_evidence: approvedEvidence }), required);
   });
 });
 

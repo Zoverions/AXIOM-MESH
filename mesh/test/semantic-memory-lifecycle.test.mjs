@@ -13,6 +13,7 @@ import {
   evaluateSemanticMemoryLifecycleUse,
   verifySemanticMemoryLifecycle
 } from '../src/lib/semantic-memory-lifecycle.mjs';
+import { semanticMemoryGridReviewEvidence } from '../test-support/semantic-memory-grid-review.mjs';
 
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
@@ -59,9 +60,10 @@ test('semantic memory lifecycle binds exact provenance and records explicit no-a
   assert.deepEqual(verifySemanticMemoryLifecycle(lifecycle, record), lifecycle);
 });
 
-test('bounded retention expires ordinary retrieval and privileged instruction use', () => {
+test('bounded retention expires ordinary retrieval and privileged instruction use', async t => {
   const base = remoteInstruction();
   const approved = approveInstruction(base);
+  const [evidence] = await semanticMemoryGridReviewEvidence(approved);
   const lifecycle = createSemanticMemoryLifecycle(approved, {
     retention_mode: 'bounded',
     expires_at: '2026-08-18T05:00:00.000Z'
@@ -92,7 +94,7 @@ test('bounded retention expires ordinary retrieval and privileged instruction us
     'privileged-instruction',
     {
       now: new Date('2026-08-18T04:59:59.000Z'),
-      verified_review_request_digest: approved.review_request_digest
+      verified_review_evidence: evidence
     }
   ).allow, true);
 
@@ -102,7 +104,7 @@ test('bounded retention expires ordinary retrieval and privileged instruction us
     'privileged-instruction',
     {
       now: new Date('2026-08-18T05:00:00.000Z'),
-      verified_review_request_digest: approved.review_request_digest
+      verified_review_evidence: evidence
     }
   ).code, 'semantic_memory_expired');
 });
