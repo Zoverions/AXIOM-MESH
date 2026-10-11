@@ -228,7 +228,9 @@ unexpired; nothing here makes the clock tamper-proof. Use the absent form
     Date or `Object.create(Date.prototype)`;
   - a Date that defines `valueOf`, `getTime`, `toISOString` or
     `Symbol.toPrimitive` on itself or on a subclass prototype, because it shows
-    ordinary readers a different time than its slot holds;
+    ordinary readers a different time than its slot holds. A Date whose
+    prototype chain has more than 64 objects before its base `Date.prototype`
+    is also rejected, because the chain is not walked to the end;
   - any other string;
   - any time that is not finite or not after the epoch (time `<= 0`):
     `new Date(NaN)`, `new Date(0)`, `'1970'`, `'1970-01-01T00:00:00Z'`,

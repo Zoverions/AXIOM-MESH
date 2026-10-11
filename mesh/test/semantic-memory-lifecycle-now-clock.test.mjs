@@ -64,8 +64,10 @@ test('red/green: a real Date with an own valueOf/getTime/toPrimitive cannot revi
   Object.defineProperty(ownToPrimitive, Symbol.toPrimitive, { value: () => 0 });
   const ownGetTime = new Date(LATE);
   ownGetTime.getTime = () => 0;
+  const ownToISOString = new Date(LATE);
+  ownToISOString.toISOString = () => '1970-01-01T00:00:00.000Z';
   // On 57ce193f the first two returned semantic_memory_retrieval_allowed.
-  for (const [now, label] of [[ownValueOf, 'own valueOf'], [ownBoth, 'own valueOf+getTime'], [ownToPrimitive, 'own toPrimitive'], [ownGetTime, 'own getTime']]) {
+  for (const [now, label] of [[ownValueOf, 'own valueOf'], [ownBoth, 'own valueOf+getTime'], [ownToPrimitive, 'own toPrimitive'], [ownGetTime, 'own getTime'], [ownToISOString, 'own toISOString']]) {
     assertRejectedEverywhere(now, label);
   }
 });
@@ -75,9 +77,24 @@ test('red/green: a Date subclass overriding valueOf/getTime is rejected', () => 
   class ZeroGetTime extends Date { getTime() { return 0; } }
   class ZeroBoth extends Date { valueOf() { return 0; } getTime() { return 0; } }
   class Deeper extends ZeroBoth {}
-  for (const Kind of [ZeroValueOf, ZeroGetTime, ZeroBoth, Deeper]) {
+  class ZeroToISOString extends Date { toISOString() { return '1970-01-01T00:00:00.000Z'; } }
+  class ZeroToPrimitive extends Date { [Symbol.toPrimitive]() { return 0; } }
+  for (const Kind of [ZeroValueOf, ZeroGetTime, ZeroBoth, Deeper, ZeroToISOString, ZeroToPrimitive]) {
     assertRejectedEverywhere(new Kind(LATE), Kind.name);
   }
+  // A pathologically deep chain (more than 64 prototypes above the base
+  // Date.prototype) is not walked to the end: it is rejected, not trusted.
+  let deepPrototype = Date.prototype;
+  for (let index = 0; index < 70; index += 1) deepPrototype = Object.create(deepPrototype);
+  const deep = new Date(LATE);
+  Object.setPrototypeOf(deep, deepPrototype);
+  assertRejectedEverywhere(deep, 'deep prototype chain');
+  // A shallow chain of plain prototypes with no time readers is still a genuine Date.
+  let shallowPrototype = Date.prototype;
+  for (let index = 0; index < 8; index += 1) shallowPrototype = Object.create(shallowPrototype);
+  const shallow = new Date(LATE);
+  Object.setPrototypeOf(shallow, shallowPrototype);
+  assert.equal(evaluate(lcExpired, { now: shallow }).code, EXPIRED);
   // A plain subclass and a Date from another realm are still genuine Dates.
   class Plain extends Date {}
   for (const now of [new Plain(LATE), vm.runInNewContext(`new Date('${LATE}')`)]) {
