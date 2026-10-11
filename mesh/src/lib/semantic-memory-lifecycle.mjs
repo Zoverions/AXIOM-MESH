@@ -205,6 +205,20 @@ function verifyLifecycleWith(reader, rawLifecycle, record) {
   return Object.freeze({ ...body, lifecycle_digest: suppliedDigest });
 }
 
+/**
+ * Lifecycle-checked use decision: an expired bounded lifecycle denies, and
+ * otherwise the decision of evaluateSemanticMemoryUse is returned with the
+ * lifecycle_digest added.
+ *
+ * Retrieval authority boundary: an 'ordinary-retrieval' allow from this
+ * function is content-only, exactly as for evaluateSemanticMemoryUse. Its
+ * authority_tier is the record's unverified claim, and a lifecycle is not
+ * review evidence. Instruction use is granted only for 'privileged-instruction'
+ * with a verified_review_request_digest taken from
+ * verifySemanticMemoryReviewFromGrid(store, record). This is the Grid-verified
+ * lifecycle path that any authority decision about a semantic memory record
+ * must go through. See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
+ */
 export function evaluateSemanticMemoryLifecycleUse(record, lifecycle, usage, {
   // Destructured only so null options throw main's TypeError. The values are
   // re-read below as own properties: an inherited verified digest or clock

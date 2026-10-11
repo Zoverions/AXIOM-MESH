@@ -5,6 +5,17 @@ import {
 } from '../lib/semantic-memory-provenance.mjs';
 import { verifySemanticMemoryGridEvidence } from '../lib/semantic-memory-grid-evidence.mjs';
 
+/**
+ * The Grid-verified owner review for a semantic memory record. It finds the
+ * completed 'memory.semantic.review' intent for the record's exact
+ * review_request_digest in the store's verified evidence chain, and checks
+ * that the record's own pre-review provenance reproduces it. This is the only
+ * sanctioned source of `verified_review_request_digest` for
+ * evaluateSemanticMemoryUse and evaluateSemanticMemoryLifecycleUse. A record's
+ * claimed authority_tier, review_state, review_decision or review digests, and
+ * any retrieval result, are never a substitute. Throws when no completed review
+ * exists. See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
+ */
 export function verifySemanticMemoryReviewFromGrid(store, record) {
   if (!store || typeof store.requireIntentEvidenceChain !== 'function') {
     throw new TypeError('Semantic memory review verification requires a Grid store');

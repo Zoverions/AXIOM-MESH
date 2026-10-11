@@ -505,6 +505,29 @@ function deriveProvenanceWith(parent, options, read) {
   }, read);
 }
 
+/**
+ * Decides how a semantic memory record may be used.
+ *
+ * Retrieval authority boundary: semantic-memory retrieval is a Knowledge path.
+ * For usage 'ordinary-retrieval' the result `{ allow: true, code:
+ * 'semantic_memory_retrieval_allowed', authority_tier, provenance_digest }`
+ * means only "may be read as content". It is never authority. The returned
+ * authority_tier is the record's own claim, copied without any Grid check, and
+ * a fully forged record (claimed 'owner-approved-instruction', approved
+ * review_state and review_decision, self-consistent review digests) is
+ * returned with allow:true. A caller must never use allow, authority_tier,
+ * review_state, review_decision or any other review or instruction field of a
+ * retrieved record or of this result to grant instruction use, tool or
+ * capability authority, privilege, writes or escalation.
+ *
+ * The only authority-bearing outcome is 'semantic_memory_instruction_allowed'
+ * for usage 'privileged-instruction', and it requires
+ * `verified_review_request_digest`. That value must come from
+ * verifySemanticMemoryReviewFromGrid(store, record) (the Grid-verified owner
+ * review), never from the record, from a retrieval result, or from Grid rows
+ * the caller assembled itself. 'authority-mutation' is always denied.
+ * See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
+ */
 export function evaluateSemanticMemoryUse(record, usage, {
   verified_review_request_digest: _verifiedReviewRequestDigest
 } = {}) {

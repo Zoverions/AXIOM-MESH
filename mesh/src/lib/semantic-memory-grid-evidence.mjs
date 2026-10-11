@@ -52,6 +52,15 @@ function ownEntry(array, item) {
   return array.some((entry, index) => entry === item && Object.hasOwn(array, index));
 }
 
+/**
+ * Checks that the supplied intent row, events and chain summary are consistent
+ * with the record's exact owner review request. It does not read the Grid.
+ * Rows a caller assembles from the record itself pass this check, so its
+ * output is Grid evidence only when the rows came from GridStore, which is what
+ * verifySemanticMemoryReviewFromGrid does. Authority decisions must use
+ * verifySemanticMemoryReviewFromGrid, not this function with caller-built rows.
+ * See docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md.
+ */
 export function verifySemanticMemoryGridEvidence(record, {
   // Destructured only so that a null options argument throws exactly as
   // before; the values are read below as own properties.
