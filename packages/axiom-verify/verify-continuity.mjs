@@ -1,5 +1,5 @@
 import { digestObject, VerifyError } from './canonical.mjs';
-import { loadPublicKey, verifyObjectSignature } from './crypto.mjs';
+import { keyIdFor, loadPublicKey, verifyObjectSignature } from './crypto.mjs';
 import {
   CLAIM_BUILD_CONTEXT_SCHEMA,
   GRID_CONTINUITY_ANCHOR_SCHEMA,
@@ -13,6 +13,11 @@ const GENESIS_HASH = '0'.repeat(64);
 const ANCHOR_ID = /^gca_[a-f0-9]{64}$/;
 const PURPOSE = 'grid.external-continuity';
 const EXPORT_FORMAT = 'axiom-export.v1';
+const ALLOWED_ANCHOR_KEYS = new Set([
+  'statement',
+  'attestation',
+  'anchor_digest'
+]);
 
 /**
  * Verify an axiom-grid-continuity-anchor.v1 record against a provided chain
@@ -68,6 +73,23 @@ function verifyAnchorRecord(anchor, { publicKeyPem, chainSegment } = {}) {
     return failClosed(
       'missing_public_key',
       'Public key material is required to verify a continuity anchor',
+      GRID_CONTINUITY_ANCHOR_SCHEMA
+    );
+  }
+
+  if (Object.hasOwn(anchor, 'verification')) {
+    return failClosed(
+      'invalid_shape',
+      'Continuity anchor must not embed top-level verification output',
+      GRID_CONTINUITY_ANCHOR_SCHEMA
+    );
+  }
+
+  const unexpectedKeys = Object.keys(anchor).filter(key => !ALLOWED_ANCHOR_KEYS.has(key));
+  if (unexpectedKeys.length > 0) {
+    return failClosed(
+      'invalid_shape',
+      `Continuity anchor contains unexpected top-level fields: ${unexpectedKeys.sort().join(', ')}`,
       GRID_CONTINUITY_ANCHOR_SCHEMA
     );
   }
@@ -210,14 +232,16 @@ function verifyAnchorRecord(anchor, { publicKeyPem, chainSegment } = {}) {
   } catch {
     return failClosed(
       'invalid_public_key',
-      'Public key material could not be parsed as an SPKI PEM key',
+      'Public key material could not be parsed as an SPKI PEM Ed25519 key',
       GRID_CONTINUITY_ANCHOR_SCHEMA,
       { anchor_digest: claimedDigest, anchor_id: statement.anchor_id }
     );
   }
 
+  const expectedKeyId = keyIdFor('grid', publicKey);
   if (
-    anchor.attestation.key_id !== statement.grid_key_id
+    statement.grid_key_id !== expectedKeyId
+    || anchor.attestation.key_id !== statement.grid_key_id
     || !verifyObjectSignature(statement, anchor.attestation, publicKey)
   ) {
     return failClosed(

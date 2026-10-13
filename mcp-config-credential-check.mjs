@@ -4,6 +4,9 @@ import { readFile } from 'node:fs/promises';
 const CREDENTIAL_KEY = /(^|[_-])(api[_-]?key|token|secret|password|passwd|credential|private[_-]?key)($|[_-])/i;
 const AUTHORIZATION_KEY = /^(authorization|proxy-authorization|auth)$/i;
 const PLACEHOLDER = /^(?:<[^>]+>|REPLACE[_-]?ME|CHANGE[_-]?ME|YOUR[_-][A-Z0-9_-]+|NONE|NULL)$/i;
+const CLI_FLAG_ASSIGNMENT = /^--?([A-Za-z0-9_-]+)=(.+)$/s;
+const CLI_FLAG_ONLY = /^--?([A-Za-z0-9_-]+)$/;
+const HEADER_STRING = /^(authorization|proxy-authorization)\s*:\s*(.+)$/is;
 
 function normalizedKey(key) {
   return String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2');
@@ -25,10 +28,85 @@ function isSafeReference(value) {
   return false;
 }
 
+function inspectArrayElement(value, index, path) {
+  const findings = [];
+  const item = value[index];
+  if (typeof item !== 'string') return { findings, consumedNext: false };
+
+  const flagAssign = item.match(CLI_FLAG_ASSIGNMENT);
+  if (flagAssign) {
+    const [, flagName, flagValue] = flagAssign;
+    if (isCredentialKey(flagName)) {
+      if (!isSafeReference(flagValue)) {
+        findings.push({
+          location: [...path, String(index)].join('.'),
+          key: flagName,
+          risk: 'hardcoded-credential-literal'
+        });
+      }
+      return { findings, consumedNext: false };
+    }
+    const assignedHeader = flagValue.match(HEADER_STRING);
+    if (assignedHeader) {
+      const [, headerName, headerValue] = assignedHeader;
+      if (!isSafeReference(headerValue)) {
+        findings.push({
+          location: [...path, String(index)].join('.'),
+          key: headerName,
+          risk: 'hardcoded-credential-literal'
+        });
+      }
+      return { findings, consumedNext: false };
+    }
+    return { findings, consumedNext: false };
+  }
+
+  const headerMatch = item.match(HEADER_STRING);
+  if (headerMatch) {
+    const [, headerName, headerValue] = headerMatch;
+    if (!isSafeReference(headerValue)) {
+      findings.push({
+        location: [...path, String(index)].join('.'),
+        key: headerName,
+        risk: 'hardcoded-credential-literal'
+      });
+    }
+    return { findings, consumedNext: false };
+  }
+
+  const flagOnly = item.match(CLI_FLAG_ONLY);
+  if (
+    flagOnly
+    && isCredentialKey(flagOnly[1])
+    && index + 1 < value.length
+    && typeof value[index + 1] === 'string'
+    && !value[index + 1].startsWith('-')
+  ) {
+    if (!isSafeReference(value[index + 1])) {
+      findings.push({
+        location: [...path, String(index + 1)].join('.'),
+        key: flagOnly[1],
+        risk: 'hardcoded-credential-literal'
+      });
+    }
+    return { findings, consumedNext: true };
+  }
+
+  return { findings, consumedNext: false };
+}
+
 function inspect(value, path = []) {
   const findings = [];
   if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i += 1) findings.push(...inspect(value[i], [...path, String(i)]));
+    for (let i = 0; i < value.length; i += 1) {
+      if (typeof value[i] === 'string') {
+        const { findings: itemFindings, consumedNext } = inspectArrayElement(value, i, path);
+        findings.push(...itemFindings);
+        if (consumedNext) i += 1;
+      } else {
+        findings.push(...inspect(value[i], [...path, String(i)]));
+      }
+    }
     return findings;
   }
   if (!value || typeof value !== 'object') return findings;

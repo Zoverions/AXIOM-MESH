@@ -79,12 +79,13 @@ export function verifyCausalUpdate(input, {
     throw new ValidationError('Causal update value digest is invalid');
   }
   const publicKey = assertString(value.public_key, 'public_key', { max: 8192 });
-  const publicKeyDigest = sha256(publicKey);
+  const parsedKey = parseEd25519PublicKey(publicKey, 'Causal update');
+  const publicKeyDigest = sha256(parsedKey.canonicalPem);
   if (expectedPublicKeyDigest !== undefined && publicKeyDigest !== expectedPublicKeyDigest) {
     throw new ValidationError('Causal update public key does not match the admitted node');
   }
   const signature = assertString(value.signature, 'signature', { max: 1024 });
-  verifyStatement(statement, signature, publicKey, 'Causal update');
+  verifyStatement(statement, signature, parsedKey.publicKey, 'Causal update');
   const updateDigest = digestObject(statement);
   return {
     statement,
@@ -127,7 +128,8 @@ export function verifyCausalBundle(input, {
     throw new ValidationError('Causal sync bundle must contain 1-128 updates');
   }
   const publicKey = assertString(value.public_key, 'public_key', { max: 8192 });
-  const publicKeyDigest = sha256(publicKey);
+  const parsedKey = parseEd25519PublicKey(publicKey, 'Causal sync bundle');
+  const publicKeyDigest = sha256(parsedKey.canonicalPem);
   if (expectedPublicKeyDigest !== undefined && publicKeyDigest !== expectedPublicKeyDigest) {
     throw new ValidationError('Causal sync bundle key does not match the admitted node');
   }
@@ -166,7 +168,7 @@ export function verifyCausalBundle(input, {
     nonce: assertString(value.nonce, 'nonce', { max: 160, pattern: ID })
   };
   const signature = assertString(value.signature, 'signature', { max: 1024 });
-  verifyStatement(statement, signature, publicKey, 'Causal sync bundle');
+  verifyStatement(statement, signature, parsedKey.publicKey, 'Causal sync bundle');
   return {
     statement,
     signature,
@@ -213,7 +215,7 @@ export function compareVersionVectors(leftInput, rightInput) {
   return 'concurrent';
 }
 
-function verifyStatement(statement, signature, publicKeyPem, label) {
+function parseEd25519PublicKey(publicKeyPem, label) {
   let publicKey;
   try {
     publicKey = createPublicKey(publicKeyPem);
@@ -223,6 +225,13 @@ function verifyStatement(statement, signature, publicKeyPem, label) {
   if (publicKey.asymmetricKeyType !== 'ed25519') {
     throw new ValidationError(`${label} public key must use Ed25519`);
   }
+  return {
+    publicKey,
+    canonicalPem: publicKey.export({ type: 'spki', format: 'pem' })
+  };
+}
+
+function verifyStatement(statement, signature, publicKey, label) {
   let valid = false;
   try {
     valid = verify(

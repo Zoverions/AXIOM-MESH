@@ -7,10 +7,28 @@ import { validateAxiomOnePolicy } from './mesh/src/check-axiom-one.mjs';
 const repositoryRoot = dirname(fileURLToPath(import.meta.url));
 const policyPath = join(repositoryRoot, 'apps', 'axiom-one', 'app-policy.json');
 
+function safeGitEnvironment() {
+  const env = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!key.toUpperCase().startsWith('GIT_') && typeof value === 'string') {
+      env[key] = value;
+    }
+  }
+  return {
+    ...env,
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_OPTIONAL_LOCKS: '0'
+  };
+}
+
 function readSourceState() {
+  const gitEnv = safeGitEnvironment();
   const refResult = spawnSync('git', ['rev-parse', 'HEAD'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
+    env: gitEnv,
     windowsHide: true
   });
 
@@ -26,6 +44,7 @@ function readSourceState() {
   const statusResult = spawnSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
+    env: gitEnv,
     windowsHide: true
   });
 

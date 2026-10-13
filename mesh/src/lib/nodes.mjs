@@ -40,11 +40,11 @@ export function verifyNodeAdmission(input, { requireFuture = true } = {}) {
     statement.discovery = normalizeDiscovery(value.discovery);
   }
   const signature = assertString(value.signature, 'signature', { max: 1024 });
-  verifyStatement(statement, signature, statement.public_key);
+  const canonicalPublicKey = verifyStatement(statement, signature, statement.public_key);
   return {
     statement,
     signature,
-    public_key_digest: sha256(statement.public_key),
+    public_key_digest: sha256(canonicalPublicKey),
     admission_digest: digestObject(statement)
   };
 }
@@ -73,12 +73,12 @@ export function verifyNodeRenewal(input, { requireFuture = true } = {}) {
     statement.discovery = normalizeDiscovery(value.discovery);
   }
   const signature = assertString(value.signature, 'signature', { max: 1024 });
-  verifyStatement(statement, signature, publicKey);
+  const canonicalPublicKey = verifyStatement(statement, signature, publicKey);
   return {
     statement,
     signature,
     public_key: publicKey,
-    public_key_digest: sha256(publicKey),
+    public_key_digest: sha256(canonicalPublicKey),
     renewal_digest: digestObject(statement)
   };
 }
@@ -103,13 +103,13 @@ export function verifyStorageOffer(input, { requireFuture = true } = {}) {
     nonce: assertString(value.nonce, 'nonce', { max: 160, pattern: ID })
   };
   const signature = assertString(value.signature, 'signature', { max: 1024 });
-  verifyStatement(statement, signature, publicKey);
+  const canonicalPublicKey = verifyStatement(statement, signature, publicKey);
   const offerDigest = digestObject(statement);
   return {
     statement,
     signature,
     public_key: publicKey,
-    public_key_digest: sha256(publicKey),
+    public_key_digest: sha256(canonicalPublicKey),
     offer_digest: offerDigest,
     offer_id: `offer_${offerDigest}`
   };
@@ -137,6 +137,7 @@ function verifyStatement(statement, signature, publicKeyPem) {
     valid = false;
   }
   if (!valid) throw new ValidationError('Node statement signature is invalid');
+  return publicKey.export({ type: 'spki', format: 'pem' });
 }
 
 function uniqueStrings(value, name, maxItems, itemMax) {

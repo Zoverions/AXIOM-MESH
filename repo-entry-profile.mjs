@@ -47,7 +47,105 @@ function classify(section, subsection, key) {
 
 function beginsShellAlias(rawValue) {
   const trimmed = rawValue.trim();
-  return trimmed.startsWith('!') || trimmed.startsWith('"!');
+  return trimmed.startsWith('!') || /^"\s*!/.test(trimmed);
+}
+
+function stripUnquotedComment(text) {
+  let inQuotes = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && (ch === '#' || ch === ';')) {
+      return text.slice(0, i);
+    }
+  }
+  return text;
+}
+
+function parseLeadingSectionHeader(trimmed) {
+  if (!trimmed.startsWith('[')) return null;
+  let inQuotes = false;
+  let escaped = false;
+  for (let i = 1; i < trimmed.length; i += 1) {
+    const ch = trimmed[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && ch === ']') {
+      return {
+        headerContent: trimmed.slice(1, i),
+        remainder: trimmed.slice(i + 1)
+      };
+    }
+  }
+  return null;
+}
+
+function endsWithUnescapedBackslash(line) {
+  let count = 0;
+  for (let i = line.length - 1; i >= 0 && line[i] === '\\'; i -= 1) {
+    count += 1;
+  }
+  return count % 2 === 1;
+}
+
+function joinContinuedLines(rawLines) {
+  const logicalLines = [];
+  let index = 0;
+  while (index < rawLines.length) {
+    const startLine = index + 1;
+    let combined = rawLines[index];
+    while (endsWithUnescapedBackslash(combined) && index + 1 < rawLines.length) {
+      combined = combined.slice(0, -1) + rawLines[index + 1];
+      index += 1;
+    }
+    logicalLines.push({ lineNumber: startLine, text: combined });
+    index += 1;
+  }
+  return logicalLines;
+}
+
+function evaluateAssignment(assignmentText, section, subsection, lineNumber, findings) {
+  const cleanAssignment = stripUnquotedComment(assignmentText);
+  const assignment = cleanAssignment.match(/^\s*([^=\s]+)\s*=\s*(.*)$/u);
+  if (!assignment) return;
+
+  const [, key, value] = assignment;
+  let classification = classify(section, subsection, key);
+
+  if (section === 'alias' && !subsection && beginsShellAlias(value)) {
+    classification = { normalized_key: `alias.${key.toLowerCase()}`, risk_class: 'shell-alias' };
+  }
+
+  if (!classification) return;
+
+  findings.push({
+    line: lineNumber,
+    key: classification.normalized_key,
+    risk_class: classification.risk_class,
+    value: 'REDACTED'
+  });
 }
 
 function scanConfig(path, inputIndex) {
@@ -67,40 +165,28 @@ function scanConfig(path, inputIndex) {
   let section = null;
   let subsection = null;
   const findings = [];
-  const lines = text.split(/\r?\n/u);
+  const rawLines = text.split(/\r?\n/u);
+  const logicalLines = joinContinuedLines(rawLines);
 
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
+  for (const { lineNumber, text: line } of logicalLines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) continue;
 
-    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-      const parsed = normalizeSection(trimmed.slice(1, -1));
+    if (trimmed.startsWith('[')) {
+      const header = parseLeadingSectionHeader(trimmed);
+      if (!header) continue;
+      const parsed = normalizeSection(header.headerContent);
       section = parsed?.section ?? null;
       subsection = parsed?.subsection ?? null;
+      const remainder = stripUnquotedComment(header.remainder).trim();
+      if (section && remainder) {
+        evaluateAssignment(remainder, section, subsection, lineNumber, findings);
+      }
       continue;
     }
 
     if (!section) continue;
-
-    const assignment = line.match(/^\s*([^=\s]+)\s*=\s*(.*)$/u);
-    if (!assignment) continue;
-
-    const [, key, value] = assignment;
-    let classification = classify(section, subsection, key);
-
-    if (section === 'alias' && !subsection && beginsShellAlias(value)) {
-      classification = { normalized_key: `alias.${key.toLowerCase()}`, risk_class: 'shell-alias' };
-    }
-
-    if (!classification) continue;
-
-    findings.push({
-      line: index + 1,
-      key: classification.normalized_key,
-      risk_class: classification.risk_class,
-      value: 'REDACTED'
-    });
+    evaluateAssignment(line, section, subsection, lineNumber, findings);
   }
 
   return {

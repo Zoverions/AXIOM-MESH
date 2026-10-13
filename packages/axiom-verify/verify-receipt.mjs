@@ -1,5 +1,5 @@
 import { digestObject, VerifyError } from './canonical.mjs';
-import { loadPublicKey, verifyObjectSignature } from './crypto.mjs';
+import { keyIdFor, loadPublicKey, verifyObjectSignature } from './crypto.mjs';
 import {
   isKnownReceiptSchema,
   MACHINE_INTENT_RECEIPT_SCHEMA,
@@ -8,6 +8,12 @@ import {
 import { buildVerificationReport } from './report.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
+const ALLOWED_RECEIPT_KEYS = new Set([
+  'schema',
+  'statement',
+  'attestation',
+  'receipt_digest'
+]);
 
 /**
  * Verify a machine-receipt-like artifact with caller-supplied public key material.
@@ -74,6 +80,23 @@ function verifyMachineIntentReceipt(receipt, { publicKeyPem } = {}) {
     );
   }
 
+  if (Object.hasOwn(receipt, 'verification')) {
+    return failClosed(
+      'invalid_shape',
+      'Machine intent receipt must not embed top-level verification output',
+      MACHINE_INTENT_RECEIPT_SCHEMA
+    );
+  }
+
+  const unexpectedKeys = Object.keys(receipt).filter(key => !ALLOWED_RECEIPT_KEYS.has(key));
+  if (unexpectedKeys.length > 0) {
+    return failClosed(
+      'invalid_shape',
+      `Machine intent receipt contains unexpected top-level fields: ${unexpectedKeys.sort().join(', ')}`,
+      MACHINE_INTENT_RECEIPT_SCHEMA
+    );
+  }
+
   if (receipt.statement?.schema !== MACHINE_INTENT_RECEIPT_STATEMENT_SCHEMA) {
     return failClosed(
       'invalid_statement_schema',
@@ -126,14 +149,17 @@ function verifyMachineIntentReceipt(receipt, { publicKeyPem } = {}) {
   } catch {
     return failClosed(
       'invalid_public_key',
-      'Public key material could not be parsed as an SPKI PEM key',
+      'Public key material could not be parsed as an SPKI PEM Ed25519 key',
       MACHINE_INTENT_RECEIPT_SCHEMA,
       { receipt_digest: claimedDigest }
     );
   }
 
-  const signatureOk = verifyObjectSignature(receipt.statement, receipt.attestation, publicKey);
-  if (!signatureOk) {
+  const expectedKeyId = keyIdFor('grid', publicKey);
+  if (
+    receipt.attestation.key_id !== expectedKeyId
+    || !verifyObjectSignature(receipt.statement, receipt.attestation, publicKey)
+  ) {
     return failClosed(
       'signature_invalid',
       'Ed25519 attestation does not verify under the supplied public key (bad signature, wrong key, or altered statement)',
