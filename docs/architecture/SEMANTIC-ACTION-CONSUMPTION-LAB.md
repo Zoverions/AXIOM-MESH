@@ -47,7 +47,14 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 > only secret that binds follow-up transitions. Replay receipts returned to a
 > non-admitting presenter, and unauthenticated `getReceipt` reads, carry
 > `presentation_jti_digest: null`; only the admitting presenter sees that
-> digest. `abort` is deliberately unauthenticated in the lab: it can only
+> digest. The denial reason follows the same rule (#1894 N-2): only the
+> presenter of the last admission is told `token_replayed` while the budget is
+> exhausted or that admission is unresolved. Any other replayed jti gets the
+> same response as a never-seen jti (`semantic_budget_exhausted` or
+> `prior_admission_unresolved`), so the reason cannot confirm a guessed earlier
+> jti. With budget left and the last admission resolved, a replayed earlier jti
+> is still refused with `token_replayed`, since a never-seen jti would be
+> admitted there. This is defence in depth on top of the 128-bit rule. `abort` is deliberately unauthenticated in the lab: it can only
 > remove authority, never add it, so its residual risk is denial of service,
 > not escalation.
 >

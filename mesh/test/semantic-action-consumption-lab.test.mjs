@@ -1096,6 +1096,63 @@ test('R-2 (lab only) replay receipts reveal the admitting jti digest only to the
   assert.equal(afterCommit.receipt.presentation_jti_digest, null);
 });
 
+test('#1894 N-2 (lab only) a non-admitting presenter gets one uniform denial reason, so a guessed earlier-admitting jti is not confirmed', async () => {
+  // Budget exhausted: an earlier (non-last) admitting jti and a never-seen jti
+  // must be indistinguishable; only the presenter of the last admission keeps
+  // token_replayed (the same rule that already gates the jti-digest reveal).
+  {
+    const { lab } = await registeredLab({ budget: 2 });
+    const sink = createSink({ idempotent: false });
+    const earlier = freshToken();
+    const latest = freshToken();
+    await executeAdmitted(lab, await lab.admit({ presentation: earlier, effect: structuredEffect() }), sink);
+    await executeAdmitted(lab, await lab.admit({ presentation: latest, effect: structuredEffect() }), sink);
+    const guessedHit = await lab.admit({ presentation: earlier, effect: structuredEffect() });
+    const guessedMiss = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+    assert.equal(guessedMiss.reason, 'semantic_budget_exhausted');
+    assert.equal(guessedHit.reason, guessedMiss.reason, 'an earlier admitting jti must not be confirmed by its reason');
+    assert.deepEqual(guessedHit, guessedMiss, 'the whole response is identical for a hit and a miss');
+    assert.equal(guessedHit.perform, false);
+    const owner = await lab.admit({ presentation: latest, effect: structuredEffect() });
+    assert.equal(owner.reason, 'token_replayed');
+    assert.equal(owner.receipt.presentation_jti_digest, sha256(latest.jti));
+    assert.equal(owner.receipt.admissions_consumed, 2);
+    assert.equal(sink.mutations, 2);
+  }
+  // Prior admission unresolved with budget left: same property.
+  {
+    const { lab } = await registeredLab({ budget: 3 });
+    const sink = createSink({ idempotent: false });
+    const earlier = freshToken();
+    await executeAdmitted(lab, await lab.admit({ presentation: earlier, effect: structuredEffect() }), sink);
+    const pending = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+    assert.equal(pending.decision, 'admit');
+    const guessedHit = await lab.admit({ presentation: earlier, effect: structuredEffect() });
+    const guessedMiss = await lab.admit({ presentation: freshToken(), effect: structuredEffect() });
+    assert.equal(guessedMiss.reason, 'prior_admission_unresolved');
+    assert.deepEqual(guessedHit, guessedMiss);
+    assert.equal(guessedHit.decision, 'deny');
+    const budget = await lab.getBudget({ authorization_instance_id: 'authz-grade-1' });
+    assert.equal(budget.consumed, 2, 'neither presentation consumed budget');
+  }
+  // Deny-dominance: with budget left and the last admission resolved, an
+  // earlier admitting jti is still refused (never re-admitted, no budget used).
+  {
+    const { lab } = await registeredLab({ budget: 3 });
+    const sink = createSink({ idempotent: false });
+    const earlier = freshToken();
+    await executeAdmitted(lab, await lab.admit({ presentation: earlier, effect: structuredEffect() }), sink);
+    await executeAdmitted(lab, await lab.admit({ presentation: freshToken(), effect: structuredEffect() }), sink);
+    const replay = await lab.admit({ presentation: earlier, effect: structuredEffect() });
+    assert.notEqual(replay.decision, 'admit');
+    assert.equal(replay.perform, false);
+    assert.equal(replay.reason, 'token_replayed');
+    assert.equal(replay.receipt.presentation_jti_digest, null);
+    assert.equal(replay.receipt.admissions_consumed, 2);
+    assert.equal(sink.mutations, 2);
+  }
+});
+
 test('R-5 (lab only) Unicode format (Cf) and default-ignorable code points fail closed', async () => {
   const { lab } = await registeredLab();
   const samples = [
