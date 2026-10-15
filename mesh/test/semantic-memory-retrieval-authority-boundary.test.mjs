@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -563,11 +563,14 @@ test('a forged verified review digest, evidence or clock on Object.prototype gra
 });
 
 // ---------------------------------------------------------------------------
-// Consumer allowlist. The retrieval-boundary audit found no src consumer of
+// Consumer allowlist. The retrieval-boundary audit found no consumer of
 // retrieval output outside the semantic-memory modules. A new importer, or a new
-// src site that supplies verified_review_evidence (or names the removed
+// site that supplies verified_review_evidence (or names the removed
 // verified_review_request_digest), must be audited against the boundary before
-// it is added here.
+// it is added here. The scan covers every non-test source file in the
+// repository (#1918), not only directories named src: root scripts, apps,
+// labs, packages and mesh/test-support are scanned too. Only directories named
+// test or tests (and node_modules, .git, .data) are skipped.
 
 const SOURCE_EXTENSIONS = /\.(mjs|cjs|js|ts|mts|cts|rs|py)$/;
 const SKIPPED_DIRECTORIES = new Set(['node_modules', '.git', 'test', 'tests', '.data']);
@@ -577,7 +580,12 @@ const ALLOWED_IMPORTERS = Object.freeze([
   'mesh/src/lib/semantic-memory-lifecycle.mjs',
   // Imports the evidence checker (isSemanticMemoryGridEvidence and the private
   // binding reader) from the Grid adapter; it mints nothing.
-  'mesh/src/lib/semantic-memory-provenance.mjs'
+  'mesh/src/lib/semantic-memory-provenance.mjs',
+  // Test support, imported only by mesh/test: records a completed owner review
+  // in a GridStore it opens itself and reads it back through
+  // verifySemanticMemoryReviewFromGrid. This is the documented in-process
+  // self-made-store trust boundary; no src module imports it.
+  'mesh/test-support/semantic-memory-grid-review.mjs'
 ].sort());
 const ALLOWED_VERIFIED_DIGEST_SITES = Object.freeze([
   'mesh/src/grid/semantic-memory-review-evidence.mjs',
@@ -595,17 +603,6 @@ const ALLOWED_GRID_EVIDENCE_CALLERS = Object.freeze([
   'mesh/src/grid/semantic-memory-review-evidence.mjs'
 ]);
 
-async function sourceTrees(directory = REPOSITORY_ROOT) {
-  const trees = [];
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (!entry.isDirectory() || SKIPPED_DIRECTORIES.has(entry.name)) continue;
-    const path = join(directory, entry.name);
-    if (entry.name === 'src') trees.push(path);
-    else trees.push(...await sourceTrees(path));
-  }
-  return trees;
-}
-
 async function sourceFiles(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -617,32 +614,84 @@ async function sourceFiles(directory) {
   return files;
 }
 
-test('only the audited semantic-memory modules consume retrieval output or supply a verified review digest', async () => {
-  const trees = await sourceTrees();
-  assert.ok(trees.some(tree => posixRelative(REPOSITORY_ROOT, tree) === 'mesh/src'), 'mesh/src must be scanned');
-  const importers = [];
-  const verifiedDigestSites = [];
-  const verifiedEvidenceSites = [];
-  const gridEvidenceCallers = [];
-  for (const tree of trees) {
-    for (const file of await sourceFiles(tree)) {
-      // Comments (JSDoc that documents the boundary) are not consumers.
-      const text = (await readFile(file, 'utf8'))
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/^\s*\/\/.*$/gm, '');
-      const path = posixRelative(REPOSITORY_ROOT, file);
-      if (/semantic-memory-(provenance|lifecycle|grid-evidence|review-evidence)(\.mjs)?['"]/.test(text)) {
-        importers.push(path);
-      }
-      if (text.includes('verified_review_request_digest')) verifiedDigestSites.push(path);
-      if (text.includes('verified_review_evidence')) verifiedEvidenceSites.push(path);
-      if (/verifySemanticMemoryGridEvidence\s*\(/.test(text)) gridEvidenceCallers.push(path);
+// One scanner for the repository and for the fixture tree below.
+async function consumerScan(root) {
+  const files = (await sourceFiles(root)).map(file => [file, posixRelative(root, file)]);
+  const scan = {
+    scanned: new Set(files.map(([, path]) => path)),
+    importers: [],
+    verifiedDigestSites: [],
+    verifiedEvidenceSites: [],
+    gridEvidenceCallers: []
+  };
+  for (const [file, path] of files) {
+    // Comments (JSDoc that documents the boundary) are not consumers.
+    const text = (await readFile(file, 'utf8'))
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    if (/semantic-memory-(provenance|lifecycle|grid-evidence|review-evidence)(\.mjs)?['"]/.test(text)) {
+      scan.importers.push(path);
     }
+    if (text.includes('verified_review_request_digest')) scan.verifiedDigestSites.push(path);
+    if (text.includes('verified_review_evidence')) scan.verifiedEvidenceSites.push(path);
+    if (/verifySemanticMemoryGridEvidence\s*\(/.test(text)) scan.gridEvidenceCallers.push(path);
   }
+  for (const key of ['importers', 'verifiedDigestSites', 'verifiedEvidenceSites', 'gridEvidenceCallers']) scan[key].sort();
+  return scan;
+}
+
+test('only the audited semantic-memory modules consume retrieval output or supply a verified review digest', async () => {
+  const scan = await consumerScan(REPOSITORY_ROOT);
+  // Scope pins: src trees, root scripts, mesh/test-support and other non-src
+  // trees are scanned; test directories are not.
+  for (const path of [
+    'mesh/src/lib/semantic-memory-provenance.mjs',
+    'memory-lifecycle-profile.mjs',
+    'mesh/test-support/semantic-memory-grid-review.mjs',
+    'apps/axiom-one/server.mjs'
+  ]) {
+    assert.ok(scan.scanned.has(path), `${path} must be scanned`);
+  }
+  assert.ok(![...scan.scanned].some(path => path.startsWith('mesh/test/')), 'mesh/test is test code and is not scanned');
   const message = 'new semantic-memory consumer: audit it against docs/architecture/SEMANTIC-MEMORY-RETRIEVAL-BOUNDARY.md';
-  assert.deepEqual(importers.sort(), [...ALLOWED_IMPORTERS], message);
-  assert.deepEqual(verifiedDigestSites.sort(), [...ALLOWED_VERIFIED_DIGEST_SITES], message);
-  assert.deepEqual(verifiedEvidenceSites.sort(), [...ALLOWED_VERIFIED_EVIDENCE_SITES], message);
-  assert.deepEqual(gridEvidenceCallers.sort(), [...ALLOWED_GRID_EVIDENCE_CALLERS], message);
+  assert.deepEqual(scan.importers, [...ALLOWED_IMPORTERS], message);
+  assert.deepEqual(scan.verifiedDigestSites, [...ALLOWED_VERIFIED_DIGEST_SITES], message);
+  assert.deepEqual(scan.verifiedEvidenceSites, [...ALLOWED_VERIFIED_EVIDENCE_SITES], message);
+  assert.deepEqual(scan.gridEvidenceCallers, [...ALLOWED_GRID_EVIDENCE_CALLERS], message);
   assert.ok(basename(fileURLToPath(import.meta.url)).startsWith('semantic-memory-'));
+});
+
+test('the consumer scan finds consumers outside src trees: root scripts, test-support, apps, packages and labs (#1918)', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-semantic-consumer-scan-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const planted = {
+    'root-script.mjs': "import { evaluateSemanticMemoryUse } from './mesh/src/lib/semantic-memory-provenance.mjs';\n",
+    'mesh/test-support/helper.mjs': "export { verifySemanticMemoryReviewFromGrid } from '../src/grid/semantic-memory-review-evidence.mjs';\n",
+    'mesh/scripts/tool.mjs': 'export const use = (f, r, e) => f(r, "privileged-instruction", { verified_review_evidence: e });\n',
+    'apps/web/client.js': "const m = await import('../../mesh/src/lib/semantic-memory-lifecycle.mjs');\n",
+    'packages/kit/index.cjs': 'module.exports = o => o.verified_review_request_digest;\n',
+    'labs/x/run.mjs': 'verifySemanticMemoryGridEvidence (rows);\n',
+    'mesh/src/lib/consumer.mjs': "import './semantic-memory-grid-evidence.mjs';\n"
+  };
+  const skipped = {
+    'mesh/test/a.test.mjs': "import '../src/lib/semantic-memory-provenance.mjs';\n",
+    'apps/web/tests/b.mjs': "import '../../../mesh/src/lib/semantic-memory-provenance.mjs';\n",
+    'node_modules/dep/index.mjs': "import 'x/semantic-memory-provenance.mjs';\n",
+    'notes/comment.mjs': "// import './semantic-memory-provenance.mjs';\n/* verified_review_evidence */\n"
+  };
+  for (const [path, text] of Object.entries({ ...planted, ...skipped })) {
+    await mkdir(dirname(join(root, path)), { recursive: true });
+    await writeFile(join(root, path), text);
+  }
+  const scan = await consumerScan(root);
+  assert.deepEqual(scan.importers, [
+    'apps/web/client.js',
+    'mesh/src/lib/consumer.mjs',
+    'mesh/test-support/helper.mjs',
+    'root-script.mjs'
+  ]);
+  assert.deepEqual(scan.verifiedEvidenceSites, ['mesh/scripts/tool.mjs']);
+  assert.deepEqual(scan.verifiedDigestSites, ['packages/kit/index.cjs']);
+  assert.deepEqual(scan.gridEvidenceCallers, ['labs/x/run.mjs']);
+  for (const path of Object.keys(skipped).slice(0, 3)) assert.ok(!scan.scanned.has(path), `${path} is not scanned`);
 });

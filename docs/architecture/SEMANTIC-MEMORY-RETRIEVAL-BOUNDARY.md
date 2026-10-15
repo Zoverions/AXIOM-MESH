@@ -114,7 +114,10 @@ own digest was granted with no Grid review at all. The option is removed. For
   from the record's own fields and returns
   `semantic_memory_review_provenance_mismatch`.
   `mesh/test/semantic-memory-evidence-owner-binding.test.mjs` pins the first on
-  both evaluate paths.
+  both evaluate paths. Adding the owner to the review request digest is
+  deliberately not done: it would change the `review_request_digest` of every
+  reviewed record, so every stored reviewed record would fail to normalize and
+  every recorded Grid review would stop verifying (#1918).
 - **No evidence** still returns
   `{ allow: false, code: 'semantic_memory_review_evidence_unverified' }`.
 - **Own reads and deny dominance (#1938/#1940)** apply to both option names:
@@ -146,13 +149,43 @@ protects against data (records, retrieval results, digest strings, copied or
 hand-built evidence, prototype pollution), not against code running in the
 same process with access to a store.
 
-Known residuals, tracked on #1918
-(https://github.com/Zoverions/AXIOM-MESH/issues/1918#issuecomment-6105608155):
+The three #1943 limits below are documented trust boundaries, not defects
+queued for a fix (CoS, #1918,
+https://github.com/Zoverions/AXIOM-MESH/issues/1918#issuecomment-6105608155).
+Changing any of them is new design work, not a residual:
 
-- Evidence is reusable for its own record. It is bound to one record, not to a
-  caller, a time or a single use.
-- Later Grid events do not revoke evidence that has already been minted. The
-  review is not re-read at evaluate time.
+- **Self-made store.** An in-process caller can open its own `GridStore`
+  (for example in a temp directory) and mint genuine evidence for a record it
+  made up, as described above. A possible future hardening is to mint evidence
+  only from a store opened at a pinned data path or identity key.
+- **Reuse for its own record.** Evidence is bound to one record, not to a
+  caller, a time or a single use. Whoever holds it can present it again for
+  that same record.
+- **No revocation.** Later Grid events do not revoke evidence that has already
+  been minted. The review is not re-read at evaluate time.
+
+### Review limits
+
+- **Long object ids cannot be reviewed.** The review intent's data scope is
+  `memory.semantic:<object_id>`, and `intentRequestBinding` caps each data scope
+  at 160 characters. A record whose `object_id` is 145 to 160 characters long
+  (the provenance id limit is 160) normalizes, is retrieved as content, takes a
+  lifecycle and can be derived from, but `semanticMemoryReviewRequestDigest`,
+  `ownerReviewSemanticMemory` and Grid verification throw a `ValidationError`
+  for it, so it can never reach `semantic_memory_instruction_allowed`. This
+  fails closed. Making such records reviewable would grant something denied
+  today and needs a CoS decision; it is not a residual fix.
+- **Derive from a reviewed parent.** `deriveSemanticMemoryProvenance` copies
+  the parent's `origin_principal` and `origin_runtime_id` into the child, and
+  `deriveSemanticMemoryLifecycle` binds the parent's provenance digest. For
+  a parent with explicit review evidence both first recompute the parent's
+  pre-review provenance (#1937) and throw a `ValidationError` when it does not
+  reproduce `reviewed_from_provenance_digest`, so an origin changed after
+  review never reaches a child. A re-reviewed parent cannot be recomputed and
+  fails closed, as in Grid verification; this is an intended deny-only
+  narrowing (CoS). An unreviewed parent's origin is its
+  own unbound claim and is copied as before. The child stays `untrusted-data`
+  and `unreviewed` either way.
 
 ### Store-bound, unforgeable Grid evidence
 
@@ -229,7 +262,7 @@ unexpired; nothing here makes the clock tamper-proof. Use the absent form
   - a Date that defines `valueOf`, `getTime`, `toISOString` or
     `Symbol.toPrimitive` on itself or on a subclass prototype, because it shows
     ordinary readers a different time than its slot holds. A Date whose
-    prototype chain has more than 64 objects before its base `Date.prototype`
+    prototype chain has 64 or more objects before its base `Date.prototype`
     is also rejected, because the chain is not walked to the end;
   - any other string;
   - any time that is not finite or not after the epoch (time `<= 0`):
@@ -261,7 +294,10 @@ unexpired; nothing here makes the clock tamper-proof. Use the absent form
 
 The audit of every src tree in the repository (`mesh/src` and
 `labs/rust-trust-core/src`) found no consumer outside the four semantic-memory
-modules. In particular:
+modules. Widened to every non-test source file (#1918), it finds one more
+importer, `mesh/test-support/semantic-memory-grid-review.mjs`. It is imported
+only by `mesh/test` and mints evidence from a `GridStore` it opens itself, which
+is the documented self-made-store trust boundary. In particular:
 
 - no consumer reads retrieval output to grant anything;
 - `evaluateSemanticMemoryLifecycleUse` only forwards the caller's verified
@@ -346,12 +382,16 @@ boundary:
   patches do not widen the ISO-8601 check. It also requires
   `Object.prototype.now` pollution to deny as documented above. Globals are
   restored in `finally`.
-- **Consumer allowlist.** A static scan of every `src` tree fails when a new
-  module imports the semantic-memory modules, supplies
+- **Consumer allowlist.** A static scan of every non-test source file in the
+  repository (everything except `test`/`tests`, `node_modules`, `.git` and
+  `.data` directories: src trees, root scripts, `apps`, `labs`, `packages`,
+  `mesh/test-support`, ...) fails when a new module imports the semantic-memory
+  modules, supplies
   `verified_review_evidence` or names the removed
   `verified_review_request_digest`, or calls the Grid row checker
   (`verifySemanticMemoryGridEvidence`, now internal to the Grid adapter).
-  Such a change must be audited against this document first.
+  Such a change must be audited against this document first. A computed
+  dynamic import or computed key is not detected by this text scan.
 
 ## Non-claims
 

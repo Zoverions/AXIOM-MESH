@@ -86,7 +86,7 @@ test('red/green: a Date subclass overriding valueOf/getTime is rejected', () => 
   for (const Kind of [ZeroValueOf, ZeroGetTime, ZeroBoth, Deeper, ZeroToISOString, ZeroToPrimitive]) {
     assertRejectedEverywhere(new Kind(LATE), Kind.name);
   }
-  // A pathologically deep chain (more than 64 prototypes above the base
+  // A pathologically deep chain (64 or more prototypes above the base
   // Date.prototype) is not walked to the end: it is rejected, not trusted.
   let deepPrototype = Date.prototype;
   for (let index = 0; index < 70; index += 1) deepPrototype = Object.create(deepPrototype);
