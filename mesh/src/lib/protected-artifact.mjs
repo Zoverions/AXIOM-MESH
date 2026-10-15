@@ -312,9 +312,6 @@ function verifyRewrapNode({
     rewrap.signer?.service !== 'grid'
     || typeof rewrap.signer?.public_key_pem !== 'string'
     || rewrap.attestation?.key_id !== rewrap.signer?.key_id
-    || rewrap.signer.key_id !== (
-      `grid:${sha256(rewrap.signer.public_key_pem).slice(0, 16)}`
-    )
   ) {
     throw new ValidationError('Protected artifact rewrap signer metadata is invalid');
   }
@@ -326,6 +323,10 @@ function verifyRewrapNode({
   }
   if (publicKey.asymmetricKeyType !== 'ed25519') {
     throw new ValidationError('Protected artifact rewrap signer is not Ed25519');
+  }
+  const canonicalSignerPem = publicKey.export({ type: 'spki', format: 'pem' });
+  if (rewrap.signer.key_id !== `grid:${sha256(canonicalSignerPem).slice(0, 16)}`) {
+    throw new ValidationError('Protected artifact rewrap signer metadata is invalid');
   }
   const trustedKey = verificationKeys?.get?.(rewrap.signer.key_id);
   if (

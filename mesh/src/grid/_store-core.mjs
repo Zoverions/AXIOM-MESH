@@ -2955,12 +2955,16 @@ function parseGridKeyTransition(manifest) {
   } catch {
     throw new ValidationError('Credential rotation history Grid key is invalid');
   }
-  const beforeId = `grid:${sha256(manifest.before.public_keys.grid).slice(0, 16)}`;
-  const afterId = `grid:${sha256(manifest.after.public_keys.grid).slice(0, 16)}`;
   if (
     beforeKey.asymmetricKeyType !== 'ed25519'
     || afterKey.asymmetricKeyType !== 'ed25519'
-    || beforeId !== manifest.before.key_ids?.grid
+  ) {
+    throw new ValidationError('Credential rotation history key transition is invalid');
+  }
+  const beforeId = `grid:${sha256(beforeKey.export({ type: 'spki', format: 'pem' })).slice(0, 16)}`;
+  const afterId = `grid:${sha256(afterKey.export({ type: 'spki', format: 'pem' })).slice(0, 16)}`;
+  if (
+    beforeId !== manifest.before.key_ids?.grid
     || afterId !== manifest.after.key_ids?.grid
     || beforeId === afterId
     || manifest.attestation?.key_id !== beforeId

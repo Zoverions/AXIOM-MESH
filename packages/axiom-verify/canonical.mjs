@@ -1,11 +1,41 @@
 import { createHash } from 'node:crypto';
+import { types } from 'node:util';
 
 /**
  * Minimal canonical JSON + digest helpers for AXIOM Verify.
  * Dependency-free subset aligned with mesh/src/lib/canonical.mjs for offline use.
  */
 
+export const CANONICAL_JSON_MAX_DEPTH = 2048;
+
+const STACK_OVERFLOW = 'Maximum call stack size exceeded';
+
+let ancestors = null;
+let depth = 0;
+
 export function canonicalize(value) {
+  ancestors = new Set();
+  depth = 0;
+  try {
+    return canonicalValue(value);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new TypeError(
+        String(error.message).includes(STACK_OVERFLOW)
+          ? 'Canonical JSON input exceeds the engine stack depth'
+          : `Canonical JSON input exceeds an engine limit (${error.message})`
+      );
+    }
+    throw error;
+  } finally {
+    ancestors = null;
+  }
+}
+
+function canonicalValue(value) {
+  if (types.isProxy(value)) {
+    throw new TypeError('Canonical JSON cannot encode a Proxy');
+  }
   if (value === null || typeof value === 'boolean' || typeof value === 'string') {
     return value;
   }
@@ -15,12 +45,30 @@ export function canonicalize(value) {
     }
     return Object.is(value, -0) ? 0 : value;
   }
-  if (Array.isArray(value)) return canonicalizeArray(value);
-  if (typeof value === 'object') return canonicalizeRecord(value);
-  throw new TypeError(`Canonical JSON cannot encode ${typeof value}`);
+  if (typeof value !== 'object') {
+    throw new TypeError(`Canonical JSON cannot encode ${typeof value}`);
+  }
+  if (depth >= CANONICAL_JSON_MAX_DEPTH) {
+    throw new TypeError(`Canonical JSON nesting exceeds ${CANONICAL_JSON_MAX_DEPTH} levels`);
+  }
+  if (ancestors.has(value)) {
+    throw new TypeError('Canonical JSON cannot encode a cyclic structure');
+  }
+  return Array.isArray(value) ? canonicalizeArray(value) : canonicalizeRecord(value);
+}
+
+function enter(value) {
+  ancestors.add(value);
+  depth += 1;
+}
+
+function leave(value) {
+  depth -= 1;
+  ancestors.delete(value);
 }
 
 function canonicalizeArray(value) {
+  enter(value);
   if (Object.getPrototypeOf(value) !== Array.prototype) {
     throw new TypeError('Canonical JSON arrays must use the ordinary Array prototype');
   }
@@ -39,17 +87,19 @@ function canonicalizeArray(value) {
     if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
       throw new TypeError(`Canonical JSON array index ${index} must be an enumerable data property`);
     }
-    output.push(canonicalize(descriptor.value));
+    output.push(canonicalValue(descriptor.value));
   }
   for (const name of Object.getOwnPropertyNames(value)) {
     if (!allowedNames.has(name)) {
       throw new TypeError(`Canonical JSON arrays cannot contain custom property ${name}`);
     }
   }
+  leave(value);
   return output;
 }
 
 function canonicalizeRecord(value) {
+  enter(value);
   const prototype = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
     throw new TypeError('Canonical JSON objects must be plain records');
@@ -73,12 +123,13 @@ function canonicalizeRecord(value) {
       throw new TypeError(`Canonical JSON cannot encode property ${key}`);
     }
     Object.defineProperty(output, key, {
-      value: canonicalize(item),
+      value: canonicalValue(item),
       enumerable: true,
       configurable: true,
       writable: true
     });
   }
+  leave(value);
   return output;
 }
 
