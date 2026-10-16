@@ -1,0 +1,141 @@
+{
+  "schema": "axiom-circle-historical-rule-binding-threat-review.v0",
+  "version": 0,
+  "status": "inert-historical-binding-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "scope": "circle-invitation-membership-proposal-decision-event-snapshot-rule-binding-only",
+  "threats": [
+    {
+      "id": "historical-record-substitution-or-rewrite",
+      "mitigations": [
+        "canonical-record-digest-required",
+        "record-identity-unique-per-type",
+        "event-snapshot-semantics"
+      ],
+      "residual_limit": "local digest validation detects changes to supplied snapshots but does not prove an omitted or never-recorded event did not exist"
+    },
+    {
+      "id": "ledger-reordering-truncation-or-fork",
+      "mitigations": [
+        "previous-binding-digest-chain",
+        "strict-binding-time-order",
+        "unique-binding-identifiers"
+      ],
+      "residual_limit": "without an externally anchored head digest, a locally supplied prefix or alternate complete ledger can still be presented as if it were the whole history"
+    },
+    {
+      "id": "stale-invitation-admission-after-charter-change",
+      "mitigations": [
+        "invitation-charter-resolved-at-issue",
+        "membership-charter-resolved-at-acceptance",
+        "invitation-charter-must-still-equal-acceptance-charter"
+      ],
+      "residual_limit": "the binding rejects stale charter admission but does not itself prove the inviter or accepting principal was authentically present or authorized"
+    },
+    {
+      "id": "one-use-invitation-replay",
+      "mitigations": [
+        "membership-requires-invitation-basis-binding",
+        "invitation-basis-consumption-tracked-across-ledger",
+        "second-membership-from-same-invitation-basis-rejected"
+      ],
+      "residual_limit": "one-use enforcement prevents duplicate membership acceptances inside the supplied ledger but does not prove a truncated or alternate unanchored ledger omitted an earlier consumption"
+    },
+    {
+      "id": "mid-proposal-rule-switching",
+      "mitigations": [
+        "proposal-freezes-charter-at-creation",
+        "decision-requires-proposal-basis",
+        "decision-inherits-proposal-frozen-charter"
+      ],
+      "residual_limit": "freezing rules prevents amendment-based rule switching for the represented proposal but does not prove votes, quorum, tally, or decision legitimacy"
+    },
+    {
+      "id": "mutable-projection-misrepresented-as-original-event",
+      "mitigations": [
+        "membership-requires-active-acceptance-snapshot",
+        "membership-status-effective-at-acceptance",
+        "proposal-requires-open-creation-snapshot"
+      ],
+      "residual_limit": "later membership, proposal, appeal, exit, or task state still needs separate append-only lifecycle events rather than projection overwrite"
+    },
+    {
+      "id": "basis-binding-substitution",
+      "mitigations": [
+        "basis-binding-must-already-exist",
+        "membership-basis-type-invitation",
+        "decision-basis-type-proposal",
+        "basis-record-identities-cross-checked"
+      ],
+      "residual_limit": "structural basis binding does not independently prove the source record was signed, witnessed, or admitted through an authorized process"
+    },
+    {
+      "id": "event-time-or-binding-time-backdating",
+      "mitigations": [
+        "canonical-utc-event-time",
+        "event-time-must-equal-source-record-time",
+        "binding-cannot-predate-event",
+        "future-event-and-binding-time-rejected"
+      ],
+      "residual_limit": "canonical chronology is a local consistency property and does not independently attest secure real-world time or prevent a dishonest source from claiming an earlier event timestamp"
+    },
+    {
+      "id": "cross-circle-historical-confusion",
+      "mitigations": [
+        "exact-ledger-circle-binding",
+        "exact-record-circle-binding",
+        "charter-lifecycle-circle-binding"
+      ],
+      "residual_limit": "no cross-Circle treaty, delegation, inheritance, or federated historical authority semantics are implemented"
+    },
+    {
+      "id": "evidence-or-receipt-authority-laundering",
+      "mitigations": [
+        "canonical-reference-formatting",
+        "record-digest-binding",
+        "runtime-authority-false",
+        "authority-effect-none"
+      ],
+      "residual_limit": "an evidence or participant-receipt reference is provenance data only and does not establish truth, identity, consent, vote validity, or authorization"
+    },
+    {
+      "id": "historical-binding-authority-laundering",
+      "mitigations": [
+        "historical-record-may-mint-runtime-authority-false",
+        "portable-authority-false",
+        "network-effect-none"
+      ],
+      "residual_limit": "a valid historical rule binding can explain which rules were associated with an event snapshot but cannot grant Grid, Sandbox, repository, legal, financial, or coercive authority"
+    },
+    {
+      "id": "partial-record-type-coverage",
+      "mitigations": [
+        "exact-supported-record-type-inventory",
+        "unsupported-types-rejected-rather-than-inferred"
+      ],
+      "residual_limit": "v0 covers invitations, membership acceptance, proposal creation, and decisions only; tasks, appeals, exits, suspensions, revocations, and later projection transitions remain outside this ledger"
+    }
+  ],
+  "promotion_blockers": [
+    "grid-backed-replay-safe-binding-ledger-with-anchored-head",
+    "signed-event-record-and-actor-authentication-model",
+    "membership-proposer-voter-and-decision-authority-validation",
+    "append-only-membership-status-proposal-status-task-appeal-and-exit-events",
+    "historical-read-model-that-does-not-rewrite-core-event-snapshots",
+    "causal-conflict-and-concurrent-history-handling",
+    "privacy-disclosure-retention-and-export-review",
+    "security-and-governance-review-before-real-circle-use"
+  ],
+  "non_claims": {
+    "historical_binding_proves_record_authenticity": false,
+    "historical_binding_proves_actor_authorization": false,
+    "historical_binding_proves_decision_legitimacy": false,
+    "historical_binding_proves_complete_history": false,
+    "binding_ledger_is_grid_persisted": false,
+    "distributed_consensus_enabled": false,
+    "runtime_authority_granted": false,
+    "portable_authority_granted": false
+  }
+}
