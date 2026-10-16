@@ -89,6 +89,21 @@ High-value contribution classes include:
 - recovery, scaling, privacy, and continuity failure-mode analysis;
 - hardware and platform portability evidence.
 
+## Debugger-first diagnosis
+
+Project-scoped MCP configuration exposes two developer-only debugger surfaces:
+
+- `debugger` — DAP-backed step-through debugging for reproducible Node/JavaScript and Rust/runtime failures;
+- `chrome-devtools` — isolated browser inspection for UI, console, network, memory, and performance failures.
+
+For a runtime failure that reproduces locally, use the relevant debugger before making a second speculative code patch. Prefer the narrowest failing test, executable, or disposable local preview; set breakpoints around the first violated invariant; inspect the stack and only the variables needed to explain the failure; then patch and reproduce the same case.
+
+For browser/UI, network, or performance regressions, inspect the live local page with `chrome-devtools` before changing application code when runtime evidence can distinguish the cause. Static diagnostics with a complete causal explanation do not require a debugger.
+
+Debugger observations are evidence, not authority. Debugger MCP servers are developer tooling outside the AXIOM runtime trust path. Do not attach debugger tooling to production, third-party systems, credential-bearing sessions, or private user data; do not disable secret redaction; do not use evaluation, browser scripting, or debugger attach to bypass authorization or create an external effect that the task did not already permit.
+
+If the relevant debugger is unavailable, continue with tests, logs, traces, and static inspection, but state that live debugger evidence was not obtained. Never describe an inferred runtime state as debugger-observed. Remove temporary instrumentation after the diagnosis and still run the repository's required checks before presenting a fix as ready.
+
 ## Evidence expectations
 
 Where applicable, report:

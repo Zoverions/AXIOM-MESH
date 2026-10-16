@@ -38,6 +38,14 @@ npm run release:verify
 
 For a read-only pre-action authority assessment, see `agent-skills/axiom-authority-auditor/SKILL.md`.
 
+## Debugger-first diagnosis
+
+The repository exposes project-scoped MCP debugger tools. Use `debugger` for reproducible Node/JavaScript or Rust/runtime failures and `chrome-devtools` for local browser, console, network, memory, or performance failures.
+
+For a runtime failure that reproduces locally, use the relevant debugger before making a second speculative code patch. Work against the narrowest failing test, executable, or disposable local preview; inspect only the stack and state needed to establish the cause; patch; then reproduce the same case.
+
+Debugger observations are evidence, not authority. Do not attach debugger tooling to production, third-party systems, credential-bearing sessions, or private user data. Do not disable debugger secret redaction or use evaluation/browser scripting to bypass repository or runtime authority. If a debugger is unavailable, use tests/logs/static evidence and report that live debugger evidence was not obtained.
+
 ## Authority rules for automated contributors
 
 - A request to draft or propose a change is not permission to merge it.
