@@ -15,7 +15,7 @@
 - Node compatibility remains `>=22.23.2 <23 || >=24.14.0 <25`.
 - `mesh/config/capabilities.json` remains authoritative; this slice does not promote `ai.providers`.
 - No production module in this slice may import filesystem, network, subprocess, Grid, credential, wallet, token, secret, or runtime-supervisor surfaces.
-- `authority_effect` must remain `none`.
+- `authority_effect` must remain `none` until the dedicated Gateway authorization step; authorization itself is selection-scoped only and never execution authority.
 - `network_effect` must remain `none`.
 - `credential_visibility` must remain `none`.
 - `runtime_activation` must remain `false`.
@@ -25,6 +25,10 @@
 - Recommendation is not authorization: proposal output must retain `winner_selected: false`, `runtime_activation: false`, `authority_effect: none`, and `selection_effect: proposal-only`.
 - Policy-bounded recommendation v0 uses explicit ordered enum preferences only; no hidden weights, learned scores, ambient provider defaults, or automatic execution.
 - `profile_id` raw JavaScript code-unit order is the mandatory final recommendation tie-break; `localeCompare()` is forbidden for evidence ordering.
+- Raw `PolicyEngine.evaluate()` allow is never sufficient evidence of completed cognitive selection authorization.
+- Selection authorization must traverse the normal Gateway `/v1/intents` path and bind the exact proposal to terminal execution evidence.
+- A selection authorization decision is non-transferable evidence, not a bearer capability, provider credential, runtime grant, or cognitive-execution authorization.
+- Any future provider/model execution must re-enter a fresh normal Gateway authority path and independently satisfy current policy, capability, assurance, credential, destination, and runtime constraints.
 
 ---
 
@@ -245,27 +249,112 @@ The report must include request/policy/eligibility digests, ranked candidate evi
 
 Use JSON Schema 2020-12, closed-world objects, fixed boundary constants, explicit criterion variants, semantic-validator metadata, and non-claims for invocation, egress, execution, authority, learned routing, and hidden scoring.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
-Run focused tests and the full protected suite. No eligibility or provider/runtime test may be weakened.
+Focused tests and the full protected suite passed without weakening eligibility or provider/runtime safeguards.
 
 ### Task 8: Review, verify, and integrate the exact head
 
 **Files:**
 - Review all changed files; add regression tests before any defect correction.
 
-- [ ] **Step 1: Review for determinism and authority leakage**
+- [x] **Step 1: Review for determinism and authority leakage**
 
-Check for `localeCompare`, filesystem/network/subprocess imports, provider/runtime invocation, credential paths, hidden defaults, eligibility bypass, mutable nested evidence, and accidental winner semantics.
+Checked for `localeCompare`, filesystem/network/subprocess imports, provider/runtime invocation, credential paths, hidden defaults, eligibility bypass, mutable nested evidence, and accidental winner semantics.
 
-- [ ] **Step 2: Run exact-head cross-platform verification**
+- [x] **Step 2: Run exact-head cross-platform verification**
+
+Clean Kernel full suite and signed assurance chain, Node 22, container deny-egress/segmentation/failure isolation, Windows, macOS ARM, and macOS Intel passed on the verified head.
+
+- [x] **Step 3: Merge only the verified head**
+
+The known ready-for-review connector mutation failed, so the draft was closed without rewriting the branch and a non-draft replacement was opened from the same exact verified head, then merged with the expected-head guard.
+
+- [x] **Step 4: Verify the resulting `main` merge commit**
+
+Post-merge Clean Kernel, Node 22, container, Windows/macOS compatibility, and protected analysis contexts completed green before integration was claimed.
+
+---
+
+## Follow-on: Governed Cognitive Selection Authorization v0
+
+This slice adds a narrow authority bridge after an inert recommendation. The governing doctrine is:
+
+> **Eligibility establishes admissibility. Preference proposes an ordering. Gateway authority may authorize the proposed selection. Execution requires a separate fresh authority path.**
+
+Selection authorization is intentionally not a provider call and not a transferable execution grant.
+
+### Task 9: Bind an exact recommendation to the normal Gateway authority path
+
+**Files:**
+- Create: `mesh/src/lib/cognitive-selection-authorization.mjs`
+- Modify: `mesh/config/policy.json`
+- Modify: `mesh/src/sandbox/executor.mjs`
+- Create: `mesh/test/cognitive-selection-authorization.test.mjs`
+
+**Interfaces:**
+- Action: `cognitive.selection.authorize`.
+- Policy scope: `cognitive:select`.
+- Tool: `builtin.cognitive-selection-authorize`.
+- Gateway route: existing `intents.submit` / `POST /v1/intents` only.
+
+- [x] **Step 1: Reject pre-authorized, widened, or recommendation-free proposals**
+
+The authorization builder validates the exact inert proposal, requires rank-one recommendation binding, and rejects winner selection, runtime activation, provider egress, credential visibility, authority widening, or bypass of Gateway authorization.
+
+- [x] **Step 2: Build only a normal Gateway intent**
+
+The contract builds a standard `axiom-intent-request.v1` shape. It does not call PolicyEngine, Gateway, Hypervisor, Sandbox, Grid, a provider, a credential broker, or a runtime itself.
+
+- [x] **Step 3: Add an output-only local Sandbox builtin**
+
+`builtin.cognitive-selection-authorize` returns only a deterministic authorization-output object. It returns no Grid mutation/query, activates no runtime, exposes no credential, and invokes no cognitive provider.
+
+- [x] **Step 4: Prove raw policy allow is insufficient**
+
+A regression test demonstrates that `PolicyEngine.evaluate()` returning `allow: true` cannot be passed off as a completed cognitive selection authorization result.
+
+### Task 10: Validate terminal authorization evidence without laundering it into execution authority
+
+**Files:**
+- Modify: `mesh/src/lib/cognitive-selection-authorization.mjs`
+- Create: `mesh/test/cognitive-selection-authorization-e2e.test.mjs`
+- Modify: `mesh/test/cognitive-selection-boundary-static.test.mjs`
+
+- [x] **Step 1: Require completed Gateway result and exact Sandbox-output digest binding**
+
+The validator requires terminal `status: completed`, exact authorization output fields, plan/invocation/capability-consumption/policy digests, and an `execution_digest` equal to the digest of the exact Sandbox output.
+
+- [x] **Step 2: Match the real human/operator evidence contract**
+
+Human/operator intent results do not serialize `effect_destination`; machine-principal results may do so. If present it must be exactly `local`. The authorization decision records `effect_destination: null` when the Gateway made no destination claim rather than inventing evidence.
+
+- [x] **Step 3: Exercise the real four-service path**
+
+Start the actual development Gateway, Hypervisor, Sandbox, and Grid; submit the authorization intent through `/v1/intents`; validate the returned terminal result; and prove the resulting decision authorizes selection only.
+
+- [x] **Step 4: Pin the source boundary statically**
+
+The authorization module may import only canonical helpers, the inert selection-proposal contract, and the Gateway client contract. It may not import I/O, provider/runtime, credential, wallet, secret, subprocess, or execution transport surfaces.
+
+### Task 11: Preserve non-transferability and verify integration
+
+- [ ] **Step 1: Document the decision as non-transferable authority evidence**
+
+The completed decision is evidence that the normal Gateway authorized one exact proposed selection under the policy digest recorded in that intent. It is not a token, capability, credential, lease, runtime activation, or permission to invoke the selected provider/model later.
+
+- [ ] **Step 2: Require fresh authorization for future cognitive execution**
+
+Any future provider/model invocation must enter a separate fresh Gateway intent and independently re-evaluate current policy, principal authority, assurance, credentials, destination restrictions, runtime state, and other execution constraints. The selection decision cannot be replayed as a bearer grant.
+
+- [ ] **Step 3: Review the exact PR diff**
+
+Check action scope, policy risk, output-only Sandbox behavior, evidence binding, unknown-field rejection, static imports, non-transferability semantics, and absence of capability-registry/provider promotion.
+
+- [ ] **Step 4: Run exact-head cross-platform verification**
 
 Require Clean Kernel full suite and signed assurance chain, Node 22, container deny-egress/segmentation/failure isolation, Windows, macOS ARM, and macOS Intel.
 
-- [ ] **Step 3: Merge only the verified head**
+- [ ] **Step 5: Merge only the verified exact head and verify `main`**
 
-Use the expected-head SHA guard. If the known ready-for-review connector mutation fails, close the draft without rewriting the branch and open a non-draft replacement from the same exact head.
-
-- [ ] **Step 4: Verify the resulting `main` merge commit**
-
-Require the post-merge Clean Kernel and Windows/macOS compatibility workflows to finish green before claiming integration complete.
+Use the expected-head guard. If the known draft-ready mutation fails, preserve the branch/head and use the same non-draft replacement-PR workaround. After merge, require post-merge protected workflows to pass before claiming integration complete.

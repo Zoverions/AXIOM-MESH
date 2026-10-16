@@ -9,7 +9,8 @@ const SURFACES = Object.freeze([
     allowedImports: Object.freeze([
       './canonical.mjs',
       './runtime-connector-fabric-contracts.mjs'
-    ])
+    ]),
+    allowedForbiddenMarkers: Object.freeze([])
   }),
   Object.freeze({
     name: 'selection-proposal',
@@ -17,7 +18,18 @@ const SURFACES = Object.freeze([
     allowedImports: Object.freeze([
       './canonical.mjs',
       './cognitive-capability-profile.mjs'
-    ])
+    ]),
+    allowedForbiddenMarkers: Object.freeze([])
+  }),
+  Object.freeze({
+    name: 'selection-authorization',
+    sourceUrl: new URL('../src/lib/cognitive-selection-authorization.mjs', import.meta.url),
+    allowedImports: Object.freeze([
+      './canonical.mjs',
+      './cognitive-selection-proposal.mjs',
+      './gateway-client-contract.mjs'
+    ]),
+    allowedForbiddenMarkers: Object.freeze(['Gateway'])
   })
 ]);
 
@@ -42,9 +54,13 @@ const FORBIDDEN_SURFACES = Object.freeze([
   'Sandbox',
   'Grid',
   'credentialBroker',
+  'credentialProvider',
+  'credentialStore',
   'wallet',
   'paymentToken',
-  'secretStore'
+  'secretStore',
+  'transport-credentials',
+  'provider-runtime'
 ]);
 
 function importSpecifiers(source) {
@@ -59,6 +75,7 @@ for (const surface of SURFACES) {
     assert.deepEqual(imports.sort(), [...surface.allowedImports].sort());
 
     for (const forbidden of FORBIDDEN_SURFACES) {
+      if (surface.allowedForbiddenMarkers.includes(forbidden)) continue;
       assert.equal(
         source.includes(forbidden),
         false,
