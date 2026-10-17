@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-09-20
+**Updated:** 2026-10-17
 
 **Active build:** `0.12.0-dev.3`
 
@@ -61,6 +61,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 |---|---|---|---|
 | What can run now? | [`mesh/config/capabilities.json`](../mesh/config/capabilities.json) and generated [`rebuild/STATUS.md`](rebuild/STATUS.md) | Registry state, digest, implementation classification | Roadmap promises or test-only features |
 | What is true about this build? | [`PROJECT-STATUS-2026.md`](PROJECT-STATUS-2026.md) | Current scope, evidence boundary, blockers, and non-claims | Detailed future sequencing |
+| What actually runs in production? | [`operations/PRODUCTION-AGENT-NETWORK.md`](operations/PRODUCTION-AGENT-NETWORK.md) | The operator-run agent network — relay, circles registry, coordination plane, staging Matrix — and its gaps | Kernel capability or promotion claims (those stay with the registry and PROJECT-STATUS) |
 | Can it be promoted? | [`PRODUCTION-READINESS-TRACKER.md`](PRODUCTION-READINESS-TRACKER.md) | Gate status, evidence, owner, and remaining action | Aspirational milestones |
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
