@@ -1,12 +1,19 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-09-23
+**Status date:** 2026-10-17
 
 **Supported build:** `0.12.0-dev.3`
 
 **Development branch:** `main`
 
-**Deployment status:** production candidate; no live deployment claim
+**Repository state:** `main` @ `83b364cdab80d49f0df6b083ea366ddfcedd62e9`
+(verified against the GitHub API on 2026-10-17)
+
+**Deployment status:** production candidate; no live deployment claim for the
+kernel. A separate operator-run production agent network exists and is
+described under *Operational reality beyond the kernel* below and in
+[Production agent network](operations/PRODUCTION-AGENT-NETWORK.md). That
+network is not this kernel, and its operation does not promote the kernel.
 
 ## Claim labels
 
@@ -29,6 +36,22 @@ independently restartable single-host units with isolated private credentials.
 It is the supported development line, not a published release or production
 promotion. The last immutable published production-candidate release is
 `v0.11.0`.
+
+### Since the 2026-09-23 status
+
+Four pull requests merged on 2026-10-15: #1946 (semantic-memory #1918
+residuals), #1947 (semantic-action laboratory #1894 N-2 uniform denial
+reason), #1948 (security audit hardening, closing F-01..F-07), and #1949
+(Windows verification timeout raised from 15 to 25 minutes). Issue #1950
+(whole-repo scan cost in the semantic-memory boundary tests) is open. As of
+2026-10-17 the open queue stands at 167 pull requests (132 draft) and 152
+issues, verified against the GitHub API.
+
+The capability registry's counts (50 tracked; 31 implemented, 4 experimental,
+2 specified, 9 adapter-required, 4 disabled) were recomputed and confirmed
+exact by the 2026-10-16 foundation audit. The registry's own `verified_at`
+stamp still reads 2026-08-30; refreshing the stamp is a separate registry
+commit and has not happened yet.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
@@ -78,6 +101,73 @@ repository operators, remote nodes, and administrators do not inherit authority
 from being connected. Consequential authority still has to pass the normal
 identity, policy, consent/confirmation, approval, grant/execution, and evidence
 boundaries.
+
+## Operational reality beyond the kernel
+
+The kernel above is not deployed. Separately, an operator-run production
+agent network has been in daily use since late September 2026 in support of
+this programme and the founder's circles. It is a different, simpler system
+from the kernel: a relay server with an identity and circles registry, a
+coordination plane, and a staging Matrix homeserver, running on the
+operator's own servers. It is described in full in
+[Production agent network](operations/PRODUCTION-AGENT-NETWORK.md). Three
+boundaries matter for every claim in this document:
+
+- the production network is **not** the AXIOM-MESH kernel, does not run its
+  Gateway -> Hypervisor -> Sandbox -> Grid authority path, and its operation
+  is not kernel deployment or promotion evidence;
+- the network runs as the operator's production (a pilot posture: production
+  for the operator, a testnet for the ecosystem, honestly early-stage); and
+- nothing in the network's operation widens the kernel's capability registry,
+  promotion state, or non-claims.
+
+### Circles
+
+Both circles were founded as records in the production relay's registry on
+2026-09-30: `zoverions` (six members: two agents and four instrument
+devices) and `kindred`, the everybody-circle (one member: the coordinator
+agent only). The founder is not yet a registered Kindred member. The
+registry's agreement chain has never been exercised (sequence still 0).
+Charter v0 (written 2026-09-29) remains unratified, and live registry
+membership has drifted from the membership the charter names. No
+registration mechanism bound to a single mesh identity exists; building one
+is the largest open item on the circle track.
+
+### Matrix (staging only)
+
+A tuwunel homeserver runs in staging posture alongside the relay:
+loopback-only, registration closed, federation off. A public endpoint
+(reverse-proxy vhost and placeholder certificate) is built but not run, and
+there is no public DNS record for the Matrix endpoint. The governance bot
+attached to the staging instance is a forwarding demonstration, not an
+enforcement gate. End-to-end encryption is absent and has never been
+demonstrated. No public Matrix service is claimed.
+
+### Praxis
+
+The Praxis laboratory (`labs/praxis`) remains inert by design and
+production-unreachable. Since 2026-10-02 it has included a synthetic-host
+`run` command (`run-command.mjs`, `RUN.md`) alongside the parser, compiler,
+and analyser: `run` executes only against a synthetic host with no network,
+disk, or credential I/O. Earlier records stating that Praxis has "no run
+command" are stale and are corrected here. The circle contract suite
+(invite token schema, join policy, bridge treaty object, rights-grant
+receipt) remains specified only; no artefacts have been written.
+
+### Axiom OS
+
+Axiom OS is built in the separate private `Zoverions/axiom-os` repository.
+The current image lineage — the fix-combined base through the sealed `next8`
+models build (local model library, avatar/comm/voice layer, universal
+installer) — was QEMU-verified end to end on 2026-10-17, including
+models-accepted, models-declined, and Ad Box installs. Physical-hardware
+installs are pending and are the only route to Pascal GPU throughput
+evidence. The build system and records for this lineage are not yet
+committed to `Zoverions/axiom-os` (that repository was last pushed on
+2026-10-04); committing them is tracked reconciliation work, and until it
+lands, this section is the repository's only pointer to the current OS
+state. Axiom OS device enrollment speaks to the production relay's
+device-link contract, not to the kernel.
 
 ## Registry-backed implemented kernel scope
 
@@ -488,6 +578,16 @@ The `0.12.0-dev.3` build does **not** claim:
   operator;
 - federation, BFT consensus, replicated Grid finality, or global Sybil
   resistance;
+- a deployed kernel, or that the operator-run production agent network is the
+  kernel or promotes it;
+- a public Matrix service, Matrix federation, or Matrix end-to-end
+  encryption;
+- open or self-service circle registration, or any registration mechanism
+  bound to a single mesh identity;
+- circle-state redundancy, cross-server registry synchronisation, or Matrix
+  backups;
+- a physically verified Axiom OS release (the current lineage is
+  QEMU-verified; physical installs are pending);
 - arbitrary-code sandbox security;
 - exactly-once external side effects from durable capability consumption;
 - operational token, bridge, liquidity, staking, treasury, payroll, or chain
@@ -526,6 +626,10 @@ promotion.
 6. continue Agent Contributor Mode, authenticated multi-host dispatch,
    Circles/social exchange, plural authority, and frontier work incrementally
    behind their own evidence and promotion gates.
+7. reconcile repository documentation with operational reality (this refresh
+   and the production agent network record), commit the current Axiom OS
+   build lineage to its repository, and refresh the capability registry's
+   verification stamp.
 
 See the [roadmap](ROADMAP.md), [execution queue](MASTER-TODO.md),
 [production-readiness tracker](PRODUCTION-READINESS-TRACKER.md),

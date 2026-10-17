@@ -197,6 +197,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md',
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md',
+  'docs/operations/PRODUCTION-AGENT-NETWORK.md',
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
