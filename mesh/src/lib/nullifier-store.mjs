@@ -1,7 +1,7 @@
 import {
   closeSync,
   fsyncSync,
-  ftruncateSync,
+  truncateSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -50,7 +50,13 @@ export function openDurableNullifierStore(path, { expectedHead = null } = {}) {
     const { spent, head, digests, validLength } = load(path);
     if (validLength !== null) {
       // A torn final line: the spend it began was never acknowledged.
-      ftruncateSync(fd, validLength);
+      // Windows refuses to truncate a path while an append handle is open.
+      // Keep the process lock, close only this descriptor, truncate by path,
+      // then reopen and sync before accepting another spend.
+      closeSync(fd);
+      fd = undefined;
+      truncateSync(path, validLength);
+      fd = openSync(path, 'a+', 0o600);
       fsyncSync(fd);
     }
     if (expectedHead !== null) checkExpectedHead(digests, expectedHead);
