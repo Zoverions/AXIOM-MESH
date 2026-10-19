@@ -6,9 +6,39 @@
 // this module owns the section(s) listed above.
 
 import { createHash } from 'node:crypto';
+import { types } from 'node:util';
 import { PraxisRuntimeError } from './errors.mjs';
 
+export const PRAXIS_CANONICAL_JSON_MAX_DEPTH = 2048;
+
+const STACK_OVERFLOW = 'Maximum call stack size exceeded';
+
+let praxisAncestors = null;
+let praxisDepth = 0;
+
 export function canonicalizePraxis(value) {
+  praxisAncestors = new Set();
+  praxisDepth = 0;
+  try {
+    return canonicalizePraxisValue(value);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new TypeError(
+        String(error.message).includes(STACK_OVERFLOW)
+          ? 'Praxis canonical JSON input exceeds the engine stack depth'
+          : `Praxis canonical JSON input exceeds an engine limit (${error.message})`
+      );
+    }
+    throw error;
+  } finally {
+    praxisAncestors = null;
+  }
+}
+
+function canonicalizePraxisValue(value) {
+  if (types.isProxy(value)) {
+    throw new TypeError('Praxis canonical JSON cannot encode a Proxy');
+  }
   if (value === null || typeof value === 'boolean' || typeof value === 'string') {
     return value;
   }
@@ -20,7 +50,18 @@ export function canonicalizePraxis(value) {
     return Object.is(value, -0) ? 0 : value;
   }
 
+  if (typeof value === 'object') {
+    if (praxisDepth >= PRAXIS_CANONICAL_JSON_MAX_DEPTH) {
+      throw new TypeError(`Praxis canonical JSON nesting exceeds ${PRAXIS_CANONICAL_JSON_MAX_DEPTH} levels`);
+    }
+    if (praxisAncestors.has(value)) {
+      throw new TypeError('Praxis canonical JSON cannot encode a cyclic structure');
+    }
+  }
+
   if (Array.isArray(value)) {
+    praxisAncestors.add(value);
+    praxisDepth += 1;
     if (Object.getPrototypeOf(value) !== Array.prototype) {
       throw new TypeError('Praxis canonical arrays must use the ordinary Array prototype');
     }
@@ -40,7 +81,7 @@ export function canonicalizePraxis(value) {
       if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
         throw new TypeError(`Praxis canonical array index ${index} must be an enumerable data property`);
       }
-      output.push(canonicalizePraxis(descriptor.value));
+      output.push(canonicalizePraxisValue(descriptor.value));
     }
 
     for (const name of Object.getOwnPropertyNames(value)) {
@@ -48,10 +89,14 @@ export function canonicalizePraxis(value) {
         throw new TypeError(`Praxis canonical arrays cannot contain custom property ${name}`);
       }
     }
+    praxisDepth -= 1;
+    praxisAncestors.delete(value);
     return output;
   }
 
   if (typeof value === 'object') {
+    praxisAncestors.add(value);
+    praxisDepth += 1;
     const prototype = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) {
       throw new TypeError('Praxis canonical objects must be plain records');
@@ -77,12 +122,14 @@ export function canonicalizePraxis(value) {
         throw new TypeError(`Praxis canonical JSON cannot encode property ${key}`);
       }
       Object.defineProperty(output, key, {
-        value: canonicalizePraxis(item),
+        value: canonicalizePraxisValue(item),
         enumerable: true,
         configurable: true,
         writable: true
       });
     }
+    praxisDepth -= 1;
+    praxisAncestors.delete(value);
     return output;
   }
 

@@ -44,6 +44,16 @@ const NODE_FIELDS = Object.freeze([
   'lineage_ref'
 ]);
 
+export const VERIFIED_WORK_GRAPH_MAX_NODES = 4096;
+export const VERIFIED_WORK_GRAPH_MAX_DEPENDENCIES = 256;
+// The largest schema-valid graph, counted the way a plain-data snapshot counts
+// (one per value visited): the root object and its top-level field values
+// (the nodes array is one of them), plus, for every node, the node object, its
+// field values (the dependencies array is one of them) and up to 256
+// dependency strings. 1 + 11 + 4096 * (1 + 10 + 256) = 1,093,644.
+export const VERIFIED_WORK_GRAPH_MAX_PLAIN_VALUES = 1 + TOP_LEVEL_FIELDS.length
+  + VERIFIED_WORK_GRAPH_MAX_NODES * (1 + NODE_FIELDS.length + VERIFIED_WORK_GRAPH_MAX_DEPENDENCIES);
+
 function assertExactFields(value, fields, name) {
   const allowed = new Set(fields);
   for (const key of Object.keys(value)) {
@@ -84,7 +94,7 @@ function validateNode(input, index) {
   const verificationResult = assertString(value.verification_result, `${name}.verification_result`, { max: 32 });
   if (!VERIFICATION_RESULTS.has(verificationResult)) throw new ValidationError(`${name}.verification_result is unsupported`);
 
-  const dependencies = assertStringArray(value.dependencies, `${name}.dependencies`, { maxItems: 256, itemMax: 160 });
+  const dependencies = assertStringArray(value.dependencies, `${name}.dependencies`, { maxItems: VERIFIED_WORK_GRAPH_MAX_DEPENDENCIES, itemMax: 160 });
   for (let dependencyIndex = 0; dependencyIndex < dependencies.length; dependencyIndex += 1) {
     identifier(dependencies[dependencyIndex], `${name}.dependencies[${dependencyIndex}]`);
   }
@@ -180,7 +190,7 @@ export function validateVerifiedWorkGraph(input) {
   if (value.authority_effect !== 'none') throw new ValidationError('verified work graph.authority_effect must be none');
   if (value.network_effect !== 'none') throw new ValidationError('verified work graph.network_effect must be none');
   if (value.execution_authority !== false) throw new ValidationError('verified work graph.execution_authority must be false');
-  if (!Array.isArray(value.nodes) || value.nodes.length === 0 || value.nodes.length > 4096) {
+  if (!Array.isArray(value.nodes) || value.nodes.length === 0 || value.nodes.length > VERIFIED_WORK_GRAPH_MAX_NODES) {
     throw new ValidationError('verified work graph.nodes must contain 1-4096 nodes');
   }
 

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/verified-install-session-v0.schema.json",
+  "title": "AXIOM Verified-Input Install Session v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema","version","status","candidate","decision","artifact_proofs",
+    "release_signer_key_id","evaluated_at","credential_effect","service_start_effect",
+    "host_mutation_authorized","authority_effect","network_effect","runtime_activation",
+    "session_digest"
+  ],
+  "properties": {
+    "schema":{"const":"axiom-install-session.v0"},
+    "version":{"const":0},
+    "status":{"const":"inert-verified-input-session"},
+    "candidate":{"$ref":"install-session-v0.schema.json"},
+    "decision":{"$ref":"install-session-decision-v0.schema.json"},
+    "artifact_proofs":{
+      "type":"array","minItems":1,"maxItems":128,"uniqueItems":true,
+      "items":{
+        "type":"object","additionalProperties":false,
+        "required":["artifact_id","artifact_sha256","byte_length"],
+        "properties":{
+          "artifact_id":{"$ref":"#/$defs/id"},
+          "artifact_sha256":{"$ref":"#/$defs/digest"},
+          "byte_length":{"type":"integer","minimum":1,"maximum":1000000000000}
+        }
+      }
+    },
+    "release_signer_key_id":{"$ref":"#/$defs/id"},
+    "evaluated_at":{"type":"string","format":"date-time"},
+    "credential_effect":{"const":"none"},
+    "service_start_effect":{"const":"none"},
+    "host_mutation_authorized":{"const":false},
+    "authority_effect":{"const":"none"},
+    "network_effect":{"const":"none"},
+    "runtime_activation":{"const":false},
+    "session_digest":{"$ref":"#/$defs/digest"}
+  },
+  "$defs": {
+    "id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,191}$"},
+    "digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}

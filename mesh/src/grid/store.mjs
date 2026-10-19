@@ -81,6 +81,25 @@ function projectSupportedGridEvent(event) {
 }
 
 export class GridStore extends CheckpointGridStore {
+  // Private brand and database handle. Both are installed only by this
+  // constructor and are not reachable through the prototype chain or a Proxy,
+  // so Object.create(GridStore.prototype), a store-shaped object or a Proxy
+  // around a real store is never a GridStore for isGridStore. #db is the
+  // DatabaseSync the core constructor opened from options.path; it does not
+  // follow a later reassignment of the public `db` property.
+  #brand = true;
+  #db = this.db;
+
+  static isGridStore(value) {
+    return value !== null && typeof value === 'object' && #brand in value;
+  }
+
+  // The DatabaseSync this store opened, read from the private field. Throws
+  // (TypeError) for anything that is not a GridStore.
+  static openedDatabase(store) {
+    return store.#db;
+  }
+
   verifyCheckpointHistory(history, from = null) {
     const result = super.verifyCheckpointHistory(history, from);
     if (

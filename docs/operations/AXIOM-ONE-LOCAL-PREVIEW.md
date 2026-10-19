@@ -95,7 +95,7 @@ reverse tunnel, or production deployment.
 
 ## Implemented surfaces
 
-The preview has nine primary sections. Their labels describe the intended
+The preview has twelve primary sections. Their labels describe the intended
 product organization, but only the functions in this table are current.
 
 | Surface | Current behavior | Gateway routes | Current boundary |
@@ -105,13 +105,16 @@ product organization, but only the functions in this table are current.
 | Vault organize | Reviews `ai.local-organize`, runs the local organizer stub on owner-selected text, shows a draft suggestion with provider/scope/budget/timeout/cancel/retention/digest fields, and only writes via a separate `memory.put` review | browser-local stub; optional later `memory.put` | Draft only; not production AI; not a Mesh grant; `ai.providers` remains `adapter_required` |
 | Social | Reads the authenticated owner's bounded local actor, persona, publication corpus, supersession/retraction status, transition count, truncation state, and raw snapshot | `social.get` | Read-only owner-local projection; owner is derived from authentication; `network_effect` must remain `none`; no federation, remote distribution, or browser Social mutation |
 | Circles | Reads the exact local built-in `axiom-circle-template-catalog.v0` as a public shell asset and explains its roles/decision defaults | none | Static inert templates only; works without a token; cannot create/join/invite, assign membership/roles, govern, delegate, execute, federate, or lower the raise-only protection floor |
+| Capabilities | Projects every returned registry entry into implementation, availability, and authorization dimensions while preserving the raw entry | `capabilities.list` | Registry implementation is descriptive only; availability and authorization remain explicitly unknown because this route supplies neither |
 | Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
+| Consent | Explains owner-scoped active, expired, revoked, and unknown consent records with purpose, scopes, controller, subject, and lifecycle timestamps | `consents.list` | Read-only; current consent is not execution authority and revoked/expired consent cannot authorize new use |
 | Vault | Lists active owner-scoped memory objects and edges, creates one private note at a time, optionally organizes owner-selected text into a local draft suggestion, records one of three fixed directional provenance links, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get`; local organizer stub | Bounded lifecycle only; organize drafts are ephemeral and non-authorizing; no arbitrary relation, direct edge deletion, hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
 | Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
+| Verify | Interprets the Grid evidence-chain verification result and preserves the exact event count, head digest, failing sequence, or reason where applicable | `audit.verify` | Chain integrity is evidence only; it grants no authority and does not prove an external claim is true |
 | Share | Displays explicit unavailable Selective Sharing state and points to the separate inert Circles template browser | none | Sends nothing; sharing and live Circles remain disabled |
-| Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
+| Explore | Reads selected raw status, registry, operations, owner-local Social, node, capsule, import, and backup data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
-The policy lists exactly 15 client route identifiers. The checker requires
+The policy lists exactly 16 client route identifiers. The checker requires
 every identifier to exist in the active Gateway client contract. The loopback
 server independently matches method, path, and query names against that
 contract before proxying. `/internal/...`, unlisted `/v1/...`, a wrong method,
@@ -173,7 +176,8 @@ The machine-readable `axiom-one-human-contract.v1` and zero-dependency
 [`presentation.mjs`](../../apps/axiom-one/presentation.mjs) module are public
 shell assets. They contain no token, user record, remote origin, runtime policy
 override, or executable authority. The release checker independently verifies
-their exact action, error, event, approval, and non-claim inventories.
+their exact action, error, event, approval, capability, consent, verification,
+and non-claim boundaries.
 
 The current action inventory contains `system.echo`, `memory.put`,
 `memory.link`, `memory.tombstone`, `export.create`, and `ai.local-organize`.
@@ -267,6 +271,25 @@ expiry is past; a `consumed` record shows the bound intent where available; an
 unknown status is never presented as active. The explanation repeats that the
 page is read-only and cannot grant, widen, renew, revoke, or self-approve the
 record. This is visibility into authority, not authority creation.
+
+Capability explanations use only the authenticated registry response. The
+registry's `status` becomes an implementation label, while **Availability** and
+**Authorization** remain explicitly **Unknown** because `capabilities.list`
+does not contain runtime-availability or per-principal authorization evidence.
+A capability marked `implemented` is therefore never presented as authorized.
+
+Consent explanations use only the owner-scoped `consents.list` response.
+Exact purpose, scope, subject, controller, expiry, creation, and revocation
+facts remain visible. A past expiry is displayed as expired, a revocation is
+displayed as revoked, and malformed or unknown state is never promoted to
+active consent. Even active consent is described as purpose/scoped evidence,
+not as a substitute for the ordinary execution-authority path.
+
+Verify explanations use the exact `audit.verify` result. A valid result means
+the local chain passed its sequence, payload digest, event hash, signature, and
+metadata-continuity checks. An invalid result preserves its exact reason and
+failing sequence where present. Neither state grants authority, and chain
+integrity does not prove that an external assertion or payload claim is true.
 
 Every explanation is rendered with `textContent`, fixed DOM construction, and
 an adjacent raw `<details>` view. Unknown Gateway codes retain the client's

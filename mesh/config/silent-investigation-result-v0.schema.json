@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/silent-investigation-result-v0.schema.json",
+  "title": "AXIOM Silent Investigation Result v0",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","version","status","result_id","task_id","policy_digest","observation_digest","started_at","completed_at","evidence_refs","useful_finding","actionable_finding","silence_reason","steps_used","tool_calls","duration_ms","unresolved_unknowns","emitted_message","authority_effect","execution_effect","runtime_activation"],
+  "properties": {
+    "schema":{"const":"axiom-silent-investigation-result.v0"},
+    "version":{"const":0},
+    "status":{"const":"inert-silent-investigation-evidence"},
+    "result_id":{"$ref":"#/$defs/id"},
+    "task_id":{"$ref":"#/$defs/id"},
+    "policy_digest":{"$ref":"#/$defs/digest"},
+    "observation_digest":{"$ref":"#/$defs/digest"},
+    "started_at":{"type":"string","format":"date-time"},
+    "completed_at":{"type":"string","format":"date-time"},
+    "evidence_refs":{"type":"array","maxItems":256,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":512}},
+    "useful_finding":{"type":"boolean"},
+    "actionable_finding":{"type":"boolean"},
+    "silence_reason":{"enum":["no-useful-finding","no-actionable-finding","already-covered","interruption-not-justified","policy-suppressed"]},
+    "steps_used":{"type":"integer","minimum":0,"maximum":1000000},
+    "tool_calls":{"type":"integer","minimum":0,"maximum":1000000},
+    "duration_ms":{"type":"integer","minimum":0,"maximum":86400000},
+    "unresolved_unknowns":{"type":"array","maxItems":128,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":512}},
+    "emitted_message":{"const":false},
+    "authority_effect":{"const":"none"},
+    "execution_effect":{"const":"none"},
+    "runtime_activation":{"const":false}
+  },
+  "$defs": {
+    "id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"},
+    "digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}

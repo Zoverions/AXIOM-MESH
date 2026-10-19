@@ -1,8 +1,11 @@
+import { types } from 'node:util';
+
 import {
   AxiomError,
   ValidationError,
   digestObject
 } from './canonical.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 import { verifyObjectSignature } from './identity.mjs';
 
 export const MACHINE_INTENT_RECEIPT_SCHEMA = 'axiom-machine-intent-receipt.v1';
@@ -140,7 +143,15 @@ export function buildMachineIntentReceipt({
   };
 }
 
-export function validateMachineIntentReceipt(receipt) {
+/**
+ * Validates a machine intent receipt and returns a deep-frozen plain-data
+ * snapshot of it, never the caller's object. The input is copied exactly once,
+ * at entry, with the strict plain-data walk (Proxies are rejected before any
+ * trap runs and no getter is called), and every check below reads only that
+ * copy, so callers that read the returned value see exactly what was checked.
+ */
+export function validateMachineIntentReceipt(input) {
+  const receipt = snapshotDelegationPlainData(input, 'Machine intent receipt');
   if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) {
     throw new ValidationError('Machine intent receipt must be an object');
   }
@@ -160,20 +171,48 @@ export function validateMachineIntentReceipt(receipt) {
   if (receipt.verification !== undefined) {
     throw new ValidationError('Machine intent receipt verification facts must be statement-bound');
   }
-  return receipt;
+  return deepFreeze(receipt);
 }
 
-export function verifyMachineIntentReceipt(receipt, gridPublicKey) {
-  validateMachineIntentReceipt(receipt);
-  if (!gridPublicKey) throw new ValidationError('Grid verification key is required');
+export function verifyMachineIntentReceipt(input, gridPublicKey) {
+  // Verify the same frozen snapshot that was validated. gridPublicKey is read
+  // by node:crypto after this point and may run caller code, so nothing below
+  // reads the caller's object again.
+  const receipt = validateMachineIntentReceipt(input);
+  const key = gridVerificationKey(gridPublicKey);
+  let valid;
+  try {
+    valid = verifyObjectSignature(receipt.statement, receipt.attestation, key);
+  } catch {
+    throw new ValidationError('Grid verification key cannot verify the machine intent receipt');
+  }
   return {
-    valid: verifyObjectSignature(receipt.statement, receipt.attestation, gridPublicKey),
+    valid,
     receipt_digest: receipt.receipt_digest,
     intent_id: receipt.statement.intent.intent_id,
     status: receipt.statement.intent.status,
     verification_mode: receipt.statement.chain.verification_mode,
     prefix_assurance: receipt.statement.chain.prefix_assurance
   };
+}
+
+// Checked up front, before node:crypto touches it: a Proxy (even a revoked
+// one) is a ValidationError and runs no trap. Any other unusable key surfaces
+// from the signature check, which the caller wraps as a ValidationError.
+function gridVerificationKey(gridPublicKey) {
+  if (!gridPublicKey) throw new ValidationError('Grid verification key is required');
+  if (types.isProxy(gridPublicKey)) throw new ValidationError('Grid verification key cannot be a Proxy');
+  return gridPublicKey;
+}
+
+// Only ever applied to a fresh snapshot (a tree of plain data), so this is
+// linear in the snapshot's size.
+function deepFreeze(value) {
+  if (value !== null && typeof value === 'object') {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
 }
 
 function terminalOutcome(intent, payload, acceptedPayload) {

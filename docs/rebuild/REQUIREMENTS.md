@@ -245,6 +245,7 @@ state.
 | OPS-09 | Secret and policy providers MUST use independent signers, digest-pinned command chains, nonce-bound exact inventories, bounded execution, semantic validation, private materialization, and fail-closed cleanup. | Provider conformance drill. |
 | OPS-10 | Every user-facing and frontier component MUST have an owner, threat model, support boundary, update path, rollback, uninstall or decommissioning procedure, and incident contact before exposure. | Release checklist and deployment dossier. |
 | OPS-11 | Internal service communication MUST default deny, authorize an exact caller, destination, method, and route before request signing or network I/O, derive active mTLS peers from the same policy, keep plaintext development traffic on loopback, and remove unrelated unit-network adjacency. | Policy/route/Compose negative tests, protected required-path readiness, selected forbidden-edge container probes, and release-provenance binding. |
+| OPS-12 | A fresh-host installer MUST keep host compatibility, signed-release admission, artifact-byte verification, existing-installed-state classification, and privileged mutation as separate gates. Reruns MUST NOT automatically downgrade a newer release, overwrite divergent state, treat partial secrets as repairable, infer runtime readiness from installer completion, or use synthetic/supplied host facts as live mutation admission. | Host-plan/release-verifier/install-session negative tests plus disposable-host install, repair, update, recovery, rollback/uninstall and readiness evidence before promotion. |
 
 ## Production and marketing promotion
 
@@ -284,11 +285,13 @@ execution evidence;
   visible conflicts and explicit all-head resolution;
 - signed deployment-independent secret and policy provider startup;
 - the experimental loopback AXIOM One shell, including an exact human
-  explanation contract for five bounded actions, all 20 stable Gateway
-  outcomes, all 37 current kernel event kinds, approval states, raw evidence,
-  fixed directional owner-scoped provenance with correction-without-replacement,
+  explanation contract for six bounded actions, all 20 stable Gateway
+  outcomes, all 37 current kernel event kinds, approval states, non-authorizing
+  capability-status projection, current owner-scoped consent state, bounded
+  evidence-chain verification, raw evidence, fixed directional owner-scoped provenance with correction-without-replacement,
   and same-key uncertain-outcome recovery without claiming an authoritative
-  pre-execution kernel plan or edge-deletion control;
+  pre-execution kernel plan, per-principal capability authorization, external
+  truth, or edge-deletion control;
 - strict pilot-evidence and independent-security-review intake verifiers;
 - authenticated operator API and CLI;
 - an experimental loopback-only AXIOM One PWA foundation with a contract-only
@@ -296,7 +299,8 @@ execution evidence;
   creation/listing, three fixed directional provenance links,
   correction-without-replacement, confirmation-bound tombstoning, selective
   local export, explicit-only bundle reveal, cross-principal denial evidence,
-  and explicit unavailable Share, Circles, and AI states.
+  capability/consent/Verify read projections, and explicit unavailable Share,
+  live Circles, and production-AI states.
 
 The current checkpoint does **not** include a supported AXIOM One browser
 application, autonomous-agent runtime, MCP/A2A endpoint, machine delegation,

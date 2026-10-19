@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/install-session-decision-v0.schema.json",
+  "title": "AXIOM Install Session Decision v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema","version","status","decision","reasons","candidate_digest",
+    "observation_digest","decision_digest","observation_bound","host_mutation_authorized",
+    "authority_effect","network_effect","runtime_activation"
+  ],
+  "properties": {
+    "schema":{"const":"axiom-install-session-decision.v0"},
+    "version":{"const":0},
+    "status":{"const":"inert-install-session-decision"},
+    "decision":{"enum":[
+      "INSTALL_REVIEW","VERIFY_NOOP","REPAIR_REVIEW","UPGRADE_REVIEW",
+      "RECOVERY_REVIEW","STOP_NONLIVE_PLAN","STOP_HOST_BLOCKED",
+      "STOP_LEGACY_PROOF_STATE","STOP_UPGRADE_UNPROVEN","STOP_PARTIAL_SECRET_STATE",
+      "STOP_NEWER_PRESENT","STOP_DIVERGED","STOP_CONFLICT","STOP_UNCERTAIN"
+    ]},
+    "reasons":{"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":128}},
+    "candidate_digest":{"$ref":"#/$defs/digest"},
+    "observation_digest":{"$ref":"#/$defs/digest"},
+    "decision_digest":{"$ref":"#/$defs/digest"},
+    "observation_bound":{"const":false},
+    "host_mutation_authorized":{"const":false},
+    "authority_effect":{"const":"none"},
+    "network_effect":{"const":"none"},
+    "runtime_activation":{"const":false}
+  },
+  "$defs":{"digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}}
+}

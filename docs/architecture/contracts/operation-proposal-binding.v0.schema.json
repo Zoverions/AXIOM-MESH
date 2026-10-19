@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:operation-proposal-binding:v0",
+  "title": "AXIOM Operation Proposal Binding v0 (O1)",
+  "description": "Closed wire schema for the inert O1 Operation Proposal Binding document (#1628). mesh/src/lib/operation-proposal-binding.mjs recomputes the operation-manifest digest, the Operation Candidate Selection from trusted input, the proposal-space candidate_set_digest, and every supplied External Operation Offer digest and eligibility from the caller's original objects, and binds a Semantic Operation Proposal to the deterministic selection only when every check passes. A binding is evidence, never permission: authority, assurance, currentness, execution and network effects are none, runtime_activation is false and authorization_result is not-evaluated. Proposed arguments are re-checked against the manifest argument schemas with the O0 validator. Relational rules (rejected documents carry null digests and no bound operations; bound and unresolved-deliberation documents carry 1-32 bound operations; bound_operations are in canonical order; binding_digest recomputes) are enforced by validateOperationProposalBinding. validateOperationProposalBinding checks internal consistency only; it cannot prove that the digests were recomputed, so consumers must re-run verifyOperationProposalBinding and never trust a binding document on its own.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "binding_status",
+    "rejection_reason",
+    "offer_rejection_reasons",
+    "operation_manifest_digest",
+    "proposal_candidate_set_digest",
+    "selection_candidate_set_digest",
+    "selection_proposal_digest",
+    "selection_mode",
+    "proposal_id",
+    "proposal_digest",
+    "bound_operations",
+    "binding_digest",
+    "authority_effect",
+    "assurance_effect",
+    "currentness_effect",
+    "execution_effect",
+    "network_effect",
+    "runtime_activation",
+    "authorization_result"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-operation-proposal-binding.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-operation-proposal-binding"
+    },
+    "binding_status": {
+      "enum": [
+        "bound",
+        "unresolved-deliberation",
+        "abstained",
+        "rejected"
+      ]
+    },
+    "rejection_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "input-not-plain-data",
+            "input-malformed",
+            "candidate-limit-exceeded",
+            "proposed-limit-exceeded",
+            "offer-limit-exceeded",
+            "proposal-invalid",
+            "manifest-invalid",
+            "manifest-digest-mismatch",
+            "proposal-manifest-digest-mismatch",
+            "candidate-not-in-manifest",
+            "candidate-manifest-digest-mismatch",
+            "selection-not-recomputed",
+            "candidate-set-digest-mismatch",
+            "discovery-mode-not-bindable",
+            "operation-deterministic-ineligible",
+            "operation-not-selected",
+            "proposal-arguments-invalid",
+            "offer-malformed",
+            "offer-duplicate",
+            "offer-operation-not-proposed",
+            "offer-ineligible",
+            "offer-digest-mismatch"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "offer_rejection_reasons": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,63}$"
+      }
+    },
+    "operation_manifest_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "proposal_candidate_set_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "selection_candidate_set_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "selection_proposal_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "selection_mode": {
+      "anyOf": [
+        {
+          "enum": [
+            "deterministic-exact",
+            "semantic-single",
+            "semantic-top-k",
+            "fallback-retain-eligible",
+            "fallback-escalate",
+            "no-eligible-candidates"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "proposal_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "proposal_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bound_operations": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "arguments_digest",
+          "offer_digest"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+          },
+          "arguments_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "offer_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "binding_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "assurance_effect": {
+      "const": "none"
+    },
+    "currentness_effect": {
+      "const": "none"
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "authorization_result": {
+      "const": "not-evaluated"
+    }
+  },
+  "x-axiom-limits": {
+    "max_candidates": 32,
+    "max_proposed_operations": 32,
+    "max_offers": 32
+  },
+  "x-axiom-non-claims": [
+    "authority",
+    "assurance",
+    "currentness",
+    "execution",
+    "network",
+    "runtime-activation",
+    "authorization",
+    "spend-approval",
+    "capability-promotion"
+  ]
+}

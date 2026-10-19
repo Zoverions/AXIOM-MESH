@@ -154,16 +154,26 @@ function nestedCallFailures(input) {
     if (!operation || !isPlainObject(operation.arguments) || !isPlainObject(call?.arguments)) {
       continue;
     }
-    for (const [argumentName, schema] of Object.entries(operation.arguments)) {
-      if (schema.type !== 'object') continue;
-      const result = validateNestedArgumentValue(schema, call.arguments[argumentName]);
-      if (!result.ok) {
-        failures.set(call.order_index ?? index, result.reason);
-        break;
-      }
+    const reason = nestedArgumentFailureReason(operation, call.arguments);
+    if (reason !== null) {
+      failures.set(call.order_index ?? index, reason);
     }
   }
   return failures;
+}
+
+/**
+ * First nested object-argument failure reason for one call against its
+ * manifest operation, or null. This is the single O0 nested-argument check,
+ * shared with the O1 binding verifier.
+ */
+export function nestedArgumentFailureReason(operation, args) {
+  for (const [argumentName, schema] of Object.entries(operation.arguments)) {
+    if (schema.type !== 'object') continue;
+    const result = validateNestedArgumentValue(schema, args[argumentName]);
+    if (!result.ok) return result.reason;
+  }
+  return null;
 }
 
 function proposalDigestPayload(document) {

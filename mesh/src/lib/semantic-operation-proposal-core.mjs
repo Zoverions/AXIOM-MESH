@@ -1,5 +1,8 @@
 import {
+  CANONICAL_JSON_MAX_CONTRACT_DEPTH,
   ValidationError,
+  assertContractDepth,
+  assertContractNode,
   assertPlainObject,
   assertString,
   digestObject
@@ -21,7 +24,16 @@ const CANONICAL_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MAX_PROPOSED = 32;
 const MAX_ARGS = 32;
 const MAX_EXPLANATION = 512;
-const MAX_SERIALIZED_BYTES = 65_536;
+export const SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES = 65_536;
+const MAX_SERIALIZED_BYTES = SEMANTIC_OPERATION_PROPOSAL_MAX_SERIALIZED_BYTES;
+// Nesting bound for a whole proposal document, counted in container levels
+// from the document root. Free-form argument values are otherwise bounded only
+// by the byte limit, which would allow depth up to 32,768; canonicalize accepts
+// at most CANONICAL_JSON_MAX_DEPTH (2,048) and the structuredClone argument copy
+// overflows earlier on some platforms (1,833 levels on Windows), so the contract
+// promises 1,400 and over-deep input is a ValidationError before any digest or
+// copy runs.
+export const SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH = CANONICAL_JSON_MAX_CONTRACT_DEPTH;
 
 const DOCUMENT_FIELDS = Object.freeze([
   'schema',
@@ -590,7 +602,7 @@ function proposalDigestPayload(document) {
   };
 }
 
-function validateCallAgainstManifest(operationId, args, manifestById, candidateById, candidateMode) {
+export function validateCallAgainstManifest(operationId, args, manifestById, candidateById, candidateMode) {
   const manifestEntry = manifestById.get(operationId);
   if (!manifestEntry) {
     return {
@@ -958,6 +970,7 @@ export function createSemanticOperationProposal(input) {
   if (providerResult.ok !== true) {
     const failureReason = providerResult.failure_reason || 'provider-failure';
     const proposalId = `semantic_operation_proposal_${digestObject({
+      provider,
       operation_manifest_digest: operationManifestDigest,
       candidate_set_digest: candidateSetDigest,
       request_digest: requestDigest,
@@ -1156,6 +1169,10 @@ function validateSuppressedEntry(entry, index) {
 }
 
 export function validateSemanticOperationProposalShape(document) {
+  // Fail closed before any read: the root and every container read ahead of
+  // the depth walk below must be plain JSON data with data properties only,
+  // so no Proxy trap or getter runs and no non-JSON wrapper can hide depth.
+  if (document !== null && typeof document === 'object') assertContractNode(document, 'semantic operation proposal');
   const value = exact(document, DOCUMENT_FIELDS, 'semantic operation proposal');
   if (value.schema !== SEMANTIC_OPERATION_PROPOSAL_SCHEMA) {
     throw new ValidationError('semantic operation proposal schema is invalid');
@@ -1167,6 +1184,7 @@ export function validateSemanticOperationProposalShape(document) {
     throw new ValidationError('semantic operation proposal status is invalid');
   }
   identifier(value.proposal_id, 'proposal_id');
+  if (value.provider !== null && typeof value.provider === 'object') assertContractNode(value.provider, 'semantic operation proposal');
   normalizeProviderIdentity(value.provider);
   digest(value.operation_manifest_digest, 'operation_manifest_digest');
   digest(value.candidate_set_digest, 'candidate_set_digest');
@@ -1184,6 +1202,17 @@ export function validateSemanticOperationProposalShape(document) {
   if (!Array.isArray(value.suppressed) || value.suppressed.length > MAX_PROPOSED) {
     throw new ValidationError('suppressed must be a bounded array');
   }
+  // The cheap shape checks run first (as on main), so an unknown field holding
+  // a large value is rejected without walking it: the document's own fields
+  // above, then each entry's field set (the same check and message its
+  // validator below uses). The depth bound then runs before any argument
+  // digest or structuredClone copy, so JSON input deeper than the bound is
+  // still a ValidationError before either.
+  for (const list of [value.proposed, value.withheld, value.suppressed]) assertContractNode(list, 'semantic operation proposal');
+  value.proposed.forEach((entry, index) => exact(entry, PROPOSED_FIELDS, `proposed[${index}]`));
+  value.withheld.forEach((entry, index) => exact(entry, WITHHELD_FIELDS, `withheld[${index}]`));
+  value.suppressed.forEach((entry, index) => exact(entry, SUPPRESSED_FIELDS, `suppressed[${index}]`));
+  assertContractDepth(document, 'semantic operation proposal');
   value.proposed.forEach(validateProposedEntry);
   value.withheld.forEach(validateWithheldEntry);
   value.suppressed.forEach(validateSuppressedEntry);

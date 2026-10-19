@@ -57,6 +57,34 @@ Hard zeros (all proposals):
 - `network_effect: none`
 - `selection_effect: proposal-only`
 
+Size and nesting bounds:
+
+- The serialized document is at most 65,536 bytes.
+- The whole document nests at most 1,400 container levels, counted from the
+  document root (`SEMANTIC_OPERATION_PROPOSAL_MAX_DEPTH`, equal to
+  `CANONICAL_JSON_MAX_CONTRACT_DEPTH` in `mesh/src/lib/canonical.mjs`).
+  Free-form argument values are where this bites: the byte limit alone would
+  allow about 32,768 levels, canonical JSON accepts at most 2,048, and the
+  validator's `structuredClone` argument copy overflows the native stack
+  earlier on some platforms (1,833 levels on Windows CI, Node 24). The bound
+  sits about 24% below that lowest measured value, and the validator rejects
+  deeper documents with a `ValidationError` before any digest or copy runs.
+  The depth check runs after the document's and each entry's field-set checks,
+  so an unknown field is rejected without walking its value. It fails closed:
+  the document and everything in it must be plain JSON data (arrays with the
+  intrinsic `Array` prototype, records whose prototype is `Object.prototype` or
+  `null`, data properties only). Any other object (a Proxy, typed array, `Map`,
+  `Set`, `Date`, class instance, `Array` subclass or cross-realm object) and
+  any accessor property, at the root or below, is a `ValidationError` the
+  moment it is met, without entering it or running a getter or trap. The
+  validator checks the root, `provider` and the three entry lists this way
+  before it reads them, so no caller code runs before the depth check.
+  JSON Schema cannot express a depth limit, so the wire schema states it in a
+  `$comment`. Earlier releases sometimes accepted deeper arguments, but only up
+  to wherever the stack ran out (about 2,900–3,290 levels on Linux at Node's
+  default stack size, about 1,830 on Windows, about 1,160–1,250 at
+  `--stack-size=400`), so that was never a guarantee.
+
 ## Needle ≠ Decision Observation
 
 Needle-shaped payloads (`function_calls`, `suppressed_calls`, scalar
@@ -87,6 +115,25 @@ reachable; the mode is explicit on the proposal.
 - Needle-shaped payload fixture/normalization
 - hostile falsification tests from #1628
 - digest-only composition helpers for Offer / selection
+
+## O1: Operation Proposal Binding
+
+O1 adds [Operation Proposal Binding v0](OPERATION-PROPOSAL-BINDING.md)
+(`axiom-operation-proposal-binding.v0`). It is a pure verifier that recomputes
+the manifest digest, the candidate selection, the proposal-space candidate set
+digest and every supplied offer digest from the caller's original objects.
+It binds a proposal only when all of them agree. It fixes these O0 gaps:
+
+- P1: O0 only format-checks `manifest.manifest_digest`; O1 recomputes it.
+- P2: the compose helpers only format-check digests; O1 recomputes them.
+- P3: the selection and proposal candidate digests use different projections;
+  O1 derives the proposal-space digest from the trusted selection candidates.
+- `descriptive-discovery` skips eligibility in O0; O1 never binds it.
+- The failure-path `proposal_id` now includes the provider in its preimage.
+
+**Deprecated (docs only, behaviour unchanged):** `composeProposalWithOfferDigest`
+and `composeProposalWithSelectionDigest` check only the format of the digest
+they are given. Use `verifyOperationProposalBinding` instead.
 
 ## Out of O0
 

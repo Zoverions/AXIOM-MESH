@@ -204,19 +204,23 @@ implemented/supported claims until complete production-path code, negative
 tests, human evidence, packaging, documentation, and independent review satisfy
 the capability acceptance rule.
 
-The current experimental human-explanation slice reviews five exact actions
+The current experimental human-explanation slice reviews six exact actions
 before sending: the non-consequential echo, owner-scoped private memory creation,
 one of three fixed directional provenance links, confirmation-bound
-tombstoning, and selective local memory export. It maps all stable Gateway
-outcomes and current kernel event kinds, distinguishes active,
-expired, consumed, and unknown approvals, preserves raw evidence, and reuses the
-same request key when a browser outcome is uncertain. A `corrects` edge retains
-the source and target as independently visible records; it is provenance, not
-silent replacement. The Vault reveals a generated bundle only after a separate
-action and retains no token or response in browser storage. This browser
-projection is not an authoritative pre-execution kernel plan. General
-consequential plan/approval, edge deletion, hard deletion,
-restore, bulk ingestion, and human evidence still require their own gates.
+tombstoning, selective local memory export, and the browser-local organize draft.
+It maps all stable Gateway outcomes and current kernel event kinds, distinguishes
+active, expired, consumed, and unknown approvals, projects capability
+implementation separately from deliberately unknown availability/authorization,
+shows owner-scoped active/revoked/expired consent state, and explains local
+evidence-chain verification without turning integrity into external truth or
+authority. Raw evidence remains available and the same request key is reused when
+a browser outcome is uncertain. A `corrects` edge retains the source and target
+as independently visible records; it is provenance, not silent replacement. The
+Vault reveals a generated bundle only after a separate action and retains no
+token or response in browser storage. This browser projection is not an
+authoritative pre-execution kernel plan. General consequential plan/approval,
+edge deletion, hard deletion, restore, bulk ingestion, and human evidence still
+require their own gates.
 
 ### Axiom Education
 

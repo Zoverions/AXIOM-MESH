@@ -14,9 +14,12 @@ const EXPECTED_SURFACES = Object.freeze([
   'ask',
   'social',
   'circles',
+  'capabilities',
   'approvals',
+  'consent',
   'vault',
   'receipts',
+  'verify',
   'share',
   'explore'
 ]);
@@ -27,6 +30,7 @@ const EXPECTED_ROUTES = Object.freeze([
   'intents.submit',
   'social.get',
   'approvals.list',
+  'consents.list',
   'memory.list',
   'exports.get',
   'export_bundles.get',
@@ -432,7 +436,10 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     'aria-live="polite"',
     'Experimental local preview',
     'data-route="social"',
-    'data-route="circles"'
+    'data-route="circles"',
+    'data-route="capabilities"',
+    'data-route="consent"',
+    'data-route="verify"'
   ];
   if (requiredIndex.some(marker => !index.includes(marker))) {
     throw new ValidationError('AXIOM One document semantics are incomplete');
@@ -467,6 +474,11 @@ function validateAssets({ index, app, presentation, localOrganize, styles, worke
     'intentSuccess',
     'intentFailure',
     'retrySameRequest',
+    'human.capability',
+    'human.consent',
+    'human.verification',
+    "state.client.call('consents.list'",
+    "state.client.call('audit.verify'",
     'Raw result and evidence'
   ];
   if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {

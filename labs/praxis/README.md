@@ -491,15 +491,13 @@ state, or deployment path depends on it.
 ## Reproducibility
 
 The front-end benchmark remains laboratory evidence, not a hardware score or
-production SLO. Wall-clock parse/format checks use a median of five samples and
-retain the 5,000 ms absolute ceilings. Parse scaling uses process CPU time from
-up to five independent normalized batches. Normal batch size is derived from
-source length so the 1k and 10k corpora process comparable source volume per CPU
-sample instead of equal parse counts; each base batch is capped at 16 parses.
-A zero CPU reading may increase only the next bounded batch. The sampler never
-exceeds 80 parse runs and requires at least three nonzero CPU samples; otherwise
-it returns missing timing evidence so the existing fail-closed budget check
-rejects the scaling result. The 1k -> 10k CPU ceiling remains 20x.
+production SLO. Absolute parse/format checks use a median of five wall samples
+and retain the 5,000 ms ceilings. The 1k -> 10k parse scaling ceiling remains
+20x, but the gate now uses five alternating comparable-work wall-time rounds and
+the median paired ratio so short process-CPU quantization or runner scheduling
+cannot decide the result. Per-corpus CPU timing is still required as diagnostic
+evidence and keeps its bounded sampler; malformed or missing CPU evidence still
+fails closed. Missing or malformed paired scaling evidence also fails closed.
 
 Run the focused tests through the existing Mesh test harness:
 

@@ -1,13 +1,21 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { createPublicKey, generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
-import { digestObject } from '../src/lib/canonical.mjs';
+import { ValidationError, digestObject } from '../src/lib/canonical.mjs';
 import { DELEGATION_ROOT_BINDING_SCHEMA } from '../src/lib/delegation-ledger.mjs';
 import {
   createDelegationRootAttestation,
   delegationRootAttestationKeyId
 } from '../src/lib/delegation-root-attestation.mjs';
+import {
+  containerPaths,
+  countingProxy,
+  label,
+  propertyPaths,
+  withAccessorAt,
+  withProxyAt
+} from '../test-support/hostile-plain-data.mjs';
 
 const ACTIVATED = '2026-08-28T04:00:00.000Z';
 const ROTATED = '2026-08-28T04:10:00.000Z';
@@ -352,4 +360,333 @@ test('historical verification rejects retired or revoked signer keys at the atte
     revocations: [revocation],
     expectedRootBindingDigest: binding.binding_digest
   }), /revoked at requested time/i);
+});
+
+async function revokedKeyFixture() {
+  const binding = rootBinding();
+  const controller = keys();
+  const firstKey = keys();
+  const {
+    createDelegationRootAttestationKeyRevocation,
+    verifyDelegationRootAttestationWithKeyLifecycle
+  } = await lifecycle();
+  const first = await initialCredential({ binding, controller, operational: firstKey });
+  const revocation = createDelegationRootAttestationKeyRevocation(first, {
+    trustedControllerPublicKey: controller.publicKey,
+    controllerPrivateKey: controller.privateKey,
+    effectiveAt: '2026-08-28T04:05:00.000Z',
+    reasonCode: 'compromised'
+  });
+  // The compromised key signs after its revocation; the genuinely signed time is 04:30.
+  const revokedAttestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: firstKey.privateKey,
+    issued_at: '2026-08-28T04:30:00.000Z'
+  });
+  const validAttestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: firstKey.privateKey,
+    issued_at: '2026-08-28T04:01:00.000Z'
+  });
+  const options = {
+    trustedControllerPublicKey: controller.publicKey,
+    credentials: [first],
+    revocations: [revocation],
+    expectedRootBindingDigest: binding.binding_digest
+  };
+  return {
+    binding,
+    controller,
+    firstKey,
+    first,
+    revocation,
+    revokedAttestation,
+    validAttestation,
+    options,
+    verify: (attestation, changes = {}) =>
+      verifyDelegationRootAttestationWithKeyLifecycle(attestation, { ...options, ...changes })
+  };
+}
+
+test('P2: an issued_at getter cannot move a revoked-key attestation before its revocation', async () => {
+  const f = await revokedKeyFixture();
+  assert.throws(() => f.verify(f.revokedAttestation), /revoked at requested time/i);
+  assert.throws(() => f.verify(JSON.parse(JSON.stringify(f.revokedAttestation))), /revoked at requested time/i);
+  let reads = 0;
+  const statement = { ...f.revokedAttestation.statement };
+  Object.defineProperty(statement, 'issued_at', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      reads += 1;
+      return reads === 1 ? '2026-08-28T04:01:00.000Z' : f.revokedAttestation.statement.issued_at;
+    }
+  });
+  assert.throws(
+    () => f.verify({ ...f.revokedAttestation, statement }),
+    error => error instanceof ValidationError && /accessor/.test(error.message)
+  );
+  assert.equal(reads, 0);
+});
+
+test('P2: a lying issued_at Proxy cannot bypass key revocation', async () => {
+  const f = await revokedKeyFixture();
+  const counter = { traps: 0 };
+  const statement = countingProxy({ ...f.revokedAttestation.statement }, counter, {
+    issued_at: (read, signed) => (read === 1 ? '2026-08-28T04:01:00.000Z' : signed)
+  });
+  assert.throws(
+    () => f.verify({ ...f.revokedAttestation, statement }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(counter.traps, 0);
+});
+
+test('lifecycle verification rejects a Proxy or accessor anywhere in attestation, credentials or revocations', async () => {
+  const f = await revokedKeyFixture();
+  assert.equal(f.verify(f.validAttestation).verified, true);
+  assert.equal(f.verify(f.validAttestation).issued_at, '2026-08-28T04:01:00.000Z');
+  const positions = [
+    ['attestation', f.validAttestation, value => f.verify(value)],
+    ['credentials', f.options.credentials, value => f.verify(f.validAttestation, { credentials: value })],
+    ['revocations', f.options.revocations, value => f.verify(f.validAttestation, { revocations: value })]
+  ];
+  let checked = 0;
+  for (const [name, document, run] of positions) {
+    for (const path of containerPaths(document)) {
+      const counter = { traps: 0 };
+      assert.throws(
+        () => run(withProxyAt(document, path, counter)),
+        error => error instanceof ValidationError && /Proxy/.test(error.message),
+        `${name} Proxy at ${label(path)}`
+      );
+      assert.equal(counter.traps, 0, `${name} Proxy at ${label(path)} ran a trap`);
+      checked += 1;
+    }
+    for (const path of propertyPaths(document)) {
+      const counter = { getters: 0 };
+      assert.throws(
+        () => run(withAccessorAt(document, path, counter)),
+        error => error instanceof ValidationError && /accessor/.test(error.message),
+        `${name} accessor at ${label(path)}`
+      );
+      assert.equal(counter.getters, 0, `${name} accessor at ${label(path)} ran its getter`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 50, `expected to cover every position, covered ${checked}`);
+});
+
+test('lifecycle verification rejects hidden, symbol and non-plain attestation state without a raw TypeError', async () => {
+  const f = await revokedKeyFixture();
+  const hidden = structuredClone(f.validAttestation);
+  Object.defineProperty(hidden.statement, 'issued_at', {
+    value: f.validAttestation.statement.issued_at, enumerable: false, configurable: true, writable: true
+  });
+  const symbolKeyed = structuredClone(f.validAttestation);
+  symbolKeyed.statement[Symbol('shadow')] = 'x';
+  class Statement {}
+  const nonPlain = {
+    ...f.validAttestation,
+    statement: Object.assign(new Statement(), f.validAttestation.statement)
+  };
+  const cases = [
+    ['hidden', hidden, /non-enumerable/],
+    ['symbolKeyed', symbolKeyed, /symbol key/],
+    ['nonPlain', nonPlain, /non-plain prototype/]
+  ];
+  for (const [name, value, reason] of cases) {
+    assert.throws(
+      () => f.verify(value),
+      error => error instanceof ValidationError && /must be plain data/.test(error.message)
+        && reason.test(error.message),
+      name
+    );
+  }
+  const {
+    validateDelegationRootAttestationKeyCredentialPath
+  } = await lifecycle();
+  const counter = { traps: 0 };
+  assert.throws(
+    () => validateDelegationRootAttestationKeyCredentialPath(countingProxy([...f.options.credentials], counter), {
+      trustedControllerPublicKey: f.options.trustedControllerPublicKey
+    }),
+    error => error instanceof ValidationError && /Proxy/.test(error.message)
+  );
+  assert.equal(counter.traps, 0);
+});
+
+// A real controller public key whose `type` read runs `mutate`. Options are not
+// snapshotted, so this runs caller code after the evidence snapshot is taken.
+function mutatingControllerKey(publicKey, mutate) {
+  const key = createPublicKey(publicKey.export({ type: 'spki', format: 'pem' }));
+  let reads = 0;
+  Object.defineProperty(key, 'type', {
+    configurable: true,
+    get() {
+      reads += 1;
+      mutate();
+      return 'public';
+    }
+  });
+  return { key, reads: () => reads };
+}
+
+test('mutating options cannot redirect the signer key lookup to raw input', async () => {
+  const f = await revokedKeyFixture();
+  const input = structuredClone(f.revokedAttestation);
+  const hook = mutatingControllerKey(f.controller.publicKey, () => {
+    input.statement.signer_key_id = 'f'.repeat(64);
+  });
+  assert.throws(() => f.verify(input, { trustedControllerPublicKey: hook.key }), /revoked at requested time/i);
+  assert.ok(hook.reads() > 0);
+});
+
+test('mutating options cannot move raw issued_at before revocation or into the output', async () => {
+  const f = await revokedKeyFixture();
+  const input = structuredClone(f.revokedAttestation);
+  const hook = mutatingControllerKey(f.controller.publicKey, () => {
+    input.statement.issued_at = '2026-08-28T04:01:00.000Z';
+  });
+  assert.throws(() => f.verify(input, { trustedControllerPublicKey: hook.key }), /revoked at requested time/i);
+  assert.ok(hook.reads() > 0);
+
+  const valid = structuredClone(f.validAttestation);
+  const outputHook = mutatingControllerKey(f.controller.publicKey, () => {
+    valid.statement.issued_at = '2026-08-28T04:00:30.000Z';
+  });
+  const result = f.verify(valid, { trustedControllerPublicKey: outputHook.key });
+  assert.equal(result.verified, true);
+  assert.equal(result.issued_at, f.validAttestation.statement.issued_at);
+});
+
+test('mutating options cannot swap the raw attestation for another genuinely signed one', async () => {
+  const f = await revokedKeyFixture();
+  const input = structuredClone(f.revokedAttestation);
+  const replacement = structuredClone(f.validAttestation);
+  const hook = mutatingControllerKey(f.controller.publicKey, () => {
+    Object.assign(input, structuredClone(replacement));
+  });
+  assert.throws(() => f.verify(input, { trustedControllerPublicKey: hook.key }), /revoked at requested time/i);
+  assert.equal(input.statement.issued_at, replacement.statement.issued_at);
+});
+
+test('mutating options cannot drop a successor from the raw credential list after path validation', async () => {
+  const binding = rootBinding();
+  const controller = keys();
+  const firstKey = keys();
+  const secondKey = keys();
+  const {
+    createDelegationRootAttestationKeyCredential,
+    verifyDelegationRootAttestationWithKeyLifecycle
+  } = await lifecycle();
+  const first = await initialCredential({ binding, controller, operational: firstKey });
+  const second = createDelegationRootAttestationKeyCredential({
+    rootBinding: binding,
+    controllerPrivateKey: controller.privateKey,
+    operationalPublicKey: secondKey.publicKey,
+    keyEpoch: 2,
+    activatedAt: ROTATED,
+    transitionKind: 'rotation',
+    predecessorCredential: first,
+    predecessorDisposition: 'retired'
+  });
+  const staleAttestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: firstKey.privateKey,
+    issued_at: '2026-08-28T04:30:00.000Z'
+  });
+  const credentials = [first, second];
+  const hook = mutatingControllerKey(controller.publicKey, () => {
+    credentials.length = 1;
+  });
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(staleAttestation, {
+    trustedControllerPublicKey: hook.key,
+    credentials,
+    expectedRootBindingDigest: binding.binding_digest
+  }), /stale after successor activation/i);
+  assert.equal(credentials.length, 1, 'the option hook must have truncated the raw list');
+});
+
+test('an own __proto__ key (JSON.parse) in the attestation or a credential is rejected, never applied as a prototype', async () => {
+  const binding = rootBinding();
+  const controller = keys();
+  const operational = keys();
+  const { verifyDelegationRootAttestationWithKeyLifecycle } = await lifecycle();
+  const credential = await initialCredential({ binding, controller, operational });
+  const attestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: operational.privateKey,
+    issued_at: '2026-08-28T04:05:00.000Z'
+  });
+  const options = {
+    trustedControllerPublicKey: controller.publicKey,
+    credentials: [credential],
+    expectedRootBindingDigest: binding.binding_digest,
+    expectedRootAuthorityDigest: binding.root_authority_digest,
+    expectedRootHolder: binding.root_holder
+  };
+  const withOwnProto = (value, injected) => JSON.parse(
+    JSON.stringify(value).replace(/^\{/, `{"__proto__":${JSON.stringify(injected)},`)
+  );
+  assert.equal(verifyDelegationRootAttestationWithKeyLifecycle(JSON.parse(JSON.stringify(attestation)), options).verified, true);
+  const tampered = withOwnProto(attestation, { signer_id: binding.root_holder });
+  assert.equal(Object.hasOwn(tampered, '__proto__'), true);
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(tampered, options), ValidationError);
+  const statement = JSON.parse(JSON.stringify(attestation));
+  statement.statement = withOwnProto(statement.statement, { issued_at: '2026-08-28T04:05:00.000Z' });
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(statement, options), ValidationError);
+  const credentialTampered = withOwnProto(credential, { credential_digest: credential.credential_digest });
+  assert.throws(() => verifyDelegationRootAttestationWithKeyLifecycle(attestation, { ...options, credentials: [credentialTampered] }), ValidationError);
+});
+
+test('lifecycle verification accepts at most 128 revocations, like the currentness checkpoint', async () => {
+  const binding = rootBinding();
+  const controller = keys();
+  const firstKey = keys();
+  const secondKey = keys();
+  const {
+    createDelegationRootAttestationKeyCredential,
+    createDelegationRootAttestationKeyRevocation,
+    verifyDelegationRootAttestationWithKeyLifecycle
+  } = await lifecycle();
+  const first = await initialCredential({ binding, controller, operational: firstKey });
+  const second = createDelegationRootAttestationKeyCredential({
+    rootBinding: binding,
+    controllerPrivateKey: controller.privateKey,
+    operationalPublicKey: secondKey.publicKey,
+    keyEpoch: 2,
+    activatedAt: ROTATED,
+    transitionKind: 'rotation',
+    predecessorCredential: first,
+    predecessorDisposition: 'retired'
+  });
+  // Revokes the retired first key only; the attestation is signed by the second.
+  const revocation = createDelegationRootAttestationKeyRevocation(first, {
+    trustedControllerPublicKey: controller.publicKey,
+    controllerPrivateKey: controller.privateKey,
+    effectiveAt: '2026-08-28T04:05:00.000Z',
+    reasonCode: 'compromised'
+  });
+  const attestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: secondKey.privateKey,
+    issued_at: '2026-08-28T04:15:00.000Z'
+  });
+  const verify = count => verifyDelegationRootAttestationWithKeyLifecycle(attestation, {
+    trustedControllerPublicKey: controller.publicKey,
+    credentials: [first, second],
+    revocations: Array.from({ length: count }, () => revocation),
+    expectedRootBindingDigest: binding.binding_digest
+  });
+  assert.equal(verify(128).verified, true);
+  assert.throws(
+    () => verify(129),
+    error => error instanceof ValidationError && /at most 128 entries/.test(error.message)
+  );
 });
