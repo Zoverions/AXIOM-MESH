@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { meshConfig } from '../lib/config.mjs';
 import {
@@ -28,7 +29,8 @@ import {
   serviceSnapshotsFromReport,
   ServiceTelemetry
 } from '../lib/observability.mjs';
-import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
+import { createActivePolicy, loadPolicyStack, verifyPolicyGenerationReceipt } from '../lib/policy.mjs';
+import { ExecutionGate } from '../lib/execution-gate.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
   machinePrincipalAuthorityFacts,
@@ -57,6 +59,11 @@ import {
 } from '../lib/service-network-policy.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const TERMINAL_INTENT_EVENTS = new Set(['intent.completed', 'intent.denied', 'intent.failed']);
+// Bounds on recovery: ids awaiting a terminal record, and pages per sweep.
+const UNSETTLED_INTENT_LIMIT = 1_024;
+const RECOVERY_BATCH = 100;
+const RECOVERY_PAGE_LIMIT = 100;
 
 export async function createHypervisorService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'hypervisor', { create: config.autoBootstrap });
@@ -73,7 +80,7 @@ export async function createHypervisorService(config = meshConfig()) {
   const router = new Router();
   const telemetry = new ServiceTelemetry('hypervisor');
 
-  async function commit(traceId, principalId, events) {
+  async function commitToGrid(traceId, principalId, events) {
     return signedFetch(identity, 'grid', `${config.urls.grid}/internal/v1/commit`, {
       method: 'POST',
       traceId,
@@ -102,23 +109,47 @@ export async function createHypervisorService(config = meshConfig()) {
     );
   }
 
+  const intentGate = new ExecutionGate({
+    // A stable, retryable Gateway code; the reason says why.
+    code: 'dependency_unavailable',
+    message: 'The Hypervisor is at capacity; retry later',
+    details: { service: 'hypervisor' },
+    ...config.intentGate
+  });
+  telemetry.setAdmissionSource(() => intentGate.snapshot());
+  // Scalability audit S-15: rebuilt only when Grid's overlay generation
+  // changes; Grid is still asked on every intent (lib/policy.mjs). Each ask
+  // carries a fresh nonce, and Grid's signed receipt for it is verified
+  // before the answer is used.
+  const cachedActivePolicy = createActivePolicy({
+    basePolicy,
+    fetchOverlays: async ({ generation, traceId, nonce, sink }) => {
+      const query = new URLSearchParams({ nonce });
+      if (generation) query.set('generation', generation);
+      const response = await gridGet(`/internal/v1/policy-overlays?${query}`, traceId);
+      sink.receipt = verifyPolicyGenerationReceipt(response?.receipt, {
+        publicKey: gridKey,
+        generation: response?.generation,
+        nonce
+      });
+      return response;
+    }
+  });
+  // Returns the policy engine in force and Grid's signed receipt naming its
+  // overlay generation.
   async function activePolicy(traceId) {
-    const response = await gridGet('/internal/v1/policy-overlays', traceId);
-    if (!response.overlays?.length) return basePolicy;
-    const merged = mergeDenyDominantPolicy([
-      basePolicy.policy,
-      ...response.overlays.map(overlay => overlay.policy_json)
-    ]);
-    return new PolicyEngine(merged, {
-      layers: [
-        ...basePolicy.layers,
-        ...response.overlays.map((overlay, index) => ({
-          order: basePolicy.layers.length + index,
-          version: overlay.policy_json.version,
-          digest: overlay.policy_digest
-        }))
-      ]
-    });
+    const sink = {};
+    try {
+      const policy = await cachedActivePolicy({
+        traceId,
+        nonce: randomBytes(24).toString('base64url'),
+        sink
+      });
+      return { policy, receipt: sink.receipt };
+    } catch (error) {
+      if (error?.code === 'policy_unavailable') throw new AxiomError('policy_unavailable', error.message, 503);
+      throw error;
+    }
   }
 
   async function currentOperations(traceId = newId('trace')) {
@@ -168,14 +199,135 @@ export async function createHypervisorService(config = meshConfig()) {
     );
     return buildMachineDiscovery({
       principal,
-      policy: await activePolicy(traceId),
+      policy: (await activePolicy(traceId)).policy,
       kernelVersion: '0.12.0-dev.3'
     });
   });
 
-  router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {
+  // Scalability audit S-15: every accepted intent reaches a terminal state.
+  // The handler records one on every path; if that record cannot be
+  // written, the intent id is retried by id; and intents a previous
+  // process left accepted are closed once after start. The Grid accepts
+  // exactly one terminal event per intent, so a late one is refused.
+  const activeIntents = new Set();
+  const unsettledIntentIds = new Set();
+  const recovery = {
+    delayMs: config.intentRecovery?.delayMs ?? 2 * config.clockSkewSeconds * 1_000,
+    intervalMs: config.intentRecovery?.intervalMs ?? 60_000,
+    marginMs: config.intentRecovery?.marginMs ?? config.clockSkewSeconds * 1_000,
+    pageSize: config.intentRecovery?.pageSize ?? RECOVERY_BATCH,
+    timers: [],
+    swept: false
+  };
+  let crashPoint = null;
+
+  function trackedCommit(lifecycle) {
+    return async (trace, principalId, events) => {
+      const committed = await commitToGrid(trace, principalId, events);
+      for (const event of events) {
+        if (event.kind === 'intent.accepted') lifecycle.accepted = true;
+        if (TERMINAL_INTENT_EVENTS.has(event.kind)) lifecycle.terminal = true;
+      }
+      return committed;
+    };
+  }
+
+  async function settleUnfinishedIntent(intent, traceId, lifecycle, error) {
+    if (!lifecycle.accepted || lifecycle.terminal || lifecycle.crashed) return;
+    try {
+      await trackedCommit(lifecycle)(traceId, intent.principal.id, [{
+        kind: 'intent.failed',
+        subject: intent.intent_id,
+        payload: {
+          intent_id: intent.intent_id,
+          error: { code: error.code ?? 'execution_failed', message: error.message }
+        }
+      }]);
+    } catch (settleError) {
+      // Another path already recorded the terminal state.
+      if (settleError.code === 'intent_not_accepted') return;
+      if (unsettledIntentIds.size < UNSETTLED_INTENT_LIMIT) unsettledIntentIds.add(intent.intent_id);
+    }
+  }
+
+  // Test-only. At a named point the handler stops as if the process died
+  // (`crash`: nothing after it, including the terminal record, is written),
+  // fails with an ordinary error (`fail`), or waits (`{ pause }`).
+  async function crashPointForTest(lifecycle, point) {
+    if (crashPoint?.point !== point) return;
+    if (crashPoint.pause) return crashPoint.pause;
+    if (crashPoint.mode === 'fail') {
+      throw new AxiomError(crashPoint.code ?? 'injected_failure', `Injected failure ${point}`, 500);
+    }
+    lifecycle.crashed = true;
+    throw new AxiomError('simulated_crash', `Simulated Hypervisor crash ${point}`, 500);
+  }
+
+  async function closeInterruptedIntents(body) {
+    return signedFetch(identity, 'grid', `${config.urls.grid}/internal/v1/intents/interrupted`, {
+      method: 'POST',
+      traceId: newId('trace'),
+      body
+    });
+  }
+
+  // Closes intents accepted before every intent this process is running,
+  // less a clock margin. Intents a previous process accepted are older than
+  // that once this process has run for the margin.
+  async function recoverInterruptedIntents() {
+    const cutoffMs = Math.min(Date.now(), ...[...activeIntents].map(item => item.startedAtMs)) - recovery.marginMs;
+    const closed = [];
+    for (let page = 0; page < RECOVERY_PAGE_LIMIT; page += 1) {
+      const result = await closeInterruptedIntents({
+        before: new Date(cutoffMs).toISOString(),
+        limit: recovery.pageSize
+      });
+      closed.push(...result.closed);
+      if (!result.has_more) {
+        recovery.swept = true;
+        break;
+      }
+    }
+    return closed;
+  }
+
+  // Retries, by id, intents whose terminal record this process could not
+  // write. They are no longer running here.
+  async function settleUnsettledIntents() {
+    if (!unsettledIntentIds.size) return [];
+    const ids = [...unsettledIntentIds].slice(0, RECOVERY_BATCH);
+    const result = await closeInterruptedIntents({
+      before: new Date(Date.now() - recovery.marginMs).toISOString(),
+      intent_ids: ids
+    });
+    // Closed, already terminal or unknown: settled. Accepted within the
+    // margin: kept for the next round.
+    const pending = new Set(result.pending ?? []);
+    for (const id of ids) if (!pending.has(id)) unsettledIntentIds.delete(id);
+    return result.closed;
+  }
+
+  // Scalability audit S-15: a bounded execution queue in front of intent
+  // handling. Beyond it the Hypervisor answers 503 dependency_unavailable
+  // (reason queue_full or queue_timeout) with a retry hint, before any
+  // evidence is written, so saturation is an explicit answer and every
+  // intent that starts reaches its terminal state.
+  router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => intentGate.run(async () => {
     const intent = normalizeIntent(parseJsonBody(body));
-    const policy = await activePolicy(traceId);
+    const lifecycle = { accepted: false, terminal: false, crashed: false, startedAtMs: Date.now() };
+    activeIntents.add(lifecycle);
+    try {
+      return await processIntent(intent, traceId, lifecycle, trackedCommit(lifecycle));
+    } catch (error) {
+      await settleUnfinishedIntent(intent, traceId, lifecycle, error);
+      throw error;
+    } finally {
+      activeIntents.delete(lifecycle);
+    }
+  }));
+
+  async function processIntent(intent, traceId, lifecycle, commit) {
+    const { policy, receipt: policyReceipt } = await activePolicy(traceId);
     let decision = policy.evaluate({
       action: intent.action,
       principal: intent.principal,
@@ -257,24 +409,29 @@ export async function createHypervisorService(config = meshConfig()) {
         request_digest: intentRequestDigest(intent),
         policy_version: decision.policy_version,
         policy_digest: decision.policy_digest,
+        policy_generation_receipt: policyReceipt,
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
         ...(machineAuthority ? { machine_authority: machineAuthority } : {}),
         ...(machineAssurance ? { machine_assurance: machineAssurance } : {})
       }
     }]);
+    await crashPointForTest(lifecycle, 'after_accepted');
     if (!decision.allow) {
+      const httpStatus = decision.http_status ?? (decision.pending ? 409 : 403);
+      // The status is kept so a replay with the same key answers as this did.
       const error = {
         code: decision.code,
         message: decision.reason,
-        ...(decision.pending ? { pending: true } : {})
+        ...(decision.pending ? { pending: true } : {}),
+        http_status: httpStatus
       };
       await commit(traceId, intent.principal.id, [{
         kind: 'intent.denied',
         subject: intent.intent_id,
         payload: { intent_id: intent.intent_id, error }
       }]);
-      throw new AxiomError(decision.code, decision.reason, decision.http_status ?? (decision.pending ? 409 : 403), {
+      throw new AxiomError(decision.code, decision.reason, httpStatus, {
         intent_id: intent.intent_id,
         risk: decision.risk,
         ...(decision.required_confirmations
@@ -291,7 +448,8 @@ export async function createHypervisorService(config = meshConfig()) {
       if (intent.approval_ids.length !== 1) {
         await denyIntent(commit, traceId, intent, {
           code: 'independent_approval_required',
-          message: 'This action requires one active approval from a different principal.'
+          message: 'This action requires one active approval from a different principal.',
+          http_status: 409
         });
         throw new AxiomError(
           'independent_approval_required',
@@ -319,7 +477,8 @@ export async function createHypervisorService(config = meshConfig()) {
       ) {
         await denyIntent(commit, traceId, intent, {
           code: 'approval_mismatch',
-          message: 'The supplied approval is not active and bound to this exact request.'
+          message: 'The supplied approval is not active and bound to this exact request.',
+          http_status: 403
         });
         throw new AxiomError(
           'approval_mismatch',
@@ -342,10 +501,12 @@ export async function createHypervisorService(config = meshConfig()) {
         if (error.code !== 'approval_unavailable') throw error;
         await denyIntent(commit, traceId, intent, {
           code: 'approval_unavailable',
-          message: 'The supplied approval was already consumed or expired.'
+          message: 'The supplied approval was already consumed or expired.',
+          http_status: 409
         });
         throw error;
       }
+      await crashPointForTest(lifecycle, 'after_approval_consumed');
     }
     const plan = buildPlan(intent, decision, { approval });
     const boundPlanDigest = planDigest(plan);
@@ -420,6 +581,7 @@ export async function createHypervisorService(config = meshConfig()) {
           502
         );
       }
+      await crashPointForTest(lifecycle, 'after_capability_consumed');
 
       const execution = await signedFetch(identity, 'sandbox', `${config.urls.sandbox}/internal/v1/execute`, {
         method: 'POST',
@@ -471,6 +633,7 @@ export async function createHypervisorService(config = meshConfig()) {
           );
         }
       }
+      await crashPointForTest(lifecycle, 'after_sandbox_executed');
       const events = [];
       if (execution.result.mutation) {
         events.push(projectExecutionMutationEvent(execution.result.mutation, {
@@ -517,6 +680,7 @@ export async function createHypervisorService(config = meshConfig()) {
       }
       return { httpStatus: 201, body: result };
     } catch (error) {
+      if (lifecycle.crashed) throw error;
       const failure = {
         code: error.code ?? 'execution_failed',
         message: error.message
@@ -528,12 +692,12 @@ export async function createHypervisorService(config = meshConfig()) {
           payload: { intent_id: intent.intent_id, error: failure }
         }]);
       } catch {
-        // The original error remains authoritative; a missing failure event is
-        // visible through the accepted intent's unfinished state.
+        // The original error remains authoritative. settleUnfinishedIntent
+        // retries, and recovery closes the intent if that fails too.
       }
       throw error;
     }
-  });
+  }
 
   const server = createServiceServer({
     name: 'hypervisor',
@@ -568,11 +732,34 @@ export async function createHypervisorService(config = meshConfig()) {
     identity,
     policy: basePolicy,
     telemetry,
+    intentGate,
+    recoverInterruptedIntents,
+    settleUnsettledIntents,
+    unsettledIntentIds,
+    setCrashPointForTest(point, { mode = 'crash', pause, code } = {}) {
+      if (config.environment !== 'test') throw new Error('Crash points exist only in the test environment');
+      crashPoint = point ? { point, mode, pause, code } : null;
+    },
     operations: currentOperations,
     async start() {
-      return listen(server, { host: config.hosts.internal, port: config.ports.hypervisor });
+      const address = await listen(server, { host: config.hosts.internal, port: config.ports.hypervisor });
+      // Recovery never blocks startup; a failed round is tried again.
+      const recover = () => {
+        const work = recovery.swept ? settleUnsettledIntents() : recoverInterruptedIntents();
+        work.catch(() => {});
+      };
+      const first = setTimeout(() => {
+        recover();
+        const every = setInterval(recover, recovery.intervalMs);
+        every.unref?.();
+        recovery.timers.push(every);
+      }, recovery.delayMs);
+      first.unref?.();
+      recovery.timers.push(first);
+      return address;
     },
     async stop() {
+      for (const timer of recovery.timers.splice(0)) clearTimeout(timer);
       if (server.listening) await new Promise(resolve => server.close(resolve));
     }
   };

@@ -17,6 +17,10 @@ import {
 const GENESIS_HASH = '0'.repeat(64);
 const CHECKPOINT_SCHEMA = 'axiom-grid-chain-checkpoint.v1';
 const CHECKPOINT_META_KEY = 'chain_checkpoints_v1';
+// Scalar copy of the latest checkpoint's position (scalability audit S-03).
+// Only a scheduling hint: it decides whether an append must consult the
+// history, never whether anything verifies.
+const CHECKPOINT_HEAD_META_KEY = 'chain_checkpoint_head_v1';
 const DEFAULT_CHECKPOINT_INTERVAL = 10_000;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CHECKPOINT_ID = /^gcp_[a-f0-9]{64}$/;
@@ -41,6 +45,7 @@ export class GridStore extends CoreGridStore {
     this.checkpointInterval = interval;
     this.liveChainVerificationCache = null;
     this.liveChainTrustedGrowth = null;
+    this.checkpointPrefixCache = null;
     this.ensureChainCheckpoint({ minimumDistance: interval });
   }
 
@@ -60,7 +65,9 @@ export class GridStore extends CoreGridStore {
       )
     );
     const appended = super.appendEvents(input);
-    this.ensureChainCheckpoint({ minimumDistance: this.checkpointInterval });
+    if (this.checkpointDue(this.checkpointInterval)) {
+      this.ensureChainCheckpoint({ minimumDistance: this.checkpointInterval });
+    }
     const after = this.readLiveChainMarker();
     this.liveChainTrustedGrowth = trustedBase
       ? {
@@ -241,14 +248,15 @@ export class GridStore extends CoreGridStore {
     if (mode !== 'checkpoint') {
       return { valid: false, reason: 'verification_mode_invalid' };
     }
+    let raw;
     let history;
     try {
-      history = this.readCheckpointHistory();
+      ({ raw, history } = this.readCheckpointHistoryWithRaw());
     } catch {
       return { valid: false, reason: 'checkpoint_history_invalid' };
     }
     if (!history.length) return this.verifyFullChain();
-    const checkpointVerification = this.verifyCheckpointHistory(history);
+    const checkpointVerification = this.verifyCheckpointHistoryIncremental(raw, history);
     if (!checkpointVerification.valid) return checkpointVerification;
     const latest = history.at(-1);
     return this.verifyEventRange({
@@ -306,7 +314,10 @@ export class GridStore extends CoreGridStore {
     ).get().value;
     const history = this.readCheckpointHistory();
     const latest = history.at(-1);
-    if (latest && seq - latest.statement.seq < minimumDistance) return latest;
+    if (latest && seq - latest.statement.seq < minimumDistance) {
+      this.writeCheckpointHead(latest);
+      return latest;
+    }
     if (!Number.isFinite(Date.parse(createdAt))) {
       throw new ValidationError('Grid checkpoint timestamp is invalid');
     }
@@ -335,20 +346,116 @@ export class GridStore extends CoreGridStore {
         INSERT INTO meta(key, value) VALUES (?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value
       `).run(CHECKPOINT_META_KEY, canonicalJson(next));
+      this.writeCheckpointHead(record);
     });
     return structuredClone(record);
   }
 
+  /**
+   * Whether an append at the current head needs the full checkpoint path.
+   *
+   * O(1): reads the scalar head instead of parsing the whole history on every
+   * append, which cost grew with checkpoint count. A missing, malformed or
+   * impossible head (ahead of the chain) answers true, so the authoritative
+   * path runs and rewrites it. A head edited to look recent can only delay the
+   * next checkpoint; verification always reads the signed history itself.
+   */
+  checkpointDue(minimumDistance) {
+    const seq = Number(
+      this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value
+    );
+    if (seq === 0) return false;
+    const head = this.readCheckpointHead();
+    return !head || head.seq > seq || seq - head.seq >= minimumDistance;
+  }
+
+  readCheckpointHead() {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(
+      CHECKPOINT_HEAD_META_KEY
+    );
+    if (!row) return null;
+    try {
+      const head = JSON.parse(row.value);
+      if (
+        isPlainObject(head)
+        && Number.isSafeInteger(head.seq)
+        && head.seq >= 1
+        && DIGEST.test(head.checkpoint_digest ?? '')
+      ) {
+        return head;
+      }
+    } catch {
+      // Treated as absent: the authoritative path rewrites it.
+    }
+    return null;
+  }
+
+  writeCheckpointHead(record) {
+    const value = canonicalJson({
+      seq: record.statement.seq,
+      checkpoint_digest: record.checkpoint_digest
+    });
+    const current = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(
+      CHECKPOINT_HEAD_META_KEY
+    );
+    if (current?.value === value) return;
+    this.db.prepare(`
+      INSERT INTO meta(key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(CHECKPOINT_HEAD_META_KEY, value);
+  }
+
   readCheckpointHistory() {
+    return this.readCheckpointHistoryWithRaw().history;
+  }
+
+  readCheckpointHistoryWithRaw() {
     const row = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(
       CHECKPOINT_META_KEY
     );
-    if (!row) return [];
+    if (!row) return { raw: null, history: [] };
     const parsed = JSON.parse(row.value);
     if (!Array.isArray(parsed) || parsed.length > 100_000) {
       throw new ValidationError('Grid checkpoint history is invalid');
     }
-    return parsed;
+    return { raw: row.value, history: parsed };
+  }
+
+  /**
+   * Checkpoint-mode verification without re-verifying an unchanged prefix
+   * (scalability audit S-03). Every call re-verified every checkpoint
+   * signature and anchor event, so a request needing live chain verification
+   * cost time proportional to the node's age.
+   *
+   * After a successful verification, the exact stored bytes of every record
+   * except the latest are remembered by digest, together with the active
+   * verification keys. A later call whose stored history begins with those
+   * same bytes, under the same keys, verifies only the records after them;
+   * the latest record, which the unverified suffix hangs from, is always
+   * verified again in full. Any edit to an earlier record changes the bytes
+   * and forces a full verification. Edits to event rows inside the prefix are
+   * outside checkpoint mode's assurance, as for every other prefix event;
+   * verifyFullChain re-verifies them from genesis.
+   */
+  verifyCheckpointHistoryIncremental(raw, history) {
+    const keysDigest = digestObject(this.verificationKeyInventory());
+    const cache = this.checkpointPrefixCache;
+    let from;
+    if (
+      cache
+      && cache.keysDigest === keysDigest
+      && typeof raw === 'string'
+      && history.length > cache.verifiedCount
+      && raw.length > cache.prefixLength
+      && sha256(raw.slice(0, cache.prefixLength)) === cache.prefixDigest
+    ) {
+      from = cache;
+    }
+    const verification = this.verifyCheckpointHistory(history, from);
+    this.checkpointPrefixCache = verification.valid
+      ? checkpointPrefixCacheFor(raw, history, keysDigest)
+      : null;
+    return verification;
   }
 
   verificationKeyInventory() {
@@ -360,13 +467,14 @@ export class GridStore extends CoreGridStore {
       .sort((left, right) => left.key_id.localeCompare(right.key_id));
   }
 
-  verifyCheckpointHistory(history) {
+  verifyCheckpointHistory(history, from = null) {
     const activeKeys = new Map(
       this.verificationKeyInventory().map(item => [item.key_id, item.public_key_digest])
     );
-    let previousDigest = null;
-    let previousSeq = 0;
+    let previousDigest = from?.previousDigest ?? null;
+    let previousSeq = from?.previousSeq ?? 0;
     for (const [index, record] of history.entries()) {
+      if (index < (from?.verifiedCount ?? 0)) continue;
       if (!isPlainObject(record) || !isPlainObject(record.statement)) {
         return { valid: false, reason: 'checkpoint_record_invalid', checkpoint_index: index };
       }
@@ -553,6 +661,29 @@ export class GridStore extends CoreGridStore {
         verificationMode === 'checkpoint'
     };
   }
+}
+
+/**
+ * Describes the verified prefix of a checkpoint history: every record except
+ * the latest, by the digest of its exact stored bytes. Returns null when the
+ * stored form is not the expected canonical layout, which only disables the
+ * shortcut.
+ */
+function checkpointPrefixCacheFor(raw, history, keysDigest) {
+  if (typeof raw !== 'string' || history.length < 2) return null;
+  const latest = canonicalJson(history.at(-1));
+  const suffix = `,${latest}]`;
+  if (!raw.endsWith(suffix)) return null;
+  const prefixLength = raw.length - suffix.length + 1; // keep the separator
+  const previous = history.at(-2);
+  return {
+    keysDigest,
+    verifiedCount: history.length - 1,
+    prefixLength,
+    prefixDigest: sha256(raw.slice(0, prefixLength)),
+    previousDigest: previous.checkpoint_digest,
+    previousSeq: previous.statement.seq
+  };
 }
 
 function sameLiveChainMarker(left, right) {

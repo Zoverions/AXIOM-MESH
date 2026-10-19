@@ -231,7 +231,7 @@ They change no current capability status.
 
 ### 0.12.1 - human shell
 
-- maintain the implemented versioned Gateway client with exact 31-route
+- maintain the implemented versioned Gateway client with exact 33-route
   compatibility, schema, error, idempotency, cancellation, and same-origin
   boundary checks;
 - extend the experimental loopback-only `apps/axiom-one/` PWA foundation into

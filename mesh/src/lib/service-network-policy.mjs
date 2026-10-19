@@ -46,8 +46,13 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'hypervisor-self-health',
   'sandbox-self-health'
 ]);
+// Updated deliberately for GET /internal/v1/sync/:owner/bundles and
+// GET /internal/v1/sync/:owner/updates/:id: the owner's paged bundle
+// summaries and single sync updates (scalability audit S-10); and for
+// POST /internal/v1/intents/interrupted, Hypervisor to Grid: closing
+// intents a previous Hypervisor process left accepted (audit S-15).
 const EXPECTED_POLICY_DIGEST =
-  '09e491a82ca90e57755dafd900d3c3768668f0bed315f746da905cb5f07614bb';
+  '2b8a488cf28187b119ed18784af071bbaa1263217fb052547bdb8578aadeb6ae';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
@@ -393,7 +398,9 @@ function serviceRouteSource(destination, source) {
 function validateExactCurrentRoutes(flows) {
   const gatewayGrid = flows.find(flow => flow.id === 'gateway-to-grid');
   if (
-    gatewayGrid.routes.length !== 26
+    // 28 since GET /internal/v1/sync/:owner/bundles and
+    // GET /internal/v1/sync/:owner/updates/:id (audit S-10).
+    gatewayGrid.routes.length !== 28
     || !gatewayGrid.routes.some(route => route.path === '/internal/v1/verify-chain')
     || !gatewayGrid.routes.some(route => (
       route.method === 'GET'
@@ -415,6 +422,8 @@ function validateExactCurrentRoutes(flows) {
       'GET /internal/v1/policy-overlays',
       'GET /internal/v1/approval/:id',
       'POST /internal/v1/commit',
+      // Audit S-15: closing intents a previous process left accepted.
+      'POST /internal/v1/intents/interrupted',
       'POST /internal/v1/education/learner-progress'
     ],
     'hypervisor-to-sandbox': [

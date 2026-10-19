@@ -205,6 +205,21 @@
       ]
     },
     {
+      "id": "circles.member-exchange",
+      "family": "communications",
+      "status": "experimental",
+      "summary": "Laboratory Circle exchange between members' own nodes: per-member signed record logs derive one Circle view; an off-by-default authenticated peer transport returns signed node receipts, applies per-member rate limits and records withholding findings as evidence only; members publish X25519 disclosure keys and seal records to role-based audiences with a completeness check. It is not enabled, exposed, or production-promoted, and running it beyond tests is an activation decision.",
+      "surfaces": [
+        "npm:circle:peer"
+      ],
+      "evidence": [
+        "mesh/test/circle-exchange.test.mjs",
+        "mesh/test/circle-transport.test.mjs",
+        "mesh/test/circle-disclosure.test.mjs",
+        "docs/operations/CIRCLE-EXCHANGE-TRANSPORT.md"
+      ]
+    },
+    {
       "id": "nodes.discovery-scheduling",
       "family": "mesh",
       "status": "implemented",
@@ -306,7 +321,7 @@
       "id": "ui.gateway-client",
       "family": "operations",
       "status": "implemented",
-      "summary": "A versioned same-origin Gateway client contract covers all 31 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
+      "summary": "A versioned same-origin Gateway client contract covers all 33 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
       "evidence": [
         "mesh/test/gateway-client-contract.test.mjs",
         "packages/axiom-client/index.mjs",
@@ -375,7 +390,7 @@
       "id": "operations.service-network-policy",
       "family": "operations",
       "status": "implemented",
-      "summary": "A default-deny current-build policy permits only 42 exact internal caller, destination, method, and route combinations; the additional Education permission is the bounded Hypervisor-to-Grid POST learner-progress edge and creates no public ingress or alternate authority; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
+      "summary": "A default-deny current-build policy permits only 44 exact internal caller, destination, method, and route combinations; the additional Education permission is the bounded Hypervisor-to-Grid POST learner-progress edge and creates no public ingress or alternate authority; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
       "evidence": [
         "mesh/test/service-network-policy.test.mjs",
         "mesh/src/lib/service-network-policy.mjs",

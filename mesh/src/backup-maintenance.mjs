@@ -554,8 +554,7 @@ export async function loadBackupInventory({
       backupId: entry.name,
       dataDir: root,
       identity,
-      protector,
-      artifactRelativePath: `backups/${entry.name}/snapshot.axb`
+      protector
     }));
   }
   return inventory.sort(compareNewestFirst);
@@ -589,20 +588,24 @@ async function descriptorForBackupDirectory({
     manifest.created_at,
     `Backup ${backupId} created_at`
   );
+  // Rotation records bind the snapshot's logical path, which is where it
+  // lives in the inventory whatever its format; a relocated backup passes
+  // that path explicitly.
   const verified = await verifyGridBackupArtifact({
     manifestPath,
     dataDir,
     identity,
     protector,
     expectedDatabaseDigest: manifest.database?.sha256,
-    artifactRelativePath
+    artifactRelativePath: artifactRelativePath
+      ?? `backups/${backupId}/${snapshotFileName(manifest)}`
   });
   return validateDescriptor({
     backup_id: backupId,
     created_at: createdAt,
     manifest_sha256: sha256(rawManifest),
     signer_key_id: manifest.attestation?.key_id,
-    snapshot_relative_path: `backups/${backupId}/snapshot.axb`,
+    snapshot_relative_path: `backups/${backupId}/${snapshotFileName(manifest)}`,
     encrypted_snapshot_sha256: manifest.snapshot?.sha256,
     database_sha256: verified.database_digest,
     database_bytes: manifest.database?.bytes,
@@ -732,8 +735,8 @@ function validateDescriptor(value) {
     || canonicalJson(Object.keys(value).sort())
       !== canonicalJson(expectedKeys.sort())
     || !BACKUP_ID.test(value.backup_id ?? '')
-    || value.snapshot_relative_path
-      !== `backups/${value.backup_id}/snapshot.axb`
+    || ![`backups/${value.backup_id}/snapshot.axb`, `backups/${value.backup_id}/snapshot.axc`]
+      .includes(value.snapshot_relative_path)
     || ![
       value.manifest_sha256,
       value.encrypted_snapshot_sha256,
@@ -855,6 +858,15 @@ async function assertRealDirectory(path, label) {
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
     throw new ValidationError(`${label} must be a real directory`);
   }
+}
+
+// A v1 backup holds one protected snapshot envelope; a v2 (streaming)
+// backup holds a chunked snapshot (scalability audit S-13).
+function snapshotFileName(manifest) {
+  if (manifest?.format === 'axiom-grid-backup.v2' && manifest.snapshot?.name === 'snapshot.axc') {
+    return 'snapshot.axc';
+  }
+  return 'snapshot.axb';
 }
 
 async function readBoundedFile(path, maximumBytes, label) {

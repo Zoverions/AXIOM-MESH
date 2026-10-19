@@ -70,6 +70,24 @@ export function meshConfig(overrides = {}) {
       ?? envInteger('AXIOM_RATE_LIMIT_CAPACITY', 60, { min: 10, max: 10_000 }),
     rateLimitRefillPerSecond: overrides.rateLimitRefillPerSecond
       ?? envInteger('AXIOM_RATE_LIMIT_REFILL_PER_SECOND', 1, { min: 1, max: 1_000 }),
+    // Scalability audit S-15: intents beyond these bounds get a retryable
+    // 503 with a retry hint instead of waiting unbounded.
+    intentGate: {
+      maxConcurrent: overrides.intentGate?.maxConcurrent
+        ?? envInteger('AXIOM_HYPERVISOR_MAX_CONCURRENT_INTENTS', 32, { min: 1, max: 4_096 }),
+      maxQueued: overrides.intentGate?.maxQueued
+        ?? envInteger('AXIOM_HYPERVISOR_MAX_QUEUED_INTENTS', 64, { min: 0, max: 65_536 }),
+      queueTimeoutMs: overrides.intentGate?.queueTimeoutMs
+        ?? envInteger('AXIOM_HYPERVISOR_INTENT_QUEUE_TIMEOUT_MS', 2_000, { min: 1, max: 60_000 })
+    },
+    // Scalability audit S-15: when the Hypervisor closes intents a previous
+    // process left accepted. Unset fields derive from clockSkewSeconds.
+    intentRecovery: {
+      delayMs: overrides.intentRecovery?.delayMs,
+      intervalMs: overrides.intentRecovery?.intervalMs,
+      marginMs: overrides.intentRecovery?.marginMs,
+      pageSize: overrides.intentRecovery?.pageSize
+    },
     ports: {
       gateway: overrides.gatewayPort ?? envInteger('AXIOM_GATEWAY_PORT', 8080),
       hypervisor: overrides.hypervisorPort ?? envInteger('AXIOM_HYPERVISOR_PORT', 8081),

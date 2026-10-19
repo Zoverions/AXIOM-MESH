@@ -124,7 +124,7 @@ The production-candidate surface includes:
   release/artifact evidence set to a self-digested installed-state observation
   and distinguishes install/no-op/repair/upgrade/recovery review from newer,
   diverged, partial-secret, conflict, and uncertainty stops without host mutation;
-- a versioned Gateway client contract implemented for all 31 authenticated routes with
+- a versioned Gateway client contract implemented for all 33 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
   Grid/Hypervisor/Sandbox target;
@@ -142,7 +142,7 @@ The production-candidate surface includes:
   non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 42-route application policy,
+  internal network segments, a default-deny 45-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and

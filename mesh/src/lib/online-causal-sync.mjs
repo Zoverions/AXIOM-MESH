@@ -110,11 +110,13 @@ export async function pollOnlineCausalSync(runtime, {
       return publicStatus(state, runtime, 'backing_off');
     }
     try {
+      const nonce = randomUUID().replaceAll('-', '');
       const response = await requestJson({
         fetchImpl,
         origin: runtime.config.source.origin,
         path: `/v1/events?after=${state.source_cursor}`
-          + `&limit=${runtime.config.max_events_per_poll}`,
+          + `&limit=${runtime.config.max_events_per_poll}`
+          + `&nonce=${nonce}`,
         token: runtime.source_token,
         timeoutMs: runtime.config.request_timeout_ms
       });
@@ -166,8 +168,18 @@ export async function pollOnlineCausalSync(runtime, {
         }
         state.source_cursor = event.seq;
         previousSeq = event.seq;
+        if (event.kind === 'sync.bundle.applied' && state.sync_events_seen !== null) {
+          state.sync_events_seen += 1;
+          state.last_sync_event_hash = event.event_hash;
+        }
       }
-      if (!queueSaturated) state.failure = null;
+      if (!queueSaturated) {
+        checkSourceSyncHead(payload.sync_head, runtime, state, {
+          nonce,
+          exhausted: payload.events.length < runtime.config.max_events_per_poll
+        });
+        state.failure = null;
+      }
       state.updated_at = isoNow(now);
       await saveState(runtime, state);
       return publicStatus(
@@ -177,10 +189,69 @@ export async function pollOnlineCausalSync(runtime, {
       );
     } catch (error) {
       recordFailure(state, error, runtime.config.retry, now);
+      // Withholding is evidence about the source, not a transient fault: stop
+      // until an operator has looked and reset the direction.
+      if (state.failure.code === 'online_sync_source_incomplete') state.failure.blocked = true;
       await saveState(runtime, state);
       return publicStatus(state, runtime, 'failed');
     }
   });
+}
+
+/**
+ * Checks the source Grid's signed, nonce-bound count of this owner's sync
+ * bundle events against the events actually delivered. The events feed is
+ * filtered to the owner, so gaps in seq are normal and cannot reveal an
+ * omitted bundle; the head can. A head beyond the cursor on a page that
+ * ended the feed, or a count or latest hash that differs from what the
+ * cursor has passed, means bundle events were withheld.
+ *
+ * State written before sync heads existed has no count; the first head seen
+ * once caught up becomes its baseline, so omissions before the upgrade are
+ * not detected.
+ */
+function checkSourceSyncHead(input, runtime, state, { nonce, exhausted }) {
+  const head = assertPlainObject(input, 'source sync head');
+  const body = assertPlainObject(head.body, 'source sync head body');
+  if (
+    body.format !== 'axiom-sync-head.v1'
+    || body.owner !== runtime.config.owner
+    || body.nonce !== nonce
+    || Object.keys(body).length !== 6
+  ) {
+    throw new ValidationError('Source sync head is not bound to this request');
+  }
+  const count = boundedInteger(body.sync_event_count, 'sync head count', 0, Number.MAX_SAFE_INTEGER);
+  const lastSeq = boundedInteger(body.last_sync_seq, 'sync head seq', 0, Number.MAX_SAFE_INTEGER);
+  const lastHash = body.last_sync_event_hash === null
+    ? null
+    : assertString(body.last_sync_event_hash, 'sync head hash', { min: 64, max: 64, pattern: DIGEST });
+  if ((count === 0) !== (lastSeq === 0) || (lastSeq === 0) !== (lastHash === null)) {
+    throw new ValidationError('Source sync head is inconsistent');
+  }
+  if (!runtime.source_grid_public_keys.some(key => verifyObjectSignature(body, head.signature, key))) {
+    throw new ValidationError('Source sync head signature is invalid');
+  }
+  if (lastSeq > state.source_cursor) {
+    if (!exhausted) return; // later pages still to come
+    throw new AxiomError(
+      'online_sync_source_incomplete',
+      'Source reports sync bundles beyond the events it returned',
+      502
+    );
+  }
+  if (state.sync_events_seen === null) {
+    state.sync_events_seen = count;
+    state.last_sync_event_hash = lastHash;
+    return;
+  }
+  if (count !== state.sync_events_seen || lastHash !== state.last_sync_event_hash) {
+    throw new AxiomError(
+      'online_sync_source_incomplete',
+      'Source withheld sync bundle events',
+      502
+    );
+  }
 }
 
 export async function applyOnlineCausalSyncBundle(runtime, {
@@ -200,6 +271,13 @@ export async function applyOnlineCausalSyncBundle(runtime, {
   });
   return withStateLock(runtime, now, async () => {
     const state = await loadState(runtime, now);
+    if (state.failure?.code === 'online_sync_source_incomplete') {
+      throw new AxiomError(
+        'online_sync_source_incomplete',
+        'The source withheld sync bundle events; reset the direction after review',
+        409
+      );
+    }
     const pending = state.pending[0];
     if (!pending) {
       throw new AxiomError(
@@ -742,6 +820,8 @@ function emptyState(runtime, now) {
     schema: STATE_SCHEMA,
     direction_id: runtime.direction_id,
     source_cursor: 0,
+    sync_events_seen: 0,
+    last_sync_event_hash: null,
     pending: [],
     receipts: [],
     failure: null,
@@ -785,6 +865,14 @@ function normalizeState(input, runtime) {
       0,
       Number.MAX_SAFE_INTEGER
     ),
+    // null: state written before sync heads; the next caught-up head is
+    // adopted as the baseline.
+    sync_events_seen: value.sync_events_seen === undefined || value.sync_events_seen === null
+      ? null
+      : boundedInteger(value.sync_events_seen, 'sync_events_seen', 0, Number.MAX_SAFE_INTEGER),
+    last_sync_event_hash: value.last_sync_event_hash === undefined || value.last_sync_event_hash === null
+      ? null
+      : assertString(value.last_sync_event_hash, 'last_sync_event_hash', { min: 64, max: 64, pattern: DIGEST }),
     pending,
     receipts,
     failure: value.failure === null ? null : normalizeFailure(value.failure),

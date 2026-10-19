@@ -169,7 +169,7 @@ test('admission laboratory initializes after staging and keeps a separate event-
     await rm(setup.root, { recursive: true, force: true });
   });
   const status = setup.store.getStatus();
-  assert.equal(status.schema_version, 10);
+  assert.equal(status.schema_version, 11);
   assert.equal(status.social_schema_version, 1);
   assert.equal(status.remote_social_schema_version, 1);
   assert.equal(status.remote_social_admission_schema_version, 1);

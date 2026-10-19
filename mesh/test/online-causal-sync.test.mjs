@@ -39,9 +39,7 @@ test('online causal sync survives partition, orders approvals, and encrypts stat
     if (target.origin === 'http://127.0.0.1:41001') {
       if (partitioned) throw new Error('controlled partition');
       const after = Number(target.searchParams.get('after'));
-      return jsonResponse(200, {
-        events: events.filter(event => event.seq > after)
-      });
+      return sourceResponse(fixture.grid, events, target, events.filter(event => event.seq > after));
     }
     if (target.pathname.startsWith('/v1/sync/bundles/')) {
       return jsonResponse(404, {
@@ -142,7 +140,7 @@ test('online causal sync rejects source evidence tampering without advancing', a
   const fetchImpl = async url => {
     const target = new URL(url);
     if (target.origin === 'http://127.0.0.1:41001') {
-      return jsonResponse(200, { events: [event] });
+      return sourceResponse(fixture.grid, [event], new URL(url), [event]);
     }
     throw new Error(`Destination must not be contacted: ${url}`);
   };
@@ -168,7 +166,7 @@ test('destination preflight absorbs duplicate delivery without approval', async 
   const fetchImpl = async (url, options = {}) => {
     const target = new URL(url);
     if (target.origin === 'http://127.0.0.1:41001') {
-      return jsonResponse(200, { events: [event] });
+      return sourceResponse(fixture.grid, [event], new URL(url), [event]);
     }
     if (target.pathname.startsWith('/v1/sync/bundles/')) {
       return jsonResponse(200, {
@@ -203,7 +201,7 @@ test('a rejected approval can be replaced without idempotency deadlock', async t
   const fetchImpl = async (url, options = {}) => {
     const target = new URL(url);
     if (target.origin === 'http://127.0.0.1:41001') {
-      return jsonResponse(200, { events: [event] });
+      return sourceResponse(fixture.grid, [event], new URL(url), [event]);
     }
     if (target.pathname.startsWith('/v1/sync/bundles/')) {
       return jsonResponse(404, {
@@ -254,7 +252,124 @@ test('a rejected approval can be replaced without idempotency deadlock', async t
   assert.notEqual(idempotencyKeys[0], idempotencyKeys[1]);
 });
 
-async function onlineFixture(t, suffix = 'ordered') {
+function sourceLog(fixture, seqs) {
+  return seqs.map((seq, index) => signedEvent(fixture.grid, signedBundle(fixture.node, {
+    counter: index + 1,
+    value: { title: `bundle ${index + 1}` },
+    nonce: `bundle-head-${index + 1}`
+  }), seq));
+}
+
+function withholdingSource(fixture, log, { deliver = log, head = null } = {}) {
+  return async url => {
+    const target = new URL(url);
+    if (target.origin === 'http://127.0.0.1:41001') {
+      const after = Number(target.searchParams.get('after'));
+      const limit = Number(target.searchParams.get('limit'));
+      const page = deliver.filter(event => event.seq > after).slice(0, limit);
+      return head ? head(target, page) : sourceResponse(fixture.grid, log, target, page);
+    }
+    if (target.pathname.startsWith('/v1/sync/bundles/')) {
+      return jsonResponse(404, { error: { code: 'sync_bundle_not_found' } });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+}
+
+test('a source that withholds a bundle event is detected and blocked', async t => {
+  const middle = await onlineFixture(t, 'withheld-middle');
+  const log = sourceLog(middle, [5, 9, 12]);
+  const skipped = await pollOnlineCausalSync(middle.runtime, {
+    fetchImpl: withholdingSource(middle, log, { deliver: [log[0], log[2]] }),
+    now: 1_800_000_001_000
+  });
+  assert.equal(skipped.outcome, 'failed');
+  assert.equal(skipped.failure.code, 'online_sync_source_incomplete');
+  assert.equal(skipped.failure.blocked, true);
+  await assert.rejects(
+    applyOnlineCausalSyncBundle(middle.runtime, {
+      bundleDigest: log[0].payload.bundle_digest,
+      approvalId: 'approval_0123456789abcdef',
+      fetchImpl: withholdingSource(middle, log),
+      now: 1_800_000_002_000
+    }),
+    error => error?.code === 'online_sync_source_incomplete'
+  );
+
+  const tail = await onlineFixture(t, 'withheld-tail');
+  const tailLog = sourceLog(tail, [5, 9]);
+  const lastMissing = await pollOnlineCausalSync(tail.runtime, {
+    fetchImpl: withholdingSource(tail, tailLog, { deliver: [tailLog[0]] }),
+    now: 1_800_000_001_000
+  });
+  assert.equal(lastMissing.failure.code, 'online_sync_source_incomplete');
+  assert.equal(lastMissing.source_cursor, 5);
+});
+
+test('a complete source passes, including across pages', async t => {
+  const fixture = await onlineFixture(t, 'complete-paged', { max_events_per_poll: 2 });
+  const log = sourceLog(fixture, [5, 9, 12]);
+  const fetchImpl = withholdingSource(fixture, log);
+  const first = await pollOnlineCausalSync(fixture.runtime, { fetchImpl, now: 1_800_000_001_000 });
+  assert.equal(first.outcome, 'polled');
+  assert.equal(first.source_cursor, 9);
+  const second = await pollOnlineCausalSync(fixture.runtime, { fetchImpl, now: 1_800_000_002_000 });
+  assert.equal(second.outcome, 'polled');
+  assert.equal(second.source_cursor, 12);
+  assert.equal(second.pending_count, 3);
+});
+
+test('a sync head must be signed by the pinned source Grid and bound to this request', async t => {
+  const forged = await onlineFixture(t, 'head-forged');
+  const log = sourceLog(forged, [5]);
+  const impostor = generateKeyPairSync('ed25519');
+  const forgedStatus = await pollOnlineCausalSync(forged.runtime, {
+    fetchImpl: withholdingSource(forged, log, {
+      head: (target, page) => {
+        const body = {
+          format: 'axiom-sync-head.v1',
+          owner: 'owner:online',
+          sync_event_count: 1,
+          last_sync_seq: 5,
+          last_sync_event_hash: log[0].event_hash,
+          nonce: target.searchParams.get('nonce')
+        };
+        const canonical = canonicalJson(body);
+        return jsonResponse(200, {
+          events: page,
+          sync_head: {
+            body,
+            signature: {
+              algorithm: 'Ed25519',
+              key_id: 'impostor',
+              digest: digestObject(body),
+              signature: sign(null, Buffer.from(canonical), impostor.privateKey).toString('base64url')
+            }
+          }
+        });
+      }
+    }),
+    now: 1_800_000_001_000
+  });
+  assert.equal(forgedStatus.failure.code, 'online_sync_evidence_invalid');
+
+  const replayed = await onlineFixture(t, 'head-replayed');
+  const replayLog = sourceLog(replayed, [5]);
+  const stale = await pollOnlineCausalSync(replayed.runtime, {
+    fetchImpl: withholdingSource(replayed, replayLog, {
+      head: (target, page) => sourceResponse(
+        replayed.grid,
+        replayLog,
+        new URL('http://127.0.0.1:41001/v1/events?nonce=00000000000000000000000000000000'),
+        page
+      )
+    }),
+    now: 1_800_000_001_000
+  });
+  assert.equal(stale.failure.code, 'online_sync_evidence_invalid');
+});
+
+async function onlineFixture(t, suffix = 'ordered', overrides = {}) {
   const root = await mkdtemp(join(tmpdir(), `axiom-online-sync-${suffix}-`));
   t.after(() => rm(root, { recursive: true, force: true }));
   const sourceTokenPath = join(root, 'source.token');
@@ -312,7 +427,8 @@ async function onlineFixture(t, suffix = 'ordered') {
       base_ms: 1_000,
       maximum_ms: 8_000,
       maximum_attempts: 4
-    }
+    },
+    ...overrides
   })}\n`, { mode: 0o600 });
   const runtime = await loadOnlineCausalSyncRuntime(configPath, {
     allowInsecureLoopback: true
@@ -413,6 +529,24 @@ function bundleStatement(bundle) {
     created_at: bundle.created_at,
     nonce: bundle.nonce
   };
+}
+
+/**
+ * A source events page plus the Grid-signed sync head for the whole source
+ * log, bound to the nonce in the request, as the Gateway returns them.
+ */
+function sourceResponse(grid, log, target, page, owner = log[0]?.actor ?? 'person:online') {
+  const syncEvents = log.filter(event => event.kind === 'sync.bundle.applied' && event.actor === owner);
+  const last = syncEvents.at(-1);
+  const body = {
+    format: 'axiom-sync-head.v1',
+    owner,
+    sync_event_count: syncEvents.length,
+    last_sync_seq: last?.seq ?? 0,
+    last_sync_event_hash: last?.event_hash ?? null,
+    nonce: target.searchParams.get('nonce')
+  };
+  return jsonResponse(200, { events: page, sync_head: { body, signature: grid.signObject(body) } });
 }
 
 function jsonResponse(status, payload) {

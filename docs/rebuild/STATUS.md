@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-30`
-Registry digest: `2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee`
+Registry digest: `bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -12,7 +12,7 @@ Only **implemented** capabilities are runnable claims.
 
 - adapter_required: 9
 - disabled: 4
-- experimental: 4
+- experimental: 5
 - implemented: 31
 - specified: 2
 
@@ -43,6 +43,7 @@ Only **implemented** capabilities are runnable claims.
 | `identity.ssi` | identity | **specified** | DIDs, credentials, selective disclosure, reputation, and portable identity require an approved credential profile. |
 | `offline.causal-sync` | mesh | **implemented** | Independently verifiable admitted-node bundles use contiguous dependency-checked version vectors, replay and equivocation rejection, visible concurrent heads, and explicit complete conflict resolution. |
 | `online.causal-sync` | mesh | **implemented** | Pinned Grid-signed event streams transfer node-signed causal bundles between exact Gateway origins through encrypted ordered queues; destination application retains one-use independent approval, duplicate preflight, visible concurrent heads, and explicit all-head convergence without claiming replicated consensus. |
+| `circles.member-exchange` | communications | **experimental** | Laboratory Circle exchange between members' own nodes: per-member signed record logs derive one Circle view; an off-by-default authenticated peer transport returns signed node receipts, applies per-member rate limits and records withholding findings as evidence only; members publish X25519 disclosure keys and seal records to role-based audiences with a completeness check. It is not enabled, exposed, or production-promoted, and running it beyond tests is an activation decision. |
 | `nodes.discovery-scheduling` | mesh | **implemented** | Admitted-node v2 statements bind signed HTTPS origins, failure domains, roles, resource ceilings, and leases; authenticated discovery and policy-controlled deterministic scheduling enforce capability, security, capacity, concurrency, owner, domain, expiry, and quarantine constraints without claiming remote execution or federation. |
 | `storage.backup-restore` | storage | **implemented** | Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, signed policy-derived retention into recoverable quarantine, interruption recovery, and recurring restore evidence. |
 | `domains.education` | domains | **adapter_required** | Education runs as a strict-consent capsule; curriculum and learner systems are not part of the trusted kernel. |
@@ -56,12 +57,12 @@ Only **implemented** capabilities are runnable claims.
 | `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
-| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 31 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
+| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 33 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **experimental** | A loopback-only AXIOM One PWA preview provides node status, reversible review for echo plus four governed memory lifecycle actions, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, owner-scoped private-note creation, three fixed directional provenance links with correction-without-replacement, confirmation-bound tombstoning, selective local export with explicit bundle reveal, unavailable-sharing, and raw evidence surfaces; it is not a supported product, edge-deletion/hard-delete/restore interface, authoritative pre-execution kernel plan, or completed browser-security boundary. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
 | `operations.mutual-transport` | operations | **implemented** | Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback. |
-| `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 42 exact internal caller, destination, method, and route combinations; the additional Education permission is the bounded Hypervisor-to-Grid POST learner-progress edge and creates no public ingress or alternate authority; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |
+| `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 44 exact internal caller, destination, method, and route combinations; the additional Education permission is the bounded Hypervisor-to-Grid POST learner-progress edge and creates no public ingress or alternate authority; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |
 | `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, segmented internal deny-egress networks, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.provider-runtime` | operations | **implemented** | Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown. |
 | `operations.public-witness` | operations | **experimental** | Independently operated public witnessing durably publishes and verifies signed currentness anchors without granting execution authority or claiming global currentness or finality. |

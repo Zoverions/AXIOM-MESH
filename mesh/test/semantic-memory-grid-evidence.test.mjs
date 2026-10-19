@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { digestObject, sha256 } from '../src/lib/canonical.mjs';
+import { canonicalJson, digestObject, sha256 } from '../src/lib/canonical.mjs';
 import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { intentRequestDigest } from '../src/lib/intent-binding.mjs';
@@ -135,6 +135,54 @@ function intentEvents(store, intentId) {
   `).all(intentId).map(row => store.decodeEventRow(row));
 }
 
+// Simulate a correctly signed event written before GridStore began refusing
+// invalid intent lifecycles at append time. The evidence adapter must still
+// deny such historical rows when opening an existing store.
+function appendLegacyEvent(store, { traceId, actor, event }) {
+  const seq = Number(store.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value) + 1;
+  const prevHash = store.db.prepare("SELECT value FROM meta WHERE key = 'last_hash'").get().value;
+  const eventId = `evt.legacy.${seq}`;
+  const occurredAt = new Date().toISOString();
+  const payloadDigest = digestObject(event.payload);
+  const envelope = {
+    seq,
+    event_id: eventId,
+    trace_id: traceId,
+    actor,
+    kind: event.kind,
+    subject: event.subject,
+    occurred_at: occurredAt,
+    payload_digest: payloadDigest,
+    prev_hash: prevHash
+  };
+  const eventHash = digestObject(envelope);
+  const signature = store.identity.signObject({ event_hash: eventHash });
+  store.transaction(() => {
+    store.db.prepare(`
+      INSERT INTO events(
+        seq, event_id, trace_id, actor, kind, subject, occurred_at,
+        payload_json, payload_digest, prev_hash, event_hash, signature_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      seq,
+      eventId,
+      traceId,
+      actor,
+      event.kind,
+      event.subject,
+      occurredAt,
+      store.protectJson('events', 'payload_json', eventId, event.payload),
+      payloadDigest,
+      prevHash,
+      eventHash,
+      canonicalJson(signature)
+    );
+    store.applyMaterializedEvent({ ...envelope, event_hash: eventHash, payload: event.payload });
+    store.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_seq'").run(String(seq));
+    store.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_hash'").run(eventHash);
+  });
+}
+
 // The row checks inside verifySemanticMemoryReviewFromGrid are not exported,
 // and the adapter only reads rows from a branded, unmodified GridStore through
 // methods captured at load, so hand-made rows cannot reach them any more. They
@@ -248,14 +296,14 @@ test('the row checks reject a failed terminal event behind a completed intent ro
   const record = reviewedInstruction();
   const { intentId, traceId } = appendAccepted(store, record);
   appendCompleted(store, record, { intentId, traceId });
-  store.appendEvents({
+  appendLegacyEvent(store, {
     traceId,
     actor: record.owner,
-    events: [{
+    event: {
       kind: 'intent.failed',
       subject: intentId,
       payload: { intent_id: intentId, error: { code: 'synthetic', message: 'ambiguous terminal' } }
-    }]
+    }
   });
   // The projection now says failed; a store whose intent row still says
   // completed must not hide the failed event.
@@ -271,7 +319,18 @@ test('the row checks require the accepted event before the completed event', asy
   const record = reviewedInstruction();
   const intentId = 'intent.semantic.review.reversed';
   const traceId = 'trace.semantic.review.reversed';
-  appendCompleted(store, record, { intentId, traceId });
+  appendLegacyEvent(store, {
+    traceId,
+    actor: record.owner,
+    event: {
+      kind: 'intent.completed',
+      subject: intentId,
+      payload: {
+        intent_id: intentId,
+        result: { intent_id: intentId, trace_id: traceId, status: 'completed' }
+      }
+    }
+  });
   appendAccepted(store, record, { intentId, traceId });
   setIntentColumn(store, intentId, 'status', 'completed');
   assert.throws(() => verifySemanticMemoryReviewFromGrid(store, record), /ordering or actor\/trace binding is invalid/);

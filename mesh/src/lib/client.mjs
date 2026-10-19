@@ -1,5 +1,5 @@
 import https from 'node:https';
-import { AxiomError, ValidationError } from './canonical.mjs';
+import { AxiomError, ValidationError, sha256 } from './canonical.mjs';
 import { signedRequestHeaders } from './identity.mjs';
 import { evaluateMachineIntentWithAssurance } from './agent-assurance-authority-binding.mjs';
 import { validatePlan } from './plan.mjs';
@@ -8,9 +8,126 @@ import {
   verifyTransportServerIdentity
 } from './transport-credentials.mjs';
 import { authorizeServiceRequest } from './service-network-policy.mjs';
+import { registerTransportMetrics } from './observability.mjs';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REQUEST_TIMEOUT_MS = 300_000;
+
+// Keep-alive pools for mutually authenticated internal calls (scalability
+// audit S-04). Every hop used to open a new TCP and TLS 1.3 connection.
+// A pool serves one caller service, one audience and one origin under one
+// credential generation: the caller's certificate, key and trusted CA, and
+// the pinned fingerprint of the audience's certificate. A reused socket skips
+// the TLS handshake and so every identity check, which is safe only because
+// the socket was opened under exactly this generation. A new generation gets
+// a new pool and the old one drains: its idle sockets close and busy ones
+// close when released.
+// The server identity check belongs to the pool, not the request: Node 22
+// never keeps a socket alive that was opened with a per-request
+// checkServerIdentity, and the check depends only on what the pool is keyed by.
+// Idle sockets close after 4 s, before the services' 5 s keep-alive timeout,
+// so a request is never written to a socket the server is closing.
+const TRANSPORT_POOL_LIMITS = Object.freeze({
+  maxSockets: 64,
+  maxFreeSockets: 16,
+  idleTimeoutMs: 4_000
+});
+const transportPools = new Map();
+const pooledSockets = new WeakSet();
+const transportPoolCounters = {
+  connections: 0,
+  reused: 0,
+  drained_pools: 0,
+  // Requests that waited for a socket because their pool was at its limit,
+  // and the most waiting at once.
+  queued_total: 0,
+  queued_high_water: 0
+};
+registerTransportMetrics('transport-pools', () => {
+  const state = transportPoolState();
+  return {
+    pool_connections_total: transportPoolCounters.connections,
+    pool_reused_total: transportPoolCounters.reused,
+    pool_drained_total: transportPoolCounters.drained_pools,
+    pool_queued_total: transportPoolCounters.queued_total,
+    pool_active_sockets: state.active,
+    pool_idle_sockets: state.idle,
+    pool_queued_requests: state.queued,
+    pool_queued_high_water: transportPoolCounters.queued_high_water
+  };
+});
+
+// Sockets in use, idle sockets and waiting requests across the current
+// pools, from each agent's documented `sockets`, `freeSockets` and
+// `requests` (scalability audit S-04).
+function transportPoolState() {
+  const state = { active: 0, idle: 0, queued: 0 };
+  for (const { agent } of transportPools.values()) {
+    state.active += countQueued(agent.sockets);
+    state.idle += countQueued(agent.freeSockets);
+    state.queued += countQueued(agent.requests);
+  }
+  return state;
+}
+
+function countQueued(record) {
+  let count = 0;
+  for (const list of Object.values(record ?? {})) count += list?.length ?? 0;
+  return count;
+}
+
+function transportAgent(transport, audience, target) {
+  const scope = `${transport.service}\u0000${audience}\u0000${target.origin}`;
+  const generation = sha256([
+    transport.cert,
+    transport.key,
+    transport.ca,
+    transport.peers?.[audience] ?? ''
+  ].join('\u0000'));
+  const existing = transportPools.get(scope);
+  if (existing?.generation === generation) return existing.agent;
+  if (existing) drainAgent(existing.agent);
+  const agent = new https.Agent({
+    keepAlive: true,
+    maxSockets: TRANSPORT_POOL_LIMITS.maxSockets,
+    maxFreeSockets: TRANSPORT_POOL_LIMITS.maxFreeSockets,
+    timeout: TRANSPORT_POOL_LIMITS.idleTimeoutMs,
+    scheduling: 'lifo',
+    checkServerIdentity: (_hostname, peer) => (
+      verifyTransportServerIdentity(transport, audience, peer)
+    )
+  });
+  transportPools.set(scope, { generation, agent });
+  return agent;
+}
+
+function drainAgent(agent) {
+  agent.keepAlive = false;
+  for (const sockets of Object.values(agent.freeSockets)) {
+    for (const socket of sockets) socket.destroy();
+  }
+  transportPoolCounters.drained_pools += 1;
+}
+
+/** Connection reuse evidence for the internal transport pools. */
+export function transportPoolStats() {
+  return Object.freeze({
+    pools: transportPools.size,
+    ...transportPoolCounters,
+    ...transportPoolState(),
+    limits: TRANSPORT_POOL_LIMITS
+  });
+}
+
+/**
+ * Closes every pooled internal connection now. Idle pooled sockets are
+ * unreferenced, so they never hold a process open; this is for tests and for
+ * callers that want connections closed immediately.
+ */
+export function closeTransportPools() {
+  for (const { agent } of transportPools.values()) agent.destroy();
+  transportPools.clear();
+}
 
 export async function signedFetch(identity, audience, url, {
   method = 'GET',
@@ -55,7 +172,10 @@ export async function signedFetch(identity, audience, url, {
         timeoutMs: effectiveTimeoutMs
       })
     : await ordinaryRequest({
-        url,
+        // Send exactly the path that was signed. The signature covers the
+        // URL-normalized pathname and search, so the raw text (an empty
+        // trailing `?`, a fragment) must not reach the wire instead.
+        url: `${target.origin}${target.pathname}${target.search}`,
         method,
         body: encoded,
         headers: requestHeaders,
@@ -203,6 +323,7 @@ async function mutuallyAuthenticatedRequest({
       503
     );
   }
+  const agent = transportAgent(transport, audience, target);
   return new Promise((resolve, reject) => {
     const request = https.request({
       protocol: target.protocol,
@@ -218,10 +339,7 @@ async function mutuallyAuthenticatedRequest({
       minVersion: 'TLSv1.3',
       maxVersion: 'TLSv1.3',
       servername: serviceDnsName(audience),
-      checkServerIdentity: (_hostname, peer) => (
-        verifyTransportServerIdentity(transport, audience, peer)
-      ),
-      agent: false
+      agent
     }, response => {
       const chunks = [];
       let size = 0;
@@ -255,6 +373,25 @@ async function mutuallyAuthenticatedRequest({
           payload
         });
       });
+    });
+    // The agent assigns a socket or queues the request as it is created.
+    if (Object.values(agent.requests).some(list => list.includes(request))) {
+      transportPoolCounters.queued_total += 1;
+      transportPoolCounters.queued_high_water = Math.max(
+        transportPoolCounters.queued_high_water,
+        transportPoolState().queued
+      );
+    }
+    // Counted by socket identity: a queued request handed a socket another
+    // request just released is a reuse, although Node sets `reusedSocket`
+    // only for a socket taken from the idle list.
+    request.once('socket', socket => {
+      if (pooledSockets.has(socket)) {
+        transportPoolCounters.reused += 1;
+      } else {
+        pooledSockets.add(socket);
+        transportPoolCounters.connections += 1;
+      }
     });
     request.setTimeout(timeoutMs, () => {
       request.destroy(new Error('Mutually authenticated request timed out'));

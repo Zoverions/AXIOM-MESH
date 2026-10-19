@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-ballot-v0.schema.json",
+  "title": "AXIOM Circle Ballot v0",
+  "description": "A member's signed choice on one Circle proposal under one charter. A decision's participant_receipts are the digests of the ballots it counts; outcome, quorum and approval are recomputed by mesh/src/lib/circle-ballots.mjs. Ballots grant no authority and execute nothing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["body", "attestation"],
+  "properties": {
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "circle_id",
+        "proposal_id",
+        "charter_digest",
+        "principal_id",
+        "choice",
+        "cast_at",
+        "authority_effect"
+      ],
+      "properties": {
+        "schema": { "const": "axiom-circle-ballot.v0" },
+        "circle_id": { "$ref": "#/$defs/identifier" },
+        "proposal_id": { "$ref": "#/$defs/identifier" },
+        "charter_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "principal_id": { "$ref": "#/$defs/identifier" },
+        "choice": { "enum": ["approve", "reject", "abstain"] },
+        "cast_at": { "type": "string", "format": "date-time" },
+        "authority_effect": { "const": "none" }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "digest", "signature"],
+      "properties": {
+        "algorithm": { "const": "Ed25519" },
+        "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "signature": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-ballots.mjs"
+}
