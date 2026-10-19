@@ -30,7 +30,11 @@ const PARENT_BLOBS = Object.freeze({
   // (S-15), and a Grid-signed receipt naming the overlay generation for a
   // caller's nonce (S-15). The server still composes no SIEA store; the
   // assertions below are unchanged.
-  grid_server: '48df400ad6449baa00a98ed442ab28c655917ada',
+  // Updated again while reconciling current main: capability consumption now
+  // initializes inside the guarded Grid startup and caller-supplied semantic
+  // consumption events fail closed. The server still composes no SIEA store;
+  // the assertions below are unchanged.
+  grid_server: '7ada138171a4203debb3a7d26893db7ebeffadee',
   // Updated deliberately for core migration 11 (index-only: composite
   // indexes for the paged collections, accounting journals, node schedules
   // and sync bundles, scalability audit S-11). No table or column changed.
@@ -57,7 +61,7 @@ test('Slice 2 leaves core Grid migrations byte-identical to approved Slice 1 par
   assert.equal(await gitBlobSha('../src/grid/migrations.mjs'), PARENT_BLOBS.core_migrations);
 });
 
-test('Slice 2 leaves current Grid server composition byte-identical and does not make SIEA store the runtime default', async () => {
+test('Slice 2 remains absent from the current reviewed Grid server composition and does not make SIEA store the runtime default', async () => {
   assert.equal(await gitBlobSha('../src/grid/server.mjs'), PARENT_BLOBS.grid_server);
   const source = await readFile(new URL('../src/grid/server.mjs', import.meta.url), 'utf8');
   assert.equal(source.includes('SovereignInformationGridStore'), false);

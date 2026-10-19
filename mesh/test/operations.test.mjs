@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { EventEmitter, once } from 'node:events';
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -172,6 +172,36 @@ test('production provisioning is explicit, restrictive, idempotent, and file-bac
     () => provisionProduction({ dataDir: incompleteData, secretDir: incompleteSecrets }),
     /incomplete/
   );
+});
+
+test('production provisioning rejects overlapping data and secret directories before writing credentials', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-production-boundary-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const dataDir = join(root, 'data');
+  const nestedSecrets = join(dataDir, 'secrets');
+  await assert.rejects(
+    () => provisionProduction({ dataDir, secretDir: nestedSecrets }),
+    /must not overlap/
+  );
+  await assert.rejects(() => stat(join(nestedSecrets, 'operator.token')), { code: 'ENOENT' });
+
+  const secretDir = join(root, 'private-secrets');
+  const nestedData = join(secretDir, 'data');
+  await assert.rejects(
+    () => provisionProduction({ dataDir: nestedData, secretDir }),
+    /must not overlap/
+  );
+  await assert.rejects(() => stat(join(secretDir, 'operator.token')), { code: 'ENOENT' });
+
+  if (process.platform !== 'win32') {
+    const alias = join(root, 'data-alias');
+    await symlink(dataDir, alias, 'dir');
+    await assert.rejects(
+      () => provisionProduction({ dataDir, secretDir: join(alias, 'hidden-secrets') }),
+      /must not overlap/
+    );
+    await assert.rejects(() => stat(join(dataDir, 'hidden-secrets', 'operator.token')), { code: 'ENOENT' });
+  }
 });
 
 test('production deployment policy is digest-pinned and fail-closed', async () => {
@@ -687,4 +717,3 @@ async function waitForReady(url, child, diagnostics) {
   }
   throw new Error(`Production supervisor did not become ready: ${diagnostics()}`);
 }
-

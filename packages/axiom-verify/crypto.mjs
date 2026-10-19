@@ -54,6 +54,7 @@ export function verifyObjectSignature(value, attestation, publicKeyInput) {
   const publicKey = typeof publicKeyInput === 'string' || Buffer.isBuffer(publicKeyInput)
     ? createPublicKey(publicKeyInput)
     : publicKeyInput;
+  if (publicKey?.asymmetricKeyType !== 'ed25519') return false;
   const body = canonicalJson(value);
   if (attestation.digest !== sha256(body)) return false;
   try {
@@ -64,5 +65,9 @@ export function verifyObjectSignature(value, attestation, publicKeyInput) {
 }
 
 export function loadPublicKey(publicKeyPem) {
-  return createPublicKey(publicKeyPem);
+  const key = createPublicKey(publicKeyPem);
+  if (key.asymmetricKeyType !== 'ed25519') {
+    throw new TypeError('Public key must use Ed25519');
+  }
+  return key;
 }

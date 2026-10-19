@@ -197,11 +197,13 @@ authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
 ### AXIOM One
 
 AXIOM One remains an experimental loopback-only browser/PWA preview. The current
-slice provides node status, reversible review for five bounded actions,
+slice provides node status, reversible review for six bounded actions,
 owner-scoped private memory, three fixed directional provenance relations,
 confirmation-bound tombstoning, selective local export, explicit bundle reveal,
-raw evidence, approval-state distinctions, same-idempotency-key uncertainty
-recovery, and cross-principal negative tests.
+raw evidence, approval-state distinctions, non-authorizing capability-status
+projection, current consent-state inspection, bounded local evidence-chain
+verification, same-idempotency-key uncertainty recovery, and cross-principal
+negative tests.
 
 It is not a supported product and does not yet claim general consequential
 plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
@@ -319,7 +321,7 @@ chain that produces that authority.
 |---|---|---|
 | **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
 | **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
-| **Install planning** | Review the future personal/local and infrastructure-node host profiles without mistaking them for implemented installers | `mesh/config/install-targets.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
+| **Install planning** | Produce an inert, non-mutating Linux host plan for the personal/local or infrastructure-node profile; this is not a fresh-host installer | `npm run host-install:plan -- personal-local` -> `mesh/config/host-install-policy.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
 | **Applications** | Discover first-class in-tree and independently released applications and their authority boundaries | `mesh/config/application-catalog.json` -> `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` |
 | **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
 | **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
+import { ValidationError } from '../src/lib/canonical.mjs';
 import { validateLocalAdmissionRecord } from '../src/lib/local-admission-record.mjs';
 
 const exampleUrl = new URL('../../agent-commons/examples/local-admission-record.v1.json', import.meta.url);
@@ -124,4 +126,202 @@ test('reported audit checks reflect the validated record fields', async () => {
   assert.equal(result.checks.quarantine_scan_passed, record.review.quarantine_scan_passed);
   assert.equal(result.checks.policy_check_passed, record.review.policy_check_passed);
   assert.equal(result.checks.rollback_defined, record.rollback.required);
+});
+
+// --- P5: the output holds only values that were validated ---
+
+const HOSTILE_ID = '../../not validated\u0000';
+
+function isPlainDataRejection(error) {
+  return error instanceof ValidationError && /local admission record must be plain data/.test(error.message);
+}
+
+// Every [container path, key] in a JSON value, objects and arrays alike.
+function allSlots(value, path = []) {
+  if (value === null || typeof value !== 'object') return [];
+  const slots = [];
+  for (const key of Object.keys(value)) {
+    slots.push([path, key]);
+    slots.push(...allSlots(value[key], [...path, key]));
+  }
+  return slots;
+}
+
+const at = (root, path) => path.reduce((node, key) => node[key], root);
+
+test('P5: an admission_id getter cannot put an unvalidated value in the output (no getter call)', async () => {
+  const raw = await exampleRecord();
+  let reads = 0;
+  const record = { ...raw };
+  Object.defineProperty(record, 'admission_id', {
+    enumerable: true,
+    get() { reads += 1; return reads === 1 ? raw.admission_id : HOSTILE_ID; }
+  });
+  let result;
+  assert.throws(() => { result = validateLocalAdmissionRecord(record, { now: NOW }); }, isPlainDataRejection);
+  assert.equal(result, undefined);
+  assert.equal(reads, 0, 'the getter is never called');
+});
+
+test('P5: a Proxy record or nested Proxy is rejected before any trap runs', async () => {
+  const raw = await exampleRecord();
+  let traps = 0;
+  const handler = {};
+  for (const trap of ['get', 'has', 'ownKeys', 'getOwnPropertyDescriptor', 'getPrototypeOf']) {
+    handler[trap] = (...args) => {
+      traps += 1;
+      if (trap === 'get' && args[1] === 'admission_id' && traps > 1) return HOSTILE_ID;
+      return Reflect[trap](...args);
+    };
+  }
+  assert.throws(() => validateLocalAdmissionRecord(new Proxy(raw, handler), { now: NOW }), isPlainDataRejection);
+  const nested = structuredClone(raw);
+  nested.review = new Proxy(nested.review, handler);
+  assert.throws(() => validateLocalAdmissionRecord(nested, { now: NOW }), isPlainDataRejection);
+  assert.equal(traps, 0);
+});
+
+test('P5: counting sweep - a getter or Proxy at every slot is rejected with zero caller reads', async () => {
+  const raw = await exampleRecord();
+  const slots = allSlots(raw);
+  assert.equal(slots.length, 38, "sweep covers every slot of the example record");
+  let reads = 0;
+  for (const [path, key] of slots) {
+    const record = structuredClone(raw);
+    const container = at(record, path);
+    const original = container[key];
+    Object.defineProperty(container, key, { enumerable: true, configurable: true, get() { reads += 1; return original; } });
+    assert.throws(() => validateLocalAdmissionRecord(record, { now: NOW }), isPlainDataRejection, [...path, key].join('.'));
+    if (original !== null && typeof original === 'object') {
+      const proxied = structuredClone(raw);
+      at(proxied, path)[key] = new Proxy(structuredClone(original), {
+        get(target, property, receiver) { reads += 1; return Reflect.get(target, property, receiver); },
+        ownKeys(target) { reads += 1; return Reflect.ownKeys(target); },
+        getOwnPropertyDescriptor(target, property) { reads += 1; return Reflect.getOwnPropertyDescriptor(target, property); }
+      });
+      assert.throws(() => validateLocalAdmissionRecord(proxied, { now: NOW }), isPlainDataRejection, [...path, key].join('.'));
+    }
+  }
+  assert.equal(reads, 0, 'no caller getter or trap ran anywhere');
+});
+
+test('P5: changing the caller record after the call cannot change the frozen result', async () => {
+  const raw = await exampleRecord();
+  const result = validateLocalAdmissionRecord(raw, { now: NOW });
+  raw.admission_id = HOSTILE_ID;
+  raw.target_instance_id = HOSTILE_ID;
+  raw.review.quarantine_scan_passed = false;
+  assert.equal(result.admission_id, 'admission:institution-alpha-enclave-001');
+  assert.equal(result.target_instance_id, 'instance:alpha-airgap-01');
+  assert.equal(result.checks.quarantine_scan_passed, true);
+  assert.ok(Object.isFrozen(result) && Object.isFrozen(result.checks));
+});
+
+test('P5: options are read once as own data; getters, Proxies and lying Dates cannot steer now', async () => {
+  const raw = await exampleRecord();
+  const expired = new Date(raw.expires_at);
+  let reads = 0;
+  const getterOptions = {};
+  Object.defineProperty(getterOptions, 'now', { enumerable: true, get() { reads += 1; return reads === 1 ? NOW : expired; } });
+  assert.throws(() => validateLocalAdmissionRecord(raw, getterOptions), /options\.now must be a data property/);
+  const proxyOptions = new Proxy({ now: NOW }, { get() { reads += 1; return NOW; } });
+  assert.throws(() => validateLocalAdmissionRecord(raw, proxyOptions), /local admission options must be an object/);
+  assert.throws(() => validateLocalAdmissionRecord(raw, Object.create({ now: NOW })), /options must be a plain object/);
+  for (const options of [null, 'x', 5, [NOW]]) {
+    assert.throws(() => validateLocalAdmissionRecord(raw, options), /local admission options must be an object/, String(options));
+  }
+  assert.equal(reads, 0);
+  // A Date whose own valueOf/getTime lie is read through the intrinsic Date.prototype.getTime.
+  const lyingDate = new Date(NOW);
+  lyingDate.valueOf = () => { reads += 1; return expired.valueOf(); };
+  lyingDate.getTime = () => { reads += 1; return expired.valueOf(); };
+  assert.equal(validateLocalAdmissionRecord(raw, { now: lyingDate }).valid, true);
+  assert.equal(reads, 0);
+  // Non-Date objects, bigint and symbol are 'now is invalid', never a raw TypeError or caller code.
+  for (const now of [{ valueOf() { reads += 1; return NOW.valueOf(); } }, 1n, Symbol('now'), () => NOW]) {
+    assert.throws(() => validateLocalAdmissionRecord(raw, { now }), error => error instanceof ValidationError && /now is invalid/.test(error.message));
+  }
+  assert.equal(reads, 0);
+});
+
+test('P5 controls: plain, JSON, structuredClone and null-prototype records give identical results', async () => {
+  const raw = await exampleRecord();
+  const expected = validateLocalAdmissionRecord(raw, { now: NOW });
+  const nullPrototype = value => {
+    if (Array.isArray(value)) return value.map(nullPrototype);
+    if (value === null || typeof value !== 'object') return value;
+    return Object.assign(Object.create(null), Object.fromEntries(Object.entries(value).map(([k, v]) => [k, nullPrototype(v)])));
+  };
+  for (const [name, record] of Object.entries({
+    json: JSON.parse(JSON.stringify(raw)),
+    structuredClone: structuredClone(raw),
+    nullPrototype: nullPrototype(raw),
+    frozen: Object.freeze(structuredClone(raw))
+  })) {
+    assert.deepEqual(validateLocalAdmissionRecord(record, { now: NOW }), expected, name);
+  }
+  // now as a Date, an ISO string, epoch milliseconds or a null-prototype options record agree.
+  for (const now of [NOW, NOW.toISOString(), NOW.valueOf()]) {
+    assert.deepEqual(validateLocalAdmissionRecord(raw, { now }), expected, String(now));
+  }
+  assert.deepEqual(validateLocalAdmissionRecord(raw, Object.assign(Object.create(null), { now: NOW })), expected);
+  // Omitted options and an omitted now still default to the current time.
+  assert.equal(validateLocalAdmissionRecord(raw).admission_id, expected.admission_id);
+  assert.equal(validateLocalAdmissionRecord(raw, {}).admission_id, expected.admission_id);
+  assert.equal(validateLocalAdmissionRecord(raw, { now: undefined }).admission_id, expected.admission_id);
+});
+
+test('fail-closed controls: missing authority or review evidence, expiry and conflicting or malformed ids stay rejected', async () => {
+  const raw = await exampleRecord();
+  const mutate = change => { const record = structuredClone(raw); change(record); return record; };
+  const rejects = [
+    [record => { delete record.authority_source; }, /missing required field authority_source/],
+    [record => { record.authority_source.authority_evidence_digest = 'x'; }, /authority_evidence_digest/],
+    [record => { record.review.review_evidence_digests = []; }, /requires review evidence/],
+    [record => { record.review.reviewer_ids = []; }, /requires reviewer_ids/],
+    [record => { record.review.quarantine_scan_passed = false; }, /quarantine scan must pass/],
+    [record => { record.rejected_artifact_digests = [...record.approved_artifact_digests]; }, /both approved and rejected/],
+    [record => { record.admission_id = HOSTILE_ID; }, /admission_id has an invalid format/],
+    [record => { record.target_instance_id = '../escape'; }, /target_instance_id has an invalid format/],
+    [record => { record.target_instance_id = ''; }, /target_instance_id must contain/]
+  ];
+  for (const [change, message] of rejects) {
+    assert.throws(() => validateLocalAdmissionRecord(mutate(change), { now: NOW }), error => error instanceof ValidationError && message.test(error.message), String(message));
+  }
+  // Expired and not-yet-effective admissions are reported as not valid.
+  const expired = validateLocalAdmissionRecord(raw, { now: new Date('2026-09-09T00:00:00.000Z') });
+  assert.equal(expired.valid, false);
+  assert.equal(expired.checks.not_expired, false);
+  const early = validateLocalAdmissionRecord(raw, { now: new Date('2026-09-01T12:00:00.000Z') });
+  assert.equal(early.valid, false);
+  assert.equal(early.checks.effective, false);
+});
+
+test('P5: a Date from another realm is still read as a Date (brand check, not instanceof)', async () => {
+  const raw = await exampleRecord();
+  const expected = validateLocalAdmissionRecord(raw, { now: NOW });
+  const foreign = runInNewContext(`new Date(${NOW.valueOf()})`);
+  assert.equal(foreign instanceof Date, false, 'the fixture really is cross-realm');
+  assert.deepEqual(validateLocalAdmissionRecord(raw, { now: foreign }), expected);
+  const foreignExpired = runInNewContext(`new Date(${JSON.stringify(raw.expires_at)})`);
+  assert.equal(validateLocalAdmissionRecord(raw, { now: foreignExpired }).checks.not_expired, false);
+});
+
+test('P5: a polluted Object.prototype.now is never used as now', async () => {
+  const raw = await exampleRecord();
+  // The record is valid only at NOW (2026-09-01 to 2026-09-08); the real clock is later.
+  assert.ok(Date.now() > Date.parse(raw.expires_at));
+  Object.defineProperty(Object.prototype, 'now', { value: NOW, configurable: true, writable: true });
+  try {
+    // Options without an own now use the current time, never the inherited NOW.
+    for (const options of [{}, { unrelated: true }, undefined]) {
+      const result = validateLocalAdmissionRecord(raw, options);
+      assert.equal(result.checks.not_expired, false, JSON.stringify(options));
+      assert.equal(result.valid, false);
+    }
+    assert.equal(validateLocalAdmissionRecord(raw, { now: NOW }).valid, true);
+  } finally {
+    delete Object.prototype.now;
+  }
+  assert.equal(Object.hasOwn(Object.prototype, 'now'), false);
 });

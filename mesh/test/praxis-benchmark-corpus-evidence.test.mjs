@@ -9,8 +9,16 @@ function standardRows() {
   ];
 }
 
-function hasFailure(rows, expected) {
-  const failures = checkBudgets(rows);
+function validScaling() {
+  return {
+    method: 'paired-comparable-work-wall-median-v1',
+    sample_count: 5,
+    wall_ratio: 19
+  };
+}
+
+function hasFailure(rows, expected, scaling = validScaling()) {
+  const failures = checkBudgets(rows, scaling);
   assert.ok(failures.some(message => expected.test(message)), JSON.stringify(failures));
 }
 
@@ -53,16 +61,21 @@ test('a duplicate cannot replace a failing standard measurement in either order'
 test('complete unique standard rows remain order independent with optional corpora', () => {
   const rows = standardRows();
   const extra = { label: 'release.prax', parseCpuMs: null, parseMs: 1, formatMs: 1 };
-  assert.deepEqual(checkBudgets([extra, ...rows]), []);
-  assert.deepEqual(checkBudgets([rows[1], extra, rows[0]]), []);
+  assert.deepEqual(checkBudgets([extra, ...rows], validScaling()), []);
+  assert.deepEqual(checkBudgets([rows[1], extra, rows[0]], validScaling()), []);
 });
 
 test('nonstandard duplicate labels do not acquire standard-corpus requirements', () => {
   const extra = { label: 'custom.prax', parseCpuMs: null, parseMs: 1, formatMs: 1 };
-  assert.deepEqual(checkBudgets([extra, ...standardRows(), { ...extra }]), []);
+  assert.deepEqual(checkBudgets([extra, ...standardRows(), { ...extra }], validScaling()), []);
 });
 
 test('missing companion evidence does not hide an observed wall-budget failure', () => {
   const large = { ...standardRows()[1], parseMs: 5001 };
   hasFailure([large], /10k-line parse took 5001ms/);
+});
+
+
+test('missing paired scaling evidence fails closed independently of corpus completeness', () => {
+  hasFailure(standardRows(), /paired scaling evidence is missing or invalid/, null);
 });

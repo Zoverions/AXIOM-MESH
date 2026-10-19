@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import test from 'node:test';
 
 import { PUBLICATION_PERSONA_SCHEMA } from '../src/identity/actor-state.mjs';
+import { ValidationError, canonicalJson, digestObject } from '../src/lib/canonical.mjs';
 import {
   createPublicPersonaProjection,
   createSocialPublicationProjection
@@ -440,4 +441,210 @@ test('witness observation and conflict tampering fail verification', () => {
     }),
     /without selecting a preferred artifact|statement digest/
   );
+});
+
+// --- P5 family: verifyPublicWitnessObservation reads only one plain-data copy ---
+
+// Re-signs a statement with the witness key exactly as signEnvelope does, so the
+// only thing wrong with the result is the statement content itself.
+function witnessSigned(envelope, statement, witnessPrivateKey, digestField = 'observation_digest') {
+  const statementDigest = digestObject(statement);
+  const signable = { schema: envelope.schema, statement, statement_digest: statementDigest };
+  const witnessSignature = sign(null, Buffer.from(canonicalJson(signable)), witnessPrivateKey).toString('base64url');
+  const signed = { ...signable, witness_signature: witnessSignature };
+  return { ...signed, [digestField]: digestObject(signed) };
+}
+
+function observedCredential() {
+  const data = fixture();
+  const lab = service();
+  const first = lab.service.observeCredential(data.credential1, {
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    observedAt: T1
+  });
+  return { data, lab, observation: structuredClone(first.observation) };
+}
+
+const isWitnessPlainDataRejection = error => error instanceof ValidationError
+  && /public witness observation must be plain data/.test(error.message);
+
+test('P5 witness: a getter cannot show the checked artifact_schema to the checks and a different signed one to the output', () => {
+  const { lab, observation } = observedCredential();
+  const options = { trustedWitnessPublicKey: lab.service.witnessPublicKey };
+  const genuineSchema = observation.statement.artifact_schema;
+  // A statement the witness key signed, but whose schema is inconsistent with its kind.
+  const inconsistent = witnessSigned(observation, { ...observation.statement, artifact_schema: 'axiom-unrelated.v1' }, lab.witness.privateKey);
+  assert.throws(() => verifyPublicWitnessObservation(inconsistent, options), /credential observation schema is invalid/);
+  let reads = 0;
+  const statement = { ...inconsistent.statement };
+  Object.defineProperty(statement, 'artifact_schema', {
+    enumerable: true,
+    get() { reads += 1; return reads === 1 ? genuineSchema : 'axiom-unrelated.v1'; }
+  });
+  let result;
+  assert.throws(() => { result = verifyPublicWitnessObservation({ ...inconsistent, statement }, options); }, isWitnessPlainDataRejection);
+  assert.equal(result, undefined);
+  assert.equal(reads, 0);
+  let traps = 0;
+  const proxied = new Proxy(inconsistent.statement, {
+    get(target, property, receiver) {
+      traps += 1;
+      return property === 'artifact_schema' && traps === 1 ? genuineSchema : Reflect.get(target, property, receiver);
+    }
+  });
+  assert.throws(() => verifyPublicWitnessObservation({ ...inconsistent, statement: proxied }, options), isWitnessPlainDataRejection);
+  assert.equal(traps, 0);
+});
+
+test('P5 witness: counting sweep - a getter at every observation slot is rejected with zero caller reads', () => {
+  const { lab, observation } = observedCredential();
+  const options = { trustedWitnessPublicKey: lab.service.witnessPublicKey };
+  const slots = [];
+  const walk = (value, path) => {
+    if (value === null || typeof value !== 'object') return;
+    for (const key of Object.keys(value)) { slots.push([path, key]); walk(value[key], [...path, key]); }
+  };
+  walk(observation, []);
+  assert.ok(slots.length > 25, `sweep covers every slot (${slots.length})`);
+  let reads = 0;
+  for (const [path, key] of slots) {
+    const copy = structuredClone(observation);
+    const container = path.reduce((node, part) => node[part], copy);
+    const original = container[key];
+    Object.defineProperty(container, key, { enumerable: true, get() { reads += 1; return original; } });
+    assert.throws(() => verifyPublicWitnessObservation(copy, options), isWitnessPlainDataRejection, [...path, key].join('.'));
+  }
+  assert.equal(reads, 0);
+});
+
+test('P5 witness controls: plain, JSON, structuredClone, null-prototype and frozen observations verify identically', () => {
+  const { lab, observation } = observedCredential();
+  const options = { trustedWitnessPublicKey: lab.service.witnessPublicKey, expectedDomainId: 'axiom.social.public.v1' };
+  const expected = verifyPublicWitnessObservation(observation, options);
+  const nullPrototype = value => {
+    if (Array.isArray(value)) return value.map(nullPrototype);
+    if (value === null || typeof value !== 'object') return value;
+    return Object.assign(Object.create(null), Object.fromEntries(Object.entries(value).map(([k, v]) => [k, nullPrototype(v)])));
+  };
+  for (const [name, input] of Object.entries({
+    json: JSON.parse(JSON.stringify(observation)),
+    structuredClone: structuredClone(observation),
+    nullPrototype: nullPrototype(observation),
+    frozen: Object.freeze(structuredClone(observation))
+  })) {
+    assert.deepEqual(verifyPublicWitnessObservation(input, options), expected, name);
+  }
+});
+
+test('witness fail-closed controls: missing, mismatched or wrong-domain witness and tampered signatures stay rejected', () => {
+  const { lab, observation } = observedCredential();
+  const other = service();
+  assert.throws(() => verifyPublicWitnessObservation(observation, {}), /trusted public witness observation public key is invalid/);
+  assert.throws(() => verifyPublicWitnessObservation(observation, { trustedWitnessPublicKey: other.service.witnessPublicKey }),
+    /witness key does not match the trusted public key/);
+  assert.throws(() => verifyPublicWitnessObservation(observation, {
+    trustedWitnessPublicKey: lab.service.witnessPublicKey, expectedDomainId: 'axiom.other.v1'
+  }), /belongs to a different domain/);
+  // Re-signed by a different key under the original witness_key_id.
+  const forged = witnessSigned(observation, observation.statement, other.witness.privateKey);
+  assert.throws(() => verifyPublicWitnessObservation(forged, { trustedWitnessPublicKey: lab.service.witnessPublicKey }),
+    /witness signature is invalid/);
+  const wrongDigest = { ...structuredClone(observation), observation_digest: 'f'.repeat(64) };
+  assert.throws(() => verifyPublicWitnessObservation(wrongDigest, { trustedWitnessPublicKey: lab.service.witnessPublicKey }),
+    /observation_digest does not match/);
+});
+
+// --- B-1: verifyPublicWitnessConflict reads only one plain-data copy ---
+
+function observedConflict() {
+  const data = fixture();
+  const alternateJournal = keys();
+  const alternateCredential = createPersonaSigningCredential({
+    personaId: data.projection.persona_id,
+    personaProjectionDigest: data.projection.projection_digest,
+    personaRootPrivateKey: data.root.privateKey,
+    signingPublicKey: alternateJournal.publicKey,
+    epoch: 1,
+    activatedAt: T0
+  });
+  const lab = service();
+  const first = lab.service.observeCredential(data.credential1, { trustedPersonaRootPublicKey: data.root.publicKey, observedAt: T1 });
+  const second = lab.service.observeCredential(alternateCredential, { trustedPersonaRootPublicKey: data.root.publicKey, observedAt: T2 });
+  return {
+    lab,
+    conflict: structuredClone(second.conflicts[0]),
+    observations: [structuredClone(first.observation), structuredClone(second.observation)]
+  };
+}
+
+const isConflictPlainDataRejection = error => error instanceof ValidationError
+  && /public witness conflict must be plain data/.test(error.message);
+
+test('B-1: a Proxy artifact_digests reporting length 2, 2, then 3 cannot pass the exactly-two bound', () => {
+  const { lab, conflict } = observedConflict();
+  const options = { trustedWitnessPublicKey: lab.service.witnessPublicKey };
+  // The witness key signs a conflict with three artifact digests; the schema requires exactly two.
+  const three = [...conflict.statement.artifact_digests, 'e'.repeat(64)].sort();
+  const signed = witnessSigned(conflict, { ...conflict.statement, artifact_digests: three }, lab.witness.privateKey, 'conflict_digest');
+  assert.throws(() => verifyPublicWitnessConflict(signed, options), /artifact_digests must contain 2-2 digests/);
+  let lengthReads = 0;
+  let traps = 0;
+  const lying = new Proxy([...three], {
+    get(target, property, receiver) {
+      traps += 1;
+      if (property === 'length') { lengthReads += 1; return lengthReads <= 2 ? 2 : 3; }
+      return Reflect.get(target, property, receiver);
+    },
+    has(target, property) { traps += 1; return Reflect.has(target, property); },
+    ownKeys(target) { traps += 1; return Reflect.ownKeys(target); },
+    getOwnPropertyDescriptor(target, property) { traps += 1; return Reflect.getOwnPropertyDescriptor(target, property); }
+  });
+  let result;
+  assert.throws(() => {
+    result = verifyPublicWitnessConflict({ ...signed, statement: { ...signed.statement, artifact_digests: lying } }, options);
+  }, isConflictPlainDataRejection);
+  assert.equal(result, undefined);
+  assert.equal(lengthReads, 0);
+  assert.equal(traps, 0);
+});
+
+test('B-1: counting sweep - a getter at every conflict slot is rejected with zero caller reads', () => {
+  const { lab, conflict } = observedConflict();
+  const options = { trustedWitnessPublicKey: lab.service.witnessPublicKey };
+  const slots = [];
+  const walk = (value, path) => {
+    if (value === null || typeof value !== 'object') return;
+    for (const key of Object.keys(value)) { slots.push([path, key]); walk(value[key], [...path, key]); }
+  };
+  walk(conflict, []);
+  assert.ok(slots.length > 20, `sweep covers every slot (${slots.length})`);
+  let reads = 0;
+  for (const [path, key] of slots) {
+    const copy = structuredClone(conflict);
+    const container = path.reduce((node, part) => node[part], copy);
+    const original = container[key];
+    Object.defineProperty(container, key, { enumerable: true, get() { reads += 1; return original; } });
+    assert.throws(() => verifyPublicWitnessConflict(copy, options), isConflictPlainDataRejection, [...path, key].join('.'));
+  }
+  assert.equal(reads, 0);
+});
+
+test('B-1 controls: plain, JSON, structuredClone, null-prototype and frozen conflicts verify identically', () => {
+  const { lab, conflict, observations } = observedConflict();
+  const options = { trustedWitnessPublicKey: lab.service.witnessPublicKey, observations };
+  const expected = verifyPublicWitnessConflict(conflict, options);
+  assert.equal(expected.valid, true);
+  const nullPrototype = value => {
+    if (Array.isArray(value)) return value.map(nullPrototype);
+    if (value === null || typeof value !== 'object') return value;
+    return Object.assign(Object.create(null), Object.fromEntries(Object.entries(value).map(([k, v]) => [k, nullPrototype(v)])));
+  };
+  for (const [name, input] of Object.entries({
+    json: JSON.parse(JSON.stringify(conflict)),
+    structuredClone: structuredClone(conflict),
+    nullPrototype: nullPrototype(conflict),
+    frozen: Object.freeze(structuredClone(conflict))
+  })) {
+    assert.deepEqual(verifyPublicWitnessConflict(input, options), expected, name);
+  }
 });
