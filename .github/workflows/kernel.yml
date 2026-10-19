@@ -102,7 +102,7 @@ jobs:
           npm run credential-history:audit \
             > "$RUNNER_TEMP/axiom-credential-history-audit-evidence.json"
       - name: Upload signed credential-history audit evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-credential-history-audit-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-credential-history-audit-evidence.json
@@ -115,7 +115,7 @@ jobs:
             "$RUNNER_TEMP/axiom-recovery-drill" \
             > "$RUNNER_TEMP/axiom-recovery-drill-evidence.json"
       - name: Upload signed recovery evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-recovery-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-recovery-drill-evidence.json
@@ -128,7 +128,7 @@ jobs:
             "$RUNNER_TEMP/axiom-backup-lifecycle-drill" \
             > "$RUNNER_TEMP/axiom-backup-lifecycle-evidence.json"
       - name: Upload signed backup lifecycle evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-backup-lifecycle-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-backup-lifecycle-evidence.json
@@ -141,7 +141,7 @@ jobs:
             "$RUNNER_TEMP/axiom-slo-drill" \
             > "$RUNNER_TEMP/axiom-slo-baseline-evidence.json"
       - name: Upload signed SLO baseline evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-slo-baseline-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-slo-baseline-evidence.json
@@ -154,7 +154,7 @@ jobs:
             "$RUNNER_TEMP/axiom-resilience-drill" \
             > "$RUNNER_TEMP/axiom-resilience-drill-evidence.json"
       - name: Upload signed resilience evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-resilience-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-resilience-drill-evidence.json
@@ -167,7 +167,7 @@ jobs:
             "$RUNNER_TEMP/axiom-transport-drill" \
             > "$RUNNER_TEMP/axiom-transport-drill-evidence.json"
       - name: Upload signed transport evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-transport-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-transport-drill-evidence.json
@@ -180,7 +180,7 @@ jobs:
             "$RUNNER_TEMP/axiom-service-unit-drill" \
             > "$RUNNER_TEMP/axiom-service-unit-drill-evidence.json"
       - name: Upload signed service-unit evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-service-unit-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-service-unit-drill-evidence.json
@@ -193,7 +193,7 @@ jobs:
             "$RUNNER_TEMP/axiom-node-scheduling-drill" \
             > "$RUNNER_TEMP/axiom-node-scheduling-drill-evidence.json"
       - name: Upload signed node-scheduling evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-node-scheduling-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-node-scheduling-drill-evidence.json
@@ -206,7 +206,7 @@ jobs:
             "$RUNNER_TEMP/axiom-online-causal-sync-drill" \
             > "$RUNNER_TEMP/axiom-online-causal-sync-drill-evidence.json"
       - name: Upload signed online causal sync evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-online-causal-sync-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-online-causal-sync-drill-evidence.json
@@ -219,7 +219,7 @@ jobs:
             "$RUNNER_TEMP/axiom-telemetry-relay-drill" \
             > "$RUNNER_TEMP/axiom-telemetry-relay-evidence.json"
       - name: Upload signed telemetry relay evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-telemetry-relay-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-telemetry-relay-evidence.json
@@ -232,7 +232,7 @@ jobs:
             "$RUNNER_TEMP/axiom-credential-rotation-drill" \
             > "$RUNNER_TEMP/axiom-credential-rotation-evidence.json"
       - name: Upload signed credential rotation evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-credential-rotation-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-credential-rotation-evidence.json
@@ -245,7 +245,7 @@ jobs:
             "$RUNNER_TEMP/axiom-data-key-rotation-drill" \
             > "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json"
       - name: Upload signed data-key rotation evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-data-key-rotation-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-data-key-rotation-evidence.json
@@ -258,7 +258,7 @@ jobs:
             "$RUNNER_TEMP/axiom-provider-conformance-drill" \
             > "$RUNNER_TEMP/axiom-provider-conformance-evidence.json"
       - name: Upload signed provider conformance evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-provider-conformance-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-provider-conformance-evidence.json
@@ -272,7 +272,7 @@ jobs:
             --require-commit-bound \
             > "$RUNNER_TEMP/axiom-runtime-adapter-reference-conformance-evidence.json"
       - name: Upload commit-bound runtime-adapter reference evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-runtime-adapter-reference-conformance-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-runtime-adapter-reference-conformance-evidence.json
@@ -284,7 +284,7 @@ jobs:
           node src/pilot-dossier-conformance-drill.mjs \
             > "$RUNNER_TEMP/axiom-pilot-dossier-verifier-conformance-evidence.json"
       - name: Upload signed pilot dossier verifier conformance evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-pilot-dossier-verifier-conformance-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-pilot-dossier-verifier-conformance-evidence.json
@@ -296,7 +296,7 @@ jobs:
           node src/pilot-evidence-package-drill.mjs \
             > "$RUNNER_TEMP/axiom-pilot-evidence-package-verifier-conformance-evidence.json"
       - name: Upload signed pilot evidence package verifier conformance evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-pilot-evidence-package-verifier-conformance-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-pilot-evidence-package-verifier-conformance-evidence.json
@@ -308,7 +308,7 @@ jobs:
           node src/independent-security-review-drill.mjs \
             > "$RUNNER_TEMP/axiom-independent-security-review-verifier-conformance-evidence.json"
       - name: Upload signed independent security review verifier evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-independent-security-review-verifier-conformance-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-independent-security-review-verifier-conformance-evidence.json
@@ -332,7 +332,7 @@ jobs:
             "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json" \
             > "$RUNNER_TEMP/axiom-incident-tabletop-evidence.json"
       - name: Upload signed incident tabletop evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-incident-tabletop-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-incident-tabletop-evidence.json
@@ -448,7 +448,7 @@ jobs:
             kernel node src/network-boundary.mjs \
             > "$RUNNER_TEMP/axiom-deny-egress-evidence.json"
       - name: Upload signed deny-egress evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: axiom-deny-egress-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-deny-egress-evidence.json
