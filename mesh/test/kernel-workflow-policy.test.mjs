@@ -9,7 +9,7 @@ test('load-bearing Clean Kernel workflow pins actions and runner and filters no 
   assert.equal(source.includes('actions/setup-node@v7'), false);
   assert.equal(source.includes('actions/upload-artifact@v7'), false);
   assert.ok(source.includes('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7'));
-  assert.ok(source.includes('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7'));
+  assert.ok(source.includes('actions/setup-node@949febbc7c328844f3062ffed8cb2a1eb7e2a8f7 # v7'));
   assert.ok(source.includes('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7'));
   assert.ok(source.includes('node src/lib/runtime-adapter-contract.mjs'));
   assert.ok(source.includes('node src/runtime-adapter-conformance.mjs'));

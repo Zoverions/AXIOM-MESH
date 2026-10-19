@@ -504,7 +504,7 @@ test('Windows compatibility workflow is immutable and release-governed', async (
   assert.throws(
     () => verifyWindowsWorkflow(
       workflow.replace(
-        'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+        'actions/setup-node@949febbc7c328844f3062ffed8cb2a1eb7e2a8f7',
         'actions/setup-node@v7'
       )
     ),
