@@ -729,7 +729,7 @@ export function verifyProductionDeployment({
     'runs-on: ubuntu-24.04',
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',
     'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7',
-    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7',
+    'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7',
     'npm run setup:install',
     'fetch-depth: 0',
     'AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}',
