@@ -8,7 +8,7 @@ import {
   hkdfSync,
   randomBytes
 } from 'node:crypto';
-import { canonicalJson, sha256, ValidationError } from './canonical.mjs';
+import { assertContractDepth, canonicalJson, sha256, ValidationError } from './canonical.mjs';
 
 /**
  * Per-record disclosure for Circles (laboratory, with the exchange).
@@ -76,6 +76,7 @@ export function circleDisclosureKeyRecord({ principalId, publicKey, publishedAt 
 }
 
 export function validateCircleDisclosureKeyRecord(record) {
+  assertContractDepth(record, 'Circle disclosure key');
   exactObject(record, 'Circle disclosure key', ['schema', 'principal_id', 'key_id', 'public_key', 'published_at']);
   if (
     record.schema !== CIRCLE_DISCLOSURE_KEY_SCHEMA
@@ -177,6 +178,7 @@ export function openCircleSealedContent({ record, genesisDigest, principalId, pr
 
 /** Checks a sealed_content record's shape, without decrypting it. */
 export function validateCircleSealedContentRecord(record, genesisDigest) {
+  assertContractDepth(record, 'Circle sealed content');
   exactObject(record, 'Circle sealed content', ['published_by', 'published_at', 'audience', 'envelope']);
   exactObject(record.audience, 'Circle sealed content audience', ['role_ids']);
   exactObject(record.envelope, 'Circle sealed content envelope', [

@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { open, rm } from 'node:fs/promises';
-import { canonicalJson, ValidationError } from './canonical.mjs';
+import { assertContractDepth, canonicalJson, ValidationError } from './canonical.mjs';
 
 /**
  * Chunked protected artifacts (scalability audit S-13).
@@ -207,6 +207,7 @@ export async function openFileChunked({
 }
 
 export function validateChunkedMetadata(value) {
+  assertContractDepth(value, 'Chunked artifact metadata');
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError('Chunked artifact metadata is invalid');
   }

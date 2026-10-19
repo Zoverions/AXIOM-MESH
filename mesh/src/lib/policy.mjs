@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import { digestObject, ValidationError } from './canonical.mjs';
+import { types } from 'node:util';
+
+import { assertContractDepth, digestObject, ValidationError } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
 import {
   ASSURANCE_TIER_IDS,
@@ -271,11 +273,27 @@ const RECEIPT_NONCE = /^[A-Za-z0-9_-]{16,128}$/;
  *
  * Returns the receipt (`{ body, signature }`) or throws `policy_unavailable`.
  */
-export function verifyPolicyGenerationReceipt(receipt, { publicKey, generation, nonce }) {
+export function verifyPolicyGenerationReceipt(receipt, options) {
   const refuse = message => Object.assign(new Error(message), {
     code: 'policy_unavailable',
     status: 503
   });
+  try {
+    assertContractDepth(receipt, 'Policy generation receipt');
+  } catch {
+    throw refuse('Policy generation receipt is malformed');
+  }
+  if (
+    types.isProxy(options)
+    || options === null
+    || typeof options !== 'object'
+    || Array.isArray(options)
+  ) throw refuse('Policy generation receipt verification options are malformed');
+  const optionDescriptors = Reflect.ownKeys(options).map(key => Object.getOwnPropertyDescriptor(options, key));
+  if (optionDescriptors.some(descriptor => !descriptor || !Object.hasOwn(descriptor, 'value'))) {
+    throw refuse('Policy generation receipt verification options are malformed');
+  }
+  const { publicKey, generation, nonce } = options;
   const body = receipt?.body;
   if (
     !body || typeof body !== 'object' || Array.isArray(body)

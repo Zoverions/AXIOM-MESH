@@ -1,4 +1,6 @@
-import { digestObject, ValidationError } from './canonical.mjs';
+import { types } from 'node:util';
+
+import { assertContractDepth, digestObject, ValidationError } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
 import { CIRCLE_HEADS_SCHEMA, CIRCLE_NODE_STATEMENT_SCHEMA } from './circle-exchange.mjs';
 
@@ -41,8 +43,13 @@ const MAX_HEADS = 8192;
  * statement body.
  */
 export function verifyCircleNodeEvidence(replica, evidence) {
-  const statement = evidence?.statement;
-  const heads = evidence?.heads;
+  assertReplica(replica);
+  assertContractDepth(evidence, 'Circle node evidence');
+  if (evidence === null || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    throw new ValidationError('Circle node evidence is invalid');
+  }
+  const statement = evidence.statement;
+  const heads = evidence.heads;
   const body = statement?.body;
   if (
     body?.schema !== CIRCLE_NODE_STATEMENT_SCHEMA
@@ -178,7 +185,14 @@ export function detectCircleWithholdingAcross({ replica, evidence }) {
 
 /** Re-derives a finding from its own evidence; throws if it does not hold. */
 export function verifyCircleWithholdingFinding(replica, value) {
-  if (value?.schema !== CIRCLE_WITHHOLDING_FINDING_SCHEMA) throw new ValidationError('Circle withholding finding is invalid');
+  assertReplica(replica);
+  assertContractDepth(value, 'Circle withholding finding');
+  if (
+    value === null
+    || typeof value !== 'object'
+    || Array.isArray(value)
+    || value.schema !== CIRCLE_WITHHOLDING_FINDING_SCHEMA
+  ) throw new ValidationError('Circle withholding finding is invalid');
   const statements = (value.evidence ?? []).map(item => verifyCircleNodeEvidence(replica, item));
   const last = value.evidence.at(-1);
   const counterIn = (evidence, author, keyId) => evidence.heads.heads
@@ -228,6 +242,12 @@ function at(value) {
   const time = Date.parse(value);
   if (Number.isNaN(time)) throw new ValidationError('Circle withholding time is invalid');
   return time;
+}
+
+function assertReplica(value) {
+  if (types.isProxy(value) || value === null || typeof value !== 'object') {
+    throw new ValidationError('Circle replica is invalid');
+  }
 }
 
 function finding(kind, fields) {

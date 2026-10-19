@@ -1,4 +1,5 @@
 import { KeyObject, createPublicKey, sign } from 'node:crypto';
+import { types } from 'node:util';
 import { canonicalJson, digestObject, sha256, ValidationError } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
 import { circleStanding } from './circle-core.mjs';
@@ -67,7 +68,9 @@ export function circleBallotReceipt(ballot) {
   return digestObject(ballot.body);
 }
 
-export function verifyCircleDecision({ document, decisionId, ballots, voterKeys }) {
+export function verifyCircleDecision(input) {
+  exactObject(input, 'Circle decision verification', ['document', 'decisionId', 'ballots', 'voterKeys']);
+  const { document, decisionId, ballots, voterKeys } = input;
   const standing = circleStanding(document);
   const decision = document.decisions.find(item => item.decision_id === decisionId);
   if (!decision) throw new ValidationError(`Circle decision ${decisionId} does not exist`);
@@ -299,10 +302,24 @@ function normalizeVoterKeys(voterKeys) {
 }
 
 function exactObject(value, name, fields) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+  if (types.isProxy(value) || value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new ValidationError(`${name} must be an object`);
   }
-  const keys = Object.keys(value).sort();
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new ValidationError(`${name} must be a plain object`);
+  }
+  const ownKeys = Reflect.ownKeys(value);
+  if (ownKeys.some(key => typeof key === 'symbol')) {
+    throw new ValidationError(`${name} fields are invalid`);
+  }
+  for (const key of ownKeys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new ValidationError(`${name} must contain only enumerable data properties`);
+    }
+  }
+  const keys = ownKeys.map(String).sort();
   const expected = [...fields].sort();
   if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
     throw new ValidationError(`${name} fields are invalid`);

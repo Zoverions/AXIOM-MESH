@@ -1,5 +1,5 @@
 import { KeyObject, createPublicKey, sign, verify } from 'node:crypto';
-import { canonicalJson, sha256, ValidationError } from './canonical.mjs';
+import { assertContractDepth, canonicalJson, sha256, ValidationError } from './canonical.mjs';
 
 /**
  * Circle key establishment. Inert contract laboratory.
@@ -76,6 +76,7 @@ export function circleCreatorKey(value) {
 }
 
 export function validateCircleCreatorKey(value) {
+  assertContractDepth(value, 'Circle creator key');
   exactObject(value, 'Circle creator key', ['key_id', 'public_key']);
   return decodeRecordKey(value.public_key, value.key_id, 'Circle creator key');
 }
@@ -159,7 +160,14 @@ export function createCircleKeyRevocation({
  * and, for endorsements and rotations, proof of possession. Returns the
  * public key it introduces, if any. Authorization is judged by the view.
  */
-export function validateCircleKeyRecord(type, record, { genesisDigest, circleId }) {
+export function validateCircleKeyRecord(type, record, options) {
+  if (typeof type !== 'string') throw new ValidationError('Circle key record type is invalid');
+  assertContractDepth(record, 'Circle key record');
+  assertContractDepth(options, 'Circle key record options');
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new ValidationError('Circle key record options must be an object');
+  }
+  const { genesisDigest, circleId } = options;
   if (type === 'key_endorsement') {
     exactObject(record, 'Circle key endorsement', [
       'schema', 'circle_id', 'principal_id', 'key_id', 'public_key', 'possession',

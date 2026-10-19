@@ -317,6 +317,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/chunked-artifact.mjs#validateChunkedMetadata": {},
     "src/lib/ci-checkout-freshness.mjs#verifyCiCheckoutFreshness": {
       "undefined": "raw",
       "null": "raw",
@@ -329,6 +330,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/circle-ballots.mjs#verifyCircleDecision": {},
     "src/lib/circle-commitment-admission.mjs#validateCircleCommitmentAdmission": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -344,11 +346,15 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/circle-disclosure.mjs#validateCircleDisclosureKeyRecord": {},
+    "src/lib/circle-disclosure.mjs#validateCircleSealedContentRecord": {},
     "src/lib/circle-export-retention-evidence.mjs#validateCircleExportRetentionEvidence": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/circle-keys.mjs#validateCircleCreatorKey": {},
+    "src/lib/circle-keys.mjs#validateCircleKeyRecord": {},
     "src/lib/circle-membership-assurance.mjs#validateCircleMembershipAssurance": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -364,6 +370,8 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/circle-withholding.mjs#verifyCircleNodeEvidence": {},
+    "src/lib/circle-withholding.mjs#verifyCircleWithholdingFinding": {},
     "src/lib/co-creative-workspace.mjs#validateCoCreativeWorkspaceProposal": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
@@ -1442,6 +1450,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/policy.mjs#verifyPolicyGenerationReceipt": {},
     "src/lib/portable-trust-package.mjs#validatePortableTrustPackage": {
       "throwing-proxy": "sentinel",
       "recording-proxy": "read-through",
