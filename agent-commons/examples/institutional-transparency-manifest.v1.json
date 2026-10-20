@@ -1,0 +1,82 @@
+{
+  "schema": "axiom-institutional-transparency-manifest.v1",
+  "manifest_id": "transparency:institution-alpha-2026-09",
+  "subject_id": "institution:alpha-service",
+  "subject_version": "2026.09",
+  "published_at": "2026-09-01T17:30:00.000Z",
+  "expires_at": "2026-10-01T17:30:00.000Z",
+  "surfaces": [
+    {
+      "surface_id": "surface:authorization",
+      "class": "public_inspectable",
+      "claim": "Authorization semantics and effect-admission boundaries are publicly documented.",
+      "artifact_refs": [
+        "docs:authorization-policy"
+      ],
+      "evidence_digests": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "reviewer_or_witness_refs": [],
+      "currentness_checked_at": "2026-09-01T17:30:00.000Z",
+      "unresolved_assumptions": []
+    },
+    {
+      "surface_id": "surface:verifier",
+      "class": "independently_verifiable",
+      "claim": "The verifier used for bounded external assertions can be independently reproduced.",
+      "artifact_refs": [
+        "artifact:verifier-release-7"
+      ],
+      "evidence_digests": [
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "reviewer_or_witness_refs": [
+        "witness:repro-build-01"
+      ],
+      "currentness_checked_at": "2026-09-01T17:30:00.000Z",
+      "unresolved_assumptions": []
+    },
+    {
+      "surface_id": "surface:managed-provider",
+      "class": "opaque_dependency",
+      "claim": "A managed notification provider is externally operated and not independently inspectable.",
+      "artifact_refs": [],
+      "evidence_digests": [],
+      "reviewer_or_witness_refs": [],
+      "currentness_checked_at": "2026-09-01T17:30:00.000Z",
+      "unresolved_assumptions": [
+        "Provider operational controls and internal message-routing policy are not independently inspectable."
+      ]
+    }
+  ],
+  "change_control": {
+    "policy_or_charter_ref": "policy:alpha-change-control",
+    "upgrade_authority_refs": [
+      "authority:alpha-release-board"
+    ],
+    "emergency_change_refs": [
+      "policy:alpha-emergency-change"
+    ],
+    "change_evidence_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "external_dependencies": [
+    {
+      "dependency_id": "provider:notifications",
+      "role": "Optional outbound notification relay.",
+      "transparency_class": "opaque_dependency",
+      "replaceable": true,
+      "trust_assumptions": [
+        "Provider can observe metadata for messages routed through its service."
+      ]
+    }
+  ],
+  "limitations": [
+    "Manifest describes declared trust surfaces at one point in time.",
+    "Public documentation does not prove the deployed instance matches the published source without separate deployment evidence."
+  ],
+  "authority": {
+    "transparency_grants_authority": false,
+    "audit_grants_authority": false,
+    "witness_grants_authority": false
+  }
+}
