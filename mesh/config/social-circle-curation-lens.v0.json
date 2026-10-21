@@ -1,0 +1,66 @@
+{
+  "schema": "axiom-social-circle-curation-lens.v0",
+  "version": 0,
+  "status": "inert-curation-lens-contract",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "charter_binding": {
+    "charter_digest_required": true,
+    "curator_role_binding_required": true,
+    "founder_has_implicit_curation_authority": false,
+    "role_label_alone_grants_authority": false
+  },
+  "lens_model": {
+    "multiple_lenses_allowed": true,
+    "member_selects_lens_locally": true,
+    "uncurated_view_remains_available": true,
+    "lens_may_define_default_presentation": true,
+    "lens_may_control_network_visibility": false,
+    "lens_may_control_personal_interaction_boundaries": false,
+    "lens_may_invoke_safety_legal_quarantine": false
+  },
+  "allowed_rule_effects": [
+    "include",
+    "exclude-from-this-lens",
+    "annotate",
+    "deprioritize-within-this-lens"
+  ],
+  "prohibited_rule_effects": [
+    "network-ban",
+    "network-delete",
+    "block-for-members",
+    "disable-uncurated-view",
+    "safety-legal-quarantine",
+    "mutate-canonical-source"
+  ],
+  "lens_record": {
+    "schema": "axiom-circle-curation-lens-record.v0",
+    "requires_circle_id": true,
+    "requires_lens_id": true,
+    "requires_charter_digest": true,
+    "requires_curator_role_ids": true,
+    "requires_rules_digest": true,
+    "requires_explanation_policy": true,
+    "member_uncurated_access_preserved": true,
+    "third_party_suppression": false,
+    "network_effect": "none",
+    "authority_effect": "none"
+  },
+  "selection_record": {
+    "schema": "axiom-circle-curation-selection.v0",
+    "scope": "owner-local-preference",
+    "user_may_change_lens": true,
+    "user_may_select_uncurated": true,
+    "curator_may_override_user_selection": false,
+    "network_effect": "none",
+    "authority_effect": "none"
+  },
+  "explainability": {
+    "lens_identity_visible": true,
+    "curator_role_visible": true,
+    "rule_reason_required": true,
+    "exclusion_reason_available": true,
+    "why_am_i_seeing_this_supported": true
+  }
+}
