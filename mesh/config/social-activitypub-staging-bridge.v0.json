@@ -1,0 +1,54 @@
+{
+  "schema": "axiom-social-activitypub-staging-bridge.v0",
+  "version": 0,
+  "status": "inert-normalization-contract",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "existing_axiom_transport": {
+    "direct_reuse": false,
+    "reason": "trust-model-mismatch",
+    "requires_axiom_social_exchange_package": true,
+    "requires_distinct_transport_and_exporter_trust_roots": true,
+    "activitypub_signature_may_be_treated_as_axiom_exporter_attestation": false
+  },
+  "bridge": {
+    "new_activitypub_staging_schema_required": true,
+    "owner_scoped_review_pattern_reusable": true,
+    "explicit_admission_pattern_reusable": true,
+    "retention_pattern_reusable_after_normalization": true,
+    "abuse_control_pattern_reusable_after_normalization": true,
+    "must_not_forge_exporter_grid_id": true,
+    "must_not_relabel_remote_actor_as_axiom_grid_exporter": true,
+    "must_not_bypass_operator_review": true
+  },
+  "verification": {
+    "webfinger_binding_required_for_mastodon_actor_discovery": true,
+    "activitypub_actor_key_binding_required": true,
+    "federation_request_authentication_required": true,
+    "ssrf_safe_dereferencing_required": true,
+    "canonical_remote_object_digest_required": true,
+    "replay_or_idempotency_control_required": true,
+    "transport_authentication_is_content_truth_proof": false,
+    "transport_authentication_is_legal_identity_proof": false,
+    "local_adapter_attestation_is_remote_authorship_proof": false
+  },
+  "normalized_candidate": {
+    "remote_observation_only": true,
+    "local_authorship_claimed": false,
+    "content_truth_claimed": false,
+    "legal_identity_claimed": false,
+    "circle_authority_claimed": false,
+    "execution_authority_claimed": false,
+    "requires_explicit_local_admission": true,
+    "authority_effect": "none"
+  },
+  "non_claims": {
+    "activitypub_is_axiom_native_transport": false,
+    "mastodon_instance_is_axiom_trust_root": false,
+    "remote_actor_is_axiom_grid": false,
+    "verified_delivery_is_authorship": false,
+    "verified_delivery_is_truth": false,
+    "normalization_is_admission": false
+  }
+}
