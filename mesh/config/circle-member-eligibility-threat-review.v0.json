@@ -1,0 +1,96 @@
+{
+  "schema": "axiom-circle-member-eligibility-threat-review.v0",
+  "version": 0,
+  "status": "inert-member-eligibility-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "id": "mutable-current-membership-snapshot",
+      "control": "Eligibility starts from the retained active membership-acceptance binding, derives later restriction events append-only, and requires the current Circle Core snapshot to equal the derived lifecycle head.",
+      "residual": "The current Core membership object remains a snapshot surface; correctness depends on retaining the complete eligibility event chain and historical acceptance binding."
+    },
+    {
+      "id": "role-widening-by-lifecycle-record",
+      "control": "The v0 eligibility lifecycle permits only strict role-set narrowing; a lifecycle event cannot add, restore, or substitute a role even when that role exists in the charter.",
+      "residual": "Future role grants or restoration require a separately authorized governance procedure and are intentionally unsupported here."
+    },
+    {
+      "id": "membership-resume-as-authority-restoration",
+      "control": "Membership suspension is one-way in v0; resume is unsupported so a lifecycle record cannot silently restore eligibility after suspension.",
+      "residual": "A practical future resume procedure needs explicit actor, collective-authorization, notice, appeal, and credential-currentness semantics."
+    },
+    {
+      "id": "terminal-state-rewrite",
+      "control": "Revocation and voluntary exit are terminal, reject all later eligibility events, and must bind exactly one matching Circle Core exit record at the same effective time.",
+      "residual": "The contract does not establish whether the revocation or exit process was legitimate, voluntary, procedurally fair, or legally effective."
+    },
+    {
+      "id": "historical-role-time-confusion",
+      "control": "Role narrowing is resolved by event time and checked against the charter active at that time, so later narrowing does not rewrite an earlier eligibility state.",
+      "residual": "This slice does not yet retrofit every Circle record-authorization call site to require the new resolver; that atomic integration remains a promotion blocker."
+    },
+    {
+      "id": "credential-currentness-laundering",
+      "control": "Credential eligibility composes the preserved hardened credential lifecycle with membership state at the exact use time and requires the selected credential to be active and authentication-eligible.",
+      "residual": "The carried-forward credential lifecycle still does not prove who authorized initial credential issuance, suspension/resume, replacement-device admission, or recovery."
+    },
+    {
+      "id": "credential-possession-overclaim",
+      "control": "The eligibility assessment explicitly sets credential_possession_verified false and treats authenticatedPrincipal as external assurance rather than self-authenticating input.",
+      "residual": "A future Hypervisor service path must cryptographically authenticate possession of the selected member credential and bind that result to the principal and request."
+    },
+    {
+      "id": "principal-membership-cross-binding",
+      "control": "Historical acceptance, membership lifecycle, credential lifecycle, selected credential, and authenticated-principal input must all bind the same Circle, membership, and principal identifiers.",
+      "residual": "Identifier agreement does not prove human identity, legal identity, unique-personhood, or freedom from account compromise."
+    },
+    {
+      "id": "compromised-device-reuse",
+      "control": "The preserved credential lifecycle rejects post-compromise issuance and derives credentials on a compromised device as ineligible for later authentication use.",
+      "residual": "The contract cannot detect an unreported compromise and does not attest secure hardware custody."
+    },
+    {
+      "id": "stale-eligibility-proof",
+      "control": "Every eligibility assessment binds an exact as_of time plus membership-lifecycle, credential-lifecycle, historical-ledger, policy, and governing-charter digests.",
+      "residual": "The assessment is inert; a future admission path must reject stale assessments by recomputing current state or enforcing a bounded authenticated freshness rule."
+    },
+    {
+      "id": "authorization-admission-split",
+      "control": "The eligibility result carries no runtime or external-effect authority and cannot append to Grid, mint a Circle decision, or invoke Gateway, Hypervisor, or Sandbox effects.",
+      "residual": "Runtime promotion must bind member eligibility and record authorization into the same Hypervisor-issued Grid admission capability so a caller cannot mix evidence from different states."
+    },
+    {
+      "id": "sybil-or-coercion-confusion",
+      "control": "The contract makes no human-identity, legal-identity, governance-legitimacy, or coercion-free-participation claim.",
+      "residual": "Distinct principals or valid credentials can still represent Sybils, shared control, coercion, malware, deception, or captured governance."
+    }
+  ],
+  "promotion_blockers": [
+    "Define authorized Circle role-grant and membership-resume procedures before any lifecycle operation may widen eligibility.",
+    "Define credential issuance, credential resume, replacement-device admission, and recovery authorization rather than treating structurally valid credential records as self-authorizing.",
+    "Implement Hypervisor-bound proof of possession for the selected Circle member credential and bind it to authenticated principal, Circle, membership, request digest, and freshness window.",
+    "Retrofit Circle record authorization to resolve membership status and roles from this append-only lifecycle at each record event time rather than relying on the current snapshot compatibility path.",
+    "Bind the exact member-eligibility assessment and record-authorization assessment into one Hypervisor-issued Circle Grid admission capability and deterministic Grid event.",
+    "Make the eligibility-plus-authorization-plus-admission composition the only service-level Circle append path; direct persistence helpers must remain inaccessible to runtime callers.",
+    "Persist eligibility restriction events through the replay-safe Circle Grid path with deterministic identity and atomic head ordering before treating the lifecycle as durable runtime state.",
+    "Define electorate handling for suspension, revocation, exit, and role narrowing during an already-open proposal without retroactively rewriting valid earlier participation.",
+    "Add accessible member-facing explanations for active, suspended, narrowed, revoked, exited, credential-compromised, and credential-ineligible states.",
+    "Complete independent security, privacy, coercion, Sybil, recovery, capture, and governance review before real Circle authentication or decision use."
+  ],
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "credential-possession",
+    "credential-issuance-authority",
+    "role-grant-authority",
+    "membership-resume-authority",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "trusted-wall-clock",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority"
+  ]
+}
