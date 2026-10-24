@@ -373,7 +373,7 @@ topologies.
 
 The source-setup policy distinguishes exact hosted-production approval and
 security-focused CI on Node.js `22.23.2`, protected-CI Node.js `24.18.0`, and
-the candidate production image pin `24.22.0`. The supported source engine is
+the candidate production image pin `24.22.1`. The supported source engine is
 `>=22.23.2 <23 || >=24.14.0 <25`; the production supervisor permits exactly
 Node.js `22.23.2` or the existing Node.js 24 range. Hosted production still
 requires private credentials, mutual TLS, verified deny-egress, and a separate
