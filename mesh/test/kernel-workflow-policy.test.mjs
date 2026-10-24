@@ -33,6 +33,7 @@ test('container CI assembles an exact-head non-authorizing release bundle candid
   assert.ok(source.includes('Assemble exact-head non-authorizing release bundle candidate'));
   assert.ok(source.includes('git archive --format=tar'));
   assert.ok(source.includes('docker save --output'));
+  assert.ok(source.includes('node mesh/src/release.mjs --write'));
   assert.ok(source.includes('node mesh/src/release-bundle-candidate.mjs'));
   assert.ok(source.includes('axiom-release-bundle-candidate-${{ github.sha }}'));
   assert.ok(source.includes('mesh/.data/release/0.12.0-dev.3/sbom.spdx.json'));

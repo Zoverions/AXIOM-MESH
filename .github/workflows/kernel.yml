@@ -389,7 +389,7 @@ jobs:
           source_epoch="$(git show -s --format=%ct "$GITHUB_SHA")"
           created_at="$(date -u -d "@$source_epoch" +%Y-%m-%dT%H:%M:%S.000Z)"
           mkdir -p "$bundle_dir"
-          npm --prefix mesh run release:evidence
+          node mesh/src/release.mjs --write
           git archive --format=tar \
             --output="$bundle_dir/source.tar" \
             "$GITHUB_SHA"
