@@ -167,7 +167,7 @@ the exact checked-out revision: source archive, OCI image export,
 documentation, SPDX SBOM, provenance, and a digest inventory. This artifact is
 explicitly non-authorizing: it has no trusted release signature or install
 manifest, does not establish host installation, does not promote production,
-and is not a release-ready package. It is retained only as reproducible input
+and is not a release-ready package. It is retained only as digest-bound input
 to the later external signing and fresh-host verification gates.
 
 See the [pilot dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md) and
