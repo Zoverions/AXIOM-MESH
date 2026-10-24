@@ -36,7 +36,7 @@ current-state document must say so explicitly.
 - Source/shared-host compatibility: Node.js `>=22.23.2 <23`.
 - Protected CI and `.node-version` pin Node.js **24.18.0**.
 - A separate hosted-runtime/security CI job pins Node.js **22.23.2**.
-- The candidate production image pins Node.js **24.19.0**.
+- The candidate production image pins Node.js **24.22.0**.
 - npm `>=11.0.0 <12`, or Node 22's bundled npm `>=10.9.8 <11`.
 - Check out and work with umask `022`: provider executables and artifacts
   must not be group- or other-writable, and checkouts made with umask
