@@ -13,6 +13,10 @@ fn parse_bool(value: &str) -> bool {
     }
 }
 
+fn state_bit(index: usize, mask: usize) -> bool {
+    index & mask != 0
+}
+
 fn valid_input() -> AuthorityEvidence<'static> {
     AuthorityEvidence {
         principal: PrincipalEvidence {
@@ -78,6 +82,79 @@ fn authority_vectors_match_expected_decisions() {
         };
 
         assert_eq!(allowed, expected_allowed, "case {case_id}");
+    }
+}
+
+#[test]
+fn authority_truth_table_exhausts_the_six_input_boolean_state_space() {
+    let source = include_str!("../fixtures/authority-truth-table.v0.txt");
+    let truth_table: String = source
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect();
+
+    assert_eq!(
+        truth_table.len(),
+        64,
+        "authority truth table must contain exactly 64 decisions"
+    );
+    assert_eq!(
+        truth_table
+            .bytes()
+            .filter(|decision| *decision == b'1')
+            .count(),
+        9,
+        "authority v0 should allow exactly nine semantic states"
+    );
+
+    for (index, decision) in truth_table.bytes().enumerate() {
+        let principal_verified = state_bit(index, 0b100000);
+        let capability_authorized = state_bit(index, 0b010000);
+        let consent_required = state_bit(index, 0b001000);
+        let consent_valid = state_bit(index, 0b000100);
+        let budget_required = state_bit(index, 0b000010);
+        let budget_positive = state_bit(index, 0b000001);
+
+        let expected_from_table = match decision {
+            b'0' => false,
+            b'1' => true,
+            other => panic!("invalid authority truth-table decision byte: {other}"),
+        };
+        let expected_from_formula = principal_verified
+            && capability_authorized
+            && (!consent_required || consent_valid)
+            && (!budget_required || budget_positive);
+
+        assert_eq!(
+            expected_from_table, expected_from_formula,
+            "truth-table formula mismatch at state index {index}"
+        );
+
+        let input = AuthorityEvidence {
+            principal: PrincipalEvidence {
+                subject: "truth-table-state",
+                verified: principal_verified,
+            },
+            capability: CapabilityEvidence {
+                capability: "synthetic.effect",
+                authorized: capability_authorized,
+            },
+            consent: ConsentEvidence {
+                required: consent_required,
+                valid: consent_valid,
+            },
+            budget: EffectBudgetEvidence {
+                required: budget_required,
+                remaining: u64::from(budget_positive),
+            },
+        };
+
+        assert_eq!(
+            evaluate_authority(input).is_ok(),
+            expected_from_table,
+            "Rust evaluator drift at state index {index}"
+        );
     }
 }
 
