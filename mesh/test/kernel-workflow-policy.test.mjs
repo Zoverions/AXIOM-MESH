@@ -27,3 +27,17 @@ test('load-bearing Clean Kernel workflow pins actions and runner and filters no 
   assert.ok(source.includes('axiom-runtime-adapter-reference-conformance-evidence-${{ github.sha }}'));
   assert.doesNotMatch(source, /^\s+paths(?:-ignore)?:/m);
 });
+
+test('container CI assembles an exact-head non-authorizing release bundle candidate', async () => {
+  const source = await readFile(new URL('../../.github/workflows/kernel.yml', import.meta.url), 'utf8');
+  assert.ok(source.includes('Assemble exact-head non-authorizing release bundle candidate'));
+  assert.ok(source.includes('git archive --format=tar'));
+  assert.ok(source.includes('docker save --output'));
+  assert.ok(source.includes('node mesh/src/release.mjs --write'));
+  assert.ok(source.includes('node mesh/src/release-bundle-candidate.mjs'));
+  assert.ok(source.includes('axiom-release-bundle-candidate-${{ github.sha }}'));
+  assert.ok(source.includes('mesh/.data/release/0.12.0-dev.3/sbom.spdx.json'));
+  assert.ok(source.includes('mesh/.data/release/0.12.0-dev.3/provenance.json'));
+  assert.equal(source.includes('release_ready: true'), false);
+  assert.equal(source.includes('production_promoted: true'), false);
+});
