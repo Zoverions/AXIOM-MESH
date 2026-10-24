@@ -32,7 +32,7 @@ shared-host setup also accepts Node.js `>=22.23.2 <23`; no other Node.js 22
 patch is approved to start the production supervisor.
 
 The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
-and **Node.js 24.22.0 for the candidate production image**.
+and **Node.js 24.22.1 for the candidate production image**.
 A separate hosted-runtime job pins **Node.js 22.23.2** and verifies the
 production guard, mutual TLS, network-boundary, and supervisor protections.
 Runtime approval never waives private credential storage, deny-egress
