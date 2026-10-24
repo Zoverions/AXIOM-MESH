@@ -219,7 +219,7 @@ For the current tree this includes:
 - engine: `>=22.23.2 <23 || >=24.14.0 <25`;
 - protected CI: Node `24.18.0`;
 - separately approved hosted-production/security runtime: Node `22.23.2`;
-- candidate container runtime: Node `24.21.0`;
+- candidate container runtime: Node `24.22.1`;
 - primary npm: `>=11.0.0 <12`;
 - Node 22 compatibility npm: `>=10.9.8 <11`.
 
