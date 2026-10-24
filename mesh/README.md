@@ -21,7 +21,7 @@ Supported source runtime:
 - source/shared-host compatibility Node.js `>=22.23.2 <23`;
 - separate hosted-runtime/security CI: Node.js `22.23.2`;
 - protected CI and `.node-version`: Node.js `24.18.0`;
-- candidate production image: Node.js `24.19.0`;
+- candidate production image: Node.js `24.22.1`;
 - npm `>=11.0.0 <12`, or bundled npm `>=10.9.8 <11` with Node.js 22;
 - zero third-party npm dependency packages.
 
