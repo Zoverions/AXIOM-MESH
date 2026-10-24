@@ -31,7 +31,7 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
   assert.equal(result.runtime.npm, '11.9.0');
   assert.equal(result.runtime.profile, 'primary');
   assert.equal(result.runtime.ci_pin, '24.18.0');
-  assert.equal(result.runtime.production_pin, '24.22.0');
+  assert.equal(result.runtime.production_pin, '24.22.1');
   assert.equal(result.workspaces, 2);
   assert.equal(result.dependency_packages, 0);
   assert.equal(result.install_scripts_allowed, false);
@@ -52,7 +52,7 @@ test('Rebel hosting compatibility accepts Node 22.23.2 with its bundled npm 10.9
   assert.equal(result.runtime.npm, '10.9.8');
   assert.equal(result.runtime.profile, 'compatibility');
   assert.equal(result.runtime.ci_pin, '24.18.0');
-  assert.equal(result.runtime.production_pin, '24.22.0');
+  assert.equal(result.runtime.production_pin, '24.22.1');
   assert.equal(result.production_credentials_created, false);
 });
 
@@ -108,7 +108,7 @@ test('npm 10 compatibility remains isolated from the protected Node 24 profile',
 test('production runtime guard permits only the approved Node 22 host pin and protected Node 24 range', () => {
   assert.equal(setupRuntime.assertProductionRuntime('v22.23.2'), '22.23.2');
   assert.equal(setupRuntime.assertProductionRuntime('v24.18.0'), '24.18.0');
-  assert.equal(setupRuntime.assertProductionRuntime('24.22.0'), '24.22.0');
+  assert.equal(setupRuntime.assertProductionRuntime('24.22.1'), '24.22.1');
 
   for (const nodeVersion of ['20.20.2', '22.23.1', '22.23.3', '22.24.0', '23.11.1', '24.13.9', '25.0.0']) {
     assert.throws(
@@ -312,7 +312,7 @@ test('setup state binds local, CI, and production runtime pins', async () => {
     () => validateSourceSetupState({
       ...input,
       dockerfile: input.dockerfile.replace(
-        'FROM node:24.22.0-',
+        'FROM node:24.22.1-',
         'FROM node:24.20.0-'
       )
     }),
