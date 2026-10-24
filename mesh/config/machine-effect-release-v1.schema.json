@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/machine-effect-release-v1.schema.json",
+  "title": "AXIOM Machine Effect Release v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "release_id",
+    "principal_id",
+    "principal_type",
+    "capability_id",
+    "execution_attempt_id",
+    "sandbox_execution_epoch",
+    "intent_id",
+    "plan_digest",
+    "action",
+    "destination",
+    "root_authority_digest",
+    "lifecycle_seq",
+    "lifecycle_head_digest",
+    "effective_authority_digest",
+    "consumption_receipt_digest",
+    "released_at",
+    "authority_effect"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-machine-effect-release.v1"
+    },
+    "release_id": {
+      "type": "string",
+      "pattern": "^machine_release_[a-f0-9]{64}$"
+    },
+    "principal_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "principal_type": {
+      "enum": [
+        "agent",
+        "service"
+      ]
+    },
+    "capability_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "execution_attempt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sandbox_execution_epoch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "intent_id": {
+      "type": "string",
+      "pattern": "^intent_[a-f0-9]{64}$"
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "action": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{1,127}$"
+    },
+    "destination": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,255}$"
+    },
+    "root_authority_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "lifecycle_seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lifecycle_head_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "effective_authority_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "consumption_receipt_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "released_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "authority_effect": {
+      "const": "exact-machine-effect-release"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/machine-principal-currentness.mjs",
+  "x-axiom-non-claims": [
+    "effect-executed",
+    "result-disclosed",
+    "transferable-bearer-authority"
+  ]
+}
