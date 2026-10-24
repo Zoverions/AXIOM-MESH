@@ -241,7 +241,7 @@ Current machine-readable setup policy intentionally distinguishes:
 
 - separate approved hosted-runtime/security CI: **Node.js 22.23.2**;
 - protected CI and `.node-version`: **Node.js 24.18.0**;
-- candidate production image: **Node.js 24.22.0**.
+- candidate production image: **Node.js 24.22.1**.
 
 Both exact zero-dependency locks are installed with lifecycle scripts disabled
 and must remain unchanged.
