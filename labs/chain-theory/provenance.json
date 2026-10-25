@@ -1,0 +1,32 @@
+{
+  "schema_version": "chain-theory-cleanroom-provenance-v0",
+  "status": "TEST",
+  "reviewed_at": "2026-10-24",
+  "paper": {
+    "title": "A Parameter-Free Candidate for the Fine-Structure Constant from Entangled Qudits",
+    "author": "A. D. Wissner-Gross",
+    "dated": "2026-10-23",
+    "url": "https://alexwg.org/publications/ChainTheoryAlpha.pdf"
+  },
+  "upstream_formalization": {
+    "claimed_filename": "ChainAlpha.lean",
+    "claimed_toolchain": "Lean 4.35.0",
+    "retrieval_status": "not_independently_retrieved",
+    "licence_status": "not_stated",
+    "vendored_or_translated": false
+  },
+  "implementation": {
+    "method": "clean_room_from_published_mathematical_description",
+    "dependencies": [],
+    "network": false,
+    "provider_calls": false,
+    "authority": false
+  },
+  "non_claims": [
+    "physical_axiom validation",
+    "postselection causality validation",
+    "photon conjecture validation",
+    "on-shell coupling identification validation",
+    "Stack or ITH-M integration"
+  ]
+}
