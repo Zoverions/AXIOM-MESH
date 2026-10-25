@@ -25,12 +25,22 @@ Run the focused reproduction:
 node --test mesh/test/chain-theory-cleanroom.test.mjs
 ```
 
-The test includes a dimension-drift negative control. A matching census proves
-only that this independent finite combinatorial reconstruction agrees with the
-published `172` records, sector counts `79/48/42/3`, normalization `31104`, and
-the resulting numerical candidate. It does **not** validate the physical
-axiom, the postselection interpretation, the photon conjecture, the claimed
-on-shell identification, or any integration with The Stack/ITH-M.
+The tests keep the published construction as the positive control and vary
+one bounded choice at a time: the same-end off-diagonal sector, cross-end
+exchange-orbit count, qubit-commutator inclusion, sector amplitudes, and
+normalization. Each tested alternative fails to reproduce the published
+readout. These controls establish definition sensitivity within this finite
+clean-room model; they are not a probability over alternative definitions,
+an exhaustive null distribution, or evidence that the selected construction
+was physically derived rather than chosen.
+
+A matching census proves only that this independent finite combinatorial
+reconstruction agrees with the published `172` records, sector counts
+`79/48/42/3`, normalization `31104`, and resulting numerical candidate.
+It does **not** validate the physical axiom, deterministic postselection,
+Born-probability recovery, causality or no-signalling, the photon conjecture,
+the claimed on-shell identification, local gauge dynamics, or any integration
+with The Stack/ITH-M.
 
 This lab is offline and dependency-free. It grants no operational, policy,
 identity, cognition, state, merge, deployment, or scientific authority.
