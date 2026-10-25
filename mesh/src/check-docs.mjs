@@ -21,6 +21,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'AGENTS.md',
   'AGENT-ENTRY.md',
   'agent-commons/PLUGIN-INTEGRITY-DRILL.md',
+  'labs/chain-theory/README.md',
   'labs/praxis/README.md',
   'labs/praxis/BOOTSTRAP.md',
   'labs/praxis/SPEC.md',
