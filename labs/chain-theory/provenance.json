@@ -1,7 +1,7 @@
 {
   "schema_version": "chain-theory-cleanroom-provenance-v0",
   "status": "TEST",
-  "reviewed_at": "2026-10-24",
+  "reviewed_at": "2026-10-25",
   "paper": {
     "title": "A Parameter-Free Candidate for the Fine-Structure Constant from Entangled Qudits",
     "author": "A. D. Wissner-Gross",
@@ -11,8 +11,33 @@
   "upstream_formalization": {
     "claimed_filename": "ChainAlpha.lean",
     "claimed_toolchain": "Lean 4.35.0",
-    "retrieval_status": "not_independently_retrieved",
-    "licence_status": "not_stated",
+    "repository": "https://github.com/physical-superintelligence/chain-theory",
+    "commit": "a28db8998bce5bd5ef11195c05f13c86cd9dac5c",
+    "commit_signature_status": "unsigned",
+    "path": "papers/alpha/lean/ChainAlpha.lean",
+    "git_blob_sha1": "08d8e371cc3cd3d9894f32f444679151ab3baf07",
+    "sha256": "522844e911cf5f6091b603db0d1d042f50544d2ec8d10ed9336b722945c331da",
+    "toolchain_declaration": "leanprover/lean4:v4.35.0",
+    "toolchain_archive_sha256": "7289597a44543246c9227b8cae501767e095ce17f6d448b95fc4a8dc97268f6d",
+    "retrieval_status": "independently_retrieved_and_verified",
+    "licence_status": "Apache-2.0",
+    "verification": {
+      "environment": "Linux x86_64",
+      "lean_version": "4.35.0",
+      "lean_commit": "eb6cafb7290e8bd5f2937522d8d804f58f02bafc",
+      "commands": [
+        "lean ChainAlpha.lean",
+        "python3 audit.py",
+        "diff -u axioms_report.txt lean-output.txt",
+        "LEAN=/path/to/lean python3 mutations.py"
+      ],
+      "kernel_check": "passed",
+      "source_audit": "passed",
+      "axiom_report_match": "passed",
+      "definition_mutations": "18 expected failures and 1 semantics-preserving positive control passed",
+      "network_during_check": false,
+      "environment_note": "A local LD_PRELOAD shim supplied Lean's own executable path because the sandbox denies /proc/<pid>/exe readlink; source bytes, compiler bytes, options, and proof definitions were unchanged."
+    },
     "vendored_or_translated": false
   },
   "implementation": {
