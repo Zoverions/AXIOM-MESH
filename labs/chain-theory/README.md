@@ -14,10 +14,13 @@ only the mathematical description in the paper:
 - readout normalization `(8 * 3) * 36 * 36`.
 
 The implementation enumerates exchange-orbit combinations rather than copying
-or translating the author's Lean source. The source file was not imported or
-executed because no explicit reuse licence was located in the paper or its
-public source references during the 2026-10-24 review. See
-`provenance.json` for the pinned review boundary.
+or translating the author's Lean source. On 2026-10-25, the upstream Lean file
+was independently retrieved from the Apache-2.0-licensed
+`physical-superintelligence/chain-theory` repository at exact commit
+`a28db8998bce5bd5ef11195c05f13c86cd9dac5c`. Its pinned Lean 4.35.0 kernel
+check, source audit, committed axiom-report comparison, and definition-mutation
+suite passed without vendoring or translating the source into AXIOM-MESH. See
+`provenance.json` for the exact digests, commands, observations, and limits.
 
 Run the focused reproduction:
 
@@ -37,6 +40,10 @@ was physically derived rather than chosen.
 A matching census proves only that this independent finite combinatorial
 reconstruction agrees with the published `172` records, sector counts
 `79/48/42/3`, normalization `31104`, and resulting numerical candidate.
+The independent Lean build verifies that the pinned formalization elaborates
+and that its reported theorem dependencies are Lean's standard axioms listed
+in the upstream report; it does not make the paper's definitions physically
+correct.
 It does **not** validate the physical axiom, deterministic postselection,
 Born-probability recovery, causality or no-signalling, the photon conjecture,
 the claimed on-shell identification, local gauge dynamics, or any integration
