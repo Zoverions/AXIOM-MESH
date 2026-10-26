@@ -306,3 +306,10 @@ Focused regressions cover missing and stale persisted epochs, stale/wrong-scope/
 A coordinator, provider, steward, or relay acknowledgement establishes only that a bounded message or request was acknowledged. It does not establish that the independently controlled authority plane denied the protected effect. The local containment evaluator therefore requires post-decision denial evidence on every required simulated plane even when coordination acknowledgement is present.
 
 The focused negative control combines a locally denied effect with an acknowledged external coordinator whose corresponding protected effect still succeeds. The scenario remains `INCOMPLETE`, records the post-decision success, and reports missing denial evidence for the external plane. This distinguishes communication success from containment success without contacting a provider, interpreting an acknowledgement as authority, or claiming production coordination coverage.
+
+
+## 14. Transport labels do not change effect semantics
+
+Once an observation has entered this harness as a protected effect, an identifier such as `telemetry.heartbeat` or an authority path such as `transport.audit-only` cannot downgrade a post-decision success into harmless transport activity. The evaluator remains label-neutral and records the success and missing denial evidence exactly as it would for any other protected effect.
+
+This closes only the local regression boundary. The harness does not infer whether arbitrary production traffic is a protected effect, inspect payloads, or define a new semantic classifier. Production integrations must establish effect classification through their existing canonical contracts before supplying observations; that classification and live transport verification remain separate integration evidence.
