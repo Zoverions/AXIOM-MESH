@@ -268,3 +268,26 @@ as production containment certification.
 - [Production Readiness Tracker](../PRODUCTION-READINESS-TRACKER.md)
 - [Requirements](../rebuild/REQUIREMENTS.md)
 - [Capability registry](../../mesh/config/capabilities.json)
+
+
+## 10. Bounded containment-latency regression
+
+Issue [#1490](https://github.com/Zoverions/AXIOM-MESH/issues/1490) is exercised by a repository-owned, offline evaluator at `mesh/src/lib/containment-latency-lab.mjs` with focused tests in `mesh/test/containment-latency-lab.test.mjs`.
+
+The evaluator accepts only synthetic plane acknowledgements and effect observations. It records the decision timestamp, per-plane acknowledgement, first denied effect, last successful effect, time to denial, unresolved edges, and false-success conditions. A result is `COMPLETE` only when every required simulated plane acknowledges, every required plane has post-decision denial evidence, no protected effect succeeds after the decision, and queued work has rechecked currentness. Required planes that are pending or unreachable remain explicit and force `INCOMPLETE`; the output always keeps `protected_effects_allowed: false`.
+
+The focused regressions cover:
+
+- a sibling authority path that still performs an equivalent protected effect;
+- an effect queued before containment that attempts execution without a fresh currentness check;
+- an unreachable required backend that cannot be represented as successful containment;
+- a positive control in which all required simulated planes acknowledge and deny post-decision effects;
+- malformed or authority-bearing extra input, which fails closed.
+
+Run the bounded check with:
+
+```bash
+node --test mesh/test/containment-latency-lab.test.mjs
+```
+
+This harness does not stop a process, revoke a credential, contact a provider, mutate currentness, operate CI/repository controls, or certify production incident response. It creates no authority and consumes no live credentials or network state. Its result is local regression evidence only; live cross-plane containment, restart/shared-state persistence, descendant propagation, recovery/re-entry, external coordination state, and independent deterministic controls remain separate integration gates.
