@@ -313,3 +313,10 @@ The focused negative control combines a locally denied effect with an acknowledg
 Once an observation has entered this harness as a protected effect, an identifier such as `telemetry.heartbeat` or an authority path such as `transport.audit-only` cannot downgrade a post-decision success into harmless transport activity. The evaluator remains label-neutral and records the success and missing denial evidence exactly as it would for any other protected effect.
 
 This closes only the local regression boundary. The harness does not infer whether arbitrary production traffic is a protected effect, inspect payloads, or define a new semantic classifier. Production integrations must establish effect classification through their existing canonical contracts before supplying observations; that classification and live transport verification remain separate integration evidence.
+
+
+## 15. Independent deterministic controls and integration boundary
+
+A separately constructed literal control, rather than the shared fixture helpers, exercises the complete path twice from equivalent serialized input. The outputs must be byte-identical under JSON serialization and the evaluator must not mutate its input. A one-field mutation from `denied` to `succeeded` must independently change the result to `INCOMPLETE`, add post-decision false-success evidence, and add missing-denial evidence.
+
+These controls close the repository-local determinism gate only. Real integration evidence still requires an authorized test environment with independently controlled authority planes, trusted timestamps/currentness, observed protected-effect denial, failure injection, and retained results. This task does not authorize provider calls, live credentials, network effects, production mutation, incident activation, or deployment; without such an environment, production containment certification remains blocked rather than inferred from local tests.
