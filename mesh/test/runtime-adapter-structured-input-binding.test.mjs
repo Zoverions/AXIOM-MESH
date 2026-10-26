@@ -16,6 +16,13 @@ const ACTION = 'adapter.reference.echo';
 const INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
 const PURPOSE = 'test.conformance';
 const PRINCIPAL_ID = 'principal:rt-auth-011';
+const BUDGET = Object.freeze({
+  max_requests_per_minute: 60,
+  max_concurrent_requests: 1,
+  max_execution_ms: 1_000,
+  max_request_bytes: 4_096,
+  max_response_bytes: 4_096
+});
 
 function expectedCommitment(structuredArguments) {
   const structuredInputSha256 = sha256(canonicalJson({
@@ -24,11 +31,17 @@ function expectedCommitment(structuredArguments) {
     input_schema_ref: INPUT_SCHEMA_REF,
     arguments: structuredArguments
   }));
-  return sha256(canonicalJson({
+  const purposeBoundInputSha256 = sha256(canonicalJson({
     schema: 'axiom-effect-purpose-commitment.v1',
     axiom_action: ACTION,
     purpose: PURPOSE,
     input_sha256: structuredInputSha256
+  }));
+  return sha256(canonicalJson({
+    schema: 'axiom-effect-budget-commitment.v1',
+    axiom_action: ACTION,
+    budget: BUDGET,
+    input_sha256: purposeBoundInputSha256
   }));
 }
 
@@ -38,6 +51,7 @@ function authorizationDetail() {
     runtime_operation: 'reference.echo',
     axiom_action: ACTION,
     purpose: PURPOSE,
+    budget: BUDGET,
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference']
@@ -87,6 +101,7 @@ test('structured input commitment is domain-separated and object-order stable', 
   assert.equal(requestB.input_sha256, expectedCommitment(reordered));
   assert.equal(requestA.input_sha256, requestB.input_sha256);
   assert.equal(Object.hasOwn(requestA, 'structuredArguments'), false);
+  assert.equal(Object.hasOwn(requestA, 'budget'), false);
   assert.equal(canonicalJson(requestA).includes('hello'), false);
 });
 
