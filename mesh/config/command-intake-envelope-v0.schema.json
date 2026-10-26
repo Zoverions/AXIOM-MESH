@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/command-intake-envelope-v0.schema.json",
+  "title": "AXIOM Command Intake Envelope v0",
+  "description": "Channel-neutral, replay-bounded command proposal envelope. Channel identity, pairing, message possession and successful intake never grant AXIOM effect authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "command_id",
+    "channel_kind",
+    "channel_binding_ref",
+    "claimed_principal_ref",
+    "authenticated_principal_ref",
+    "authentication_evidence_ref",
+    "payload_ref",
+    "payload_digest",
+    "received_at",
+    "expires_at",
+    "replay_nonce",
+    "channel_is_authority",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-command-intake-envelope.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-proposal-envelope"
+    },
+    "command_id": {
+      "$ref": "#/$defs/id"
+    },
+    "channel_kind": {
+      "enum": [
+        "web",
+        "voice",
+        "messaging",
+        "email",
+        "cli",
+        "wearable",
+        "device",
+        "api",
+        "other"
+      ]
+    },
+    "channel_binding_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "claimed_principal_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/id"
+        }
+      ]
+    },
+    "authenticated_principal_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/id"
+        }
+      ]
+    },
+    "authentication_evidence_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/ref"
+        }
+      ]
+    },
+    "payload_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "payload_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "received_at": {
+      "$ref": "#/$defs/date"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/date"
+    },
+    "replay_nonce": {
+      "$ref": "#/$defs/id"
+    },
+    "channel_is_authority": {
+      "const": false
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/command-intake-envelope.mjs",
+  "x-axiom-non-claims": [
+    "channel-authority",
+    "effect-authority",
+    "identity-proof-from-channel",
+    "command-execution",
+    "runtime-activation"
+  ]
+}
