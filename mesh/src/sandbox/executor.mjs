@@ -19,6 +19,10 @@ import {
 import { recipientKeyMetadata } from '../lib/recipient-encryption.mjs';
 import { verifyCausalBundle } from '../lib/causal-sync.mjs';
 import { normalizeNodeScheduleRequest } from '../lib/node-scheduling.mjs';
+import {
+  COGNITIVE_SELECTION_AUTHORIZATION_ACTION,
+  buildCognitiveSelectionAuthorizationOutput
+} from '../lib/cognitive-selection-authorization.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -37,6 +41,15 @@ export function executeBuiltin({ tool, intent }) {
   if (tool === 'builtin.hash') {
     if (action !== 'system.hash') throw new ValidationError('Capability tool does not match intent action');
     return { output: { algorithm: 'sha256', digest: digestObject(input) } };
+  }
+  if (tool === 'builtin.cognitive-selection-authorize') {
+    if (action !== COGNITIVE_SELECTION_AUTHORIZATION_ACTION) {
+      throw new ValidationError('Capability tool does not match intent action');
+    }
+    if (Object.keys(input).length !== 1 || !Object.hasOwn(input, 'proposal')) {
+      throw new ValidationError('Cognitive selection authorization input must contain only proposal');
+    }
+    return { output: buildCognitiveSelectionAuthorizationOutput(input.proposal) };
   }
   if (tool !== 'builtin.validate-mutation') throw new ValidationError('Requested tool is unavailable');
   return mutationFor(action, input, intent.principal);
