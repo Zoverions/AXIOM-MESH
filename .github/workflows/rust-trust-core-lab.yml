@@ -67,6 +67,8 @@ jobs:
         run: node --test labs/rust-trust-core/node/canonical_adversarial_limits.test.mjs
       - name: Verify Stage 5A Node intent attenuation oracle
         run: node --test labs/rust-trust-core/node/intent_attenuation_oracle.test.mjs
+      - name: Verify Stage 5B Node authority-context oracle
+        run: node --test labs/rust-trust-core/node/authority_context_oracle.test.mjs
       - name: Verify Stage 3 source boundary
         run: node mesh/src/rust-trust-core-source-boundary.mjs
       - name: Verify Stage 4 does not modify promoted Rust v0 source
