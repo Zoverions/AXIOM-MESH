@@ -148,6 +148,32 @@ test('external acknowledgement cannot substitute for observed effect denial', ()
   assert.equal(result.authority_effect, 'none');
 });
 
+
+test('benign transport labels cannot launder a successful protected effect', () => {
+  const result = evaluateContainmentLatency(scenario([
+    plane({
+      plane_id: 'transport-observability',
+      effects: [effect({
+        effect_id: 'telemetry.heartbeat',
+        authority_path: 'transport.audit-only',
+        outcome: 'succeeded'
+      })]
+    })
+  ]));
+  assert.equal(result.result, 'INCOMPLETE');
+  assert.deepEqual(result.false_success_conditions, [{
+    plane_id: 'transport-observability',
+    effect_id: 'telemetry.heartbeat',
+    authority_path: 'transport.audit-only',
+    condition: 'post-decision-protected-effect-succeeded'
+  }]);
+  assert.deepEqual(result.missing_denial_evidence, [{
+    plane_id: 'transport-observability',
+    condition: 'no-post-decision-denial-evidence'
+  }]);
+  assert.equal(result.protected_effects_allowed, false);
+});
+
 function recoveryAuthorization(overrides = {}) {
   return {
     authorization_id: 'recovery.current',
