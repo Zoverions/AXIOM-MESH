@@ -213,6 +213,53 @@ test('fresh scoped recovery evidence is a positive control but grants no authori
   assert.equal(result.production_certified, false);
 });
 
+
+test('containment and recovery scope propagate to descendant authority paths', () => {
+  const descendantPath = 'delegation.primary.child';
+  const blocked = evaluateContainmentResumption(resumptionScenario({
+    recovery_authorizations: [recoveryAuthorization({
+      authorization_id: 'recovery.parent',
+      authority_path: 'delegation.primary'
+    })],
+    attempts: [resumptionAttempt({
+      attempt_id: 'attempt.descendant',
+      source: 'descendant',
+      authority_path: descendantPath,
+      persisted_containment_epoch: null,
+      recovery_authorization_id: 'recovery.parent'
+    })]
+  }));
+  assert.equal(blocked.result, 'INCOMPLETE');
+  assert.deepEqual(
+    blocked.false_success_conditions.map(item => item.condition),
+    [
+      'descendant-did-not-preserve-containment-epoch',
+      'successful-reentry-without-fresh-recovery-authorization'
+    ]
+  );
+
+  const recovered = evaluateContainmentResumption(resumptionScenario({
+    recovery_authorizations: [recoveryAuthorization({
+      authorization_id: 'recovery.descendant',
+      authority_path: descendantPath
+    })],
+    attempts: [resumptionAttempt({
+      attempt_id: 'attempt.descendant',
+      source: 'descendant',
+      authority_path: descendantPath,
+      recovery_authorization_id: 'recovery.descendant'
+    })]
+  }));
+  assert.equal(recovered.result, 'COMPLETE');
+  assert.deepEqual(recovered.matching_recovery_evidence, [{
+    attempt_id: 'attempt.descendant',
+    authorization_id: 'recovery.descendant',
+    authority_path: descendantPath
+  }]);
+  assert.equal(recovered.authority_effect, 'none');
+  assert.equal(recovered.authorizes_reentry, false);
+});
+
 test('malformed resumption evidence fails closed', () => {
   assert.throws(
     () => evaluateContainmentResumption({
