@@ -137,6 +137,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
+  'docs/security/SHUTDOWN-QUARANTINE-AUTHORITY-LATTICE.md',
   'docs/security/EPISTEMIC-FABRIC-THREAT-MODEL.md',
   'docs/security/CONTINUOUS-THREAT-INTELLIGENCE-THREAT-MODEL.md',
   'docs/superpowers/specs/2026-08-27-emergent-coordination-collective-authority-design.md',
