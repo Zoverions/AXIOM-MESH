@@ -1,0 +1,203 @@
+{
+  "schema": "axiom-social-activitypub-adapter.v0",
+  "version": 0,
+  "status": "inert-semantic-mapping",
+  "runtime_activation": false,
+  "canonical_model": "axiom-social",
+  "authority_effect": "none",
+  "network_effect": "none",
+  "transport_effect": "none",
+  "protocol": {
+    "name": "ActivityPub",
+    "baseline": "W3C Recommendation 2018-01-23",
+    "mastodon_profile": true,
+    "webfinger_required_for_mastodon": true,
+    "webfinger_implemented": false,
+    "inbox_implemented": false,
+    "outbox_implemented": false,
+    "http_signature_transport_implemented": false,
+    "oauth_mastodon_connector_implemented": false
+  },
+  "identity": {
+    "source_projection_schema": "axiom-publication-persona-projection.v1",
+    "target_concept": "activitypub-actor",
+    "protected_actor_state_exposed": false,
+    "legal_identity_proof_claimed": false,
+    "controller_identity_proof_claimed": false
+  },
+  "outbound_mappings": [
+    {
+      "axiom_semantic": "social.publication.create",
+      "activitypub_activity": "Create",
+      "activitypub_object": "Note",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.publication.retract",
+      "activitypub_activity": "Delete",
+      "activitypub_object": "Tombstone",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.follow.request",
+      "activitypub_activity": "Follow",
+      "activitypub_object": "Actor",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.follow.accept",
+      "activitypub_activity": "Accept",
+      "activitypub_object": "Follow",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.follow.reject",
+      "activitypub_activity": "Reject",
+      "activitypub_object": "Follow",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.follow.undo",
+      "activitypub_activity": "Undo",
+      "activitypub_object": "Follow",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.reshare",
+      "activitypub_activity": "Announce",
+      "activitypub_object": "Object",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "social.like",
+      "activitypub_activity": "Like",
+      "activitypub_object": "Object",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "personal.interaction.boundary",
+      "activitypub_activity": "Block",
+      "activitypub_object": "Actor",
+      "requires_public_projection": true
+    },
+    {
+      "axiom_semantic": "content.report",
+      "activitypub_activity": "Flag",
+      "activitypub_object": "ActorOrObject",
+      "requires_public_projection": true
+    }
+  ],
+  "inbound_mappings": [
+    {
+      "activitypub_activity": "Create",
+      "axiom_semantic": "remote.social.publication.observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Update",
+      "axiom_semantic": "remote.social.publication.update-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Delete",
+      "axiom_semantic": "remote.social.publication.deletion-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Follow",
+      "axiom_semantic": "remote.social.follow.request-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Accept",
+      "axiom_semantic": "remote.social.follow.accept-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Reject",
+      "axiom_semantic": "remote.social.follow.reject-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Undo",
+      "axiom_semantic": "remote.social.undo-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Announce",
+      "axiom_semantic": "remote.social.reshare-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Like",
+      "axiom_semantic": "remote.social.like-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Block",
+      "axiom_semantic": "personal.interaction.boundary.remote-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    },
+    {
+      "activitypub_activity": "Flag",
+      "axiom_semantic": "content.report.remote-observation",
+      "remote_observation_only": true,
+      "authorship_claimed": false,
+      "content_truth_claimed": false
+    }
+  ],
+  "block_semantics": {
+    "scope": "actor-pair-only",
+    "personal_interaction_boundary": true,
+    "personal_visibility_effect_allowed": true,
+    "third_party_suppression": false,
+    "circle_wide_suppression": false,
+    "community_wide_suppression": false,
+    "spam_claimed": false,
+    "unsafe_claimed": false,
+    "truth_judgment_claimed": false
+  },
+  "flag_semantics": {
+    "report_assertion_only": true,
+    "spam_truth_claimed": false,
+    "content_falsity_claimed": false,
+    "guilt_claimed": false,
+    "universal_hiding_effect": false
+  },
+  "prohibited_outbound_semantics": [
+    "social.publication.supersede",
+    "circle.curated-lens.exclude",
+    "circle.member-private-publication",
+    "circle.membership",
+    "circle.charter",
+    "circle.governance",
+    "feed.diversity.preference",
+    "feed.presentation.transform",
+    "spam.assessment",
+    "safety.quarantine"
+  ],
+  "private_circle_federation": false,
+  "remote_instance_delivery_completeness_claimed": false,
+  "third_party_deletion_guaranteed": false,
+  "recommendation_effect": "none"
+}
