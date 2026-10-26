@@ -116,6 +116,38 @@ test('unknown fields and contradictory acknowledgement evidence fail closed', ()
 });
 
 
+
+test('external acknowledgement cannot substitute for observed effect denial', () => {
+  const result = evaluateContainmentLatency(scenario([
+    plane(),
+    plane({
+      plane_id: 'provider-coordinator',
+      acknowledgement_status: 'acknowledged',
+      acknowledged_at: '2026-10-26T14:00:00.006Z',
+      effects: [effect({
+        effect_id: 'effect.provider',
+        authority_path: 'provider.remote-entitlement',
+        attempted_at: '2026-10-26T14:00:00.030Z',
+        outcome: 'succeeded'
+      })]
+    })
+  ]));
+  assert.equal(result.result, 'INCOMPLETE');
+  assert.deepEqual(result.unresolved_edges, []);
+  assert.deepEqual(result.false_success_conditions, [{
+    plane_id: 'provider-coordinator',
+    effect_id: 'effect.provider',
+    authority_path: 'provider.remote-entitlement',
+    condition: 'post-decision-protected-effect-succeeded'
+  }]);
+  assert.deepEqual(result.missing_denial_evidence, [{
+    plane_id: 'provider-coordinator',
+    condition: 'no-post-decision-denial-evidence'
+  }]);
+  assert.equal(result.protected_effects_allowed, false);
+  assert.equal(result.authority_effect, 'none');
+});
+
 function recoveryAuthorization(overrides = {}) {
   return {
     authorization_id: 'recovery.current',

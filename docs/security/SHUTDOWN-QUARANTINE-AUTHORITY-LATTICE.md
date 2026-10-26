@@ -299,3 +299,10 @@ The same offline module exposes a separate evidence evaluator for restart, share
 A successful restart or shared-state attempt is an explicit false success when it drops or carries a stale containment epoch. A successful attempt also remains a false success when the cited recovery record is missing, stale, from an earlier epoch, scoped to another authority path, issued before containment, or issued after the attempt. A positive control may show matching fresh recovery evidence, but the output always records `authority_effect: none` and `authorizes_reentry: false`: evidence consistency is not operational authorization.
 
 Focused regressions cover missing and stale persisted epochs, stale/wrong-scope/pre-decision recovery records, exact-path descendant propagation, a valid fresh scoped recovery record, strict field validation, and immutable nested result evidence. Parent recovery evidence does not satisfy a child authority path; a successful descendant requires the current containment epoch and separately matching descendant recovery evidence. No runtime restart, descendant process, production state, provider, credential, storage, network, or recovery transition is exercised.
+
+
+## 13. External coordination is not effect evidence
+
+A coordinator, provider, steward, or relay acknowledgement establishes only that a bounded message or request was acknowledged. It does not establish that the independently controlled authority plane denied the protected effect. The local containment evaluator therefore requires post-decision denial evidence on every required simulated plane even when coordination acknowledgement is present.
+
+The focused negative control combines a locally denied effect with an acknowledged external coordinator whose corresponding protected effect still succeeds. The scenario remains `INCOMPLETE`, records the post-decision success, and reports missing denial evidence for the external plane. This distinguishes communication success from containment success without contacting a provider, interpreting an acknowledgement as authority, or claiming production coordination coverage.
