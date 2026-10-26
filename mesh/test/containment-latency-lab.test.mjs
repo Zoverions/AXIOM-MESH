@@ -174,6 +174,48 @@ test('benign transport labels cannot launder a successful protected effect', () 
   assert.equal(result.protected_effects_allowed, false);
 });
 
+
+test('independent literal controls are deterministic and input preserving', () => {
+  const control = {
+    scenario_id: 'independent.control',
+    decision_at: '2026-10-26T14:00:00.000Z',
+    planes: [{
+      plane_id: 'independent-plane',
+      required: true,
+      acknowledgement_status: 'acknowledged',
+      acknowledged_at: '2026-10-26T14:00:00.005Z',
+      effects: [{
+        effect_id: 'independent.effect',
+        authority_path: 'independent.authority',
+        queued_at: '2026-10-26T14:00:00.010Z',
+        attempted_at: '2026-10-26T14:00:00.020Z',
+        currentness_rechecked: true,
+        outcome: 'denied'
+      }]
+    }]
+  };
+  const inputSnapshot = JSON.stringify(control);
+  const first = evaluateContainmentLatency(control);
+  const second = evaluateContainmentLatency(JSON.parse(inputSnapshot));
+
+  assert.equal(first.result, 'COMPLETE');
+  assert.equal(JSON.stringify(first), JSON.stringify(second));
+  assert.equal(JSON.stringify(control), inputSnapshot);
+
+  const oneFieldMutation = JSON.parse(inputSnapshot);
+  oneFieldMutation.planes[0].effects[0].outcome = 'succeeded';
+  const negative = evaluateContainmentLatency(oneFieldMutation);
+  assert.equal(negative.result, 'INCOMPLETE');
+  assert.deepEqual(
+    negative.false_success_conditions.map(item => item.condition),
+    ['post-decision-protected-effect-succeeded']
+  );
+  assert.deepEqual(negative.missing_denial_evidence, [{
+    plane_id: 'independent-plane',
+    condition: 'no-post-decision-denial-evidence'
+  }]);
+});
+
 function recoveryAuthorization(overrides = {}) {
   return {
     authorization_id: 'recovery.current',
