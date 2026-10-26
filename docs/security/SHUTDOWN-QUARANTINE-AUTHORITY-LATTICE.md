@@ -270,7 +270,7 @@ as production containment certification.
 - [Capability registry](../../mesh/config/capabilities.json)
 
 
-## 10. Bounded containment-latency regression
+## 11. Bounded containment-latency regression
 
 Issue [#1490](https://github.com/Zoverions/AXIOM-MESH/issues/1490) is exercised by a repository-owned, offline evaluator at `mesh/src/lib/containment-latency-lab.mjs` with focused tests in `mesh/test/containment-latency-lab.test.mjs`.
 
@@ -290,4 +290,12 @@ Run the bounded check with:
 node --test mesh/test/containment-latency-lab.test.mjs
 ```
 
-This harness does not stop a process, revoke a credential, contact a provider, mutate currentness, operate CI/repository controls, or certify production incident response. It creates no authority and consumes no live credentials or network state. Its result is local regression evidence only; live cross-plane containment, restart/shared-state persistence, descendant propagation, recovery/re-entry, external coordination state, and independent deterministic controls remain separate integration gates.
+This harness does not stop a process, revoke a credential, contact a provider, mutate currentness, operate CI/repository controls, or certify production incident response. It creates no authority and consumes no live credentials or network state. Its result is local regression evidence only; live cross-plane containment, descendant propagation, external coordination state, transport/effect-semantic laundering, and independent deterministic controls remain separate integration gates.
+
+## 12. Bounded resumption and recovery regression
+
+The same offline module exposes a separate evidence evaluator for restart, shared-state, and descendant resumption attempts. It checks only whether synthetic observations preserve the current containment epoch and whether a successful re-entry cites a current, exact-epoch, exact-authority-path recovery record issued after the containment decision and no later than the attempt.
+
+A successful restart or shared-state attempt is an explicit false success when it drops or carries a stale containment epoch. A successful attempt also remains a false success when the cited recovery record is missing, stale, from an earlier epoch, scoped to another authority path, issued before containment, or issued after the attempt. A positive control may show matching fresh recovery evidence, but the output always records `authority_effect: none` and `authorizes_reentry: false`: evidence consistency is not operational authorization.
+
+Focused regressions cover missing and stale persisted epochs, stale/wrong-scope/pre-decision recovery records, a valid fresh scoped recovery record, strict field validation, and immutable nested result evidence. No runtime restart, production state, provider, credential, storage, network, or recovery transition is exercised.
