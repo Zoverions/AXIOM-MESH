@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluateContainmentLatency } from '../src/lib/containment-latency-lab.mjs';
+import {
+  evaluateContainmentLatency,
+  evaluateContainmentResumption
+} from '../src/lib/containment-latency-lab.mjs';
 
 const decisionAt = '2026-10-26T14:00:00.000Z';
 
@@ -44,6 +47,8 @@ test('complete result requires acknowledgement and post-decision denial on every
   assert.equal(result.planes[0].time_to_effect_denial_ms, 20);
   assert.deepEqual(result.false_success_conditions, []);
   assert.equal(result.authority_effect, 'none');
+  assert.equal(Object.isFrozen(result.planes[0].effects), true);
+  assert.equal(Object.isFrozen(result.planes[0].false_success_conditions), true);
 });
 
 test('sibling authority success is explicit and containment cannot report success', () => {
@@ -107,5 +112,119 @@ test('unknown fields and contradictory acknowledgement evidence fail closed', ()
       plane({ acknowledgement_status: 'acknowledged', acknowledged_at: null })
     ])),
     /timestamp\/status/i
+  );
+});
+
+
+function recoveryAuthorization(overrides = {}) {
+  return {
+    authorization_id: 'recovery.current',
+    issued_at: '2026-10-26T14:00:00.010Z',
+    containment_epoch: 'epoch.contained',
+    authority_path: 'delegation.primary',
+    current: true,
+    ...overrides
+  };
+}
+
+function resumptionAttempt(overrides = {}) {
+  return {
+    attempt_id: 'attempt.restart',
+    source: 'restart',
+    authority_path: 'delegation.primary',
+    persisted_containment_epoch: 'epoch.contained',
+    attempted_at: '2026-10-26T14:00:00.020Z',
+    recovery_authorization_id: 'recovery.current',
+    outcome: 'succeeded',
+    ...overrides
+  };
+}
+
+function resumptionScenario(overrides = {}) {
+  return {
+    scenario_id: 'resumption.case',
+    containment_epoch: 'epoch.contained',
+    decision_at: decisionAt,
+    recovery_authorizations: [recoveryAuthorization()],
+    attempts: [resumptionAttempt()],
+    ...overrides
+  };
+}
+
+test('restart and shared-state success cannot discard the persisted containment epoch', () => {
+  const result = evaluateContainmentResumption(resumptionScenario({
+    attempts: [
+      resumptionAttempt({
+        attempt_id: 'attempt.restart',
+        persisted_containment_epoch: null,
+        recovery_authorization_id: null
+      }),
+      resumptionAttempt({
+        attempt_id: 'attempt.shared-state',
+        source: 'shared-state',
+        persisted_containment_epoch: 'epoch.previous',
+        recovery_authorization_id: null
+      })
+    ]
+  }));
+  assert.equal(result.result, 'INCOMPLETE');
+  assert.deepEqual(
+    result.false_success_conditions.map(item => item.condition),
+    [
+      'restart-did-not-preserve-containment-epoch',
+      'successful-reentry-without-fresh-recovery-authorization',
+      'shared-state-did-not-preserve-containment-epoch',
+      'successful-reentry-without-fresh-recovery-authorization'
+    ]
+  );
+  assert.equal(result.authorizes_reentry, false);
+});
+
+test('stale, wrong-scope, and pre-decision recovery records do not authorize re-entry', () => {
+  const variants = [
+    recoveryAuthorization({ current: false }),
+    recoveryAuthorization({ containment_epoch: 'epoch.previous' }),
+    recoveryAuthorization({ authority_path: 'delegation.sibling' }),
+    recoveryAuthorization({ issued_at: '2026-10-26T13:59:59.999Z' })
+  ];
+  for (const authorization of variants) {
+    const result = evaluateContainmentResumption(resumptionScenario({
+      recovery_authorizations: [authorization]
+    }));
+    assert.equal(result.result, 'INCOMPLETE');
+    assert.equal(
+      result.false_success_conditions[0].condition,
+      'successful-reentry-without-fresh-recovery-authorization'
+    );
+  }
+});
+
+test('fresh scoped recovery evidence is a positive control but grants no authority', () => {
+  const result = evaluateContainmentResumption(resumptionScenario());
+  assert.equal(result.result, 'COMPLETE');
+  assert.deepEqual(result.false_success_conditions, []);
+  assert.deepEqual(result.matching_recovery_evidence, [{
+    attempt_id: 'attempt.restart',
+    authorization_id: 'recovery.current',
+    authority_path: 'delegation.primary'
+  }]);
+  assert.equal(result.authority_effect, 'none');
+  assert.equal(result.authorizes_reentry, false);
+  assert.equal(result.production_certified, false);
+});
+
+test('malformed resumption evidence fails closed', () => {
+  assert.throws(
+    () => evaluateContainmentResumption({
+      ...resumptionScenario(),
+      authorizes_reentry: true
+    }),
+    /fields/i
+  );
+  assert.throws(
+    () => evaluateContainmentResumption(resumptionScenario({
+      attempts: [resumptionAttempt({ source: 'process-respawn' })]
+    })),
+    /source is invalid/i
   );
 });
