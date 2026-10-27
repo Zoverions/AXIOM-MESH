@@ -63,6 +63,20 @@ test('recognized authorization detail types still reject unmapped constraint axe
   );
 });
 
+test('resource-party allowlisting cannot add exact-effect authority', () => {
+  assert.throws(
+    () => translateSyntheticExternalAuthorizationRequest(externalRequest({
+      suffix: 'resource-party-allowlist',
+      grantId: 'grant:rt-auth-009-resource-party-allowlist',
+      authorizationDetails: recognizedAuthorizationDetails({
+        authorization_mode: 'autonomous',
+        resource_party: 'https://allowed-resource.example'
+      })
+    })),
+    /unsupported authorization detail fields: authorization_mode, resource_party/
+  );
+});
+
 test('translated external widening reaches native deny checks instead of being normalized away', async () => {
   const manifest = createSyntheticReferenceAdapterManifest();
   const grantAuthority = createSyntheticReferenceGrantAuthority();
