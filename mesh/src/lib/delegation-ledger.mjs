@@ -13,6 +13,7 @@ import {
   normalizeDelegationRevocation,
   resolveDelegationChain
 } from './delegation-graph.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 export const DELEGATION_ROOT_BINDING_SCHEMA = 'axiom-delegation-root-binding.v1';
 export const DELEGATION_LEDGER_ENTRY_SCHEMA = 'axiom-delegation-ledger-entry.v1';
@@ -337,41 +338,42 @@ function makeLedgerEntry({ sequence, kind, record, previousEntryDigest }) {
 }
 
 function normalizeLedgerEntry(raw, expectedSequence, expectedPreviousDigest) {
-  assertPlainObject(raw, 'delegation ledger entry');
+  const entry = snapshotDelegationPlainData(raw, 'delegation ledger entry');
+  assertPlainObject(entry, 'delegation ledger entry');
   assertExactKeys(raw, 'delegation ledger entry', ENTRY_KEYS);
-  if (raw.schema !== DELEGATION_LEDGER_ENTRY_SCHEMA) {
+  if (entry.schema !== DELEGATION_LEDGER_ENTRY_SCHEMA) {
     throw new ValidationError('Delegation ledger entry schema is invalid');
   }
-  if (!Number.isSafeInteger(raw.sequence) || raw.sequence !== expectedSequence) {
+  if (!Number.isSafeInteger(entry.sequence) || entry.sequence !== expectedSequence) {
     throw new ValidationError(
       `Delegation ledger sequence must be ${expectedSequence}`
     );
   }
-  if (raw.kind !== 'grant' && raw.kind !== 'revocation') {
+  if (entry.kind !== 'grant' && entry.kind !== 'revocation') {
     throw new ValidationError('Delegation ledger entry kind is invalid');
   }
-  if (raw.previous_entry_digest !== expectedPreviousDigest) {
+  if (entry.previous_entry_digest !== expectedPreviousDigest) {
     throw new ValidationError('Delegation ledger previous entry digest does not match history');
   }
-  if (raw.previous_entry_digest !== null && !DIGEST_PATTERN.test(raw.previous_entry_digest)) {
+  if (entry.previous_entry_digest !== null && !DIGEST_PATTERN.test(entry.previous_entry_digest)) {
     throw new ValidationError('Delegation ledger previous entry digest is invalid');
   }
-  if (typeof raw.entry_digest !== 'string' || !DIGEST_PATTERN.test(raw.entry_digest)) {
+  if (typeof entry.entry_digest !== 'string' || !DIGEST_PATTERN.test(entry.entry_digest)) {
     throw new ValidationError('Delegation ledger entry digest is invalid');
   }
 
-  const record = raw.kind === 'grant'
-    ? normalizeDelegationGrant(raw.record)
-    : normalizeDelegationRevocation(raw.record);
+  const record = entry.kind === 'grant'
+    ? normalizeDelegationGrant(entry.record)
+    : normalizeDelegationRevocation(entry.record);
   const core = {
     schema: DELEGATION_LEDGER_ENTRY_SCHEMA,
-    sequence: raw.sequence,
-    kind: raw.kind,
+    sequence: entry.sequence,
+    kind: entry.kind,
     record,
-    previous_entry_digest: raw.previous_entry_digest
+    previous_entry_digest: entry.previous_entry_digest
   };
   const expectedDigest = digestObject(core);
-  if (raw.entry_digest !== expectedDigest) {
+  if (entry.entry_digest !== expectedDigest) {
     throw new ValidationError('Delegation ledger entry digest does not match normalized entry');
   }
   return {
