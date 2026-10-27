@@ -340,7 +340,7 @@ function makeLedgerEntry({ sequence, kind, record, previousEntryDigest }) {
 function normalizeLedgerEntry(raw, expectedSequence, expectedPreviousDigest) {
   const entry = snapshotDelegationPlainData(raw, 'delegation ledger entry');
   assertPlainObject(entry, 'delegation ledger entry');
-  assertExactKeys(raw, 'delegation ledger entry', ENTRY_KEYS);
+  assertExactKeys(entry, 'delegation ledger entry', ENTRY_KEYS);
   if (entry.schema !== DELEGATION_LEDGER_ENTRY_SCHEMA) {
     throw new ValidationError('Delegation ledger entry schema is invalid');
   }
