@@ -335,9 +335,13 @@ test('ledger entry normalizer snapshots raw evidence once before field validatio
     normalizer,
     /const entry = snapshotDelegationPlainData\(raw, 'delegation ledger entry'\);/
   );
+  const afterSnapshot = normalizer.slice(
+    normalizer.indexOf("snapshotDelegationPlainData(raw, 'delegation ledger entry')")
+      + "snapshotDelegationPlainData(raw, 'delegation ledger entry')".length
+  );
   assert.doesNotMatch(
-    normalizer,
-    /\braw\./,
-    'untrusted ledger entry must not be reread after its single snapshot'
+    afterSnapshot,
+    /\braw\b/,
+    'untrusted ledger entry must not be referenced after its single snapshot'
   );
 });
