@@ -34,6 +34,18 @@ const MAX_PATH_LENGTH = 128;
 // Same bound as the currentness checkpoint's revocation inventory. Without it
 // the only limit was the snapshot node budget (about 2,173 revocations).
 const MAX_REVOCATIONS = 128;
+
+/*
+ * Trust boundary: credentials, revocations, and attestations are snapshotted as
+ * strict plain data. The options container and its control values are not,
+ * because controller KeyObjects and related verifier controls are not plain
+ * evidence. Callers must construct options in verifier-controlled code; an
+ * untrusted serialized options object is not a supported validation boundary.
+ * Option properties are destructured before the function body, and later key
+ * parsing may execute caller hooks. Lifecycle evidence is snapshotted before
+ * those control values are consumed, so a hook cannot rewrite the evidence used
+ * for signer lookup, currentness, revocation, signature, or returned results.
+ */
 const ROOT_BINDING_KEYS = Object.freeze([
   'schema',
   'root_holder',
