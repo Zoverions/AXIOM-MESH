@@ -98,6 +98,18 @@ test('the node budget counts every value on every path, exactly at the bound', (
   );
 });
 
+test('the node budget is checked before descending into an over-budget child', () => {
+  // The root consumes the sole permitted node. Its child contains a value that
+  // would fail for another reason if traversal happened before the budget
+  // guard, so this pins the denial order as well as the eventual rejection.
+  assert.throws(
+    () => snapshotDelegationPlainData({ child: { nested: () => {} } }, 'evidence', { maxNodes: 1 }),
+    error => error instanceof ValidationError
+      && /child exceeds the node budget/.test(error.message)
+      && !/function/.test(error.message)
+  );
+});
+
 test('a caller-chosen budget is honoured exactly at its bounds and defaults stay 50,000 / 64', () => {
   assert.equal(snapshot.DELEGATION_SNAPSHOT_NODE_CEILING, 2_000_000);
   // The depth ceiling admits exactly the canonical contract depth (1,400
