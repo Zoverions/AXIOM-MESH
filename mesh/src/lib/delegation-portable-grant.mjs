@@ -39,6 +39,18 @@ const STATEMENT_KEYS = [
   'signer_key_id'
 ];
 
+/*
+ * Trust boundary: signed or serialized evidence is snapshotted as strict plain
+ * data before verification. The options container and control values are not:
+ * they may include KeyObjects and Date-like values that plain-data snapshotting
+ * would reject. Callers must therefore construct options in verifier-controlled
+ * code, never treat an untrusted serialized options object as evidence. Option
+ * properties are destructured before the body runs, and later key parsing or
+ * time coercion may execute caller hooks. Once the body begins, evidence is
+ * snapshotted before those control values are consumed, so such hooks cannot
+ * change which evidence values are checked, signed, or returned.
+ */
+
 function exact(value, keys, label) {
   const input = assertPlainObject(value, label);
   if (Object.keys(input).sort().join(',') !== [...keys].sort().join(',')) {
