@@ -18,6 +18,7 @@ import {
   verifyDelegationRootAttestationKeyCredential,
   verifyDelegationRootAttestationKeyRevocation
 } from './delegation-root-attestation-key-lifecycle.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 export const DELEGATION_ROOT_ATTESTATION_KEY_CURRENTNESS_CHECKPOINT_SCHEMA =
   'axiom-delegation-root-attestation-key-currentness-checkpoint.v1';
@@ -398,16 +399,24 @@ function normalizeLifecycleSnapshot({
   expectedRootAuthorityDigest,
   expectedRootHolder
 }) {
-  const path = validateDelegationRootAttestationKeyCredentialPath(credentials, {
+  const credentialSnapshot = snapshotDelegationPlainData(
+    credentials,
+    'delegation root attestation currentness credentials'
+  );
+  const revocationSnapshot = snapshotDelegationPlainData(
+    revocations,
+    'delegation root attestation currentness revocations'
+  );
+  const path = validateDelegationRootAttestationKeyCredentialPath(credentialSnapshot, {
     trustedControllerPublicKey,
     expectedRootBindingDigest,
     expectedRootAuthorityDigest,
     expectedRootHolder
   });
-  if (!Array.isArray(credentials) || credentials.length < 1) {
+  if (!Array.isArray(credentialSnapshot) || credentialSnapshot.length < 1) {
     throw new ValidationError('Delegation root attestation currentness requires credential history');
   }
-  const history = Object.freeze(credentials.map(raw => (
+  const history = Object.freeze(credentialSnapshot.map(raw => (
     verifyDelegationRootAttestationKeyCredential(raw, {
       trustedControllerPublicKey,
       expectedRootBindingDigest: path.root_binding_digest,
@@ -415,7 +424,7 @@ function normalizeLifecycleSnapshot({
       expectedRootHolder: path.root_holder
     })
   )));
-  if (!Array.isArray(revocations) || revocations.length > MAX_REVOCATIONS) {
+  if (!Array.isArray(revocationSnapshot) || revocationSnapshot.length > MAX_REVOCATIONS) {
     throw new ValidationError(
       `Delegation root attestation currentness revocations must contain at most ${MAX_REVOCATIONS} entries`
     );
@@ -423,7 +432,7 @@ function normalizeLifecycleSnapshot({
 
   const credentialByDigest = new Map(history.map(item => [item.credential_digest, item]));
   const credentialRevocations = new Set();
-  const verifiedRevocations = revocations.map(raw => {
+  const verifiedRevocations = revocationSnapshot.map(raw => {
     const preliminary = verifyDelegationRootAttestationKeyRevocation(raw, {
       trustedControllerPublicKey
     });
