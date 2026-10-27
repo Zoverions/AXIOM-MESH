@@ -470,3 +470,50 @@ test('newer checkpoint path satisfies retained state without claiming global or 
   assert.equal(result.global_currentness_proved, false);
   assert.equal(result.wall_clock_currentness_proved, false);
 });
+
+
+test('lifecycle snapshot rejects accessor-backed evidence without running getters', async () => {
+  const { controller, first, second } = fixture();
+  const {
+    createDelegationRootAttestationKeyCurrentnessCheckpoint
+  } = await checkpoints();
+
+  const credential = structuredClone(first);
+  let credentialGetterCalls = 0;
+  Object.defineProperty(credential, 'credential_digest', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      credentialGetterCalls += 1;
+      return first.credential_digest;
+    }
+  });
+  assert.throws(() => createDelegationRootAttestationKeyCurrentnessCheckpoint({
+    credentials: [credential],
+    trustedControllerPublicKey: controller.publicKey,
+    controllerPrivateKey: controller.privateKey,
+    checkpointSequence: 1,
+    checkpointedAt: T1
+  }));
+  assert.equal(credentialGetterCalls, 0, 'credential getter must not run');
+
+  const revocation = structuredClone(revoke(first, controller, T1));
+  let revocationGetterCalls = 0;
+  Object.defineProperty(revocation, 'revocation_digest', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      revocationGetterCalls += 1;
+      return 'f'.repeat(64);
+    }
+  });
+  assert.throws(() => createDelegationRootAttestationKeyCurrentnessCheckpoint({
+    credentials: [first, second],
+    revocations: [revocation],
+    trustedControllerPublicKey: controller.publicKey,
+    controllerPrivateKey: controller.privateKey,
+    checkpointSequence: 1,
+    checkpointedAt: T2
+  }));
+  assert.equal(revocationGetterCalls, 0, 'revocation getter must not run');
+});
