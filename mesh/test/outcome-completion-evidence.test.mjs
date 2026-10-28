@@ -98,6 +98,86 @@ test('uncertain external effect cannot be called verified', () => {
   assert.throws(() => evaluateOutcomeCompletion(source, record), /Verified completion requirements/);
 });
 
+
+test('physical completion requires a passed local predicate and confirmed effect evidence', () => {
+  const source = outcome();
+  source.intent = 'Move one physical payload and verify the final state.';
+  source.acceptance_criteria = [
+    'Cloud planner reports task complete',
+    'Local safety predicate confirms final state'
+  ];
+  source.effect_boundaries = ['physical'];
+
+  const record = completion(source);
+  record.acceptance_results = [
+    {
+      criterion_index:0,
+      criterion:'Cloud planner reports task complete',
+      state:'passed',
+      evidence_refs:['model:cloud-completion.1']
+    },
+    {
+      criterion_index:1,
+      criterion:'Local safety predicate confirms final state',
+      state:'passed',
+      evidence_refs:['sensor:local-interlock-confirmed.1']
+    }
+  ];
+  record.task_results[0].effect_state = 'confirmed';
+  record.external_effects = [{
+    effect_ref:'physical:payload-move.1',
+    state:'confirmed',
+    evidence_refs:['sensor:local-interlock-confirmed.1'],
+    reconciliation_ref:null
+  }];
+
+  const result = evaluateOutcomeCompletion(source, record);
+  assert.equal(result.verified, true);
+  assert.deepEqual(result.reasons, []);
+});
+
+test('cloud-classified success cannot override a contradictory local physical predicate', () => {
+  const source = outcome();
+  source.intent = 'Move one physical payload and verify the final state.';
+  source.acceptance_criteria = [
+    'Cloud planner reports task complete',
+    'Local safety predicate confirms final state'
+  ];
+  source.effect_boundaries = ['physical'];
+
+  const record = completion(source);
+  record.acceptance_results = [
+    {
+      criterion_index:0,
+      criterion:'Cloud planner reports task complete',
+      state:'passed',
+      evidence_refs:['model:cloud-completion.1']
+    },
+    {
+      criterion_index:1,
+      criterion:'Local safety predicate confirms final state',
+      state:'failed',
+      evidence_refs:['sensor:local-interlock-contradiction.1']
+    }
+  ];
+  record.task_results[0].effect_state = 'uncertain';
+  record.external_effects = [{
+    effect_ref:'physical:payload-move.1',
+    state:'uncertain',
+    evidence_refs:['model:cloud-completion.1'],
+    reconciliation_ref:'sensor:local-interlock-contradiction.1'
+  }];
+
+  assert.throws(
+    () => evaluateOutcomeCompletion(source, record),
+    error => (
+      /criterion-not-passed:1/.test(error.message)
+      && /task-effect-not-confirmed:task\.demo\.1/.test(error.message)
+      && /external-effect-not-confirmed:physical:payload-move\.1/.test(error.message)
+    )
+  );
+});
+
 test('passed criteria and verified tasks require evidence', () => {
   const source = outcome();
   const noCriterionEvidence = completion(source);
