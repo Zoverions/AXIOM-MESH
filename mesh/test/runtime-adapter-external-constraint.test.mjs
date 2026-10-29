@@ -160,3 +160,24 @@ test('unknown external authorization detail types fail closed', () => {
     /unsupported authorization detail type: axiom-unknown-constraint/
   );
 });
+
+
+test('an additional child authorization detail type fails closed instead of widening', () => {
+  assert.throws(
+    () => translateSyntheticExternalAuthorizationRequest({
+      ...externalRequest({
+        suffix: 'child-detail-type-widening',
+        grantId: 'grant:rt-auth-009-child-detail-type-widening',
+        authorizationDetails: recognizedAuthorizationDetails()
+      }),
+      authorization_details: [
+        recognizedAuthorizationDetails(),
+        {
+          type: 'urn:example:child-only-authority',
+          requested_scopes: ['synthetic.admin']
+        }
+      ]
+    }),
+    /authorization_details must contain exactly one authorization detail/
+  );
+});
