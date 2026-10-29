@@ -83,6 +83,30 @@
         }
       },
       "attempted_principal_id": "principal:attacker-projected"
+    },
+    {
+      "id": "mtls-holder-binding-no-grant",
+      "mode": "inert-upstream-auth-no-grant",
+      "upstream_metadata": {
+        "holder_binding": {
+          "method": "mtls",
+          "validated": true,
+          "trace_marker": "rt-mcp-auth-mtls-only"
+        }
+      },
+      "must_not_project": ["rt-mcp-auth-mtls-only"]
+    },
+    {
+      "id": "dpop-holder-binding-with-local-grant",
+      "mode": "dpop-compatible-with-local-grant",
+      "upstream_metadata": {
+        "holder_binding": {
+          "method": "dpop",
+          "validated": true,
+          "trace_marker": "rt-mcp-auth-dpop"
+        }
+      },
+      "must_not_project": ["rt-mcp-auth-dpop"]
     }
   ]
 }
