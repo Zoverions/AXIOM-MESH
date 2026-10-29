@@ -121,6 +121,40 @@ test('synthetic adapter completes only an exact granted request and signs a rece
   );
 });
 
+test('grant is expired when the decision clock equals expires_at', async () => {
+  const manifest = createSyntheticReferenceAdapterManifest({
+    sourceRevision: REVISION
+  });
+  const grantAuthority = createSyntheticReferenceGrantAuthority();
+  const adapter = new SyntheticReferenceRuntimeAdapter({
+    manifest,
+    now: () => NOW,
+    grantAuthority: grantAuthority.verifier
+  });
+  const grant = createSyntheticReferenceGrant({
+    grantId: 'grant:test-expiry-equality',
+    principalId: 'principal:test-owner',
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW - 60_000,
+    lifetimeMs: 60_000,
+    signer: grantAuthority.signer
+  });
+  assert.equal(Date.parse(grant.expires_at), NOW);
+  adapter.registerGrant(grant);
+
+  const result = await adapter.execute(createSyntheticReferenceRequest({
+    requestId: 'request:test-expiry-equality',
+    principalId: grant.principal_id,
+    grantId: grant.grant_id,
+    idempotencyKey: 'idempotency:test-expiry-equality-0001'
+  }));
+
+  assert.equal(result.state, 'denied');
+  assert.equal(result.code, 'grant-expired');
+  assert.equal(result.receipt.external_effect_performed, false);
+});
+
 test('synthetic single-use grant rejects same-request replays outside the cached idempotency path', async () => {
   const manifest = createSyntheticReferenceAdapterManifest({
     sourceRevision: REVISION
