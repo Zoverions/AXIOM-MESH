@@ -25,7 +25,9 @@ const EXPECTED_CASE_IDS = [
   'query-token-no-grant',
   'tools-list-then-call-denied',
   'scope-injection-denied',
-  'principal-substitution-denied'
+  'principal-substitution-denied',
+  'mtls-holder-binding-no-grant',
+  'dpop-holder-binding-with-local-grant'
 ];
 
 function authorizationDetail(overrides = {}) {
@@ -112,6 +114,42 @@ async function assertNoGrantCannotAuthorize(vector) {
   assert.equal(result.receipt.external_effect_performed, false);
 }
 
+async function assertDpopCompatibleWithLocalGrant(vector) {
+  const { adapter, grantAuthority, manifest } = harness();
+  const grantId = `grant:rt-mcp-auth-001-${vector.id}`;
+  const translated = translate({
+    suffix: vector.id,
+    grantId,
+    request: mcpRequest({
+      id: `mcp:rt-mcp-auth-001-${vector.id}`,
+      meta: vector.upstream_metadata
+    })
+  });
+
+  const serialized = JSON.stringify(translated);
+  for (const marker of vector.must_not_project ?? []) {
+    assert.equal(
+      serialized.includes(marker),
+      false,
+      `upstream holder-binding marker must remain non-authoritative: ${marker}`
+    );
+  }
+
+  adapter.registerGrant(createSyntheticReferenceGrant({
+    grantId,
+    principalId: PRINCIPAL_ID,
+    adapterId: manifest.adapter_id,
+    runtimeId: manifest.runtime.runtime_id,
+    now: NOW,
+    signer: grantAuthority.signer,
+    inputSha256: translated.input_sha256
+  }));
+
+  const result = await adapter.execute(translated);
+  assert.equal(result.state, 'completed');
+  assert.equal(result.receipt.external_effect_performed, false);
+}
+
 test('RT-MCP-AUTH-001 fixture is complete and bounded to the MCP upstream-auth threat', () => {
   assert.equal(FIXTURE.schema, 'axiom-rt-mcp-auth-001-upstream-auth.v1');
   assert.equal(FIXTURE.target, 'RT-MCP-AUTH-001');
@@ -172,6 +210,10 @@ for (const vector of FIXTURE.cases) {
         assert.equal(result.state, 'denied');
         assert.equal(result.code, 'scope-not-mapped');
         assert.equal(result.receipt.external_effect_performed, false);
+        return;
+      }
+      case 'dpop-compatible-with-local-grant': {
+        await assertDpopCompatibleWithLocalGrant(vector);
         return;
       }
       case 'principal-substitution-denied': {
