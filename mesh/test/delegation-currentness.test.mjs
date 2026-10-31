@@ -89,6 +89,7 @@ test('RT-DELEGATION-CURRENTNESS-001: offline-valid delegation remains evidence, 
     profile.cases.map(item => item.id),
     [
       'cached-valid-projection-remains-non-authorizing',
+      'missing-current-root-authority-fails-closed',
       'revocation-invalidates-current-projection',
       'root-narrowing-invalidates-old-binding'
     ]
@@ -144,6 +145,15 @@ test('RT-DELEGATION-CURRENTNESS-001: offline-valid delegation remains evidence, 
       'agent.worker'
     );
     assert.match(historicalProjection.projection_digest, /^[a-f0-9]{64}$/);
+
+    await assert.rejects(
+      projectDelegationLedger({
+        ledger_path: ledgerPath,
+        target_grant_id: 'grant.worker',
+        now: CURRENT_NOW
+      }),
+      /delegation authority must be an object/i
+    );
 
     const narrowedRoot = authority('owner.alice', {
       actions: ['memory.read'],
