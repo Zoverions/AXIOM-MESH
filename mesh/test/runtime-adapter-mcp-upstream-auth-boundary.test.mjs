@@ -27,7 +27,8 @@ const EXPECTED_CASE_IDS = [
   'scope-injection-denied',
   'principal-substitution-denied',
   'mtls-holder-binding-no-grant',
-  'dpop-holder-binding-with-local-grant'
+  'dpop-holder-binding-with-local-grant',
+  'dpop-body-substitution-denied'
 ];
 
 function authorizationDetail(overrides = {}) {

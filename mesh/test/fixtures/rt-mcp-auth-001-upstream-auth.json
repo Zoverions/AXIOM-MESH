@@ -15,7 +15,9 @@
           "trace_marker": "rt-mcp-auth-empty-object"
         }
       },
-      "must_not_project": ["rt-mcp-auth-empty-object"]
+      "must_not_project": [
+        "rt-mcp-auth-empty-object"
+      ]
     },
     {
       "id": "oauth-fallback-no-grant",
@@ -27,7 +29,9 @@
           "trace_marker": "rt-mcp-auth-oauth-fallback"
         }
       },
-      "must_not_project": ["rt-mcp-auth-oauth-fallback"]
+      "must_not_project": [
+        "rt-mcp-auth-oauth-fallback"
+      ]
     },
     {
       "id": "arbitrary-bearer-no-grant",
@@ -36,7 +40,10 @@
         "authorization": "Bearer attacker-controlled-token",
         "trace_marker": "rt-mcp-auth-arbitrary-bearer"
       },
-      "must_not_project": ["attacker-controlled-token", "rt-mcp-auth-arbitrary-bearer"]
+      "must_not_project": [
+        "attacker-controlled-token",
+        "rt-mcp-auth-arbitrary-bearer"
+      ]
     },
     {
       "id": "query-token-no-grant",
@@ -48,7 +55,10 @@
           "trace_marker": "rt-mcp-auth-query-token"
         }
       },
-      "must_not_project": ["attacker-query-token", "rt-mcp-auth-query-token"]
+      "must_not_project": [
+        "attacker-query-token",
+        "rt-mcp-auth-query-token"
+      ]
     },
     {
       "id": "tools-list-then-call-denied",
@@ -60,7 +70,9 @@
           "trace_marker": "rt-mcp-auth-enumeration"
         }
       },
-      "must_not_project": ["rt-mcp-auth-enumeration"]
+      "must_not_project": [
+        "rt-mcp-auth-enumeration"
+      ]
     },
     {
       "id": "scope-injection-denied",
@@ -68,10 +80,15 @@
       "upstream_metadata": {
         "gateway_claims": {
           "authenticated": true,
-          "scopes": ["synthetic.admin"]
+          "scopes": [
+            "synthetic.admin"
+          ]
         }
       },
-      "requested_scopes": ["synthetic.read", "synthetic.admin"]
+      "requested_scopes": [
+        "synthetic.read",
+        "synthetic.admin"
+      ]
     },
     {
       "id": "principal-substitution-denied",
@@ -94,7 +111,9 @@
           "trace_marker": "rt-mcp-auth-mtls-only"
         }
       },
-      "must_not_project": ["rt-mcp-auth-mtls-only"]
+      "must_not_project": [
+        "rt-mcp-auth-mtls-only"
+      ]
     },
     {
       "id": "dpop-holder-binding-with-local-grant",
@@ -106,7 +125,31 @@
           "trace_marker": "rt-mcp-auth-dpop"
         }
       },
-      "must_not_project": ["rt-mcp-auth-dpop"]
+      "must_not_project": [
+        "rt-mcp-auth-dpop"
+      ]
+    },
+    {
+      "id": "dpop-body-substitution-denied",
+      "mode": "dpop-body-substitution-denied",
+      "upstream_metadata": {
+        "holder_binding": {
+          "method": "dpop",
+          "validated": true,
+          "htm": "POST",
+          "htu": "https://runtime.example.test/mcp",
+          "trace_marker": "rt-mcp-auth-dpop-body-substitution"
+        }
+      },
+      "original_arguments": {
+        "message": "approved body"
+      },
+      "substituted_arguments": {
+        "message": "substituted body"
+      },
+      "must_not_project": [
+        "rt-mcp-auth-dpop-body-substitution"
+      ]
     }
   ]
 }
