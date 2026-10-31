@@ -265,7 +265,7 @@ for (const vector of FIXTURE.cases) {
 
         const result = await adapter.execute(substituted);
         assert.equal(result.state, 'denied');
-        assert.equal(result.code, 'grant-binding-mismatch');
+        assert.equal(result.code, 'input-mismatch');
         assert.equal(result.receipt.external_effect_performed, false);
         return;
       }
