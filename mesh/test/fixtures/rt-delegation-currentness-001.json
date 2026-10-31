@@ -17,6 +17,11 @@
       "expected": "The cached projection remains historical evidence only and explicitly grants no execution authority, even after later authority state changes."
     },
     {
+      "id": "missing-current-root-authority-fails-closed",
+      "setup": "Retain a cryptographically valid historical delegation ledger, then attempt a fresh projection without supplying the current root authority.",
+      "expected": "Projection fails closed before resolving historical grants because unavailable current root standing cannot be replaced by ledger history."
+    },
+    {
       "id": "revocation-invalidates-current-projection",
       "setup": "Append a fresher revocation of an upstream delegation grant after the historical projection was created.",
       "expected": "A fresh projection from current ledger state fails closed because the upstream grant is revoked."
