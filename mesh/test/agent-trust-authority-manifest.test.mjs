@@ -12,6 +12,9 @@ import {
   createAgentAuthorityManifest,
   verifyAgentAuthorityManifest
 } from '../src/lib/agent-trust-authority-manifest.mjs';
+import { sessionFixtureExpiry } from '../test-support/session-fixture-clock.mjs';
+
+const SESSION_FIXTURE_EXPIRES_AT = sessionFixtureExpiry(new Date());
 
 const humans = new Set(['owner.alice']);
 
@@ -23,7 +26,7 @@ function principalDefinition(overrides = {}) {
     roles: ['researcher'],
     scopes: ['intent:execute'],
     lifetime: 'session',
-    expires_at: '2099-01-01T00:00:00.000Z',
+    expires_at: SESSION_FIXTURE_EXPIRES_AT,
     runtime: {
       id: 'runtime.fixture.1',
       kind: 'local-process',
