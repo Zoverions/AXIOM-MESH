@@ -217,6 +217,58 @@ for (const vector of FIXTURE.cases) {
         await assertDpopCompatibleWithLocalGrant(vector);
         return;
       }
+      case 'dpop-body-substitution-denied': {
+        const { adapter, grantAuthority, manifest } = harness();
+        const grantId = `grant:rt-mcp-auth-001-${vector.id}`;
+        const original = translate({
+          suffix: `${vector.id}-original`,
+          grantId,
+          request: mcpRequest({
+            id: `mcp:rt-mcp-auth-001-${vector.id}-original`,
+            meta: vector.upstream_metadata,
+            argumentsObject: vector.original_arguments
+          })
+        });
+        const substituted = translate({
+          suffix: `${vector.id}-substituted`,
+          grantId,
+          request: mcpRequest({
+            id: `mcp:rt-mcp-auth-001-${vector.id}-substituted`,
+            meta: vector.upstream_metadata,
+            argumentsObject: vector.substituted_arguments
+          })
+        });
+
+        assert.notEqual(
+          original.input_sha256,
+          substituted.input_sha256,
+          'the local grant binding must change when the MCP request body changes'
+        );
+        const serialized = JSON.stringify(substituted);
+        for (const marker of vector.must_not_project ?? []) {
+          assert.equal(
+            serialized.includes(marker),
+            false,
+            `upstream DPoP marker must remain non-authoritative: ${marker}`
+          );
+        }
+
+        adapter.registerGrant(createSyntheticReferenceGrant({
+          grantId,
+          principalId: PRINCIPAL_ID,
+          adapterId: manifest.adapter_id,
+          runtimeId: manifest.runtime.runtime_id,
+          now: NOW,
+          signer: grantAuthority.signer,
+          inputSha256: original.input_sha256
+        }));
+
+        const result = await adapter.execute(substituted);
+        assert.equal(result.state, 'denied');
+        assert.equal(result.code, 'grant-binding-mismatch');
+        assert.equal(result.receipt.external_effect_performed, false);
+        return;
+      }
       case 'principal-substitution-denied': {
         const { adapter, grantAuthority, manifest } = harness();
         const grantId = `grant:rt-mcp-auth-001-${vector.id}`;
