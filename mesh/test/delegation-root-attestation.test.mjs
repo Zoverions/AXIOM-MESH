@@ -218,3 +218,32 @@ test('v1 root attestation may only be signed for the bound root holder', async t
     /signer.*root holder|root holder.*signer/i
   );
 });
+
+test('matching root key material without an independently expected principal remains non-authorizing evidence', async t => {
+  const { binding } = await fixture(t);
+  const signer = generateKeyPairSync('ed25519');
+  const {
+    createDelegationRootAttestation,
+    verifyDelegationRootAttestation
+  } = await loadAttestationModule();
+
+  const attestation = createDelegationRootAttestation({
+    root_binding: binding,
+    signer_id: binding.root_holder,
+    signer_private_key: signer.privateKey,
+    issued_at: NOW.toISOString()
+  });
+
+  // Deliberately omit expected_signer_id: the retained key and authority
+  // digest are valid evidence, but they do not independently establish
+  // that the key is correctly bound to the represented principal.
+  const verified = verifyDelegationRootAttestation(attestation, {
+    trusted_signer_public_key: signer.publicKey,
+    expected_root_authority_digest: binding.root_authority_digest
+  });
+
+  assert.equal(verified.statement.authority_effect, 'none');
+  assert.equal(verified.statement.delegation_effect, 'none');
+  assert.equal(verified.statement.execution_authority_granted, false);
+  assert.equal(verified.statement.global_currentness_claimed, false);
+});
