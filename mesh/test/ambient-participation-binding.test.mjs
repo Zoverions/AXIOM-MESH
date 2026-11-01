@@ -490,6 +490,37 @@ test('NO_VIOLATION_OBSERVED is bounded by searched evidence universe and exclusi
   assert.throws(()=>verifySilentInvestigationBinding(noEvidence,p,o),/NO_VIOLATION_OBSERVED/i);
 });
 
+
+test('silent scope arrays reject accessors before reading or digesting them',()=>{
+  const p=policy();
+  const o=observation();
+  const result=silentResult(p,o,{no_violation_observed:true});
+  const validScope='context:channel.engineering/event:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  let reads=0;
+  const scope=[validScope];
+  Object.defineProperty(scope,'0',{
+    enumerable:true,
+    configurable:true,
+    get(){
+      reads+=1;
+      Object.defineProperty(scope,'0',{
+        value:'',
+        enumerable:true,
+        writable:true,
+        configurable:true
+      });
+      return validScope;
+    }
+  });
+  result.searched_evidence_universe=scope;
+
+  assert.throws(
+    ()=>verifySilentInvestigationBinding(result,p,o),
+    /data properties|plain array/i
+  );
+  assert.equal(reads,0);
+});
+
 test('silent investigation binds exact policy and observation and is never valid for explicit requests',()=>{
   const p=policy();
   const o=observation();
