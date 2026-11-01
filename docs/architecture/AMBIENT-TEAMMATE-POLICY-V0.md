@@ -148,7 +148,7 @@ The v0 binding accepts only self-steering by the task's current principal. That 
 
 `axiom-silent-investigation-result.v0` makes silence an explicit terminal evidence state. It can record bounded evidence, work counts, useful/actionable findings, unresolved unknowns, and the reason no message was emitted.
 
-A silent result is not a hidden failure and is not proof that no relevant fact exists outside the searched evidence universe.
+A silent result is not a hidden failure and is not proof that no relevant fact exists outside the searched evidence universe. Every result therefore binds a non-empty `searched_evidence_universe` and an explicit `search_exclusions` list. A `NO_VIOLATION_OBSERVED` conclusion is represented by `no_violation_observed: true` only when at least one evidence reference supports that bounded search and neither a useful nor actionable finding was observed. An empty exclusions list means no known exclusions were declared; it does not expand the searched universe.
 
 `verifySilentInvestigationBinding` additionally binds the result to the exact participation policy and observation. Silent conclusions must be enabled by policy and are never accepted for an explicit addressed request. An `interruption-not-justified` reason must be supported by the observation's noise/interruption evidence; a `policy-suppressed` reason must correspond to an actual passive/quiet/context-scope restriction. The binding remains evidence-only and cannot itself suppress or send a message.
 
