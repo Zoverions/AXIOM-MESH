@@ -42,8 +42,8 @@ test('silent scope-array schema rejects whitespace and control-only entries', as
     const item = schema.properties[field].items;
     const pattern = new RegExp(item.pattern, 'u');
     assert.equal(pattern.test('context:channel.engineering'), true, field + ' accepts a bounded scope entry');
-    assert.equal(pattern.test('\\u2028context:channel.engineering'), true, field + ' accepts a leading Unicode line separator');
-    assert.equal(pattern.test('\\u2029context:channel.engineering'), true, field + ' accepts a leading Unicode paragraph separator');
+    assert.equal(pattern.test('\u2028context:channel.engineering'), true, field + ' accepts a leading Unicode line separator');
+    assert.equal(pattern.test('\u2029context:channel.engineering'), true, field + ' accepts a leading Unicode paragraph separator');
     for (const invalid of [' ', '\t', '\n', '\u0000']) {
       assert.equal(pattern.test(invalid), false, field + ' rejects ' + JSON.stringify(invalid));
     }
