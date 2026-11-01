@@ -79,7 +79,7 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 512,
-        "pattern": "^(?=.*\\S)[^\\u0000-\\u001f]+$"
+        "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u001f]+$"
       }
     },
     "search_exclusions": {
@@ -90,7 +90,7 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 512,
-        "pattern": "^(?=.*\\S)[^\\u0000-\\u001f]+$"
+        "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u001f]+$"
       }
     },
     "no_violation_observed": {
