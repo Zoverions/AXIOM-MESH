@@ -4,6 +4,12 @@ import test from 'node:test';
 
 const workflowPath = new URL('../../.github/workflows/chain-verification-benchmark.yml', import.meta.url);
 
+const privilegedTriggerPattern = /\b(?:pull_request_target|workflow_run|issue_comment)\b/;
+
+function assertNoPrivilegedTriggers(source) {
+  assert.doesNotMatch(source, privilegedTriggerPattern);
+}
+
 async function workflowText() {
   return readFile(workflowPath, 'utf8');
 }
@@ -14,9 +20,7 @@ test('Security Cell Scout is read-only evidence automation', async () => {
   const permissionBlocks = [...source.matchAll(/^permissions:\s*\n((?:^[ \t]+[^\n]*\n?)*)/gm)];
   assert.equal(permissionBlocks.length, 1);
   assert.equal(permissionBlocks[0][1].trim(), 'contents: read');
-  assert.doesNotMatch(source, /pull_request_target\s*:/);
-  assert.doesNotMatch(source, /workflow_run\s*:/);
-  assert.doesNotMatch(source, /issue_comment\s*:/);
+  assertNoPrivilegedTriggers(source);
   assert.doesNotMatch(source, /\bissues:\s*write\b/);
   assert.doesNotMatch(source, /\bpull-requests:\s*write\b/);
   assert.doesNotMatch(source, /\bcontents:\s*write\b/);
@@ -54,4 +58,17 @@ test('Security Cell Scout is read-only evidence automation', async () => {
   assert.ok(alwaysSteps.length >= 2);
   assert.match(source, /actions\/upload-artifact@[a-f0-9]{40}/);
   assert.match(source, /retention-days:\s*30/);
+});
+
+test('privileged trigger guard rejects YAML key spellings and event lists', () => {
+  for (const source of [
+    'on:\n  pull_request_target:\n',
+    'on:\n  "workflow_run":\n',
+    "on:\n  'issue_comment':\n",
+    'on: [push, workflow_run]\n'
+  ]) {
+    assert.throws(() => assertNoPrivilegedTriggers(source));
+  }
+
+  assert.doesNotThrow(() => assertNoPrivilegedTriggers('on:\n  schedule:\n  workflow_dispatch:\n'));
 });
