@@ -186,6 +186,9 @@ function silentResult(p=policy(),o=observation(),overrides={}){
     started_at:'2026-09-27T04:10:00.000Z',
     completed_at:'2026-09-27T04:10:05.000Z',
     evidence_refs:['evidence.investigation.1'],
+    searched_evidence_universe:['context:channel.engineering/event:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'],
+    search_exclusions:[],
+    no_violation_observed:false,
     useful_finding:false,
     actionable_finding:false,
     silence_reason:'no-useful-finding',
@@ -460,6 +463,32 @@ test('steering binding rejects hostile task lifecycle containers before imported
   assert.throws(()=>verifyActiveTaskSteeringBinding(s,customArray,next),/plain array/i);
 });
 
+
+test('NO_VIOLATION_OBSERVED is bounded by searched evidence universe and exclusions',()=>{
+  const p=policy();
+  const o=observation();
+  const result=silentResult(p,o,{
+    no_violation_observed:true,
+    searched_evidence_universe:['github:Zoverions/AXIOM-MESH@f6ac164e/issues/1575'],
+    search_exclusions:['private-runtime-logs:not-authorized-for-this-search']
+  });
+  const bound=verifySilentInvestigationBinding(result,p,o);
+  assert.equal(bound.bound,true);
+  assert.deepEqual(bound.reasons,[]);
+
+  const emptyUniverse={...result,searched_evidence_universe:[]};
+  assert.throws(()=>verifySilentInvestigationBinding(emptyUniverse,p,o),/searched evidence universe/i);
+
+  const missingScope=structuredClone(result);
+  delete missingScope.search_exclusions;
+  assert.throws(()=>verifySilentInvestigationBinding(missingScope,p,o),/fields are invalid/i);
+
+  const unsupportedFinding={...result,useful_finding:true};
+  assert.throws(()=>verifySilentInvestigationBinding(unsupportedFinding,p,o),/NO_VIOLATION_OBSERVED/i);
+
+  const noEvidence={...result,evidence_refs:[]};
+  assert.throws(()=>verifySilentInvestigationBinding(noEvidence,p,o),/NO_VIOLATION_OBSERVED/i);
+});
 
 test('silent investigation binds exact policy and observation and is never valid for explicit requests',()=>{
   const p=policy();
