@@ -15,6 +15,8 @@ test('Security Cell Scout is read-only evidence automation', async () => {
   assert.equal(permissionBlocks.length, 1);
   assert.equal(permissionBlocks[0][1].trim(), 'contents: read');
   assert.doesNotMatch(source, /pull_request_target\s*:/);
+  assert.doesNotMatch(source, /workflow_run\s*:/);
+  assert.doesNotMatch(source, /issue_comment\s*:/);
   assert.doesNotMatch(source, /\bissues:\s*write\b/);
   assert.doesNotMatch(source, /\bpull-requests:\s*write\b/);
   assert.doesNotMatch(source, /\bcontents:\s*write\b/);
