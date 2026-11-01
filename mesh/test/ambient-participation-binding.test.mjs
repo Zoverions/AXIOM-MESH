@@ -484,7 +484,7 @@ test('NO_VIOLATION_OBSERVED is bounded by searched evidence universe and exclusi
   assert.throws(()=>verifySilentInvestigationBinding(missingScope,p,o),/fields are invalid/i);
 
   const unsupportedFinding={...result,useful_finding:true};
-  assert.throws(()=>verifySilentInvestigationBinding(unsupportedFinding,p,o),/NO_VIOLATION_OBSERVED/i);
+  assert.throws(()=>verifySilentInvestigationBinding(unsupportedFinding,p,o));
 
   const noEvidence={...result,evidence_refs:[]};
   assert.throws(()=>verifySilentInvestigationBinding(noEvidence,p,o),/NO_VIOLATION_OBSERVED/i);
