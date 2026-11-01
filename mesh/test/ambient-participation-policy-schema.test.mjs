@@ -34,3 +34,16 @@ test('participation nested policy and observation objects are closed', async () 
   assert.equal(policy.allOf.length, 2);
   assert.equal(policy.properties.threshold_basis.const, 'illustrative-unvalidated');
 });
+
+
+test('silent scope-array schema rejects whitespace and control-only entries', async () => {
+  const schema = JSON.parse(await readFile(new URL('../config/silent-investigation-result-v0.schema.json', import.meta.url), 'utf8'));
+  for (const field of ['searched_evidence_universe','search_exclusions']) {
+    const item = schema.properties[field].items;
+    const pattern = new RegExp(item.pattern, 'u');
+    assert.equal(pattern.test('context:channel.engineering'), true, field + ' accepts a bounded scope entry');
+    for (const invalid of [' ', '\t', '\n', '\u0000']) {
+      assert.equal(pattern.test(invalid), false, field + ' rejects ' + JSON.stringify(invalid));
+    }
+  }
+});
