@@ -421,7 +421,20 @@ function integer(v,label,min,max){if(!Number.isSafeInteger(v)||v<min||v>max)thro
 function en(v,set,label){if(!set.has(v))throw new ValidationError(label+' is invalid');}
 function date(v,label){if(typeof v!=='string')throw new ValidationError(label+' must be a timestamp'); const d=new Date(v); if(!Number.isFinite(d.valueOf())||d.toISOString()!==v)throw new ValidationError(label+' must be canonical ISO-8601 UTC'); return d;}
 function text(v,label,max){if(typeof v!=='string'||v.trim().length<1||v.length>max||/[\u0000-\u001f]/.test(v))throw new ValidationError(label+' is invalid');}
-function strings(v,label,max,itemMax){if(utilTypes.isProxy(v)||!Array.isArray(v)||v.length>max)throw new ValidationError(label+' has invalid cardinality'); const seen=new Set(); for(const x of v){text(x,label+' item',itemMax); if(seen.has(x))throw new ValidationError(label+' contains duplicate values'); seen.add(x);}}
+function plainArrayValues(v,label,max){
+  if(utilTypes.isProxy(v)||!Array.isArray(v)||Object.getPrototypeOf(v)!==Array.prototype||v.length>max)throw new ValidationError(label+' must be a bounded plain array');
+  const keys=Reflect.ownKeys(v);
+  if(keys.some(key=>typeof key==='symbol'))throw new ValidationError(label+' must contain only indexed data properties');
+  const values=[];
+  for(let index=0;index<v.length;index+=1){
+    const descriptor=Reflect.getOwnPropertyDescriptor(v,String(index));
+    if(!descriptor?.enumerable||!Object.hasOwn(descriptor,'value'))throw new ValidationError(label+' must contain only enumerable data properties');
+    values.push(descriptor.value);
+  }
+  if(keys.length!==v.length+1)throw new ValidationError(label+' cannot be sparse or carry custom properties');
+  return values;
+}
+function strings(v,label,max,itemMax){const values=plainArrayValues(v,label,max); const seen=new Set(); for(const x of values){text(x,label+' item',itemMax); if(seen.has(x))throw new ValidationError(label+' contains duplicate values'); seen.add(x);}}
 function ids(v,label,max){if(utilTypes.isProxy(v)||!Array.isArray(v)||v.length>max)throw new ValidationError(label+' has invalid cardinality'); const seen=new Set(); for(const x of v){ident(x,label+' item'); if(seen.has(x))throw new ValidationError(label+' contains duplicate values'); seen.add(x);}}
 function enums(v,label,set,max){if(utilTypes.isProxy(v)||!Array.isArray(v)||v.length<1||v.length>max)throw new ValidationError(label+' has invalid cardinality'); const seen=new Set(); for(const x of v){en(x,set,label+' item'); if(seen.has(x))throw new ValidationError(label+' contains duplicate values'); seen.add(x);}}
 function deepFreeze(v){if(v&&typeof v==='object'&&!Object.isFrozen(v)){for(const child of Object.values(v))deepFreeze(child);Object.freeze(v);}return v;}

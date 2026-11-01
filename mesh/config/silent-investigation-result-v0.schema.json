@@ -78,7 +78,8 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 512
+        "maxLength": 512,
+        "pattern": "^(?=.*\\S)[^\\u0000-\\u001f]+$"
       }
     },
     "search_exclusions": {
@@ -88,7 +89,8 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 512
+        "maxLength": 512,
+        "pattern": "^(?=.*\\S)[^\\u0000-\\u001f]+$"
       }
     },
     "no_violation_observed": {
