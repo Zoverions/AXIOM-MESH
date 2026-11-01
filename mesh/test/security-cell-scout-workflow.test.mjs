@@ -5,9 +5,17 @@ import test from 'node:test';
 const workflowPath = new URL('../../.github/workflows/chain-verification-benchmark.yml', import.meta.url);
 
 const privilegedTriggerPattern = /\b(?:pull_request_target|workflow_run|issue_comment)\b/;
+const yamlUnicodeEscapePattern = /\\(?:x([0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|U([0-9a-fA-F]{8}))/g;
+
+function normalizeYamlUnicodeEscapes(source) {
+  return source.replace(yamlUnicodeEscapePattern, (_match, x, u, upperU) => {
+    const codePoint = Number.parseInt(x ?? u ?? upperU, 16);
+    return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : '\ufffd';
+  });
+}
 
 function assertNoPrivilegedTriggers(source) {
-  assert.doesNotMatch(source, privilegedTriggerPattern);
+  assert.doesNotMatch(normalizeYamlUnicodeEscapes(source), privilegedTriggerPattern);
 }
 
 async function workflowText() {
@@ -65,7 +73,10 @@ test('privileged trigger guard rejects YAML key spellings and event lists', () =
     'on:\n  pull_request_target:\n',
     'on:\n  "workflow_run":\n',
     "on:\n  'issue_comment':\n",
-    'on: [push, workflow_run]\n'
+    'on: [push, workflow_run]\n',
+    'on:\n  "pull\\u005frequest\\u005ftarget":\n',
+    'on:\n  "workflow\\x5frun":\n',
+    'on:\n  "issue\\U0000005fcomment":\n'
   ]) {
     assert.throws(() => assertNoPrivilegedTriggers(source));
   }
