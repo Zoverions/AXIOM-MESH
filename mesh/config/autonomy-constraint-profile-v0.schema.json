@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/autonomy-constraint-profile-v0.schema.json",
+  "title": "AXIOM Autonomy Constraint Profile v0",
+  "description": "Narrow-only autonomy constraint overlay over separately current authority. It may reject proposed autonomous work but cannot grant, widen, renew or substitute authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "profile_id",
+    "principal_id",
+    "source_authority_refs",
+    "valid_from",
+    "expires_at",
+    "revocation_state",
+    "allowed_purpose_refs",
+    "allowed_capabilities",
+    "allowed_data_classes",
+    "allowed_destinations",
+    "max_consequence_class",
+    "max_cost",
+    "allowed_trigger_modes",
+    "confirmation_floor",
+    "may_widen_authority",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-autonomy-constraint-profile.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-narrowing-overlay"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "principal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "source_authority_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "valid_from": {
+      "$ref": "#/$defs/date"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/date"
+    },
+    "revocation_state": {
+      "enum": [
+        "active",
+        "revoked",
+        "unknown"
+      ]
+    },
+    "allowed_purpose_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "allowed_capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "allowed_data_classes": {
+      "$ref": "#/$defs/textArray"
+    },
+    "allowed_destinations": {
+      "$ref": "#/$defs/textArray"
+    },
+    "max_consequence_class": {
+      "enum": [
+        "C0",
+        "C1",
+        "C2",
+        "C3"
+      ]
+    },
+    "max_cost": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "max_minor_units"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "max_minor_units": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      ]
+    },
+    "allowed_trigger_modes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "manual",
+          "scheduled",
+          "condition-triggered"
+        ]
+      }
+    },
+    "confirmation_floor": {
+      "enum": [
+        "none",
+        "user-presence",
+        "explicit-confirmation",
+        "independent-approval"
+      ]
+    },
+    "may_widen_authority": {
+      "const": false
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/autonomy-constraint-profile.mjs",
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "authority-renewal",
+    "wildcard-full-access",
+    "task-execution",
+    "credential-access",
+    "runtime-activation"
+  ]
+}
