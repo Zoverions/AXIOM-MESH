@@ -102,14 +102,20 @@ export async function replaceFileWithWindowsRetry(source, destination, { deadlin
   const sourceIdentity = identity(sourceStat);
   const destinationIdentity = destinationStat ? identity(destinationStat) : null;
   const deadline = performance.now() + deadlineMs;
+  let previousLockError;
   let waitMs = 20;
 
+  // These checks fail closed on changes observed between attempts. Node has no
+  // portable compare-and-swap rename; callers needing writer exclusion must
+  // serialize cooperating writers before invoking this helper.
   for (;;) {
+    if (previousLockError && performance.now() >= deadline) throw previousLockError;
     await assertRetryIdentity(source, sourceIdentity, 'source');
     await assertRetryIdentity(destination, destinationIdentity, 'destination', {
       allowMissing: true
     });
     try {
+      if (previousLockError && performance.now() >= deadline) throw previousLockError;
       await rename(source, destination);
       return;
     } catch (error) {
@@ -117,6 +123,7 @@ export async function replaceFileWithWindowsRetry(source, destination, { deadlin
         && destinationIdentity !== null
         && WINDOWS_TRANSIENT_RENAME_CODES.has(error?.code);
       if (!transientWindowsLock || performance.now() >= deadline) throw error;
+      previousLockError = error;
 
       await assertRetryIdentity(source, sourceIdentity, 'source');
       await assertRetryIdentity(destination, destinationIdentity, 'destination');
