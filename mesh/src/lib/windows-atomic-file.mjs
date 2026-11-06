@@ -20,8 +20,8 @@ function codedError(code, message, cause) {
 
 function identity(stat) {
   return {
-    birthtimeMs: stat.birthtimeMs,
-    ctimeMs: stat.ctimeMs,
+    birthtimeNs: stat.birthtimeNs,
+    ctimeNs: stat.ctimeNs,
     dev: stat.dev,
     ino: stat.ino,
     size: stat.size
@@ -29,8 +29,8 @@ function identity(stat) {
 }
 
 function sameIdentity(left, right) {
-  return left.birthtimeMs === right.birthtimeMs
-    && left.ctimeMs === right.ctimeMs
+  return left.birthtimeNs === right.birthtimeNs
+    && left.ctimeNs === right.ctimeNs
     && left.dev === right.dev
     && left.ino === right.ino
     && left.size === right.size;
