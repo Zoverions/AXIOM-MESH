@@ -29,6 +29,7 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
+import { writeFileAtomically } from '../lib/windows-atomic-file.mjs';
 import { COLLECTION_PAGE_MAX, decodeCollectionCursor, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
 import { runMigrations } from './migrations.mjs';
 import {
@@ -3698,10 +3699,7 @@ function writeAllSync(fd, buffer) {
 }
 
 async function atomicWrite(path, content, mode) {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const temp = `${path}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(temp, content, { mode, flag: 'wx' });
-  await rename(temp, path);
+  await writeFileAtomically(path, content, mode);
 }
 
 export const SYNC_PAGE_DEFAULT_RECORDS = 100;
