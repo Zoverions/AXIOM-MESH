@@ -149,6 +149,7 @@ export class GridStore {
     this.verificationKeys = loadGridVerificationKeys(dataDir, identity);
     if (!protector) throw new ValidationError('GridStore requires a data protector');
     this.protector = protector;
+    this.exportPublicationTails = new Map();
     this.db = new DatabaseSync(path);
     try {
       this.initialize();
@@ -2711,7 +2712,33 @@ export class GridStore {
     return { valid: true, events: rows.length, head: previous };
   }
 
+  /**
+   * Serializes publication for one export within the GridStore instance owned
+   * by the server. The filesystem helper detects observed changes but is not a
+   * compare-and-swap primitive against non-cooperating external writers.
+   */
   async createExport(exportId, traceId) {
+    const previousPublication = this.exportPublicationTails.get(exportId) ?? Promise.resolve();
+    let releasePublication;
+    const currentPublication = new Promise(resolve => {
+      releasePublication = resolve;
+    });
+    this.exportPublicationTails.set(exportId, currentPublication);
+    await previousPublication;
+    try {
+      return await this.createExportPublication(exportId, traceId);
+    } finally {
+      releasePublication();
+      if (this.exportPublicationTails.get(exportId) === currentPublication) {
+        this.exportPublicationTails.delete(exportId);
+      }
+    }
+  }
+
+  /**
+   * Publishes one export while createExport holds the per-export queue.
+   */
+  async createExportPublication(exportId, traceId) {
     const row = this.db.prepare('SELECT * FROM exports WHERE export_id = ?').get(exportId);
     if (!row) throw new AxiomError('export_not_found', 'Export request was not found', 404);
     if (row.status === 'completed') {
@@ -2739,6 +2766,7 @@ export class GridStore {
     let stored;
     let recordCount;
     let manifest;
+    let plaintextTemp;
 
     try {
       if (recipient) {
@@ -2767,19 +2795,19 @@ export class GridStore {
         // A plaintext bundle is written record by record while it is hashed, so
         // memory does not grow with the export. The write is synchronous, so the
         // records come from one consistent read of the database.
-        const temp = `${bundlePath}.${process.pid}.${randomUUID()}.tmp`;
-        const fd = openSync(temp, 'wx', 0o600);
+        plaintextTemp = `${bundlePath}.${process.pid}.${randomUUID()}.tmp`;
+        const fd = openSync(plaintextTemp, 'wx', 0o600);
         let written;
         try {
           written = writeExportRecords(this.exportRecords(principal, scope), chunk => writeAllSync(fd, chunk));
           fsyncSync(fd);
         } catch (error) {
           closeSync(fd);
-          rmSync(temp, { force: true });
+          rmSync(plaintextTemp, { force: true });
           throw error;
         }
         closeSync(fd);
-        await replaceFileWithWindowsRetry(temp, bundlePath);
+        await replaceFileWithWindowsRetry(plaintextTemp, bundlePath);
         recordCount = written.records;
         stored = { bytes: written.bytes, sha256: written.sha256 };
       }
@@ -2816,6 +2844,7 @@ export class GridStore {
       await atomicWrite(join(exportDir, 'manifest.json'), Buffer.from(canonicalJson(manifest)), 0o600);
       manifestPublished = true;
     } catch (error) {
+      if (plaintextTemp) await rm(plaintextTemp, { force: true }).catch(() => {});
       let rollbackError;
       if (bundlePublished && !manifestPublished) {
         try {
@@ -3732,10 +3761,16 @@ function writeAllSync(fd, buffer) {
   while (offset < buffer.length) offset += writeSync(fd, buffer, offset, buffer.length - offset);
 }
 
+/**
+ * Compares the stable filesystem identifier used to verify a rollback link.
+ */
 function sameFileId(left, right) {
   return left.dev === right.dev && left.ino === right.ino;
 }
 
+/**
+ * Captures the prior regular file as a same-directory hard-link rollback point.
+ */
 async function snapshotRegularFileForRollback(path, rollbackPath) {
   let before;
   try {
