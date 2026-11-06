@@ -5,7 +5,7 @@
 // verification path when store.mjs is used.
 
 import { DatabaseSync } from 'node:sqlite';
-import { createHash, createPublicKey } from 'node:crypto';
+import { createHash, createPublicKey, randomUUID } from 'node:crypto';
 import {
   closeSync,
   fsyncSync,
@@ -16,7 +16,7 @@ import {
   rmSync,
   writeSync
 } from 'node:fs';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { link, lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
   AxiomError,
@@ -29,7 +29,7 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
-import { writeFileAtomically } from '../lib/windows-atomic-file.mjs';
+import { replaceFileWithWindowsRetry, writeFileAtomically } from '../lib/windows-atomic-file.mjs';
 import { COLLECTION_PAGE_MAX, decodeCollectionCursor, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
 import { runMigrations } from './migrations.mjs';
 import {
@@ -2725,87 +2725,121 @@ export class GridStore {
     if (manifestScope.recipient) {
       manifestScope.recipient = { key_id: manifestScope.recipient.key_id };
     }
-    let bundleName = 'bundle.jsonl';
-    let bundleMediaType = 'application/x-ndjson';
+    let bundleName = recipient ? 'bundle.encrypted.json' : 'bundle.jsonl';
+    let bundleMediaType = recipient
+      ? 'application/vnd.axiom.recipient-encrypted+json'
+      : 'application/x-ndjson';
+    const bundlePath = join(exportDir, bundleName);
+    const rollbackPath = `${bundlePath}.${process.pid}.${randomUUID()}.rollback`;
+    await mkdir(exportDir, { recursive: true, mode: 0o700 });
+    const hadPriorBundle = await snapshotRegularFileForRollback(bundlePath, rollbackPath);
+    let bundlePublished = false;
+    let manifestPublished = false;
     let encryption;
     let stored;
     let recordCount;
-    if (recipient) {
-      // The recipient envelope seals the bundle whole, so an encrypted export
-      // is still assembled in memory; its plaintext never touches the disk.
-      const chunks = [];
-      const written = writeExportRecords(this.exportRecords(principal, scope), chunk => chunks.push(chunk));
-      recordCount = written.records;
-      const context = `axiom:export:${exportId}:bundle.jsonl`;
-      const envelope = encryptForRecipient(Buffer.concat(chunks), recipient.public_key, context);
-      chunks.length = 0;
-      const storedBundle = Buffer.from(canonicalJson(envelope));
-      bundleName = 'bundle.encrypted.json';
-      bundleMediaType = 'application/vnd.axiom.recipient-encrypted+json';
-      encryption = {
-        format: envelope.format,
-        algorithm: envelope.algorithm,
-        context,
-        recipient_key_id: envelope.recipient_key_id,
-        plaintext: {
-          name: 'bundle.jsonl',
-          media_type: 'application/x-ndjson'
+    let manifest;
+
+    try {
+      if (recipient) {
+        // The recipient envelope seals the bundle whole, so an encrypted export
+        // is still assembled in memory; its plaintext never touches the disk.
+        const chunks = [];
+        const written = writeExportRecords(this.exportRecords(principal, scope), chunk => chunks.push(chunk));
+        recordCount = written.records;
+        const context = `axiom:export:${exportId}:bundle.jsonl`;
+        const envelope = encryptForRecipient(Buffer.concat(chunks), recipient.public_key, context);
+        chunks.length = 0;
+        const storedBundle = Buffer.from(canonicalJson(envelope));
+        encryption = {
+          format: envelope.format,
+          algorithm: envelope.algorithm,
+          context,
+          recipient_key_id: envelope.recipient_key_id,
+          plaintext: {
+            name: 'bundle.jsonl',
+            media_type: 'application/x-ndjson'
+          }
+        };
+        await atomicWrite(bundlePath, storedBundle, 0o600);
+        stored = { bytes: storedBundle.length, sha256: sha256(storedBundle) };
+      } else {
+        // A plaintext bundle is written record by record while it is hashed, so
+        // memory does not grow with the export. The write is synchronous, so the
+        // records come from one consistent read of the database.
+        const temp = `${bundlePath}.${process.pid}.${randomUUID()}.tmp`;
+        const fd = openSync(temp, 'wx', 0o600);
+        let written;
+        try {
+          written = writeExportRecords(this.exportRecords(principal, scope), chunk => writeAllSync(fd, chunk));
+          fsyncSync(fd);
+        } catch (error) {
+          closeSync(fd);
+          rmSync(temp, { force: true });
+          throw error;
+        }
+        closeSync(fd);
+        await replaceFileWithWindowsRetry(temp, bundlePath);
+        recordCount = written.records;
+        stored = { bytes: written.bytes, sha256: written.sha256 };
+      }
+      bundlePublished = true;
+
+      const unsigned = {
+        format: 'axiom-export.v1',
+        schema_versions: {
+          manifest: 1,
+          records: 2,
+          scope: 2,
+          evidence: 1
+        },
+        export_id: exportId,
+        principal,
+        scope: manifestScope,
+        created_at: new Date().toISOString(),
+        record_count: recordCount,
+        files: [
+          {
+            name: bundleName,
+            media_type: bundleMediaType,
+            bytes: stored.bytes,
+            sha256: stored.sha256
+          }
+        ],
+        ...(encryption ? { encryption } : {}),
+        continuity: {
+          mode: 'signed-transparency-log-head',
+          evidence_head: this.getStatus().last_hash
         }
       };
-      await atomicWrite(join(exportDir, bundleName), storedBundle, 0o600);
-      stored = { bytes: storedBundle.length, sha256: sha256(storedBundle) };
-    } else {
-      // A plaintext bundle is written record by record while it is hashed, so
-      // memory does not grow with the export. The write is synchronous, so the
-      // records come from one consistent read of the database.
-      await mkdir(exportDir, { recursive: true, mode: 0o700 });
-      const target = join(exportDir, bundleName);
-      const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
-      const fd = openSync(temp, 'wx', 0o600);
-      let written;
-      try {
-        written = writeExportRecords(this.exportRecords(principal, scope), chunk => writeAllSync(fd, chunk));
-        fsyncSync(fd);
-      } catch (error) {
-        closeSync(fd);
-        rmSync(temp, { force: true });
-        throw error;
-      }
-      closeSync(fd);
-      await rename(temp, target);
-      recordCount = written.records;
-      stored = { bytes: written.bytes, sha256: written.sha256 };
-    }
-    const bundlePath = join(exportDir, bundleName);
-    const unsigned = {
-      format: 'axiom-export.v1',
-      schema_versions: {
-        manifest: 1,
-        records: 2,
-        scope: 2,
-        evidence: 1
-      },
-      export_id: exportId,
-      principal,
-      scope: manifestScope,
-      created_at: new Date().toISOString(),
-      record_count: recordCount,
-      files: [
-        {
-          name: bundleName,
-          media_type: bundleMediaType,
-          bytes: stored.bytes,
-          sha256: stored.sha256
+      manifest = { ...unsigned, attestation: this.identity.signObject(unsigned) };
+      await atomicWrite(join(exportDir, 'manifest.json'), Buffer.from(canonicalJson(manifest)), 0o600);
+      manifestPublished = true;
+    } catch (error) {
+      let rollbackError;
+      if (bundlePublished && !manifestPublished) {
+        try {
+          if (hadPriorBundle) {
+            await replaceFileWithWindowsRetry(rollbackPath, bundlePath);
+          } else {
+            await rm(bundlePath, { force: true });
+          }
+        } catch (caught) {
+          rollbackError = caught;
         }
-      ],
-      ...(encryption ? { encryption } : {}),
-      continuity: {
-        mode: 'signed-transparency-log-head',
-        evidence_head: this.getStatus().last_hash
+      } else {
+        await rm(rollbackPath, { force: true }).catch(() => {});
       }
-    };
-    const manifest = { ...unsigned, attestation: this.identity.signObject(unsigned) };
-    await atomicWrite(join(exportDir, 'manifest.json'), Buffer.from(canonicalJson(manifest)), 0o600);
+      if (rollbackError) {
+        throw new AggregateError(
+          [error, rollbackError],
+          'Export publication failed and the prior bundle could not be restored'
+        );
+      }
+      throw error;
+    }
+
+    await rm(rollbackPath, { force: true });
     this.appendEvents({
       traceId,
       actor: 'grid',
@@ -3696,6 +3730,47 @@ function writeExportRecords(records, sink) {
 function writeAllSync(fd, buffer) {
   let offset = 0;
   while (offset < buffer.length) offset += writeSync(fd, buffer, offset, buffer.length - offset);
+}
+
+function sameFileId(left, right) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function snapshotRegularFileForRollback(path, rollbackPath) {
+  let before;
+  try {
+    before = await lstat(path, { bigint: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  }
+  if (before.isSymbolicLink()) {
+    throw Object.assign(new Error(`bundle must not be a symbolic link: ${path}`), { code: 'ELOOP' });
+  }
+  if (before.isDirectory()) {
+    throw Object.assign(new Error(`bundle must not be a directory: ${path}`), { code: 'EISDIR' });
+  }
+  if (!before.isFile()) {
+    throw Object.assign(new Error(`bundle must be a regular file: ${path}`), { code: 'EINVAL' });
+  }
+
+  await link(path, rollbackPath);
+  try {
+    const [current, rollback] = await Promise.all([
+      lstat(path, { bigint: true }),
+      lstat(rollbackPath, { bigint: true })
+    ]);
+    if (!sameFileId(before, current) || !sameFileId(current, rollback)) {
+      throw Object.assign(
+        new Error(`bundle changed while rollback evidence was captured: ${path}`),
+        { code: 'ESTALE' }
+      );
+    }
+    return true;
+  } catch (error) {
+    await rm(rollbackPath, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 async function atomicWrite(path, content, mode) {
