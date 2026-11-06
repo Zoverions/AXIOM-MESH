@@ -9,6 +9,7 @@ import {
 } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
+import { performance } from 'node:perf_hooks';
 
 const WINDOWS_TRANSIENT_RENAME_CODES = new Set(['EACCES', 'EBUSY', 'EPERM']);
 const MAX_DEADLINE_MS = 10_000;
@@ -37,7 +38,7 @@ function sameIdentity(left, right) {
 
 async function statPath(path) {
   try {
-    return await lstat(path);
+    return await lstat(path, { bigint: true });
   } catch (error) {
     if (error?.code === 'ENOENT') return null;
     throw error;
@@ -63,7 +64,7 @@ async function inspectRegularFile(path, role, { allowMissing = false } = {}) {
 }
 
 async function assertWritableTarget(path, stat) {
-  if ((stat.mode & 0o222) === 0) {
+  if ((stat.mode & 0o222n) === 0n) {
     throw codedError('EACCES', `destination is read-only: ${path}`);
   }
   try {
@@ -100,10 +101,14 @@ export async function replaceFileWithWindowsRetry(source, destination, { deadlin
 
   const sourceIdentity = identity(sourceStat);
   const destinationIdentity = destinationStat ? identity(destinationStat) : null;
-  const deadline = Date.now() + deadlineMs;
+  const deadline = performance.now() + deadlineMs;
   let waitMs = 20;
 
   for (;;) {
+    await assertRetryIdentity(source, sourceIdentity, 'source');
+    await assertRetryIdentity(destination, destinationIdentity, 'destination', {
+      allowMissing: true
+    });
     try {
       await rename(source, destination);
       return;
@@ -111,12 +116,12 @@ export async function replaceFileWithWindowsRetry(source, destination, { deadlin
       const transientWindowsLock = process.platform === 'win32'
         && destinationIdentity !== null
         && WINDOWS_TRANSIENT_RENAME_CODES.has(error?.code);
-      if (!transientWindowsLock || Date.now() >= deadline) throw error;
+      if (!transientWindowsLock || performance.now() >= deadline) throw error;
 
       await assertRetryIdentity(source, sourceIdentity, 'source');
       await assertRetryIdentity(destination, destinationIdentity, 'destination');
 
-      const remaining = deadline - Date.now();
+      const remaining = deadline - performance.now();
       if (remaining <= 0) throw error;
       await delay(Math.min(waitMs, remaining));
       waitMs = Math.min(waitMs * 2, 500);
