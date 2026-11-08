@@ -69,6 +69,11 @@ const GENESIS_HASH = '0'.repeat(64);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const CAPSULE_ID = /^[a-z][a-z0-9.-]{2,127}$/;
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
+
+function windowsPathComponentIdentity(value) {
+  return value.replace(/\.+$/u, '').toLowerCase();
+}
+
 /**
  * Tables derived entirely from the event log by applyMaterializedEvent.
  * Bump CORE_MATERIALIZER_VERSION whenever that logic changes, so anchored
@@ -2743,6 +2748,17 @@ export class GridStore {
     if (!row) throw new AxiomError('export_not_found', 'Export request was not found', 404);
     if (row.status === 'completed') {
       return this.openJson('exports', 'manifest_json', row.export_id, row.manifest_json);
+    }
+    const directoryIdentity = windowsPathComponentIdentity(exportId);
+    const collidingExport = this.db.prepare('SELECT export_id FROM exports WHERE export_id <> ?')
+      .all(exportId)
+      .find(candidate => windowsPathComponentIdentity(candidate.export_id) === directoryIdentity);
+    if (collidingExport) {
+      throw new AxiomError(
+        'export_path_collision',
+        'Export identity is not unique on supported filesystems',
+        409
+      );
     }
     const principal = row.principal;
     const scope = this.openJson('exports', 'scope_json', row.export_id, row.scope_json);
