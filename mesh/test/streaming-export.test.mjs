@@ -164,6 +164,26 @@ test('same-export publication is serialized within one GridStore', async t => {
   assert.deepEqual(second, first);
 });
 
+test('Windows-equivalent persisted export IDs fail closed before publication', async t => {
+  const { store, dataDir } = await openStore(t);
+  const firstId = 'export_Case';
+  const secondId = 'export_case';
+  requestExport(store, firstId, { types: ['identity'] });
+  requestExport(store, secondId, { types: ['identity'] });
+
+  for (const exportId of [firstId, secondId]) {
+    await assert.rejects(
+      store.createExport(exportId, `trace_${exportId}`),
+      error => error?.code === 'export_path_collision'
+    );
+    await assert.rejects(
+      readFile(join(dataDir, 'exports', exportId, 'bundle.jsonl')),
+      error => error?.code === 'ENOENT'
+    );
+    assert.equal(store.getExport(exportId, OWNER).status, 'pending');
+  }
+});
+
 test('plaintext export temp is removed when bundle replacement is rejected', async t => {
   const { store, dataDir } = await openStore(t);
   const exportId = 'export_bundle_rejected';
