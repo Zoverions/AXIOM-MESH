@@ -271,6 +271,32 @@ test('byte views use their actual bounded window and cannot change an already re
   assert.equal(s.session_digest,digest);denied(f.input,/digest/i);
 });
 
+test('artifact length mismatch is rejected before Install Session copies the byte window',()=>{
+  const f=fixture();const name='fixture.artifact.0';const expected=f.input.artifactBytes[name];
+  const mismatched=new Uint8Array(expected.byteLength+1);mismatched.set(expected);
+  f.input.artifactBytes[name]=mismatched;
+
+  const originalFrom=Buffer.from;
+  let mismatchedCopyAttempts=0;
+  Buffer.from=function(value,...args){
+    if(value instanceof Uint8Array&&value.buffer===mismatched.buffer){
+      mismatchedCopyAttempts+=1;
+      throw new Error('Install Session attempted to copy mismatched artifact bytes');
+    }
+    return Reflect.apply(originalFrom,this,[value,...args]);
+  };
+  try{
+    assert.throws(()=>run(f.input),error=>{
+      assert.ok(error instanceof ValidationError,error?.stack);
+      assert.match(error.message,/byte length/i);
+      return true;
+    });
+  }finally{
+    Buffer.from=originalFrom;
+  }
+  assert.equal(mismatchedCopyAttempts,0);
+});
+
 // ---------------------------------------------------------------------------
 // T3/T4 and verified-evidence gates added in the re-scope.
 
@@ -584,7 +610,7 @@ test('structural classifier snapshots the observation before validating it',()=>
   assert.equal(reads,0);
 });
 
-test('byte views are copied through intrinsic accessors, not spoofable own properties',()=>{
+test('byte views are verified through intrinsic accessors, not spoofable own properties',()=>{
   const f=fixture();const name='fixture.artifact.0';
   const view=new Uint8Array(f.input.artifactBytes[name]);
   Object.defineProperty(view,'length',{value:1});

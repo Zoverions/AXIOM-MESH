@@ -813,6 +813,35 @@ test('artifact verifier rejects proxied or lying byte containers and bad options
   assert.equal(verifyInstallReleaseArtifact(target,new Uint8Array(good)).artifact_bytes_verified,true);
 });
 
+test('artifact verifier uses intrinsic byte length and rejects before copying a lying byte view',()=>{
+  const target=manifest().artifacts.find(item=>item.artifact_id==='runtime-personal');
+  const good=artifactBytes['runtime-personal'];
+  class LyingByteLength extends Uint8Array {
+    get byteLength(){return good.byteLength;}
+  }
+  const lying=new LyingByteLength(good.byteLength+1);lying.set(good);
+
+  const originalFrom=Buffer.from;
+  let mismatchedCopyAttempts=0;
+  Buffer.from=function(value,...args){
+    if(value instanceof Uint8Array&&value.byteLength===lying.length){
+      mismatchedCopyAttempts+=1;
+      throw new Error('artifact verifier attempted to copy mismatched bytes');
+    }
+    return Reflect.apply(originalFrom,this,[value,...args]);
+  };
+  try{
+    assert.throws(()=>verifyInstallReleaseArtifact(target,lying),error=>{
+      assert.ok(error instanceof ValidationError,error?.stack);
+      assert.match(error.message,/byte length mismatch/i);
+      return true;
+    });
+  }finally{
+    Buffer.from=originalFrom;
+  }
+  assert.equal(mismatchedCopyAttempts,0);
+});
+
 test('manifest verifier rejects null or proxied options with ValidationError',()=>{
   assertValidationError(()=>verifyInstallReleaseManifest(signPackage(),null),'manifest options:null');
   assertValidationError(()=>verifyInstallReleaseManifest(signPackage(),7),'manifest options:number');

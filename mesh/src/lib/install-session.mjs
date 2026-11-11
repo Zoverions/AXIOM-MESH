@@ -570,8 +570,8 @@ const SESSION_KEYS=Object.freeze([
  * Derive the inert install-session candidate from original evidence only:
  * `{sessionId, hostPlan, releasePackage, expectedReleaseManifestDigest,
  * trustedSigners, artifactBytes, requestedAt, evaluatedAt,
- * maxObservationAgeSeconds}`. Plain data is snapshotted once and byte views
- * are copied from their actual byte range, then:
+ * maxObservationAgeSeconds}`. Plain data is snapshotted once; byte views are
+ * admitted as synchronous verifier input without a preliminary copy, then:
  * - the host plan is checked by main's validateHostInstallPlan;
  * - this function itself verifies the original signed package with
  *   verifyInstallReleaseManifest (repository policy defaults, no caller
@@ -800,9 +800,10 @@ function proofEvidence(proofs){
 }
 
 // A plain record of own enumerable data properties mapping artifact ids to
-// byte views. Each view is copied from its actual byte range through the
-// intrinsic %TypedArray% getters (caller-defined accessors on the view are
-// ignored); shared or detached storage is rejected.
+// byte views. The record is snapshotted without reading caller accessors. Each
+// view remains synchronous plain input for verifyInstallReleaseArtifact, which
+// checks its intrinsic byte length before making the one private copy. Shared
+// storage is rejected here so it cannot race that later verification.
 function snapshotArtifactBytes(value){
   if(utilTypes.isProxy(value)) throw new ValidationError('artifactBytes cannot be a Proxy');
   if(
@@ -826,26 +827,21 @@ function snapshotArtifactBytes(value){
 const TYPED_ARRAY_PROTOTYPE=Object.getPrototypeOf(Uint8Array.prototype);
 const intrinsic=name=>Object.getOwnPropertyDescriptor(TYPED_ARRAY_PROTOTYPE,name).get;
 const TYPED_ARRAY_BUFFER=intrinsic('buffer');
-const TYPED_ARRAY_OFFSET=intrinsic('byteOffset');
-const TYPED_ARRAY_LENGTH=intrinsic('byteLength');
 
 function snapshotBytes(value){
   if(utilTypes.isProxy(value)||!utilTypes.isUint8Array(value)){
     throw new ValidationError('Artifact bytes must be a Buffer or Uint8Array');
   }
-  const buffer=Reflect.apply(TYPED_ARRAY_BUFFER,value,[]);
-  if(utilTypes.isSharedArrayBuffer(buffer)){
-    throw new ValidationError('Shared artifact byte storage is not accepted');
-  }
+  let buffer;
   try{
-    return Buffer.from(new Uint8Array(
-      buffer,
-      Reflect.apply(TYPED_ARRAY_OFFSET,value,[]),
-      Reflect.apply(TYPED_ARRAY_LENGTH,value,[])
-    ));
+    buffer=Reflect.apply(TYPED_ARRAY_BUFFER,value,[]);
   }catch{
     throw new ValidationError('Artifact bytes are unreadable');
   }
+  if(utilTypes.isSharedArrayBuffer(buffer)){
+    throw new ValidationError('Shared artifact byte storage is not accepted');
+  }
+  return value;
 }
 
 function plainArray(v,label,min,max){
