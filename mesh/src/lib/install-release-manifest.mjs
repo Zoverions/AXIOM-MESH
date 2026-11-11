@@ -58,6 +58,10 @@ const ID=/^[A-Za-z0-9][A-Za-z0-9._:/-]{1,191}$/;
 const VERSION=/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/;
 const BASE64URL=/^[A-Za-z0-9_-]{64,256}$/;
 const MAX_IN_MEMORY_ARTIFACT_BYTES=536_870_912;
+const TYPED_ARRAY_PROTOTYPE=Object.getPrototypeOf(Uint8Array.prototype);
+const TYPED_ARRAY_BYTE_LENGTH=Object.getOwnPropertyDescriptor(
+  TYPED_ARRAY_PROTOTYPE,'byteLength'
+).get;
 
 // Results issued by verifyInstallReleaseManifest, mapped to a frozen binding:
 // the signed manifest's digest, release and signer identity, and a frozen
@@ -411,7 +415,13 @@ function verifyArtifactBytes(artifact,bytes){
   if(utilTypes.isProxy(bytes)||!utilTypes.isUint8Array(bytes)){
     throw new ValidationError('Release artifact bytes must be a Buffer or Uint8Array');
   }
-  if(bytes.byteLength!==artifact.byte_length){
+  let byteLength;
+  try{
+    byteLength=Reflect.apply(TYPED_ARRAY_BYTE_LENGTH,bytes,[]);
+  }catch{
+    throw new ValidationError('Release artifact bytes are unreadable');
+  }
+  if(byteLength!==artifact.byte_length){
     throw new ValidationError(`Release artifact byte length mismatch: ${artifact.artifact_id}`);
   }
   let buffer;
