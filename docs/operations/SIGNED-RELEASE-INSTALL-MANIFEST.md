@@ -197,7 +197,7 @@ A gate must never accept a verified result produced by other code. The install-s
 
 **Unbound form:** `verifyInstallReleaseArtifact(artifact, bytes, options)` checks bytes against a caller-supplied metadata record. It is not manifest-backed provenance: its result always carries `manifest_bound: false` and it must never be used as an install gate. `options` may contain only `policy`, as an own enumerable data property; arrays, Proxies, accessors, and inherited, symbol, or unknown fields are rejected without running caller code.
 
-Both forms accept only a non-Proxy `Uint8Array`/`Buffer`, hash a private copy of its bytes, and require the exact signed byte length and SHA-256. Only the byte content is read; other properties on the byte container are ignored.
+Both forms accept only a non-Proxy `Uint8Array`/`Buffer`. Signed artifact metadata is capped at 512 MiB while this verifier remains an in-memory boundary. The verifier rejects an exact-length mismatch before allocating its private copy, then hashes that copy and requires the signed SHA-256. Only the byte content is read; other properties on the byte container are ignored. A future larger release artifact requires a separately reviewed streaming verifier rather than raising this bound silently.
 
 The verifier's source boundary test forbids ambient and dynamic code in this module and the modules it imports: `process`, `globalThis`, dynamic `import()`, `require(`, the `Function` constructor, `eval`, and reaching a constructor through a member access (`.constructor`, `['constructor']`).
 
@@ -292,7 +292,7 @@ The v1 verifier fails closed against:
 10. stale Node/npm toolchain assumptions;
 11. stale migration generation;
 12. duplicate/invalid artifact metadata;
-13. local artifact length/digest mismatch;
+13. local artifact over-limit, length, or digest mismatch;
 14. signed attempts to create install/Mesh/network authority;
 15. omitted required non-claims;
 16. proxy/accessor/hidden/symbol/custom-array input smuggling.
