@@ -137,6 +137,60 @@ test('a failed manifest replacement restores the prior bundle and manifest pair'
   assert.equal(store.getExport(exportId, OWNER).status, 'pending');
 });
 
+test('a failed completion commit retains prior-pair evidence and blocks republish', async t => {
+  const { store, dataDir } = await openStore(t);
+  const exportId = 'export_completion_recovery';
+  const exportDir = join(dataDir, 'exports', exportId);
+  requestExport(store, exportId, { types: ['events'] });
+
+  const appendEvents = store.appendEvents.bind(store);
+  store.appendEvents = () => {
+    throw new Error('stop after publishing the initial pair');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_completion_initial'),
+    /stop after publishing the initial pair/
+  );
+  store.appendEvents = appendEvents;
+
+  const bundlePath = join(exportDir, 'bundle.jsonl');
+  const manifestPath = join(exportDir, 'manifest.json');
+  const originalBundle = await readFile(bundlePath);
+  const originalManifest = await readFile(manifestPath);
+  echo(store, 1, 96);
+
+  store.appendEvents = () => {
+    throw new Error('stop before recording completion');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_completion_failure'),
+    /stop before recording completion/
+  );
+  store.appendEvents = appendEvents;
+
+  const publishedBundle = await readFile(bundlePath);
+  const publishedManifest = await readFile(manifestPath);
+  assert.notDeepEqual(publishedBundle, originalBundle);
+  assert.notDeepEqual(publishedManifest, originalManifest);
+
+  const filesAfterFailure = (await readdir(exportDir)).sort();
+  const rollbackName = filesAfterFailure.find(name => (
+    name.startsWith('bundle.jsonl.') && name.endsWith('.rollback')
+  ));
+  assert.ok(rollbackName);
+  assert.deepEqual(await readFile(join(exportDir, rollbackName)), originalBundle);
+
+  await assert.rejects(
+    store.createExport(exportId, 'trace_completion_retry'),
+    error => error?.code === 'export_recovery_required'
+  );
+
+  assert.deepEqual(await readFile(bundlePath), publishedBundle);
+  assert.deepEqual(await readFile(manifestPath), publishedManifest);
+  assert.deepEqual(await readFile(join(exportDir, rollbackName)), originalBundle);
+  assert.equal(store.getExport(exportId, OWNER).status, 'pending');
+});
+
 test('a failed prior-bundle restore retains evidence and blocks an unsafe retry', async t => {
   const { store, dataDir } = await openStore(t);
   const exportId = 'export_recovery_required';
