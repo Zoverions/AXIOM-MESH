@@ -2788,6 +2788,7 @@ export class GridStore {
       if (!verifyObjectSignature(unsigned, signature, verificationKey)) return null;
 
       bundlePath = join(exportDir, file.name);
+      if (!(await lstat(bundlePath)).isFile()) return null;
       const bundleHash = createHash('sha256');
       let bundleBytes = 0;
       for await (const chunk of createReadStream(bundlePath)) {
