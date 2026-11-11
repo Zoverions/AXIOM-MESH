@@ -8,6 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createHash, createPublicKey, randomUUID } from 'node:crypto';
 import {
   closeSync,
+  createReadStream,
   fsyncSync,
   lstatSync,
   openSync,
@@ -2787,8 +2788,14 @@ export class GridStore {
       if (!verifyObjectSignature(unsigned, signature, verificationKey)) return null;
 
       bundlePath = join(exportDir, file.name);
-      const bundle = await readFile(bundlePath);
-      if (bundle.length !== file.bytes || sha256(bundle) !== file.sha256) return null;
+      const bundleHash = createHash('sha256');
+      let bundleBytes = 0;
+      for await (const chunk of createReadStream(bundlePath)) {
+        bundleBytes += chunk.length;
+        if (!Number.isSafeInteger(bundleBytes) || bundleBytes > file.bytes) return null;
+        bundleHash.update(chunk);
+      }
+      if (bundleBytes !== file.bytes || bundleHash.digest('hex') !== file.sha256) return null;
     } catch {
       return null;
     }
