@@ -71,6 +71,20 @@ install. An external release authority must still sign the canonical statement
 and the normal verifier must accept that detached signature against an
 independently supplied trusted-signer inventory.
 
+The repository also exposes that builder as a bounded stdin/stdout command:
+
+```bash
+npm run --silent release:manifest:build < release-manifest-input.json > unsigned-manifest.json
+```
+
+The command accepts at most 1 MiB of JSON input and emits one canonical JSON
+statement. It does not read an input path, write a repository or release file,
+generate or load a signing key, create a signature package, publish bytes, pin
+a trust root, authorize an install, mutate a host, or contact a network. The
+output remains unsigned evidence for a separately controlled external release
+authority; redirecting stdout is an operator shell action, not command-owned
+publication or approval.
+
 Adversarial tests:
 
 - `mesh/test/install-release-manifest.test.mjs`
