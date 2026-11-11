@@ -2893,7 +2893,6 @@ export class GridStore {
       throw error;
     }
 
-    await rm(rollbackPath, { force: true }).catch(() => {});
     this.appendEvents({
       traceId,
       actor: 'grid',
@@ -2907,6 +2906,7 @@ export class GridStore {
         }
       }]
     });
+    await rm(rollbackPath, { force: true }).catch(() => {});
     return manifest;
   }
 
