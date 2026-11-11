@@ -59,6 +59,18 @@ Verifier:
 
 - `mesh/src/lib/install-release-manifest.mjs`
 
+The same module exports `buildInstallReleaseManifestStatement(input)` for the
+bounded step before external signing. It derives current toolchain, migration,
+install-profile status, control-plane digests, mandatory non-claims, and all
+zero-authority fields from the canonical repository sources while accepting
+the exact release identity, validity window, future external signer key ID,
+profile IDs, rollback declaration, and artifact metadata as explicit input.
+It returns a deeply frozen **unsigned** statement. It does not generate a key,
+create a signature package, pin a trust root, publish bytes, or authorize an
+install. An external release authority must still sign the canonical statement
+and the normal verifier must accept that detached signature against an
+independently supplied trusted-signer inventory.
+
 Adversarial tests:
 
 - `mesh/test/install-release-manifest.test.mjs`

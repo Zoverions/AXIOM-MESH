@@ -141,6 +141,89 @@ export function validateInstallReleaseManifestPolicy(policy=manifestPolicy){
   });
 }
 
+// Assemble the exact unsigned statement that an external release authority may
+// choose to sign. This creates no key, signature, trust root, publication,
+// install permission or host effect; successful verification still requires
+// the separately supplied trusted-signer inventory and detached signature.
+export function buildInstallReleaseManifestStatement(input){
+  exactObject(input,'Install release manifest statement input',[
+    'release_id','channel','source_revision','issued_at','valid_until',
+    'signing_key_id','install_profiles','rollback_mode',
+    'minimum_compatible_kernel','artifacts'
+  ]);
+  validateInstallReleaseManifestPolicy(manifestPolicy);
+  stringArray(input.install_profiles,'Install release statement profiles',{
+    min:1,max:manifestPolicy.install_profiles.length,itemMax:64
+  });
+  const targets=new Map(installTargets.targets.map(target=>[target.id,target]));
+  const profiles=input.install_profiles.map(id=>({
+    id,
+    target_status:targets.get(id)?.status
+  }));
+  const issuedAt=parseInstant(input.issued_at,'manifest issued_at');
+  const validUntil=parseInstant(input.valid_until,'manifest valid_until');
+  if(validUntil<=issuedAt) throw new ValidationError('Install release manifest validity window is invalid');
+  if((validUntil-issuedAt)/1000>manifestPolicy.max_validity_seconds){
+    throw new ValidationError('Install release manifest validity exceeds policy');
+  }
+  const statement={
+    schema:INSTALL_RELEASE_MANIFEST_SCHEMA,
+    version:1,
+    release_id:input.release_id,
+    kernel_version:installTargets.kernel_version,
+    channel:input.channel,
+    production_promoted:false,
+    source_revision:input.source_revision,
+    issued_at:input.issued_at,
+    valid_until:input.valid_until,
+    signing_key_id:input.signing_key_id,
+    install_profiles:profiles,
+    toolchain:{
+      node_engine:sourceSetupPolicy.runtime.engine,
+      node_ci_version:sourceSetupPolicy.runtime.ci_version,
+      node_hosted_production_version:sourceSetupPolicy.runtime.hosted_production_version,
+      node_container_version:sourceSetupPolicy.runtime.production_version,
+      npm_minimum_version:sourceSetupPolicy.package_manager.minimum_version,
+      npm_major_exclusive:sourceSetupPolicy.package_manager.maximum_major_exclusive,
+      npm_compatibility_minimum_version:sourceSetupPolicy.package_manager.compatibility_minimum_version,
+      npm_compatibility_major_exclusive:sourceSetupPolicy.package_manager.compatibility_maximum_major_exclusive
+    },
+    data_compatibility:{
+      migration_generation:MIGRATIONS.length,
+      rollback_mode:input.rollback_mode,
+      minimum_compatible_kernel:input.minimum_compatible_kernel
+    },
+    control_plane:{
+      install_targets_sha256:digestObject(installTargets),
+      host_install_policy_sha256:digestObject(hostInstallPolicy),
+      capability_registry_sha256:digestObject(capabilityRegistry),
+      application_catalog_sha256:digestObject(applicationCatalog),
+      service_network_policy_sha256:digestObject(serviceNetworkPolicy),
+      source_setup_policy_sha256:digestObject(sourceSetupPolicy)
+    },
+    artifacts:snapshotDelegationPlainData(
+      input.artifacts,
+      'Install release statement artifacts'
+    ),
+    non_claims:[...REQUIRED_NON_CLAIMS],
+    installation_grants_authority:false,
+    host_mutation_authorized:false,
+    authority_effect:'none',
+    network_effect:'none'
+  };
+  validateManifest(statement,{
+    policy:manifestPolicy,
+    currentInstallTargets:installTargets,
+    currentHostInstallPolicy:hostInstallPolicy,
+    currentCapabilityRegistry:capabilityRegistry,
+    currentApplicationCatalog:applicationCatalog,
+    currentServiceNetworkPolicy:serviceNetworkPolicy,
+    currentSourceSetupPolicy:sourceSetupPolicy,
+    migrationGeneration:MIGRATIONS.length
+  });
+  return deepFreeze(statement);
+}
+
 export function verifyInstallReleaseManifest(packageValue,options={}){
   optionsRecord(options);
   // Own properties only (as the artifact form's policy): an inherited key, for
