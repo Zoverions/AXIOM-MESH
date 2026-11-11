@@ -17,6 +17,7 @@ import sourceSetupPolicy from '../config/setup.json' with { type: 'json' };
 import releasePolicy from '../config/install-release-manifest-policy.json' with { type: 'json' };
 import { MIGRATIONS } from '../src/grid/migrations.mjs';
 import {
+  buildInstallReleaseManifestStatement,
   INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA,
   INSTALL_RELEASE_MANIFEST_SCHEMA,
   TRUST_ROOT_SIGNER_SET_SCHEMA,
@@ -125,6 +126,28 @@ function manifest(overrides={}){
   };
 }
 
+function manifestStatementInput(overrides={}){
+  return {
+    release_id:'axiom-mesh/0.12.0-dev.3/test-release',
+    channel:'development',
+    source_revision:'a'.repeat(40),
+    issued_at:'2026-09-28T00:30:00.000Z',
+    valid_until:'2026-09-28T02:00:00.000Z',
+    signing_key_id:KEY_ID,
+    install_profiles:['personal-local','infrastructure-node'],
+    rollback_mode:'migration-specific',
+    minimum_compatible_kernel:'0.12.0-dev.3',
+    artifacts:[
+      artifact('runtime-personal','oci-image',['personal-local']),
+      artifact('runtime-infrastructure','oci-image',['infrastructure-node']),
+      artifact('documentation','documentation-bundle',['personal-local','infrastructure-node']),
+      artifact('sbom','sbom',['personal-local','infrastructure-node']),
+      artifact('provenance','provenance',['personal-local','infrastructure-node'])
+    ],
+    ...overrides
+  };
+}
+
 function signPackage(value=manifest(),privateKey=pair.privateKey){
   const body=canonicalJson(value);
   return {
@@ -163,6 +186,39 @@ test('policy retains external trust and zero authority',()=>{
   assert.equal(result.signer_custody,'external');
   assert.equal(result.host_mutation_authorized,false);
   assert.equal(result.authority_effect,'none');
+});
+
+test('builder emits an unsigned current-control-plane statement that only external signing can verify',()=>{
+  const value=buildInstallReleaseManifestStatement(manifestStatementInput());
+
+  assert.equal(value.schema,'axiom-install-release-manifest.v1');
+  assert.equal(value.kernel_version,'0.12.0-dev.3');
+  assert.equal(value.source_revision,'a'.repeat(40));
+  assert.deepEqual(value.install_profiles,[
+    {id:'personal-local',target_status:'specified'},
+    {id:'infrastructure-node',target_status:'specified'}
+  ]);
+  assert.deepEqual(value.control_plane,{
+    install_targets_sha256:digestObject(installTargets),
+    host_install_policy_sha256:digestObject(hostInstallPolicy),
+    capability_registry_sha256:digestObject(capabilityRegistry),
+    application_catalog_sha256:digestObject(applicationCatalog),
+    service_network_policy_sha256:digestObject(serviceNetworkPolicy),
+    source_setup_policy_sha256:digestObject(sourceSetupPolicy)
+  });
+  assert.equal(value.production_promoted,false);
+  assert.equal(value.installation_grants_authority,false);
+  assert.equal(value.host_mutation_authorized,false);
+  assert.equal(value.authority_effect,'none');
+  assert.equal(value.network_effect,'none');
+  assert.equal(Object.hasOwn(value,'signature'),false);
+  assert.equal(Object.isFrozen(value),true);
+  assert.equal(Object.isFrozen(value.artifacts),true);
+
+  const verified=verify(signPackage(value));
+  assert.equal(verified.manifest_digest,sha256(canonicalJson(value)));
+  assert.equal(verified.signature_verified,true);
+  assert.equal(verified.host_mutation_authorized,false);
 });
 
 test('valid signed release input binds current control plane without authorizing install',()=>{
