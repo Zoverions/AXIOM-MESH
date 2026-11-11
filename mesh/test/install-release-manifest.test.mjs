@@ -199,6 +199,30 @@ test('artifact bytes require an exact local digest and length check',()=>{
   );
 });
 
+test('signed artifact metadata cannot exceed the in-memory verifier bound',()=>{
+  const value=manifest();
+  value.artifacts[0]={
+    ...value.artifacts[0],
+    byte_length:536_870_913
+  };
+  assert.throws(
+    ()=>verify(signPackage(value)),
+    /artifact byte length exceeds verifier limit/
+  );
+});
+
+test('artifact length mismatch is rejected before the verifier reads bytes',()=>{
+  const value=manifest();
+  const target=value.artifacts.find(item=>item.artifact_id==='runtime-personal');
+  const detached=new Uint8Array(artifactBytes['runtime-personal']);
+  structuredClone(detached.buffer,{transfer:[detached.buffer]});
+  assert.equal(detached.byteLength,0);
+  assert.throws(
+    ()=>verifyInstallReleaseArtifact(target,detached),
+    error=>error instanceof ValidationError&&/byte length mismatch/.test(error.message)
+  );
+});
+
 test('signed package cannot supply or substitute its own trust root',()=>{
   const selfTrust={...signPackage(),public_key:publicPem};
   assert.throws(()=>verify(selfTrust),/key inventory drifted/);
@@ -777,7 +801,7 @@ test('artifact verifier rejects proxied or lying byte containers and bad options
   assert.throws(()=>verifyInstallReleaseArtifact(target,lying),/byte length mismatch/);
   const detached=new Uint8Array(good);
   detached.buffer.transfer();
-  assert.throws(()=>verifyInstallReleaseArtifact(target,detached),/Release artifact bytes are unreadable/);
+  assert.throws(()=>verifyInstallReleaseArtifact(target,detached),/Release artifact byte length mismatch/);
 
   assertValidationError(()=>verifyInstallReleaseArtifact(target,good,null),'artifact options:null');
   assertValidationError(()=>verifyInstallReleaseArtifact(target,good,'policy'),'artifact options:string');
@@ -1094,7 +1118,7 @@ test('#1914 bound form rejects byte tampering, length mismatch and substituted a
   assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',lying),/byte length mismatch/);
   const detached=new Uint8Array(good);
   detached.buffer.transfer();
-  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',detached),/bytes are unreadable/);
+  assert.throws(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',detached),/byte length mismatch/);
   for(const bytes of [[...good],good.toString('hex'),undefined,null,new DataView(new ArrayBuffer(4))]){
     assertValidationError(()=>verifyInstallReleaseArtifact(verified,'runtime-personal',bytes),`non-byte input ${typeof bytes}`);
   }
