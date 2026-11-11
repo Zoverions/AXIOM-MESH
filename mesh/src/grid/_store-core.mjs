@@ -16,7 +16,7 @@ import {
   rmSync,
   writeSync
 } from 'node:fs';
-import { link, lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { link, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
   AxiomError,
@@ -2746,8 +2746,18 @@ export class GridStore {
   async createExportPublication(exportId, traceId) {
     const row = this.db.prepare('SELECT * FROM exports WHERE export_id = ?').get(exportId);
     if (!row) throw new AxiomError('export_not_found', 'Export request was not found', 404);
+    const exportDir = join(this.dataDir, 'exports', exportId);
+    const recoverySnapshots = await listExportRollbackSnapshots(exportDir);
     if (row.status === 'completed') {
+      await cleanupExportRollbackSnapshots(recoverySnapshots);
       return this.openJson('exports', 'manifest_json', row.export_id, row.manifest_json);
+    }
+    if (recoverySnapshots.length) {
+      throw new AxiomError(
+        'export_recovery_required',
+        'Export publication has retained rollback evidence and requires bounded recovery',
+        409
+      );
     }
     const directoryIdentity = windowsPathComponentIdentity(exportId);
     const collidingExport = this.db.prepare('SELECT export_id FROM exports WHERE export_id <> ?')
@@ -2762,7 +2772,6 @@ export class GridStore {
     }
     const principal = row.principal;
     const scope = this.openJson('exports', 'scope_json', row.export_id, row.scope_json);
-    const exportDir = join(this.dataDir, 'exports', exportId);
     const recipient = scope.recipient;
     const manifestScope = structuredClone(scope);
     if (manifestScope.recipient) {
@@ -2884,7 +2893,7 @@ export class GridStore {
       throw error;
     }
 
-    await rm(rollbackPath, { force: true });
+    await rm(rollbackPath, { force: true }).catch(() => {});
     this.appendEvents({
       traceId,
       actor: 'grid',
@@ -3775,6 +3784,32 @@ function writeExportRecords(records, sink) {
 function writeAllSync(fd, buffer) {
   let offset = 0;
   while (offset < buffer.length) offset += writeSync(fd, buffer, offset, buffer.length - offset);
+}
+
+/**
+ * Lists retained rollback evidence without following or interpreting entries.
+ */
+async function listExportRollbackSnapshots(exportDir) {
+  let entries;
+  try {
+    entries = await readdir(exportDir);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
+  return entries
+    .filter(name => (
+      (name.startsWith('bundle.jsonl.') || name.startsWith('bundle.encrypted.json.'))
+      && name.endsWith('.rollback')
+    ))
+    .map(name => join(exportDir, name));
+}
+
+/**
+ * Removes obsolete rollback evidence after a completed pair is authoritative.
+ */
+async function cleanupExportRollbackSnapshots(paths) {
+  await Promise.all(paths.map(path => rm(path, { force: true }).catch(() => {})));
 }
 
 /**
