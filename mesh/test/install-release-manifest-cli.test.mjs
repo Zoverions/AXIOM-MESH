@@ -56,12 +56,12 @@ function run(stdin,argv=['build-unsigned']){
 }
 
 function runPackageScript(stdin){
-  const npm=process.platform==='win32'?'npm.cmd':'npm';
-  return spawnSync(npm,['run','--silent','release:manifest:build'],{
+  return spawnSync('npm run --silent release:manifest:build',{
     cwd:REPOSITORY_ROOT,
     input:stdin,
     encoding:'utf8',
-    maxBuffer:4*1024*1024
+    maxBuffer:4*1024*1024,
+    shell:true
   });
 }
 
