@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmodSync } from 'node:fs';
+import { chmod, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -99,6 +100,233 @@ test('an export whose scope fails part-way leaves no bundle and stays pending', 
   await assert.rejects(store.createExport('export_bad', 'trace_bad'), error => error.code === 'export_scope_forbidden');
   assert.deepEqual(await readdir(join(dataDir, 'exports', 'export_bad')), [], 'no bundle or temporary file is left');
   assert.equal(store.getExport('export_bad', OWNER).status, 'pending');
+});
+
+test('a failed manifest replacement restores the prior bundle and manifest pair', async t => {
+  const { store, dataDir } = await openStore(t);
+  const exportId = 'export_pair_rollback';
+  const exportDir = join(dataDir, 'exports', exportId);
+  requestExport(store, exportId, { types: ['events'] });
+
+  const appendEvents = store.appendEvents.bind(store);
+  store.appendEvents = () => {
+    throw new Error('stop after publishing the initial pair');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_pair_initial'),
+    /stop after publishing the initial pair/
+  );
+  store.appendEvents = appendEvents;
+
+  const bundlePath = join(exportDir, 'bundle.jsonl');
+  const manifestPath = join(exportDir, 'manifest.json');
+  const originalBundle = await readFile(bundlePath);
+  const originalManifest = await readFile(manifestPath);
+  echo(store, 1, 96);
+  await chmod(manifestPath, 0o400);
+  t.after(() => chmod(manifestPath, 0o600).catch(() => {}));
+
+  await assert.rejects(
+    store.createExport(exportId, 'trace_pair_retry'),
+    error => error?.code === 'EACCES'
+  );
+
+  assert.deepEqual(await readFile(bundlePath), originalBundle);
+  assert.deepEqual(await readFile(manifestPath), originalManifest);
+  assert.deepEqual((await readdir(exportDir)).sort(), ['bundle.jsonl', 'manifest.json']);
+  assert.equal(store.getExport(exportId, OWNER).status, 'pending');
+});
+
+test('a valid interrupted completion finishes without republishing files', async t => {
+  const { store, dataDir } = await openStore(t);
+  const exportId = 'export_completion_recovery';
+  const exportDir = join(dataDir, 'exports', exportId);
+  requestExport(store, exportId, { types: ['events'] });
+
+  const appendEvents = store.appendEvents.bind(store);
+  store.appendEvents = () => {
+    throw new Error('stop after publishing the initial pair');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_completion_initial'),
+    /stop after publishing the initial pair/
+  );
+  store.appendEvents = appendEvents;
+
+  const bundlePath = join(exportDir, 'bundle.jsonl');
+  const manifestPath = join(exportDir, 'manifest.json');
+  const originalBundle = await readFile(bundlePath);
+  const originalManifest = await readFile(manifestPath);
+  echo(store, 1, 96);
+
+  store.appendEvents = () => {
+    throw new Error('stop before recording completion');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_completion_failure'),
+    /stop before recording completion/
+  );
+  store.appendEvents = appendEvents;
+
+  const publishedBundle = await readFile(bundlePath);
+  const publishedManifest = await readFile(manifestPath);
+  assert.notDeepEqual(publishedBundle, originalBundle);
+  assert.notDeepEqual(publishedManifest, originalManifest);
+
+  const filesAfterFailure = (await readdir(exportDir)).sort();
+  const rollbackName = filesAfterFailure.find(name => (
+    name.startsWith('bundle.jsonl.') && name.endsWith('.rollback')
+  ));
+  assert.ok(rollbackName);
+  assert.deepEqual(await readFile(join(exportDir, rollbackName)), originalBundle);
+
+  const recovered = await store.createExport(exportId, 'trace_completion_retry');
+
+  assert.deepEqual(recovered, JSON.parse(publishedManifest.toString('utf8')));
+  assert.deepEqual(await readFile(bundlePath), publishedBundle);
+  assert.deepEqual(await readFile(manifestPath), publishedManifest);
+  await assert.rejects(
+    readFile(join(exportDir, rollbackName)),
+    error => error?.code === 'ENOENT'
+  );
+  assert.deepEqual((await readdir(exportDir)).sort(), ['bundle.jsonl', 'manifest.json']);
+  assert.equal(store.getExport(exportId, OWNER).status, 'completed');
+});
+
+test('a failed prior-bundle restore retains evidence and blocks an unsafe retry', async t => {
+  const { store, dataDir } = await openStore(t);
+  const exportId = 'export_recovery_required';
+  const exportDir = join(dataDir, 'exports', exportId);
+  requestExport(store, exportId, { types: ['events'] });
+
+  const appendEvents = store.appendEvents.bind(store);
+  store.appendEvents = () => {
+    throw new Error('stop after publishing the initial pair');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_recovery_initial'),
+    /stop after publishing the initial pair/
+  );
+  store.appendEvents = appendEvents;
+
+  const bundlePath = join(exportDir, 'bundle.jsonl');
+  const manifestPath = join(exportDir, 'manifest.json');
+  const originalBundle = await readFile(bundlePath);
+  const originalManifest = await readFile(manifestPath);
+  echo(store, 1, 96);
+  await chmod(manifestPath, 0o400);
+
+  const getStatus = store.getStatus.bind(store);
+  store.getStatus = (...args) => {
+    chmodSync(bundlePath, 0o400);
+    return getStatus(...args);
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_recovery_failure'),
+    error => error instanceof AggregateError
+  );
+  store.getStatus = getStatus;
+  await chmod(bundlePath, 0o600);
+  await chmod(manifestPath, 0o600);
+
+  const filesAfterFailure = (await readdir(exportDir)).sort();
+  const rollbackName = filesAfterFailure.find(name => (
+    name.startsWith('bundle.jsonl.') && name.endsWith('.rollback')
+  ));
+  assert.ok(rollbackName);
+  assert.notDeepEqual(await readFile(bundlePath), originalBundle);
+  assert.deepEqual(await readFile(manifestPath), originalManifest);
+  assert.deepEqual(await readFile(join(exportDir, rollbackName)), originalBundle);
+
+  const unsafeBundle = await readFile(bundlePath);
+  await assert.rejects(
+    store.createExport(exportId, 'trace_recovery_retry'),
+    error => error?.code === 'export_recovery_required'
+  );
+
+  assert.deepEqual(await readFile(bundlePath), unsafeBundle);
+  assert.deepEqual(await readFile(manifestPath), originalManifest);
+  assert.deepEqual(await readFile(join(exportDir, rollbackName)), originalBundle);
+  assert.equal(store.getExport(exportId, OWNER).status, 'pending');
+});
+
+test('same-export publication is serialized within one GridStore', async t => {
+  const { store } = await openStore(t);
+  const exportId = 'export_serialized';
+  requestExport(store, exportId, { types: ['identity'] });
+  const publish = store.createExportPublication.bind(store);
+  let active = 0;
+  let peak = 0;
+  store.createExportPublication = async (...args) => {
+    active += 1;
+    peak = Math.max(peak, active);
+    await new Promise(resolve => setTimeout(resolve, 25));
+    try {
+      return await publish(...args);
+    } finally {
+      active -= 1;
+    }
+  };
+
+  const [first, second] = await Promise.all([
+    store.createExport(exportId, 'trace_serialized_1'),
+    store.createExport(exportId, 'trace_serialized_2')
+  ]);
+
+  assert.equal(peak, 1);
+  assert.equal(first.export_id, exportId);
+  assert.deepEqual(second, first);
+});
+
+test('Windows-equivalent persisted export IDs fail closed before publication', async t => {
+  const { store, dataDir } = await openStore(t);
+  const firstId = 'export_Case';
+  const secondId = 'export_case';
+  requestExport(store, firstId, { types: ['identity'] });
+  requestExport(store, secondId, { types: ['identity'] });
+
+  for (const exportId of [firstId, secondId]) {
+    await assert.rejects(
+      store.createExport(exportId, `trace_${exportId}`),
+      error => error?.code === 'export_path_collision'
+    );
+    await assert.rejects(
+      readFile(join(dataDir, 'exports', exportId, 'bundle.jsonl')),
+      error => error?.code === 'ENOENT'
+    );
+    assert.equal(store.getExport(exportId, OWNER).status, 'pending');
+  }
+});
+
+test('plaintext export temp is removed when bundle replacement is rejected', async t => {
+  const { store, dataDir } = await openStore(t);
+  const exportId = 'export_bundle_rejected';
+  const exportDir = join(dataDir, 'exports', exportId);
+  requestExport(store, exportId, { types: ['events'] });
+
+  const appendEvents = store.appendEvents.bind(store);
+  store.appendEvents = () => {
+    throw new Error('stop after publishing the initial pair');
+  };
+  await assert.rejects(
+    store.createExport(exportId, 'trace_bundle_initial'),
+    /stop after publishing the initial pair/
+  );
+  store.appendEvents = appendEvents;
+
+  const bundlePath = join(exportDir, 'bundle.jsonl');
+  const originalBundle = await readFile(bundlePath);
+  await chmod(bundlePath, 0o400);
+  t.after(() => chmod(bundlePath, 0o600).catch(() => {}));
+
+  await assert.rejects(
+    store.createExport(exportId, 'trace_bundle_retry'),
+    error => error?.code === 'EACCES'
+  );
+
+  assert.deepEqual(await readFile(bundlePath), originalBundle);
+  assert.deepEqual((await readdir(exportDir)).sort(), ['bundle.jsonl', 'manifest.json']);
+  assert.equal(store.getExport(exportId, OWNER).status, 'pending');
 });
 
 test('export generation holds bounded memory, whatever the export size', async t => {
