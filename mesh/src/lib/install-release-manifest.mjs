@@ -57,6 +57,7 @@ const REVISION=/^[a-f0-9]{40}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:/-]{1,191}$/;
 const VERSION=/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/;
 const BASE64URL=/^[A-Za-z0-9_-]{64,256}$/;
+const MAX_IN_MEMORY_ARTIFACT_BYTES=536_870_912;
 
 // Results issued by verifyInstallReleaseManifest, mapped to a frozen binding:
 // the signed manifest's digest, release and signer identity, and a frozen
@@ -313,8 +314,9 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
  * accessors, inherited or unknown fields are rejected without running caller
  * code.
  *
- * In both forms bytes must be a non-Proxy `Uint8Array`/`Buffer`; a private copy
- * is hashed and must match the exact byte length and SHA-256.
+ * In both forms bytes must be a non-Proxy `Uint8Array`/`Buffer`; artifact
+ * metadata is capped at 512 MiB, the exact byte length is checked before a
+ * private copy is made, and that copy must match the signed SHA-256.
  */
 export function verifyInstallReleaseArtifact(subject,second,...rest){
   // typeof never runs caller code, even on a Proxy.
@@ -408,6 +410,9 @@ function issuedManifestBinding(verifiedResult){
 function verifyArtifactBytes(artifact,bytes){
   if(utilTypes.isProxy(bytes)||!utilTypes.isUint8Array(bytes)){
     throw new ValidationError('Release artifact bytes must be a Buffer or Uint8Array');
+  }
+  if(bytes.byteLength!==artifact.byte_length){
+    throw new ValidationError(`Release artifact byte length mismatch: ${artifact.artifact_id}`);
   }
   let buffer;
   try{
@@ -586,8 +591,10 @@ function validateArtifact(artifact,profileIds,policy=manifestPolicy){
     ||!matches(SHA256,artifact.sha256)
     ||!Number.isSafeInteger(artifact.byte_length)
     ||artifact.byte_length<1
-    ||artifact.byte_length>1_000_000_000_000
   ) throw new ValidationError('Install release artifact metadata is invalid');
+  if(artifact.byte_length>MAX_IN_MEMORY_ARTIFACT_BYTES){
+    throw new ValidationError('Install release artifact byte length exceeds verifier limit');
+  }
 
   stringArray(artifact.required_for_profiles,'Install release artifact profiles',{
     min:1,max:PROFILES.length,itemMax:64
