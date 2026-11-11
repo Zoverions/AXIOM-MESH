@@ -2741,6 +2741,76 @@ export class GridStore {
   }
 
   /**
+   * Finishes an interrupted completion event only for a fully verified pair.
+   * Invalid or uncertain state is left untouched for bounded recovery.
+   */
+  async finishInterruptedExportPublication(row, exportDir, recoverySnapshots, traceId) {
+    let manifest;
+    let bundlePath;
+    try {
+      manifest = JSON.parse(await readFile(join(exportDir, 'manifest.json'), 'utf8'));
+      if (
+        !manifest
+        || typeof manifest !== 'object'
+        || Array.isArray(manifest)
+        || manifest.format !== 'axiom-export.v1'
+        || manifest.export_id !== row.export_id
+        || manifest.principal !== row.principal
+        || !Array.isArray(manifest.files)
+        || manifest.files.length !== 1
+      ) return null;
+
+      const file = manifest.files[0];
+      if (
+        !file
+        || typeof file !== 'object'
+        || !['bundle.jsonl', 'bundle.encrypted.json'].includes(file.name)
+        || !Number.isSafeInteger(file.bytes)
+        || file.bytes < 0
+        || typeof file.sha256 !== 'string'
+        || !/^[0-9a-f]{64}$/.test(file.sha256)
+      ) return null;
+
+      const expectedScope = structuredClone(
+        this.openJson('exports', 'scope_json', row.export_id, row.scope_json)
+      );
+      if (expectedScope.recipient) {
+        expectedScope.recipient = { key_id: expectedScope.recipient.key_id };
+      }
+      if (canonicalJson(manifest.scope) !== canonicalJson(expectedScope)) return null;
+
+      const verificationKey = this.verificationKeys.get(manifest.attestation?.key_id);
+      if (!verificationKey) return null;
+      const unsigned = structuredClone(manifest);
+      const signature = unsigned.attestation;
+      delete unsigned.attestation;
+      if (!verifyObjectSignature(unsigned, signature, verificationKey)) return null;
+
+      bundlePath = join(exportDir, file.name);
+      const bundle = await readFile(bundlePath);
+      if (bundle.length !== file.bytes || sha256(bundle) !== file.sha256) return null;
+    } catch {
+      return null;
+    }
+
+    this.appendEvents({
+      traceId,
+      actor: 'grid',
+      events: [{
+        kind: 'export.completed',
+        subject: row.export_id,
+        payload: {
+          export_id: row.export_id,
+          bundle_path: bundlePath,
+          manifest
+        }
+      }]
+    });
+    await cleanupExportRollbackSnapshots(recoverySnapshots);
+    return manifest;
+  }
+
+  /**
    * Publishes one export while createExport holds the per-export queue.
    */
   async createExportPublication(exportId, traceId) {
@@ -2753,6 +2823,13 @@ export class GridStore {
       return this.openJson('exports', 'manifest_json', row.export_id, row.manifest_json);
     }
     if (recoverySnapshots.length) {
+      const recovered = await this.finishInterruptedExportPublication(
+        row,
+        exportDir,
+        recoverySnapshots,
+        traceId
+      );
+      if (recovered) return recovered;
       throw new AxiomError(
         'export_recovery_required',
         'Export publication has retained rollback evidence and requires bounded recovery',
