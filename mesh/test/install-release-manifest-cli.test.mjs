@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import { canonicalJson } from '../src/lib/canonical.mjs';
+import { buildInstallReleaseManifestStatement } from '../src/lib/install-release-manifest.mjs';
 
 const CLI=fileURLToPath(new URL('../src/install-release-manifest.mjs',import.meta.url));
 const REPOSITORY_ROOT=resolve(dirname(CLI),'../..');
@@ -65,6 +67,16 @@ function runPackageScript(stdin){
   });
 }
 
+function runDetachedPackageScript(stdin){
+  return spawnSync('npm run --silent release:manifest:package',{
+    cwd:REPOSITORY_ROOT,
+    input:stdin,
+    encoding:'utf8',
+    maxBuffer:4*1024*1024,
+    shell:true
+  });
+}
+
 test('CLI emits one canonical unsigned statement without authority or signature fields',()=>{
   const result=run(JSON.stringify(input()));
 
@@ -81,6 +93,86 @@ test('CLI emits one canonical unsigned statement without authority or signature 
   assert.equal(statement.authority_effect,'none');
   assert.equal(statement.network_effect,'none');
   assert.equal(Object.hasOwn(statement,'signature'),false);
+});
+
+test('CLI packages a detached signature while deriving all release metadata itself',()=>{
+  const manifest=buildInstallReleaseManifestStatement(input());
+  const signature='A'.repeat(86);
+  const result=run(JSON.stringify({manifest,signature}),['package-detached']);
+
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(result.stderr,'');
+  const packageValue=JSON.parse(result.stdout);
+  assert.equal(result.stdout,`${canonicalJson(packageValue)}\n`);
+  assert.deepEqual(packageValue,{
+    schema:'axiom-install-release-manifest-package.v1',
+    manifest:structuredClone(manifest),
+    signature:{
+      algorithm:'Ed25519',
+      key_id:'release:external-test-key-1',
+      digest:createHash('sha256').update(canonicalJson(manifest)).digest('hex'),
+      signature
+    }
+  });
+  assert.equal(Object.hasOwn(packageValue,'public_key'),false);
+  assert.equal(Object.hasOwn(packageValue,'trusted_signers'),false);
+});
+
+test('CLI rejects non-canonical or wrong-length detached Ed25519 signatures',()=>{
+  const manifest=buildInstallReleaseManifestStatement(input());
+  for(const signature of ['A'.repeat(85),'A'.repeat(87),'A'.repeat(85)+'=','A'.repeat(85)+'!']){
+    const result=run(JSON.stringify({manifest,signature}),['package-detached']);
+    assert.equal(result.status,1,signature.length);
+    assert.match(result.stderr,/input failed validation/);
+    assert.equal(result.stdout,'');
+  }
+});
+
+test('CLI refuses to package a statement whose control-plane binding is stale',()=>{
+  const manifest=structuredClone(buildInstallReleaseManifestStatement(input()));
+  manifest.control_plane.install_targets_sha256='0'.repeat(64);
+  const result=run(JSON.stringify({manifest,signature:'A'.repeat(86)}),['package-detached']);
+
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/input failed validation/);
+  assert.equal(result.stdout,'');
+});
+
+test('CLI refuses detached packages with malformed, inverted, or overlong validity windows',()=>{
+  const valid=buildInstallReleaseManifestStatement(input());
+  const cases=[
+    {...structuredClone(valid),issued_at:'not-an-instant'},
+    {
+      ...structuredClone(valid),
+      issued_at:'2026-11-11T23:00:00.000Z',
+      valid_until:'2026-11-11T22:00:00.000Z'
+    },
+    {
+      ...structuredClone(valid),
+      issued_at:'2026-11-01T00:00:00.000Z',
+      valid_until:'2026-12-03T00:00:00.000Z'
+    }
+  ];
+  for(const manifest of cases){
+    const result=run(JSON.stringify({manifest,signature:'A'.repeat(86)}),['package-detached']);
+    assert.equal(result.status,1,manifest.issued_at);
+    assert.match(result.stderr,/input failed validation/);
+    assert.equal(result.stdout,'');
+  }
+});
+
+test('CLI refuses detached-package input with an expanded key inventory',()=>{
+  const manifest=buildInstallReleaseManifestStatement(input());
+  const result=run(JSON.stringify({
+    manifest,
+    signature:'A'.repeat(86),
+    public_key:'self-trust-is-not-allowed'
+  }),['package-detached']);
+
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/input failed validation/);
+  assert.doesNotMatch(result.stderr,/self-trust-is-not-allowed/);
+  assert.equal(result.stdout,'');
 });
 
 test('CLI rejects invalid JSON without echoing the supplied content',()=>{
@@ -100,6 +192,18 @@ test('documented quiet package command emits only the canonical statement',()=>{
   assert.equal(result.stderr,'');
   const statement=JSON.parse(result.stdout);
   assert.equal(result.stdout,`${canonicalJson(statement)}\n`);
+});
+
+test('documented detached-package command emits only the canonical package',()=>{
+  const manifest=buildInstallReleaseManifestStatement(input());
+  const signature='A'.repeat(86);
+  const result=runDetachedPackageScript(JSON.stringify({manifest,signature}));
+
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(result.stderr,'');
+  const packageValue=JSON.parse(result.stdout);
+  assert.equal(result.stdout,`${canonicalJson(packageValue)}\n`);
+  assert.equal(packageValue.signature.signature,signature);
 });
 
 test('CLI rejects malformed UTF-8 instead of replacement-decoding it',()=>{
@@ -141,7 +245,7 @@ test('CLI rejects oversized stdin before parsing or emitting output',()=>{
   assert.equal(result.stdout,'');
 });
 
-test('CLI rejects commands other than the bounded unsigned build',()=>{
+test('CLI rejects commands outside the bounded manifest build and package surface',()=>{
   const result=run(JSON.stringify(input()),['sign']);
 
   assert.equal(result.status,1);

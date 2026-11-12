@@ -57,6 +57,7 @@ const REVISION=/^[a-f0-9]{40}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:/-]{1,191}$/;
 const VERSION=/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/;
 const BASE64URL=/^[A-Za-z0-9_-]{64,256}$/;
+const ED25519_SIGNATURE_BASE64URL=/^[A-Za-z0-9_-]{86}$/;
 const MAX_IN_MEMORY_ARTIFACT_BYTES=536_870_912;
 const TYPED_ARRAY_PROTOTYPE=Object.getPrototypeOf(Uint8Array.prototype);
 const TYPED_ARRAY_BYTE_LENGTH=Object.getOwnPropertyDescriptor(
@@ -160,12 +161,7 @@ export function buildInstallReleaseManifestStatement(input){
     id,
     target_status:targets.get(id)?.status
   }));
-  const issuedAt=parseInstant(input.issued_at,'manifest issued_at');
-  const validUntil=parseInstant(input.valid_until,'manifest valid_until');
-  if(validUntil<=issuedAt) throw new ValidationError('Install release manifest validity window is invalid');
-  if((validUntil-issuedAt)/1000>manifestPolicy.max_validity_seconds){
-    throw new ValidationError('Install release manifest validity exceeds policy');
-  }
+  validateManifestValidityWindow(input,manifestPolicy);
   const statement={
     schema:INSTALL_RELEASE_MANIFEST_SCHEMA,
     version:1,
@@ -224,6 +220,48 @@ export function buildInstallReleaseManifestStatement(input){
   return deepFreeze(statement);
 }
 
+// Combine an externally produced detached Ed25519 signature with the exact
+// statement it covered. This derives every package metadata field locally and
+// validates the statement against the current control plane, but deliberately
+// does not claim that the signature is trusted or cryptographically valid.
+// Callers must still pass the result to verifyInstallReleaseManifest with an
+// independently trusted signer inventory before using it as release evidence.
+export function packageInstallReleaseManifestStatement(input){
+  exactObject(input,'Install release manifest package input',['manifest','signature']);
+  const manifest=snapshotDelegationPlainData(
+    input.manifest,'Install release manifest package statement'
+  );
+  validateInstallReleaseManifestPolicy(manifestPolicy);
+  validateManifest(manifest,{
+    policy:manifestPolicy,
+    currentInstallTargets:installTargets,
+    currentHostInstallPolicy:hostInstallPolicy,
+    currentCapabilityRegistry:capabilityRegistry,
+    currentApplicationCatalog:applicationCatalog,
+    currentServiceNetworkPolicy:serviceNetworkPolicy,
+    currentSourceSetupPolicy:sourceSetupPolicy,
+    migrationGeneration:MIGRATIONS.length
+  });
+  validateManifestValidityWindow(manifest,manifestPolicy);
+  const signatureBytes=matches(ED25519_SIGNATURE_BASE64URL,input.signature)
+    ?Buffer.from(input.signature,'base64url')
+    :null;
+  if(
+    signatureBytes?.length!==64
+    ||signatureBytes.toString('base64url')!==input.signature
+  ) throw new ValidationError('Detached Ed25519 signature encoding is invalid');
+  return deepFreeze({
+    schema:INSTALL_RELEASE_MANIFEST_PACKAGE_SCHEMA,
+    manifest,
+    signature:{
+      algorithm:manifestPolicy.signature_algorithm,
+      key_id:manifest.signing_key_id,
+      digest:sha256(canonicalJson(manifest)),
+      signature:input.signature
+    }
+  });
+}
+
 export function verifyInstallReleaseManifest(packageValue,options={}){
   optionsRecord(options);
   // Own properties only (as the artifact form's policy): an inherited key, for
@@ -259,12 +297,7 @@ export function verifyInstallReleaseManifest(packageValue,options={}){
   });
 
   const evaluationTime=parseInstant(evaluatedAt,'evaluatedAt');
-  const issuedAt=parseInstant(manifest.issued_at,'manifest issued_at');
-  const validUntil=parseInstant(manifest.valid_until,'manifest valid_until');
-  if(validUntil<=issuedAt) throw new ValidationError('Install release manifest validity window is invalid');
-  if((validUntil-issuedAt)/1000>policy.max_validity_seconds){
-    throw new ValidationError('Install release manifest validity exceeds policy');
-  }
+  const {issuedAt,validUntil}=validateManifestValidityWindow(manifest,policy);
   if(issuedAt>evaluationTime) throw new ValidationError('Install release manifest is future-issued');
   if(validUntil<=evaluationTime) throw new ValidationError('Install release manifest is expired');
 
@@ -751,6 +784,16 @@ function parseInstant(value,label){
     throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
   }
   return parsed;
+}
+
+function validateManifestValidityWindow(manifest,policy){
+  const issuedAt=parseInstant(manifest.issued_at,'manifest issued_at');
+  const validUntil=parseInstant(manifest.valid_until,'manifest valid_until');
+  if(validUntil<=issuedAt) throw new ValidationError('Install release manifest validity window is invalid');
+  if((validUntil-issuedAt)/1000>policy.max_validity_seconds){
+    throw new ValidationError('Install release manifest validity exceeds policy');
+  }
+  return Object.freeze({issuedAt,validUntil});
 }
 
 function sameStringArray(value,expected){

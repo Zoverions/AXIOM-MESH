@@ -1,11 +1,15 @@
 import { pathToFileURL } from 'node:url';
 
 import { canonicalJson, ValidationError } from './lib/canonical.mjs';
-import { buildInstallReleaseManifestStatement } from './lib/install-release-manifest.mjs';
+import {
+  buildInstallReleaseManifestStatement,
+  packageInstallReleaseManifestStatement
+} from './lib/install-release-manifest.mjs';
 
 const MAX_INPUT_BYTES=1_048_576;
+const USAGE='Usage: node src/install-release-manifest.mjs <build-unsigned|package-detached> < input.json';
 const PUBLIC_ERRORS=new Set([
-  'Usage: node src/install-release-manifest.mjs build-unsigned < input.json',
+  USAGE,
   `Install release manifest input exceeds ${MAX_INPUT_BYTES} bytes`,
   'Install release manifest input is not valid UTF-8',
   'Install release manifest input is not valid JSON',
@@ -16,10 +20,8 @@ export async function installReleaseManifestMain(
   argv=process.argv.slice(2),
   input=process.stdin
 ){
-  if(argv.length!==1||argv[0]!=='build-unsigned'){
-    throw new ValidationError(
-      'Usage: node src/install-release-manifest.mjs build-unsigned < input.json'
-    );
+  if(argv.length!==1||!['build-unsigned','package-detached'].includes(argv[0])){
+    throw new ValidationError(USAGE);
   }
 
   const chunks=[];
@@ -46,7 +48,9 @@ export async function installReleaseManifestMain(
     throw new ValidationError('Install release manifest input is not valid JSON');
   }
   try{
-    return buildInstallReleaseManifestStatement(value);
+    return argv[0]==='build-unsigned'
+      ?buildInstallReleaseManifestStatement(value)
+      :packageInstallReleaseManifestStatement(value);
   }catch(error){
     if(error instanceof ValidationError){
       throw new ValidationError('Install release manifest input failed validation');

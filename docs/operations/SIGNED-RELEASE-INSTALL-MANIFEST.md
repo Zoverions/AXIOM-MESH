@@ -1,7 +1,8 @@
 # AXIOM-MESH Signed Release Install Manifest
 
 **Applies to:** `0.12.0-dev.3` development line  
-**Status:** verifier implemented in this candidate stack; release-signer custody, published install manifests, Node-free bootstrap download, and host-mutating installation remain unimplemented  
+**Status:** unsigned export, detached-package assembly, and verification implemented in this candidate stack; release-signer custody, published install manifests, Node-free bootstrap download, and host-mutating installation remain unimplemented
+
 **Tracking:** #1901  
 **Authority:** none; a valid manifest cannot authorize host mutation, Mesh authority, network authority, node admission, or service start.
 
@@ -84,6 +85,25 @@ a trust root, authorize an install, mutate a host, or contact a network. The
 output remains unsigned evidence for a separately controlled external release
 authority; redirecting stdout is an operator shell action, not command-owned
 publication or approval.
+
+After that external authority returns the 64-byte Ed25519 signature as canonical
+unpadded base64url, the repository can assemble the verifier's package shape:
+
+```bash
+npm run --silent release:manifest:package < detached-package-input.json > signed-manifest-package.json
+```
+
+`detached-package-input.json` has exactly two fields: `manifest`, containing the
+exact exported statement, and `signature`, containing the detached signature.
+`packageInstallReleaseManifestStatement(input)` and the command revalidate the
+statement against the current control plane, reject expanded input such as a
+self-supplied public key, require a canonical validity window within the policy
+ceiling and canonical Ed25519 signature encoding, and derive the package schema,
+algorithm, key ID, and statement digest locally.
+They do **not** verify that the signature is cryptographically valid or trusted.
+The assembled package must still pass `verifyInstallReleaseManifest(...)` with
+an independently trusted signer inventory. Assembly creates no signer custody,
+trust-root pin, publication, install permission, host effect, or network effect.
 
 Adversarial tests:
 
