@@ -14,6 +14,9 @@ import {
   buildResolvedIntentTargetAuthorization,
   verifyResolvedIntentPreparedRepositoryDocsEffect
 } from '../lib/intent-resolver-prepared-effect.mjs';
+import {
+  buildRepositoryDocsConsequenceAdmission
+} from '../lib/repository-docs-consequence-admission.mjs';
 
 export const INTENT_RESOLVER_GRID_PREPARATION_SCHEMA =
   'axiom-intent-resolver-grid-preparation.v1';
@@ -169,7 +172,18 @@ export async function prepareResolvedRepositoryEffectWithGridApproval({
     prepared_at,
     expires_at
   });
-  const preparedEvent = buildExternalEffectPreparedEvent(binding.prepared_effect);
+  const consequenceAdmission = buildRepositoryDocsConsequenceAdmission({
+    preparedEffect: binding.prepared_effect,
+    policyRisk: handoff?.required_gates?.risk
+  });
+  const basePreparedEvent = buildExternalEffectPreparedEvent(binding.prepared_effect);
+  const preparedEvent = {
+    ...basePreparedEvent,
+    payload: {
+      ...basePreparedEvent.payload,
+      consequence_admission: consequenceAdmission
+    }
+  };
   const consumedEvent = approvalConsumedEvent(approval, intent_id);
   const expectedEvents = [consumedEvent, preparedEvent];
 
@@ -225,10 +239,11 @@ export async function prepareResolvedRepositoryEffectWithGridApproval({
     binding: verifiedBinding,
     effect_id: verifiedBinding.prepared_effect.effect_id,
     effect_digest: verifiedBinding.prepared_effect.effect_digest,
+    consequence_admission: consequenceAdmission,
     durable_preparation_observed: true,
     approval_consumed_observed: true,
     external_effect_executed: false,
     merge_performed: false,
-    non_claim: 'Grid durably consumed one approval and recorded one prepared effect atomically. The repository operator has not been called and no external effect has executed.'
+    non_claim: 'Grid durably consumed one approval and recorded one prepared effect with non-authorizing consequence evidence atomically. The repository operator has not been called and no external effect has executed.'
   };
 }
