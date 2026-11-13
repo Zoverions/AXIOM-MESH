@@ -1,0 +1,112 @@
+{
+  "schema": "axiom-rt-auth-currentness-portable-fixtures.v1",
+  "target": "RT-AUTH-001",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "independent_external_reproduction_claimed": false,
+  "authority_granted_by_fixture": false,
+  "purpose": "Portable consume -> mutate -> release cases proving that historically valid capability evidence and durable consumption do not substitute for current effect authority.",
+  "cases": [
+    {
+      "id": "authority-replacement-after-consumption",
+      "given": {
+        "capability_consumed": true,
+        "historical_evidence_valid": true,
+        "local_effect_authority_valid_at_issue": true,
+        "issued_authority_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "retained_head_authority_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "mutation": "authority_replacement",
+        "consumption_precedes_mutation": true,
+        "currentness_source_available": true
+      },
+      "attempt": "release the already-consumed capability after a newer authoritative successor changes the principal authority from A to B",
+      "expect": {
+        "historical_evidence_valid": true,
+        "currentness_state": "authority_changed",
+        "checkpoint_state": "newer_successor_retained",
+        "local_effect_authority_valid": false,
+        "effect_allowed": false,
+        "authority_minted_by_currentness": false,
+        "reason_code": "machine_currentness_authority_changed"
+      }
+    },
+    {
+      "id": "revocation-after-consumption",
+      "given": {
+        "capability_consumed": true,
+        "historical_evidence_valid": true,
+        "local_effect_authority_valid_at_issue": true,
+        "issued_authority_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "retained_head_authority_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "mutation": "terminal_revocation",
+        "retained_terminal_state": "revoked",
+        "consumption_precedes_mutation": true,
+        "currentness_source_available": true
+      },
+      "attempt": "release the already-consumed capability after a newer terminal revocation is durably retained",
+      "expect": {
+        "historical_evidence_valid": true,
+        "currentness_state": "revoked",
+        "checkpoint_state": "terminal_successor_retained",
+        "local_effect_authority_valid": false,
+        "effect_allowed": false,
+        "authority_minted_by_currentness": false,
+        "reason_code": "machine_currentness_revoked"
+      }
+    },
+    {
+      "id": "unchanged-authority-positive-control",
+      "given": {
+        "capability_consumed": true,
+        "historical_evidence_valid": true,
+        "local_effect_authority_valid_at_issue": true,
+        "local_effect_authority_valid_at_effect": true,
+        "issued_authority_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "retained_head_authority_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "mutation": "none",
+        "currentness_source_available": true,
+        "all_other_required_checks_valid": true
+      },
+      "attempt": "release the consumed capability when the authoritative retained head remains unchanged and every separate local effect check still passes",
+      "expect": {
+        "historical_evidence_valid": true,
+        "currentness_state": "current",
+        "checkpoint_state": "current",
+        "local_effect_authority_valid": true,
+        "effect_allowed": true,
+        "authority_minted_by_currentness": false,
+        "effect_authority_source": "preexisting_local_effect_authority",
+        "reason_code": "currentness_prerequisite_satisfied"
+      }
+    },
+    {
+      "id": "stale-or-rollback-checkpoint-fails-closed",
+      "given": {
+        "capability_consumed": true,
+        "historical_evidence_valid": true,
+        "local_effect_authority_valid_at_issue": true,
+        "presented_checkpoint_sequence": 7,
+        "retained_head_sequence": 9,
+        "presented_checkpoint_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "retained_head_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "currentness_source_available": true
+      },
+      "attempt": "reuse an older or rollback checkpoint to make historically valid authority appear current after the authoritative retained head has advanced",
+      "expect": {
+        "historical_evidence_valid": true,
+        "currentness_state": "unresolved_due_stale_checkpoint",
+        "checkpoint_state": "stale_or_rollback",
+        "local_effect_authority_valid": null,
+        "effect_allowed": false,
+        "authority_minted_by_currentness": false,
+        "reason_code": "currentness_checkpoint_not_latest"
+      }
+    }
+  ],
+  "claim_boundary": [
+    "The first two cases are portable abstractions of project-authored A6.4 races from PR #1444, not independent external reproduction.",
+    "The positive control demonstrates that a currentness prerequisite is not a deny-always mechanism; effect permission still originates from separately valid local effect authority.",
+    "The stale/rollback case is a portable fail-closed requirement and does not claim globally Byzantine or externally anchored rollback resistance.",
+    "None of these fixtures grants authority, activates a production currentness source, or modifies the Gateway -> Hypervisor -> Sandbox -> Grid runtime path."
+  ]
+}
