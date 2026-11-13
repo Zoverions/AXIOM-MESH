@@ -26,12 +26,22 @@ const SUPPORTED_EXTERNAL_TRANSLATION_FIELD_SET = new Set(
 const AUTHORIZATION_DETAIL_TYPE = 'axiom-runtime-effect.v1';
 const EFFECT_INPUT_COMMITMENT_SCHEMA = 'axiom-effect-input-commitment.v1';
 const EFFECT_PURPOSE_COMMITMENT_SCHEMA = 'axiom-effect-purpose-commitment.v1';
+const EFFECT_BUDGET_COMMITMENT_SCHEMA = 'axiom-effect-budget-commitment.v1';
 const REFERENCE_INPUT_SCHEMA_REF = 'synthetic://schemas/reference-echo-input.v1';
 const DEFAULT_REFERENCE_INPUT_SHA256 = sha256('synthetic reference input');
 const DIGEST = /^[a-f0-9]{64}$/;
 const PURPOSE_ID = /^[a-z][a-z0-9_.:-]{0,159}$/;
+const EXTERNAL_BUDGET_FIELDS = Object.freeze([
+  'max_concurrent_requests',
+  'max_execution_ms',
+  'max_request_bytes',
+  'max_requests_per_minute',
+  'max_response_bytes'
+]);
+const EXTERNAL_BUDGET_FIELD_SET = new Set(EXTERNAL_BUDGET_FIELDS);
 const SUPPORTED_AUTHORIZATION_DETAIL_FIELDS = Object.freeze([
   'axiom_action',
+  'budget',
   'credential_handles',
   'destinations',
   'purpose',
@@ -159,6 +169,7 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
     'external authorization detail purpose',
     { max: 160, pattern: PURPOSE_ID }
   );
+  const budget = normalizeExternalBudget(detail.budget);
   const {
     authorization_details: ignoredAuthorizationDetails,
     structuredArguments,
@@ -177,10 +188,15 @@ export function translateSyntheticExternalAuthorizationRequest(input) {
     'external authorization input digest',
     { min: 64, max: 64, pattern: DIGEST }
   );
-  const inputSha256 = createPurposeBoundInputCommitment({
+  const purposeBoundInputSha256 = createPurposeBoundInputCommitment({
     axiomAction: detail.axiom_action,
     purpose,
     inputSha256: normalizedBaseInputSha256
+  });
+  const inputSha256 = createBudgetBoundInputCommitment({
+    axiomAction: detail.axiom_action,
+    budget,
+    inputSha256: purposeBoundInputSha256
   });
 
   const nativeRequest = createSyntheticReferenceRequest({
@@ -363,6 +379,38 @@ function validateReferenceEchoArguments(value) {
   return projected;
 }
 
+function normalizeExternalBudget(value) {
+  const source = assertPlainObject(
+    value,
+    'external authorization detail budget'
+  );
+  rejectUnsupportedFields(
+    source,
+    EXTERNAL_BUDGET_FIELD_SET,
+    'authorization budget'
+  );
+  const missing = EXTERNAL_BUDGET_FIELDS
+    .filter(field => !Object.hasOwn(source, field))
+    .sort();
+  if (missing.length > 0) {
+    throw new ValidationError(
+      `missing authorization budget fields: ${missing.join(', ')}`
+    );
+  }
+
+  const normalized = {};
+  for (const field of EXTERNAL_BUDGET_FIELDS) {
+    const amount = source[field];
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new ValidationError(
+        `external authorization detail budget ${field} must be a positive safe integer`
+      );
+    }
+    normalized[field] = amount;
+  }
+  return normalized;
+}
+
 function rejectUnsupportedFields(source, supportedFields, label) {
   const unsupported = Object.keys(source)
     .filter(field => !supportedFields.has(field))
@@ -392,6 +440,15 @@ function createPurposeBoundInputCommitment({ axiomAction, purpose, inputSha256 }
     schema: EFFECT_PURPOSE_COMMITMENT_SCHEMA,
     axiom_action: axiomAction,
     purpose,
+    input_sha256: inputSha256
+  }));
+}
+
+function createBudgetBoundInputCommitment({ axiomAction, budget, inputSha256 }) {
+  return sha256(canonicalJson({
+    schema: EFFECT_BUDGET_COMMITMENT_SCHEMA,
+    axiom_action: axiomAction,
+    budget,
     input_sha256: inputSha256
   }));
 }

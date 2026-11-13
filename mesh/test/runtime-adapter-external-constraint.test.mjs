@@ -12,6 +12,13 @@ import {
 } from '../src/runtime-adapter-conformance.mjs';
 
 const NOW = Date.UTC(2026, 8, 3, 22, 30, 0);
+const BUDGET = Object.freeze({
+  max_requests_per_minute: 60,
+  max_concurrent_requests: 1,
+  max_execution_ms: 1_000,
+  max_request_bytes: 4_096,
+  max_response_bytes: 4_096
+});
 
 function recognizedAuthorizationDetails(overrides = {}) {
   return {
@@ -19,6 +26,7 @@ function recognizedAuthorizationDetails(overrides = {}) {
     runtime_operation: 'reference.echo',
     axiom_action: 'adapter.reference.echo',
     purpose: 'test.conformance',
+    budget: BUDGET,
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference'],
@@ -48,18 +56,19 @@ test('recognized external authorization details map exactly into native effect c
   assert.deepEqual(translated.requested_scopes, ['synthetic.read']);
   assert.deepEqual(translated.destinations, ['local:reference']);
   assert.deepEqual(translated.credential_handles, ['credential:synthetic-reference']);
+  assert.equal(Object.hasOwn(translated, 'budget'), false);
 });
 
 test('recognized authorization detail types still reject unmapped constraint axes', () => {
   assert.throws(
     () => translateSyntheticExternalAuthorizationRequest(externalRequest({
-      suffix: 'unmapped-budget',
-      grantId: 'grant:rt-auth-009-unmapped-budget',
+      suffix: 'unmapped-approval-floor',
+      grantId: 'grant:rt-auth-009-unmapped-approval-floor',
       authorizationDetails: recognizedAuthorizationDetails({
-        budget: { max_cost_micros: 1 }
+        approval_floor: 'independent'
       })
     })),
-    /unsupported authorization detail fields: budget/
+    /unsupported authorization detail fields: approval_floor/
   );
 });
 
