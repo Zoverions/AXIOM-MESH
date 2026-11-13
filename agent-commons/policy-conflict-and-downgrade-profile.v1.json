@@ -1,0 +1,44 @@
+{
+  "schema": "axiom-policy-conflict-and-downgrade-profile.v1",
+  "status": "experimental coordination architecture; reuses existing deny-dominant policy algebra",
+  "purpose": "Make cross-layer policy conflicts and downgrade attempts explicit when combining kernel, owner, Circle, institution, jurisdiction, adapter, action-risk, and fallback requirements.",
+  "conflict_classes": [
+    "explicit_deny_vs_allow",
+    "minimum_assurance_lowering",
+    "allowlist_widening",
+    "privacy_scope_widening",
+    "retention_extension",
+    "residency_relaxation",
+    "currentness_relaxation",
+    "approval_count_reduction",
+    "purpose_widening",
+    "audience_widening",
+    "resource_widening",
+    "fallback_to_weaker_profile",
+    "unknown_or_ambiguous_merge"
+  ],
+  "resolution_states": [
+    "compatible",
+    "narrowed",
+    "denied",
+    "unresolved_conflict",
+    "appeal_or_exception_required"
+  ],
+  "core_invariants": [
+    "existing kernel deny-dominant merge remains authoritative for currently implemented production constraints",
+    "higher-precedence or non-waivable floors cannot be weakened by lower layers",
+    "lower layers may narrow authority or strengthen assurance/privacy requirements",
+    "ambiguous conflicts fail closed",
+    "fallback candidates must independently satisfy the full composed policy",
+    "an unavailable preferred verifier/provider cannot cause silent routing to a weaker forbidden alternative",
+    "exceptions require explicit authority, scope, expiry, evidence, and review; exception presence is not itself success",
+    "conflict visibility is mandatory in human- and machine-readable outputs",
+    "policy conflict resolution never relies on actor prestige, institutional size, reputation score, or graph centrality"
+  ],
+  "nonclaims": [
+    "This profile does not replace mesh/src/lib/policy.mjs or alter current production policy semantics.",
+    "This profile does not define a universal jurisdictional supremacy rule.",
+    "This profile does not grant exceptions automatically.",
+    "This profile does not make every policy dimension linearly ordered."
+  ]
+}
