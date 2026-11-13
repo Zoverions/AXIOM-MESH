@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/contracts/authority-verifiability-decision.v1.schema.json",
+  "title": "AXIOM Authority-Verifiability Decision v1",
+  "description": "Strict non-authorizing evidence contract for the v0 capability-must-not-outrun-verifiability gate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "notice",
+    "request",
+    "evidence",
+    "requirements",
+    "decision",
+    "reasons",
+    "semantics",
+    "decision_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-authority-verifiability-decision.v1"
+    },
+    "notice": {
+      "const": "eligibility_is_not_authorization"
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "principal_id",
+        "action",
+        "risk",
+        "effect_destination",
+        "authority_level",
+        "autonomy_level",
+        "novelty_signals",
+        "external_agent_interaction",
+        "self_modification"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+        },
+        "principal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 192,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9.-]{1,127}$"
+        },
+        "risk": {
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "effect_destination": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "authority_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "autonomy_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "novelty_signals": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "counterparty",
+              "environment",
+              "model",
+              "objective",
+              "policy-context",
+              "tool"
+            ]
+          }
+        },
+        "external_agent_interaction": {
+          "type": "boolean"
+        },
+        "self_modification": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_binding_digest",
+        "identity_current",
+        "delegation_current",
+        "evidence_bound",
+        "monitorability_level",
+        "independent_monitor",
+        "independent_evaluator",
+        "human_authorization_present",
+        "rollback_available",
+        "rollback_tested"
+      ],
+      "properties": {
+        "policy_binding_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "identity_current": { "type": "boolean" },
+        "delegation_current": { "type": "boolean" },
+        "evidence_bound": { "type": "boolean" },
+        "monitorability_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "independent_monitor": { "type": "boolean" },
+        "independent_evaluator": { "type": "boolean" },
+        "human_authorization_present": { "type": "boolean" },
+        "rollback_available": { "type": "boolean" },
+        "rollback_tested": { "type": "boolean" }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "monitorability_level",
+        "max_lease_ms",
+        "independent_monitor_required",
+        "independent_evaluator_required",
+        "human_authorization_required",
+        "rollback_available_required",
+        "rollback_tested_required"
+      ],
+      "properties": {
+        "monitorability_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "max_lease_ms": {
+          "enum": [15000, 60000, 300000, 900000]
+        },
+        "independent_monitor_required": { "type": "boolean" },
+        "independent_evaluator_required": { "type": "boolean" },
+        "human_authorization_required": { "type": "boolean" },
+        "rollback_available_required": { "type": "boolean" },
+        "rollback_tested_required": { "type": "boolean" }
+      }
+    },
+    "decision": {
+      "enum": ["deny", "hold", "eligible"]
+    },
+    "reasons": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "counterparty_novelty_signal_required",
+          "delegation_currentness_required",
+          "evidence_binding_required",
+          "human_authorization_required",
+          "identity_currentness_required",
+          "independent_evaluator_required",
+          "independent_monitor_required",
+          "monitorability_below_requirement",
+          "rollback_available_required",
+          "rollback_test_required"
+        ]
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grants_execution_authority",
+        "mints_capability",
+        "consumes_capability",
+        "grants_delegation",
+        "changes_policy",
+        "changes_currentness",
+        "authority_effect",
+        "network_effect",
+        "state_effect",
+        "requires_downstream_authorization"
+      ],
+      "properties": {
+        "grants_execution_authority": { "const": false },
+        "mints_capability": { "const": false },
+        "consumes_capability": { "const": false },
+        "grants_delegation": { "const": false },
+        "changes_policy": { "const": false },
+        "changes_currentness": { "const": false },
+        "authority_effect": { "const": "none" },
+        "network_effect": { "const": "none" },
+        "state_effect": { "const": "none" },
+        "requires_downstream_authorization": { "const": true }
+      }
+    },
+    "decision_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
