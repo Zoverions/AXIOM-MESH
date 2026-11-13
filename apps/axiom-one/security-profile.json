@@ -1,0 +1,35 @@
+{
+  "schema": "axiom-application-security-profile.v1",
+  "version": 1,
+  "application_id": "axiom-one",
+  "status": "experimental",
+  "exposure": "loopback-only",
+  "browser_untrusted": true,
+  "adapters": {
+    "hosted_web": false,
+    "relational_database": false,
+    "reusable_session": false,
+    "password_store": false,
+    "file_upload": false
+  },
+  "controls": {
+    "secret_non_disclosure": "enforced",
+    "server_authentication": "inherited",
+    "server_authorization": "inherited",
+    "record_access": "inherited",
+    "field_integrity": "inherited",
+    "input_validation": "enforced",
+    "output_encoding": "enforced",
+    "response_minimization": "enforced",
+    "security_headers": "enforced",
+    "transport_policy": "enforced",
+    "request_bounding": "enforced",
+    "security_event_redaction": "enforced",
+    "dependency_integrity": "enforced"
+  },
+  "evidence": [
+    "mesh/test/axiom-one-shell.test.mjs",
+    "mesh/src/check-axiom-one.mjs",
+    "apps/axiom-one/app-policy.json"
+  ]
+}
