@@ -1,0 +1,64 @@
+{
+  "schema": "axiom-institutional-transparency-profile.v1",
+  "status": "experimental trust/transparency architecture; no certification claim",
+  "purpose": "Give institutions, agents, and relying parties a machine-readable way to disclose which trust-critical surfaces are independently inspectable, reproducible, externally witnessed, selectively disclosed, or opaque.",
+  "transparency_classes": [
+    {
+      "id": "public_inspectable",
+      "meaning": "Source, verifier semantics, trust anchors, policies, and evidence required for the stated claim are publicly inspectable.",
+      "trust_effect": "reduces reliance on operator assertion but does not create authority"
+    },
+    {
+      "id": "independently_verifiable",
+      "meaning": "A relying party can reproduce or independently verify the relevant claim using published artifacts or a portable verifier.",
+      "trust_effect": "stronger evidence for bounded claims; authority remains local"
+    },
+    {
+      "id": "selectively_disclosed",
+      "meaning": "Sensitive implementation or records remain protected while a bounded proof, digest, witness, or redacted evidence package allows verification of the required property.",
+      "trust_effect": "claim-specific evidence only"
+    },
+    {
+      "id": "confidential_auditable",
+      "meaning": "Full material is available only to approved reviewers under a controlled disclosure process.",
+      "trust_effect": "requires explicit reliance on reviewer process and disclosure controls"
+    },
+    {
+      "id": "opaque_dependency",
+      "meaning": "The relying party cannot independently inspect or verify a trust-critical surface.",
+      "trust_effect": "must be declared as an unresolved trust assumption"
+    }
+  ],
+  "required_surfaces": [
+    "identity and trust anchors",
+    "authorization semantics",
+    "policy version and change process",
+    "cryptographic/verifier implementation",
+    "software/source provenance",
+    "build/deployment reproducibility",
+    "upgrade authority",
+    "revocation/currentness mechanism",
+    "data handling and retention",
+    "audit/evidence continuity",
+    "incident-response authority",
+    "recovery and key-rotation authority",
+    "external operators/providers",
+    "known limitations and unresolved assumptions"
+  ],
+  "core_invariants": [
+    "transparency is claim-specific rather than a global virtue score",
+    "public source code alone does not prove deployed bytes or configuration",
+    "a reproducible build does not prove safe policy or honest operation",
+    "an audit does not replace local verification where independent verification is feasible",
+    "confidentiality can coexist with verification through selective disclosure or controlled audit",
+    "opaque trust-critical dependencies must be surfaced, not silently inherited",
+    "no transparency class grants runtime or institutional authority"
+  ],
+  "adoption_rule": "For higher-consequence use, local policy may require specific trust-critical surfaces to be independently verifiable, reproducible, externally witnessed, or confidential-auditable before the system can be relied upon.",
+  "nonclaims": [
+    "This profile is not a security certification, accreditation, or legal compliance label.",
+    "More transparency does not automatically mean more security.",
+    "Protected secrecy may be legitimate when the verification obligation can still be satisfied.",
+    "The profile does not require every internal detail to be public."
+  ]
+}
