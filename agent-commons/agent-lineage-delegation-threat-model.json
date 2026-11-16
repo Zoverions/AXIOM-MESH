@@ -1,0 +1,104 @@
+{
+  "schema": "axiom-agent-lineage-delegation-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-lineage-delegation-v0-laboratory",
+  "scope": "Strict parent-to-child machine-principal attenuation, bounded recursive lineage metadata and Ed25519 provenance attestations. The slice is non-production-reachable and does not authorize spawning or promote a capability.",
+  "core_invariant": "A lineage artifact may prove that an issuer attested to a bounded parent-child proposal. It cannot increase machine authority, authorize execution, prove runtime spawn, transfer trust, prove task success or establish global currentness.",
+  "attack_classes": [
+    {
+      "id": "authority-amplification",
+      "risks": ["child adds an action", "child adds a purpose", "child adds a destination", "child adds a scope", "child adds an authority-bearing role"],
+      "controls": ["exact subset checks for actions/purposes/destinations/scopes/roles", "machine-principal v1 normalizer remains authoritative", "unknown fields fail closed"]
+    },
+    {
+      "id": "budget-laundering",
+      "risks": ["child receives a larger request rate", "child receives greater concurrency", "child receives greater execution time", "child receives larger request or response budgets"],
+      "controls": ["component-wise child<=parent checks across all current v1 machine budgets"]
+    },
+    {
+      "id": "recursive-resource-laundering",
+      "risks": ["descendant resets token budget", "descendant resets storage budget", "descendant resets wall-clock budget", "descendant increases child or descendant count ceiling", "descendant bypasses maximum depth"],
+      "controls": ["component-wise recursive ceiling attenuation", "lineage depth must increment exactly by one", "exact parent attestation digest required after generation one"]
+    },
+    {
+      "id": "sponsor-substitution",
+      "risks": ["child changes root human sponsor", "machine parent is substituted for required human sponsor"],
+      "controls": ["parent and child must share the same human sponsor", "existing v1 knownHumanPrincipals validation remains in force", "parent is recorded as causal lineage only"]
+    },
+    {
+      "id": "principal-reuse",
+      "risks": ["child reuses parent principal ID", "lineage appears to recurse while retaining one identity"],
+      "controls": ["parent and child IDs must differ", "principal definition and authority digests are separately bound"]
+    },
+    {
+      "id": "lifetime-widening",
+      "risks": ["ephemeral lineage creates persistent child", "child outlives session parent", "proposal outlives child", "expired proposal replayed as fresh"],
+      "controls": ["persistent children rejected in v0", "child expiry cannot exceed non-persistent parent expiry", "proposal expiry cannot exceed child expiry", "normalization checks current time"]
+    },
+    {
+      "id": "lineage-forgery",
+      "risks": ["descendant cites unrelated parent", "parent attestation digest is changed", "lineage depth is skipped", "previous child is not the next parent"],
+      "controls": ["exact parent attestation digest binding", "exact previous-child to next-parent principal-definition digest binding", "depth increments exactly once"]
+    },
+    {
+      "id": "signature-or-key-substitution",
+      "risks": ["attestation signed by another key", "trusted public key replaced", "issuer ID changed", "proposal changed after signing"],
+      "controls": ["Ed25519 signatures over canonical envelope", "issuer key ID derived from canonical public key", "expected issuer ID checked", "proposal and attestation digests recomputed"]
+    },
+    {
+      "id": "trust-inheritance-confusion",
+      "risks": ["trusted parent causes child to be marked trusted", "signed lineage is marketed as output verification", "historical provenance is treated as reputation"],
+      "controls": ["fixed semantics trust_inherited=false", "output_verified=false", "task_success_claimed=false", "no reputation field or trust score"]
+    },
+    {
+      "id": "authorization-confusion",
+      "risks": ["spawn proposal used as bearer capability", "lineage attestation treated as permission to execute", "agent invokes tools because ancestry is valid"],
+      "controls": ["fixed semantics spawn_authorized=false", "authority_effect=none", "delegation_effect=none", "no Gateway/runtime integration", "no capability-registry promotion"]
+    },
+    {
+      "id": "currentness-and-replay-confusion",
+      "risks": ["valid historical lineage is treated as current authority", "revoked parent lineage is reused", "attestation is replayed to recreate work"],
+      "controls": ["global_currentness_claimed=false", "attestation is evidence only", "production currentness/revocation admission is an explicit future gate"]
+    },
+    {
+      "id": "capability-promotion-confusion",
+      "risks": ["laboratory code described as supported dynamic spawning", "documentation interpreted as production reachability"],
+      "controls": ["capability_promotion_enabled=false", "no capability registry change", "design and threat model repeat non-production boundary"]
+    }
+  ],
+  "known_nonclaims": [
+    "The v0 laboratory does not authorize a runtime to spawn a child.",
+    "The v0 laboratory does not issue child machine identity credentials.",
+    "The v0 laboratory does not prove that a child process existed or executed.",
+    "The v0 laboratory does not prove task success, output correctness or truth.",
+    "The v0 laboratory does not establish reputation or inherit trust.",
+    "The v0 laboratory does not establish global authority, revocation or identity currentness.",
+    "The v0 laboratory does not permit machine principals to change axiom-machine-principal.v1 delegation semantics.",
+    "The v0 laboratory does not enforce actual runtime token/storage/descendant consumption; it validates declared ceilings only.",
+    "The v0 laboratory does not promote a capability or add a production route."
+  ],
+  "next_gates": [
+    "root/sponsor spawn authorization primitive separate from the v1 principal definition",
+    "child credential issuance and currentness binding",
+    "runtime admission and sandbox attestation",
+    "actual descendant/resource accounting enforcement",
+    "revocation and cancellation propagation",
+    "lineage binding into action/effect receipts",
+    "improvement proposal/promotion separation",
+    "independent-lineage verification for consequential improvements",
+    "offline/selective-disclosure lineage proof design",
+    "capability-registry evidence before public promotion"
+  ],
+  "boundaries": {
+    "spawn_authorized": false,
+    "task_success_claimed": false,
+    "output_verified": false,
+    "trust_inherited": false,
+    "reputation_claimed": false,
+    "global_currentness_claimed": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "capability_promotion_enabled": false,
+    "production_reachable": false
+  }
+}
