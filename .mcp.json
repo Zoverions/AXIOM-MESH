@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "debugger": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@debugmcp/mcp-debugger@0.24.2",
+        "stdio"
+      ],
+      "env": {
+        "DEBUG_MCP_VARIABLE_ACCESS": "explicit",
+        "DEBUG_MCP_BP_ADDRESSING": "content"
+      }
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@1.9.0",
+        "--headless=true",
+        "--isolated=true",
+        "--performance-crux=false",
+        "--usage-statistics=false",
+        "--redact-network-headers=true"
+      ],
+      "env": {
+        "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "1"
+      }
+    }
+  }
+}
