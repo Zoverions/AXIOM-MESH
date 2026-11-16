@@ -1,0 +1,68 @@
+{
+  "schema": "axiom-runtime-enforcement-evidence-profile.v1",
+  "status": "experimental evidence and containment profile; no production promotion claimed",
+  "target": "runtime-enforcement-evidence-plane",
+  "scope": "Provider-neutral correlation and fail-closed composition between external host/runtime enforcement evidence and AXIOM effect authorization.",
+  "core_invariant": "Host identity, host execution approval, runtime telemetry, endpoint containment, and sensor evidence are independent from AXIOM effect authority. External enforcement may constrain or veto execution and may enrich evidence, but it MUST NOT mint, widen, revive, or substitute for AXIOM authority.",
+  "authority_model": {
+    "host_runtime_can_mint_axiom_authority": false,
+    "sensor_evidence_can_mint_axiom_authority": false,
+    "axiom_grant_can_disable_host_containment": false,
+    "effect_release_requires_axiom_authority": true,
+    "host_containment_is_independent_veto": true,
+    "runtime_identity_is_authorization": false,
+    "telemetry_is_external_world_truth": false
+  },
+  "correlation_chain": [
+    "principal",
+    "delegation_or_grant",
+    "intent",
+    "tool_or_protocol_transition",
+    "process_or_runtime",
+    "consequential_effect",
+    "receipt"
+  ],
+  "evidence_dimensions": [
+    "host_runtime_identity_verified",
+    "host_policy_allows_execution",
+    "host_containment_allows_execution",
+    "sensor_evidence_state",
+    "axiom_authorization_allowed",
+    "effect_allowed"
+  ],
+  "composition_rules": [
+    "A host or endpoint allow decision is never sufficient for an AXIOM effect.",
+    "An AXIOM grant or late-current authorization decision cannot suppress a host or endpoint containment deny.",
+    "When local policy requires runtime or sensor evidence, missing, stale, contradictory, or invalid evidence fails closed without creating a replacement authority path.",
+    "A runtime, process, model, tool, protocol, destination, or effect binding change after authorization requires fresh evaluation before consequence.",
+    "External sensor evidence may be retained in receipts only with source identity, observation time or freshness bounds, integrity state, and explicit limitations.",
+    "Sensor or endpoint observations are evidence about what the source observed; they are not proof of arbitrary external-world truth.",
+    "Protocol transitions such as MCP, A2A, shell, browser, native API, or local IPC do not inherit authority merely because a host runtime permits the transition.",
+    "Deny is dominant across required independent enforcement planes; an allow from one plane cannot cancel a deny from another required plane."
+  ],
+  "receipt_requirements": {
+    "bind_correlation_chain": true,
+    "bind_actual_runtime_or_process": true,
+    "bind_consequential_effect": true,
+    "bind_axiom_authorization_evidence": true,
+    "external_sensor_evidence_is_optional_unless_local_policy_requires_it": true,
+    "external_sensor_evidence_must_record_integrity_and_freshness": true,
+    "otel_trace_context_may_be_carried_as_non_authorizing_metadata": true,
+    "raw_secrets_or_reusable_credentials_forbidden": true
+  },
+  "interoperability": {
+    "provider_neutral": true,
+    "vendor_sdk_required": false,
+    "opentelemetry_dependency_required": false,
+    "otel_compatible_correlation_metadata_allowed": true,
+    "external_sensor_or_edr_may_be_absent": true
+  },
+  "explicit_non_claims": [
+    "No external endpoint-security, EDR, SIEM, agent-security, or runtime-enforcement product is integrated or certified by this profile.",
+    "No host sensor becomes an AXIOM trust root by supplying telemetry or an allow decision.",
+    "No production effect path is activated or promoted by this profile.",
+    "No change is made to the byte-pinned Agent Runtime Adapter v1 contract.",
+    "No capability-registry claim is promoted.",
+    "No sensor observation is treated as complete ground truth merely because its integrity verifies."
+  ]
+}
