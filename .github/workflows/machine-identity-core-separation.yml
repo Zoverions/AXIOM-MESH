@@ -1,0 +1,40 @@
+name: Machine Identity Core Separation
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "mesh/src/lib/agent-trust-machine-identity-core.mjs"
+      - "mesh/src/lib/agent-trust-cross-plane-mint.mjs"
+      - "mesh/test/agent-trust-machine-identity-core.test.mjs"
+      - "mesh/test/agent-trust-cross-plane-mint.test.mjs"
+      - ".github/workflows/machine-identity-core-separation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: machine-identity-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-identity-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+          check-latest: false
+      - name: Run stable machine identity-core regression
+        run: node --test mesh/test/agent-trust-machine-identity-core.test.mjs
+      - name: Run cross-plane mint binding regression when present
+        shell: bash
+        run: |
+          if [ -f mesh/test/agent-trust-cross-plane-mint.test.mjs ]; then
+            node --test mesh/test/agent-trust-cross-plane-mint.test.mjs
+          fi
