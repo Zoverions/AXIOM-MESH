@@ -1,0 +1,114 @@
+{
+  "schema": "axiom-compositional-assurance-profile.v1",
+  "status": "experimental assurance architecture; no capability promotion",
+  "purpose": "Replace over-reliance on one-dimensional A0-A4 summaries with a compositional, deny-dominant assurance vector while preserving A0-A4 as a compatibility rendering where useful.",
+  "dimensions": [
+    "identity",
+    "authority",
+    "execution",
+    "evidence",
+    "independent_verification",
+    "currentness",
+    "privacy",
+    "recovery"
+  ],
+  "states": [
+    "not_required",
+    "required",
+    "attempted",
+    "achieved",
+    "failed",
+    "unknown"
+  ],
+  "semantics": {
+    "required_assurance": "The minimum evidence/verification obligations demanded by all applicable local and domain floors for this action.",
+    "attempted_assurance": "The mechanisms actually invoked in an effort to satisfy required assurance.",
+    "achieved_assurance": "Requirements for which sufficient evidence was successfully produced and remains current.",
+    "failed_assurance": "Requirements that were attempted but demonstrably did not satisfy their acceptance criteria.",
+    "unknown_assurance": "Requirements whose state cannot currently be established because evidence is missing, stale, unavailable, contradictory, or unverifiable."
+  },
+  "composition": {
+    "native_model": "partial_order_vector",
+    "compatibility_summary": "A0-A4 may be derived only as a lossy summary and must not be used to infer missing dimensions.",
+    "required_floor_rule": "For each dimension, compose all applicable non-waivable floors by taking the strongest requirement for that dimension.",
+    "deny_dominant_rule": "A consequential action is assurance-satisfied only if every required dimension is achieved. Failed or unknown required dimensions deny or hold according to explicit degraded-mode policy.",
+    "no_compensation_rule": "Strength in one dimension cannot compensate for failure in another unless a specific policy explicitly defines a safe substitution and evidence for it."
+  },
+  "floor_sources": [
+    "kernel",
+    "owner_or_subject",
+    "circle",
+    "institution",
+    "jurisdiction_or_domain",
+    "adapter_or_connector",
+    "action_risk",
+    "data_class",
+    "deployment_topology"
+  ],
+  "compatibility_mapping": [
+    {
+      "id": "A0",
+      "summary": "ephemeral",
+      "minimum_vector": {
+        "evidence": "not_required"
+      }
+    },
+    {
+      "id": "A1",
+      "summary": "attributable",
+      "minimum_vector": {
+        "identity": "achieved",
+        "authority": "achieved"
+      }
+    },
+    {
+      "id": "A2",
+      "summary": "auditable",
+      "minimum_vector": {
+        "identity": "achieved",
+        "authority": "achieved",
+        "execution": "achieved",
+        "evidence": "achieved"
+      }
+    },
+    {
+      "id": "A3",
+      "summary": "independently_verified",
+      "minimum_vector": {
+        "identity": "achieved",
+        "authority": "achieved",
+        "execution": "achieved",
+        "evidence": "achieved",
+        "independent_verification": "achieved"
+      }
+    },
+    {
+      "id": "A4",
+      "summary": "collectively_finalized_compatibility_label",
+      "minimum_vector": {
+        "identity": "achieved",
+        "authority": "achieved",
+        "execution": "achieved",
+        "evidence": "achieved",
+        "independent_verification": "achieved"
+      },
+      "note": "Collective finality is not itself an assurance dimension and remains a separate finality concept."
+    }
+  ],
+  "invariants": [
+    "assurance is not authority",
+    "assurance is not finality",
+    "assurance is not retention",
+    "assurance is not a global person reputation score",
+    "unknown is not equivalent to failed, but both fail a required consequential assurance gate unless degraded-mode policy explicitly permits holding or advisory use",
+    "later stronger verification never rewrites assurance_at_execution",
+    "compatibility rendering cannot silently upgrade a vector",
+    "non-waivable kernel floors cannot be lowered by imported domain policy"
+  ],
+  "nonclaims": [
+    "This profile does not promote adaptive assurance as a current production capability.",
+    "A0-A4 remain current compatibility identifiers where already implemented; this profile does not silently change existing runtime behavior.",
+    "This profile does not define collective finality or consensus.",
+    "This profile does not authorize any action."
+  ]
+}
