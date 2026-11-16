@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { canonicalJson, digestObject, sha256, ValidationError } from './lib/canonical.mjs';
 import { MESH_ROOT } from './lib/config.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
+import { validateApplicationSecurityProfile } from './lib/application-security-profile.mjs';
 import { validateHumanContract } from '../../apps/axiom-one/presentation.mjs';
 import { validateCircleTemplateCatalog } from './lib/circle-templates.mjs';
 
@@ -101,6 +102,7 @@ const EXPECTED_EVENT_KINDS = Object.freeze([
 export async function checkAxiomOnePreview() {
   const [
     policy,
+    securityProfile,
     humanContract,
     manifest,
     index,
@@ -120,6 +122,7 @@ export async function checkAxiomOnePreview() {
     circleTemplates
   ] = await Promise.all([
     readJson('app-policy.json'),
+    readJson('security-profile.json'),
     readJson('human-contract.json'),
     readJson('manifest.webmanifest'),
     readText('index.html'),
@@ -139,6 +142,7 @@ export async function checkAxiomOnePreview() {
     readMeshConfigJson('circle-templates-v0.json')
   ]);
   validatePolicy(policy);
+  validateAxiomOneApplicationSecurity(policy, securityProfile);
   validateExplanations(policy, humanContract);
   validateCircleTemplateCatalog(circleTemplates);
   validateManifest(manifest);
@@ -164,6 +168,10 @@ export async function checkAxiomOnePreview() {
     public_shell_cache: policy.security.public_shell_cache,
     api_cache: policy.security.api_cache,
     remote_origins_allowed: policy.network.remote_origins_allowed,
+    application_security_schema: securityProfile.schema,
+    application_security_exposure: securityProfile.exposure,
+    application_security_active_adapters: Object.values(securityProfile.adapters).filter(Boolean).length,
+    application_security_profile_digest: digestObject(securityProfile),
     human_contract_schema: humanContract.schema,
     human_contract_digest: digestObject(humanContract),
     explained_gateway_errors: Object.keys(humanContract.gateway_outcomes).length,
@@ -202,6 +210,23 @@ export async function checkAxiomOnePreview() {
 
 export function validateAxiomOnePolicy(policy) {
   validatePolicy(policy);
+  return true;
+}
+
+export function validateAxiomOneApplicationSecurity(policy, securityProfile) {
+  validateApplicationSecurityProfile(securityProfile);
+  if (
+    securityProfile.application_id !== 'axiom-one'
+    || securityProfile.status !== 'experimental'
+    || securityProfile.exposure !== 'loopback-only'
+    || securityProfile.adapters.hosted_web !== false
+    || securityProfile.adapters.relational_database !== false
+    || securityProfile.adapters.reusable_session !== false
+    || securityProfile.adapters.password_store !== false
+    || securityProfile.adapters.file_upload !== false
+    || policy.security.cookies_used !== false
+    || policy.security.token_persistence !== 'memory-only'
+  ) throw new ValidationError('AXIOM One application security profile conflicts with preview policy');
   return true;
 }
 
