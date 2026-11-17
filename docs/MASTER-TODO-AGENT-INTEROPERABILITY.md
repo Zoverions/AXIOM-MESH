@@ -37,6 +37,15 @@
 - [x] Define agent/service/runtime principal identifier schema.
 - [ ] Complete key issuance, ownership/sponsorship, device/runtime binding, rotation, compromise, and dedicated revocation. Human sponsorship, runtime binding, lifetime and expiry are implemented; dedicated machine revocation/rotation remains open.
 - [x] Distinguish human, agent, infrastructure service, and constrained machine-service identities at bearer-registry normalization; future delegator/executor/verifier/remote-peer profiles remain separate later work.
+- [x] Protect the shared-workload-identity boundary with a protocol-neutral
+  synthetic regression: an issuer-signed credential plus holder presentation
+  shared by multiple logical agents authenticates only the shared principal
+  and cannot be relabelled or answered with an individual agent's holder key.
+  A logical agent requires separate synthetic identity evidence and a separate
+  current grant before it can be attributed independently. Identity and grant
+  remain independent controls with no authority effect. The fixture uses only
+  ephemeral local test keys and adds no production issuer, credential, network
+  path, WIMSE conformance claim, or effect authority.
 - [x] Define short-lived versus persistent machine principal semantics.
 - [x] Define purpose and destination restrictions. Purpose/action ceilings are live; current built-in effect destination is AXIOM-computed as `local` and enforced against the finite principal ceiling; external/provider/MCP destination semantics remain future adapter work.
 - [ ] Complete compute, storage, bandwidth, cost, time, request, response, rate, and concurrency budgets. Execution time, authenticated Gateway request size, authenticated Gateway request rate, authenticated Gateway concurrency, and authenticated Gateway response size are live; storage/bandwidth/cost profiles remain future work.
