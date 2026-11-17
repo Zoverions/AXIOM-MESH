@@ -1,0 +1,53 @@
+{
+  "schema": "axiom-rt-wimse-agent-identity-001.v2",
+  "target": "RT-WIMSE-AGENT-IDENTITY-001",
+  "title": "Shared workload identity must not become individual-agent identity or authority",
+  "invariant": "When several logical agents present one workload credential, only the shared principal is authenticated. Individual-agent attribution, revocation, policy identity, delegation and effect authority require separate current evidence bound to that exact principal and action.",
+  "source": {
+    "kind": "working-group-internet-draft",
+    "document": "draft-ietf-wimse-arch-09",
+    "source_revision": "3bc2ec497cfc95f5c7ef13b4b61d90fefe92195d",
+    "published_at": "2026-11-17"
+  },
+  "shared_principal_id": "principal:shared-workload",
+  "logical_agent_principal_ids": [
+    "principal:logical-agent-a",
+    "principal:logical-agent-b"
+  ],
+  "scope": {
+    "protocol_dependency": false,
+    "production_runtime_change_required": false,
+    "standards_compatibility_claim": false,
+    "synthetic_local_issuer_and_credentials_only": true,
+    "production_credential_or_issuer_added": false,
+    "authority_path_added": false
+  },
+  "cases": [
+    {
+      "id": "shared-holder-presentation-authenticates-only-shared-principal",
+      "setup": "Create an issuer-signed synthetic machine credential for the shared workload principal and answer one exact local holder challenge with its bound operational key.",
+      "expected": "The existing verifier authenticates only the shared principal with no authority effect; relabelling it as a logical agent or answering with that agent's holder key fails closed."
+    },
+    {
+      "id": "shared-credential-does-not-authenticate-logical-agent",
+      "setup": "After authenticating the shared workload holder presentation, bind a separate current synthetic grant to that shared principal, then relabel the request as one logical agent.",
+      "expected": "The request is denied on the grant principal binding; neither the shared identity evidence nor the shared grant proves the logical agent identity."
+    },
+    {
+      "id": "shared-principal-remains-explicit",
+      "setup": "Use the same current synthetic grant with the exact shared workload principal retained on the request and receipt.",
+      "expected": "The bounded synthetic request can complete only as the shared principal; no individual-agent attribution or external effect is claimed."
+    },
+    {
+      "id": "distinct-agent-requires-distinct-identity-and-current-grant",
+      "setup": "Create a distinct issuer-signed synthetic credential and holder presentation for the logical agent, then bind a separate current synthetic grant to that exact principal.",
+      "expected": "The bounded synthetic request can complete with distinct attribution only after both identity and grant controls succeed independently; no external effect is performed."
+    }
+  ],
+  "non_claims": [
+    "This fixture does not implement or certify WIMSE.",
+    "This fixture creates only ephemeral local synthetic issuer keys, credentials and holder presentations; it adds no production issuer, credential, network path or authentication service.",
+    "Distinct identity does not grant action, delegation, effect, merge, deployment or production authority.",
+    "A completed synthetic reference-adapter request performs no external effect and proves no production interoperability."
+  ]
+}
