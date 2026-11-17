@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, sign } from 'node:crypto';
+import { canonicalJson, digestObject } from '../src/lib/canonical.mjs';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createMachineIdentityCredential } from '../src/lib/agent-trust-machine-identity.mjs';
@@ -150,6 +151,33 @@ test('RT-WIMSE-AGENT-IDENTITY-001: a shared workload credential authenticates on
     issuedAt: PRESENTED_AT,
     expiresAt: PRESENTATION_EXPIRES_AT
   }), /holder|operational/i);
+
+  // Reach the verifier with valid shared bindings and digest, but another key's
+  // signature. Constructor rejection alone cannot guard this trust boundary.
+  const wrongHolderSigned = {
+    schema: sharedIdentity.presentation.schema,
+    statement: sharedIdentity.presentation.statement,
+    statement_digest: sharedIdentity.presentation.statement_digest,
+    holder_signature: sign(null, Buffer.from(canonicalJson({
+      schema: sharedIdentity.presentation.schema,
+      statement: sharedIdentity.presentation.statement,
+      statement_digest: sharedIdentity.presentation.statement_digest
+    })), logicalAgentHolder.privateKey).toString('base64url')
+  };
+  const wrongHolderPresentation = {
+    ...wrongHolderSigned,
+    proof_digest: digestObject(wrongHolderSigned)
+  };
+  assert.throws(() => verifyMachineHolderPresentation(wrongHolderPresentation, {
+    credential: sharedIdentity.credential,
+    trustedIssuerPublicKey: issuer.publicKey,
+    expectedIssuerId: 'issuer:wimse-boundary-fixture',
+    expectedPrincipalId: profile.shared_principal_id,
+    expectedAudienceId: AUDIENCE,
+    expectedPurpose: PURPOSE,
+    expectedNonce: sharedIdentity.nonce,
+    at: EVALUATED_AT
+  }), /^ValidationError: machine holder presentation holder signature is invalid$/);
 
   const manifest = createSyntheticReferenceAdapterManifest({
     sourceRevision: REVISION
