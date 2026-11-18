@@ -65,7 +65,9 @@
       "timeout_ms": 10000,
       "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
       "reversibility": "This preview has no restore action. Recovery requires separately governed backup or import procedures and is not promised.",
-      "required_confirmations": ["confirm:memory.tombstone"],
+      "required_confirmations": [
+        "confirm:memory.tombstone"
+      ],
       "independent_approval": false
     },
     "export.create": {
@@ -81,6 +83,22 @@
       "timeout_ms": 10000,
       "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
       "reversibility": "Creating an export does not alter the source record, but this preview cannot delete a generated bundle.",
+      "required_confirmations": [],
+      "independent_approval": false
+    },
+    "ai.local-organize": {
+      "label": "Local organize draft",
+      "consequence": "non-consequential-local-draft",
+      "effect": "Produce a deterministic local draft organization of owner-selected note text without writing Vault state.",
+      "provider": "Local deterministic organizer stub only; no external model provider and no Mesh capability promotion.",
+      "destination": "Ephemeral browser draft only; not Sandbox execution and not a Grid write.",
+      "information_scope": "Only the owner-selected note text explicitly included in this request.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "Draft is ephemeral in this page until discarded; nothing is retained by a provider. Vault writes require a separate memory.put review.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel discards the pending local draft review without submitting a Mesh intent.",
+      "reversibility": "No Mesh side effect. Discarding the draft leaves Vault unchanged.",
       "required_confirmations": [],
       "independent_approval": false
     }
@@ -270,43 +288,191 @@
     }
   },
   "event_kinds": {
-    "accounting.account.created": ["Account created", "A local accounting identity was recorded.", "complete"],
-    "accounting.journal.posted": ["Journal posted", "A balanced local accounting journal was committed.", "complete"],
-    "approval.consumed": ["Approval used once", "A bound independent approval was consumed by one intent.", "complete"],
-    "approval.granted": ["Approval granted", "A separate principal approved one exact request until expiry.", "ready"],
-    "backup.completed": ["Backup completed", "An encrypted backup completed and its manifest was recorded.", "complete"],
-    "backup.requested": ["Backup requested", "A governed backup request entered the evidence log.", "pending"],
-    "backup.restored": ["Backup restored", "A governed restore completed and was recorded.", "complete"],
-    "capsule.registered": ["Capsule registered", "A validated capsule manifest was admitted to the local registry.", "complete"],
-    "capsule.revoked": ["Capsule revoked", "The capsule was revoked and is no longer active.", "denied"],
-    "consent.granted": ["Consent granted", "A purpose-, scope-, subject-, controller-, and expiry-bound consent record was created.", "ready"],
-    "consent.revoked": ["Consent revoked", "The consent record was revoked and no longer authorizes new use.", "denied"],
-    "export.completed": ["Export completed", "A governed export bundle completed and its evidence was recorded.", "complete"],
-    "export.requested": ["Export requested", "A scoped local export request entered the evidence log.", "pending"],
-    "governance.activated": ["Policy activated", "A finalized governance proposal became active after its timelock.", "complete"],
-    "governance.appeal.filed": ["Appeal filed", "A governance appeal was recorded for review.", "pending"],
-    "governance.emergency.activated": ["Emergency policy activated", "A temporary authority-reducing emergency policy became active until expiry.", "pending"],
-    "governance.emergency.reviewed": ["Emergency policy reviewed", "The emergency governance action received its required review record.", "complete"],
-    "governance.finalized": ["Proposal finalized", "Voting closed and the governance outcome was finalized.", "complete"],
-    "governance.proposed": ["Proposal created", "A governance proposal was recorded for voting.", "pending"],
-    "governance.rolled-back": ["Policy rolled back", "A governed policy activation was rolled back to its recorded predecessor.", "denied"],
-    "governance.verified": ["Policy verified", "A governance activation received its verification record.", "complete"],
-    "governance.voted": ["Vote recorded", "A chamber vote was added to the proposal record.", "pending"],
-    "import.applied": ["Import applied", "An independently approved import was applied to the foreign-record store.", "complete"],
-    "import.staged": ["Import staged", "An import bundle was validated and staged without applying it.", "pending"],
-    "intent.accepted": ["Request accepted", "The node recorded the request before policy evaluation reached a final outcome.", "pending"],
-    "intent.completed": ["Request completed", "Execution completed and the result was committed to local evidence.", "complete"],
-    "intent.denied": ["Request denied", "Policy, confirmation, or approval requirements stopped execution.", "denied"],
-    "intent.failed": ["Request failed", "The node recorded a failure; inspect the raw event before inferring whether any partial work occurred.", "uncertain"],
-    "memory.linked": ["Memory linked", "A provenance edge between governed memory objects was recorded.", "complete"],
-    "memory.put": ["Memory stored", "An encrypted owner-bound memory object was recorded.", "complete"],
-    "memory.tombstoned": ["Memory tombstoned", "The memory object was marked unavailable while append-only provenance remained.", "denied"],
-    "node.quarantined": ["Node quarantined", "The admitted node was removed from eligible scheduling.", "denied"],
-    "node.registered": ["Node registered", "A signed node statement was admitted to the local registry.", "complete"],
-    "node.renewed": ["Node renewed", "An admitted node statement and lease were renewed.", "complete"],
-    "node.schedule.requested": ["Schedule requested", "A signed bounded scheduling request was recorded.", "pending"],
-    "storage.offered": ["Storage offered", "A bounded storage-capacity offer was recorded without transferring content.", "pending"],
-    "sync.bundle.applied": ["Sync bundle applied", "An independently approved causal bundle was applied with its conflict state visible.", "complete"]
+    "accounting.account.created": [
+      "Account created",
+      "A local accounting identity was recorded.",
+      "complete"
+    ],
+    "accounting.journal.posted": [
+      "Journal posted",
+      "A balanced local accounting journal was committed.",
+      "complete"
+    ],
+    "approval.consumed": [
+      "Approval used once",
+      "A bound independent approval was consumed by one intent.",
+      "complete"
+    ],
+    "approval.granted": [
+      "Approval granted",
+      "A separate principal approved one exact request until expiry.",
+      "ready"
+    ],
+    "backup.completed": [
+      "Backup completed",
+      "An encrypted backup completed and its manifest was recorded.",
+      "complete"
+    ],
+    "backup.requested": [
+      "Backup requested",
+      "A governed backup request entered the evidence log.",
+      "pending"
+    ],
+    "backup.restored": [
+      "Backup restored",
+      "A governed restore completed and was recorded.",
+      "complete"
+    ],
+    "capsule.registered": [
+      "Capsule registered",
+      "A validated capsule manifest was admitted to the local registry.",
+      "complete"
+    ],
+    "capsule.revoked": [
+      "Capsule revoked",
+      "The capsule was revoked and is no longer active.",
+      "denied"
+    ],
+    "consent.granted": [
+      "Consent granted",
+      "A purpose-, scope-, subject-, controller-, and expiry-bound consent record was created.",
+      "ready"
+    ],
+    "consent.revoked": [
+      "Consent revoked",
+      "The consent record was revoked and no longer authorizes new use.",
+      "denied"
+    ],
+    "export.completed": [
+      "Export completed",
+      "A governed export bundle completed and its evidence was recorded.",
+      "complete"
+    ],
+    "export.requested": [
+      "Export requested",
+      "A scoped local export request entered the evidence log.",
+      "pending"
+    ],
+    "governance.activated": [
+      "Policy activated",
+      "A finalized governance proposal became active after its timelock.",
+      "complete"
+    ],
+    "governance.appeal.filed": [
+      "Appeal filed",
+      "A governance appeal was recorded for review.",
+      "pending"
+    ],
+    "governance.emergency.activated": [
+      "Emergency policy activated",
+      "A temporary authority-reducing emergency policy became active until expiry.",
+      "pending"
+    ],
+    "governance.emergency.reviewed": [
+      "Emergency policy reviewed",
+      "The emergency governance action received its required review record.",
+      "complete"
+    ],
+    "governance.finalized": [
+      "Proposal finalized",
+      "Voting closed and the governance outcome was finalized.",
+      "complete"
+    ],
+    "governance.proposed": [
+      "Proposal created",
+      "A governance proposal was recorded for voting.",
+      "pending"
+    ],
+    "governance.rolled-back": [
+      "Policy rolled back",
+      "A governed policy activation was rolled back to its recorded predecessor.",
+      "denied"
+    ],
+    "governance.verified": [
+      "Policy verified",
+      "A governance activation received its verification record.",
+      "complete"
+    ],
+    "governance.voted": [
+      "Vote recorded",
+      "A chamber vote was added to the proposal record.",
+      "pending"
+    ],
+    "import.applied": [
+      "Import applied",
+      "An independently approved import was applied to the foreign-record store.",
+      "complete"
+    ],
+    "import.staged": [
+      "Import staged",
+      "An import bundle was validated and staged without applying it.",
+      "pending"
+    ],
+    "intent.accepted": [
+      "Request accepted",
+      "The node recorded the request before policy evaluation reached a final outcome.",
+      "pending"
+    ],
+    "intent.completed": [
+      "Request completed",
+      "Execution completed and the result was committed to local evidence.",
+      "complete"
+    ],
+    "intent.denied": [
+      "Request denied",
+      "Policy, confirmation, or approval requirements stopped execution.",
+      "denied"
+    ],
+    "intent.failed": [
+      "Request failed",
+      "The node recorded a failure; inspect the raw event before inferring whether any partial work occurred.",
+      "uncertain"
+    ],
+    "memory.linked": [
+      "Memory linked",
+      "A provenance edge between governed memory objects was recorded.",
+      "complete"
+    ],
+    "memory.put": [
+      "Memory stored",
+      "An encrypted owner-bound memory object was recorded.",
+      "complete"
+    ],
+    "memory.tombstoned": [
+      "Memory tombstoned",
+      "The memory object was marked unavailable while append-only provenance remained.",
+      "denied"
+    ],
+    "node.quarantined": [
+      "Node quarantined",
+      "The admitted node was removed from eligible scheduling.",
+      "denied"
+    ],
+    "node.registered": [
+      "Node registered",
+      "A signed node statement was admitted to the local registry.",
+      "complete"
+    ],
+    "node.renewed": [
+      "Node renewed",
+      "An admitted node statement and lease were renewed.",
+      "complete"
+    ],
+    "node.schedule.requested": [
+      "Schedule requested",
+      "A signed bounded scheduling request was recorded.",
+      "pending"
+    ],
+    "storage.offered": [
+      "Storage offered",
+      "A bounded storage-capacity offer was recorded without transferring content.",
+      "pending"
+    ],
+    "sync.bundle.applied": [
+      "Sync bundle applied",
+      "An independently approved causal bundle was applied with its conflict state visible.",
+      "complete"
+    ]
   },
   "unknown_event": {
     "title": "Unmapped evidence event",

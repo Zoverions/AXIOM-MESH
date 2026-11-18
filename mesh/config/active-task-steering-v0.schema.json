@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/active-task-steering-v0.schema.json",
+  "title": "AXIOM Active Task Steering v0",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","version","status","steering_id","task_id","previous_task_digest","new_event_digest","actor_principal_id","semantic_observation_digest","authority_snapshot_ref","decision","resulting_task_revision_digest","decided_at","grants_authority","delegation_effect","execution_effect","runtime_activation"],
+  "properties": {
+    "schema":{"const":"axiom-active-task-steering.v0"},
+    "version":{"const":0},
+    "status":{"const":"inert-steering-evidence"},
+    "steering_id":{"$ref":"#/$defs/id"},
+    "task_id":{"$ref":"#/$defs/id"},
+    "previous_task_digest":{"$ref":"#/$defs/digest"},
+    "new_event_digest":{"$ref":"#/$defs/digest"},
+    "actor_principal_id":{"$ref":"#/$defs/id"},
+    "semantic_observation_digest":{"$ref":"#/$defs/digest"},
+    "authority_snapshot_ref":{"$ref":"#/$defs/id"},
+    "decision":{"enum":["IGNORE","APPEND","REPLACE","STOP"]},
+    "resulting_task_revision_digest":{"anyOf":[{"$ref":"#/$defs/digest"},{"type":"null"}]},
+    "decided_at":{"type":"string","format":"date-time"},
+    "grants_authority":{"const":false},
+    "delegation_effect":{"const":"none"},
+    "execution_effect":{"const":"none"},
+    "runtime_activation":{"const":false}
+  },
+  "allOf":[
+    {"if":{"properties":{"decision":{"enum":["APPEND","REPLACE"]}}},"then":{"properties":{"resulting_task_revision_digest":{"$ref":"#/$defs/digest"}}}},
+    {"if":{"properties":{"decision":{"enum":["IGNORE","STOP"]}}},"then":{"properties":{"resulting_task_revision_digest":{"type":"null"}}}}
+  ],
+  "$defs": {
+    "id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"},
+    "digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}

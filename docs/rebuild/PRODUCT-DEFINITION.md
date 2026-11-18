@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -108,7 +108,7 @@ visible effect.
 
 The current reference unit topology runs the four services across four exact
 single-host internal network segments. A machine-readable default-deny policy
-authorizes only 42 exact caller, destination, method, and route combinations
+authorizes only 45 exact caller, destination, method, and route combinations
 before signing or network I/O, derives each destination's active mTLS peers,
 and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. The additional
 Education edge is the bounded Hypervisor-to-Grid
@@ -204,19 +204,23 @@ implemented/supported claims until complete production-path code, negative
 tests, human evidence, packaging, documentation, and independent review satisfy
 the capability acceptance rule.
 
-The current experimental human-explanation slice reviews five exact actions
+The current experimental human-explanation slice reviews six exact actions
 before sending: the non-consequential echo, owner-scoped private memory creation,
 one of three fixed directional provenance links, confirmation-bound
-tombstoning, and selective local memory export. It maps all stable Gateway
-outcomes and current kernel event kinds, distinguishes active,
-expired, consumed, and unknown approvals, preserves raw evidence, and reuses the
-same request key when a browser outcome is uncertain. A `corrects` edge retains
-the source and target as independently visible records; it is provenance, not
-silent replacement. The Vault reveals a generated bundle only after a separate
-action and retains no token or response in browser storage. This browser
-projection is not an authoritative pre-execution kernel plan. General
-consequential plan/approval, edge deletion, hard deletion,
-restore, bulk ingestion, and human evidence still require their own gates.
+tombstoning, selective local memory export, and the browser-local organize draft.
+It maps all stable Gateway outcomes and current kernel event kinds, distinguishes
+active, expired, consumed, and unknown approvals, projects capability
+implementation separately from deliberately unknown availability/authorization,
+shows owner-scoped active/revoked/expired consent state, and explains local
+evidence-chain verification without turning integrity into external truth or
+authority. Raw evidence remains available and the same request key is reused when
+a browser outcome is uncertain. A `corrects` edge retains the source and target
+as independently visible records; it is provenance, not silent replacement. The
+Vault reveals a generated bundle only after a separate action and retains no
+token or response in browser storage. This browser projection is not an
+authoritative pre-execution kernel plan. General consequential plan/approval,
+edge deletion, hard deletion, restore, bulk ingestion, and human evidence still
+require their own gates.
 
 ### Axiom Education
 

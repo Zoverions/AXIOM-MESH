@@ -195,6 +195,26 @@ last-write-wins. Operators inspect conflicts through:
 GET /v1/sync?namespace=<namespace>&record_id=<record>
 ```
 
+State is paged by record in `(namespace, record_id)` order: `limit` records
+(default 100, at most 200) or about 512 KiB of records, whichever comes first.
+A page always carries every current head of each record on it, so `status`
+and `conflicts` are never computed from part of a record. While
+`page.has_more` is true, pass `page.next_cursor` back as `cursor`. A record
+written behind the cursor during a pass appears on the next pass.
+
+A record whose heads alone exceed the page budget (several concurrent heads
+of up to 256 KiB each) is returned on its own page with every head field
+except the value: those heads carry `value: null`, `value_omitted: true` and
+`value_bytes`. Fetch each value with `GET /v1/sync/updates/<update_id>` and
+check it against the head's `value_digest`.
+
+Each page also lists the owner's newest bundle summaries: at most 100, and at
+most about 256 KiB of them, so that a full page stays under the 1 MiB internal
+response ceiling. `truncated` is true when either list was cut. List every
+bundle summary, newest first, with `GET /v1/sync/bundles` (`limit` up to 100
+and `cursor`, as for the other paged collections), and fetch one by digest
+with `GET /v1/sync/bundles/<digest>`.
+
 A record with multiple heads reports `status: conflict`. Resolution is a new
 node-signed update whose vector includes all accepted dependencies and whose
 sorted `resolves` list contains every current head identifier. That resolution
@@ -232,6 +252,24 @@ the owner owns every source event sequence. Owner-filtered streams can contain
 gaps because unrelated principals share the source Grid log. Every returned
 event must still be strictly increasing and independently signed. A malformed
 event stops the batch before its cursor is committed.
+
+Because those gaps are normal, sequence numbers alone cannot show that a
+bundle event was left out. Each poll therefore sends a fresh nonce, and the
+source Grid signs, with that nonce, how many `sync.bundle.applied` events the
+owner's history holds and the latest one's sequence and hash. The relay
+compares that sync head with the events its cursor has passed:
+
+- a head beyond the cursor on a page that ended the feed, or
+- a count or latest hash different from those the relay has counted
+
+means the source withheld bundle events. Polling then fails with
+`online_sync_source_incomplete`, is blocked at once rather than retried, and
+applying queued bundles from that direction is refused until an operator has
+investigated the source Gateway and reset the direction. A head that is not
+signed by a pinned source Grid key or not bound to the request nonce is
+treated as invalid evidence. State written before sync heads existed has no
+count; the first head seen once the relay is caught up becomes its baseline,
+so omissions before the upgrade are not detected.
 
 ## Rollback and incident handling
 

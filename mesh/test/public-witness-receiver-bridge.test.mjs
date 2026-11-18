@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp } from 'node:fs/promises';
+import { copyFile, mkdtemp, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { PUBLICATION_PERSONA_SCHEMA } from '../src/identity/actor-state.mjs';
 import { createPublicPersonaProjection } from '../src/lib/social-publication.mjs';
@@ -27,6 +29,7 @@ const T3 = '2026-08-17T21:23:00.000Z';
 const T4 = '2026-08-17T21:24:00.000Z';
 const T5 = '2026-08-17T21:25:00.000Z';
 const T6 = '2026-08-17T21:26:00.000Z';
+const T7 = '2026-08-17T21:27:00.000Z';
 
 function keys() {
   const pair = generateKeyPairSync('ed25519');
@@ -80,7 +83,43 @@ function fixture() {
     expiresAt: T6,
     now: Date.parse(T1)
   });
-  return { root, witness, credential, admission, transfer };
+  return { root, source, witness, credential, admission, transfer };
+}
+
+async function makeTransferInSourceProcess({ credential, admission, source, previousTransfer = null, transferId, createdAt, expiresAt }) {
+  const path = fileURLToPath(new URL('../test-support/public-witness-source-child.mjs', import.meta.url));
+  const child = spawn(process.execPath, [path], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let output = '';
+  let diagnostic = '';
+  child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
+  child.stderr.setEncoding('utf8').on('data', chunk => { diagnostic += chunk; });
+  child.stdin.end(JSON.stringify({
+    credential,
+    sourceAdmission: admission,
+    sourcePrivateKey: source.privateKey,
+    previousTransfer,
+    transferId,
+    createdAt,
+    expiresAt,
+    now: Date.parse(createdAt)
+  }));
+  const [code] = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      child.kill();
+      reject(new Error('source process timed out'));
+    }, 5000);
+    timeout.unref();
+    child.once('error', error => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.once('close', (...args) => {
+      clearTimeout(timeout);
+      resolve(args);
+    });
+  });
+  assert.equal(code, 0, diagnostic);
+  return JSON.parse(output);
 }
 
 async function stores(data) {
@@ -264,4 +303,217 @@ test('bridge rejects source-admission substitution, persona-root substitution, a
     }),
     /must use the same witness key/
   );
+});
+
+test('receiver linkage refuses a witness state path that cannot reproduce the signed observation', async () => {
+  const data = fixture();
+  const setup = await stores(data);
+  const received = await intake(data, setup.receiverStore);
+  const unrelatedPath = join(setup.dir, 'unrelated-witness.jsonl');
+  await openPublicWitnessDurableStore({
+    statePath: unrelatedPath,
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'witness-receiver-bridge',
+    witnessPrivateKey: data.witness.privateKey
+  });
+
+  await assert.rejects(
+    () => commitReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: unrelatedPath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      observedAt: T3,
+      committedAt: T4
+    }),
+    /backing state path/
+  );
+  assert.equal(setup.receiverStore.getTransfer(received.transfer_digest).observation_status, 'pending-observation');
+  const reopenedReceiver = await openPublicWitnessReceiverStore({
+    statePath: setup.receiverStatePath,
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'witness-receiver-bridge',
+    witnessPrivateKey: data.witness.privateKey
+  });
+  const reopenedWitness = await openPublicWitnessDurableStore({
+    statePath: setup.witnessStatePath,
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'witness-receiver-bridge',
+    witnessPrivateKey: data.witness.privateKey
+  });
+  const reconciled = await reconcileReceiverTransferObservation({
+    receiverStore: reopenedReceiver,
+    witnessStore: reopenedWitness,
+    witnessStatePath: setup.witnessStatePath,
+    transferDigest: received.transfer_digest,
+    sourceAdmission: data.admission,
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    now: Date.parse(T5)
+  });
+  assert.equal(reconciled.status, 'reconciled');
+  assert.equal(reopenedReceiver.getTransfer(received.transfer_digest).observation_status, 'observation-committed');
+});
+
+test('a separate source process cannot advance a retired key after receiver restart; exact replay remains stable', async () => {
+  const data = fixture();
+  const setup = await stores(data);
+  await setup.receiverStore.admitSource(data.admission, { admittedAt: T0 });
+  const first = await makeTransferInSourceProcess({
+    credential: data.credential,
+    admission: data.admission,
+    source: data.source,
+    transferId: 'source-child-first',
+    createdAt: T1,
+    expiresAt: T6
+  });
+  const received = await setup.receiverStore.receiveTransfer(first, {
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    receivedAt: T2
+  });
+  const committed = await commitReceiverTransferObservation({
+    receiverStore: setup.receiverStore,
+    witnessStore: setup.witnessStore,
+    witnessStatePath: setup.witnessStatePath,
+    transferDigest: received.transfer_digest,
+    sourceAdmission: data.admission,
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    observedAt: T3,
+    committedAt: T4
+  });
+  assert.equal(committed.status, 'observation-committed');
+
+  const rotatedSource = keys();
+  const rotatedAdmission = createPublicWitnessSourceAdmission({
+    domainId: 'axiom.social.public.v1',
+    sourceId: data.admission.source_id,
+    sourcePublicKey: rotatedSource.publicKey,
+    sourceEpoch: 2,
+    validFrom: T5,
+    expiresAt: '2026-08-17T22:00:00.000Z'
+  });
+  await setup.receiverStore.admitSource(rotatedAdmission, { admittedAt: T5 });
+  const reopenedReceiver = await openPublicWitnessReceiverStore({
+    statePath: setup.receiverStatePath,
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'witness-receiver-bridge',
+    witnessPrivateKey: data.witness.privateKey
+  });
+  const reopenedWitness = await openPublicWitnessDurableStore({
+    statePath: setup.witnessStatePath,
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'witness-receiver-bridge',
+    witnessPrivateKey: data.witness.privateKey
+  });
+  const oldReplay = await reopenedReceiver.receiveTransfer(first, {
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    receivedAt: T7
+  });
+  assert.equal(oldReplay.status, 'replay');
+  assert.equal(oldReplay.transfer_receipt.receipt_digest, received.transfer_receipt.receipt_digest);
+
+  const oldUnseen = await makeTransferInSourceProcess({
+    credential: data.credential,
+    admission: data.admission,
+    source: data.source,
+    previousTransfer: first,
+    transferId: 'source-child-stale',
+    createdAt: T4,
+    expiresAt: T6
+  });
+  await assert.rejects(
+    () => reopenedReceiver.receiveTransfer(oldUnseen, {
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      receivedAt: T7
+    }),
+    /stale source epoch/
+  );
+
+  const current = await makeTransferInSourceProcess({
+    credential: data.credential,
+    admission: rotatedAdmission,
+    source: rotatedSource,
+    transferId: 'source-child-current',
+    createdAt: T5,
+    expiresAt: T7
+  });
+  const currentReceipt = await reopenedReceiver.receiveTransfer(current, {
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    receivedAt: T6
+  });
+  assert.equal(currentReceipt.status, 'received');
+  assert.equal(currentReceipt.transfer_receipt.statement.source_epoch, 2);
+  assert.equal(reopenedReceiver.snapshot().transfer_count, 2);
+  assert.equal(reopenedWitness.snapshot().durable_record_count, 1);
+  assert.equal((await reopenedReceiver.verifyState()).valid, true);
+  assert.equal((await reopenedWitness.verifyState()).valid, true);
+});
+
+test('signed copied witness state cannot replace the active store backing path on replay', async () => {
+  const data = fixture();
+  const setup = await stores(data);
+  const received = await intake(data, setup.receiverStore);
+  await setup.witnessStore.commit('observe-credential', {
+    credential: data.credential,
+    trusted_persona_root_public_key: data.root.publicKey,
+    observed_at: T3
+  }, { committedAt: T4 });
+  const copyPath = join(setup.dir, 'signed-copy.jsonl');
+  await copyFile(setup.witnessStatePath, copyPath);
+
+  await assert.rejects(
+    () => commitReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: copyPath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      observedAt: T3,
+      committedAt: T5
+    }),
+    /backing state path/
+  );
+  assert.equal(setup.receiverStore.getTransfer(received.transfer_digest).observation_status, 'pending-observation');
+});
+
+test('reconciliation rejects a signed copy if the active witness backing file disappears', async () => {
+  const data = fixture();
+  const setup = await stores(data);
+  const received = await intake(data, setup.receiverStore);
+  await setup.witnessStore.commit('observe-credential', {
+    credential: data.credential,
+    trusted_persona_root_public_key: data.root.publicKey,
+    observed_at: T3
+  }, { committedAt: T4 });
+  const copyPath = join(setup.dir, 'signed-copy.jsonl');
+  await copyFile(setup.witnessStatePath, copyPath);
+  await unlink(setup.witnessStatePath);
+
+  await assert.rejects(
+    () => reconcileReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: copyPath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      now: Date.parse(T5)
+    }),
+    /backing state path|ENOENT/
+  );
+  await assert.rejects(
+    () => reconcileReceiverTransferObservation({
+      receiverStore: setup.receiverStore,
+      witnessStore: setup.witnessStore,
+      witnessStatePath: setup.witnessStatePath,
+      transferDigest: received.transfer_digest,
+      sourceAdmission: data.admission,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      now: Date.parse(T5)
+    }),
+    error => error?.code === 'ENOENT'
+  );
+  assert.equal(setup.receiverStore.getTransfer(received.transfer_digest).observation_status, 'pending-observation');
 });

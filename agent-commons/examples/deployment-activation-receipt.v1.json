@@ -1,0 +1,39 @@
+{
+  "schema": "axiom-deployment-transition-receipt.v1",
+  "receipt_id": "transition:alpha-airgap-activate-001",
+  "target_instance_id": "instance:alpha-airgap-01",
+  "admission_id": "admission:institution-alpha-enclave-001",
+  "from_state": "staging",
+  "to_state": "active",
+  "artifact_digests": [
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "transition_authority": {
+    "mode": "fresh_effect_admission",
+    "grant_or_policy_evidence_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "fresh_at_transition": true
+  },
+  "health": {
+    "pre_transition_check_passed": true,
+    "post_transition_check_passed": true,
+    "evidence_digests": [
+      "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    ]
+  },
+  "rollback": {
+    "target_state_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "rollback_plan_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "available": true
+  },
+  "occurred_at": "2026-09-01T12:55:00.000Z",
+  "offline_context": {
+    "offline": true,
+    "external_currentness_satisfied": true,
+    "reconciliation_required": true
+  },
+  "limitations": [
+    "Receipt records one bounded activation transition only.",
+    "The receipt is evidence and cannot be replayed as authority."
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "axiom-studio-artifact-manifest.v1",
+  "artifact_id": "artifact:example-local-research-capsule",
+  "artifact_type": "agent_runtime_capsule",
+  "version": "0.1.0",
+  "content_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "provenance": {
+    "source": "Studio local workspace",
+    "author_or_generator": "human+agent-assisted",
+    "source_version": "workspace-0.1",
+    "source_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "protection_profile_ids": [
+    "protection:local-research-default"
+  ],
+  "verification_profile_ids": [
+    "verify:artifact-integrity",
+    "verify:runtime-conformance"
+  ],
+  "deployment_topology_compatibility": [
+    "single_device_local",
+    "local_lan_mesh",
+    "air_gapped_enclave"
+  ],
+  "required_local_adaptation": true,
+  "installation_grants_authority": false,
+  "publication_grants_authority": false,
+  "activation_requires_local_admission": true,
+  "limitations": [
+    "Example only; does not identify a production-ready capsule.",
+    "Target deployment must supply local policy, custody, authority, and topology-specific configuration."
+  ]
+}

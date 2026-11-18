@@ -26,6 +26,22 @@ test('canonical documentation is complete and has valid local links', async () =
   assert.ok(result.links >= 10);
 });
 
+test('repository Markdown boundary excludes installed agent skills', async () => {
+  const repositoryRoot = await mkdtemp(join(tmpdir(), 'axiom-doc-agents-'));
+  try {
+    await mkdir(join(repositoryRoot, '.agents', 'skills', 'vendor'), { recursive: true });
+    await writeFile(join(repositoryRoot, 'README.md'), '# Root\n');
+    await writeFile(
+      join(repositoryRoot, '.agents', 'skills', 'vendor', 'SKILL.md'),
+      '# Vendor skill\n'
+    );
+
+    assert.deepEqual(await repositoryMarkdownFiles(repositoryRoot), ['README.md']);
+  } finally {
+    await rm(repositoryRoot, { recursive: true, force: true });
+  }
+});
+
 test('repository Markdown boundary stops at nested Git repositories', async () => {
   const repositoryRoot = await mkdtemp(join(tmpdir(), 'axiom-doc-boundary-'));
   try {

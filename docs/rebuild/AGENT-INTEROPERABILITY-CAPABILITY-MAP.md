@@ -154,6 +154,7 @@ Skill instructions are content. They do not become policy merely because a frame
 
 | Capability | Planning state | Dependency | Current claim |
 |---|---|---|---|
+| Inert workflow proposal/plan compiler | laboratory-only | canonical digests + operation-manifest/schema/evidence references | deterministic dependency compilation, hard workflow budgets, retry/idempotency and uncertain-completion validation; required capabilities remain requests; no invocation, authority, network, persistence, credential, or runtime activation |
 | Task state machine | specified-next | intent/evidence | not-claimed |
 | Awaiting-approval task state | specified-next | approvals | not-claimed |
 | Progress event stream | planned | event observation | not-claimed |
@@ -267,6 +268,7 @@ current kernel + constrained machine principal + pilot evidence
   -> read-only MCP adapter
   -> inert skill/capsule importer
   -> bounded external tool/provider
+  -> inert workflow proposal/plan compiler
   -> async task/artifact model
   -> attenuation-only delegation
   -> MCP client laboratory

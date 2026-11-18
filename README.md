@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -20,6 +20,9 @@ AXIOM application and declared downstream Mesh consumer.
 The machine-readable project/application boundary is recorded in
 [`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
 
+Zoverions writes and builds in the open: [zoverions.com](https://zoverions.com) ·
+[@zoverions on X](https://x.com/zoverions) · [YouTube](https://www.youtube.com/@zoverions)
+
 ## First 5 Minutes
 
 Primary production requirements: Node.js `>=24.14.0 <25` and npm
@@ -29,7 +32,7 @@ shared-host setup also accepts Node.js `>=22.23.2 <23`; no other Node.js 22
 patch is approved to start the production supervisor.
 
 The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
-and **Node.js 24.19.0 for the candidate production image**.
+and **Node.js 24.22.2 for the candidate production image**.
 A separate hosted-runtime job pins **Node.js 22.23.2** and verifies the
 production guard, mutual TLS, network-boundary, and supervisor protections.
 Runtime approval never waives private credential storage, deny-egress
@@ -81,7 +84,7 @@ authority for runnable capability status. Roadmap entries, demonstrations,
 laboratories, synthetic conformance, and built-but-production-unreachable source
 do not promote a capability beyond that registry.
 
-The current registry tracks 49 capabilities, of which 31 are marked
+The current registry tracks 51 capabilities, of which 31 are marked
 `implemented`.
 
 ### Implemented production-candidate kernel surface
@@ -194,11 +197,13 @@ authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
 ### AXIOM One
 
 AXIOM One remains an experimental loopback-only browser/PWA preview. The current
-slice provides node status, reversible review for five bounded actions,
+slice provides node status, reversible review for six bounded actions,
 owner-scoped private memory, three fixed directional provenance relations,
 confirmation-bound tombstoning, selective local export, explicit bundle reveal,
-raw evidence, approval-state distinctions, same-idempotency-key uncertainty
-recovery, and cross-principal negative tests.
+raw evidence, approval-state distinctions, non-authorizing capability-status
+projection, current consent-state inspection, bounded local evidence-chain
+verification, same-idempotency-key uncertainty recovery, and cross-principal
+negative tests.
 
 It is not a supported product and does not yet claim general consequential
 plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
@@ -316,7 +321,7 @@ chain that produces that authority.
 |---|---|---|
 | **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
 | **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
-| **Install planning** | Review the future personal/local and infrastructure-node host profiles without mistaking them for implemented installers | `mesh/config/install-targets.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
+| **Install planning** | Produce an inert, non-mutating Linux host plan for the personal/local or infrastructure-node profile; this is not a fresh-host installer | `npm run host-install:plan -- personal-local` -> `mesh/config/host-install-policy.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
 | **Applications** | Discover first-class in-tree and independently released applications and their authority boundaries | `mesh/config/application-catalog.json` -> `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` |
 | **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
 | **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |
@@ -402,7 +407,7 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 42 current internal**
+machine-readable default-deny policy **permits only 45 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
 allowlists, and removes unrelated adjacency. The 42nd reviewed permission is the
 bounded Hypervisor-to-Grid Education learner-progress edge; it is not public

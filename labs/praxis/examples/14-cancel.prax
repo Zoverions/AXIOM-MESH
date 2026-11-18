@@ -1,0 +1,5 @@
+requires permit deploy_prod: Deploy @ Production;
+op release = Deploy("sha256:abc123") @ Production;
+authorize release using deploy_prod as armed_release;
+prepare armed_release as prepared_release;
+cancel prepared_release as cancelled_release;

@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-external-operation-offer.v0",
+  "offer_id": "offer:synthetic:free-read",
+  "observed_at": "2026-09-16T20:00:00.000Z",
+  "freshness": {
+    "state": "current",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "catalog_entry": {
+    "entry_id": "connector:synthetic-search",
+    "entry_version": "0.1.0",
+    "entry_digest": "51cd5bd3ae68bda16c1380112266f77be9e1d685e54ac0e58ead49adcb1d69c0"
+  },
+  "operation": {
+    "broker_operation_id": "synthetic#search",
+    "axiom_action": "external.search.read",
+    "schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "provider_ref": "provider:synthetic-search",
+    "effect_class": "read-external",
+    "input_data_classes": [
+      "query.text"
+    ],
+    "output_data_classes": [
+      "search.results"
+    ],
+    "network_required": true,
+    "description": "Search an external synthetic index."
+  },
+  "topology": {
+    "broker_location": "hosted",
+    "broker_destination": "https://broker.example.invalid",
+    "downstream_location": "provider-remote",
+    "provider_destination": "https://api.example.invalid"
+  },
+  "quote": {
+    "kind": "free",
+    "currency": null,
+    "quoted_amount_minor_units": 0,
+    "max_amount_minor_units": 0,
+    "pricing_unit": "call",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "health": {
+    "state": "available",
+    "observed_at": "2026-09-16T20:00:00.000Z",
+    "p50_ms": 120,
+    "p95_ms": 350
+  },
+  "execution_semantics": {
+    "timeout_ms": 20000,
+    "cancellation": "best-effort",
+    "idempotency": "read-safe",
+    "reconciliation": "not-required"
+  },
+  "evidence": {
+    "source_refs": [
+      "fixture:synthetic"
+    ],
+    "external_claim_only": true
+  },
+  "grants_authority": false,
+  "execution_effect": "none"
+}

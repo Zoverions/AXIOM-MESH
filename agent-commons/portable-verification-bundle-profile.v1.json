@@ -1,0 +1,45 @@
+{
+  "schema": "axiom-portable-verification-bundle-profile.v1",
+  "status": "experimental interoperability architecture; no production promotion",
+  "purpose": "Allow local, intermittently connected, institutional-private, or air-gapped deployments to carry the exact verifier context needed to check bounded assertions without treating offline availability as permission to extend stale trust.",
+  "bundle_contents": [
+    "assertion profile identifiers",
+    "verifier implementation/artifact digests",
+    "trust profile identifiers",
+    "trust-anchor digests",
+    "policy digest",
+    "freshness constraints",
+    "revocation/currentness requirements",
+    "offline validity window",
+    "limitations"
+  ],
+  "core_invariants": [
+    "portable verification context is not portable authority",
+    "offline availability does not extend expiry",
+    "cached trust material does not imply current external revocation state",
+    "reconnection triggers explicit reconciliation where required",
+    "high-consequence decisions may require a fresh revocation/currentness check even if the proof itself verifies",
+    "bundle provenance and verifier reproducibility are separately inspectable",
+    "air-gapped verification must state which external facts cannot be refreshed"
+  ],
+  "deployment_uses": [
+    "single-device local verification",
+    "school or university private network",
+    "government administrative enclave",
+    "field research mesh",
+    "disaster-response local network",
+    "air-gapped high-security review",
+    "portable institutional verifier appliance"
+  ],
+  "stale_behaviors": [
+    "deny_required_proof",
+    "hold_pending_reconnect",
+    "downgrade_to_advisory_only"
+  ],
+  "nonclaims": [
+    "A portable bundle does not make an offline assertion current forever.",
+    "A valid bundle does not grant execution authority.",
+    "A bundle does not prove that an external issuer, chain, service, or institution remains uncompromised.",
+    "This profile does not prescribe a single packaging, signature, or cryptographic format."
+  ]
+}

@@ -28,6 +28,9 @@ import {
 } from '../src/lib/repository-docs-effect.mjs';
 import { startRepositoryOperatorService } from '../src/repository-operator/service.mjs';
 import { executeGridPreparedResolvedRepositoryEffect } from '../src/hypervisor/intent-resolver-grid-complete.mjs';
+import {
+  createRepositoryOperatorTestSocket
+} from '../test-support/repository-operator-socket.mjs';
 
 const productionPolicy = JSON.parse(
   await readFile(new URL('../config/policy.json', import.meta.url), 'utf8')
@@ -298,9 +301,7 @@ async function socketPath(t) {
   if (process.platform === 'win32') {
     return `\\\\.\\pipe\\axiom-repository-operator-test-resolver-${randomUUID()}`;
   }
-  const dir = await mkdtemp(join(tmpdir(), 'axiom-resolver-completion-socket-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  return join(dir, 'operator.sock');
+  return createRepositoryOperatorTestSocket(t);
 }
 
 async function signedGridCompletionServer(t, hypervisor) {

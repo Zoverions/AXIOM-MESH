@@ -354,6 +354,102 @@ test('Grid rejects node-key Sybils and preserves auditable schedule degradation'
   store.close();
 });
 
+async function discoveryStore(t) {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-node-discovery-paging-'));
+  const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
+  const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
+  const store = new GridStore({ path: join(dataDir, 'grid.sqlite'), dataDir, identity, protector });
+  // One hook, in order: Windows cannot remove an open database file.
+  t.after(async () => {
+    try { store.close(); } catch {}
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  const insert = store.db.prepare(`
+    INSERT INTO nodes(node_id, public_key_digest, security_profile, capabilities_json, software_digest,
+      expires_at, status, registered_at, owner, public_key_json, admission_digest, discovery_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)
+  `);
+  const add = node => insert.run(
+    node.node_id, node.public_key_digest, node.security_profile,
+    store.protectJson('nodes', 'capabilities_json', node.node_id, node.capabilities),
+    node.software_digest, node.expires_at, node.status, NOW, node.owner,
+    node.discovery ? store.protectJson('nodes', 'discovery_json', node.node_id, node.discovery) : null
+  );
+  return { store, add };
+}
+
+// Every page, in order, until has_more is false.
+function allPages(store, query, asOf) {
+  const nodes = [];
+  let after;
+  for (let pages = 0; pages < 100; pages += 1) {
+    const discovery = store.discoverNodes(query, { asOf, after });
+    nodes.push(...discovery.nodes.map(node => node.node_id));
+    if (!discovery.page.has_more) return nodes;
+    after = discovery.page.next_cursor;
+  }
+  throw new Error('discovery did not finish');
+}
+
+test('node discovery pages reach every eligible node in ranking order', async t => {
+  const { store, add } = await discoveryStore(t);
+  const later = '2026-07-29T14:00:00.000Z';
+  const levels = ['S0_BASIC', 'S1_STANDARD', 'S2_HARDENED', 'S3_HARDENED', 'unrated'];
+  const ids = [];
+  for (let index = 0; index < 60; index += 1) {
+    // Mixed case and punctuation: the tie order is byte order, as in SQL.
+    const nodeId = `${index % 2 ? 'Node' : 'node'}:${index % 3 ? 'a' : '_'}${String(index).padStart(2, '0')}`;
+    ids.push(nodeId);
+    const kind = index % 7;
+    add(candidate(nodeId, {
+      owner: `owner:${index}`,
+      domain: `zone:${index % 4}`,
+      security: levels[index % levels.length],
+      status: kind === 1 ? 'quarantined' : 'active',
+      capabilities: kind === 2 ? ['storage.offer'] : ['compute.batch', 'storage.offer'],
+      expiresAt: kind === 3 ? '2026-07-29T12:03:00.000Z' : later
+    }));
+  }
+  const query = { required_capabilities: ['compute.batch'], minimum_security_level: 1, minimum_lease_seconds: 300, limit: 7 };
+  const paged = allPages(store, query, NOW);
+  const whole = discoverAdmittedNodes(store.listNodes({ asOf: NOW }), { ...query, limit: 500 }, { asOf: NOW });
+  assert.ok(whole.page.has_more === false && whole.nodes.length > 7 * 2, `eligible: ${whole.nodes.length}`);
+  assert.deepEqual(paged, whole.nodes.map(node => node.node_id));
+  assert.equal(new Set(paged).size, paged.length, 'no node twice');
+  // Ranked: security level high to low, then node id in byte order.
+  const byId = new Map(whole.nodes.map(node => [node.node_id, node]));
+  for (let index = 1; index < paged.length; index += 1) {
+    const [left, right] = [byId.get(paged[index - 1]), byId.get(paged[index])];
+    assert.ok(left.security_profile > right.security_profile
+      || (left.security_profile === right.security_profile && left.node_id < right.node_id), `${left.node_id} before ${right.node_id}`);
+  }
+
+  // Cursors are canonical and bound to discovery.
+  const first = store.discoverNodes(query, { asOf: NOW });
+  assert.throws(() => store.discoverNodes(query, { asOf: NOW, after: `${first.page.next_cursor}x` }), /cursor is invalid/);
+  const foreign = Buffer.from(JSON.stringify(['nodes', '3', 'node:a01'])).toString('base64url');
+  assert.throws(() => store.discoverNodes(query, { asOf: NOW, after: foreign }), /cursor is invalid/);
+});
+
+test('a discovery page decodes only what it returns, however many nodes have expired', async t => {
+  const { store, add } = await discoveryStore(t);
+  for (let index = 0; index < 300; index += 1) {
+    add(candidate(`node:gone${String(index).padStart(3, '0')}`, {
+      owner: `owner:gone${index}`, domain: 'zone:a', security: 'S3_HARDENED', expiresAt: '2026-07-29T11:00:00.000Z'
+    }));
+    add(candidate(`node:live${String(index).padStart(3, '0')}`, {
+      owner: `owner:live${index}`, domain: 'zone:b', expiresAt: '2026-07-29T14:00:00.000Z'
+    }));
+  }
+  let decoded = 0;
+  const decode = store.decodeNodeRow.bind(store);
+  store.decodeNodeRow = row => { decoded += 1; return decode(row); };
+  const page = store.discoverNodes({ required_capabilities: ['compute.batch'], limit: 10 }, { asOf: NOW });
+  assert.equal(page.count, 10);
+  assert.equal(page.page.has_more, true);
+  assert.ok(decoded <= 11, `decoded ${decoded} node rows for a page of 10`);
+});
+
 test('node scheduling drill signs Sybil, expiry, quarantine, and partition evidence', async t => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-node-scheduling-drill-'));
   t.after(() => rm(root, { recursive: true, force: true }));

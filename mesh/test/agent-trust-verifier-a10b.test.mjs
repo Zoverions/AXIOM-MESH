@@ -21,6 +21,9 @@ import {
   checkAgentTrustVerificationReportIntegrity,
   verifyAgentTrustBundle
 } from '../src/lib/agent-trust-verifier.mjs';
+import { sessionFixtureExpiry } from '../test-support/session-fixture-clock.mjs';
+
+const SESSION_FIXTURE_EXPIRES_AT = sessionFixtureExpiry(new Date());
 
 const humans = new Set(['owner.alice']);
 const INPUT = '1'.repeat(64);
@@ -34,7 +37,7 @@ function machineDefinition({ id, runtimeId, software }) {
     roles: ['researcher'],
     scopes: ['intent:execute'],
     lifetime: 'session',
-    expires_at: '2099-01-01T00:00:00.000Z',
+    expires_at: SESSION_FIXTURE_EXPIRES_AT,
     runtime: { id: runtimeId, kind: 'local-process', software_digest: software },
     constraints: {
       actions: ['system.echo'],

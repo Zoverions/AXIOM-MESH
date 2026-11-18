@@ -402,3 +402,33 @@ test('external anchor guard requires anchor and trusted witness key together and
   assert.equal(snapshot.rollback_checked_relative_to_external_anchor, false);
   assert.equal(snapshot.storage_rollback_proof_claimed, false);
 });
+
+
+test('anchor statement rejects accessor-backed evidence without running getters', async () => {
+  const f = fixture();
+  const {
+    createDelegationRootAttestationKeyCurrentnessAnchor,
+    verifyDelegationRootAttestationKeyCurrentnessAnchor
+  } = await anchorModule();
+  const anchor = createDelegationRootAttestationKeyCurrentnessAnchor(
+    anchorCreateOptions(f, f.checkpoint1, [f.checkpoint1])
+  );
+  const accessorBacked = structuredClone(anchor);
+  let getterCalls = 0;
+  Object.defineProperty(accessorBacked.statement, 'checkpoint_digest', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      getterCalls += 1;
+      return anchor.statement.checkpoint_digest;
+    }
+  });
+
+  assert.throws(
+    () => verifyDelegationRootAttestationKeyCurrentnessAnchor(
+      accessorBacked,
+      anchorVerifyOptions(f, f.checkpoint1)
+    )
+  );
+  assert.equal(getterCalls, 0, 'anchor statement getter must not run');
+});

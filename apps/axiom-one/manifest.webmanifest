@@ -1,21 +1,98 @@
 {
-  "name": "AXIOM One Local Preview",
-  "short_name": "AXIOM One",
-  "description": "Experimental local interface for an AXIOM-MESH personal node.",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
   "background_color": "#08111f",
-  "theme_color": "#0b1526",
-  "orientation": "any",
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "description": "Experimental local interface for an AXIOM-MESH personal node. Owner-scoped; no external AI, sharing, or federation is claimed.",
+  "dir": "ltr",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "icons": [
     {
-      "src": "/icon.svg",
+      "purpose": "any",
+      "sizes": "192x192",
+      "src": "/icons/icon-192.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any",
+      "sizes": "512x512",
+      "src": "/icons/icon-512.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "192x192",
+      "src": "/icons/icon-maskable-192.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "512x512",
+      "src": "/icons/icon-maskable-512.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any",
       "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon.svg",
+      "type": "image/svg+xml"
     }
-  ]
+  ],
+  "id": "/",
+  "lang": "en",
+  "name": "AXIOM One Local Preview",
+  "orientation": "any",
+  "scope": "/",
+  "screenshots": [
+    {
+      "form_factor": "wide",
+      "label": "AXIOM One local preview (stylized mockup): Local Social and Vault sections.",
+      "sizes": "1280x720",
+      "src": "/screenshots/screenshot-wide.png",
+      "type": "image/png"
+    },
+    {
+      "form_factor": "narrow",
+      "label": "AXIOM One local preview (stylized mockup): compact mobile layout.",
+      "sizes": "390x844",
+      "src": "/screenshots/screenshot-narrow.png",
+      "type": "image/png"
+    }
+  ],
+  "short_name": "AXIOM One",
+  "shortcuts": [
+    {
+      "description": "Open the owner-scoped local social feed.",
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "/icons/icon-192.png",
+          "type": "image/png"
+        }
+      ],
+      "name": "Local Social",
+      "short_name": "Social",
+      "url": "/#social"
+    },
+    {
+      "description": "Open the partitioned local vault.",
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "/icons/icon-192.png",
+          "type": "image/png"
+        }
+      ],
+      "name": "Vault",
+      "short_name": "Vault",
+      "url": "/#vault"
+    }
+  ],
+  "start_url": "/",
+  "theme_color": "#0b1526"
 }

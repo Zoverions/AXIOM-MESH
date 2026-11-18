@@ -17,6 +17,7 @@ import {
   validateDelegationRootAttestationKeyCurrentnessCheckpointPath,
   verifyDelegationRootAttestationKeyCurrentnessCheckpoint
 } from './delegation-root-attestation-key-currentness-checkpoint.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 export const DELEGATION_ROOT_ATTESTATION_KEY_CURRENTNESS_ANCHOR_SCHEMA =
   'axiom-delegation-root-attestation-key-currentness-anchor.v1';
@@ -376,54 +377,58 @@ function normalizeAnchor(raw) {
 }
 
 function normalizeStatement(raw) {
-  assertPlainObject(raw, 'delegation currentness anchor statement');
-  assertExactKeys(raw, 'delegation currentness anchor statement', STATEMENT_KEYS);
+  const snapshot = snapshotDelegationPlainData(
+    raw,
+    'delegation currentness anchor statement'
+  );
+  assertPlainObject(snapshot, 'delegation currentness anchor statement');
+  assertExactKeys(snapshot, 'delegation currentness anchor statement', STATEMENT_KEYS);
   const statement = {
     root_binding_digest: assertDigest(
-      raw.root_binding_digest,
+      snapshot.root_binding_digest,
       'delegation currentness anchor root_binding_digest'
     ),
     root_authority_digest: assertDigest(
-      raw.root_authority_digest,
+      snapshot.root_authority_digest,
       'delegation currentness anchor root_authority_digest'
     ),
-    root_holder: assertIdentifier(raw.root_holder, 'delegation currentness anchor root_holder'),
+    root_holder: assertIdentifier(snapshot.root_holder, 'delegation currentness anchor root_holder'),
     controller_key_id: assertDigest(
-      raw.controller_key_id,
+      snapshot.controller_key_id,
       'delegation currentness anchor controller_key_id'
     ),
-    witness_id: assertIdentifier(raw.witness_id, 'delegation currentness anchor witness_id'),
+    witness_id: assertIdentifier(snapshot.witness_id, 'delegation currentness anchor witness_id'),
     witness_key_id: assertDigest(
-      raw.witness_key_id,
+      snapshot.witness_key_id,
       'delegation currentness anchor witness_key_id'
     ),
-    anchor_sequence: positiveInteger(raw.anchor_sequence, 'delegation currentness anchor sequence'),
-    anchored_at: canonicalTimestamp(raw.anchored_at, 'delegation currentness anchored_at'),
-    predecessor_anchor_digest: raw.predecessor_anchor_digest === null
+    anchor_sequence: positiveInteger(snapshot.anchor_sequence, 'delegation currentness anchor sequence'),
+    anchored_at: canonicalTimestamp(snapshot.anchored_at, 'delegation currentness anchored_at'),
+    predecessor_anchor_digest: snapshot.predecessor_anchor_digest === null
       ? null
       : assertDigest(
-        raw.predecessor_anchor_digest,
+        snapshot.predecessor_anchor_digest,
         'delegation currentness predecessor_anchor_digest'
       ),
     checkpoint_sequence: positiveInteger(
-      raw.checkpoint_sequence,
+      snapshot.checkpoint_sequence,
       'delegation currentness anchored checkpoint sequence'
     ),
     checkpoint_digest: assertDigest(
-      raw.checkpoint_digest,
+      snapshot.checkpoint_digest,
       'delegation currentness anchored checkpoint digest'
     ),
-    anchor_scope: raw.anchor_scope,
-    rollback_detection_scope: raw.rollback_detection_scope,
-    authority_effect: raw.authority_effect,
-    delegation_effect: raw.delegation_effect,
-    execution_authority_granted: raw.execution_authority_granted,
-    capability_promotion_effect: raw.capability_promotion_effect,
-    network_effect: raw.network_effect,
-    global_currentness_claimed: raw.global_currentness_claimed,
-    wall_clock_anchor_time_proved: raw.wall_clock_anchor_time_proved,
-    witness_independence_proved: raw.witness_independence_proved,
-    external_persistence_proved: raw.external_persistence_proved
+    anchor_scope: snapshot.anchor_scope,
+    rollback_detection_scope: snapshot.rollback_detection_scope,
+    authority_effect: snapshot.authority_effect,
+    delegation_effect: snapshot.delegation_effect,
+    execution_authority_granted: snapshot.execution_authority_granted,
+    capability_promotion_effect: snapshot.capability_promotion_effect,
+    network_effect: snapshot.network_effect,
+    global_currentness_claimed: snapshot.global_currentness_claimed,
+    wall_clock_anchor_time_proved: snapshot.wall_clock_anchor_time_proved,
+    witness_independence_proved: snapshot.witness_independence_proved,
+    external_persistence_proved: snapshot.external_persistence_proved
   };
   for (const [key, value] of Object.entries(FIXED_SEMANTICS)) {
     if (statement[key] !== value) {

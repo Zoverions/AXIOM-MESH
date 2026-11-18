@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  PORT_BLOCK_EPHEMERAL_FLOOR,
+  productionPortBlockBase,
   reserveProductionPortBlock
 } from '../src/lib/production-host.mjs';
 
@@ -87,5 +89,13 @@ test('production port leases reject an externally occupied candidate block', asy
 });
 
 function basePortForSample(sample) {
-  return 20_000 + Math.floor(sample * 5_000) * 4;
+  return productionPortBlockBase(sample);
 }
+
+test('production port blocks stay below the Linux ephemeral port range', () => {
+  const lowest = productionPortBlockBase(0);
+  const highest = productionPortBlockBase(1 - Number.EPSILON);
+  assert.ok(lowest >= 1_024);
+  assert.ok(highest + 3 < PORT_BLOCK_EPHEMERAL_FLOOR, `highest block ends at ${highest + 3}`);
+  assert.equal(PORT_BLOCK_EPHEMERAL_FLOOR, 32_768);
+});

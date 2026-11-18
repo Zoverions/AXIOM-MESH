@@ -15,6 +15,9 @@ import {
   evaluateAgentAuthorityAttenuation,
   verifyAgentAttenuationProof
 } from '../src/lib/agent-trust-attenuation-proof.mjs';
+import { sessionFixtureExpiry } from '../test-support/session-fixture-clock.mjs';
+
+const SESSION_FIXTURE_EXPIRES_AT = sessionFixtureExpiry(new Date());
 
 function parentCeiling(overrides = {}) {
   return createAgentAuthorityCeiling({
@@ -319,7 +322,7 @@ function realPassportFixture() {
     roles: ['researcher'],
     scopes: ['intent:execute'],
     lifetime: 'session',
-    expires_at: '2099-01-01T00:00:00.000Z',
+    expires_at: SESSION_FIXTURE_EXPIRES_AT,
     runtime: { id: 'runtime.current.1', kind: 'local-process', software_digest: 'b'.repeat(64) },
     constraints: {
       actions: ['system.echo'],

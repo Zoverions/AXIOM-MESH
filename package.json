@@ -21,6 +21,11 @@
     "agent-commons:readonly:check": "node mesh/src/check-agent-commons-readonly-lab.mjs",
     "agent-commons:mcp-readonly:check": "node mesh/src/check-agent-commons-mcp-readonly.mjs",
     "agent-commons:a2a-card:check": "node mesh/src/check-agent-commons-a2a-card-candidate.mjs",
+    "mcp-config:credential-check": "node mcp-config-credential-check.mjs",
+    "repo-entry:profile": "node repo-entry-profile.mjs",
+    "trust-profile": "node trust-profile.mjs",
+    "memory-lifecycle:profile": "node memory-lifecycle-profile.mjs",
+    "testnet:probe": "node community-testnet-probe.mjs",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
     "cli": "node mesh/src/cli.mjs --human",
@@ -62,8 +67,15 @@
     "start:production": "npm --prefix mesh run start:production",
     "test": "npm --prefix mesh test",
     "check": "npm --prefix mesh run check",
+    "interrogation:report": "npm --prefix mesh run interrogation:report",
     "status": "npm --prefix mesh run status:check",
     "release:verify": "npm --prefix mesh run release:verify",
-    "release:evidence": "npm --prefix mesh run release:evidence"
+    "release:manifest:build": "npm --prefix mesh run release:manifest:build",
+    "release:manifest:package": "npm --prefix mesh run release:manifest:package",
+    "release:evidence": "npm --prefix mesh run release:evidence",
+    "growth:demand:check": "npm --prefix mesh run growth:demand:check",
+    "growth:gtm:check": "npm --prefix mesh run growth:gtm:check",
+    "host-install:policy": "npm --prefix mesh run host-install:policy",
+    "host-install:plan": "npm --prefix mesh run host-install:plan --"
   }
 }

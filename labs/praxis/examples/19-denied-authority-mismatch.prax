@@ -1,0 +1,3 @@
+requires permit deploy_staging: Deploy @ Staging;
+op release = Deploy("sha256:abc123") @ Production;
+authorize release using deploy_staging as armed_release;

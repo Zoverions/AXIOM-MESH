@@ -38,7 +38,15 @@ test('causal sync apply uses only separately supplied local approval', async t =
   const fetchImpl = async (url, options = {}) => {
     const target = new URL(url);
     if (target.origin === 'http://127.0.0.1:42001') {
-      return jsonResponse(200, { events: [event] });
+      const body = {
+        format: 'axiom-sync-head.v1',
+        owner: event.actor,
+        sync_event_count: 1,
+        last_sync_seq: event.seq,
+        last_sync_event_hash: event.event_hash,
+        nonce: new URL(url).searchParams.get('nonce')
+      };
+      return jsonResponse(200, { events: [event], sync_head: { body, signature: fixture.grid.signObject(body) } });
     }
     if (target.pathname.startsWith('/v1/sync/bundles/')) {
       return jsonResponse(404, { error: { code: 'sync_bundle_not_found' } });

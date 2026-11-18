@@ -348,6 +348,9 @@ function registerCapsule(input, principalId) {
   } catch {
     throw new ValidationError('Capsule issuer public key is invalid');
   }
+  if (publicKey.asymmetricKeyType !== 'ed25519') {
+    throw new ValidationError('Capsule issuer public key must use Ed25519');
+  }
   let valid = false;
   try {
     valid = verify(null, Buffer.from(canonicalJson(unsigned)), publicKey, Buffer.from(signature, 'base64url'));
@@ -355,6 +358,7 @@ function registerCapsule(input, principalId) {
     valid = false;
   }
   if (!valid) throw new ValidationError('Capsule manifest signature is invalid');
+  const canonicalIssuerPem = publicKey.export({ type: 'spki', format: 'pem' });
   const manifestDigest = digestObject(manifest);
   return {
     output: {
@@ -371,7 +375,7 @@ function registerCapsule(input, principalId) {
         version,
         digest: manifestDigest,
         manifest,
-        signer: `${issuer.id}:${sha256(issuer.public_key).slice(0, 16)}`,
+        signer: `${issuer.id}:${sha256(canonicalIssuerPem).slice(0, 16)}`,
         registered_by: principalId
       }
     }

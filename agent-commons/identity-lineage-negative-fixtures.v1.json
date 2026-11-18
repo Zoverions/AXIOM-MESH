@@ -1,0 +1,155 @@
+{
+  "schema": "axiom-identity-lineage-negative-fixtures.v1",
+  "target": "RT-AUTH-001",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "authority_granted": false,
+  "cases": [
+    {
+      "id": "service-key-rotation-root-stable",
+      "given": {
+        "root": "root:A",
+        "service": "svc:alpha",
+        "old_key": "k1",
+        "new_key": "k2",
+        "new_delegation_valid": true
+      },
+      "attempt": "rotate service endpoint key while preserving root identity",
+      "expect": {
+        "identity_continuity": "preserved_by_delegation",
+        "endpoint_currency": "new_key_only",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "stale-endpoint-current-delegation",
+      "given": {
+        "endpoint_key": "k1",
+        "endpoint_state": "stale",
+        "delegation_state": "valid"
+      },
+      "attempt": "use valid lineage to rescue stale endpoint evidence",
+      "expect": {
+        "decision": "deny",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "valid-lineage-no-local-grant",
+      "given": {
+        "endpoint_proof": "valid",
+        "lineage": "valid",
+        "operator_credential": "valid",
+        "local_grant": null
+      },
+      "attempt": "perform consequential effect",
+      "expect": {
+        "decision": "deny",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "cross-service-delegation-replay",
+      "given": {
+        "delegation_service": "alpha",
+        "request_service": "beta",
+        "lineage": "valid"
+      },
+      "attempt": "replay alpha delegation at beta",
+      "expect": {
+        "decision": "deny",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "endpoint-proof-as-allow",
+      "given": {
+        "endpoint_proof": "valid",
+        "local_grant": null
+      },
+      "attempt": "treat endpoint possession proof as allow",
+      "expect": {
+        "decision": "deny",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "protocol-switch-authority-laundering",
+      "given": {
+        "source_protocol": "discovery",
+        "target_protocol": "authorization",
+        "source_evidence": "valid",
+        "local_grant": null
+      },
+      "attempt": "cross protocol boundary while adding action/purpose/destination authority",
+      "expect": {
+        "decision": "deny",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "root-compromise-vs-service-compromise",
+      "given": {
+        "root_state": "compromised",
+        "service_key_state": "valid"
+      },
+      "attempt": "treat service endpoint currency as sufficient recovery from root compromise",
+      "expect": {
+        "decision": "deny",
+        "recovery_class": "root_compromise",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "endpoint-rotation-does-not-inherit-old-grant",
+      "given": {
+        "root": "root:A",
+        "service": "svc:alpha",
+        "old_key": "k1",
+        "new_key": "k2",
+        "old_grant_bound_key": "k1",
+        "lineage_continuity": "valid",
+        "new_endpoint_proof": "valid"
+      },
+      "attempt": "reuse a grant bound to the retired endpoint key after service-key rotation",
+      "expect": {
+        "decision": "deny",
+        "requires_fresh_or_rebound_grant": true,
+        "authority": "none"
+      }
+    },
+    {
+      "id": "platform-credential-isolation",
+      "given": {
+        "root": "root:A",
+        "alpha_service_credential": "cred:alpha",
+        "beta_service": "svc:beta",
+        "alpha_credential_valid": true
+      },
+      "attempt": "present a valid platform-specific credential from alpha as authority/evidence for beta",
+      "expect": {
+        "decision": "deny",
+        "cross_platform_reuse": "forbidden",
+        "authority": "none"
+      }
+    },
+    {
+      "id": "root-compromise-invalidates-unrevalidated-lineage",
+      "given": {
+        "root": "root:A",
+        "root_state": "compromised",
+        "service": "svc:alpha",
+        "service_key": "k2",
+        "service_key_state": "current",
+        "delegation_issued_before_compromise": true
+      },
+      "attempt": "continue treating pre-compromise lineage as sufficient continuity after root compromise",
+      "expect": {
+        "decision": "deny",
+        "recovery_class": "root_compromise",
+        "requires_reestablished_root_or_local_recovery_policy": true,
+        "authority": "none"
+      }
+    }
+  ]
+}

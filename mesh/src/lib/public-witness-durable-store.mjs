@@ -11,7 +11,7 @@ import {
   readFile,
   stat
 } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 import {
   ValidationError,
@@ -345,7 +345,7 @@ function applyRequest(core, operation, request) {
       observedAt: request.observed_at
     });
   }
-  throw new ValidationError('public witness durable operation is unsupported');
+  throw new ValidationError('public witness durable request operation is unsupported');
 }
 
 function resultDigests(result) {
@@ -489,6 +489,30 @@ export class PublicWitnessDurableStore {
     return this.#core.witnessPublicKey;
   }
 
+  #serialize(run) {
+    const promise = this.#tail.then(run, run);
+    this.#tail = promise.then(() => undefined, () => undefined);
+    return promise;
+  }
+
+  async findDurableObservationRecord(observationDigest, { statePath } = {}) {
+    const target = digest(observationDigest, 'public witness durable observationDigest');
+    const supplied = assertString(statePath, 'public witness durable backing statePath', { min: 1, max: 4096 });
+    if (resolve(supplied) !== resolve(this.#statePath)) {
+      throw new ValidationError('public witness durable observation must use the active store backing state path');
+    }
+    return this.#serialize(async () => {
+      // Recheck the store's own signed backing chain, within its configured
+      // state/record limits; a caller-supplied signed copy is not this store.
+      await this.#assertDiskMatchesMemory();
+      const matches = this.#records.filter(record => record.statement.observation_digest === target);
+      if (matches.length > 1) {
+        throw new ValidationError('public witness durable observation digest appears in multiple records');
+      }
+      return matches.length === 0 ? null : structuredClone(matches[0]);
+    });
+  }
+
   async commit(operation, rawRequest, { committedAt } = {}) {
     const normalizedOperation = assertString(operation, 'public witness durable operation');
     if (!OPERATIONS.has(normalizedOperation)) throw new ValidationError('public witness durable operation is invalid');
@@ -500,10 +524,7 @@ export class PublicWitnessDurableStore {
     if (this.#records.length > 0 && committed < this.#records.at(-1).statement.committed_at) {
       throw new ValidationError('public witness durable commit time cannot move backward');
     }
-    const run = async () => this.#commitSerialized(normalizedOperation, request, committed);
-    const promise = this.#tail.then(run, run);
-    this.#tail = promise.then(() => undefined, () => undefined);
-    return promise;
+    return this.#serialize(() => this.#commitSerialized(normalizedOperation, request, committed));
   }
 
   async #assertDiskMatchesMemory() {
@@ -639,7 +660,7 @@ export async function openPublicWitnessDurableStore({
   maxStateBytes,
   maxRecordBytes
 } = {}) {
-  const normalizedStatePath = assertString(statePath, 'public witness durable statePath', { min: 1, max: 4096 });
+  const normalizedStatePath = resolve(assertString(statePath, 'public witness durable statePath', { min: 1, max: 4096 }));
   const normalizedDomainId = identifier(domainId, 'public witness durable domainId');
   const normalizedWitnessId = identifier(witnessId, 'public witness durable witnessId');
   const normalizedMaxStateBytes = boundedInteger(maxStateBytes, 'public witness durable maxStateBytes', DEFAULT_MAX_STATE_BYTES, HARD_MAX_STATE_BYTES);

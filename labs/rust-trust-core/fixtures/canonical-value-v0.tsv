@@ -1,0 +1,18 @@
+case_id	kind	payload
+null_value	null	
+bool_true	bool	true
+bool_false	bool	false
+integer_zero	safe_integer	0
+integer_positive	safe_integer	42
+integer_negative	safe_integer	-7
+integer_max_safe	safe_integer	9007199254740991
+integer_min_safe	safe_integer	-9007199254740991
+negative_zero	negative_zero	-0
+ascii_string_simple	ascii_string	hello
+ascii_string_spaces	ascii_string	Axiom Mesh v0
+ascii_string_punctuation	ascii_string	A-Z_9.test
+array_empty	scalar_array	
+array_mixed	scalar_array	n,b:true,i:42,z,s:hello
+array_order_preserved	scalar_array	i:2,i:1
+object_key_sort	ascii_key_object	zeta=i:2;alpha=i:1
+object_mixed	ascii_key_object	b=b:false;a=s:hello;m=z;n=n

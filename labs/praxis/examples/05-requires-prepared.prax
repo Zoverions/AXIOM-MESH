@@ -1,0 +1,2 @@
+requires prepared nightly_snapshot: Snapshot @ Backups;
+commit nightly_snapshot as snapshot_receipt;

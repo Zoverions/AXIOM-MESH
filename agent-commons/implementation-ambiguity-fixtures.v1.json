@@ -1,0 +1,147 @@
+{
+  "schema": "axiom-independent-implementation-ambiguity-fixtures.v1",
+  "target": "RT-AUTH-001",
+  "portable": true,
+  "production_conformance_claimed": false,
+  "authority_granted": false,
+  "purpose": "Detect when two clean-room implementations derive different signed bytes, trust relationships, currentness decisions, or authority decisions from the same specification fixture.",
+  "classification": {
+    "equivalent_outputs": "CONSISTENT",
+    "security_relevant_divergence": "SPEC_AMBIGUOUS",
+    "insufficient_evidence": "INCONCLUSIVE"
+  },
+  "rules": [
+    "A reference implementation MUST NOT silently normalize disagreement between independent implementations.",
+    "A SPEC_AMBIGUOUS result is a specification finding, not proof that either implementation is exploitable.",
+    "Discovery, identity, provenance, currentness, and signature validity MUST NOT create local effect authority without a bounded local grant.",
+    "Every result MUST bind to the exact specification revision, implementation revision, fixture revision, and environment tested."
+  ],
+  "cases": [
+    {
+      "id": "signed-field-coverage",
+      "question": "Which fields are covered by the signature when optional or extension fields are present?",
+      "same_input": {
+        "required_fields": ["subject", "scope", "expires_at"],
+        "extension_field": "parent_nonce",
+        "extension_semantics": "security_relevant"
+      },
+      "compare": ["signed_field_set", "signature_input_bytes"],
+      "security_invariant": "Security-relevant provenance or authority fields cannot remain outside the authenticated envelope by ambiguity.",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "duplicate-and-unknown-fields",
+      "question": "Do duplicate or unknown fields fail closed, normalize identically, or produce divergent authenticated meaning?",
+      "same_input": {
+        "duplicate_field": "scope",
+        "unknown_field": "x-policy-hint"
+      },
+      "compare": ["parse_result", "normalized_object", "signature_input_bytes", "decision"],
+      "security_invariant": "Parser differences cannot create alternate signed meanings or widen authority.",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "canonicalization-equivalence",
+      "question": "Do semantically equivalent objects serialize to identical signature input bytes?",
+      "same_input": {
+        "variants": ["field-order-change", "whitespace-change", "equivalent-number-representation", "unicode-normalization"]
+      },
+      "compare": ["canonical_bytes", "signature_input_bytes", "verification_result"],
+      "security_invariant": "A logical object has one authenticated byte representation for the selected canonicalization profile.",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "parent-provenance-binding",
+      "question": "Is parent-child spawn provenance cryptographically bound inside the authenticated object rather than carried only by an unsigned chain document?",
+      "same_input": {
+        "child": "agent:child",
+        "parent": "agent:parent",
+        "spawn_nonce": "n-001"
+      },
+      "compare": ["authenticated_parent", "authenticated_spawn_nonce", "chain_validation_result"],
+      "security_invariant": "Parent identity and spawn linkage cannot be substituted without invalidating authenticated provenance.",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "scope-equality-vs-escalation",
+      "question": "Do implementations distinguish exact scope equality, narrowing, and widening the same way?",
+      "same_input": {
+        "static_ceiling": ["read", "summarize"],
+        "dynamic_policy": ["read", "summarize", "execute"]
+      },
+      "compare": ["scope_relation", "decision", "effective_authority"],
+      "security_invariant": "Dynamic policy may narrow but cannot enlarge the static authority ceiling.",
+      "expected_authority": "no_execute",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "policy-version-replay",
+      "question": "Do implementations reject a cryptographically valid but superseded policy version consistently?",
+      "same_input": {
+        "presented_policy_version": 7,
+        "current_policy_version": 9,
+        "signature_valid": true
+      },
+      "compare": ["currentness_result", "decision", "effective_authority"],
+      "security_invariant": "Signature validity cannot rescue stale authorization policy.",
+      "expected_decision": "deny",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "cross-org-grant-identifier-binding",
+      "question": "Do implementations bind cross-organizational grant identity and issuer context to the same authenticated semantics?",
+      "same_input": {
+        "grant_id": "grant:42",
+        "issuer_org": "org:A",
+        "consumer_org": "org:B"
+      },
+      "compare": ["authenticated_grant_id", "authenticated_issuer", "validation_context", "decision"],
+      "security_invariant": "A grant identifier cannot be replayed or reinterpreted under a different issuer or organizational context.",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "revocation-source-unreachable",
+      "question": "Do implementations fail closed when mandatory currentness or revocation state cannot be reached?",
+      "same_input": {
+        "certificate_signature": "valid",
+        "revocation_source": "configured",
+        "revocation_source_state": "unreachable"
+      },
+      "compare": ["currentness_result", "decision", "effective_authority"],
+      "security_invariant": "Unreachable currentness evidence cannot be interpreted as not revoked.",
+      "expected_decision": "deny_or_indeterminate_no_authority",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    },
+    {
+      "id": "static-ceiling-dynamic-broader-policy",
+      "question": "Do implementations consistently cap dynamically signed policy at the static certificate or manifest ceiling?",
+      "same_input": {
+        "static_ceiling": ["read"],
+        "dynamic_policy": ["read", "write"],
+        "all_signatures_valid": true
+      },
+      "compare": ["effective_authority", "decision"],
+      "security_invariant": "Multiple valid signatures do not compose into authority beyond the static ceiling.",
+      "expected_authority": "read_only",
+      "on_divergence": "SPEC_AMBIGUOUS"
+    }
+  ],
+  "evidence_record": {
+    "required": [
+      "specification_revision",
+      "fixture_revision",
+      "implementation_a_revision",
+      "implementation_b_revision",
+      "environment_a",
+      "environment_b",
+      "raw_output_a",
+      "raw_output_b",
+      "classification"
+    ],
+    "allowed_classifications": ["CONSISTENT", "SPEC_AMBIGUOUS", "INCONCLUSIVE"]
+  },
+  "provenance": [
+    "Motivated by independently implemented agent-trust protocol drafts where implementation divergence exposed underspecified wire encoding, signature envelopes, provenance binding, and revocation/currentness semantics.",
+    "This corpus generalizes those lessons for AXIOM-MESH and Agent Commons; it does not claim conformance with or endorsement by any external standards body."
+  ]
+}

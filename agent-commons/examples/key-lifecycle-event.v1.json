@@ -1,0 +1,24 @@
+{
+  "schema": "axiom-key-lifecycle-event.v1",
+  "event_id": "key-event:rotate-service-alpha-001",
+  "key_id": "key:service-alpha-2026-q3",
+  "key_purpose": "signing",
+  "cryptographic_profile_id": "crypto:current-signature-v1",
+  "instance_id": "instance:alpha-01",
+  "from_state": "active",
+  "to_state": "rotating",
+  "public_material_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "authority_evidence_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "occurred_at": "2026-09-01T13:05:00.000Z",
+  "secret_material_present": false,
+  "offline_context": {
+    "offline": true,
+    "fresh_external_status_required": false,
+    "fresh_external_status_satisfied": false,
+    "reconciliation_required": true
+  },
+  "limitations": [
+    "Event records lifecycle state only; it does not contain the private key.",
+    "Rotation must complete through a separate retirement event for the old key."
+  ]
+}

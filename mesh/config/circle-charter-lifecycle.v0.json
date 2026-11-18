@@ -1,0 +1,41 @@
+{
+  "schema": "axiom-circle-charter-lifecycle-policy.v0",
+  "version": 0,
+  "status": "inert-activated-charter-history",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "requirements": {
+    "exact_circle_id_binding": true,
+    "activated_entries_only": true,
+    "current_circle_charter_must_equal_active_head": true,
+    "genesis_version_one": true,
+    "contiguous_versions": true,
+    "strict_effective_chronology": true,
+    "exact_supersedes_digest_chain": true,
+    "unique_charter_digests": true,
+    "recorded_before_or_at_activation": true,
+    "activation_not_in_future": true,
+    "historical_resolution_required": true,
+    "activation_evidence_is_non_authorizing": true,
+    "charter_history_may_mint_runtime_authority": false,
+    "historical_rules_rewritten": false
+  },
+  "schemas": {
+    "lifecycle": "axiom-circle-charter-lifecycle.v0",
+    "entry": "axiom-circle-charter-history-entry.v0",
+    "activation": "axiom-circle-charter-activation.v0",
+    "resolved": "axiom-circle-charter-resolution.v0"
+  },
+  "output": {
+    "policy_digest_required": true,
+    "circle_package_digest_required": true,
+    "lifecycle_digest_required": true,
+    "active_charter_digest_required": true,
+    "historical_resolution_is_local_derivation": true,
+    "runtime_authority": false,
+    "portable_authority": false,
+    "authority_effect": "none",
+    "network_effect": "none"
+  }
+}

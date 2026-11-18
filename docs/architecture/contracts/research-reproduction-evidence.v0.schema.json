@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/research-reproduction-evidence.v0.schema.json",
+  "title": "AXIOM Research Reproduction Evidence v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "evidence_id",
+    "source_manifest_digest",
+    "operation_digest",
+    "source_revision",
+    "environment_digest",
+    "fixture_digests",
+    "expected_output_digests",
+    "observed_output_digests",
+    "tolerance_method",
+    "attempt_count",
+    "disposition",
+    "failure_diagnostics",
+    "verifier_id",
+    "network_profile",
+    "claim_scope",
+    "truth_established",
+    "authority_effect",
+    "evidence_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-research-reproduction-evidence.v0" },
+    "evidence_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 512 },
+    "source_manifest_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "operation_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "source_revision": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "environment_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "fixture_digests": { "$ref": "#/$defs/digestArray" },
+    "expected_output_digests": { "$ref": "#/$defs/digestArray" },
+    "observed_output_digests": { "$ref": "#/$defs/digestArray" },
+    "tolerance_method": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "attempt_count": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "disposition": { "enum": ["pass", "fail", "excluded", "not_run"] },
+    "failure_diagnostics": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 8192 }
+    },
+    "verifier_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "network_profile": { "enum": ["none", "synthetic_loopback_only"] },
+    "claim_scope": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "truth_established": { "const": false },
+    "authority_effect": { "const": "none" },
+    "evidence_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "digestArray": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    }
+  }
+}

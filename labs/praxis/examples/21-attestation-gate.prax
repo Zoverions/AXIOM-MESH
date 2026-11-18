@@ -1,0 +1,11 @@
+requires permit open_merge_gate: OpenGate @ MergeQueue;
+observe tests_att = "{\"schema\":\"mesh-attestation.v0\",\"kind\":\"tests-reproduced\",\"subject\":\"placeholder\"}" from "loop:tests";
+observe review_att = "{\"schema\":\"mesh-attestation.v0\",\"kind\":\"adversarial-review\",\"subject\":\"placeholder\"}" from "loop:review";
+observe ci_att = "{\"schema\":\"mesh-attestation.v0\",\"kind\":\"protected-ci\",\"subject\":\"placeholder\"}" from "loop:ci";
+verify v_tests = tests_att with AttestationV0;
+verify v_review = review_att with AttestationV0;
+verify v_ci = ci_att with AttestationV0;
+op open_gate = OpenGate("pr:placeholder@sha256:placeholder-head", "sha256:placeholder-attestation-set-digest") @ MergeQueue effect gate_open irreversible;
+authorize open_gate using open_merge_gate as armed_gate;
+prepare armed_gate as prepared_gate;
+finalize prepared_gate as gate_receipt;

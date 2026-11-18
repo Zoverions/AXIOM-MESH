@@ -1,0 +1,3 @@
+observe reading = 72 from "sensor:thermostat";
+verify checked_reading = reading with SensorCalibration;
+assess assessment = checked_reading with ClimatePolicy;

@@ -1,0 +1,52 @@
+{
+  "schema": "axiom-institutional-pattern-adoption-lifecycle.v1",
+  "status": "experimental governance lifecycle; not runtime activation",
+  "states": [
+    {"id":"discovered","authority_effect":"none","meaning":"Package or pattern has been found."},
+    {"id":"inspected","authority_effect":"none","meaning":"Provenance, license, assumptions, primitives, limitations, and threat surface reviewed."},
+    {"id":"simulated","authority_effect":"none","meaning":"Pattern exercised with synthetic or historical non-authoritative data."},
+    {"id":"locally_adapted","authority_effect":"none","meaning":"Explicit local diff binds jurisdiction, policy, assurance, retention, review, and authority sources."},
+    {"id":"approved_for_pilot","authority_effect":"none","meaning":"Local governance approves a bounded pilot; this does not itself grant individual effect authority."},
+    {"id":"pilot_active","authority_effect":"none","meaning":"Pattern may structure a bounded pilot, but each consequential effect still requires ordinary local admission."},
+    {"id":"adopted","authority_effect":"none","meaning":"Institution recognizes the adapted pattern as process/policy structure; runtime authority remains separately evaluated."},
+    {"id":"suspended","authority_effect":"none","meaning":"New uses blocked pending review; existing evidence retained."},
+    {"id":"superseded","authority_effect":"none","meaning":"A newer local adaptation replaces this one prospectively."},
+    {"id":"retired","authority_effect":"none","meaning":"No new use; historical evidence remains interpretable under original version."}
+  ],
+  "permitted_transitions": [
+    ["discovered","inspected"],
+    ["inspected","simulated"],
+    ["simulated","locally_adapted"],
+    ["locally_adapted","approved_for_pilot"],
+    ["approved_for_pilot","pilot_active"],
+    ["pilot_active","adopted"],
+    ["approved_for_pilot","suspended"],
+    ["pilot_active","suspended"],
+    ["adopted","suspended"],
+    ["suspended","approved_for_pilot"],
+    ["adopted","superseded"],
+    ["pilot_active","retired"],
+    ["adopted","retired"],
+    ["superseded","retired"]
+  ],
+  "forbidden_shortcuts": [
+    ["discovered","pilot_active"],
+    ["discovered","adopted"],
+    ["inspected","adopted"],
+    ["simulated","adopted"],
+    ["locally_adapted","adopted"]
+  ],
+  "activation_requirements": [
+    "exact source package/version/digest",
+    "local adaptation record",
+    "named local authority source",
+    "jurisdiction/policy scope",
+    "security/privacy/accessibility review appropriate to consequence",
+    "assurance and evidence requirements",
+    "retention/disclosure rules",
+    "challenge/appeal/remedy path where applicable",
+    "sunset/review date",
+    "rollback/suspension procedure"
+  ],
+  "invariant": "Lifecycle state can authorize institutional use of a process pattern only through local governance; it never substitutes for effect-level authorization."
+}

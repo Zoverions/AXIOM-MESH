@@ -1,0 +1,379 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founders-console-projection-v0.schema.json",
+  "title": "AXIOM Founders Console v0 read-only inert projection",
+  "description": "Minimized read-only projection of validated Founders Council, Founder Genesis, casting-vote, and governance-era status. It exposes no action surface or credential material.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "founder_mind_id",
+    "foundation_digest",
+    "council",
+    "founder_genesis",
+    "casting_vote",
+    "governance_era",
+    "action_surface",
+    "credential_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation",
+    "projection_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founders-console-projection.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "read-only-inert-projection"
+    },
+    "founder_mind_id": {
+      "type": "string"
+    },
+    "foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "council": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_original_seats",
+        "biological_seats",
+        "digital_seats",
+        "active_biological_voters",
+        "active_digital_voters",
+        "active_voters",
+        "full_original_council_active",
+        "seats"
+      ],
+      "properties": {
+        "total_original_seats": {
+          "const": 20
+        },
+        "biological_seats": {
+          "const": 10
+        },
+        "digital_seats": {
+          "const": 10
+        },
+        "active_biological_voters": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "active_digital_voters": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "active_voters": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "full_original_council_active": {
+          "type": "boolean"
+        },
+        "seats": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/seat"
+          }
+        }
+      }
+    },
+    "founder_genesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_slots",
+        "consumed_slots",
+        "remaining_slots",
+        "slots"
+      ],
+      "properties": {
+        "total_slots": {
+          "const": 10
+        },
+        "consumed_slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "remaining_slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/$defs/genesisSlot"
+          }
+        }
+      }
+    },
+    "casting_vote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assessed",
+        "eligible",
+        "reason",
+        "pre_cast_outcome"
+      ],
+      "properties": {
+        "assessed": {
+          "type": "boolean"
+        },
+        "eligible": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "pre_cast_outcome": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          ]
+        }
+      }
+    },
+    "governance_era": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assessed",
+        "current_era",
+        "candidate_era",
+        "transition_eligible",
+        "transition_reason",
+        "authority_windows"
+      ],
+      "properties": {
+        "assessed": {
+          "type": "boolean"
+        },
+        "current_era": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "formation",
+                "founding-stewardship",
+                "distributed-settlement",
+                "polycentric-society"
+              ]
+            }
+          ]
+        },
+        "candidate_era": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "formation",
+                "founding-stewardship",
+                "distributed-settlement",
+                "polycentric-society"
+              ]
+            }
+          ]
+        },
+        "transition_eligible": {
+          "type": "boolean"
+        },
+        "transition_reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "authority_windows": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/authorityWindow"
+          }
+        }
+      }
+    },
+    "action_surface": {
+      "const": "none"
+    },
+    "credential_material": {
+      "const": "none"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "projection_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founders-console-projection.mjs",
+  "x-axiom-non-claims": [
+    "gateway-route",
+    "live-founder-console",
+    "governance-mutation",
+    "credential-disclosure",
+    "runtime-authority",
+    "automatic-execution"
+  ],
+  "$defs": {
+    "nullableMindId": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        }
+      ]
+    },
+    "seat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seat_id",
+        "seat_class",
+        "seat_number",
+        "designation",
+        "occupied",
+        "mind_id",
+        "voting_status"
+      ],
+      "properties": {
+        "seat_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "seat_class": {
+          "enum": [
+            "biological",
+            "digital"
+          ]
+        },
+        "seat_number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "designation": {
+          "enum": [
+            "founder",
+            "founder-mother",
+            "founder-appointed",
+            "founder-genesis"
+          ]
+        },
+        "occupied": {
+          "type": "boolean"
+        },
+        "mind_id": {
+          "$ref": "#/$defs/nullableMindId"
+        },
+        "voting_status": {
+          "enum": [
+            "reserved",
+            "developing",
+            "active",
+            "inactive"
+          ]
+        }
+      }
+    },
+    "genesisSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot_number",
+        "state",
+        "occupied",
+        "mind_id",
+        "receipt_bound"
+      ],
+      "properties": {
+        "slot_number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "state": {
+          "enum": [
+            "unused",
+            "pending",
+            "consumed",
+            "frozen"
+          ]
+        },
+        "occupied": {
+          "type": "boolean"
+        },
+        "mind_id": {
+          "$ref": "#/$defs/nullableMindId"
+        },
+        "receipt_bound": {
+          "type": "boolean"
+        }
+      }
+    },
+    "authorityWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_id",
+        "era_window_satisfied",
+        "reason",
+        "execution_binding"
+      ],
+      "properties": {
+        "authority_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "era_window_satisfied": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "execution_binding": {
+          "const": false
+        }
+      }
+    }
+  }
+}

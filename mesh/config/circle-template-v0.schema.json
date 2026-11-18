@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/circle-template-v0.schema.json",
+  "title": "AXIOM Circle Template Catalog v0",
+  "description": "Inert reusable Circle structure presets. Templates create no membership, invitation, role assignment, execution authority, federation or runtime activation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "templates",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-circle-template-catalog.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-template-library"
+    },
+    "templates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/template"
+      }
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_id",
+        "label",
+        "declared_modes",
+        "execution_authority"
+      ],
+      "properties": {
+        "role_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "declared_modes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "propose",
+              "deliberate",
+              "evidence",
+              "vote",
+              "approve",
+              "review",
+              "appeal",
+              "observe"
+            ]
+          }
+        },
+        "execution_authority": {
+          "const": false
+        }
+      }
+    },
+    "decisionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quorum_basis_points",
+        "approval_basis_points",
+        "abstention_counts_toward_quorum"
+      ],
+      "properties": {
+        "quorum_basis_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "approval_basis_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "abstention_counts_toward_quorum": {
+          "type": "boolean"
+        }
+      }
+    },
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "template_id",
+        "label",
+        "description",
+        "circle_kind",
+        "participation_model",
+        "roles",
+        "decision_rule",
+        "appeal_enabled",
+        "member_exit_enabled",
+        "default_disclosure_class",
+        "policy_floor",
+        "execution_authority",
+        "membership_authority",
+        "authority_effect",
+        "network_effect",
+        "runtime_activation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-circle-template.v0"
+        },
+        "template_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1200
+        },
+        "circle_kind": {
+          "enum": [
+            "family-coordination",
+            "project-team",
+            "research-group",
+            "creator-collective",
+            "community-group"
+          ]
+        },
+        "participation_model": {
+          "enum": [
+            "voluntary",
+            "contractual"
+          ]
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/role"
+          }
+        },
+        "decision_rule": {
+          "$ref": "#/$defs/decisionRule"
+        },
+        "appeal_enabled": {
+          "const": true
+        },
+        "member_exit_enabled": {
+          "const": true
+        },
+        "default_disclosure_class": {
+          "enum": [
+            "public-safe",
+            "member-private"
+          ]
+        },
+        "policy_floor": {
+          "const": "raise-only"
+        },
+        "execution_authority": {
+          "const": false
+        },
+        "membership_authority": {
+          "const": false
+        },
+        "authority_effect": {
+          "const": "none"
+        },
+        "network_effect": {
+          "const": "none"
+        },
+        "runtime_activation": {
+          "const": false
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/circle-templates.mjs",
+  "x-axiom-non-claims": [
+    "membership-creation",
+    "invitation-creation",
+    "role-assignment",
+    "execution-authority",
+    "federation",
+    "runtime-activation"
+  ]
+}

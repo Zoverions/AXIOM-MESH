@@ -190,18 +190,17 @@ export async function commitReceiverTransferObservation({
     { committedAt: committed }
   );
   const observationDigest = result.observation.observation_digest;
-  let durableRecord = result.durable_record;
-  if (!durableRecord) {
-    durableRecord = await findPublicWitnessDurableObservationRecord({
-      statePath: witnessStatePath,
-      trustedWitnessPublicKey: witnessStore.witnessPublicKey,
-      observationDigest,
-      expectedDomainId: verified.transfer.statement.domain_id,
-      expectedWitnessId: verified.receipt.statement.witness_id
-    });
-  }
+  // A successful in-memory commit does not prove the caller supplied the same
+  // durable state path. Independently verify the signed on-disk chain before
+  // the receiver links itself to that observation.
+  const durableRecord = await witnessStore.findDurableObservationRecord(observationDigest, {
+    statePath: witnessStatePath
+  });
   if (!durableRecord) {
     throw new ValidationError('public witness receiver bridge cannot locate durable observation record after witness commit');
+  }
+  if (result.durable_record && durableRecord.record_digest !== result.durable_record.record_digest) {
+    throw new ValidationError('public witness receiver bridge durable observation record differs from witness commit');
   }
   const linked = await receiverStore.markObservationCommitted(normalizedDigest, {
     observationDigest,
@@ -244,12 +243,8 @@ export async function reconcileReceiverTransferObservation({
   if (!observation) {
     return Object.freeze({ status: 'pending-observation', transfer: verified.intake });
   }
-  const durableRecord = await findPublicWitnessDurableObservationRecord({
-    statePath: witnessStatePath,
-    trustedWitnessPublicKey: witnessStore.witnessPublicKey,
-    observationDigest: observation.observation_digest,
-    expectedDomainId: verified.transfer.statement.domain_id,
-    expectedWitnessId: verified.receipt.statement.witness_id
+  const durableRecord = await witnessStore.findDurableObservationRecord(observation.observation_digest, {
+    statePath: witnessStatePath
   });
   if (!durableRecord) {
     throw new ValidationError('public witness receiver reconcile found observation without durable witness record');

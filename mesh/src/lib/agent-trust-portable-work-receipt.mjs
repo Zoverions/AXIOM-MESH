@@ -4,6 +4,7 @@ import {
   sign,
   verify
 } from 'node:crypto';
+import { types } from 'node:util';
 
 import {
   ValidationError,
@@ -95,6 +96,7 @@ const FIXED_SEMANTICS = Object.freeze({
 });
 
 function exactObject(raw, allowed, label) {
+  if (types.isProxy(raw)) throw new ValidationError(`${label} cannot be a Proxy`);
   const value = assertPlainObject(raw, label);
   for (const key of Object.keys(value)) {
     if (!allowed.has(key)) throw new ValidationError(`${label} contains unsupported field ${key}`);
@@ -120,15 +122,58 @@ function canonicalTimestamp(value, label) {
 }
 
 function canonicalDigestSet(raw, label, maxItems = 256) {
-  if (!Array.isArray(raw) || raw.length > maxItems) {
+  // The Proxy test runs first and length is read exactly once, so a lying
+  // length cannot pass the cap with one value and size the copy with another.
+  if (types.isProxy(raw) || !Array.isArray(raw)) {
     throw new ValidationError(`${label} must contain at most ${maxItems} digests`);
   }
-  const values = raw.map((item, index) => digest(item, `${label}[${index}]`));
+  const length = raw.length;
+  if (length > maxItems) {
+    throw new ValidationError(`${label} must contain at most ${maxItems} digests`);
+  }
+  const values = [];
+  for (let index = 0; index < length; index += 1) {
+    values.push(digest(raw[index], `${label}[${index}]`));
+  }
   const canonical = [...new Set(values)].sort();
   if (canonicalJson(values) !== canonicalJson(canonical)) {
     throw new ValidationError(`${label} must be sorted and unique`);
   }
   return Object.freeze(canonical);
+}
+
+// Digest-list options may be any iterable, read once where they are used.
+// The type check runs up front and touches nothing a caller controls, so a
+// number, null or Proxy is a ValidationError before any other work.
+function assertDigestListOption(value, label) {
+  if (types.isProxy(value) || value === null || typeof value !== 'object') {
+    throw new ValidationError(`${label} must be an array or iterable of digests`);
+  }
+}
+
+// Bounds the read of a caller iterable at 4,096 items, so a huge or endless
+// generator is rejected instead of exhausting memory or blocking. Each item is
+// checked as a digest before deduplication and sorting; the 256-digest
+// receipt cap is then enforced by canonicalDigestSet.
+const MAX_DIGEST_OPTION_ITEMS = 4096;
+
+function digestListOption(value, label) {
+  assertDigestListOption(value, label);
+  const unique = new Set();
+  let count = 0;
+  try {
+    for (const item of value) {
+      count += 1;
+      if (count > MAX_DIGEST_OPTION_ITEMS) {
+        throw new ValidationError(`${label} must contain at most ${MAX_DIGEST_OPTION_ITEMS} items`);
+      }
+      unique.add(digest(item, `${label}[${count - 1}]`));
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
+    throw new ValidationError(`${label} must be an array or iterable of digests`);
+  }
+  return [...unique].sort();
 }
 
 function parsePrivateKey(value, label) {
@@ -191,10 +236,15 @@ function terminalOutcome(machineReceipt) {
 function verifyBoundInputs({
   handoff,
   executorCredential,
-  machineReceipt,
+  machineReceipt: receiptInput,
   gridPublicKey
 }) {
-  validateMachineIntentReceipt(machineReceipt);
+  // Every read below uses this one deep-frozen snapshot. Callers already pass
+  // the frozen snapshot from validateMachineIntentReceipt; validating it again
+  // yields an equal frozen copy, so a raw object can never reach the reads.
+  // gridPublicKey can run caller code inside the signature check, which is why
+  // nothing here touches the caller's receipt after the snapshot.
+  const machineReceipt = validateMachineIntentReceipt(receiptInput);
   const gridVerification = verifyMachineIntentReceipt(machineReceipt, gridPublicKey);
   if (gridVerification.valid !== true) {
     throw new ValidationError('portable work receipt requires a valid Grid machine intent receipt signature');
@@ -240,7 +290,15 @@ function verifyBoundInputs({
   }
 
   const outcome = terminalOutcome(machineReceipt);
-  return Object.freeze({ gridVerification, gridStatement, gridIntent, startedAt, finishedAt, outcome });
+  return Object.freeze({
+    machineReceipt,
+    gridVerification,
+    gridStatement,
+    gridIntent,
+    startedAt,
+    finishedAt,
+    outcome
+  });
 }
 
 function normalizeStatement(raw, evidence) {
@@ -347,7 +405,7 @@ function normalizeStatement(raw, evidence) {
     executor_credential_digest: executorCredential.credential_digest,
     executor_operational_key_id: executorCredential.statement.operational_key_id,
     executor_identity_profile: 'a1-machine-identity-credential',
-    grid_machine_receipt_digest: machineReceipt.receipt_digest,
+    grid_machine_receipt_digest: checked.machineReceipt.receipt_digest,
     grid_intent_id: checked.gridIntent.intent_id,
     grid_terminal_status: checked.gridIntent.status,
     grid_action: checked.gridIntent.action,
@@ -383,6 +441,8 @@ export function createAgentPortableWorkReceipt({
   reportedArtifactDigests = [],
   reportedEvidenceDigests = []
 } = {}) {
+  assertDigestListOption(reportedArtifactDigests, 'portable work receipt reportedArtifactDigests');
+  assertDigestListOption(reportedEvidenceDigests, 'portable work receipt reportedEvidenceDigests');
   const handoff = verifyAgentSignedHandoff(rawHandoff, handoffEvidence);
   const executorCredential = verifyMachineIdentityCredential(executorIdentityCredential, {
     trustedIssuerPublicKey: trustedExecutorIssuerPublicKey,
@@ -414,7 +474,7 @@ export function createAgentPortableWorkReceipt({
     executor_credential_digest: executorCredential.credential_digest,
     executor_operational_key_id: executorCredential.statement.operational_key_id,
     executor_identity_profile: 'a1-machine-identity-credential',
-    grid_machine_receipt_digest: machineReceipt.receipt_digest,
+    grid_machine_receipt_digest: checked.machineReceipt.receipt_digest,
     grid_intent_id: checked.gridIntent.intent_id,
     grid_terminal_status: checked.gridIntent.status,
     grid_action: checked.gridIntent.action,
@@ -429,8 +489,14 @@ export function createAgentPortableWorkReceipt({
     terminal_payload_digest: checked.outcome.terminalPayloadDigest,
     started_at: checked.startedAt,
     finished_at: checked.finishedAt,
-    reported_artifact_digests: [...new Set(reportedArtifactDigests)].sort(),
-    reported_evidence_digests: [...new Set(reportedEvidenceDigests)].sort(),
+    reported_artifact_digests: digestListOption(
+      reportedArtifactDigests,
+      'portable work receipt reportedArtifactDigests'
+    ),
+    reported_evidence_digests: digestListOption(
+      reportedEvidenceDigests,
+      'portable work receipt reportedEvidenceDigests'
+    ),
     ...FIXED_SEMANTICS
   };
 
@@ -467,6 +533,12 @@ export function verifyAgentPortableWorkReceipt(raw, {
   expectedArtifactDigests,
   expectedEvidenceDigests
 } = {}) {
+  if (expectedArtifactDigests !== undefined) {
+    assertDigestListOption(expectedArtifactDigests, 'portable work receipt expectedArtifactDigests');
+  }
+  if (expectedEvidenceDigests !== undefined) {
+    assertDigestListOption(expectedEvidenceDigests, 'portable work receipt expectedEvidenceDigests');
+  }
   const value = exactObject(raw, TOP_KEYS, 'portable work receipt');
   if (value.schema !== AGENT_PORTABLE_WORK_RECEIPT_SCHEMA) {
     throw new ValidationError(`portable work receipt schema must be ${AGENT_PORTABLE_WORK_RECEIPT_SCHEMA}`);
@@ -528,13 +600,13 @@ export function verifyAgentPortableWorkReceipt(raw, {
     throw new ValidationError('portable work receipt receipt_id mismatch');
   }
   if (expectedArtifactDigests !== undefined) {
-    const expected = [...new Set(expectedArtifactDigests)].sort();
+    const expected = digestListOption(expectedArtifactDigests, 'portable work receipt expectedArtifactDigests');
     if (canonicalJson(statement.reported_artifact_digests) !== canonicalJson(expected)) {
       throw new ValidationError('portable work receipt artifact digest set mismatch');
     }
   }
   if (expectedEvidenceDigests !== undefined) {
-    const expected = [...new Set(expectedEvidenceDigests)].sort();
+    const expected = digestListOption(expectedEvidenceDigests, 'portable work receipt expectedEvidenceDigests');
     if (canonicalJson(statement.reported_evidence_digests) !== canonicalJson(expected)) {
       throw new ValidationError('portable work receipt evidence digest set mismatch');
     }

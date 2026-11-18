@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/outcome-completion-evidence-v0.schema.json",
+  "title": "AXIOM Outcome Completion Evidence v0",
+  "description": "Inert evidence record for assessing whether an exact Outcome v0 was completed. A verified conclusion requires explicit acceptance evidence and no uncertain external effects; it never establishes arbitrary external-world truth or grants authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "completion_id",
+    "outcome_id",
+    "outcome_digest",
+    "observed_at",
+    "acceptance_results",
+    "task_results",
+    "external_effects",
+    "artifact_refs",
+    "verifier_ref",
+    "conclusion",
+    "grants_authority",
+    "execution_effect",
+    "external_truth_claim",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-outcome-completion-evidence.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-evidence-laboratory"
+    },
+    "completion_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "outcome_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "outcome_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "observed_at": {
+      "$ref": "#/$defs/date"
+    },
+    "acceptance_results": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/acceptance"
+      }
+    },
+    "task_results": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "$ref": "#/$defs/taskResult"
+      }
+    },
+    "external_effects": {
+      "type": "array",
+      "maxItems": 512,
+      "items": {
+        "$ref": "#/$defs/effect"
+      }
+    },
+    "artifact_refs": {
+      "$ref": "#/$defs/refArray"
+    },
+    "verifier_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "conclusion": {
+      "enum": [
+        "verified",
+        "not-verified",
+        "uncertain"
+      ]
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "external_truth_claim": {
+      "const": false
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refArray": {
+      "type": "array",
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_index",
+        "criterion",
+        "state",
+        "evidence_refs"
+      ],
+      "properties": {
+        "criterion_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "criterion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "state": {
+          "enum": [
+            "passed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/refArray"
+        }
+      }
+    },
+    "taskResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "task_digest",
+        "lifecycle_state",
+        "effect_state",
+        "evidence_refs"
+      ],
+      "properties": {
+        "task_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "task_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "lifecycle_state": {
+          "enum": [
+            "completed-verified",
+            "completed-unverified",
+            "failed",
+            "cancelled",
+            "uncertain-effect"
+          ]
+        },
+        "effect_state": {
+          "enum": [
+            "none",
+            "confirmed",
+            "uncertain",
+            "failed"
+          ]
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/refArray"
+        }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effect_ref",
+        "state",
+        "evidence_refs",
+        "reconciliation_ref"
+      ],
+      "properties": {
+        "effect_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "state": {
+          "enum": [
+            "none",
+            "confirmed",
+            "uncertain",
+            "failed"
+          ]
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/refArray"
+        },
+        "reconciliation_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/outcome-completion-evidence.mjs",
+  "x-axiom-non-claims": [
+    "external-world-truth",
+    "effect-authority",
+    "task-execution",
+    "artifact-correctness-beyond-evidence",
+    "runtime-activation"
+  ]
+}

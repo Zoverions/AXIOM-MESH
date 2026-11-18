@@ -1,8 +1,8 @@
 # AXIOM Runtime & Connector Fabric
 
-**Status:** architecture draft `0.3.0`; documentation and contract work only
+**Status:** architecture draft `0.4.0`; documentation and contract work only
 
-**Updated:** 2026-08-21
+**Updated:** 2026-09-20
 
 **Authority boundary:** this document does not promote a capability. `mesh/config/capabilities.json` remains authoritative for runnable status.
 
@@ -43,6 +43,93 @@ The product stack is separated into six responsibilities:
 6. **Circles / governance** — collective curation, policy overlays, roles, and coordination that may raise protection requirements but cannot silently lower a node's non-waivable protections.
 
 The Runtime & Connector Fabric is therefore an orchestration plane, not an authorization plane.
+
+## Scriptability without inherited authority
+
+AXIOM should deliberately make useful capabilities available through multiple
+interaction surfaces:
+
+- AXIOM One and other human interfaces;
+- the existing CLI;
+- versioned APIs and SDKs;
+- bounded event and hook subscriptions;
+- declarative macros and workflows;
+- Capsules/plugins;
+- agent, MCP, A2A, and runtime adapters.
+
+These are interchangeable **interaction planes**, not separate trust domains.
+The same governed effect must resolve to the same canonical AXIOM action
+regardless of which surface requested it. A client may add usability checks or
+ask for additional confirmation, but it may not remove a denial, mint a grant,
+change the destination, widen a budget, suppress consent, or bypass the normal
+Gateway → Hypervisor → Sandbox → Grid path.
+
+A scriptable request therefore needs the same authority-relevant information as
+an interactive request where applicable: authenticated principal, exact action,
+purpose, data scope, destination, provider/tool mapping, budgets, lifetime,
+idempotency/cancellation semantics, and evidence obligations.
+
+### Hooks and events are observations
+
+Subscribing to an event is not permission to react with an effect. Event
+delivery should be bounded, schema-versioned, replay-aware, cancellable, and
+free of ambient credential or host authority. A callback that wants to publish,
+write, spend, disclose, message, mutate, or otherwise create a governed effect
+must re-enter the ordinary intent/grant path or present an existing still-valid
+grant that explicitly covers that effect. Execution-time policy and revocation
+checks still apply.
+
+This prevents a common automation failure mode:
+
+```text
+read permission
+  -> event subscription
+  -> callback
+  -> accidental write authority
+```
+
+AXIOM instead requires:
+
+```text
+read permission
+  -> bounded event observation
+  -> callback proposes exact effect
+  -> ordinary AXIOM authorization
+  -> bounded execution
+  -> receipt
+```
+
+### Macros and workflows are bounded compositions
+
+A macro or workflow may compose several already-described operations, but the
+composition does not create a wildcard capability. A workflow definition must
+be immutable/versioned for an execution, bind a finite principal/action/purpose/
+data/destination/resource/time envelope, and preserve per-effect evidence.
+Revocation or cancellation must stop future governed effects even if earlier
+steps completed successfully.
+
+### Cross-surface conformance
+
+For an equivalent effect, AXIOM should test at least one interactive path and
+the relevant machine surfaces against the same fixtures. The expected property
+is not byte-identical client output; it is authority equivalence:
+
+- the same action mapping;
+- the same policy/consent/approval obligations;
+- the same destination and budget ceilings;
+- the same revocation behavior;
+- the same fail-closed dependency behavior; and
+- independently inspectable receipts that identify the requesting surface
+  without changing the authority result.
+
+Security-critical checks therefore belong behind the client boundary. A GUI
+button, CLI guard, SDK helper, plugin host, or workflow runner may improve
+safety and usability, but none may be the only place that enforces an AXIOM
+authority invariant.
+
+This gives the platform a deliberate extensibility rule:
+
+> **Everything useful may become composable; nothing becomes authoritative merely because it is composable.**
 
 ## What AXIOM orchestrates
 
@@ -88,6 +175,8 @@ Provider output is data/evidence from that provider, not automatically verified 
 Examples include source control, mail, calendars, databases, browsers, storage, publishing, messaging, and business APIs.
 
 Credentials are purpose-bound references and must not become ambient model context.
+
+The source-only fixed-recipient webhook sender (`mesh/src/channel-webhook-adapter.mjs`) is an ADAPTER-001 transport experiment. It sends bounded text to one operator-fixed HTTPS destination with an operator-supplied bearer credential, timeout, disabled redirects, and bounded responses. An injected transport and in-memory idempotency map are operator-owned test/configuration hooks; the latter has no restart durability. A request is dispatched only after its in-memory idempotency reservation is confirmed, and a transport result must be a real `Response`. Pre-dispatch cancellation leaves the key reusable. Any ambiguous post-dispatch outcome stays `uncertain`; HTTP 2xx says only that the endpoint accepted a request. Its `confirmed_recipient_id` is a caller assertion, not verified human confirmation. Receipts contain no text, credential, or URL and explicitly state that Mesh authority and recipient delivery were not verified. The sender is not connected to `channel.send`, whose production policy still denies. Durable Grid outbox, one-use Mesh authorization, real recipient confirmation, egress/DNS restriction, private credential custody, abuse/retention controls, and independent end-to-end evidence remain separate gates before activation or `PROMO-01` promotion.
 
 ### Protocol adapters
 
@@ -149,6 +238,30 @@ Those labels collapse unlike claims and can become misleading when evidence chan
 - capability/production promotion remains owned by the capability registry and readiness/release process.
 
 No derived or overlay label becomes authority.
+
+### Offline catalogue candidate assessment v0
+
+`mesh/src/lib/runtime-connector-catalog-assessment.mjs` provides a pure
+assessment over the existing draft catalog-entry contract. It binds a candidate
+to its canonical digest, rejects a changed entry under the same ID and version,
+and reports additions/removals in requested access separately from provenance,
+adapter-contract, orchestration, assurance, lifecycle, and non-claim changes.
+A comparison must refer to the same subject and integration class. A different
+entry ID must name the prior entry as its exact supersession target.
+The caller must provide `expectedPriorDigest` when comparing a prior entry;
+the assessor rejects a missing or mismatched digest. The caller must obtain
+that digest from an independently trusted record. Matching a caller-provided
+digest cannot authenticate its provenance. The returned assessment is deeply
+frozen so its nested diffs and reasons cannot be altered in place.
+
+Every result is `quarantined_inert` and `unverified`. Missing or stale declared
+assurance produces review reasons, while malformed contracts and identity
+substitution are rejected. A declared source, artifact/SBOM digest, observer
+result, or freshness interval is not independent verification of that fact.
+The assessment performs no fetch, signature check, installation, activation,
+storage mutation, credential access, or network effect. The catalog-entry v1
+contract remains a draft; this assessment does not promote
+`capsules.marketplace` or grant permission to execute a listed integration.
 
 ## Certification, curation, and authorization
 
@@ -324,6 +437,14 @@ An artifact is a typed, digest-bound output or input with source identity, schem
 
 A handoff creates a new task owned by the receiving execution context. It does not transfer more authority than the receiver independently possesses or receives through a separately valid attenuation-only delegation.
 
+### P5 executable continuity verifier
+
+The first executable P5 continuity slice is `mesh/src/lib/runtime-task-continuity.mjs`. It consumes the already byte-pinned `axiom-task-artifact-handoff.v1` snapshots and adds cross-snapshot/graph semantics without modifying the frozen contract bytes.
+
+It verifies immutable task identity, requester, request, exact catalog/runtime/adapter target and inputs; monotonic grant/delegation references plus attenuation-only budgets; legal lifecycle movement; append-only output artifacts and chronological events; non-backdated cancellation/event additions; unresolved uncertainty until explicit completed/failed reconciliation; exact child-bound handoff-event evidence; invariant AXIOM action/capability; handoff purpose/destination/data/budget attenuation; source-grant non-reuse without claiming delegation attenuation; and closed acyclic causal graphs with exactly one root per causal workflow.
+
+The verifier is deliberately **not** a task store, polling loop, queue, executor, delegation issuer, grant issuer, external-effect reconciler, or authority path. A valid transition or handoff remains coordination/evidence only. Persistence, bounded observation/polling, effect-aware cancellation, full resource accounting, and live runtime handoff remain later P5/P6 gates.
+
 ## Delegation and worker spawning
 
 External orchestrators frequently spawn child agents. AXIOM must distinguish **coordination** from **delegation**.
@@ -448,6 +569,29 @@ The first runtime is not selected by popularity alone. Evaluation should compare
 
 Hermes, OpenClaw, Agent Zero, Codex CLI, and other maintained runtimes are evaluation candidates. This document does not certify, select, or promote any named runtime.
 
+## Cognitive Federation and External Operation Offer v0
+
+External models, tools, APIs, runtimes, and brokers may serve as replaceable specialized cognitive modules around a persistent sovereign entity.
+
+Capability may compose; authority does not compose ambiently.
+
+Provider/module loss degrades capability, not identity, owned memory, policy, consent, or authority continuity.
+
+Each module receives only the context, destinations, credentials, data classes, and budgets separately authorized for its role.
+
+`axiom-external-operation-offer.v0` is an adjunct to the immutable runtime/connector catalog, not a replacement catalog or authority system. An offer binds volatile per-operation schema, effect, price, health, and currentness observations to an exact catalog `entry_id` / `entry_version` / `entry_digest`. Hosted brokers expose two distinct destination policy inputs—`broker_destination` and `provider_destination`—so an intermediary cannot hide the downstream provider. Offers always carry `grants_authority: false` and `execution_effect: none`. Local eligibility and aggregate spend-envelope helpers evaluate reservation proposals only; they never authorize execution, mint grants, or perform network I/O.
+
+Flow:
+
+```text
+persistent entity
+  -> Cognitive Federation (replaceable modules)
+  -> operation offer (adjunct, digest-bound)
+  -> local eligibility (policy-before-optimization)
+  -> AXIOM authority boundary
+  -> effect / evidence
+```
+
 ## Non-claims
 
 This specification does not claim current support for:
@@ -465,3 +609,80 @@ This specification does not claim current support for:
 - production external-provider credentials.
 
 Those remain separately gated capabilities.
+
+
+## External-agent gateway profile: Muse-first ingress v0
+
+**Tracking:** GitHub issue #1746
+
+**Implementation status:** A0 inert ingress contract only. No Gateway route, provider I/O, connector credentials, persistence, capability promotion, or production activation is introduced by this stage.
+
+Meta's public Muse Connector Platform material, reviewed on 2026-09-20, establishes a useful integration shape: developers expose a service/API, Muse supplies the agent-side context and workflow, submitted connectors undergo functional/security/legal review, and approved connectors can appear in the Muse directory. The public platform page does not currently publish a stable wire schema or versioned connector endpoint contract that AXIOM can pin. AXIOM therefore records Muse as the first interoperability profile without inventing provider-specific protocol details.
+
+Public evidence:
+
+- https://muse.ai/platform
+- https://introducing.muse.ai/
+
+### A0 ingress contract
+
+The first implementation surface is the provider-neutral `axiom-external-agent-ingress-request.v0` contract:
+
+- implementation: `mesh/src/lib/external-agent-ingress-request.mjs`;
+- schema: `mesh/config/external-agent-ingress-request-v0.schema.json`;
+- falsification tests: `mesh/test/external-agent-ingress-request.test.mjs`.
+
+The envelope converts an external agent's request into bounded operation knowledge only. It carries a content digest for the external context instead of raw conversation or memory, an external-principal reference explicitly marked as an external claim, an exact AXIOM action name, an input digest, requested effect class, purpose, resource references, source evidence, and a short expiry.
+
+The hard boundary is encoded in both runtime validation and schema constants:
+
+- `authority_state = "unresolved"`;
+- `credentials_present = false`;
+- `grants_authority = false`;
+- `execution_effect = "none"`;
+- `network_effect = "none"`;
+- external identity and evidence claims are marked claim-only;
+- stale, future-dated, malformed, overlong, tampered, or unknown-field requests fail closed.
+
+A valid ingress request therefore means only: **an external surface proposed this exact bounded operation envelope**. It does not mean that the principal is authenticated to AXIOM, that consent exists, that policy allows the effect, that an approval exists, that a grant is current, or that execution may begin.
+
+The mandatory progression remains:
+
+```text
+external agent context
+  -> inert external-agent ingress request
+  -> canonical operation mapping
+  -> Gateway-authenticated AXIOM principal
+  -> Hypervisor policy / approval / grant
+  -> Sandbox bounded execution
+  -> Grid evidence / receipt
+```
+
+No Muse, MCP, A2A, browser-agent, plugin, or other external-agent profile may skip the authority stages merely because it has richer user context.
+
+### Intended connector capability surface
+
+The external-agent gateway should converge on a small capability vocabulary rather than one bespoke integration per agent:
+
+| Primitive | A0/A1 meaning | Authority effect |
+|---|---|---|
+| `discover_capabilities` | Read provider-neutral descriptions of operations that may be proposed | none |
+| `request_action` | Submit an inert external-agent ingress envelope | none |
+| `action_status` | Read status/evidence for a previously identified request/effect | none |
+| `request_approval` | Ask AXIOM to begin its ordinary approval path | none by itself |
+| `revoke_authority` | Request restrictive revocation through authenticated AXIOM control paths | cannot widen authority |
+| `get_audit_receipt` | Read an independently inspectable receipt by authorized reference | none |
+
+These names are an AXIOM capability surface, not claims about Meta's unpublished connector protocol. A future Muse adapter must map the provider's reviewed, version-pinned interface into these semantics without weakening them.
+
+### Promotion sequence
+
+1. **A0 — inert contract:** accepted in this issue. No live endpoint.
+2. **A1 — read-only adapter laboratory:** add connector discovery/status mapping only after a stable public or approved Muse connector specification can be pinned.
+3. **A2 — authenticated proposal ingress:** bind an external surface to a Gateway-authenticated AXIOM principal while keeping `request_action` non-authorizing.
+4. **A3 — consequential operations:** only ordinary AXIOM grants/approvals may reach Sandbox execution. Provider-side approval UI may add a requirement but cannot substitute for AXIOM authorization.
+5. **A4 — conformance:** prove equivalent authority results for Muse, MCP, A2A, CLI, and AXIOM One requests targeting the same canonical action.
+
+The architecture objective is interoperability without inherited authority:
+
+> **External agents may know what the user wants and may propose what to do; they do not acquire the right to do it merely by knowing.**

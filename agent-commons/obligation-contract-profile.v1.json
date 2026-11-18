@@ -1,0 +1,87 @@
+{
+  "schema": "axiom-obligation-contract-profile.v1",
+  "status": "experimental contract/settlement architecture; no legal-enforceability claim",
+  "purpose": "Represent reusable obligations, conditions, evidence, fulfillment, breach, settlement, dispute, and remedy semantics without confusing agreement, legal enforceability, consent, policy, or runtime authority.",
+  "contract_layers": [
+    {
+      "id": "agreement_expression",
+      "meaning": "What parties or institutions state they intend, promise, require, permit, or forbid.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "legal_or_institutional_context",
+      "meaning": "Jurisdiction, charter, policy, governing law, institutional procedure, or other source that may affect meaning/enforceability.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "obligation_state",
+      "meaning": "Machine-readable state of duties, conditions, deadlines, fulfillment evidence, breach claims, waivers, and disputes.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "execution_request",
+      "meaning": "A proposed machine or human action intended to perform, settle, escrow, transfer, notify, or remediate under the agreement.",
+      "authority_effect": "none"
+    },
+    {
+      "id": "effect_admission",
+      "meaning": "Independent local authorization for the exact consequential action.",
+      "authority_effect": "bounded_local_grant_only"
+    }
+  ],
+  "reusable_primitives": [
+    "party_or_role",
+    "obligation",
+    "permission",
+    "prohibition",
+    "condition_precedent",
+    "condition_subsequent",
+    "deadline_or_window",
+    "consideration_or_exchange",
+    "evidence_requirement",
+    "verification_method",
+    "acceptance_criterion",
+    "fulfillment_record",
+    "breach_claim",
+    "cure_or_remediation",
+    "waiver",
+    "amendment",
+    "termination",
+    "dispute",
+    "appeal_or_review",
+    "settlement",
+    "escrow_or_conditional_release",
+    "jurisdiction_or_policy_context"
+  ],
+  "invariants": [
+    "a signed contract artifact is not automatically legally enforceable",
+    "a contract obligation does not itself authorize runtime execution",
+    "a proof of fulfillment is bounded to the exact obligation and evidence method checked",
+    "breach is a claim/evaluation state, not an automatic punishment trigger",
+    "remedies and penalties require their own legal/policy/authority basis",
+    "waiver and amendment must identify the authority and scope that permits them",
+    "escrow release is a separate effect that requires exact local admission",
+    "ambiguous or disputed conditions remain unresolved rather than guessed by an agent",
+    "human comprehension, consent, coercion, capacity, and applicable law are separate questions from cryptographic signature validity"
+  ],
+  "settlement_states": [
+    "draft",
+    "offered",
+    "accepted_as_record",
+    "active_obligation_set",
+    "partially_fulfilled",
+    "fulfilled",
+    "claimed_breach",
+    "in_dispute",
+    "cure_pending",
+    "settled",
+    "terminated",
+    "expired"
+  ],
+  "nonclaims": [
+    "This profile is not legal advice and does not determine contract validity in any jurisdiction.",
+    "This profile does not create autonomous courts, punishment, debt collection, or asset seizure.",
+    "This profile does not make agent-generated text binding merely because it is signed.",
+    "This profile does not define one universal contracting ontology."
+  ]
+}

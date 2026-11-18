@@ -1,0 +1,192 @@
+{
+  "schema": "axiom-institutional-primitive-registry.v1",
+  "status": "experimental planning/conformance surface; no runtime authority",
+  "design_rule": "Primitives are domain-neutral mechanisms. Domain applications project local vocabulary and law/policy onto them without changing their security semantics.",
+  "primitives": [
+    {
+      "id": "relationship",
+      "purpose": "Record a scoped relationship between principals or an institution and a principal.",
+      "examples": [
+        "membership",
+        "enrollment",
+        "employment",
+        "affiliation",
+        "service relationship"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "role_or_office",
+      "purpose": "Name a bounded institutional role or office independently of the person or agent currently occupying it.",
+      "examples": [
+        "teacher",
+        "registrar",
+        "case officer",
+        "auditor",
+        "principal investigator",
+        "service operator"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "term_or_appointment",
+      "purpose": "Bind a principal to a role/office for a defined term, source, scope, and status.",
+      "examples": [
+        "appointment",
+        "election result",
+        "assignment",
+        "acting appointment"
+      ],
+      "authority_effect": "evidence_input_only"
+    },
+    {
+      "id": "credential",
+      "purpose": "Represent an issuer-bound claim about qualification, status, completion, license, or attribute.",
+      "examples": [
+        "degree",
+        "permit",
+        "professional credential",
+        "training record",
+        "machine service credential"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "eligibility",
+      "purpose": "Express conditions that must be evaluated before a local decision.",
+      "examples": [
+        "course prerequisite",
+        "permit eligibility",
+        "committee eligibility",
+        "service admission"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "consent_or_acknowledgement",
+      "purpose": "Record informed agreement, refusal, acknowledgement, or withdrawal with scope and time.",
+      "examples": [
+        "data sharing consent",
+        "participation consent",
+        "policy acknowledgement"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "delegation",
+      "purpose": "Delegate bounded authority from a valid source to another principal with attenuation, expiry, and revocation.",
+      "examples": [
+        "deputy officer",
+        "teaching assistant",
+        "agent subtask"
+      ],
+      "authority_effect": "bounded_only_after_local_validation"
+    },
+    {
+      "id": "proposal_or_request",
+      "purpose": "Represent a request for institutional action without granting the requested effect.",
+      "examples": [
+        "application",
+        "motion",
+        "grade review request",
+        "purchase request"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "approval_or_decision",
+      "purpose": "Record a decision with reasons, authority source, scope, and review status.",
+      "examples": [
+        "approval",
+        "denial",
+        "certification",
+        "award",
+        "administrative decision"
+      ],
+      "authority_effect": "decision_evidence_only"
+    },
+    {
+      "id": "quorum_or_threshold",
+      "purpose": "Express collective decision conditions without treating raw vote count as runtime authority.",
+      "examples": [
+        "board vote",
+        "committee threshold",
+        "multi-signature approval"
+      ],
+      "authority_effect": "none_until_locally_admitted"
+    },
+    {
+      "id": "evidence_or_attestation",
+      "purpose": "Bind claims, observations, artifacts, methods, provenance, and limitations.",
+      "examples": [
+        "assessment evidence",
+        "inspection evidence",
+        "audit evidence",
+        "execution receipt"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "challenge_or_appeal",
+      "purpose": "Open review, stay, reconsideration, correction, or remedy paths.",
+      "examples": [
+        "academic appeal",
+        "administrative review",
+        "incident dispute"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "retention_or_disclosure",
+      "purpose": "Apply record-class-specific retention, access, disclosure, sealing, deletion, or legal-hold rules.",
+      "examples": [
+        "student record",
+        "public record",
+        "research record",
+        "audit record"
+      ],
+      "authority_effect": "none"
+    },
+    {
+      "id": "succession_or_recovery",
+      "purpose": "Preserve institutional continuity across vacancy, key rotation, compromise, migration, dissolution, or restoration.",
+      "examples": [
+        "acting officer",
+        "key recovery",
+        "institutional succession"
+      ],
+      "authority_effect": "none_without_revalidation"
+    },
+    {
+      "id": "jurisdiction_or_policy_overlay",
+      "purpose": "Bind local legal, contractual, institutional, territorial, temporal, or policy constraints.",
+      "examples": [
+        "province",
+        "school board policy",
+        "ethics board policy",
+        "organizational charter"
+      ],
+      "authority_effect": "constraint_only"
+    },
+    {
+      "id": "effect_admission",
+      "purpose": "Re-enter the ordinary local authority path before any consequential effect.",
+      "examples": [
+        "issue credential",
+        "publish decision",
+        "release funds",
+        "change protected record"
+      ],
+      "authority_effect": "bounded_local_grant_only"
+    }
+  ],
+  "universal_invariants": [
+    "identity, relationship, role, credential, discovery, reputation and participation do not independently grant effect authority",
+    "delegation is attenuation-only unless a separately authorized source explicitly grants expansion",
+    "collective outcomes are evidence inputs until locally admitted",
+    "institutional continuity is distinct from current officeholder identity",
+    "local jurisdiction and policy may narrow a reusable pattern",
+    "installation or import of a pattern grants no authority",
+    "consequential effects re-enter the ordinary local authorization/evidence path"
+  ]
+}

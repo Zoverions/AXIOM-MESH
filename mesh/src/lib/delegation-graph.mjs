@@ -5,6 +5,7 @@ import {
   digestObject
 } from './canonical.mjs';
 import { ASSURANCE_TIER_IDS } from './assurance-tiers.mjs';
+import { snapshotDelegationPlainData } from './delegation-plain-snapshot.mjs';
 
 // This module validates attenuation-only delegation records and provenance.
 // It does not grant execution authority, add a Gateway route, or change the
@@ -38,7 +39,8 @@ const BUDGET_LIMITS = Object.freeze({
 });
 
 export function normalizeDelegationAuthority(raw) {
-  const value = assertPlainObject(raw, 'delegation authority');
+  const value = snapshotDelegationPlainData(raw, 'delegation authority');
+  assertPlainObject(value, 'delegation authority');
   assertExactKeys(value, [
     'schema',
     'holder',
@@ -112,7 +114,8 @@ export function normalizeDelegationAuthority(raw) {
 }
 
 export function normalizeDelegationGrant(raw) {
-  const value = assertPlainObject(raw, 'delegation grant');
+  const value = snapshotDelegationPlainData(raw, 'delegation grant');
+  assertPlainObject(value, 'delegation grant');
   assertExactKeys(value, [
     'schema',
     'id',
@@ -168,7 +171,8 @@ export function normalizeDelegationGrant(raw) {
 }
 
 export function normalizeDelegationRevocation(raw) {
-  const value = assertPlainObject(raw, 'delegation revocation');
+  const value = snapshotDelegationPlainData(raw, 'delegation revocation');
+  assertPlainObject(value, 'delegation revocation');
   assertExactKeys(value, [
     'schema',
     'id',

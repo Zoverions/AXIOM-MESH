@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/cognitive-advisor-escalation-policy-v0.schema.json",
+  "title": "AXIOM Cognitive Advisor Escalation Policy v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "policy_id",
+    "allowed_reasons",
+    "owner_confirmation_required",
+    "projection_required",
+    "created_at",
+    "authority_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "escalation_effect"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-cognitive-advisor-escalation-policy.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-escalation-policy"
+    },
+    "policy_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "allowed_reasons": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "capability-gap",
+          "quality-threshold",
+          "owner-request"
+        ]
+      }
+    },
+    "owner_confirmation_required": {
+      "const": true
+    },
+    "projection_required": {
+      "const": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "escalation_effect": {
+      "const": "proposal-only"
+    }
+  }
+}

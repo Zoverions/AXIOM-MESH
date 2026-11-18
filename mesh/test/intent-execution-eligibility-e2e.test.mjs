@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import { startDevelopmentStack } from '../src/dev.mjs';
+import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 import { canonicalJson, sha256 } from '../src/lib/canonical.mjs';
 import {
   buildIntentExecutionHandoff,
@@ -214,31 +214,10 @@ function contractFixture() {
   };
 }
 
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    const base = 22_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let offset = 0; offset < 4; offset += 1) {
-        const server = net.createServer();
-        await new Promise((resolve, reject) => {
-          server.once('error', reject);
-          server.listen(base + offset, '127.0.0.1', resolve);
-        });
-        servers.push(server);
-      }
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-      return base;
-    } catch {
-      await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))));
-    }
-  }
-  throw new Error('Could not allocate four consecutive ports');
-}
-
 test('v0.6 evaluates a real ratified remediation and builds no executing effect', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-v06-e2e-'));
-  const basePort = await findPortBlock();
+  const portLease = await reserveProductionPortBlock('intent execution eligibility e2e');
+  const basePort = portLease.base_port;
   const tokens = {
     operator: `operator-${crypto.randomUUID()}-${'o'.repeat(20)}`,
     approver: `approver-${crypto.randomUUID()}-${'a'.repeat(20)}`,
@@ -272,8 +251,12 @@ test('v0.6 evaluates a real ratified remediation and builds no executing effect'
     }
   });
   t.after(async () => {
-    await stack.stop();
-    await rm(dataDir, { recursive: true, force: true });
+    try {
+      await stack.stop();
+    } finally {
+      await portLease.release();
+      await rm(dataDir, { recursive: true, force: true });
+    }
   });
   const gateway = `http://127.0.0.1:${basePort}`;
 

@@ -1,9 +1,39 @@
+import { getAssuranceTier } from './assurance-tiers.mjs';
 import { canonicalJson, digestObject, ValidationError } from './canonical.mjs';
 import { effectDestinationForTool } from './effect-destination.mjs';
 import { machinePrincipalAuthorityFacts } from './machine-principal.mjs';
 
 export const MACHINE_DISCOVERY_SCHEMA = 'axiom-machine-discovery.v1';
 export const MACHINE_DISCOVERY_NOTICE = 'discovery_is_not_authorization';
+
+const DEFAULT_ASSURANCE_BY_RISK = Object.freeze({
+  low: 'A1',
+  medium: 'A2',
+  high: 'A3',
+  critical: 'A3'
+});
+const CURRENT_RUNTIME_BASE_ASSURANCE = 'A2';
+const CURRENT_RUNTIME_MAX_ASSURANCE = 'A3';
+
+function isRuntimeAssuranceAchievable(rule) {
+  const tier = rule.required_assurance ?? DEFAULT_ASSURANCE_BY_RISK[rule.risk];
+  let rank;
+  try {
+    rank = getAssuranceTier(tier).rank;
+  } catch {
+    return false;
+  }
+  if (rank > getAssuranceTier(CURRENT_RUNTIME_MAX_ASSURANCE).rank) {
+    return false;
+  }
+  if (
+    rank > getAssuranceTier(CURRENT_RUNTIME_BASE_ASSURANCE).rank
+    && rule.requires_independent_approval !== true
+  ) {
+    return false;
+  }
+  return true;
+}
 
 export function buildMachineDiscovery({ principal, policy, kernelVersion }) {
   if (principal?.schema !== 'axiom-machine-principal.v1') {
@@ -26,6 +56,7 @@ export function buildMachineDiscovery({ principal, policy, kernelVersion }) {
       ? policyActions[action]
       : null;
     if (!rule || rule.decision !== 'allow') continue;
+    if (!isRuntimeAssuranceAchievable(rule)) continue;
     const requiredScopes = [...new Set(rule.required_scopes ?? [])].sort();
     if (requiredScopes.some(scope => !principal.scopes.includes(scope))) continue;
 

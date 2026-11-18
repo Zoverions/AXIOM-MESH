@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/participation-observation-v0.schema.json",
+  "title": "AXIOM Participation Observation v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","version","status","observation_id","event_digest","state_digest","task_id","principal_id","context_id","context_class","addressing_class","producer_ref","producer_revision_ref","observed_at","applicability","dimensions","evidence_refs","score_semantics","authority_effect","assurance_effect","execution_effect","runtime_activation"],
+  "properties": {
+    "schema": {"const": "axiom-participation-observation.v0"},
+    "version": {"const": 0},
+    "status": {"const": "inert-participation-observation"},
+    "observation_id": {"$ref": "#/$defs/id"},
+    "event_digest": {"$ref": "#/$defs/digest"},
+    "state_digest": {"$ref": "#/$defs/digest"},
+    "task_id": {"anyOf": [{"$ref": "#/$defs/id"},{"type":"null"}]},
+    "principal_id": {"$ref": "#/$defs/id"},
+    "context_id": {"$ref": "#/$defs/id"},
+    "context_class": {"enum": ["owner-private","direct","circle","organization","public"]},
+    "addressing_class": {"enum": ["explicit","passive","context-only"]},
+    "producer_ref": {"$ref": "#/$defs/id"},
+    "producer_revision_ref": {"anyOf": [{"$ref": "#/$defs/id"},{"type":"null"}]},
+    "observed_at": {"type":"string","format":"date-time"},
+    "applicability": {"enum": ["current","stale","unknown"]},
+    "dimensions": {
+      "type":"object","additionalProperties":false,
+      "required":["usefulness","answer_confidence","urgency","noise","interruption_cost","investigation_value","acknowledgement_fit"],
+      "properties": {
+        "usefulness":{"$ref":"#/$defs/nullableScore"},
+        "answer_confidence":{"$ref":"#/$defs/nullableScore"},
+        "urgency":{"$ref":"#/$defs/nullableScore"},
+        "noise":{"$ref":"#/$defs/nullableScore"},
+        "interruption_cost":{"$ref":"#/$defs/nullableScore"},
+        "investigation_value":{"$ref":"#/$defs/nullableScore"},
+        "acknowledgement_fit":{"$ref":"#/$defs/nullableScore"}
+      }
+    },
+    "evidence_refs": {"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":512}},
+    "score_semantics": {"const":"uncalibrated-ordinal-0-100"},
+    "authority_effect": {"const":"none"},
+    "assurance_effect": {"const":"none"},
+    "execution_effect": {"const":"none"},
+    "runtime_activation": {"const":false}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"},
+    "digest": {"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "score": {"type":"integer","minimum":0,"maximum":100},
+    "nullableScore": {"anyOf":[{"$ref":"#/$defs/score"},{"type":"null"}]}
+  }
+}

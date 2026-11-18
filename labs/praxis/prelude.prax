@@ -1,0 +1,40 @@
+// Praxis v0 standard prelude — inert reference template.
+//
+// ABI DECISIONS (see also mesh/test/praxis-examples-v0.test.mjs and PR body):
+// 1. The prelude may name ONLY what the analyzer already pins as authority
+//    kinds: permit, lease, quorum, secret, prepared. It declares the five
+//    `requires` forms below as the canonical naming template.
+// 2. It binds NO host symbols. host-symbols.mjs exports JS-level Symbols
+//    (HOST_AUTHORITY, HOST_SECRET_REF, HOST_PREPARED_REF, ...). Those live in
+//    the synthetic test host's runtime registries and are NOT addressable in
+//    v0 Praxis syntax. The prelude therefore references no host symbol and
+//    claims no host capability.
+// 3. Policies (verify/assess `with` names) and provenance strings are
+//    unbound in v0: the language carries the names but enforces nothing
+//    about them. The registry conventions below are PROVISIONAL and are
+//    enforced, if at all, by hosts off-language.
+// 4. Secret kinds, action names, and scope names are opaque words in v0.
+//    The vocabularies used below (e.g. `api_key`, `Operate @ Mesh`) are
+//    PROVISIONAL fixtures; a host capability contract must pin them before
+//    any non-lab use.
+// 5. The prelude is a TEMPLATE, not a module: v0 has no import mechanism,
+//    and prepending these declarations to a program that redeclares the
+//    same names would fail with PRAXIS_DUPLICATE_BINDING. Copy-and-rename,
+//    or wait for a module system (PROVISIONAL).
+// 6. This file must itself pass `node cli.mjs check` and
+//    `node cli.mjs format --check`; comments survive here because the
+//    formatter strips them on re-emit — this file is documentation, not
+//    gallery input, so it is NOT held to the examples' comment-free rule.
+
+// Standard authority declarations. Rename the binding names to fit the
+// program that needs them; keep the form and the action @ scope shape.
+requires permit standard_ops: Operate @ Mesh;
+requires lease burst_window: Burst @ Compute;
+requires quorum change_board: Approve @ Ledger threshold 2 of alice, bob;
+requires secret service_token: api_key;
+requires prepared nightly_snapshot: Snapshot @ Backups;
+
+// PROVISIONAL — policy name registry conventions (v0: unenforced).
+// Hosts that consume `with <Policy>` names are expected to publish the set
+// they recognize. These fixtures exist only to give examples a stable
+// vocabulary; they grant nothing by themselves.

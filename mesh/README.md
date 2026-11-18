@@ -21,7 +21,7 @@ Supported source runtime:
 - source/shared-host compatibility Node.js `>=22.23.2 <23`;
 - separate hosted-runtime/security CI: Node.js `22.23.2`;
 - protected CI and `.node-version`: Node.js `24.18.0`;
-- candidate production image: Node.js `24.19.0`;
+- candidate production image: Node.js `24.22.2`;
 - npm `>=11.0.0 <12`, or bundled npm `>=10.9.8 <11` with Node.js 22;
 - zero third-party npm dependency packages.
 
@@ -73,7 +73,7 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 A browser, provider, external runtime, repository operator, remote node, or
 administrator does not gain authority merely by existing next to the kernel.
 
-The current machine-readable client contract covers all 31 authenticated
+The current machine-readable client contract covers all 33 authenticated
 Gateway routes with relative-only targets, explicit schemas and errors,
 bounded responses/timeouts, cancellation, stable idempotent replay, and no
 direct internal-service target.
@@ -208,6 +208,8 @@ The Gateway exposes these current operator endpoints:
 - `GET /v1/appeals`
 - `GET /v1/storage-offers`
 - `GET /v1/sync`
+- `GET /v1/sync/updates/:id`
+- `GET /v1/sync/bundles`
 - `GET /v1/sync/bundles/:digest`
 - `GET /v1/backups`
 - `GET /v1/backups/:id`

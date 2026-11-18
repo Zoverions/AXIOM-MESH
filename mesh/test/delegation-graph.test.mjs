@@ -7,6 +7,7 @@ import {
   assertDelegationAttenuates,
   normalizeDelegationAuthority,
   normalizeDelegationGrant,
+  normalizeDelegationRevocation,
   resolveDelegationChain
 } from '../src/lib/delegation-graph.mjs';
 
@@ -294,6 +295,50 @@ test('cycles, confused parentage, stale grants, and unauthorized revocations fai
     }),
     /must be issued by the grant delegator/
   );
+});
+
+
+test('delegation normalizers snapshot caller input without running accessors', () => {
+  const cases = [
+    [normalizeDelegationAuthority, authority('owner.alice'), 'holder'],
+    [
+      normalizeDelegationGrant,
+      grant(
+        'grant.chief',
+        'owner.alice',
+        'agent.chief',
+        null,
+        { delegation: { allowed: false, max_depth: 0 } }
+      ),
+      'id'
+    ],
+    [
+      normalizeDelegationRevocation,
+      {
+        schema: DELEGATION_REVOCATION_SCHEMA,
+        id: 'revoke.chief',
+        grant_id: 'grant.chief',
+        revoked_by: 'owner.alice',
+        revoked_at: '2026-08-27T21:00:00.000Z',
+        reason: 'operator revocation'
+      },
+      'reason'
+    ]
+  ];
+
+  for (const [normalize, value, field] of cases) {
+    let getterCalls = 0;
+    Object.defineProperty(value, field, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        getterCalls += 1;
+        return 'attacker-controlled';
+      }
+    });
+    assert.throws(() => normalize(value));
+    assert.equal(getterCalls, 0, `${field} getter must not run`);
+  }
 });
 
 test('supplied digests are revalidated instead of trusted', () => {

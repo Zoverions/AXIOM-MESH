@@ -1,6 +1,6 @@
 # AXIOM-MESH Institutional and Community Outreach
 
-**Updated:** 2026-08-20
+**Updated:** 2026-09-02
 
 This document complements [LAUNCH-PACK.md](LAUNCH-PACK.md). The launch pack is aimed at broad developer and social communities. This page is for organizations, working groups, foundations, security communities, and support programmes where a concrete collaboration request is more useful than a general project announcement.
 
@@ -28,6 +28,32 @@ Every outreach should preserve these boundaries:
 - sensitive security findings go through `SECURITY.md`.
 
 Before sending any dated outreach, re-check the target organization's current participation instructions rather than relying on this file as a live directory.
+
+## Community response and integration loop
+
+Useful outside participation should not disappear into a tracker after it is consumed. When a human contributor supplies a substantive falsifier, implementation insight, independently checkable result, routing correction, interoperability offer, or other material input, close the loop publicly when the venue permits it.
+
+The default response pattern is:
+
+1. **Acknowledge and credit** the contributor on the originating thread or issue. A reaction is useful but does not replace a substantive response when the contribution changed project work.
+2. **State what changed** because of the contribution: issue, PR, test, architecture decision, documentation correction, or explicit no-change decision.
+3. **Preserve evidence class**. Do not upgrade a scout hypothesis into reproduction, a reproduction into independent validation, or helpful discussion into endorsement/certification.
+4. **Offer the next bounded hook** when useful: verifier pass, independent reproduction, portable fixture, interoperability crosswalk, patch review, or a carefully evidenced `NOT_REPRODUCED` result.
+5. **Keep attribution visible** when the idea materially shaped later implementation. Follow-up implementation notes should point back to the outside input that caused the change.
+6. **Do not manufacture engagement**. Automated reviews, housekeeping, generic praise, or low-information comments do not require performative replies.
+
+A good community loop therefore looks like:
+
+```text
+outside contribution
+  -> technical triage
+  -> public acknowledgement + credit
+  -> integration / falsification / explicit no-change decision
+  -> evidence-preserving implementation note
+  -> next bounded contribution path
+```
+
+The goal is reciprocal technical collaboration: contributors should be able to see that useful criticism was heard and exactly how it affected the project, without allowing reputation, participation, or social consensus to become authority.
 
 ---
 

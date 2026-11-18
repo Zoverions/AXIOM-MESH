@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-ai-execution-provenance.v0",
+  "title": "AXIOM AI Execution Provenance v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "provenance_id",
+    "provider_id",
+    "model",
+    "request_digest",
+    "receipt_digest",
+    "adapter",
+    "orchestrator",
+    "runtime",
+    "context",
+    "tools",
+    "environment",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-ai-execution-provenance.v0" },
+    "version": { "const": "0.1.0" },
+    "status": { "const": "inert-evidence" },
+    "provenance_id": { "$ref": "#/$defs/identifier" },
+    "provider_id": { "$ref": "#/$defs/identifier" },
+    "model": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "request_digest": { "$ref": "#/$defs/digest" },
+    "receipt_digest": { "$ref": "#/$defs/digest" },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter_id", "adapter_version", "implementation_digest"],
+      "properties": {
+        "adapter_id": { "$ref": "#/$defs/identifier" },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "implementation_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "orchestrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orchestrator_id", "orchestrator_version"],
+      "properties": {
+        "orchestrator_id": { "$ref": "#/$defs/identifier" },
+        "orchestrator_version": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_id", "runtime_version", "runtime_descriptor_digest"],
+      "properties": {
+        "runtime_id": { "$ref": "#/$defs/identifier" },
+        "runtime_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "runtime_descriptor_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state_mode", "context_policy_digest", "memory_projection_digest"],
+      "properties": {
+        "state_mode": {
+          "enum": ["stateless", "session", "persistent", "opaque-provider-state"]
+        },
+        "context_policy_digest": { "$ref": "#/$defs/digest" },
+        "memory_projection_digest": {
+          "oneOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_policy_digest", "toolset_digest"],
+      "properties": {
+        "tool_policy_digest": { "$ref": "#/$defs/digest" },
+        "toolset_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment_id", "environment_version", "environment_digest"],
+      "properties": {
+        "environment_id": { "$ref": "#/$defs/identifier" },
+        "environment_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "environment_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "recorded_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

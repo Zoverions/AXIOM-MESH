@@ -315,3 +315,24 @@ test('host, policy, and reserve contracts are name-neutral and malformed input f
     }
   }).reason, 'remote_constraint_invalid');
 });
+
+test('a canonical JSON failure inside remote constraints still throws instead of becoming a denial', async () => {
+  const { canonicalJson } = await import('../src/lib/canonical.mjs');
+  let canonicalError;
+  const remoteConstraints = {};
+  Object.defineProperty(remoteConstraints, 'enabled', {
+    enumerable: true,
+    get() {
+      try { canonicalJson({ unencodable: undefined }); } catch (error) { canonicalError = error; throw error; }
+      return true;
+    }
+  });
+  assert.throws(() => evaluateContribution({
+    policy: policy(),
+    reserve: reserve(),
+    runtime: runtime(),
+    request: request(),
+    guardianState: GUARDIAN_STATES.NORMAL,
+    remoteConstraints
+  }), error => error === canonicalError && error instanceof TypeError);
+});

@@ -1,0 +1,59 @@
+{
+  "schema": "axiom-offline-reconciliation-profile.v1",
+  "status": "experimental architecture; not implemented sync claim",
+  "principle": "Disconnected nodes preserve local causal evidence and explicitly classify stale external dependencies; reconnection reconciles rather than blindly overwrites.",
+  "local_state_classes": [
+    {
+      "id": "locally_authoritative",
+      "offline_behavior": "may continue under local policy",
+      "examples": [
+        "local configuration",
+        "local unexpired grant where offline use was explicitly permitted",
+        "local receipts"
+      ]
+    },
+    {
+      "id": "externally_freshness_bound",
+      "offline_behavior": "deny_or_pending_when_freshness_required",
+      "examples": [
+        "remote revocation status",
+        "external entitlement",
+        "federated membership"
+      ]
+    },
+    {
+      "id": "advisory_cached",
+      "offline_behavior": "may inform UX/routing but not satisfy required proof",
+      "examples": [
+        "cached directory metadata",
+        "old reputation signal",
+        "stale discovery hint"
+      ]
+    },
+    {
+      "id": "conflict_visible",
+      "offline_behavior": "preserve competing versions until deterministic/local governance resolves",
+      "examples": [
+        "concurrent shared object edits",
+        "competing institutional updates"
+      ]
+    }
+  ],
+  "reconnect_sequence": [
+    "authenticate peer/source",
+    "exchange bounded causal summaries",
+    "verify artifact and receipt integrity",
+    "identify stale external dependencies",
+    "surface conflicts without silent last-writer-wins authority",
+    "apply local policy and recognition rules",
+    "revalidate revocation/currentness where required",
+    "append reconciliation evidence",
+    "resume only newly admissible operations"
+  ],
+  "forbidden": [
+    "treat connectivity restoration as authority",
+    "silently replace local protected state with remote state",
+    "retroactively label an offline action as externally verified when it was not",
+    "drop conflicting evidence to simplify convergence"
+  ]
+}

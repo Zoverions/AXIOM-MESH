@@ -34,7 +34,21 @@ These are active/draft lines with different historical bases. Before implementat
 - [ ] Keep public visibility and source licensing as separate decisions.
 - [ ] Add threat-model coverage for installer privilege, shared devices, ambient sensing, model supply chain, runtime adapters, and resource sharing.
 
+### Trust-core implementation migration
+
+- [x] Establish Stage 1 as an isolated Rust trust-core laboratory while the supported Node.js kernel remains authoritative.
+- [x] Keep Stage 1 unreachable from the Gateway, Hypervisor, Sandbox, Grid, production credentials, production durable state, and network effects.
+- [x] Pin Rust `1.85.0`, forbid unsafe code, use zero third-party Rust dependencies, and bind the laboratory to dedicated formatting, Clippy, and locked-test CI.
+- [x] Add synthetic deny-dominant authority vectors and a privately constructible `AuthorityGrant` experiment without registering a capability.
+- [x] Stage 2: freeze the first shared language-neutral conformance vectors for pure validation/canonicalization semantics and run exact Node-vs-Rust comparisons.
+- [x] Stage 3: move only the accepted pure `canonical-value-v0` candidate into the governed `trust-core/rust/` source boundary without runtime authority.
+- [x] Stage 4: run deterministic adversarial Node-vs-Rust differential conformance over the frozen `canonical-value-v0` domain without changing the promoted Rust implementation or runtime authority.
+- [ ] Require positive and negative semantic equivalence, canonical serialization equivalence where applicable, dependency/unsafe review, crash/recovery behavior, rollback, and independent review before any supported authority behavior moves from Node to Rust.
+- [ ] Keep every migration stage separately promotable and reversible; no stage inherits production authority merely because a previous stage passed.
+
 ## Priority 1 — Deployment & Capability Engine v0
+
+See the [current-base convergence decisions](architecture/DEPLOYMENT-ENGINE-V0-CONVERGENCE.md) before implementing this priority; the note inventories landed contracts and unresolved binding choices without promoting a capability.
 
 - [ ] Consume accepted `axiom-resource-envelope.v0` and `axiom-resource-observation.v0` semantics from #1402; do not create duplicates.
 - [ ] Consume applicable host-sovereignty evidence from #1456; local willingness remains independent of remote selection.
@@ -114,10 +128,11 @@ These are active/draft lines with different historical bases. Before implementat
 
 ## Priority 7 — Native bootstrapper and installation preparation
 
-- [ ] Reconstruct/consume #1281's non-mutating host-install planner on current main before adding privilege.
-- [ ] Reconstruct/consume #1282's signed release/install-manifest verification on current main.
+- [x] Reconstruct/consume #1281's non-mutating host-install planner on current main before adding privilege — OCI-first inert planner restored with explicit blockers/prerequisites and zero host mutation.
+- [x] Reconstruct/consume #1282's signed release/install-manifest verification on current main — external Ed25519 trust, exact control-plane binding, separate artifact-byte verification, zero host/install/network authority.
 - [ ] Define signed bootstrapper artifact and update policy.
 - [ ] Bind one bootstrapper session to one explicit deployment request.
+  - Install Session v0 now provides **inert rerun-state classification only** (install/no-op/repair/upgrade/recovery/stops); it is not the short-lived native-helper authorization protocol and grants no mutation.
 - [ ] Implement privileged local hardware inspection behind explicit consent.
 - [ ] Implement package/image acquisition with signature/digest verification.
 - [ ] Implement safe USB target selection and destructive-action confirmation.

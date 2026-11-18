@@ -1,0 +1,623 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/inference-benchmark-evidence-v0.schema.json",
+  "title": "AXIOM Inference Benchmark Evidence v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "benchmark_id",
+    "evidence_class",
+    "measured_at",
+    "workload",
+    "subject",
+    "environment",
+    "protocol",
+    "observations",
+    "quality",
+    "reproducer_ref",
+    "authority_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect",
+    "capability_promotion"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-inference-benchmark-evidence.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "benchmark_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "evidence_class": {
+      "enum": [
+        "measured",
+        "independently-reproduced",
+        "simulated",
+        "estimated",
+        "provider-reported"
+      ]
+    },
+    "measured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "profile_version",
+        "profile_digest",
+        "fixture_digest"
+      ],
+      "properties": {
+        "profile_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "profile_version": {
+          "$ref": "#/$defs/version"
+        },
+        "profile_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "fixture_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository_revision",
+        "model_or_provider_id",
+        "model_revision_or_digest",
+        "engine_id",
+        "engine_version",
+        "engine_implementation_digest",
+        "runtime_id",
+        "runtime_version",
+        "tokenizer_id",
+        "tokenizer_revision",
+        "numeric_format",
+        "sampling_config_digest",
+        "prompt_policy_digest",
+        "tool_memory_policy_digest",
+        "benchmark_harness_id",
+        "benchmark_harness_version",
+        "benchmark_harness_digest"
+      ],
+      "properties": {
+        "repository_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "model_or_provider_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "model_revision_or_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "engine_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "engine_version": {
+          "$ref": "#/$defs/version"
+        },
+        "engine_implementation_digest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "runtime_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "runtime_version": {
+          "$ref": "#/$defs/version"
+        },
+        "tokenizer_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "tokenizer_revision": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "numeric_format": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "sampling_config_digest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "prompt_policy_digest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "tool_memory_policy_digest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "benchmark_harness_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "benchmark_harness_version": {
+          "$ref": "#/$defs/version"
+        },
+        "benchmark_harness_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "arch",
+        "cpu",
+        "host_ram_bytes",
+        "accelerator_kind",
+        "accelerator_models",
+        "accelerator_count",
+        "accelerator_memory_bytes",
+        "driver_version",
+        "firmware_version",
+        "accelerator_runtime_version",
+        "topology_digest",
+        "source_ids"
+      ],
+      "properties": {
+        "os": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "arch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "cpu": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "host_ram_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "accelerator_kind": {
+          "enum": [
+            "none",
+            "gpu",
+            "npu",
+            "other"
+          ]
+        },
+        "accelerator_models": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "accelerator_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "accelerator_memory_bytes": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "driver_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "firmware_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "accelerator_runtime_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "topology_digest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "warmup_requests",
+        "measured_requests",
+        "concurrency",
+        "batch_size",
+        "streaming",
+        "cache_mode",
+        "failure_policy",
+        "percentile_method"
+      ],
+      "properties": {
+        "warmup_requests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measured_requests": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "cache_mode": {
+          "enum": [
+            "disabled",
+            "enabled",
+            "mixed",
+            "not-applicable"
+          ]
+        },
+        "failure_policy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "percentile_method": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latency",
+        "throughput",
+        "counts",
+        "resources",
+        "economic"
+      ],
+      "properties": {
+        "latency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ttft_ms",
+            "itl_ms",
+            "e2e_ms"
+          ],
+          "properties": {
+            "ttft_ms": {
+              "$ref": "#/$defs/percentiles"
+            },
+            "itl_ms": {
+              "$ref": "#/$defs/percentiles"
+            },
+            "e2e_ms": {
+              "$ref": "#/$defs/percentiles"
+            }
+          }
+        },
+        "throughput": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "prefill_tokens_s",
+            "decode_tokens_s",
+            "aggregate_tokens_s",
+            "requests_s",
+            "queue_wait_ms_p95"
+          ],
+          "properties": {
+            "prefill_tokens_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "decode_tokens_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "aggregate_tokens_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "requests_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "queue_wait_ms_p95": {
+              "$ref": "#/$defs/nullableNumber"
+            }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "request_count",
+            "success_count",
+            "error_count",
+            "rejected_count",
+            "oom_count"
+          ],
+          "properties": {
+            "request_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "success_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "error_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "rejected_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "oom_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "peak_accelerator_memory_bytes",
+            "steady_accelerator_memory_bytes",
+            "kv_cache_bytes",
+            "host_rss_bytes",
+            "cpu_utilization_pct",
+            "accelerator_utilization_pct",
+            "memory_bandwidth_utilization_pct",
+            "network_bytes",
+            "power_watts",
+            "energy_joules",
+            "thermal_throttling"
+          ],
+          "properties": {
+            "peak_accelerator_memory_bytes": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "steady_accelerator_memory_bytes": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "kv_cache_bytes": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "host_rss_bytes": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "cpu_utilization_pct": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "accelerator_utilization_pct": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "memory_bandwidth_utilization_pct": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "network_bytes": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "power_watts": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "energy_joules": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "thermal_throttling": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          }
+        },
+        "economic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "direct_cost_microcents",
+            "hardware_amortization_microcents",
+            "electricity_microcents",
+            "retry_failure_microcents",
+            "verification_microcents",
+            "denominator_kind",
+            "denominator_value"
+          ],
+          "properties": {
+            "direct_cost_microcents": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "hardware_amortization_microcents": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "electricity_microcents": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "retry_failure_microcents": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "verification_microcents": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "denominator_kind": {
+              "enum": [
+                "request",
+                "token",
+                "useful-output",
+                "none"
+              ]
+            },
+            "denominator_value": {
+              "$ref": "#/$defs/nullableNumber"
+            }
+          }
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "artifact_ref",
+        "artifact_digest"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "not-established",
+            "externally-bound"
+          ]
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "artifact_digest": {
+          "$ref": "#/$defs/nullableSha256"
+        }
+      }
+    },
+    "reproducer_ref": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "selection_effect": {
+      "const": "none"
+    },
+    "capability_promotion": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableSha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/sha256"
+        }
+      ]
+    },
+    "nullableString": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      ]
+    },
+    "nullableNumber": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "number",
+          "minimum": 0
+        }
+      ]
+    },
+    "percentiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "p50",
+        "p95",
+        "p99"
+      ],
+      "properties": {
+        "p50": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "p95": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "p99": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/inference-measurement-contracts.mjs",
+  "x-axiom-non-claims": [
+    "quality-equivalence",
+    "provider-selection",
+    "runtime-activation",
+    "gpu-authority",
+    "capability-promotion"
+  ]
+}

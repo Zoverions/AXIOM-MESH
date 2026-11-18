@@ -7,13 +7,13 @@ import {
   timingSafeEqual,
   verify
 } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalJson, sha256, AxiomError } from './canonical.mjs';
 import { assertTransportPeer } from './transport-credentials.mjs';
+import { registerTransportMetrics } from './observability.mjs';
 
 const KEY_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
-const REPLAY_SWEEP_INTERVAL = 64;
 
 function b64url(input) {
   return Buffer.from(input).toString('base64url');
@@ -61,10 +61,62 @@ export async function ensureMeshIdentity(dataDir, service, { create = true } = {
   return new MeshIdentity(service, privatePem, publicPem);
 }
 
-export async function loadTrustedKey(dataDir, service) {
+// Parsed trusted keys by path, each bound to the file identity it was read
+// from (scalability audit S-05). Reading and parsing the PEM on every signed
+// request cost ~5x a stat. Any replacement of the file -- rotation writes a
+// new file and renames it into place -- changes the inode or timestamps, so
+// the next request reads the new key exactly as before.
+//
+// Timestamps only change when the filesystem clock ticks: about every 15.6 ms
+// on NTFS, a few ms on Linux, 2 s on FAT. A same-size rewrite within one tick
+// of the cached read keeps the identity, so a file modified that recently is
+// never served from the cache ("racy git"). Once it is older than the margin,
+// any further write gets a timestamp outside the tick and shows as a change.
+const trustedKeyCache = new Map();
+const trustedKeyCounters = { reads: 0, hits: 0 };
+registerTransportMetrics('trusted-keys', () => ({
+  trusted_key_reads_total: trustedKeyCounters.reads,
+  trusted_key_hits_total: trustedKeyCounters.hits
+}));
+export const TRUSTED_KEY_RACY_MARGIN_MS = 2_000;
+
+function trustFileIdentity(info) {
+  return `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`;
+}
+
+/** True when a trust file is settled enough for its identity to be trusted. */
+export function trustedKeyCacheable(info, nowMs = Date.now()) {
+  const now = BigInt(Math.floor(nowMs)) * 1_000_000n;
+  const margin = BigInt(TRUSTED_KEY_RACY_MARGIN_MS) * 1_000_000n;
+  return now - info.mtimeNs >= margin && now - info.ctimeNs >= margin;
+}
+
+/** Trust-file reads and cache hits since start, for evidence and tests. */
+export function trustedKeyCacheStats() {
+  return Object.freeze({ entries: trustedKeyCache.size, ...trustedKeyCounters });
+}
+
+export async function loadTrustedKey(dataDir, service, { nowMs = Date.now() } = {}) {
   if (!KEY_PATTERN.test(service)) throw new AxiomError('invalid_service_identity', 'Invalid service identity', 401);
-  const pem = await readFile(join(dataDir, 'trust', `${service}.pub.pem`), 'utf8');
-  return createPublicKey(pem);
+  const path = join(dataDir, 'trust', `${service}.pub.pem`);
+  const info = await stat(path, { bigint: true });
+  const before = trustFileIdentity(info);
+  const cached = trustedKeyCache.get(path);
+  if (cached?.identity === before) {
+    trustedKeyCounters.hits += 1;
+    return cached.key;
+  }
+
+  trustedKeyCounters.reads += 1;
+  const key = createPublicKey(await readFile(path, 'utf8'));
+  // Cache only a settled file that did not change while it was being read.
+  const after = trustFileIdentity(await stat(path, { bigint: true }));
+  if (after === before && trustedKeyCacheable(info, nowMs)) {
+    trustedKeyCache.set(path, { identity: before, key });
+  } else {
+    trustedKeyCache.delete(path);
+  }
+  return key;
 }
 
 function keyIdFor(service, publicKey) {
@@ -102,11 +154,78 @@ export function verifyObjectSignature(value, attestation, publicKey) {
   return verify(null, Buffer.from(body), publicKey, fromB64url(attestation.signature));
 }
 
+// Replay guard capacity (scalability audit S-06). A signed request's nonce is
+// retained until its timestamp plus the clock-skew window plus one second.
+// With the default 30 s skew, a request stamped up to 30 s ahead is retained
+// for up to 61 s. Capacity is the declared peak signed-request rate per
+// receiving service, times that retention, times a safety margin. At the
+// default (500/s, 61 s, x2 = 61,000 entries) a full guard holds about 8 MiB.
+export const REPLAY_DECLARED_REQUESTS_PER_SECOND = 500;
+export const REPLAY_RETENTION_SECONDS = 61;
+export const REPLAY_CAPACITY_MARGIN = 2;
+
+export function replayGuardCapacity({
+  requestsPerSecond = REPLAY_DECLARED_REQUESTS_PER_SECOND,
+  retentionSeconds = REPLAY_RETENTION_SECONDS,
+  margin = REPLAY_CAPACITY_MARGIN
+} = {}) {
+  const capacity = Math.ceil(requestsPerSecond * retentionSeconds * margin);
+  if (!Number.isSafeInteger(capacity) || capacity < 1) {
+    throw new RangeError('Replay guard capacity is invalid');
+  }
+  return capacity;
+}
+
+export const REPLAY_DEFAULT_CAPACITY = replayGuardCapacity();
+
+// Every live guard in this process (a service holds one or two), weakly, so
+// the operations report can sum them without keeping discarded guards alive.
+const liveReplayGuards = new Set();
+const replayGuardCollector = new FinalizationRegistry(reference => liveReplayGuards.delete(reference));
+
+registerTransportMetrics('replay', () => {
+  const totals = {
+    replay_entries: 0,
+    replay_capacity: 0,
+    replay_high_water: 0,
+    replay_saturated_total: 0,
+    replay_expired_total: 0
+  };
+  for (const reference of liveReplayGuards) {
+    const stats = reference.deref()?.stats();
+    if (!stats) continue;
+    totals.replay_entries += stats.entries;
+    totals.replay_capacity += stats.capacity;
+    totals.replay_high_water += stats.high_water;
+    totals.replay_saturated_total += stats.saturated_total;
+    totals.replay_expired_total += stats.expired_total;
+  }
+  return totals;
+});
+
+/**
+ * Remembers nonces until they expire. Every live nonce is indexed under its
+ * expiry time, and expiries are kept in a min-heap, so each admission evicts
+ * exactly the entries that have expired: amortized O(1) per nonce plus
+ * O(log b) per distinct expiry (b is small; signed requests expire on whole
+ * seconds). There is no periodic full scan, and a full guard stays full only
+ * of live nonces, so saturation always means the declared rate was exceeded.
+ */
 export class ReplayGuard {
-  constructor({ maxEntries = 10_000 } = {}) {
+  constructor({ maxEntries = REPLAY_DEFAULT_CAPACITY } = {}) {
+    if (!Number.isSafeInteger(maxEntries) || maxEntries < 1) {
+      throw new RangeError('Replay guard capacity is invalid');
+    }
     this.maxEntries = maxEntries;
     this.nonces = new Map();
-    this.usesSinceSweep = 0;
+    this.byExpiry = new Map();
+    this.expiryHeap = [];
+    this.highWater = 0;
+    this.maxExpiryLagMs = 0;
+    this.counters = { admitted: 0, replayed: 0, saturated: 0, expired: 0 };
+    const reference = new WeakRef(this);
+    liveReplayGuards.add(reference);
+    replayGuardCollector.register(this, reference);
   }
 
   // Compatibility surface retained for existing callers/tests that only need
@@ -117,32 +236,94 @@ export class ReplayGuard {
   }
 
   admit(service, nonce, expiresAtMs, now = Date.now()) {
+    if (!Number.isFinite(expiresAtMs) || !Number.isFinite(now)) {
+      throw new RangeError('Replay guard times must be finite');
+    }
+    this.sweepExpired(now);
     const key = `${service}:${nonce}`;
-    const existingExpiry = this.nonces.get(key);
-    if (existingExpiry !== undefined) {
-      if (existingExpiry > now) return 'replayed';
-      this.nonces.delete(key);
+    if (this.nonces.has(key)) {
+      this.counters.replayed += 1;
+      return 'replayed';
     }
-
-    this.usesSinceSweep += 1;
-    if (
-      this.usesSinceSweep >= REPLAY_SWEEP_INTERVAL
-      || this.nonces.size >= this.maxEntries
-    ) {
-      this.sweepExpired(now);
-      this.usesSinceSweep = 0;
+    if (this.nonces.size >= this.maxEntries) {
+      this.counters.saturated += 1;
+      return 'saturated';
     }
-
-    if (this.nonces.size >= this.maxEntries) return 'saturated';
+    this.counters.admitted += 1;
+    // Already expired: nothing left to protect, so nothing to retain.
+    if (expiresAtMs <= now) return 'admitted';
     this.nonces.set(key, expiresAtMs);
+    const bucket = this.byExpiry.get(expiresAtMs);
+    if (bucket) bucket.push(key);
+    else {
+      this.byExpiry.set(expiresAtMs, [key]);
+      heapPush(this.expiryHeap, expiresAtMs);
+    }
+    if (this.nonces.size > this.highWater) this.highWater = this.nonces.size;
     return 'admitted';
   }
 
   sweepExpired(now = Date.now()) {
-    for (const [key, expiry] of this.nonces) {
-      if (expiry <= now) this.nonces.delete(key);
+    while (this.expiryHeap.length && this.expiryHeap[0] <= now) {
+      const expiry = heapPop(this.expiryHeap);
+      const keys = this.byExpiry.get(expiry);
+      this.byExpiry.delete(expiry);
+      for (const key of keys) this.nonces.delete(key);
+      this.counters.expired += keys.length;
+      this.maxExpiryLagMs = Math.max(this.maxExpiryLagMs, now - expiry);
     }
   }
+
+  /**
+   * Occupancy and outcome counters. Replay and saturation stay separate here,
+   * as they do in the errors callers raise (409 replay, 503 saturation).
+   * max_expiry_lag_ms is the longest an expired nonce stayed resident; it
+   * only grows while no request arrives, and never costs capacity, because
+   * every admission evicts first.
+   */
+  stats() {
+    return Object.freeze({
+      entries: this.nonces.size,
+      capacity: this.maxEntries,
+      high_water: this.highWater,
+      admitted_total: this.counters.admitted,
+      replayed_total: this.counters.replayed,
+      saturated_total: this.counters.saturated,
+      expired_total: this.counters.expired,
+      max_expiry_lag_ms: this.maxExpiryLagMs
+    });
+  }
+}
+
+function heapPush(heap, value) {
+  heap.push(value);
+  let index = heap.length - 1;
+  while (index > 0) {
+    const parent = (index - 1) >> 1;
+    if (heap[parent] <= value) break;
+    heap[index] = heap[parent];
+    index = parent;
+  }
+  heap[index] = value;
+}
+
+function heapPop(heap) {
+  const top = heap[0];
+  const last = heap.pop();
+  if (heap.length) {
+    let index = 0;
+    for (;;) {
+      const left = index * 2 + 1;
+      if (left >= heap.length) break;
+      const right = left + 1;
+      const child = right < heap.length && heap[right] < heap[left] ? right : left;
+      if (heap[child] >= last) break;
+      heap[index] = heap[child];
+      index = child;
+    }
+    heap[index] = last;
+  }
+  return top;
 }
 
 function requestSigningInput({ method, path, audience, service, timestamp, nonce, digest, interfaceVersion }) {

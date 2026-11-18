@@ -1,0 +1,5 @@
+requires permit deploy_staging: Deploy @ Staging;
+op release = Deploy("sha256:abc123") @ Staging;
+authorize release using deploy_staging as armed_release;
+prepare armed_release as prepared_release;
+commit prepared_release as release_receipt;

@@ -1,0 +1,24 @@
+{
+  "function_calls": [
+    {
+      "name": "op.inert.read_status",
+      "arguments": { "target": "workspace" }
+    },
+    {
+      "name": "op.inert.set_mode",
+      "arguments": { "mode": "observe" }
+    }
+  ],
+  "suppressed_calls": [
+    {
+      "name": "op.inert.echo_flag",
+      "arguments": { "enabled": true },
+      "confidence": 0.12
+    }
+  ],
+  "confidence": 0.91,
+  "latency_ms": 18,
+  "ram_mb": 96,
+  "tokens": { "input": 128, "output": 24 },
+  "explanation": "untrusted diagnostic only"
+}

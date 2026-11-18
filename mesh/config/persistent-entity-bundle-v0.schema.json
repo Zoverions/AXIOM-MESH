@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-persistent-entity-bundle.v0",
+  "title": "AXIOM Persistent Entity Bundle v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "bundle_id",
+    "entity_ref",
+    "source_composition_digest",
+    "scopes",
+    "records",
+    "created_at",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation",
+    "credential_material"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-persistent-entity-bundle.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-portability-contract" },
+    "bundle_id": { "$ref": "#/$defs/identifier" },
+    "entity_ref": { "$ref": "#/$defs/identifier" },
+    "source_composition_digest": {
+      "oneOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "scopes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "identity",
+          "character",
+          "personal_model_projection",
+          "runtime_policy",
+          "private_memory_ref",
+          "private_artifact_ref",
+          "skill_ref",
+          "relationship_projection"
+        ]
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/identity" },
+          { "$ref": "#/$defs/character" },
+          { "$ref": "#/$defs/personal_model_projection" },
+          { "$ref": "#/$defs/runtime_policy" },
+          { "$ref": "#/$defs/private_memory_ref" },
+          { "$ref": "#/$defs/private_artifact_ref" },
+          { "$ref": "#/$defs/skill_ref" },
+          { "$ref": "#/$defs/relationship_projection" }
+        ]
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "credential_material": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullable_identifier": {
+      "oneOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "display_name", "handle_intent"],
+      "properties": {
+        "kind": { "const": "identity" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "handle_intent": {
+          "oneOf": [
+            { "type": "string", "minLength": 1, "maxLength": 256 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "character": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "const": "character" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 16384 }
+      }
+    },
+    "personal_model_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "projection_ref", "projection_digest", "purpose"],
+      "properties": {
+        "kind": { "const": "personal_model_projection" },
+        "projection_ref": { "$ref": "#/$defs/identifier" },
+        "projection_digest": { "$ref": "#/$defs/digest" },
+        "purpose": { "type": "string", "minLength": 1, "maxLength": 2048 }
+      }
+    },
+    "runtime_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "primary_profile_ref", "fallback_profile_ref", "local_preferred"],
+      "properties": {
+        "kind": { "const": "runtime_policy" },
+        "primary_profile_ref": { "$ref": "#/$defs/nullable_identifier" },
+        "fallback_profile_ref": { "$ref": "#/$defs/nullable_identifier" },
+        "local_preferred": { "type": "boolean" }
+      }
+    },
+    "private_memory_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "memory_ref", "content_digest"],
+      "properties": {
+        "kind": { "const": "private_memory_ref" },
+        "memory_ref": { "$ref": "#/$defs/identifier" },
+        "content_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "private_artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "artifact_ref", "content_digest"],
+      "properties": {
+        "kind": { "const": "private_artifact_ref" },
+        "artifact_ref": { "$ref": "#/$defs/identifier" },
+        "content_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "skill_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "skill_ref", "artifact_digest", "disabled_by_default"],
+      "properties": {
+        "kind": { "const": "skill_ref" },
+        "skill_ref": { "$ref": "#/$defs/identifier" },
+        "artifact_digest": { "$ref": "#/$defs/digest" },
+        "disabled_by_default": { "const": true }
+      }
+    },
+    "relationship_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "relationship_ref", "projection_digest", "third_party_private_data"],
+      "properties": {
+        "kind": { "const": "relationship_projection" },
+        "relationship_ref": { "$ref": "#/$defs/identifier" },
+        "projection_digest": { "$ref": "#/$defs/digest" },
+        "third_party_private_data": { "const": false }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/persistent-entity-bundle.mjs",
+  "x-axiom-validation-requirement": "semantic-validator-required",
+  "x-axiom-semantic-invariants": [
+    "declared scopes exactly match carried record kinds",
+    "singleton record kinds occur at most once",
+    "reference record identifiers are unique within their kind",
+    "forbidden credential authority and implementation-lock-in field names are rejected recursively",
+    "created_at calendar validity and canonical ISO round-trip are enforced by the semantic validator"
+  ],
+  "x-axiom-non-claims": [
+    "credential-portability",
+    "authority-portability",
+    "standing-approval-portability",
+    "runtime-activation",
+    "machine-delegation",
+    "server-bound-identity-portability",
+    "canonical-embedding-portability",
+    "production-machine-person"
+  ]
+}

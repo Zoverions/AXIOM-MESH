@@ -1,0 +1,147 @@
+{
+  "schema": "axiom-circle-authorized-grid-admission-threat-review.v0",
+  "version": 0,
+  "status": "inert-authorized-admission-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "scope": "lifecycle-aware-circle-record-authorization-bound-to-grid-admission",
+  "threats": [
+    {
+      "id": "mutable-membership-snapshot-laundering",
+      "mitigations": [
+        "immutable-acceptance-binding-is-identity-anchor",
+        "append-only-membership-lifecycle-resolved-at-record-event-time",
+        "current-core-snapshot-must-match-derived-lifecycle-head"
+      ],
+      "residual_limit": "completeness of retained lifecycle history and its durable future persistence are not established by this inert composition"
+    },
+    {
+      "id": "role-narrowing-bypass",
+      "mitigations": [
+        "required-role-mode-evaluated-at-use-time",
+        "role-widening-and-restoration-unsupported",
+        "authorization-evidence-binds-member-eligibility-assessment-digest"
+      ],
+      "residual_limit": "future role grant or restoration requires a separate authorized collective procedure"
+    },
+    {
+      "id": "credential-currentness-laundering",
+      "mitigations": [
+        "credential-state-evaluated-at-exact-use-time",
+        "device-compromise-invalidates-credential-use",
+        "authorization-evidence-binds-credential-eligibility-assessment-digest"
+      ],
+      "residual_limit": "the lifecycle proves credential record eligibility but does not prove possession of the corresponding private key"
+    },
+    {
+      "id": "participant-credential-substitution",
+      "mitigations": [
+        "participant-attestation-membership-and-principal-must-match-frozen-electorate",
+        "participant-credential-eligibility-checked-at-participation-time",
+        "final-authorization-bundle-binds-participant-eligibility-assessment-digests"
+      ],
+      "residual_limit": "the current participant attestation envelope does not itself carry the credential-eligibility assessment digest; the Hypervisor composition layer binds that relationship"
+    },
+    {
+      "id": "open-proposal-electorate-mutation-ambiguity",
+      "mitigations": [
+        "electorate-frozen-at-proposal-creation",
+        "membership-or-role-change-during-open-proposal-fails-closed"
+      ],
+      "residual_limit": "normative semantics for suspension, exit, revocation, role narrowing, or other electorate changes during an open proposal remain undefined"
+    },
+    {
+      "id": "transport-vote-conflation",
+      "mitigations": [
+        "decision-transport-evaluated-separately-from-vote-participation",
+        "nonparticipant-transport-requires-review-mode",
+        "submitter-collective-authority-always-false"
+      ],
+      "residual_limit": "transport authorization does not establish political legitimacy or independent-human participation"
+    },
+    {
+      "id": "authorization-event-substitution",
+      "mitigations": [
+        "authorization-requester-must-equal-admitted-actor",
+        "historical-binding-digest-must-equal-persistence-binding-digest",
+        "record-type-id-digest-and-charter-must-match-persistence-payload",
+        "capability-invocation-and-constraints-bind-authorization-assessment-digest"
+      ],
+      "residual_limit": "technical binding establishes exact-object identity, not truth of the historical record"
+    },
+    {
+      "id": "unbound-parent-admission-bypass",
+      "mitigations": [
+        "composed-policy-declares-standalone-parent-admission-not-runtime-promotion-eligible",
+        "composed-capability-binds-parent-grid-admission-policy-digest",
+        "runtime-promotion-requires-composed-path-as-sole-service-level-append-path"
+      ],
+      "residual_limit": "the older inert parent helper remains present for provenance and tests, so future route wiring must prove it is unreachable as an independent write path"
+    },
+    {
+      "id": "authorization-to-commit-state-race",
+      "mitigations": [
+        "short-lived-hypervisor-capability",
+        "capability-binds-exact-authorization-and-eligibility-digests",
+        "same-token-replay-has-durable-grid-trace-fingerprint"
+      ],
+      "residual_limit": "membership or credential lifecycle state may change after Hypervisor assessment but before Grid commit; runtime promotion requires a current-lifecycle-head guard or an atomic equivalent"
+    },
+    {
+      "id": "historical-backfill-authority-confusion",
+      "mitigations": [
+        "authorization-is-explicitly-event-time-historical-eligibility",
+        "runtime-activation-remains-false",
+        "no-public-or-service-route-added"
+      ],
+      "residual_limit": "event-time authorization does not by itself authorize a principal to import an arbitrarily old record today; live-event freshness or a separate governed historical-import procedure remains required"
+    },
+    {
+      "id": "authorization-replay-or-reissue",
+      "mitigations": [
+        "deterministic-jti-binds-event-and-authorization-digest",
+        "signed-grid-trace-binds-exact-capability-token-digest",
+        "same-token-exact-replay-may-be-idempotent",
+        "reissued-token-for-existing-event-rejected"
+      ],
+      "residual_limit": "durable lifecycle-event replay protection is still required when eligibility restriction events themselves become Grid-backed"
+    },
+    {
+      "id": "identity-sybil-or-coercion-confusion",
+      "mitigations": [
+        "credential-possession-not-claimed",
+        "human-and-legal-identity-not-claimed",
+        "governance-legitimacy-and-coercion-free-participation-not-claimed"
+      ],
+      "residual_limit": "technical principal and credential distinctness do not prove independent humans, informed consent, or absence of coercion"
+    }
+  ],
+  "promotion_blockers": [
+    "hypervisor-bound-proof-of-current-credential-possession-and-request-binding",
+    "participant-attestation-binding-to-exact-credential-eligibility-assessment-or-equivalent-atomic-proof",
+    "explicit-open-proposal-electorate-change-semantics",
+    "historical-backfill-import-authority-and-live-event-freshness-policy",
+    "current-membership-and-credential-lifecycle-head-guard-at-grid-commit-or-atomic-equivalent",
+    "composed-authorized-admission-as-sole-service-level-circle-append-path",
+    "grid-backed-replay-safe-membership-and-credential-lifecycle-events",
+    "authorized-role-grant-membership-resume-credential-issuance-and-recovery-procedures",
+    "trusted-grid-chain-verification-obtained-internally-not-caller-supplied",
+    "accessible-member-facing-authorization-and-denial-explanations",
+    "independent-security-privacy-coercion-sybil-recovery-capture-and-governance-review"
+  ],
+  "non_claims": {
+    "credential_possession_proved": false,
+    "human_identity_proved": false,
+    "legal_identity_proved": false,
+    "historical_backfill_authorized": false,
+    "open_proposal_electorate_changes_resolved": false,
+    "authorization_and_commit_are_atomic": false,
+    "governance_legitimacy_proved": false,
+    "coercion_free_participation_proved": false,
+    "runtime_authority_granted": false,
+    "portable_authority_granted": false,
+    "external_effect_authority_granted": false,
+    "distributed_consensus_proved": false
+  }
+}

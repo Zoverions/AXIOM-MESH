@@ -6,9 +6,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  assertSupportedGit,
   createCredentialHistoryEvidence,
   createCredentialRevocationLedger,
+  detectGitVersion,
   findCredentialCandidates,
+  GIT_MINIMUM_VERSION,
+  parseGitVersion,
   scanGitHistory,
   validateCredentialRevocationLedger,
   verifyCredentialHistoryEvidence,
@@ -153,6 +157,62 @@ test('credential revocation ledger covers deprecated history and blocks reuse', 
   const ledgerFile = join(repositoryRoot, 'ledger.json');
   await writeFile(ledgerFile, `${JSON.stringify(ledger)}\n`);
   assert.equal(JSON.parse(await readFile(ledgerFile, 'utf8')).entries.length, 2);
+});
+
+test('credential audit reports the failing Git exit status and bounded stderr', async t => {
+  const repositoryRoot = await mkdtemp(join(tmpdir(), 'axiom-credential-git-error-'));
+  t.after(() => rm(repositoryRoot, { recursive: true, force: true }));
+  git(repositoryRoot, ['init', '--initial-branch=main']);
+
+  assert.throws(
+    () => scanGitHistory({
+      repositoryRoot,
+      ref: 'refs/heads/absent',
+      auditKey: AUDIT_KEY,
+      scope: 'tree',
+      gitExecutable: GIT
+    }),
+    error => (
+      /Git operation failed: rev-parse/.test(error.message)
+      && /exit \d+/.test(error.message)
+      && error.message.length < 512
+    )
+  );
+});
+
+test('credential audit requires a Git version that supports its portable plumbing', () => {
+  assert.equal(parseGitVersion('git version 2.34.1\n'), '2.34.1');
+  assert.throws(() => parseGitVersion('not git'), /unrecognized/);
+
+  const detected = detectGitVersion({ gitExecutable: GIT });
+  assert.equal(detected.available, true);
+  assert.equal(detected.minimum_version, GIT_MINIMUM_VERSION);
+  assert.equal(assertSupportedGit(detected), detected);
+
+  assert.deepEqual(detectGitVersion({ gitExecutable: 'axiom-absent-git' }), {
+    available: false,
+    version: null,
+    supported: false,
+    minimum_version: GIT_MINIMUM_VERSION
+  });
+  assert.throws(
+    () => assertSupportedGit({
+      available: false,
+      version: null,
+      supported: false,
+      minimum_version: GIT_MINIMUM_VERSION
+    }),
+    /no Git executable was found/
+  );
+  assert.throws(
+    () => assertSupportedGit({
+      available: true,
+      version: '2.20.0',
+      supported: false,
+      minimum_version: GIT_MINIMUM_VERSION
+    }),
+    /you have 2\.20\.0/
+  );
 });
 
 function git(cwd, args) {

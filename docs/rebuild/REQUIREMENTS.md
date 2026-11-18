@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-23
+**Updated:** 2026-09-18
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
@@ -49,7 +49,7 @@ state.
 | IAM-06 | Production startup MUST reject default, weak, missing, example, stale, or partially provisioned credentials. | Startup configuration tests. |
 | IAM-07 | Device and browser sessions MUST support expiry, idle timeout, revocation, and scope reduction without requiring destruction of the user’s underlying identity. | Session and device-revocation tests. |
 | IAM-08 | Core access and identity MUST NOT require a token, settlement account, or platform-controlled social account. | Token-disabled and offline-local onboarding tests. |
-| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and a finite destination ceiling enforced against the AXIOM-computed destination for current supported effects. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, destination, and four-service end-to-end tests. |
+| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and a finite destination ceiling enforced against the AXIOM-computed destination for current supported effects. Declared lifetime MUST be revalidated at authenticated request admission and again before a constrained application response is disclosed. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, machine-response-expiry direct/HTTP, destination, and four-service end-to-end tests. |
 | IAM-10 | Machine-principal v1 MUST NOT delegate authority. Any future machine delegation MUST be attenuation-only, explicitly scoped, expiring, revocable, chain-bound, independently evidenced, and separately promoted before use. | Non-delegation validation plus future delegation property and negative-path tests. |
 | IAM-11 | Machine discovery MUST be authenticated, constrained-machine-only, filtered by the active deny-dominant policy plus the caller's own scopes, actions, purposes, destinations, and budgets, MUST minimize metadata, and MUST explicitly state that discovery does not grant execution authority. Every discovered action MUST still undergo normal intent evaluation before execution. | Machine-discovery unit, client, service-network, and four-service leakage/authorization tests. |
 
@@ -82,6 +82,11 @@ state.
 | CAP-08 | Provider results MUST remain data until a later authorized effect explicitly consumes them. | Model-to-effect separation tests. |
 | CAP-09 | An external agent-runtime adapter MUST pin its exact contract, source, artifact, SBOM, Gateway compatibility, grant-verification key, operation mappings, scopes, destinations, opaque credential handles, bounds, and evidence obligations. It MUST reject unsigned, replayed, future, expired, revoked, unmapped, widened, or changed requests; reauthorize immediately before an effect; and preserve `uncertain` outcomes until reconciliation. | Byte-pinned v1 contract verifier, synthetic signed-grant negative suite, commit-bound protected-CI artifact, and separate conformance against each pinned external runtime before exposure. |
 | CAP-10 | Arbitrary-code execution MUST remain disabled until an independently reviewed isolation profile and adversarial escape suite are tied to the exact runtime. | Promotion gate. |
+| CAP-11 | Supported scriptable surfaces—including CLI, API/SDK, hooks, macros/workflows, plugins, capsules, and agent/runtime adapters—MUST map an equivalent privileged or externally visible effect to the same canonical AXIOM action and the same Gateway → Hypervisor → Sandbox → Grid authority path as an interactive client. | Cross-surface conformance tests prove identical allow/deny semantics and reject client-specific bypasses. |
+| CAP-12 | Discovery, catalog presence, installation, import, event subscription, loading, or workflow registration MUST NOT create execution authority. Requested actions, purposes, data scopes, destinations, credentials, network needs, resources, budgets, and expiry MUST remain explicit and reviewable before activation. | Install/import/subscribe-without-grant denial plus permission-diff fixtures. |
+| CAP-13 | Hooks and event streams MUST be observation-only by default. A reaction that would create a governed effect MUST submit a new authenticated intent or use an already-valid grant that explicitly covers that exact effect and MUST undergo normal execution-time re-evaluation. | Event-replay, forged-event, callback, revoked-grant, and self-triggering-loop negative tests. |
+| CAP-14 | Security-critical authorization, consent, destination, budget, revocation, and evidence checks MUST live behind shared authority boundaries rather than only in a GUI, CLI, SDK, plugin host, or workflow engine. Removing or replacing one client MUST NOT bypass a denial enforced for another. | GUI/CLI/API/plugin parity and client-removal bypass tests. |
+| CAP-15 | Bounded macros and workflows MUST bind an authenticated principal, finite action set, purposes, data scopes, destinations, resource/cost/time ceilings, cancellation/revocation behavior, and per-effect evidence. Composition MUST NOT create wildcard authority or widen any constituent grant. | Workflow manifest validation, exhaustion, revoke/cancel, idempotency, and no-self-expansion property tests. |
 
 ## Personal AI and bounded orchestration
 
@@ -240,6 +245,7 @@ state.
 | OPS-09 | Secret and policy providers MUST use independent signers, digest-pinned command chains, nonce-bound exact inventories, bounded execution, semantic validation, private materialization, and fail-closed cleanup. | Provider conformance drill. |
 | OPS-10 | Every user-facing and frontier component MUST have an owner, threat model, support boundary, update path, rollback, uninstall or decommissioning procedure, and incident contact before exposure. | Release checklist and deployment dossier. |
 | OPS-11 | Internal service communication MUST default deny, authorize an exact caller, destination, method, and route before request signing or network I/O, derive active mTLS peers from the same policy, keep plaintext development traffic on loopback, and remove unrelated unit-network adjacency. | Policy/route/Compose negative tests, protected required-path readiness, selected forbidden-edge container probes, and release-provenance binding. |
+| OPS-12 | A fresh-host installer MUST keep host compatibility, signed-release admission, artifact-byte verification, existing-installed-state classification, and privileged mutation as separate gates. Reruns MUST NOT automatically downgrade a newer release, overwrite divergent state, treat partial secrets as repairable, infer runtime readiness from installer completion, or use synthetic/supplied host facts as live mutation admission. | Host-plan/release-verifier/install-session negative tests plus disposable-host install, repair, update, recovery, rollback/uninstall and readiness evidence before promotion. |
 
 ## Production and marketing promotion
 
@@ -279,11 +285,13 @@ execution evidence;
   visible conflicts and explicit all-head resolution;
 - signed deployment-independent secret and policy provider startup;
 - the experimental loopback AXIOM One shell, including an exact human
-  explanation contract for five bounded actions, all 20 stable Gateway
-  outcomes, all 37 current kernel event kinds, approval states, raw evidence,
-  fixed directional owner-scoped provenance with correction-without-replacement,
+  explanation contract for six bounded actions, all 20 stable Gateway
+  outcomes, all 37 current kernel event kinds, approval states, non-authorizing
+  capability-status projection, current owner-scoped consent state, bounded
+  evidence-chain verification, raw evidence, fixed directional owner-scoped provenance with correction-without-replacement,
   and same-key uncertain-outcome recovery without claiming an authoritative
-  pre-execution kernel plan or edge-deletion control;
+  pre-execution kernel plan, per-principal capability authorization, external
+  truth, or edge-deletion control;
 - strict pilot-evidence and independent-security-review intake verifiers;
 - authenticated operator API and CLI;
 - an experimental loopback-only AXIOM One PWA foundation with a contract-only
@@ -291,7 +299,8 @@ execution evidence;
   creation/listing, three fixed directional provenance links,
   correction-without-replacement, confirmation-bound tombstoning, selective
   local export, explicit-only bundle reveal, cross-principal denial evidence,
-  and explicit unavailable Share, Circles, and AI states.
+  capability/consent/Verify read projections, and explicit unavailable Share,
+  live Circles, and production-AI states.
 
 The current checkpoint does **not** include a supported AXIOM One browser
 application, autonomous-agent runtime, MCP/A2A endpoint, machine delegation,

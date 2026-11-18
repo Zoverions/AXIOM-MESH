@@ -50,6 +50,101 @@ Community discussion may use the issued Agent Community pre-registration **`zove
 
 See [ZOVERIONS Agent Identity](docs/community/AGENT-IDENTITY.md) for the exact claim boundary.
 
+## Trust quickcheck
+
+If you are evaluating a local or self-hosted AI-agent harness, start with two narrow questions:
+
+1. Can client-supplied identity, capability, discovery, or routing metadata silently become authority?
+2. Can queued or retried work still produce an accepted effect after the authority that admitted it has been revoked or cancelled?
+
+Run both source-level checks with one command after cloning the repository:
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git && cd AXIOM-MESH && node trust-quickcheck.mjs
+```
+
+The quickcheck uses only existing offline tests. It exercises the read-only MCP metadata/authority boundary and the stale queued-work revocation boundary. It starts no production service, invokes no external runtime or provider, uses no production credential, and grants no authority.
+
+The MCP surface checks that self-reported client identity and capabilities cannot create authority or alter an accepted result, protocol downgrade and routing-metadata disagreement fail closed, unknown tools and unexpected arguments are rejected, discovery exposes only the fixed read-only tool map, and accepted MCP reads remain data-parity equivalent to their direct read-only AXIOM methods.
+
+The revocation surface checks that work admitted while authority was valid cannot later complete through a stale queue or retry after revocation/cancellation, and that the resulting evidence remains no-effect rather than being silently revived.
+
+A passing run is evidence only for those tested source-level invariants. It is not production MCP compatibility, remote attestation, external-runtime certification, a deployed kill switch, or permission for consequential effects.
+
+Current local-agent ecosystems increasingly mix interchangeable harnesses, models, MCP surfaces, persistent memory, scheduled work, and local/cloud execution. The narrower AXIOM claim is that **"local" is a deployment fact, not an authority credential**, and runtime choice should not become a second source of permission.
+
+If you find a reproducible non-sensitive counterexample, use the [Authority boundary counterexample issue form](.github/ISSUE_TEMPLATE/authority-counterexample.yml). Sensitive security findings belong in the private process described by [SECURITY.md](SECURITY.md); do not publish secrets, credentials, private data, weaponized exploit details, or information that would make a third-party system easier to attack.
+
+Campaign reference: `ua-2026-09-20-local-first-trust-quickcheck`. Public engagement is evidence, not authority.
+
+## Reproducible trust profile
+
+For a machine-readable version of the same bounded evaluation surface, run:
+
+```bash
+npm run trust-profile
+```
+
+The command emits `axiom-trust-profile.v0` JSON tied to the exact local Git commit when available. It reports only the two existing offline source-level checks above, their test paths, pass/fail status, and explicit non-certification fields. It sends no telemetry, starts no production service, makes no provider or network call, inspects no credential material, and grants no authority.
+
+A profile can report `passed: true` only when Git can identify the commit and the worktree is clean, including no untracked files. The JSON exposes this as `working_tree_clean`; a dirty or unverifiable source state fails closed so modified bytes cannot be misattributed to the recorded commit.
+
+The result intentionally omits timestamps, hostnames, usernames, hardware identifiers, environment variables, file contents, and credential material so an independent operator can attach or compare the result without publishing machine-specific data.
+
+A passing profile is not a general agent benchmark or production certification. The acquisition experiment is narrower: make an exact-revision trust-boundary result portable enough for technical creators, evaluators, researchers, and independent operators to rerun and falsify.
+
+Current demand context includes the September 2026 harness study [*Scanning the Harness*](https://arxiv.org/abs/2609.07360) and reproducible harness benchmark work such as [BenchClaw](https://benchclaw.io/), both of which emphasize revision-pinned, rerunnable evidence rather than model-name comparisons alone.
+
+Campaign reference: `ua-2026-09-21-reproducible-trust-profile`. Public use and feedback are evidence, not authority.
+
+## Agent memory lifecycle profile
+
+If you are comparing persistent or local-first agent-memory systems, inspect lifecycle semantics rather than recall quality alone:
+
+```bash
+npm run memory-lifecycle:profile
+```
+
+The command emits `axiom-memory-lifecycle-profile.v0` JSON from the existing experimental AXIOM One memory policy. It reports the current memory actions, read/export routes, provenance relations, correction behavior, explicit bundle-reveal rule, browser-persistence setting, and the current hard-delete, restore, and sharing claims.
+
+The profile can report `passed: true` only when the AXIOM One policy validates, Git identifies the exact source revision, and the worktree is clean. A dirty or unverifiable source tree fails closed so lifecycle claims cannot be attributed to a commit that does not match the bytes being evaluated.
+
+This is a source-level profile of an **experimental local preview**, not a production memory certification, privacy certification, recall benchmark, deletion guarantee, backup guarantee, interoperability claim, or permission grant. It makes no provider or network call, sends no telemetry, starts no production service, scans no credentials or user memories, and grants no authority. Unsupported lifecycle features remain explicit negative values rather than being inferred from roadmap intent.
+
+Current demand context includes agent-memory systems that now expose lifecycle operations such as creation, connection, update, supersession, retrieval, expiration/deletion, local persistence, provenance, and cross-tool continuity. The bounded experiment is to make AXIOM's present lifecycle contract exact-revision and machine-readable enough to compare or falsify.
+
+Campaign reference: `ua-2026-09-23-memory-lifecycle-profile`. Public use and feedback are evidence, not authority.
+
+## Repository-entry Git preflight
+
+Before asking Git to interpret repository-local configuration from a workspace you received from someone else, you can statically inspect explicit Git config files for the bounded command-capable surfaces currently covered by AXIOM:
+
+```bash
+npm run repo-entry:profile -- /path/to/preserved/.git/config
+```
+
+The preflight recognizes `core.fsmonitor`, `core.hooksPath`, `diff.external`, `diff.*.command`, `filter.*.(clean|smudge|process)`, `merge.*.driver`, and shell aliases. It reads only the file paths supplied by the operator, never invokes Git, performs no recursive repository or home-directory scan, makes no network or provider call, sends no telemetry, and emits only input index, basename, line, normalized setting key, risk class, and `value=REDACTED`. Absolute input paths and configured command values are not emitted.
+
+Exit status is `0` only when every supplied file is readable and none of the recognized surfaces is present, `1` when input is missing or unreadable, and `2` when at least one recognized surface is found. The machine-readable result always reports `absence_proves_safety: false`: a clean result covers only this bounded static surface and is not a Git security certification, sandbox certification, third-party agent compatibility claim, or permission to execute an untrusted workspace.
+
+Campaign reference: `ua-2026-09-24-repo-entry-preflight`. Public use and feedback are evidence, not authority.
+
+## MCP credential hygiene
+
+If you share MCP configuration through source control, you can check explicit local JSON configuration files for hardcoded values in credential-named fields without sending or printing the credential values:
+
+```bash
+npm run mcp-config:credential-check -- .mcp.json .cursor/mcp.json .vscode/mcp.json
+```
+
+The check is deliberately narrow. It reads only the paths you provide, performs no recursive home-directory scan, makes no network or provider calls, does not validate credentials, and does not inspect Git history. Findings contain only the file/location, risk class, and `value=REDACTED`. Common environment, input, and secret-manager references are treated as references rather than literal credentials.
+
+Exit status is `0` when no hardcoded credential literal is found in the checked credential-named JSON fields, `1` when an input cannot be read or parsed, and `2` when at least one literal is found. A clean result is not a complete secret-scan or security certification.
+
+If a real credential was ever committed, removing the current line is not sufficient remediation because Git history may retain the old value. Rotate or revoke the credential at its issuer and follow your incident-response process. Current demand context: [Hush Security's State of MCP Configuration research](https://www.hush.security/state-of-mcp/).
+
+Campaign reference: `ua-2026-09-21-mcp-config-credential-audit`. Public use and feedback are evidence, not authority.
+
 ## If you want to attack the design
 
 Please do.

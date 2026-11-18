@@ -1,0 +1,39 @@
+{
+  "schema": "axiom-deployment-transition-receipt.v1",
+  "receipt_id": "transition:alpha-airgap-rollback-001",
+  "target_instance_id": "instance:alpha-airgap-01",
+  "admission_id": "admission:institution-alpha-enclave-001",
+  "from_state": "active",
+  "to_state": "rolled_back",
+  "artifact_digests": [
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "transition_authority": {
+    "mode": "preauthorized_fail_safe",
+    "grant_or_policy_evidence_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+    "fresh_at_transition": false
+  },
+  "health": {
+    "pre_transition_check_passed": false,
+    "post_transition_check_passed": true,
+    "evidence_digests": [
+      "4444444444444444444444444444444444444444444444444444444444444444"
+    ]
+  },
+  "rollback": {
+    "target_state_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "rollback_plan_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "available": true
+  },
+  "occurred_at": "2026-09-01T13:05:00.000Z",
+  "offline_context": {
+    "offline": true,
+    "external_currentness_satisfied": false,
+    "reconciliation_required": true
+  },
+  "limitations": [
+    "Fail-safe rollback reduces effects and does not authorize reactivation.",
+    "Reactivation requires a fresh effect-increasing transition decision."
+  ]
+}

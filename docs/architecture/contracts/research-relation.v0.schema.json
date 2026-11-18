@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/research-relation.v0.schema.json",
+  "title": "AXIOM Research Relation v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "relation_id",
+    "subject_contribution_digest",
+    "predicate",
+    "object_contribution_digest",
+    "independence_state",
+    "evidence_refs",
+    "authority_effect",
+    "relation_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-research-relation.v0" },
+    "relation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+      "maxLength": 512
+    },
+    "subject_contribution_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "predicate": {
+      "enum": [
+        "builds_on",
+        "derived_from",
+        "reproduces",
+        "failed_to_reproduce",
+        "supports",
+        "contradicts",
+        "supersedes"
+      ]
+    },
+    "object_contribution_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "independence_state": {
+      "enum": [
+        "independent",
+        "shared_provenance",
+        "same_lineage",
+        "unknown"
+      ]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    },
+    "authority_effect": { "const": "none" },
+    "relation_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

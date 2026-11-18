@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/outcome-v0.schema.json",
+  "title": "AXIOM Outcome v0 inert contract",
+  "description": "Durable outcome/intention record. It may describe work, budgets and expected effects but grants no authority and activates no runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "outcome_id",
+    "owner_principal_id",
+    "intent",
+    "acceptance_criteria",
+    "purpose_ref",
+    "authority_refs",
+    "data_classes",
+    "task_ids",
+    "effect_boundaries",
+    "resource_envelope_ref",
+    "cost_budget",
+    "deadline",
+    "created_at",
+    "updated_at",
+    "completion_state",
+    "evidence_refs",
+    "grants_authority",
+    "execution_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-outcome.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-contract-laboratory"
+    },
+    "outcome_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "owner_principal_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "purpose_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "authority_refs": {
+      "$ref": "#/$defs/idArray"
+    },
+    "data_classes": {
+      "$ref": "#/$defs/textArray"
+    },
+    "task_ids": {
+      "type": "array",
+      "maxItems": 4096,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "effect_boundaries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "none",
+          "read-external",
+          "write-external",
+          "publish-external",
+          "communication",
+          "financial",
+          "create-external-resource",
+          "delete-external-resource",
+          "physical",
+          "unknown"
+        ]
+      }
+    },
+    "resource_envelope_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/identifier"
+        }
+      ]
+    },
+    "cost_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currency",
+        "max_minor_units"
+      ],
+      "properties": {
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "max_minor_units": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "deadline": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/date"
+        }
+      ]
+    },
+    "created_at": {
+      "$ref": "#/$defs/date"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/date"
+    },
+    "completion_state": {
+      "enum": [
+        "planned",
+        "in-progress",
+        "waiting",
+        "blocked",
+        "completed-unverified",
+        "completed-verified",
+        "failed",
+        "cancelled",
+        "uncertain-effect"
+      ]
+    },
+    "evidence_refs": {
+      "$ref": "#/$defs/refArray"
+    },
+    "grants_authority": {
+      "const": false
+    },
+    "execution_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:#/-]{0,191}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "refArray": {
+      "type": "array",
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/agent-os-contracts.mjs",
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "task-execution",
+    "provider-selection",
+    "node-placement",
+    "external-effect",
+    "runtime-activation"
+  ]
+}

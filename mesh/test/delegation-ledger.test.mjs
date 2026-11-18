@@ -316,3 +316,32 @@ test('persisted revocation invalidates descendant projections and unauthorized r
     assert.equal(ledger.revocations[0].id, 'revoke.chief');
   });
 });
+
+
+test('ledger entry normalizer snapshots raw evidence once before field validation', async () => {
+  const source = await readFile(
+    new URL('../src/lib/delegation-ledger.mjs', import.meta.url),
+    'utf8'
+  );
+  const start = source.indexOf(
+    'function normalizeLedgerEntry(raw, expectedSequence, expectedPreviousDigest) {'
+  );
+  const end = source.indexOf('\nfunction assertRevocationAuthorized', start);
+  assert.notEqual(start, -1, 'ledger entry normalizer must exist');
+  assert.notEqual(end, -1, 'ledger entry normalizer boundary must exist');
+
+  const normalizer = source.slice(start, end);
+  assert.match(
+    normalizer,
+    /const entry = snapshotDelegationPlainData\(raw, 'delegation ledger entry'\);/
+  );
+  const afterSnapshot = normalizer.slice(
+    normalizer.indexOf("snapshotDelegationPlainData(raw, 'delegation ledger entry')")
+      + "snapshotDelegationPlainData(raw, 'delegation ledger entry')".length
+  );
+  assert.doesNotMatch(
+    afterSnapshot,
+    /\braw\b/,
+    'untrusted ledger entry must not be referenced after its single snapshot'
+  );
+});

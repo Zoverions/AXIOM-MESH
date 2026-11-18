@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-08-23
+**Updated:** 2026-09-22
 
 **Active build:** `0.12.0-dev.3`
 
@@ -22,13 +22,14 @@ frontier laboratories do not replace production-pilot evidence.
 | Gate | Status | Evidence | Remaining action |
 |---|---|---|---|
 | Source integrity | Pass | Clean-room tree, source checksum, SBOM, provenance, exact zero-dependency locks | Maintain for every candidate/release |
-| Capability claims | Pass | Registry/generated status/claim markers; 49 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
+| Capability claims | Pass | Registry/generated status/claim markers; 51 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
 | Kernel tests | Pass | Protected Clean Kernel suite | Require on protected `main` |
-| Capability single-use durability | Pass for current kernel | Grid-backed consume-before-execute; deterministic per-JTI consume event; Grid-signed receipt; exact capability/claims/Sandbox-process-epoch binding; same-process replay guard; restart/crash/burn negative tests | Preserve at-most-once burn semantics across Grid/Sandbox changes; exactly-once external effects and automatic retry remain separate non-claims |
+| Machine response-lifetime recheck (#1840) | Pass for declared-lifetime boundary | Request admission plus response inspection revalidate declared machine expiry; successful outputs and handler-derived controlled errors are suppressed after expiry | Preserve direct/HTTP regressions; this does not establish live revocation currentness, trusted time, atomic release, rollback, or worker termination |
+| Capability single-use durability | Pass for literal replay and one exact native invocation | Grid-backed consume-before-execute; deterministic per-JTI consume event plus deterministic semantic marker over exact signed subject/issuer/audience/intent/plan/policy/invocation/tool bindings; Grid-signed receipt; same-process, fresh-JTI, restart and concurrency negatives | Preserve the two independent predicates. This does not yet establish cross-intent mandate binding, canonical-equivalent effect deduplication, multi-execution budgets, delegated-child accounting, exactly-once external effects, or automatic retry. |
 | Authority/evidence canonical input domain | Pass for current kernel | Canonical hashing accepts JSON-compatible plain data only and rejects class/custom prototypes, accessors, non-enumerable or symbol-keyed state, sparse/custom arrays, with dedicated negative regressions | Maintain call-site normalization and plain-data invariants on every authority/evidence schema change |
 | Cross-platform verification | Pass for current source | Linux/container + hosted Windows path/clock/documentation verification | Keep both protected surfaces green |
-| Source setup and dependency audit | Pass | Node 22.23.2+ shared-host/source compatibility; exact hosted-production/security CI pin 22.23.2 or protected Node 24.14.0+; protected CI/.node-version 24.18.0; candidate production image 24.19.0; Node 22 bundled npm 10.9.8+ or npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof | Maintain exact machine-readable hosted-production pin, negative tests, private credentials, mutual TLS, verified deny-egress, and separate production-promotion authority |
-| Fresh-host installation | Specified; not implemented | Machine-readable personal/local and infrastructure-node install profiles, install-without-authority contract, clean-host promotion gates | Implement/test signed clean-Linux personal install first, then infrastructure-node profile; do not treat source setup as host installation |
+| Source setup and dependency audit | Pass | Node 22.23.2+ shared-host/source compatibility; exact hosted-production/security CI pin 22.23.2 or protected Node 24.14.0+; protected CI/.node-version 24.18.0; candidate production image 24.22.2; Node 22 bundled npm 10.9.8+ or npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof | Maintain exact machine-readable hosted-production pin, negative tests, private credentials, mutual TLS, verified deny-egress, and separate production-promotion authority |
+| Fresh-host installation | Non-mutating planner + signed release verifier + inert Install Session v0 classifier implemented; mutating installer not implemented | Exact targets/policy; OCI-first blockers/prerequisites; external Ed25519 release trust; separate artifact-byte verification; live-local versus supplied/synthetic plan provenance; explicit INSTALL/VERIFY/REPAIR/UPGRADE/RECOVERY review states and newer/diverged/partial-secret/uncertain hard stops; all outputs zero-mutation | Reconcile with first-node proof, define separately authorized privileged install-session/resume/rollback boundary, then run disposable clean-Linux install lifecycle evidence; do not treat any current review state as mutation permission |
 | Container source policy | Pass | Digest-pinned Dockerfile/Compose release checks | Maintain exact production image/base digest |
 | Container build/readiness | Pass for candidate | Protected image build, readiness, authenticated operations, teardown | Repeat for promoted pilot image/platform |
 | Container network boundary | Pass for candidate topology | `network_mode: none`, Unix-socket ingress, route rejection, public TCP negative probe | Repeat and independently inspect pilot host/daemon policy |
@@ -44,7 +45,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Resilience | Pass for automated candidate | Oversized-body, rate-limit, dependency suspension/loss, fail-closed exit, state-preserving restart | Pilot cgroup/disk/traffic/replacement scenarios |
 | Internal transport | Pass for single-host candidate | TLS 1.3, Ed25519 identities, active-leaf pinning, rotation, retired-leaf rejection, rollback | Pilot CA custody/rollout/compromise recovery/independent review |
 | Independent service units | Pass for single-host candidate | Per-unit identities, Grid-only state, segmented internal networks, Sandbox-only recovery | Pilot orchestrator resource/network/update/rollback evidence |
-| Service network policy | Pass for reference single-host topology | Exact default-deny 42-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding; Education contributes one exact Hypervisor-to-Grid POST edge only | Reproduce on pilot and future independent hosts; preserve wrong-caller/wrong-method Education denials |
+| Service network policy | Pass for reference single-host topology | Exact default-deny 45-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding; Education contributes one exact Hypervisor-to-Grid POST edge only | Reproduce on pilot and future independent hosts; preserve wrong-caller/wrong-method Education denials |
 | Node discovery/scheduling | Pass for single-Grid reservation candidate | Signed admissions, filtered discovery, deterministic encrypted leases, capacity/security/owner/domain/expiry/quarantine | Remote dispatch, measured resources, endpoint health, result provenance |
 | Online causal exchange | Pass for two-Grid candidate | Pinned Grid evidence, signed bundles, encrypted ordered queues, duplicate preflight, independent approval, visible conflicts/convergence | Independent-host WAN loss/delay/clock/backlog/custody evidence |
 | Secret/policy providers | Pass for signed protocol/reference adapter | Independent signers, pinned artifacts, nonce-bound inventories, private generation, invalid-signer rejection | Pilot vault/orchestrator adapter/workload identity |
@@ -74,11 +75,11 @@ or agent security result does not itself authorize any AXIOM effect.
 
 | Product gate | Current state | Required before exposure/promotion |
 |---|---|---|
-| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 31-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
+| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 33-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
 | Axiom Education | In progress; independent downstream application with Mesh convergence candidate | Governed learner memory/write/self-read substrate is being converged onto current Mesh without production policy activation; after Mesh merge, pin exact compatibility in `Zoverions/Axiom-Education`, update feature-adoption ledger, and require downstream protected CI before claiming adoption |
 | Owner-local social substrate | In progress: intent-authorized local actor/persona/publication create/supersede/retract plus owner-derived `/v1/social`; A2 publication projection; no federation or network distribution | Complete exact-head owner-read evidence, then AXIOM One UI; later exchange/federation requires a separate protocol/security gate |
 | Remote social review inspection | Candidate mechanism implemented; not production-promoted: owner-only `/v1/social/remote-review`, owner derived from authenticated principal, query overrides rejected, minimized G5A projection, accepted `SocialGridStore`, no remote-schema creation and no social/network/authority effect | Same-head Clean Kernel/Windows/chain evidence is required before PR readiness; any staging/admission/follow/transport/federation remains a separate gate |
-| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete local social UI, onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
+| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views; LAB-GRADE installable manifest with exact local PNG/maskable icons, stylized screenshots, shortcuts, and shell-cache verification | Complete local social write UI, onboarding, session/device security, production browser evidence, accessibility/usability, signed packaging, safe update/rollback/recovery/uninstall, and support |
 | Human authority explanations | Experimental bounded slice (`UX-003`): five-action review, stable outcomes/events, approval states, raw evidence, uncertainty recovery | Authoritative policy-bound broader consequential plan/execute, reversible approval actions, consent/revocation journeys, comprehension evidence |
 | Governed memory lifecycle | Experimental (`UX-004`): owner create/list, three fixed provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives | Edge deletion, bounded bulk ingest, authorized hard deletion, restore/recovery, download threat analysis, human lifecycle evidence |
 | Browser security | Planned (`UX-005`) | CSP, CSRF, origin, session/cookie/token, clickjacking, device revocation, storage inspection |
@@ -160,6 +161,14 @@ exceptions/expiry, and exact built/enabled/exposed/promoted/marketed state.
 
 Secret values, private keys, production tokens, and unencrypted user content
 must never enter the evidence package.
+
+Protected Clean Kernel CI also assembles a commit-bound candidate bundle from
+the exact checked-out revision: source archive, OCI image export,
+documentation, SPDX SBOM, provenance, and a digest inventory. This artifact is
+explicitly non-authorizing: it has no trusted release signature or install
+manifest, does not establish host installation, does not promote production,
+and is not a release-ready package. It is retained only as digest-bound input
+to the later external signing and fresh-host verification gates.
 
 See the [pilot dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md) and
 [independent review](security/INDEPENDENT-SECURITY-REVIEW.md).

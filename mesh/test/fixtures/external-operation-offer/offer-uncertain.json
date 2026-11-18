@@ -1,0 +1,65 @@
+{
+  "schema": "axiom-external-operation-offer.v0",
+  "offer_id": "offer:synthetic:uncertain",
+  "observed_at": "2026-09-16T20:00:00.000Z",
+  "freshness": {
+    "state": "current",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "catalog_entry": {
+    "entry_id": "connector:synthetic-uncertain",
+    "entry_version": "0.1.0",
+    "entry_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "operation": {
+    "broker_operation_id": "synthetic#ambiguous",
+    "axiom_action": "external.record.write",
+    "schema_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "provider_ref": "provider:synthetic-uncertain",
+    "effect_class": "write-external",
+    "input_data_classes": [
+      "record.patch"
+    ],
+    "output_data_classes": [
+      "record.ack"
+    ],
+    "network_required": true,
+    "description": "Mutation with ambiguous timeout/reconciliation semantics."
+  },
+  "topology": {
+    "broker_location": "hosted",
+    "broker_destination": "https://broker.example.invalid",
+    "downstream_location": "provider-remote",
+    "provider_destination": "https://uncertain.example.invalid"
+  },
+  "quote": {
+    "kind": "exact",
+    "currency": "USD",
+    "quoted_amount_minor_units": 7,
+    "max_amount_minor_units": 7,
+    "pricing_unit": "call",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "health": {
+    "state": "available",
+    "observed_at": "2026-09-16T20:00:00.000Z",
+    "p50_ms": 120,
+    "p95_ms": 350
+  },
+  "execution_semantics": {
+    "timeout_ms": 10000,
+    "cancellation": "unsupported",
+    "idempotency": "none",
+    "reconciliation": "required",
+    "reconciliation_path": "status://synthetic/uncertain"
+  },
+  "evidence": {
+    "source_refs": [
+      "fixture:synthetic",
+      "fixture:uncertain-timeout"
+    ],
+    "external_claim_only": true
+  },
+  "grants_authority": false,
+  "execution_effect": "none"
+}

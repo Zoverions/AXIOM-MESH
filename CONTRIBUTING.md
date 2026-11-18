@@ -1,6 +1,6 @@
 # Contributing to AXIOM-MESH
 
-**Updated:** 2026-08-20
+**Updated:** 2026-09-18
 
 AXIOM-MESH accepts changes to:
 
@@ -36,8 +36,12 @@ current-state document must say so explicitly.
 - Source/shared-host compatibility: Node.js `>=22.23.2 <23`.
 - Protected CI and `.node-version` pin Node.js **24.18.0**.
 - A separate hosted-runtime/security CI job pins Node.js **22.23.2**.
-- The candidate production image pins Node.js **24.19.0**.
+- The candidate production image pins Node.js **24.22.2**.
 - npm `>=11.0.0 <12`, or Node 22's bundled npm `>=10.9.8 <11`.
+- Check out and work with umask `022`: provider executables and artifacts
+  must not be group- or other-writable, and checkouts made with umask
+  `0007`/`0002` produce `660`/`664` files that fail provider verification
+  (doctor warns when working-tree files are group- or other-writable).
 - Docker with Compose only when changing container/service-unit packages.
 - Browser/product toolchains only inside separately reviewed application
   boundaries; they must not become kernel dependencies.
@@ -68,6 +72,22 @@ Before opening a pull request:
 npm run check
 npm run release:verify
 ```
+
+Documentation is a continuous gate. Before a change is considered complete,
+the deterministic documentation rebuild must produce no diff and the canonical
+documentation verifier must pass:
+
+```bash
+npm --prefix mesh run status:generate
+git diff --exit-code
+npm --prefix mesh run docs:check
+```
+
+Scheduled protected CI repeats this maintenance proof so generated status and
+governing claim markers cannot quietly age behind the implementation. Narrative
+documents remain source-grounded and fail closed when they cannot be derived
+safely; the maintenance path does not grant capability, promotion, merge,
+deployment, credential, or runtime authority.
 
 Container-impacting changes must also pass the digest-pinned image, readiness,
 deny-egress, and service-isolation checks.

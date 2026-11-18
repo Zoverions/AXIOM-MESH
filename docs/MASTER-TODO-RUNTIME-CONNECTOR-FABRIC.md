@@ -2,7 +2,7 @@
 
 **Status:** subordinate execution queue; documentation/contract work only until existing capability, policy, runtime, test, and promotion gates are satisfied
 
-**Updated:** 2026-08-22
+**Updated:** 2026-09-05
 
 **Parent workstreams:** `ORCH-001`, `RUNTIME-001`, `RUNTIME-002`, `AI-001`, `ROUTE-001`, AXIOM Studio, MCP/A2A laboratories, multi-host dispatch, and Circle governance.
 
@@ -74,7 +74,7 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 - [ ] Record maintenance/release hygiene, licence, source/dependency reviewability, integration boundary, worker/sub-agent behavior, credential model, filesystem/network assumptions, update mechanism, and known security history.
 - [ ] Select one exact upstream source commit/release and pin it immutably.
 - [ ] Complete source, licence, dependency, SBOM, and threat-model review.
-- [ ] Implement one no-secret read-only operation through Agent Runtime Adapter v1.
+- [ ] Implement one no-secret read-only operation through Agent Runtime Adapter v1. *(partial: fixture-backed Hermes `get_code_identity` research slice landed 2026-09-05; live process path deferred)*
 - [ ] Bind the real-runtime task to an exact immutable catalog entry ID/version and adapter contract.
 - [ ] Prove native Gateway versus adapter authorization parity.
 - [ ] Prove direct Gateway-internal-service access is impossible from the runtime boundary.
@@ -82,6 +82,8 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 - [ ] Keep consequential effects disabled until independent review passes.
 
 **Candidate-source checkpoint:** Hermes has an immutable research pin at `b6bcb3e791c673e63974029bbab40cc9326803ff` in `reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md`. That document records the observed unsigned commit, MIT licence, version/dependency facts, and a code-identity-only candidate probe. The four-runtime first-pass comparison also includes Codex CLI as a narrower coding-runtime control. These records do not complete runtime selection, full security/dependency review, or certification.
+
+**RUNTIME-002 identity fixture (2026-09-05):** Mesh now carries a fixture-backed Hermes identity-only research slice (`docs/operations/HERMES-RUNTIME-002-IDENTITY-FIXTURE.md`, `mesh/fixtures/runtime-adapter/hermes-runtime-002-identity-pin.json`, `mesh/src/lib/hermes-identity-fixture-adapter.mjs`). It proves pin binding, field bounding, mismatch/forged-build denial, dump rejection, and contract/manifest receipt binding without spawning Hermes. Pin remains provisional; parity matrix items for live process, native Gateway path, direct-service denial, and owner acceptance remain open. `capabilities.json` untouched.
 
 ## P4 — second runtime neutrality proof
 
@@ -93,14 +95,16 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 
 ## P5 — durable task, event, artifact, and handoff model
 
-- [ ] Define durable task identifiers and causal parent/child/handoff relationships.
-- [ ] Implement `queued`, `running`, `awaiting-approval`, `blocked`, `completed`, `failed`, `cancelled`, `expired`, and `uncertain` states.
-- [ ] Bind lifecycle transitions to principal, exact catalog entry, runtime/connector identity, exact adapter contract, policy/grant state where applicable, and evidence.
-- [ ] Define typed digest-bound artifacts with source, schema/MIME, size, data class, retention class, and custody metadata.
+- [x] Define durable task identifiers and causal parent/child/handoff relationships.
+- [x] Implement `queued`, `running`, `awaiting-approval`, `blocked`, `completed`, `failed`, `cancelled`, `expired`, and `uncertain` transition semantics over the frozen v1 snapshots.
+- [x] Bind lifecycle transitions to principal, exact catalog entry, runtime/connector identity, exact adapter contract, policy/grant state where applicable, and append-only evidence.
+- [x] Enforce typed digest-bound artifacts as append-only task outputs while preserving the frozen v1 source/schema/MIME/size/data/retention metadata.
 - [ ] Add bounded polling and event observation without transcript replay.
-- [ ] Add cancellation/expiry semantics that do not falsely claim rollback after an effect occurred.
-- [ ] Preserve uncertain outcomes until reconciliation.
-- [ ] Add runaway-loop, child-task, tool-call, time, storage, bandwidth, and currency-explicit cost budget tests.
+- [ ] Add cancellation/expiry effect-boundary semantics that can distinguish a requested cancellation from an already-committed external effect.
+- [x] Preserve uncertain outcomes until explicit reconciliation to completed or failed.
+- [ ] Add the remaining runaway-loop, storage, bandwidth, and full resource-accounting tests; the continuity slice already enforces attenuation-only timeout/step/tool/child/currency ceilings across snapshots and handoffs.
+
+**P5 continuity checkpoint (2026-09-24):** `mesh/src/lib/runtime-task-continuity.mjs` now composes the byte-pinned `axiom-task-artifact-handoff.v1` validator rather than changing its frozen schema. The pure verifier enforces immutable task/request/target/input bindings, monotonic grant/delegation references plus attenuation-only budgets, legal lifecycle transitions, append-only outputs/events, non-backdated cancellation/events, unresolved-uncertainty preservation, handoff scope attenuation, no source-grant reuse, delegation-reference presence for independently authorized receiving principals (attenuation proof remains P6), and closed acyclic causal graphs with one root per causal workflow. It performs no persistence, polling, runtime invocation, delegation issuance, grant issuance, external effect, or capability promotion.
 
 ## P6 — worker spawning and attenuation-only delegation
 
@@ -170,6 +174,11 @@ No Runtime & Connector Fabric capability is production-promoted until its exact 
 - recovery/uninstall/update behavior;
 - independent review proportional to consequence;
 - truthful current-status and public non-claims.
+
+
+## External Operation Offer v0 status
+
+- [x] External Operation Offer v0 — inert/offline contract + conformance only; no live broker/provider execution, credentials, wallet, egress, autonomous purchasing, or capability promotion.
 
 ## Explicit non-claims
 

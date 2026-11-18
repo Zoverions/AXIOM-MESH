@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/behavioral-assurance-profile-v0.schema.json",
+  "title": "AXIOM Behavioral Assurance Profile v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "profile_id",
+    "subject",
+    "populations",
+    "created_at",
+    "valid_until",
+    "profile_digest",
+    "authority_effect",
+    "assurance_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-behavioral-assurance-profile.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-behavioral-assurance-evidence"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "populations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/population"
+      }
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "valid_until": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "profile_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "assurance_effect": {
+      "const": "evidence-only"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "selection_effect": {
+      "const": "evidence-only"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_kind",
+        "subject_id",
+        "subject_digest",
+        "provider_model_revision",
+        "binding_strength",
+        "instruction_policy_digest",
+        "context_memory_policy_digest",
+        "tool_policy_digest",
+        "sampling_configuration_digest",
+        "environment_harness_digest"
+      ],
+      "properties": {
+        "subject_kind": {
+          "enum": [
+            "model-artifact",
+            "provider-offering",
+            "cognitive-runtime",
+            "agent-harness",
+            "verifier-harness"
+          ]
+        },
+        "subject_id": {
+          "$ref": "#/$defs/id"
+        },
+        "subject_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "provider_model_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "binding_strength": {
+          "enum": [
+            "exact-artifact",
+            "provider-versioned",
+            "bounded-harness",
+            "mutable-alias",
+            "unknown"
+          ]
+        },
+        "instruction_policy_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "context_memory_policy_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "tool_policy_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "sampling_configuration_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "environment_harness_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "evaluationPeriod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "to": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "verificationSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "source_digest",
+        "source_class",
+        "independence_group"
+      ],
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "source_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "source_class": {
+          "enum": [
+            "deterministic-checker",
+            "human-adjudication",
+            "semantic-verifier",
+            "model-verifier",
+            "provider-evaluator",
+            "other-reviewed"
+          ]
+        },
+        "independence_group": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "rubricRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rubric_id",
+        "rubric_digest"
+      ],
+      "properties": {
+        "rubric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "rubric_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dimension_id",
+        "evidence_state",
+        "metric_kind",
+        "value",
+        "sample_count",
+        "calibration_ref",
+        "calibration_digest",
+        "calibration_state"
+      ],
+      "properties": {
+        "dimension_id": {
+          "enum": [
+            "factual-reliability",
+            "source-provenance-fidelity",
+            "uncertainty-abstention-quality",
+            "instruction-fidelity",
+            "user-intent-fit",
+            "authority-effect-discipline",
+            "privacy-egress-discipline",
+            "tool-use-discipline",
+            "prompt-context-injection-resistance",
+            "self-authored-instruction-incidence",
+            "fabricated-source-data-incidence",
+            "concealment-reporting-integrity",
+            "credential-boundary-discipline",
+            "cross-agent-shared-state-discipline",
+            "correction-responsiveness",
+            "benign-perturbation-robustness",
+            "adversarial-robustness",
+            "domain-competence",
+            "policy-conformance"
+          ]
+        },
+        "evidence_state": {
+          "enum": [
+            "accepted-evidence",
+            "insufficient-evidence",
+            "conflicting-evidence",
+            "stale-evidence",
+            "invalid-evidence"
+          ]
+        },
+        "metric_kind": {
+          "enum": [
+            "probability",
+            "rate",
+            "count",
+            "score"
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calibration_ref": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "calibration_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "calibration_state": {
+          "enum": [
+            "reviewed",
+            "experimental",
+            "rejected",
+            "expired",
+            "not-applicable"
+          ]
+        }
+      }
+    },
+    "incidentEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_class",
+        "count",
+        "evidence_refs"
+      ],
+      "properties": {
+        "event_class": {
+          "enum": [
+            "self-authored-summary-instruction",
+            "concealment-reporting-integrity-failure",
+            "fabricated-unavailable-source-data",
+            "unauthorized-credential-use",
+            "public-upload-egress-workaround",
+            "shared-state-cross-agent-communication",
+            "broken-collaboration-channel-widening"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "population": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "population_id",
+        "population_digest",
+        "domain",
+        "task_family",
+        "consequence_class",
+        "evaluation_period",
+        "sample_count",
+        "minimum_sample_count",
+        "sample_sufficiency",
+        "inclusion_criteria",
+        "exclusion_criteria",
+        "verification_sources",
+        "rubric_refs",
+        "dimensions",
+        "incident_events",
+        "known_limitations",
+        "distribution_shift_notes"
+      ],
+      "properties": {
+        "population_id": {
+          "$ref": "#/$defs/id"
+        },
+        "population_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "task_family": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "consequence_class": {
+          "enum": [
+            "informational",
+            "digital-reversible",
+            "digital-consequential",
+            "physical-reversible",
+            "physical-safety-relevant",
+            "physical-potentially-irreversible"
+          ]
+        },
+        "evaluation_period": {
+          "$ref": "#/$defs/evaluationPeriod"
+        },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minimum_sample_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sample_sufficiency": {
+          "enum": [
+            "sufficient",
+            "insufficient"
+          ]
+        },
+        "inclusion_criteria": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "exclusion_criteria": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "verification_sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/verificationSource"
+          }
+        },
+        "rubric_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/rubricRef"
+          }
+        },
+        "dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/dimension"
+          }
+        },
+        "incident_events": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/incidentEvent"
+          }
+        },
+        "known_limitations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "distribution_shift_notes": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/behavioral-assurance-profile.mjs",
+  "x-axiom-semantic-rules": [
+    "Probability metrics are accepted only after binding a validated axiom-bounded-decision-calibration-report.v0 artifact with matching population domain/method window and independently sourced outcomes.",
+    "Declared sample_sufficiency must agree with sample_count and minimum_sample_count.",
+    "Behavioral evidence is evidence only and cannot grant or widen authority.",
+    "The self digest binds the complete strict document with profile_digest zeroed for computation."
+  ],
+  "x-axiom-non-claims": [
+    "universal-alignment-score",
+    "authority-grant",
+    "global-failure-probability",
+    "true-internal-motive",
+    "universal-safety"
+  ]
+}

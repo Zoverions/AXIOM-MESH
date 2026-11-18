@@ -1,12 +1,24 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-23
+**Status date:** 2026-09-23
 
 **Supported build:** `0.12.0-dev.3`
 
 **Development branch:** `main`
 
 **Deployment status:** production candidate; no live deployment claim
+
+## Claim labels
+
+New and updated status statements in this document carry explicit evidence
+labels:
+
+- **PROVEN** — capability-registry `implemented` plus protected CI evidence;
+- **LAB-GRADE** — built and tested in isolated or laboratory paths, not
+  production-reachable;
+- **DESIGN-ONLY** — specification, architecture, or isolated contract/mock
+  scaffolding with no integrated supported-runtime or production capability;
+- **UNVERIFIED** — stated direction with no supporting evidence yet.
 
 ## Current build
 
@@ -20,7 +32,7 @@ promotion. The last immutable published production-candidate release is
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 31 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 31 implemented, 4
 experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 Built source does not become a runnable capability merely because tests exist:
 production policy, registries, runtime wiring, and applicable promotion evidence
@@ -100,7 +112,19 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
-- a versioned Gateway client contract implemented for all 31 authenticated routes with
+- an OCI-first, non-mutating Linux host planner for the specified personal/local
+  and infrastructure-node profiles; it emits deterministic compatibility,
+  blocker, and prerequisite evidence while creating no users, credentials,
+  services, network enrollment, or authority;
+- an externally trusted Ed25519 signed release/install-manifest verifier that
+  binds exact current install, capability, application, network, and setup
+  control-plane digests and keeps artifact-byte verification separate from host
+  mutation or installation authority;
+- an inert Install Session v0 state classifier that binds one desired plan/
+  release/artifact evidence set to a self-digested installed-state observation
+  and distinguishes install/no-op/repair/upgrade/recovery review from newer,
+  diverged, partial-secret, conflict, and uncertainty stops without host mutation;
+- a versioned Gateway client contract implemented for all 33 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
   Grid/Hypervisor/Sandbox target;
@@ -113,10 +137,12 @@ The production-candidate surface includes:
   projection, creates no remote-social schema, and performs no mutation,
   transport, federation, ranking, recommendation, or authority effect;
 - bounded-cardinality telemetry, readiness, operations reports, OpenMetrics,
-  and a host-side least-privilege OTLP/Alertmanager relay;
+  and a host-side least-privilege OTLP/Alertmanager relay (PROVEN as an
+  implemented `operations.observability` capability: HTTPS enforced for
+  non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 42-route application policy,
+  internal network segments, a default-deny 45-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
@@ -305,6 +331,35 @@ plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
 ingestion, completed browser-session security, accessibility/usability evidence,
 or signed end-user packaging.
 
+### AXIOM One current slice state (2026-09-23)
+
+- **Item 7 — TWA/APK rehearsal** (merged PR #1776): **LAB-GRADE**. Local build
+  evidence plus a release runbook; strictly lab-grade and offline-verifiable.
+  Repeated build work moved to disposable scratch, CLI password exposure
+  removed, rehearsal notifications disabled, fail-closed on
+  trusted-origin/shortcut drift. Owner-gated production origin, signing, DAL,
+  and distribution steps are retained. No production distribution claim.
+- **Item 8 — Social write controls** (merged PR #1777): **LAB-GRADE**.
+  Review-only deterministic review evidence for the Social write-control
+  slice; browser-local authority minting and generic adapter execution were
+  removed, and a forged-scope-plus-adapter negative regression was added.
+  Executable authority remains in the existing authenticated kernel path.
+- **Item 9 — Feed contract** (merged PR #1769): **DESIGN-ONLY**. Typed feed
+  contract (JSON Schema + TypeScript types), synthetic fixtures across all
+  four audiences (public / circle / intimate / named) including a rescind
+  notice, a 127.0.0.1-only mock feed server, and 27 contract tests. Not wired
+  to the real relay; real wiring awaits the F-1..F-3 sequence (presence-post
+  registry proposal, registry adoption plumbing, scope-label migration).
+
+**LAB-GRADE identity/role posture.** Preview `/v1/` processing first enforces the
+configured maximum target length and returns 400 for an oversized target. For
+within-limit recognized Gateway routes and query shapes, browser-boundary
+failures return 403 before bearer-token authentication; a missing or invalid
+local bearer token returns 401. Within-limit unknown or unallowed routes or
+query shapes return 404 before the browser-boundary and token checks.
+Server-side identity is never invented: the preview UI's `local-owner` display
+default is a local label and carries no authority.
+
 AXIOM Verify, AXIOM Circles, AXIOM Studio, AXIOM Managed Node, bounded AI
 providers, useful personal workflows, selective sharing, and later external
 runtime integrations remain separately gated product work.
@@ -318,7 +373,7 @@ topologies.
 
 The source-setup policy distinguishes exact hosted-production approval and
 security-focused CI on Node.js `22.23.2`, protected-CI Node.js `24.18.0`, and
-the candidate production image pin `24.19.0`. The supported source engine is
+the candidate production image pin `24.22.2`. The supported source engine is
 `>=22.23.2 <23 || >=24.14.0 <25`; the production supervisor permits exactly
 Node.js `22.23.2` or the existing Node.js 24 range. Hosted production still
 requires private credentials, mutual TLS, verified deny-egress, and a separate
@@ -356,6 +411,31 @@ other four drafts. No wearable, pairing, agent capsule executor, Personal Agent
 Pack, inference router, compute dispatcher, identity presentation, payment
 mandate, or settlement adapter has been implemented or added to the capability
 registry.
+
+## Mesh-notarized agreements (inert v0 contract candidate)
+
+The [mesh-notarized agreements specification](architecture/MESH-NOTARIZED-AGREEMENTS.md)
+(`0.1.0-draft.1`, now reconciled to prepared inert v0 contracts) defines a machine-verifiable record format for mutual
+commitments between principals: hash-chained ordering, honest `recorded_at`
+claims, digest-bound party identities, and metadata kept separate from private
+content. Notarization is evidence, not enforcement: it proves an agreement was
+recorded as stated, and claims nothing about fairness, legality, or truth.
+
+This is a product direction, recorded as design only. It changes no capability
+status, adds no registry entry, and grants no new authority. Any future
+implementation follows the normal capability, policy, registry, and promotion
+gates.
+
+## Orchestration provenance (planned; UNVERIFIED)
+
+Provenance for orchestrated work — durable task, event, artifact, and handoff
+records bound to principal, catalog entry, runtime/connector identity, and
+policy/grant state — is a stated direction, not a current claim. The planned
+queue lives in
+[`docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md`](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
+(P5 durable task/event/artifact/handoff model; P6 attenuation-only delegation
+with human-readable delegation and worker lineage in receipts). Nothing in
+that queue is implemented, enabled, or promoted.
 
 ## Promotion blockers
 

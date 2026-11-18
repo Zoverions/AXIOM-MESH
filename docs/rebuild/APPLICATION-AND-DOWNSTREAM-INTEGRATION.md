@@ -17,7 +17,7 @@ The current project family should be presented consistently across the README, d
 **Repository location:** in `AXIOM-MESH` today  
 **Current claim:** experimental loopback-only personal interface
 
-AXIOM One is the human-facing personal node experience: local agent interaction, approvals, private memory/Vault surfaces, receipts, status, selective export, and later application discovery.
+AXIOM One is the human-facing personal node experience: local agent interaction, capability-status inspection, approvals, current consent state, private memory/Vault surfaces, receipts, local evidence-chain verification, status, selective export, and later application discovery. Capability discovery remains non-authorizing, and verification remains integrity evidence rather than external truth.
 
 ### Axiom Education
 

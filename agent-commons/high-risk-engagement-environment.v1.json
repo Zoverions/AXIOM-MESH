@@ -1,0 +1,115 @@
+{
+  "schema": "axiom-high-risk-engagement-environment.v1",
+  "status": "experimental defensive containment architecture; no production promotion",
+  "purpose": "Provide isolated, disposable, instrumented environments where suspicious agents, content, tools, workflows, or artifacts can be executed for observation without exposing real credentials, production authority, sensitive state, or unrestricted external networks.",
+  "analogy": [
+    "blockchain testnet",
+    "sandbox detonation chamber",
+    "disposable branch",
+    "high-security research enclave"
+  ],
+  "core_principle": "Learn from the specimen while revealing as little real system state, authority, topology, identity, memory, credential material, and defense logic as possible.",
+  "environment_classes": [
+    {
+      "id": "read_only_quarantine",
+      "use": "Inspect suspicious artifacts without execution.",
+      "egress": "none",
+      "secrets": "none",
+      "real_authority": "none"
+    },
+    {
+      "id": "synthetic_execution_lab",
+      "use": "Execute suspicious logic against synthetic data, mock services, fake identities, and inert capabilities.",
+      "egress": "none_or_emulated_only",
+      "secrets": "synthetic_only",
+      "real_authority": "none"
+    },
+    {
+      "id": "instrumented_interaction_lab",
+      "use": "Allow bounded multi-step interaction while recording causal behavior, propagation attempts, tool requests, memory changes, and policy-pressure patterns.",
+      "egress": "simulated_or_proxy_observed_only",
+      "secrets": "synthetic_canary_material_only",
+      "real_authority": "none"
+    },
+    {
+      "id": "shadow_replay",
+      "use": "Replay a real request or workflow against mirrored non-authoritative state to compare expected and suspicious behavior.",
+      "egress": "none",
+      "secrets": "redacted_or_derived_only",
+      "real_authority": "none"
+    }
+  ],
+  "containment_controls": [
+    "ephemeral environment with deterministic teardown",
+    "no production credentials",
+    "no reusable tokens or owner secrets",
+    "no direct access to production memory or identity stores",
+    "deny-by-default network policy",
+    "synthetic or redacted datasets",
+    "fake service topology where practical",
+    "resource, time, concurrency, storage, and cost ceilings",
+    "full event and causal tracing",
+    "filesystem and process isolation",
+    "write-once evidence export channel",
+    "snapshot-before-run and destructive reset after run",
+    "tool and protocol emulation rather than real effectors",
+    "canary values that reveal attempted exfiltration without carrying real value",
+    "independent verifier for promotion decisions"
+  ],
+  "observation_goals": [
+    "detect prompt or instruction hierarchy attacks",
+    "observe attempted privilege escalation",
+    "observe credential or data exfiltration behavior",
+    "trace self-propagation or agent-to-agent contamination",
+    "identify hidden tool dependencies or protocol assumptions",
+    "discover composition attacks that require multiple individually valid steps",
+    "measure persistence across resets and context changes",
+    "compare behavior under different policy, model, and memory conditions",
+    "produce regression fixtures from confirmed findings"
+  ],
+  "asymmetry_controls": [
+    "do not expose real security policy internals beyond what is required for the test",
+    "rotate synthetic topology and canary values",
+    "avoid stable identifiers that reveal production structure",
+    "provide mock success/failure responses where sufficient",
+    "separate observer telemetry from specimen-visible channels",
+    "never expose detector reasoning or private incident corpus to the specimen",
+    "export observations outward through a one-way evidence path",
+    "do not allow the specimen to write directly into long-term trusted memory"
+  ],
+  "promotion_gate": {
+    "rule": "A behavior observed in the lab may inform policy, signatures, or future admission, but the lab itself cannot authorize production execution.",
+    "requirements": [
+      "reproducible observation or independently reviewed evidence",
+      "known production-relevant trust boundary",
+      "explicit local policy decision",
+      "fresh authority and credential checks",
+      "bounded rollout or canary where appropriate",
+      "rollback/revocation path",
+      "post-execution evidence"
+    ]
+  },
+  "learning_policy": {
+    "allowed": [
+      "signatures",
+      "negative fixtures",
+      "behavioral indicators",
+      "causal traces",
+      "tool misuse patterns",
+      "propagation patterns",
+      "false-positive examples"
+    ],
+    "prohibited": [
+      "blindly importing specimen-generated policy",
+      "allowing specimen to train trusted memory directly",
+      "promoting claims solely because a model judged them malicious",
+      "publishing sensitive defensive internals unnecessarily"
+    ]
+  },
+  "nonclaims": [
+    "Isolation reduces risk but is not absolute protection against every sandbox escape or side channel.",
+    "A successful lab run does not prove production safety.",
+    "A failed lab run does not prove an artifact is malicious.",
+    "This architecture does not authorize offensive testing against third-party systems."
+  ]
+}

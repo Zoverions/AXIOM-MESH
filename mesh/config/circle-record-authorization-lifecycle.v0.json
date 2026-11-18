@@ -1,0 +1,71 @@
+{
+  "schema": "axiom-circle-record-authorization-lifecycle-policy.v0",
+  "version": 0,
+  "status": "inert-lifecycle-aware-record-authorization",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "requirements": {
+    "parent_record_authorization_policy_digest_bound": true,
+    "historical_binding_required": true,
+    "historical_member_state_resolver_required": true,
+    "role_use_requires_event_time_membership_eligibility": true,
+    "role_use_requires_event_time_credential_currentness": true,
+    "participant_eligibility_checked_at_participation_time": true,
+    "decision_transport_eligibility_checked_at_decision_time": true,
+    "decision_electorate_frozen_at_proposal_creation": true,
+    "open_proposal_membership_change_semantics_defined": false,
+    "open_proposal_membership_change_fails_closed": true,
+    "creator_bootstrap_has_preexisting_membership_eligibility": false,
+    "self_acceptance_has_preexisting_membership_eligibility": false,
+    "credential_possession_proved_by_lifecycle": false,
+    "caller_authenticated_principal_is_external_assurance": true,
+    "decision_submitter_has_collective_authority": false,
+    "record_authorization_mints_runtime_authority": false,
+    "record_authorization_mints_portable_authority": false,
+    "record_authorization_mints_external_effect_authority": false
+  },
+  "schemas": {
+    "member_context": "axiom-circle-record-member-context.v0",
+    "eligibility_evidence_item": "axiom-circle-record-eligibility-evidence-item.v0",
+    "eligibility_evidence_bundle": "axiom-circle-record-eligibility-evidence-bundle.v0",
+    "authorization_assessment": "axiom-circle-record-authorization-with-eligibility.v0"
+  },
+  "eligibility_modes": [
+    "creator-bootstrap-no-membership",
+    "self-acceptance-pre-membership",
+    "single-member-role-use",
+    "collective-decision-member-use"
+  ],
+  "output": {
+    "parent_policy_digest_required": true,
+    "historical_ledger_digest_required": true,
+    "historical_binding_digest_required": true,
+    "governing_charter_digest_required": true,
+    "eligibility_evidence_digest_required": true,
+    "runtime_authority": false,
+    "portable_authority": false,
+    "external_effect_authority": false,
+    "authority_effect": "none",
+    "network_effect": "none"
+  },
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "credential-possession",
+    "credential-issuance-authority",
+    "role-grant-authority",
+    "membership-resume-authority",
+    "open-proposal-electorate-change-legitimacy",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "independent-human-count",
+    "truth-of-evidence",
+    "trusted-wall-clock",
+    "legal-authority",
+    "execution-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ]
+}

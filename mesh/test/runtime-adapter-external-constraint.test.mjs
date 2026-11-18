@@ -72,6 +72,20 @@ test('recognized authorization detail types still reject unmapped constraint axe
   );
 });
 
+test('resource-party allowlisting cannot add exact-effect authority', () => {
+  assert.throws(
+    () => translateSyntheticExternalAuthorizationRequest(externalRequest({
+      suffix: 'resource-party-allowlist',
+      grantId: 'grant:rt-auth-009-resource-party-allowlist',
+      authorizationDetails: recognizedAuthorizationDetails({
+        authorization_mode: 'autonomous',
+        resource_party: 'https://allowed-resource.example'
+      })
+    })),
+    /unsupported authorization detail fields: authorization_mode, resource_party/
+  );
+});
+
 test('translated external widening reaches native deny checks instead of being normalized away', async () => {
   const manifest = createSyntheticReferenceAdapterManifest();
   const grantAuthority = createSyntheticReferenceGrantAuthority();
@@ -153,5 +167,26 @@ test('unknown external authorization detail types fail closed', () => {
       }
     })),
     /unsupported authorization detail type: axiom-unknown-constraint/
+  );
+});
+
+
+test('an additional child authorization detail type fails closed instead of widening', () => {
+  assert.throws(
+    () => translateSyntheticExternalAuthorizationRequest({
+      ...externalRequest({
+        suffix: 'child-detail-type-widening',
+        grantId: 'grant:rt-auth-009-child-detail-type-widening',
+        authorizationDetails: recognizedAuthorizationDetails()
+      }),
+      authorization_details: [
+        recognizedAuthorizationDetails(),
+        {
+          type: 'urn:example:child-only-authority',
+          requested_scopes: ['synthetic.admin']
+        }
+      ]
+    }),
+    /authorization_details must contain exactly one authorization detail/
   );
 });

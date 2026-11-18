@@ -1,0 +1,17 @@
+case_id	grant_verified	intent_bound	grant_actions	grant_purposes	grant_destinations	grant_resources	intent_actions	intent_purposes	intent_destinations	intent_resources
+exact_empty	true	true								
+exact_single	true	true	action:a	purpose:a	destination:a	resource:a	action:a	purpose:a	destination:a	resource:a
+exact_multi	true	true	action:a,action:b	purpose:a,purpose:b	destination:a,destination:b	resource:a,resource:b	action:a,action:b	purpose:a,purpose:b	destination:a,destination:b	resource:a,resource:b
+subset_actions	true	true	action:a,action:b,action:c	purpose:a	destination:a	resource:a	action:a,action:c	purpose:a	destination:a	resource:a
+subset_purposes	true	true	action:a	purpose:a,purpose:b,purpose:c	destination:a	resource:a	action:a	purpose:b	destination:a	resource:a
+subset_destinations	true	true	action:a	purpose:a	destination:a,destination:b,destination:c	resource:a	action:a	purpose:a	destination:a,destination:c	resource:a
+subset_resources	true	true	action:a	purpose:a	destination:a	resource:a,resource:b,resource:c	action:a	purpose:a	destination:a	resource:b
+empty_intent_nonempty	true	true	action:a	purpose:a	destination:a	resource:a				
+widen_actions	true	true	action:a,action:b	purpose:a	destination:a	resource:a	action:a,action:c	purpose:a	destination:a	resource:a
+widen_purposes	true	true	action:a	purpose:a,purpose:b	destination:a	resource:a	action:a	purpose:a,purpose:c	destination:a	resource:a
+widen_destinations	true	true	action:a	purpose:a	destination:a,destination:b	resource:a	action:a	purpose:a	destination:a,destination:c	resource:a
+widen_resources	true	true	action:a	purpose:a	destination:a	resource:a,resource:b	action:a	purpose:a	destination:a	resource:a,resource:c
+widen_actions_resources	true	true	action:a	purpose:a	destination:a	resource:a	action:a,action:z	purpose:a	destination:a	resource:a,resource:z
+empty_grant_nonempty_action	true	true					action:a			
+disjoint_all	true	true	action:a	purpose:a	destination:a	resource:a	action:z	purpose:z	destination:z	resource:z
+partial_multi	true	true	action:a,action:b,action:c	purpose:a,purpose:b	destination:a,destination:b,destination:c	resource:a,resource:b,resource:c	action:b	purpose:b	destination:b,destination:c	resource:a,resource:c

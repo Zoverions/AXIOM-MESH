@@ -1,0 +1,64 @@
+{
+  "schema": "axiom-external-operation-offer.v0",
+  "offer_id": "offer:synthetic:publish",
+  "observed_at": "2026-09-16T20:00:00.000Z",
+  "freshness": {
+    "state": "current",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "catalog_entry": {
+    "entry_id": "connector:synthetic-publish",
+    "entry_version": "0.1.0",
+    "entry_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "operation": {
+    "broker_operation_id": "synthetic#publish",
+    "axiom_action": "external.message.publish",
+    "schema_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "provider_ref": "provider:synthetic-publish",
+    "effect_class": "publish-external",
+    "input_data_classes": [
+      "message.body"
+    ],
+    "output_data_classes": [
+      "message.receipt"
+    ],
+    "network_required": true,
+    "description": "Publish a communication to an external channel."
+  },
+  "topology": {
+    "broker_location": "hosted",
+    "broker_destination": "https://broker.example.invalid",
+    "downstream_location": "provider-remote",
+    "provider_destination": "https://publish.example.invalid"
+  },
+  "quote": {
+    "kind": "exact",
+    "currency": "USD",
+    "quoted_amount_minor_units": 2,
+    "max_amount_minor_units": 2,
+    "pricing_unit": "call",
+    "valid_until": "2026-09-16T20:05:00.000Z"
+  },
+  "health": {
+    "state": "available",
+    "observed_at": "2026-09-16T20:00:00.000Z",
+    "p50_ms": 120,
+    "p95_ms": 350
+  },
+  "execution_semantics": {
+    "timeout_ms": 15000,
+    "cancellation": "best-effort",
+    "idempotency": "none",
+    "reconciliation": "required",
+    "reconciliation_path": "status://synthetic/publish"
+  },
+  "evidence": {
+    "source_refs": [
+      "fixture:synthetic"
+    ],
+    "external_claim_only": true
+  },
+  "grants_authority": false,
+  "execution_effect": "none"
+}

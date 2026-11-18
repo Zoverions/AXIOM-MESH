@@ -60,6 +60,9 @@ export class MachineIngressGuard {
     if (!Number.isSafeInteger(responseBytes) || responseBytes < 0) {
       throw new ValidationError('responseBytes must be a non-negative safe integer');
     }
+    // Admission may precede response inspection. Recheck the declared lifetime;
+    // this does not establish current revocation state or atomic disclosure.
+    this.#assertUnexpired(principal, Date.now());
     const budgets = this.#budgets(principal);
     const maximum = budgets.max_response_bytes;
     if (
@@ -197,6 +200,15 @@ export class MachineIngressGuard {
         403
       );
     }
+    if (!this.rate.has(principalId) && this.rate.size >= this.maxPrincipals) {
+      if (!this.#evictRefilledRate(now)) {
+        throw new AxiomError(
+          'machine_rate_state_unavailable',
+          'Machine request-rate admission state is at its configured principal bound',
+          503
+        );
+      }
+    }
     const previous = this.rate.get(principalId) ?? {
       tokens: maxRequestsPerMinute,
       at: now,
@@ -227,11 +239,23 @@ export class MachineIngressGuard {
     return true;
   }
 
+  #evictRefilledRate(now) {
+    for (const [key, bucket] of this.rate) {
+      const elapsed = Math.max(0, now - bucket.at);
+      const refilled = Math.min(
+        bucket.capacity,
+        bucket.tokens + (elapsed * bucket.capacity / 60_000)
+      );
+      if (refilled >= bucket.capacity) {
+        this.rate.delete(key);
+        return true;
+      }
+    }
+    return false;
+  }
+
   #touchRate(key, value) {
     this.rate.delete(key);
     this.rate.set(key, value);
-    while (this.rate.size > this.maxPrincipals) {
-      this.rate.delete(this.rate.keys().next().value);
-    }
   }
 }

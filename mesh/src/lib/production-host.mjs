@@ -84,9 +84,19 @@ export async function startProductionHost({
   child.stderr.on('data', collect);
   child.on('message', collectMessage);
   try {
+    const startupDeadline = Date.now() + startupTimeoutMs;
     await waitForReady(`${gateway}/ready`, child, startupTimeoutMs);
-    const processDeadline = Date.now() + 1_000;
+    // The gateway reports ready before the supervisor finishes its own health
+    // polling and publishes the inventory, so that gap shares the startup
+    // budget rather than a fixed second a slow host can exceed.
+    const processDeadline = Math.max(startupDeadline, Date.now() + 1_000);
     while (!supervisorProcesses && Date.now() < processDeadline) {
+      if (child.exitCode !== null || child.signalCode !== null) {
+        throw Object.assign(
+          new Error('Supervisor exited before publishing its process inventory'),
+          { code: 'supervisor_exited' }
+        );
+      }
       await new Promise(resolvePromise => setTimeout(resolvePromise, 10));
     }
     if (!supervisorProcesses) {
@@ -186,7 +196,16 @@ export async function stopProductionHostStrict(
 
 const PORT_BLOCK_SIZE = 4;
 const PORT_BLOCK_MINIMUM = 20_000;
-const PORT_BLOCK_COUNT = 5_000;
+// Blocks end below 32768, where Linux starts assigning ephemeral ports. Blocks
+// up to 39999 overlapped that range, so a port probed free could be handed to
+// another process's socket before the drill bound it (EADDRINUSE on CI).
+// Windows and macOS start their ephemeral ranges at 49152.
+export const PORT_BLOCK_EPHEMERAL_FLOOR = 32_768;
+const PORT_BLOCK_COUNT = (PORT_BLOCK_EPHEMERAL_FLOOR - PORT_BLOCK_MINIMUM) / PORT_BLOCK_SIZE;
+
+export function productionPortBlockBase(sample) {
+  return PORT_BLOCK_MINIMUM + Math.floor(sample * PORT_BLOCK_COUNT) * PORT_BLOCK_SIZE;
+}
 const PORT_LEASE_SCHEMA = 'axiom-production-port-lease.v1';
 const PORT_LEASE_STALE_MS = 5 * 60_000;
 
@@ -206,10 +225,7 @@ export async function reserveProductionPortBlock(
     if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
       throw new ValidationError('Production port lease random source is invalid');
     }
-    const basePort = (
-      PORT_BLOCK_MINIMUM
-      + Math.floor(sample * PORT_BLOCK_COUNT) * PORT_BLOCK_SIZE
-    );
+    const basePort = productionPortBlockBase(sample);
     const lockPath = join(root, `${basePort}-${basePort + PORT_BLOCK_SIZE - 1}`);
     const acquired = await acquirePortLeaseLock(lockPath, {
       basePort,

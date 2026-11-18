@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/founders-council-circle-composition-v0.schema.json",
+  "title": "AXIOM Founders Council / Circle Core v0 inert composition evidence",
+  "description": "Binds the specialized Founders Council foundation to one inert Circle Core package without granting Circle or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "foundation_digest",
+    "circle_package_digest",
+    "circle_id",
+    "voter_role_id",
+    "developing_role_id",
+    "authority_effect",
+    "execution_authority",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-founders-council-circle-composition.v0"
+    },
+    "foundation_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "circle_package_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "circle_id": {
+      "const": "circle.founders-council"
+    },
+    "voter_role_id": {
+      "const": "founders-council.voter"
+    },
+    "developing_role_id": {
+      "const": "founders-council.developing"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "execution_authority": {
+      "const": false
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/founders-council-circle-composition.mjs",
+  "x-axiom-non-claims": [
+    "live-founders-council",
+    "circle-membership-authority",
+    "governance-execution-authority",
+    "multi-node-governance",
+    "runtime-authority",
+    "automatic-execution"
+  ]
+}

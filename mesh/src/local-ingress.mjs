@@ -79,7 +79,30 @@ async function removeStaleSocket(socketPath) {
       'Local ingress path exists and is not a Unix-domain socket'
     );
   }
+  await assertSocketStale(socketPath);
   await unlink(socketPath);
+}
+
+async function assertSocketStale(socketPath) {
+  await new Promise((resolve, reject) => {
+    const socket = net.createConnection({ path: socketPath });
+    const timeout = setTimeout(() => {
+      finish(new ValidationError('Local ingress socket activity could not be determined'));
+    }, 500);
+    timeout.unref();
+    const finish = error => {
+      clearTimeout(timeout);
+      socket.destroy();
+      if (error) reject(error);
+      else resolve();
+    };
+    socket.once('connect', () => {
+      finish(new ValidationError('Local ingress socket is already in use'));
+    });
+    socket.once('error', error => {
+      finish(error.code === 'ECONNREFUSED' ? null : error);
+    });
+  });
 }
 
 async function listenOnSocket(server, socketPath) {

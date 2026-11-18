@@ -92,15 +92,29 @@ export function validateCircleCorePackage(document) {
     consumedInvitations.add(membership.invitation_id);
   }
   const membershipById = new Map(memberships.map(item => [item.membership_id, item]));
-  const activePrincipals = new Set(
-    memberships.filter(item => item.status === 'active').map(item => item.principal_id)
+
+  // Exits are appended facts: the membership record keeps its status, and a
+  // principal's standing at any moment is derived from both.
+  const exits = validateUniqueArray(
+    document.exits,
+    'Circle exits',
+    'exit_id',
+    exit => validateExit(exit, circle, membershipById)
   );
+  const exitByMembership = new Map();
+  for (const exit of exits) {
+    if (exitByMembership.has(exit.membership_id)) {
+      throw new ValidationError(`Membership ${exit.membership_id} has more than one exit`);
+    }
+    exitByMembership.set(exit.membership_id, exit);
+  }
+  const standing = membershipStanding(memberships, exitByMembership);
 
   const proposals = validateUniqueArray(
     document.proposals,
     'Circle proposals',
     'proposal_id',
-    proposal => validateProposal(proposal, circle, charterDigest, activePrincipals)
+    proposal => validateProposal(proposal, circle, charterDigest, standing)
   );
   const proposalById = new Map(proposals.map(item => [item.proposal_id, item]));
 
@@ -108,7 +122,7 @@ export function validateCircleCorePackage(document) {
     document.tasks,
     'Circle tasks',
     'task_id',
-    task => validateTask(task, circle, proposalById, membershipById)
+    task => validateTask(task, circle, proposalById, membershipById, standing)
   );
   const taskById = new Map(tasks.map(item => [item.task_id, item]));
 
@@ -118,6 +132,13 @@ export function validateCircleCorePackage(document) {
     'decision_id',
     decision => validateDecision(decision, circle, charterDigest, proposalById)
   );
+  const decidedProposals = new Set();
+  for (const decision of decisions) {
+    if (decidedProposals.has(decision.proposal_id)) {
+      throw new ValidationError(`Proposal ${decision.proposal_id} has more than one decision`);
+    }
+    decidedProposals.add(decision.proposal_id);
+  }
   const decisionById = new Map(decisions.map(item => [item.decision_id, item]));
 
   const appeals = validateUniqueArray(
@@ -130,15 +151,8 @@ export function validateCircleCorePackage(document) {
       membershipById,
       decisionById,
       taskById,
-      activePrincipals
+      standing
     })
-  );
-
-  const exits = validateUniqueArray(
-    document.exits,
-    'Circle exits',
-    'exit_id',
-    exit => validateExit(exit, circle, membershipById)
   );
 
   const exports = validateUniqueArray(
@@ -173,6 +187,67 @@ export function validateCircleCorePackage(document) {
 export function circleCoreDigest(document) {
   validateCircleCorePackage(document);
   return digestObject(document);
+}
+
+/**
+ * Validates the package, then returns its membership standing so companion
+ * contracts (Circle ballots) apply exactly the same rules.
+ */
+export function circleStanding(document) {
+  validateCircleCorePackage(document);
+  const exitByMembership = new Map(document.exits.map(exit => [exit.membership_id, exit]));
+  return membershipStanding(document.memberships, exitByMembership);
+}
+
+/**
+ * Standing is judged at the moment of each act. A membership counts from its
+ * acceptance until an exit takes effect or its status leaves 'active'; acts
+ * made while it counted stay valid afterwards, because exit never rewrites
+ * history. One principal may not hold two memberships that count at once.
+ */
+function membershipStanding(memberships, exitByMembership) {
+  const intervals = memberships.map(membership => {
+    const exit = exitByMembership.get(membership.membership_id);
+    const ends = [
+      exit ? new Date(exit.effective_at) : null,
+      membership.status === 'active' ? null : new Date(membership.status_effective_at)
+    ].filter(Boolean);
+    return {
+      membership,
+      from: new Date(membership.accepted_at),
+      until: ends.length ? new Date(Math.min(...ends)) : null
+    };
+  });
+  const byPrincipal = new Map();
+  for (const interval of intervals) {
+    const list = byPrincipal.get(interval.membership.principal_id) ?? [];
+    for (const other of list) {
+      const overlaps = (interval.until === null || other.from < interval.until)
+        && (other.until === null || interval.from < other.until);
+      if (overlaps) {
+        throw new ValidationError(
+          `Principal ${interval.membership.principal_id} holds overlapping Circle memberships`
+        );
+      }
+    }
+    list.push(interval);
+    byPrincipal.set(interval.membership.principal_id, list);
+  }
+  return {
+    principalMembershipAt(principalId, at) {
+      const interval = (byPrincipal.get(principalId) ?? [])
+        .find(item => item.from <= at && (item.until === null || at < item.until));
+      return interval ? interval.membership : null;
+    },
+    membershipAt(membershipId, at) {
+      const interval = intervals.find(item => item.membership.membership_id === membershipId);
+      return Boolean(interval && interval.from <= at && (interval.until === null || at < interval.until));
+    },
+    principalAt(principalId, at) {
+      return (byPrincipal.get(principalId) ?? [])
+        .some(item => item.from <= at && (item.until === null || at < item.until));
+    }
+  };
 }
 
 function validateCircle(circle) {
@@ -349,7 +424,7 @@ function validateMembership(membership, circle, roles, invitationById) {
   return membership;
 }
 
-function validateProposal(proposal, circle, charterDigest, activePrincipals) {
+function validateProposal(proposal, circle, charterDigest, standing) {
   exactObject(proposal, 'Circle proposal', [
     'schema',
     'proposal_id',
@@ -370,7 +445,7 @@ function validateProposal(proposal, circle, charterDigest, activePrincipals) {
     || !id(proposal.proposal_id)
     || proposal.circle_id !== circle.circle_id
     || proposal.charter_digest !== charterDigest
-    || !activePrincipals.has(proposal.proposer)
+    || !id(proposal.proposer)
     || !text(proposal.title, 1, 200)
     || !text(proposal.summary, 1, 4000)
     || !PROPOSAL_STATUSES.has(proposal.status)
@@ -381,10 +456,13 @@ function validateProposal(proposal, circle, charterDigest, activePrincipals) {
   const created = validDate(proposal.created_at, 'Circle proposal created_at');
   const closes = validDate(proposal.closes_at, 'Circle proposal closes_at');
   if (closes <= created) throw new ValidationError('Circle proposal closes_at must follow created_at');
+  if (!standing.principalAt(proposal.proposer, created)) {
+    throw new ValidationError(`Proposal ${proposal.proposal_id} was not made by a member at the time`);
+  }
   return proposal;
 }
 
-function validateTask(task, circle, proposalById, membershipById) {
+function validateTask(task, circle, proposalById, membershipById, standing) {
   exactObject(task, 'Circle task', [
     'schema',
     'task_id',
@@ -412,6 +490,9 @@ function validateTask(task, circle, proposalById, membershipById) {
     || task.authority_effect !== 'none'
   ) throw new ValidationError('Circle task is invalid');
   const created = validDate(task.created_at, 'Circle task created_at');
+  if (!standing.membershipAt(task.assigned_membership_id, created)) {
+    throw new ValidationError(`Task ${task.task_id} is assigned to a membership that did not count at the time`);
+  }
   if (task.due_at !== null) {
     const due = validDate(task.due_at, 'Circle task due_at');
     if (due <= created) throw new ValidationError('Circle task due_at must follow created_at');
@@ -441,11 +522,15 @@ function validateDecision(decision, circle, charterDigest, proposalById) {
     || decision.charter_digest !== charterDigest
     || !DECISION_OUTCOMES.has(decision.outcome)
     || !stringArray(decision.participant_receipts, 0, 512)
+    || new Set(decision.participant_receipts).size !== decision.participant_receipts.length
     || !FINALITY_STATES.has(decision.finality)
     || decision.runtime_authority !== false
     || decision.authority_effect !== 'none'
   ) throw new ValidationError('Circle decision is invalid');
-  validDate(decision.decided_at, 'Circle decision decided_at');
+  const decided = validDate(decision.decided_at, 'Circle decision decided_at');
+  if (decided < new Date(proposalById.get(decision.proposal_id).created_at)) {
+    throw new ValidationError(`Decision ${decision.decision_id} predates its proposal`);
+  }
   return decision;
 }
 
@@ -455,7 +540,7 @@ function validateAppeal({
   membershipById,
   decisionById,
   taskById,
-  activePrincipals
+  standing
 }) {
   exactObject(appeal, 'Circle appeal', [
     'schema',
@@ -470,23 +555,34 @@ function validateAppeal({
     'resolved_at',
     'authority_effect'
   ]);
-  const targetExists = appeal.target_type === 'decision'
-    ? decisionById.has(appeal.target_id)
+  const target = appeal.target_type === 'decision'
+    ? decisionById.get(appeal.target_id)
     : appeal.target_type === 'membership'
-      ? membershipById.has(appeal.target_id)
-      : taskById.has(appeal.target_id);
+      ? membershipById.get(appeal.target_id)
+      : taskById.get(appeal.target_id);
+  const targetExists = target !== undefined;
   if (
     appeal.schema !== CIRCLE_APPEAL_SCHEMA
     || !id(appeal.appeal_id)
     || appeal.circle_id !== circle.circle_id
     || !APPEAL_TARGETS.has(appeal.target_type)
     || !targetExists
-    || !activePrincipals.has(appeal.filed_by)
+    || !id(appeal.filed_by)
     || !text(appeal.reason, 1, 4000)
     || !APPEAL_STATUSES.has(appeal.status)
     || appeal.authority_effect !== 'none'
   ) throw new ValidationError('Circle appeal is invalid');
   const filed = validDate(appeal.filed_at, 'Circle appeal filed_at');
+  if (!standing.principalAt(appeal.filed_by, filed)) {
+    throw new ValidationError(`Appeal ${appeal.appeal_id} was not filed by a member at the time`);
+  }
+  const targetTime = target.decided_at ?? target.accepted_at ?? target.created_at;
+  if (filed < new Date(targetTime)) {
+    throw new ValidationError(`Appeal ${appeal.appeal_id} predates the record it appeals`);
+  }
+  if ((appeal.status === 'open') !== (appeal.resolved_at === null)) {
+    throw new ValidationError(`Appeal ${appeal.appeal_id} status and resolved_at disagree`);
+  }
   if (appeal.resolved_at !== null) {
     const resolved = validDate(appeal.resolved_at, 'Circle appeal resolved_at');
     if (resolved < filed) throw new ValidationError('Circle appeal resolved_at precedes filed_at');
@@ -518,6 +614,7 @@ function validateExit(exit, circle, membershipById) {
     || exit.principal_id !== membership.principal_id
     || !id(exit.initiated_by)
     || !EXIT_KINDS.has(exit.kind)
+    || (exit.kind === 'voluntary-exit' && exit.initiated_by !== membership.principal_id)
     || !id(exit.reason_code)
     || exit.future_obligation_effect !== 'ends-except-explicit-post-exit-rules'
     || exit.history_rewrite !== false

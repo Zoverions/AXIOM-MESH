@@ -50,6 +50,7 @@
     "node-scheduling:drill": "node src/node-scheduling-drill.mjs",
     "online-sync": "node src/online-causal-sync.mjs",
     "online-sync:drill": "node src/online-causal-sync-drill.mjs",
+    "circle:peer": "node src/circle-peer.mjs",
     "provider:start": "node src/provider-supervisor.mjs",
     "provider:drill": "node src/provider-conformance-drill.mjs",
     "public-witness:start": "node src/public-witness-service.mjs run",
@@ -70,12 +71,19 @@
     "verify-export": "node src/verify-export.mjs",
     "verify-sync": "node src/verify-sync.mjs",
     "check-registry": "node src/check-registry.mjs",
+    "interrogation:report": "node src/interrogation-plane.mjs",
     "docs:check": "node src/check-docs.mjs",
     "status:generate": "node src/status.mjs --write",
     "status:check": "node src/status.mjs",
     "release:verify": "node src/release.mjs",
+    "release:manifest:build": "node src/install-release-manifest.mjs build-unsigned",
+    "release:manifest:package": "node src/install-release-manifest.mjs package-detached",
     "release:evidence": "npm run check && node src/release.mjs --write",
     "test": "node --test --test-reporter=spec",
-    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
+    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node src/check-demand-evidence.mjs && node --test --test-reporter=spec",
+    "growth:demand:check": "node src/check-demand-evidence.mjs",
+    "growth:gtm:check": "node --test --test-reporter=spec test/gtm-evidence.test.mjs test/gtm-outcome-receipt.test.mjs",
+    "host-install:policy": "node src/host-install.mjs policy-check",
+    "host-install:plan": "node src/host-install.mjs plan"
   }
 }
