@@ -31,11 +31,12 @@ test('signed service request proof rejects method, path, audience, and body muta
     headers = signed(),
     method = 'POST',
     path = '/internal/v1/protected?item=1',
-    requestBody = body
+    requestBody = body,
+    verifierAudience = 'grid'
   } = {}) => verifySignedRequest({
     req: { headers, method, url: path },
     body: requestBody,
-    audience: 'grid',
+    audience: verifierAudience,
     dataDir,
     allowedCallers: ['gateway'],
     replayGuard: new ReplayGuard()
@@ -52,8 +53,8 @@ test('signed service request proof rejects method, path, audience, and body muta
     error => error?.code === 'invalid_service_signature'
   );
   await assert.rejects(
-    () => verify({ headers: { ...signed(), 'x-axiom-audience': 'sandbox' } }),
-    error => error?.code === 'wrong_audience'
+    () => verify({ verifierAudience: 'sandbox' }),
+    error => error?.code === 'incompatible_interface'
   );
   await assert.rejects(
     () => verify({ requestBody: Buffer.from('{"operation":"modify"}') }),
