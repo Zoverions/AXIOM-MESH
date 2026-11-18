@@ -18,6 +18,13 @@ const FIXTURE = JSON.parse(readFileSync(
 ));
 const NOW = Date.UTC(2026, 8, 4, 8, 20, 0);
 const PRINCIPAL_ID = 'principal:rt-mcp-auth-001';
+const BUDGET = Object.freeze({
+  max_requests_per_minute: 60,
+  max_concurrent_requests: 1,
+  max_execution_ms: 1_000,
+  max_request_bytes: 4_096,
+  max_response_bytes: 4_096
+});
 const EXPECTED_CASE_IDS = [
   'empty-auth-object-no-grant',
   'oauth-fallback-no-grant',
@@ -40,6 +47,7 @@ function authorizationDetail(overrides = {}) {
     requested_scopes: ['synthetic.read'],
     destinations: ['local:reference'],
     credential_handles: ['credential:synthetic-reference'],
+    budget: BUDGET,
     ...overrides
   };
 }
