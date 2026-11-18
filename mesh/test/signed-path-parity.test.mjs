@@ -7,7 +7,59 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { signedFetch } from '../src/lib/client.mjs';
-import { ReplayGuard, ensureMeshIdentity, verifySignedRequest } from '../src/lib/identity.mjs';
+import {
+  ReplayGuard,
+  ensureMeshIdentity,
+  signedRequestHeaders,
+  verifySignedRequest
+} from '../src/lib/identity.mjs';
+
+test('signed service request proof rejects method, path, audience, and body mutation', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-signed-request-binding-'));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  const identity = await ensureMeshIdentity(dataDir, 'gateway', { create: true });
+  const url = 'http://127.0.0.1/internal/v1/protected?item=1';
+  const body = Buffer.from('{"operation":"inspect"}');
+
+  const signed = () => signedRequestHeaders(identity, {
+    method: 'POST',
+    url,
+    audience: 'grid',
+    body
+  });
+  const verify = ({
+    headers = signed(),
+    method = 'POST',
+    path = '/internal/v1/protected?item=1',
+    requestBody = body
+  } = {}) => verifySignedRequest({
+    req: { headers, method, url: path },
+    body: requestBody,
+    audience: 'grid',
+    dataDir,
+    allowedCallers: ['gateway'],
+    replayGuard: new ReplayGuard()
+  });
+
+  await verify();
+
+  await assert.rejects(
+    () => verify({ method: 'GET' }),
+    error => error?.code === 'invalid_service_signature'
+  );
+  await assert.rejects(
+    () => verify({ path: '/internal/v1/protected?item=2' }),
+    error => error?.code === 'invalid_service_signature'
+  );
+  await assert.rejects(
+    () => verify({ headers: { ...signed(), 'x-axiom-audience': 'sandbox' } }),
+    error => error?.code === 'wrong_audience'
+  );
+  await assert.rejects(
+    () => verify({ requestBody: Buffer.from('{"operation":"modify"}') }),
+    error => error?.code === 'body_digest_mismatch'
+  );
+});
 
 test('plain-HTTP signed requests send exactly the path they signed', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-signed-path-'));
