@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
 import http from 'node:http';
@@ -57,8 +58,30 @@ test('signed service request proof rejects method, path, audience, and body muta
     error => error?.code === 'incompatible_interface'
   );
   await assert.rejects(
-    () => verify({ requestBody: Buffer.from('{"operation":"modify"}') }),
+    () => verify({
+      headers: {
+        ...signed(),
+        'x-axiom-audience': 'sandbox',
+        'x-axiom-interface': 'axiom.sandbox.v1'
+      },
+      verifierAudience: 'sandbox'
+    }),
+    error => error?.code === 'invalid_service_signature'
+  );
+  const mutatedBody = Buffer.from('{"operation":"modify"}');
+  await assert.rejects(
+    () => verify({ requestBody: mutatedBody }),
     error => error?.code === 'body_digest_mismatch'
+  );
+  await assert.rejects(
+    () => verify({
+      headers: {
+        ...signed(),
+        'x-axiom-content-sha256': createHash('sha256').update(mutatedBody).digest('hex')
+      },
+      requestBody: mutatedBody
+    }),
+    error => error?.code === 'invalid_service_signature'
   );
 });
 
