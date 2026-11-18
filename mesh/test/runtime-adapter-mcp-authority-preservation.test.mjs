@@ -13,6 +13,13 @@ import {
 
 const NOW = Date.UTC(2026, 8, 3, 23, 45, 0);
 const PRINCIPAL_ID = 'principal:rt-auth-012-preservation';
+const BUDGET = Object.freeze({
+  max_requests_per_minute: 60,
+  max_concurrent_requests: 1,
+  max_execution_ms: 1_000,
+  max_request_bytes: 4_096,
+  max_response_bytes: 4_096
+});
 
 test('MCP projection preserves widened signed constraints for native denial', async () => {
   const manifest = createSyntheticReferenceAdapterManifest();
@@ -33,6 +40,7 @@ test('MCP projection preserves widened signed constraints for native denial', as
       runtime_operation: 'reference.echo',
       axiom_action: 'adapter.reference.write',
       purpose: 'test.conformance',
+      budget: BUDGET,
       requested_scopes: ['synthetic.read'],
       destinations: ['local:reference'],
       credential_handles: ['credential:synthetic-reference']
@@ -49,6 +57,7 @@ test('MCP projection preserves widened signed constraints for native denial', as
   });
 
   assert.equal(translated.axiom_action, 'adapter.reference.write');
+  assert.equal(Object.hasOwn(translated, 'budget'), false);
   adapter.registerGrant(createSyntheticReferenceGrant({
     grantId,
     principalId: PRINCIPAL_ID,
