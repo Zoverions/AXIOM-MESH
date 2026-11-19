@@ -145,9 +145,12 @@ The production-candidate surface includes:
   internal network segments, a default-deny 48-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - a default-off machine-currentness gate in which human-authorized deny-only
-  Grid lifecycle state is bound through issuance, durable capability
+  Grid lifecycle state proves strict attenuation or terminal deny, is bound
+  through issuance, and admits only one competing successor; durable capability
   consumption precedes atomic logical release, and Sandbox verifies the
   Grid-signed exact capability/attempt/process-epoch receipt before builtin;
+  deterministic revoke/narrow races and restart recovery preserve
+  no-builtin-on-deny and exact-replay semantics;
   production promotion still requires configured-principal/retained-Grid
   exact-set and root-digest preflight, and no Sandbox-to-Grid route exists;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI

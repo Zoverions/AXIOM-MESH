@@ -31,6 +31,7 @@ Only the capability registry establishes current runnable status.
 | State | Meaning |
 |---|---|
 | **current-registry** | existing foundation; consult registry for exact status |
+| **current-build / default-off** | implemented source safety boundary that remains disabled for production candidates and is not a separate registry promotion |
 | **specified-next** | candidate for normative schema/design work |
 | **planned** | architectural intent exists |
 | **laboratory-only** | may be built/tested without production authority |
@@ -48,6 +49,7 @@ Only the capability registry establishes current runnable status.
 | Scoped grants | current-registry | natural primitive for machine authority |
 | Bounded Sandbox execution | current-registry | separates effect execution from agent planning |
 | Grid evidence chain | current-registry | durable receipts and provenance |
+| Grid machine lifecycle/currentness | current-build / default-off | deny-only attenuation/revocation state and logical release ordering without a second authority store |
 | Machine intent receipts | current-registry | owner-scoped Grid-attested terminal receipt verification without promoting the AXIOM Verify product |
 | Capability registry | current-registry | machine discovery foundation |
 | Capability-to-assertion evidence bindings | current-registry | prevents prose-only capability promotion |
@@ -73,13 +75,19 @@ These foundations reduce how much new trusted code agent interoperability should
 | Purpose/action ceilings | current-registry | Hypervisor policy/intent | implemented as a second deny-dominant layer |
 | Machine execution-time ceiling | current-registry | Hypervisor plan/grant | implemented by intersecting policy and machine timeout |
 | Machine authority evidence binding | current-registry | approval/plan/grant/evidence | authority digest bound across the supported local execution path |
-| Machine-principal revocation | specified-next | bearer lifecycle / identity records | expiry enforced; dedicated revocation lifecycle remains future work |
+| Machine-principal lifecycle currentness | current-build / default-off | static configured root + Grid lifecycle | human-authorized strict attenuation and terminal revoke/compromise/expiry are implemented; production enablement awaits configured-principal/retained-Grid exact-set and root-digest preflight |
+| Currentness-bound logical release | current-build / default-off | durable capability consumption + Grid lifecycle | exact retained head/attempt/Sandbox-epoch release is Grid-ordered and Sandbox-verified; deterministic stale races deny before builtin; release is not execution or disclosure |
 | Purpose-bound machine credentials | planned | provider runtime, secret policy | not-claimed |
 | Destination/rate/concurrency/request/response limits | current-registry / partial | Gateway + runtime enforcement | request/rate/concurrency/response ceilings and current built-in `local` destination enforcement are live; external/provider destination semantics remain future work |
 | Principal-specific capability visibility | current-registry | discovery policy | principal-filtered requestability discovery is live and explicitly not authorization |
 | Machine principal in Circle | blocked | Circle identity/charter | not-claimed |
 
 Machine-principal v1 explicitly rejects wildcard scope, administrator role, and delegation. Existing infrastructure `service` identities remain compatible unless they opt into the constrained machine profile.
+
+The default-off machine-currentness gate is a current-build safety boundary,
+not a separate capability-registry promotion. It creates no Sandbox-to-Grid
+edge, remote-agent authority, credential rotation, result-disclosure authority,
+trusted-time claim, or production promotion.
 
 ## Layer C — Protocol-neutral invocation semantics
 
@@ -294,4 +302,4 @@ When any item moves from planning into specification or implementation, update a
 
 ## Current non-claims
 
-Current `0.12.0-dev.3` **does** claim the narrow constrained machine-principal authorization primitive recorded in the capability registry. It does **not** claim MCP, A2A, machine-principal delegation, dedicated machine revocation, machine-specific destination/rate/concurrency/request/response enforcement, external skill execution, production agent federation, runtime hardware attestation, or authenticated remote task execution. This map preserves a path to those capabilities while keeping current authority exact.
+Current `0.12.0-dev.3` **does** claim the narrow constrained machine-principal authorization primitive recorded in the capability registry. It also contains the default-off Grid lifecycle/currentness and logical-release safety boundary described above, without treating that built boundary as production promotion. It does **not** claim MCP, A2A, machine-principal delegation, production-enabled lifecycle enforcement, credential rotation, result-disclosure authority, external skill execution, production agent federation, runtime hardware attestation, trusted time, external-effect rollback, or authenticated remote task execution. This map preserves a path to those capabilities while keeping current authority exact.

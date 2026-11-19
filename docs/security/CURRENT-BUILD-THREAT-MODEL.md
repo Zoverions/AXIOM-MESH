@@ -193,6 +193,38 @@ provide multi-execution semantic budgets, account delegated children against a
 shared budget, or guarantee exactly-once external effects. Those remain explicit
 #1576 research/falsification boundaries.
 
+### Machine lifecycle currentness and logical-release boundary
+
+The configured `axiom-machine-principal.v1` registry entry remains the static
+root authority ceiling for one runtime generation. Grid is the sole durable
+source for mutable lifecycle currentness beneath that ceiling. A retained head
+may keep the exact root active, prove a strict same-principal attenuation, or
+enter the terminal `revoked`, `compromised`, or `expired` deny states. Root
+digest mismatch, missing or corrupt currentness, stale predecessor state,
+widening, reactivation, and ambiguous replay fail closed. Competing successors
+are ordered in one Grid transaction, so at most one successor can commit.
+
+When `AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT` is enabled, Hypervisor binds the
+exact retained lifecycle sequence, head digest, and effective authority digest
+into the machine capability. After Grid durably consumes that capability,
+Hypervisor asks Grid to order one exact logical effect release against the
+current retained head. Grid signs the exact capability, intent, plan, action,
+destination, attempt, Sandbox execution epoch, and currentness bindings;
+Sandbox verifies that receipt before invoking the builtin. Revocation or
+narrowing that commits first makes the stale release deny, and deterministic
+race tests prove zero builtin invocations on that denial. Hypervisor performs
+the Grid call, so no Sandbox-to-Grid network edge exists.
+
+Release is not execution; execution is not disclosure; denial is not rollback.
+A committed release followed by a crash remains uncertain and may be recovered
+only as the same exact release, not converted into permission for another
+attempt. The current boundary does not recall an already released effect or
+authorize later result disclosure. It also does not establish trusted time,
+hardware runtime identity, host-root resistance, bearer/key custody, external
+effect idempotency, or production promotion. Production enablement remains
+blocked until the configured principal set and retained Grid lifecycle set and
+root digests pass an exact preflight under authentic operator custody.
+
 ### Emergent coordination and collective authority boundary
 
 Emergent collective authority / unauthorized coordination is an explicit threat
@@ -422,7 +454,9 @@ verification rather than an online grant.
 |---|---|---|
 | Authentication bypass or token theft | Exact bearer principals, constrained agent profile, scoped telemetry identity, restrictive secret-file checks, signed service envelopes, mTLS peer identity, active-leaf pinning, replay guards | Bearer theft still conveys the configured principal until expiry/revocation; host memory and external custodian compromise remain possible; pilot custody and token operational monitoring are pending |
 | Legacy or forged unconstrained agent identity | Bearer registry requires `agent` principals to normalize as `axiom-machine-principal.v1`; Hypervisor independently rejects legacy `agent` shape; unknown/non-human sponsor, wildcard scope, and administrator role fail closed | A stolen valid constrained-agent bearer still needs operational revocation; runtime identity metadata is not hardware attestation |
-| Machine principal expires while a request is in flight | Gateway admission checks declared expiry before handler execution; successful constrained application responses and handler-derived controlled errors re-check the same declared expiry before application-derived bytes are written; direct constrained response methods are blocked | The recheck uses local wall-clock and the authenticated principal record loaded for the request. Pre-handler control denials remain communicable. Live revocation/currentness and atomic authorization/disclosure ordering remain separate requirements; suppressing a response does not undo handler effects |
+| Machine principal expires while a request is in flight | Gateway admission checks declared expiry before handler execution; successful constrained application responses and handler-derived controlled errors re-check the same declared expiry before application-derived bytes are written; direct constrained response methods are blocked; the default-off Grid currentness fence also re-evaluates natural expiry before capability issuance and logical effect release | All time checks use local service clocks. Pre-handler control denials remain communicable. Suppressing a response does not undo handler effects, and current logical release does not authorize later result disclosure |
+| Machine lifecycle rollback, widening, or root substitution | The configured registry digest remains the immutable root ceiling; Grid event/materialized state accepts only strict same-principal attenuation or terminal deny transitions; exact predecessor/head bindings, one-use command digests, one-winner transactions, restart reconstruction, and root-mismatch denials are tested | The production gate remains default-off pending exact configured-principal/retained-Grid set and root-digest preflight. Host root, Grid/data/signing-key compromise, operator-policy error, and clock failure remain external risks |
+| Revocation or narrowing races a consequential builtin | Durable capability consumption precedes one Grid transaction that compares the capability-bound lifecycle head and records a release; Sandbox verifies the Grid-signed exact attempt/epoch receipt before builtin invocation; deterministic revoke/narrow races prove stale denial with zero builtin calls | A release that commits first is historical authorization evidence, not proof of execution, success, rollback, or disclosure. External effects still require operation-specific idempotency and recovery |
 | Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
 | Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |
 | Machine discovery metadata inference or discovery-as-authority | The route is constrained-machine-only; Hypervisor intersects the active deny-dominant policy with only the authenticated principal's finite actions, scopes and destinations; unresolved or denied actions are omitted; overlay structure, bearer material and unrelated actions are not returned; the response declares `discovery_is_not_authorization` | The caller intentionally learns its own authority facts plus merged policy version/digest and requestable action metadata; future provider/MCP schemas or global discovery must receive separate minimization and inference review |

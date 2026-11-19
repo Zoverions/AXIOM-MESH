@@ -18,8 +18,9 @@ Its runtime validator and authorizer are
 The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
-fallback. The active policy contains 10 grouped flows and 48 exact route
-permissions, including bounded supervisor and self-health probes.
+fallback. The active policy contains 10 grouped flows. The source validator
+reports 44 implemented routes and 48 exact route permissions, including bounded
+supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
 network I/O. Each receiving service independently applies the same exact

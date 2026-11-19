@@ -92,6 +92,18 @@ allowlist before a grant can be issued; Sandbox verifies the signed destination
 again before execution. Unknown provider, remote, or MCP destination semantics
 fail closed.
 
+The source tree also implements a deny-only Grid lifecycle/currentness fence
+behind the default-off `AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT` gate. The
+configured principal remains the root authority ceiling. After explicit active
+initialization, subsequent Grid lifecycle mutations may only strictly attenuate
+authority or enter terminal revoke/compromise/expiry. A capability binds the
+exact retained head, and after durable consumption Hypervisor asks Grid for one
+logical release receipt that Sandbox verifies before builtin execution. There
+is no Sandbox-to-Grid route. Production enablement remains blocked until the
+configured-principal/retained-Grid exact-set and root-digest preflight passes.
+A release receipt is not proof of execution, rollback, disclosure, or trusted
+time.
+
 `/v1/machine-discovery` returns only the authenticated constrained machine's
 requestable intersection under current policy. Discovery is not authorization.
 Every requested effect still re-enters the normal intent and policy pipeline.

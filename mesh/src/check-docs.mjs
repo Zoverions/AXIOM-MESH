@@ -273,7 +273,9 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Priority 5 — Read-only MCP server laboratory',
     '## Priority 11 — A2A-compatible laboratory',
     '## Priority 17 — Required promotion artifacts',
-    '## Completion rule'
+    '## Completion rule',
+    'Grid lifecycle currentness',
+    'no-builtin-on-deny'
   ],
   'docs/MASTER-TODO-EPISTEMIC-FABRIC.md': [
     '## Priority 0 — Protect current authority truth',
@@ -308,7 +310,12 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Workstream K — E8 unknown-to-experiment planning',
     '## Current non-claims'
   ],
-  'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
+  'docs/PRODUCTION-GRADE.md': [
+    '## Current readiness',
+    '## Production promotion gates',
+    'AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT',
+    'one-winner competing-successor'
+  ],
   'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md': [
     '## Purpose and boundary',
     '## External trust bootstrap',
@@ -326,8 +333,18 @@ const REQUIRED_CONTENT = Object.freeze({
     'INSTALL_REVIEW',
     'STOP_NEWER_PRESENT'
   ],
-  'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
-  'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
+  'docs/PRODUCTION-READINESS-TRACKER.md': [
+    '## Current gate status',
+    'Not production-promoted',
+    'configured-principal/retained-Grid exact-set',
+    'no-builtin-on-deny'
+  ],
+  'docs/PROJECT-STATUS-2026.md': [
+    '## Current build',
+    '## What is not claimed',
+    'default-off machine-currentness gate',
+    'no-builtin-on-deny'
+  ],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
   'docs/architecture/AGENT-COMMONS.md': [
     'External agents may contribute evidence and proposals',
@@ -544,7 +561,9 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Layer F — Skill and capsule interoperability',
     '## Layer K — A2A compatibility',
     '## Layer L — Authenticated remote execution',
-    '## Current non-claims'
+    '## Current non-claims',
+    'Grid machine lifecycle/currentness',
+    'default-off machine-currentness gate'
   ],
   'docs/rebuild/PATH-OBSERVATION-EVIDENCE.md': [
     '## Architectural rule',
@@ -566,7 +585,9 @@ const REQUIRED_CONTENT = Object.freeze({
     'SIEA-01',
     'SIEA-05',
     'SIEA-08',
-    'SIEA-12'
+    'SIEA-12',
+    'IAM-12',
+    'IAM-19'
   ],
   'docs/rebuild/SOURCE-TRACEABILITY.md': [
     '## Current implementation trace',
@@ -597,7 +618,9 @@ const REQUIRED_CONTENT = Object.freeze({
     'REMOTE-SOCIAL-THREAT-REVIEW.md',
     '## Assets and security objectives',
     '## Threat analysis',
-    '## Residual risk and non-claims'
+    '## Residual risk and non-claims',
+    '### Machine lifecycle currentness and logical-release boundary',
+    'Release is not execution; execution is not disclosure'
   ],
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md': [
     '## Current activation boundary',
@@ -759,7 +782,9 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Four-segment unit topology',
     '## Runtime and protected-CI proof',
     '## Operator verification and rollback',
-    '## Pilot repetition and non-claims'
+    '## Pilot repetition and non-claims',
+    '48 exact route permissions',
+    '44 implemented routes'
   ],
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': [
     '## Enforced relay boundary',
@@ -823,7 +848,9 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Current implementation',
     '## Validation',
     '## Non-claims',
-    'npm run setup'
+    'npm run setup',
+    'machine_currentness_stale',
+    'no-builtin-on-deny'
   ],
   'docs/whitepapers_and_research/WHITEPAPER.md': [
     '## Non-claims',
@@ -831,7 +858,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'npm run setup',
     'link current counts, gates, and implementation classifications to their owners'
   ],
-  'mesh/README.md': ['npm run setup', 'AUTOMATED-SOURCE-SETUP.md'],
+  'mesh/README.md': [
+    'npm run setup',
+    'AUTOMATED-SOURCE-SETUP.md',
+    'AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT',
+    'configured-principal/retained-Grid'
+  ],
   'mesh/PRODUCTION.md': [
     '## Automated source setup',
     'npm run network-policy:check',
