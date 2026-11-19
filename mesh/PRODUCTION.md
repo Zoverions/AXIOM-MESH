@@ -160,6 +160,18 @@ and transport allowlists are the boundary. Protected CI proves the required
 path, Gateway-to-Sandbox denial, Sandbox-to-Grid denial, Grid-to-Sandbox denial,
 and public TCP failure from a running unit.
 
+Machine-currentness capability issuance remains an explicit rollout gate.
+`AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT` defaults to `false`. A development or
+test deployment may set it to `true` only after every configured machine
+principal has been initialized through the public human lifecycle-intent path.
+When enabled, Hypervisor fails closed if retained currentness is absent or
+terminal, evaluates the effective retained authority, binds the exact lifecycle
+head into invocation/plan/capability/terminal evidence, and prevents a
+capability from outliving a non-persistent machine authority. Do not enable the
+flag for a production candidate until a separately verified preflight proves
+the configured-principal and Grid-lifecycle sets and root digests match; there
+is no silent auto-initialization fallback.
+
 Verify exact policy and Compose membership before startup:
 
 ```bash
