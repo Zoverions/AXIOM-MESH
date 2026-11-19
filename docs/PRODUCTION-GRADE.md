@@ -120,10 +120,15 @@ requires explicit public-path lifecycle initialization. Production promotion
 remains blocked until a verified preflight proves the configured machine set,
 retained Grid lifecycle set, and exact root digests agree. Currentness evidence
 does not grant authority, and the gate creates no Sandbox-to-Grid edge.
+Grid permits only strict same-principal attenuation or terminal deny, enforces
+one-winner competing-successor ordering, and preserves exact replay/restart
+recovery without reactivation.
 When the gate is enabled, logical effect release is ordered after durable
 capability consumption: Grid atomically compares the capability-bound retained
 head and signs one exact attempt/epoch receipt, which Sandbox verifies before
-the builtin. This is not an external-effect rollback or trusted-time claim.
+the builtin. Deterministic revoke/narrow races prove zero builtin invocation
+when stale currentness denies. This is not an external-effect rollback,
+result-disclosure authority, or trusted-time claim.
 
 ## Supported production boundary
 

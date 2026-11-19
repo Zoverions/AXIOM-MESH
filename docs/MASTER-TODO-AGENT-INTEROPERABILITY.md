@@ -35,7 +35,8 @@
 ## Priority 2 — Machine principal specification
 
 - [x] Define agent/service/runtime principal identifier schema.
-- [ ] Complete key issuance, ownership/sponsorship, device/runtime binding, rotation, compromise, and dedicated revocation. Human sponsorship, runtime binding, lifetime and expiry are implemented; dedicated machine revocation/rotation remains open.
+- [ ] Complete key issuance, ownership/sponsorship, device/runtime binding, and credential rotation. Human sponsorship, runtime binding, lifetime/expiry, and human-authorized Grid lifecycle currentness with terminal revoke/compromise/expiry are implemented behind the default-off enforcement gate; production exact-set/root-digest preflight and credential rotation remain open.
+- [x] Prove strict same-principal lifecycle attenuation, one-winner competing successors, exact replay/restart recovery, currentness-bound issuance, and deterministic revoke/narrow no-builtin-on-deny ordering without a Sandbox-to-Grid edge.
 - [x] Distinguish human, agent, infrastructure service, and constrained machine-service identities at bearer-registry normalization; future delegator/executor/verifier/remote-peer profiles remain separate later work.
 - [x] Protect the shared-workload-identity boundary with a protocol-neutral
   synthetic regression: an issuer-signed credential plus holder presentation
@@ -53,7 +54,7 @@
 - [x] Prohibit universal reputation or moral scores as base authority.
 - [ ] Complete negative tests for identity substitution, credential replay, stale identity, confused ownership, and compromise. Sponsor, expiry, wildcard/admin, legacy-agent, action/purpose, request-size/rate, and authority-binding negatives are implemented; credential lifecycle attack coverage remains open.
 
-**Implemented checkpoint:** `core.machine-principals` is an implemented registry capability. Its current verified bounds include sponsorship, finite scopes, action/purpose ceilings, runtime identity, expiry, non-delegation, execution time, authenticated Gateway request size, authenticated Gateway request rate, authenticated Gateway concurrency, authenticated Gateway response size, and AXIOM-computed current built-in effect destination constrained to the principal allowlist. It does not claim autonomous agent loops, machine delegation, MCP/A2A, remote execution, external/provider destination semantics, or hardware/runtime attestation.
+**Implemented checkpoint:** `core.machine-principals` is an implemented registry capability. Its current verified bounds include sponsorship, finite scopes, action/purpose ceilings, runtime identity, expiry, non-delegation, execution time, authenticated Gateway request size, authenticated Gateway request rate, authenticated Gateway concurrency, authenticated Gateway response size, and AXIOM-computed current built-in effect destination constrained to the principal allowlist. The source tree also contains a default-off Grid lifecycle/currentness and logical-release fence; that built fence is not a separate registry or production promotion. It does not claim autonomous agent loops, machine delegation, MCP/A2A, remote execution, external/provider destination semantics, hardware/runtime attestation, trusted time, external-effect rollback, or result-disclosure authority.
 
 ## Priority 3 — Minimal AXIOM Invocation Envelope
 
