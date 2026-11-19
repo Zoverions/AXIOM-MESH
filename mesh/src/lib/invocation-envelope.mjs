@@ -31,7 +31,10 @@ function normalizeAssurance(value, label) {
   return value;
 }
 
-export function buildNativeInvocationEnvelope(intent, decision) {
+export function buildNativeInvocationEnvelope(intent, decision, {
+  effectiveMachinePrincipal = null,
+  machineCurrentness = null
+} = {}) {
   const value = assertPlainObject(intent, 'invocation intent');
   const principal = assertPlainObject(value.principal, 'invocation principal');
   const policy = assertPlainObject(decision, 'invocation decision');
@@ -57,7 +60,8 @@ export function buildNativeInvocationEnvelope(intent, decision) {
 
   let ingress;
   if (principal.schema === 'axiom-machine-principal.v1') {
-    const constraints = assertPlainObject(principal.constraints, 'machine constraints');
+    const effectivePrincipal = effectiveMachinePrincipal ?? principal;
+    const constraints = assertPlainObject(effectivePrincipal.constraints, 'machine constraints');
     const budgets = assertPlainObject(constraints.budgets, 'machine budgets');
     const runtime = assertPlainObject(principal.runtime, 'machine runtime');
     caller.machine = {
@@ -73,7 +77,10 @@ export function buildNativeInvocationEnvelope(intent, decision) {
         principal.authority_digest,
         'machine authority digest',
         { min: 64, max: 64, pattern: DIGEST }
-      )
+      ),
+      ...(machineCurrentness ? {
+        currentness: normalizeCurrentnessBinding(machineCurrentness)
+      } : {})
     };
     ingress = {
       max_request_bytes: normalizePositiveInteger(
@@ -194,7 +201,12 @@ export function validateInvocationEnvelope(raw) {
       throw new ValidationError('Human invocation caller cannot carry machine authority');
     }
     const machine = assertPlainObject(caller.machine, 'invocation machine caller');
-    assertExactKeys(machine, ['sponsor', 'runtime_id', 'authority_digest'], 'invocation machine caller');
+    assertExactKeys(machine, [
+      'sponsor',
+      'runtime_id',
+      'authority_digest',
+      ...(machine.currentness !== undefined ? ['currentness'] : [])
+    ], 'invocation machine caller');
     assertString(machine.sponsor, 'invocation machine sponsor', {
       max: 160,
       pattern: IDENTIFIER
@@ -208,6 +220,14 @@ export function validateInvocationEnvelope(raw) {
       max: 64,
       pattern: DIGEST
     });
+    if (machine.currentness !== undefined) {
+      const currentness = normalizeCurrentnessBinding(machine.currentness);
+      if (currentness.root_authority_digest !== machine.authority_digest) {
+        throw new ValidationError(
+          'Invocation currentness root digest does not match machine authority'
+        );
+      }
+    }
   }
 
   const request = assertPlainObject(value.request, 'invocation request');
@@ -298,6 +318,31 @@ export function validateInvocationEnvelope(raw) {
   }
 
   return structuredClone(value);
+}
+
+function normalizeCurrentnessBinding(value) {
+  const binding = assertPlainObject(value, 'invocation machine currentness');
+  assertExactKeys(binding, [
+    'root_authority_digest',
+    'effective_authority_digest',
+    'lifecycle_seq',
+    'lifecycle_head_digest'
+  ], 'invocation machine currentness');
+  for (const field of [
+    'root_authority_digest',
+    'effective_authority_digest',
+    'lifecycle_head_digest'
+  ]) {
+    assertString(binding[field], `invocation machine currentness ${field}`, {
+      min: 64,
+      max: 64,
+      pattern: DIGEST
+    });
+  }
+  if (!Number.isSafeInteger(binding.lifecycle_seq) || binding.lifecycle_seq < 1) {
+    throw new ValidationError('Invocation machine currentness lifecycle_seq is invalid');
+  }
+  return structuredClone(binding);
 }
 
 export function invocationEnvelopeDigest(envelope) {
