@@ -94,8 +94,9 @@ fail closed.
 
 The source tree also implements a deny-only Grid lifecycle/currentness fence
 behind the default-off `AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT` gate. The
-configured principal remains the root authority ceiling; Grid may retain only
-strict attenuation or terminal revoke/compromise/expiry. A capability binds the
+configured principal remains the root authority ceiling. After explicit active
+initialization, subsequent Grid lifecycle mutations may only strictly attenuate
+authority or enter terminal revoke/compromise/expiry. A capability binds the
 exact retained head, and after durable consumption Hypervisor asks Grid for one
 logical release receipt that Sandbox verifies before builtin execution. There
 is no Sandbox-to-Grid route. Production enablement remains blocked until the

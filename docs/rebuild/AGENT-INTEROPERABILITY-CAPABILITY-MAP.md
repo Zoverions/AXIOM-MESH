@@ -31,6 +31,7 @@ Only the capability registry establishes current runnable status.
 | State | Meaning |
 |---|---|
 | **current-registry** | existing foundation; consult registry for exact status |
+| **current-build / default-off** | implemented source safety boundary that remains disabled for production candidates and is not a separate registry promotion |
 | **specified-next** | candidate for normative schema/design work |
 | **planned** | architectural intent exists |
 | **laboratory-only** | may be built/tested without production authority |

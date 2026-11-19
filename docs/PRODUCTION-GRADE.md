@@ -120,8 +120,9 @@ requires explicit public-path lifecycle initialization. Production promotion
 remains blocked until a verified preflight proves the configured machine set,
 retained Grid lifecycle set, and exact root digests agree. Currentness evidence
 does not grant authority, and the gate creates no Sandbox-to-Grid edge.
-Grid permits only strict same-principal attenuation or terminal deny, enforces
-one-winner competing-successor ordering, and preserves exact replay/restart
+After explicit active initialization, subsequent Grid lifecycle mutations may
+only strictly attenuate the same principal or enter terminal deny. Grid enforces
+one-winner competing-successor ordering and preserves exact replay/restart
 recovery without reactivation.
 When the gate is enabled, logical effect release is ordered after durable
 capability consumption: Grid atomically compares the capability-bound retained

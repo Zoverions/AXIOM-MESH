@@ -1388,7 +1388,7 @@ Use the repository-pinned runtime and commands:
 npm ci --ignore-scripts
 npm --prefix mesh ci --ignore-scripts
 npm --prefix mesh run docs:check
-npm --prefix mesh run verify
+npm --prefix mesh run check
 ```
 
 Expected: all commands exit 0.
@@ -1423,7 +1423,7 @@ Record:
 - [ ] **Step 10: Commit documentation/release reconciliation**
 
 ```bash
-git add   docs/security/CURRENT-BUILD-THREAT-MODEL.md   docs/rebuild/REQUIREMENTS.md   docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md   docs/MASTER-TODO-AGENT-INTEROPERABILITY.md   docs/PRODUCTION-READINESS-TRACKER.md   docs/PROJECT-STATUS-2026.md   docs/PRODUCTION-GRADE.md   mesh/README.md   docs/releases/0.12.0-dev.3.md   docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md   mesh/src/check-docs.mjs
+git add   docs/security/CURRENT-BUILD-THREAT-MODEL.md   docs/rebuild/REQUIREMENTS.md   docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md   docs/MASTER-TODO-AGENT-INTEROPERABILITY.md   docs/PRODUCTION-READINESS-TRACKER.md   docs/PROJECT-STATUS-2026.md   docs/PRODUCTION-GRADE.md   mesh/README.md   docs/releases/0.12.0-dev.3.md   docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md   mesh/src/check-docs.mjs   docs/superpowers/plans/2026-09-25-machine-principal-grid-currentness-v1.md
 git commit -m "docs(auth): reconcile machine currentness runtime boundary"
 ```
 
