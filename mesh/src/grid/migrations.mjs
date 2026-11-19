@@ -289,6 +289,64 @@ const PAGED_COLLECTION_INDEXES_SQL = `
   ON sync_bundles(owner, received_at, bundle_digest);
 `;
 
+const MACHINE_PRINCIPAL_GRID_CURRENTNESS_SQL = `
+  CREATE TABLE IF NOT EXISTS machine_principal_lifecycle_heads (
+    principal_id TEXT PRIMARY KEY,
+    principal_type TEXT NOT NULL,
+    root_authority_digest TEXT NOT NULL,
+    status TEXT NOT NULL,
+    lifecycle_seq INTEGER NOT NULL,
+    lifecycle_head_event_id TEXT NOT NULL,
+    lifecycle_head_event_hash TEXT NOT NULL,
+    lifecycle_head_digest TEXT NOT NULL,
+    effective_authority_digest TEXT,
+    effective_authority_json TEXT,
+    last_command_id TEXT NOT NULL,
+    last_command_digest TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS machine_principal_mutation_commands (
+    command_id TEXT PRIMARY KEY,
+    command_digest TEXT NOT NULL,
+    principal_id TEXT NOT NULL,
+    predecessor_seq INTEGER,
+    successor_seq INTEGER NOT NULL,
+    result_event_id TEXT NOT NULL,
+    result_event_hash TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS machine_effect_releases (
+    release_id TEXT PRIMARY KEY,
+    principal_id TEXT NOT NULL,
+    capability_id TEXT NOT NULL UNIQUE,
+    attempt_id TEXT NOT NULL UNIQUE,
+    sandbox_execution_epoch TEXT NOT NULL,
+    intent_id TEXT NOT NULL,
+    plan_digest TEXT NOT NULL,
+    action TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    root_authority_digest TEXT NOT NULL,
+    lifecycle_seq INTEGER NOT NULL,
+    lifecycle_head_digest TEXT NOT NULL,
+    effective_authority_digest TEXT NOT NULL,
+    consumption_receipt_digest TEXT NOT NULL,
+    release_digest TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS machine_principal_lifecycle_seq_idx
+  ON machine_principal_lifecycle_heads(principal_id, lifecycle_seq);
+
+  CREATE INDEX IF NOT EXISTS machine_principal_mutation_principal_idx
+  ON machine_principal_mutation_commands(principal_id, created_at);
+
+  CREATE INDEX IF NOT EXISTS machine_effect_releases_principal_idx
+  ON machine_effect_releases(principal_id, created_at);
+`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -405,6 +463,14 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
     source: PAGED_COLLECTION_INDEXES_SQL,
     up(db) {
       db.exec(PAGED_COLLECTION_INDEXES_SQL);
+    }
+  },
+  {
+    version: 12,
+    name: 'machine-principal-grid-currentness-v1',
+    source: MACHINE_PRINCIPAL_GRID_CURRENTNESS_SQL,
+    up(db) {
+      db.exec(MACHINE_PRINCIPAL_GRID_CURRENTNESS_SQL);
     }
   }
 ]);
