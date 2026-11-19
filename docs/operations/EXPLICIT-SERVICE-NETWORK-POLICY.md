@@ -18,7 +18,7 @@ Its runtime validator and authorizer are
 The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
-fallback. The active policy contains 10 grouped flows and 45 exact route
+fallback. The active policy contains 10 grouped flows and 47 exact route
 permissions, including bounded supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -94,6 +94,17 @@ Scalability audit S-15 adds one more: `POST /internal/v1/intents/interrupted`,
 with which the Hypervisor closes intents a previous Hypervisor process left
 `accepted`, as `intent.failed` with `intent_interrupted`. It writes nothing
 else and only intents accepted before a past cutoff.
+The machine-currentness lifecycle adds exactly two more Hypervisor-to-Grid
+permissions: `GET /internal/v1/machine-currentness/:principal_id` for the
+authoritative deny-only projection and
+`POST /internal/v1/machine-currentness/mutate` for an exact mutation command.
+The mutation route requires both the authenticated Hypervisor transport/request
+identity and a separately verified Hypervisor signature over the normalized
+authorization. Grid binds actor, target, root, predecessor, transition,
+successor, policy, reason, time, command, and authorization digests before the
+transaction. Generic Grid commits reject caller-supplied
+`machine.currentness.*` events. These routes create no Gateway, Sandbox, public,
+provider, credential, or independent authority path.
 Hypervisor alone may request Sandbox operations or execution. Grid and Sandbox
 have no application egress permissions.
 
@@ -105,6 +116,7 @@ The policy does not allow:
 - Hypervisor to call a Gateway route;
 - Hypervisor to call the remote-social review Grid route;
 - Gateway to call the Education learner-progress Grid route;
+- Gateway or Sandbox to call either machine-currentness Grid route;
 - `GET` access to the Education learner-progress route;
 - a `POST` to the remote-social review route or any other read-only Grid route;
 - a `GET` to Grid commit or Sandbox execution;
@@ -287,7 +299,7 @@ This milestone does not claim:
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 45-route application graph, the reference four-unit
+an exact machine-readable 47-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
 network edges, the remote-social addition remains a Gateway-only bounded

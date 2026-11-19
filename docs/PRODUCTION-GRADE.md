@@ -102,13 +102,12 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny 45-route policy permits only current internal
+readable default-deny 47-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
-mTLS peer allowlists. The 42nd reviewed permission is the bounded
-Hypervisor-to-Grid `POST /internal/v1/education/learner-progress` edge used by
-the governed Axiom Education convergence. It does not expose Education publicly,
-give Sandbox direct Grid authority, activate an Education provider or
-curriculum, or create a second authorization path.
+mTLS peer allowlists. The governed Education learner-progress edge and two
+Hypervisor-only machine-currentness permissions are exact additions. They do
+not expose Education publicly, give Sandbox direct Grid authority, activate an
+Education provider or curriculum, or create a second authorization path.
 Signed host evidence and a protected four-container check prove required-path
 operation, selected forbidden edges, Sandbox-loss readiness degradation
 without restarting Gateway, Grid, or Hypervisor, and state-preserving

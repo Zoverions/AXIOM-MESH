@@ -46,16 +46,16 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'hypervisor-self-health',
   'sandbox-self-health'
 ]);
-// Updated deliberately for GET /internal/v1/sync/:owner/bundles and
-// GET /internal/v1/sync/:owner/updates/:id: the owner's paged bundle
-// summaries and single sync updates (scalability audit S-10); and for
-// POST /internal/v1/intents/interrupted, Hypervisor to Grid: closing
-// intents a previous Hypervisor process left accepted (audit S-15).
+// Updated deliberately for the two Hypervisor-only machine currentness routes:
+// the authoritative projection read and the exact signed mutation command.
 const EXPECTED_POLICY_DIGEST =
-  '2b8a488cf28187b119ed18784af071bbaa1263217fb052547bdb8578aadeb6ae';
+  '361c2f98279f6f9a3288d6d6cad0ae54ec019f4bf0ec9aed2cfde076988a868a';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
+const GRID_CURRENTNESS_ROUTE_IMPORT =
+  "import { registerMachineCurrentnessGridRoutes } from './machine-currentness-routes.mjs';";
+const GRID_CURRENTNESS_ROUTE_CALL = 'registerMachineCurrentnessGridRoutes(router, {';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -382,17 +382,30 @@ export function validateServiceRouteImplementation({
 
 function serviceRouteSource(destination, source) {
   if (destination !== 'grid') return source;
-  const hasImport = source.includes(GRID_EDUCATION_ROUTE_IMPORT);
-  const hasRegistration = source.includes(GRID_EDUCATION_ROUTE_CALL);
-  if (hasImport !== hasRegistration) {
+  const hasEducationImport = source.includes(GRID_EDUCATION_ROUTE_IMPORT);
+  const hasEducationRegistration = source.includes(GRID_EDUCATION_ROUTE_CALL);
+  if (hasEducationImport !== hasEducationRegistration) {
     throw new ValidationError('Grid education route registration is incomplete');
   }
-  if (!hasImport) return source;
-  const educationRoutes = readFileSync(
-    new URL('../grid/education-routes.mjs', import.meta.url),
-    'utf8'
-  );
-  return `${source}\n${educationRoutes}`;
+  const hasCurrentnessImport = source.includes(GRID_CURRENTNESS_ROUTE_IMPORT);
+  const hasCurrentnessRegistration = source.includes(GRID_CURRENTNESS_ROUTE_CALL);
+  if (hasCurrentnessImport !== hasCurrentnessRegistration) {
+    throw new ValidationError('Grid machine currentness route registration is incomplete');
+  }
+  const modules = [];
+  if (hasEducationImport) {
+    modules.push(readFileSync(
+      new URL('../grid/education-routes.mjs', import.meta.url),
+      'utf8'
+    ));
+  }
+  if (hasCurrentnessImport) {
+    modules.push(readFileSync(
+      new URL('../grid/machine-currentness-routes.mjs', import.meta.url),
+      'utf8'
+    ));
+  }
+  return [source, ...modules].join('\n');
 }
 
 function validateExactCurrentRoutes(flows) {
@@ -419,9 +432,11 @@ function validateExactCurrentRoutes(flows) {
     ],
     'hypervisor-to-grid': [
       'GET /internal/v1/status',
+      'GET /internal/v1/machine-currentness/:principal_id',
       'GET /internal/v1/policy-overlays',
       'GET /internal/v1/approval/:id',
       'POST /internal/v1/commit',
+      'POST /internal/v1/machine-currentness/mutate',
       // Audit S-15: closing intents a previous process left accepted.
       'POST /internal/v1/intents/interrupted',
       'POST /internal/v1/education/learner-progress'

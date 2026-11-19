@@ -149,11 +149,11 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes exactly 45 currently allowed internal
+policy additionally authorizes exactly 47 currently allowed internal
 method/path permissions at both sending and receiving services and derives
-inbound mTLS peer allowlists. The additional governed Education permission is
-Hypervisor-to-Grid `POST /internal/v1/education/learner-progress`; it does not
-create public ingress or a second authority path. Because internal routes must
+inbound mTLS peer allowlists. The governed Education permission and two
+Hypervisor-only machine-currentness permissions are exact additions; they do
+not create public ingress or a second authority path. Because internal routes must
 exist, this topology does not use the single-container supervisor's
 `network_mode: none` route check; segmented internal networks plus application
 and transport allowlists are the boundary. Protected CI proves the required

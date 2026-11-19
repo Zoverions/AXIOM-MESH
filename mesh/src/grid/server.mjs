@@ -2,13 +2,19 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { meshConfig } from '../lib/config.mjs';
-import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/identity.mjs';
+import {
+  ensureMeshIdentity,
+  loadTrustedKey,
+  ReplayGuard,
+  verifySignedRequest
+} from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { COLLECTION_PAGE_MAX, collectionPage, decodeCollectionCursor } from '../lib/collection-page.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { registerEducationGridRoutes } from './education-routes.mjs';
+import { registerMachineCurrentnessGridRoutes } from './machine-currentness-routes.mjs';
 import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
@@ -39,6 +45,7 @@ export async function createGridService(config = meshConfig()) {
   let protector;
   let store;
   let consumeCapability;
+  let hypervisorPublicKey;
   try {
     identity = await ensureMeshIdentity(config.dataDir, 'grid', { create: config.autoBootstrap });
     identity.transport = config.transport.enabled
@@ -60,6 +67,7 @@ export async function createGridService(config = meshConfig()) {
       identity,
       store
     });
+    hypervisorPublicKey = await loadTrustedKey(config.dataDir, 'hypervisor');
   } catch (error) {
     if (store) store.close();
     await releaseGridRuntimeLock(runtimeLock);
@@ -100,6 +108,10 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
 
   registerEducationGridRoutes(router, store);
+  registerMachineCurrentnessGridRoutes(router, {
+    store,
+    hypervisorPublicKey
+  });
 
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
@@ -121,6 +133,13 @@ export async function createGridService(config = meshConfig()) {
     ))) {
       throw new ValidationError(
         'Caller-supplied capability consumption events are forbidden; Grid derives them from exact consumption requests'
+      );
+    }
+    if (input.events.some(event => (
+      String(event?.kind ?? '').startsWith('machine.currentness.')
+    ))) {
+      throw new ValidationError(
+        'Caller-supplied machine.currentness events are forbidden; use the specialized mutation route'
       );
     }
     const consumptionRequests = input.events.filter(

@@ -407,11 +407,12 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 45 current internal**
+machine-readable default-deny policy **permits only 47 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
-allowlists, and removes unrelated adjacency. The 42nd reviewed permission is the
-bounded Hypervisor-to-Grid Education learner-progress edge; it is not public
-Education exposure or alternate authority. This is single-host isolation, not
+allowlists, and removes unrelated adjacency. The governed Education
+learner-progress edge and two Hypervisor-only machine-currentness permissions
+are exact additions; they create no public exposure or alternate authority.
+This is single-host isolation, not
 multi-host consensus or automatic failover.
 
 ## Security and contribution
