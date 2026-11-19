@@ -11,7 +11,10 @@ const PARENT_BLOBS = Object.freeze({
   // Updated deliberately again for the `circles.member-exchange` entry,
   // registered as `experimental` (built and tested, off by default, not
   // enabled or exposed). No other capability changed.
-  capabilities: 'e3ff01d61d345326416f85a80fb191d81d0c2cfc',
+  // Updated deliberately for the factual service-network summary after the
+  // Task 6 Hypervisor-to-Grid release route. Capability state, evidence,
+  // activation and SIEA non-promotion remain unchanged.
+  capabilities: '3a4d60e85477f258f77f5d8afc3e6e8c98e245b9',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
   // the other paged collections, including accounting journals, and for the
   // read-only `sync_bundles.list` and `sync_updates.get` routes over the
@@ -36,7 +39,10 @@ const PARENT_BLOBS = Object.freeze({
   // the assertions below are unchanged.
   // Updated deliberately for the Hypervisor-only machine-currentness read and
   // signed-mutation routes. The server still composes no SIEA store.
-  grid_server: 'e438ee66b3362d1df7ad4af4f2a5ad242b2473ba',
+  // Updated deliberately for the Hypervisor-only machine-effect release
+  // route. The server still composes no SIEA store and the semantic guards
+  // below remain unchanged.
+  grid_server: '29dc68c3673cd41f6fca6826d6f2aead26e05108',
   // Updated deliberately for core migration 12: event-derived machine
   // lifecycle/currentness materializations and replay state. The separately
   // gated SIEA store remains absent from ordinary Grid composition.
