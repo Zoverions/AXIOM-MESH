@@ -30,6 +30,16 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
+import {
+  MACHINE_CURRENTNESS_EVENT_KINDS,
+  normalizeMachineCurrentnessProjection,
+  normalizeMachineLifecycleTransition,
+  normalizeMachineMutationAuthorization
+} from '../lib/machine-principal-currentness.mjs';
+import {
+  assertMachineAuthorityAttenuation,
+  assertMachineAuthorityTimeActive
+} from '../lib/machine-principal-attenuation.mjs';
 import { replaceFileWithWindowsRetry, writeFileAtomically } from '../lib/windows-atomic-file.mjs';
 import { COLLECTION_PAGE_MAX, decodeCollectionCursor, encodeCollectionCursor, keysetClause } from '../lib/collection-page.mjs';
 import { runMigrations } from './migrations.mjs';
@@ -80,8 +90,11 @@ function windowsPathComponentIdentity(value) {
  * Bump CORE_MATERIALIZER_VERSION whenever that logic changes, so anchored
  * state from an older build is rebuilt rather than trusted.
  */
-const CORE_MATERIALIZER_VERSION = 1;
+const CORE_MATERIALIZER_VERSION = 2;
 const CORE_MATERIALIZED_TABLES = Object.freeze([
+  'machine_effect_releases',
+  'machine_principal_mutation_commands',
+  'machine_principal_lifecycle_heads',
   'sync_heads',
   'sync_updates',
   'sync_bundles',
@@ -109,6 +122,8 @@ const CORE_MATERIALIZED_TABLES = Object.freeze([
 
 const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ['events', 'event_id', ['payload_json']],
+  ['machine_principal_lifecycle_heads', 'principal_id', ['effective_authority_json']],
+  ['machine_principal_mutation_commands', 'command_id', ['result_json']],
   ['intents', 'intent_id', ['result_json', 'error_json']],
   ['capsules', 'digest', ['manifest_json']],
   ['consents', 'consent_id', ['scopes_json']],
@@ -512,7 +527,7 @@ export class GridStore {
       // Stream the log: loading it whole made memory grow with history.
       for (const row of this.db.prepare('SELECT * FROM events ORDER BY seq').iterate()) {
         const payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
-        validateMaterializedPayload(row.kind, payload);
+        validateMaterializedPayload(row.kind, payload, row.subject);
         this.applyMaterializedEvent({
           seq: row.seq,
           event_id: row.event_id,
@@ -531,68 +546,12 @@ export class GridStore {
   }
 
   appendEvents({ traceId, actor, events }) {
-    assertString(traceId, 'trace_id', { max: 160, pattern: ID });
-    assertString(actor, 'actor', { max: 160, pattern: ID });
-    if (!Array.isArray(events) || events.length < 1 || events.length > 32) {
-      throw new ValidationError('events must contain 1-32 items');
-    }
     try {
-      return this.transaction(() => {
-      let seq = Number(this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value);
-      let prevHash = this.db.prepare("SELECT value FROM meta WHERE key = 'last_hash'").get().value;
-      const appended = [];
-      for (const raw of events) {
-        const event = normalizeEvent(raw);
-        if (TERMINAL_INTENT_EVENTS.has(event.kind)) this.requireAcceptedIntent(event.payload.intent_id, actor);
-        seq += 1;
-        const occurredAt = new Date().toISOString();
-        const eventId = raw.event_id ?? newId('evt');
-        const payloadDigest = digestObject(event.payload);
-        const payloadJson = this.protectJson('events', 'payload_json', eventId, event.payload);
-        const envelope = {
-          seq,
-          event_id: eventId,
-          trace_id: traceId,
-          actor,
-          kind: event.kind,
-          subject: event.subject,
-          occurred_at: occurredAt,
-          payload_digest: payloadDigest,
-          prev_hash: prevHash
-        };
-        const eventHash = digestObject(envelope);
-        const signature = this.identity.signObject({ event_hash: eventHash });
-        this.db.prepare(`
-          INSERT INTO events(
-            seq, event_id, trace_id, actor, kind, subject, occurred_at,
-            payload_json, payload_digest, prev_hash, event_hash, signature_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          seq,
-          eventId,
-          traceId,
-          actor,
-          event.kind,
-          event.subject,
-          occurredAt,
-          payloadJson,
-          payloadDigest,
-          prevHash,
-          eventHash,
-          canonicalJson(signature)
-        );
-        this.applyMaterializedEvent({
-          ...envelope,
-          event_hash: eventHash,
-          payload: event.payload
-        });
-        appended.push({ ...envelope, event_hash: eventHash, signature });
-        prevHash = eventHash;
-      }
-      this.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_seq'").run(String(seq));
-      this.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_hash'").run(prevHash);
-        return appended;
-      });
+      return this.transaction(() => this.appendEventsInTransaction({
+        traceId,
+        actor,
+        events
+      }));
     } catch (error) {
       if (String(error.message).includes('UNIQUE constraint failed: intents.intent_id')) {
         throw new AxiomError('intent_already_exists', 'This idempotent intent already exists', 409);
@@ -602,6 +561,81 @@ export class GridStore {
       }
       throw error;
     }
+  }
+
+  appendEventsInTransaction({
+    traceId,
+    actor,
+    events,
+    machineCurrentnessCommandId = null
+  }) {
+    assertString(traceId, 'trace_id', { max: 160, pattern: ID });
+    assertString(actor, 'actor', { max: 160, pattern: ID });
+    if (!Array.isArray(events) || events.length < 1 || events.length > 32) {
+      throw new ValidationError('events must contain 1-32 items');
+    }
+    let seq = Number(this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value);
+    let prevHash = this.db.prepare("SELECT value FROM meta WHERE key = 'last_hash'").get().value;
+    const appended = [];
+    for (const raw of events) {
+      const event = normalizeEvent(raw);
+      if (
+        MACHINE_CURRENTNESS_EVENTS.has(event.kind)
+        && event.payload.authorization.command_id !== machineCurrentnessCommandId
+      ) {
+        throw new ValidationError(
+          'Machine currentness events require the atomic mutation boundary'
+        );
+      }
+      if (TERMINAL_INTENT_EVENTS.has(event.kind)) this.requireAcceptedIntent(event.payload.intent_id, actor);
+      seq += 1;
+      const occurredAt = new Date().toISOString();
+      const eventId = raw.event_id ?? newId('evt');
+      const payloadDigest = digestObject(event.payload);
+      const payloadJson = this.protectJson('events', 'payload_json', eventId, event.payload);
+      const envelope = {
+        seq,
+        event_id: eventId,
+        trace_id: traceId,
+        actor,
+        kind: event.kind,
+        subject: event.subject,
+        occurred_at: occurredAt,
+        payload_digest: payloadDigest,
+        prev_hash: prevHash
+      };
+      const eventHash = digestObject(envelope);
+      const signature = this.identity.signObject({ event_hash: eventHash });
+      this.db.prepare(`
+        INSERT INTO events(
+          seq, event_id, trace_id, actor, kind, subject, occurred_at,
+          payload_json, payload_digest, prev_hash, event_hash, signature_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        seq,
+        eventId,
+        traceId,
+        actor,
+        event.kind,
+        event.subject,
+        occurredAt,
+        payloadJson,
+        payloadDigest,
+        prevHash,
+        eventHash,
+        canonicalJson(signature)
+      );
+      this.applyMaterializedEvent({
+        ...envelope,
+        event_hash: eventHash,
+        payload: event.payload
+      });
+      appended.push({ ...envelope, event_hash: eventHash, signature });
+      prevHash = eventHash;
+    }
+    this.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_seq'").run(String(seq));
+    this.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_hash'").run(prevHash);
+    return appended;
   }
 
   // An intent reaches exactly one terminal state, recorded by its own
@@ -697,9 +731,136 @@ export class GridStore {
     for (const record of this.exportRecords(actor, event.payload.scope)) void record;
   }
 
+  readMachineLifecycleHead(principalId) {
+    assertString(principalId, 'principal_id', { max: 160, pattern: ID });
+    const row = this.db.prepare(`
+      SELECT * FROM machine_principal_lifecycle_heads WHERE principal_id = ?
+    `).get(principalId);
+    if (!row) return null;
+    return {
+      ...row,
+      effective_authority: row.effective_authority_json === null
+        ? null
+        : this.openJson(
+          'machine_principal_lifecycle_heads',
+          'effective_authority_json',
+          principalId,
+          row.effective_authority_json
+        )
+    };
+  }
+
+  readMachineMutationCommand(commandId) {
+    assertString(commandId, 'command_id', { max: 160, pattern: ID });
+    const row = this.db.prepare(`
+      SELECT * FROM machine_principal_mutation_commands WHERE command_id = ?
+    `).get(commandId);
+    if (!row) return null;
+    return {
+      ...row,
+      result: this.openJson(
+        'machine_principal_mutation_commands',
+        'result_json',
+        commandId,
+        row.result_json
+      )
+    };
+  }
+
+  getMachineCurrentness(principalId, { observedAt = new Date() } = {}) {
+    const row = this.readMachineLifecycleHead(principalId);
+    if (!row) {
+      throw new AxiomError(
+        'machine_currentness_not_found',
+        'Machine principal currentness was not found',
+        404
+      );
+    }
+    const observed = normalizeObservationTime(observedAt);
+    const chainSeq = Number(
+      this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value
+    );
+    const chainHead = this.db.prepare(
+      "SELECT value FROM meta WHERE key = 'last_hash'"
+    ).get().value;
+    return normalizeMachineCurrentnessProjection({
+      schema: 'axiom-machine-principal-currentness-projection.v1',
+      principal_id: row.principal_id,
+      principal_type: row.principal_type,
+      root_authority_digest: row.root_authority_digest,
+      retained_status: row.status,
+      effective_status: machineEffectiveStatus(row, observed),
+      lifecycle_seq: row.lifecycle_seq,
+      lifecycle_head_event_id: row.lifecycle_head_event_id,
+      lifecycle_head_event_hash: row.lifecycle_head_event_hash,
+      lifecycle_head_digest: row.lifecycle_head_digest,
+      effective_authority_digest: row.effective_authority_digest,
+      effective_authority: row.effective_authority,
+      grid_chain_seq: chainSeq,
+      grid_chain_head: chainHead,
+      observed_at: observed,
+      authority_effect: 'none'
+    });
+  }
+
+  commitMachineCurrentnessMutation({ traceId, actor, authorization, transition }) {
+    try {
+      return this.transaction(() => {
+        const command = normalizeMachineMutationAuthorization(authorization);
+        const next = normalizeMachineLifecycleTransition(transition);
+        const authorizationDigest = digestObject(command);
+        const commandDigest = digestObject({ authorization: command, transition: next });
+        const replay = this.readMachineMutationCommand(command.command_id);
+        if (replay) {
+          if (replay.command_digest !== commandDigest) {
+            throw new AxiomError(
+              'machine_currentness_command_conflict',
+              'Machine lifecycle command id was already used for different bytes',
+              409
+            );
+          }
+          return normalizeMachineCurrentnessProjection(replay.result);
+        }
+
+        verifyMachineMutationBindings({
+          actor,
+          command,
+          transition: next,
+          authorizationDigest,
+          current: this.readMachineLifecycleHead(next.principal_id),
+          now: new Date()
+        });
+        this.appendEventsInTransaction({
+          traceId,
+          actor,
+          events: [projectMachineLifecycleEvent(command, next)],
+          machineCurrentnessCommandId: command.command_id
+        });
+        const committed = this.readMachineMutationCommand(command.command_id);
+        return normalizeMachineCurrentnessProjection(committed.result);
+      });
+    } catch (error) {
+      if (String(error.message).includes('UNIQUE constraint failed')) {
+        throw new AxiomError(
+          'machine_currentness_conflict',
+          'Machine principal currentness changed concurrently',
+          409
+        );
+      }
+      throw error;
+    }
+  }
+
   applyMaterializedEvent(event) {
     const p = event.payload;
     switch (event.kind) {
+      case 'machine.currentness.initialized':
+      case 'machine.currentness.narrowed':
+      case 'machine.currentness.revoked':
+      case 'machine.currentness.compromised':
+      case 'machine.currentness.expired':
+        this.applyMachineLifecycleEvent(event);
+        break;
       case 'intent.accepted':
         this.db.prepare(`
           INSERT INTO intents(
@@ -1350,6 +1511,103 @@ export class GridStore {
       default:
         break;
     }
+  }
+
+  applyMachineLifecycleEvent(event) {
+    const { authorization: command, transition } = normalizeMachineCurrentnessEventPayload(
+      event.kind,
+      event.subject,
+      event.payload
+    );
+    const authorizationDigest = digestObject(command);
+    const replayDigest = digestObject({ authorization: command, transition });
+    verifyMachineMutationBindings({
+      actor: event.actor,
+      command,
+      transition,
+      authorizationDigest,
+      current: this.readMachineLifecycleHead(transition.principal_id),
+      now: new Date(event.occurred_at)
+    });
+    const lifecycleHeadDigest = digestObject({
+      event_id: event.event_id,
+      event_hash: event.event_hash,
+      command_digest: replayDigest,
+      transition_digest: digestObject(transition)
+    });
+    const authorityJson = transition.successor_authority === null
+      ? null
+      : this.protectJson(
+        'machine_principal_lifecycle_heads',
+        'effective_authority_json',
+        transition.principal_id,
+        transition.successor_authority
+      );
+    this.db.prepare(`
+      INSERT INTO machine_principal_lifecycle_heads(
+        principal_id, principal_type, root_authority_digest, status,
+        lifecycle_seq, lifecycle_head_event_id, lifecycle_head_event_hash,
+        lifecycle_head_digest, effective_authority_digest,
+        effective_authority_json, last_command_id, last_command_digest,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(principal_id) DO UPDATE SET
+        principal_type = excluded.principal_type,
+        root_authority_digest = excluded.root_authority_digest,
+        status = excluded.status,
+        lifecycle_seq = excluded.lifecycle_seq,
+        lifecycle_head_event_id = excluded.lifecycle_head_event_id,
+        lifecycle_head_event_hash = excluded.lifecycle_head_event_hash,
+        lifecycle_head_digest = excluded.lifecycle_head_digest,
+        effective_authority_digest = excluded.effective_authority_digest,
+        effective_authority_json = excluded.effective_authority_json,
+        last_command_id = excluded.last_command_id,
+        last_command_digest = excluded.last_command_digest,
+        updated_at = excluded.updated_at
+    `).run(
+      transition.principal_id,
+      transition.principal_type,
+      transition.root_authority_digest,
+      transition.successor_status,
+      transition.successor_lifecycle_seq,
+      event.event_id,
+      event.event_hash,
+      lifecycleHeadDigest,
+      transition.successor_authority_digest,
+      authorityJson,
+      command.command_id,
+      replayDigest,
+      event.occurred_at
+    );
+    const result = normalizeMachineCurrentnessProjection({
+      ...this.getMachineCurrentness(transition.principal_id, {
+        observedAt: event.occurred_at
+      }),
+      grid_chain_seq: event.seq,
+      grid_chain_head: event.event_hash
+    });
+    this.db.prepare(`
+      INSERT INTO machine_principal_mutation_commands(
+        command_id, command_digest, principal_id, predecessor_seq,
+        successor_seq, result_event_id, result_event_hash, result_json,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      command.command_id,
+      replayDigest,
+      transition.principal_id,
+      transition.predecessor_lifecycle_seq,
+      transition.successor_lifecycle_seq,
+      event.event_id,
+      event.event_hash,
+      this.protectJson(
+        'machine_principal_mutation_commands',
+        'result_json',
+        command.command_id,
+        result
+      ),
+      event.occurred_at
+    );
   }
 
   getStatus() {
@@ -3299,18 +3557,209 @@ export class GridStore {
 
 const TERMINAL_INTENT_EVENTS = new Set(['intent.completed', 'intent.denied', 'intent.failed']);
 const INTERRUPTED_INTENT_PAGE = 100;
+const MACHINE_CURRENTNESS_EVENTS = new Set(MACHINE_CURRENTNESS_EVENT_KINDS);
+const MACHINE_STATUS_EVENT = Object.freeze({
+  active: 'machine.currentness.initialized',
+  narrowed: 'machine.currentness.narrowed',
+  revoked: 'machine.currentness.revoked',
+  compromised: 'machine.currentness.compromised',
+  expired: 'machine.currentness.expired'
+});
+const MACHINE_TRANSITION_STATUS = Object.freeze({
+  initialize: 'active',
+  narrow: 'narrowed',
+  revoke: 'revoked',
+  compromise: 'compromised',
+  expire: 'expired'
+});
+const TERMINAL_MACHINE_CURRENTNESS = new Set(['revoked', 'compromised', 'expired']);
+
+function projectMachineLifecycleEvent(command, transition) {
+  return {
+    kind: MACHINE_STATUS_EVENT[transition.successor_status],
+    subject: transition.principal_id,
+    payload: {
+      authorization: command,
+      transition
+    }
+  };
+}
+
+function normalizeMachineCurrentnessEventPayload(kind, subject, payload) {
+  assertPlainObject(payload, 'machine currentness event payload');
+  if (Object.keys(payload).sort().join(',') !== 'authorization,transition') {
+    throw new ValidationError('Machine currentness event payload fields are invalid');
+  }
+  const authorization = normalizeMachineMutationAuthorization(payload.authorization);
+  const transition = normalizeMachineLifecycleTransition(payload.transition);
+  if (subject !== transition.principal_id) {
+    throw new ValidationError('Machine currentness event subject does not match principal');
+  }
+  if (MACHINE_STATUS_EVENT[transition.successor_status] !== kind) {
+    throw new ValidationError('Machine currentness event kind does not match successor status');
+  }
+  return { authorization, transition };
+}
+
+function verifyMachineMutationBindings({
+  actor,
+  command,
+  transition,
+  authorizationDigest,
+  current,
+  now
+}) {
+  assertString(actor, 'actor', { max: 160, pattern: ID });
+  if (actor !== command.actor_id || actor !== transition.actor_id) {
+    throw new ValidationError('Machine lifecycle actor binding mismatch');
+  }
+  if (
+    command.target_principal_id !== transition.principal_id
+    || command.target_principal_type !== transition.principal_type
+    || command.root_authority_digest !== transition.root_authority_digest
+  ) {
+    throw new ValidationError('Machine lifecycle target or root binding mismatch');
+  }
+  if (
+    command.command_id !== transition.command_id
+    || authorizationDigest !== transition.command_digest
+    || authorizationDigest !== transition.mutation_authorization_digest
+  ) {
+    throw new ValidationError('Machine lifecycle command digest binding mismatch');
+  }
+  if (
+    command.policy_version !== transition.policy_version
+    || command.policy_digest !== transition.policy_digest
+    || command.reason !== transition.reason
+    || command.effective_at !== transition.effective_at
+    || command.successor_authority_digest !== transition.successor_authority_digest
+  ) {
+    throw new ValidationError('Machine lifecycle authorization binding mismatch');
+  }
+  const observed = now instanceof Date ? now : new Date(now);
+  if (Number.isNaN(observed.valueOf())) {
+    throw new ValidationError('Machine lifecycle observation time is invalid');
+  }
+  if (
+    new Date(command.effective_at).valueOf() > observed.valueOf()
+    || new Date(command.expires_at).valueOf() <= observed.valueOf()
+  ) {
+    throw new AxiomError(
+      'machine_currentness_authorization_inactive',
+      'Machine lifecycle authorization is not currently active',
+      403
+    );
+  }
+  if (MACHINE_TRANSITION_STATUS[command.transition_kind] !== transition.successor_status) {
+    throw new ValidationError('Machine lifecycle transition kind and status mismatch');
+  }
+  if (
+    transition.successor_authority !== null
+    && (
+      transition.successor_authority.id !== transition.principal_id
+      || transition.successor_authority.type !== transition.principal_type
+    )
+  ) {
+    throw new ValidationError('Machine lifecycle successor principal binding mismatch');
+  }
+
+  if (!current) {
+    if (
+      command.transition_kind !== 'initialize'
+      || transition.successor_status !== 'active'
+      || transition.successor_lifecycle_seq !== 1
+    ) {
+      throw new AxiomError(
+        'machine_currentness_not_found',
+        'Machine principal currentness must be initialized explicitly',
+        404
+      );
+    }
+    if (
+      transition.root_authority_digest !== transition.successor_authority_digest
+      || transition.successor_authority === null
+    ) {
+      throw new ValidationError(
+        'Machine lifecycle initialization must bind the exact root authority'
+      );
+    }
+    assertMachineAuthorityTimeActive(transition.successor_authority, observed);
+    return;
+  }
+  if (
+    current.root_authority_digest !== command.root_authority_digest
+    || current.principal_type !== command.target_principal_type
+  ) {
+    throw new AxiomError(
+      'machine_currentness_root_mismatch',
+      'Machine currentness root authority does not match',
+      409
+    );
+  }
+  if (TERMINAL_MACHINE_CURRENTNESS.has(current.status)) {
+    throw new AxiomError(
+      'machine_currentness_terminal',
+      'Terminal machine currentness cannot be reactivated',
+      409
+    );
+  }
+  const stale = (
+    command.predecessor_lifecycle_seq !== current.lifecycle_seq
+    || command.predecessor_lifecycle_head_digest !== current.lifecycle_head_digest
+    || command.predecessor_authority_digest !== current.effective_authority_digest
+    || transition.predecessor_lifecycle_seq !== current.lifecycle_seq
+    || transition.predecessor_lifecycle_head_digest !== current.lifecycle_head_digest
+    || transition.predecessor_authority_digest !== current.effective_authority_digest
+  );
+  if (stale) {
+    throw new AxiomError(
+      'machine_currentness_stale',
+      'Machine lifecycle predecessor is stale',
+      409
+    );
+  }
+  if (command.transition_kind === 'narrow') {
+    if (current.effective_authority === null || transition.successor_authority === null) {
+      throw new ValidationError('Machine lifecycle narrow requires effective authority facts');
+    }
+    assertMachineAuthorityAttenuation(
+      current.effective_authority,
+      transition.successor_authority,
+      { now: observed }
+    );
+  }
+}
+
+function normalizeObservationTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.valueOf())) {
+    throw new ValidationError('Machine currentness observedAt is invalid');
+  }
+  return date.toISOString();
+}
+
+function machineEffectiveStatus(row, observedAt) {
+  if (TERMINAL_MACHINE_CURRENTNESS.has(row.status)) return row.status;
+  if (
+    row.effective_authority?.expires_at
+    && row.effective_authority.expires_at <= observedAt
+  ) return 'expired';
+  return row.status;
+}
 
 function normalizeEvent(raw) {
   assertPlainObject(raw, 'event');
   const kind = assertString(raw.kind, 'event.kind', { max: 128, pattern: /^[a-z][a-z0-9.-]+$/ });
   const subject = assertString(raw.subject, 'event.subject', { max: 160, pattern: ID });
   const payload = assertPlainObject(raw.payload, 'event.payload');
-  validateMaterializedPayload(kind, payload);
+  validateMaterializedPayload(kind, payload, subject);
   return { kind, subject, payload };
 }
 
-function validateMaterializedPayload(kind, p) {
-  if (kind === 'intent.accepted') {
+function validateMaterializedPayload(kind, p, subject) {
+  if (MACHINE_CURRENTNESS_EVENTS.has(kind)) {
+    normalizeMachineCurrentnessEventPayload(kind, subject, p);
+  } else if (kind === 'intent.accepted') {
     assertString(p.intent_id, 'intent_id', { max: 160, pattern: ID });
     assertString(p.principal, 'principal', { max: 160, pattern: ID });
     assertString(p.action, 'action', { max: 128, pattern: /^[a-z][a-z0-9.-]+$/ });

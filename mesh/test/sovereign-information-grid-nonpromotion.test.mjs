@@ -35,10 +35,10 @@ const PARENT_BLOBS = Object.freeze({
   // consumption events fail closed. The server still composes no SIEA store;
   // the assertions below are unchanged.
   grid_server: '7ada138171a4203debb3a7d26893db7ebeffadee',
-  // Updated deliberately for core migration 11 (index-only: composite
-  // indexes for the paged collections, accounting journals, node schedules
-  // and sync bundles, scalability audit S-11). No table or column changed.
-  core_migrations: 'ad4e0902dbbdd5a0070a1ef373b9af181884ef0c'
+  // Updated deliberately for core migration 12: event-derived machine
+  // lifecycle/currentness materializations and replay state. The separately
+  // gated SIEA store remains absent from ordinary Grid composition.
+  core_migrations: '9fb94368eeba426b366441c9b9e10fbce9f84cf6'
 });
 
 async function gitBlobSha(relative) {
