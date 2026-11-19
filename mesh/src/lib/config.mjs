@@ -64,6 +64,8 @@ export function meshConfig(overrides = {}) {
     maxBodyBytes: overrides.maxBodyBytes ?? envInteger('AXIOM_MAX_BODY_BYTES', 1_048_576, { min: 1024, max: 10_485_760 }),
     clockSkewSeconds: overrides.clockSkewSeconds ?? envInteger('AXIOM_CLOCK_SKEW_SECONDS', 30, { min: 5, max: 300 }),
     capabilityTtlSeconds: overrides.capabilityTtlSeconds ?? envInteger('AXIOM_CAPABILITY_TTL_SECONDS', 30, { min: 5, max: 300 }),
+    machineCurrentnessEnforcement: overrides.machineCurrentnessEnforcement
+      ?? envBoolean('AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT', false),
     integrityProbeIntervalSeconds: overrides.integrityProbeIntervalSeconds
       ?? envInteger('AXIOM_INTEGRITY_PROBE_INTERVAL_SECONDS', 30, { min: 5, max: 3_600 }),
     rateLimitCapacity: overrides.rateLimitCapacity
