@@ -50,6 +50,10 @@ import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
 import { projectExecutionMutationEvent } from '../lib/execution-mutation.mjs';
 import {
+  handleMachineLifecycleIntent,
+  isMachineLifecycleAction
+} from '../lib/machine-principal-mutation-authorization.mjs';
+import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
@@ -90,6 +94,15 @@ export async function createHypervisorService(config = meshConfig()) {
 
   async function gridGet(path, traceId) {
     return signedFetch(identity, 'grid', `${config.urls.grid}${path}`, { traceId });
+  }
+
+  async function mutateMachineCurrentness(body, traceId) {
+    return signedFetch(
+      identity,
+      'grid',
+      `${config.urls.grid}/internal/v1/machine-currentness/mutate`,
+      { method: 'POST', traceId, body }
+    );
   }
 
   async function executeGridQuery(traceId, principalId, query) {
@@ -507,6 +520,17 @@ export async function createHypervisorService(config = meshConfig()) {
         throw error;
       }
       await crashPointForTest(lifecycle, 'after_approval_consumed');
+    }
+    if (isMachineLifecycleAction(intent.action)) {
+      return handleMachineLifecycleIntent({
+        intent,
+        traceId,
+        decision,
+        identity,
+        gridGet,
+        mutateCurrentness: mutateMachineCurrentness,
+        commit
+      });
     }
     const plan = buildPlan(intent, decision, { approval });
     const boundPlanDigest = planDigest(plan);

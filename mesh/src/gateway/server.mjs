@@ -29,6 +29,7 @@ import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from '../lib/gateway-client-contract.mjs';
 import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
+import { isMachineLifecycleAction } from '../lib/machine-principal-mutation-authorization.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const PAGE_CURSOR = /^[A-Za-z0-9_-]{1,512}$/;
@@ -60,6 +61,9 @@ export async function createGatewayService(config = meshConfig()) {
       })
     : null;
   const principals = await loadApiPrincipals(config);
+  const principalsById = new Map(
+    [...principals.values()].map(principal => [principal.id, principal])
+  );
   const bearerAuth = createBearerAuthenticator(principals);
   const localIngress = Boolean(config.gatewaySocket);
   const ingressControl = new GatewayIngressControl({
@@ -245,12 +249,20 @@ export async function createGatewayService(config = meshConfig()) {
         'Public intent requests cannot supply agent assurance evidence'
       );
     }
+    const input = isMachineLifecycleAction(request.action)
+      ? prepareMachineLifecycleInput({
+          action: request.action,
+          input: request.input ?? {},
+          principal,
+          principalsById
+        })
+      : request.input ?? {};
     const intentId = `intent_${sha256(`${principal.id}\n${idempotencyKey}`)}`;
     const intent = {
       intent_id: intentId,
       principal,
       action: request.action,
-      input: request.input ?? {},
+      input,
       purpose: request.purpose ?? 'operator-request',
       data_scopes: request.data_scopes ?? [],
       confirmations: request.confirmations ?? [],
@@ -611,6 +623,65 @@ export async function createGatewayService(config = meshConfig()) {
 
 function hasScope(principal, scope) {
   return principal.scopes?.includes('*') || principal.scopes?.includes(scope);
+}
+
+function prepareMachineLifecycleInput({ action, input, principal, principalsById }) {
+  if (principal.type !== 'human') {
+    throw new AxiomError(
+      'forbidden',
+      'Machine lifecycle mutations require a human principal',
+      403
+    );
+  }
+  const administratorWildcard = principal.roles?.includes('administrator')
+    && principal.scopes?.includes('*');
+  if (!principal.scopes?.includes('machine:write') && !administratorWildcard) {
+    throw new AxiomError('forbidden', 'machine:write scope is required', 403);
+  }
+  const value = assertPlainObject(input, 'machine lifecycle input');
+  const initialize = action === 'machine.principal.lifecycle.initialize';
+  const transition = initialize
+    ? 'initialize'
+    : assertString(value.transition, 'machine lifecycle transition', {
+        max: 16,
+        pattern: /^(narrow|revoke|compromise|expire)$/
+      });
+  const allowed = new Set(['target_principal_id', 'reason']);
+  if (!initialize) allowed.add('transition');
+  if (transition === 'narrow') allowed.add('successor_authority');
+  const unknown = Object.keys(value).filter(key => !allowed.has(key));
+  if (unknown.length) {
+    throw new ValidationError(`Machine lifecycle input fields are invalid: ${unknown.join(', ')}`);
+  }
+  if (transition === 'narrow' && !Object.hasOwn(value, 'successor_authority')) {
+    throw new ValidationError('Machine lifecycle narrow requires successor_authority');
+  }
+  const targetPrincipalId = assertString(
+    value.target_principal_id,
+    'machine lifecycle target_principal_id',
+    { max: 160, pattern: PRINCIPAL_ID }
+  );
+  const reason = assertString(value.reason, 'machine lifecycle reason', {
+    min: 1,
+    max: 1000
+  });
+  const target = principalsById.get(targetPrincipalId);
+  if (target?.schema !== 'axiom-machine-principal.v1') {
+    throw new AxiomError(
+      'machine_principal_not_found',
+      'Configured machine principal was not found',
+      404
+    );
+  }
+  return {
+    target_principal_id: targetPrincipalId,
+    ...(!initialize ? { transition } : {}),
+    reason,
+    ...(transition === 'narrow'
+      ? { successor_authority: structuredClone(value.successor_authority) }
+      : {}),
+    resolved_machine_root: structuredClone(target)
+  };
 }
 
 function requireScope(principal, scope) {
