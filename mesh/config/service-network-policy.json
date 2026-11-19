@@ -189,6 +189,10 @@
         },
         {
           "method": "GET",
+          "path": "/internal/v1/machine-currentness/:principal_id"
+        },
+        {
+          "method": "GET",
           "path": "/internal/v1/policy-overlays"
         },
         {
@@ -198,6 +202,10 @@
         {
           "method": "POST",
           "path": "/internal/v1/commit"
+        },
+        {
+          "method": "POST",
+          "path": "/internal/v1/machine-currentness/mutate"
         },
         {
           "method": "POST",
