@@ -551,10 +551,7 @@ export function resolveEffectiveMachinePrincipal(
       root_authority_digest: root.authority_digest,
       effective_authority_digest: effective.authority_digest,
       lifecycle_seq: currentness.lifecycle_seq,
-      lifecycle_head_digest: currentness.lifecycle_head_digest,
-      retained_status: currentness.retained_status,
-      effective_status: currentness.effective_status,
-      observed_at: currentness.observed_at
+      lifecycle_head_digest: currentness.lifecycle_head_digest
     }
   });
 }

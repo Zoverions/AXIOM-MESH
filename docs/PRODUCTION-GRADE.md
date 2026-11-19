@@ -113,6 +113,13 @@ operation, selected forbidden edges, Sandbox-loss readiness degradation
 without restarting Gateway, Grid, or Hypervisor, and state-preserving
 Sandbox-only recovery. Pilot-orchestrator repetition remains open.
 
+The machine-currentness issuance fence is implemented behind the default-off
+`AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT` rollout gate. Development/test use
+requires explicit public-path lifecycle initialization. Production promotion
+remains blocked until a verified preflight proves the configured machine set,
+retained Grid lifecycle set, and exact root digests agree. Currentness evidence
+does not grant authority, and the gate creates no Sandbox-to-Grid edge.
+
 ## Supported production boundary
 
 The candidate topology is one hardened container containing four independently

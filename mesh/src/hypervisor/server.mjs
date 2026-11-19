@@ -53,6 +53,7 @@ import {
   handleMachineLifecycleIntent,
   isMachineLifecycleAction
 } from '../lib/machine-principal-mutation-authorization.mjs';
+import { resolveEffectiveMachinePrincipal } from '../lib/machine-principal-currentness.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -349,10 +350,41 @@ export async function createHypervisorService(config = meshConfig()) {
     const machineAuthority = intent.principal.schema === 'axiom-machine-principal.v1'
       ? machinePrincipalAuthorityFacts(intent.principal)
       : null;
+    let effectiveMachinePrincipal = intent.principal;
+    let machineCurrentness = null;
+    if (machineAuthority && config.machineCurrentnessEnforcement) {
+      let projection;
+      try {
+        projection = await gridGet(
+          `/internal/v1/machine-currentness/${encodeURIComponent(intent.principal.id)}`,
+          traceId
+        );
+      } catch (error) {
+        if (error?.code !== 'machine_currentness_not_found') throw error;
+        throw new AxiomError(
+          'machine_currentness_unavailable',
+          'Machine principal has no retained lifecycle currentness',
+          409
+        );
+      }
+      try {
+        const resolved = resolveEffectiveMachinePrincipal(intent.principal, projection, {
+          observedAt: new Date()
+        });
+        effectiveMachinePrincipal = resolved.effective_principal;
+        machineCurrentness = resolved.currentness_binding;
+      } catch (error) {
+        const message = String(error?.message ?? '');
+        if (/terminal/i.test(message)) {
+          throw new AxiomError('machine_currentness_terminal', message, 403);
+        }
+        throw new AxiomError('machine_currentness_invalid', message, 409);
+      }
+    }
     let effectDestination;
     let machineAssurance;
     if (machineAuthority) {
-      const machineDecision = evaluateMachineIntentWithAssurance(intent.principal, {
+      const machineDecision = evaluateMachineIntentWithAssurance(effectiveMachinePrincipal, {
         action: intent.action,
         purpose: intent.purpose,
         assurance_evidence: intent.assurance_evidence
@@ -382,7 +414,7 @@ export async function createHypervisorService(config = meshConfig()) {
         }
         if (
           effectDestination
-          && !intent.principal.constraints.destinations.includes(effectDestination)
+          && !effectiveMachinePrincipal.constraints.destinations.includes(effectDestination)
         ) {
           decision = {
             ...decision,
@@ -398,7 +430,7 @@ export async function createHypervisorService(config = meshConfig()) {
             ...decision,
             timeout_ms: Math.min(
               Number(decision.timeout_ms ?? 10_000),
-              intent.principal.constraints.budgets.max_execution_ms
+              effectiveMachinePrincipal.constraints.budgets.max_execution_ms
             )
           };
         }
@@ -407,7 +439,11 @@ export async function createHypervisorService(config = meshConfig()) {
     if (effectDestination) {
       decision = { ...decision, effect_destination: effectDestination };
     }
-    const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);
+    const executionAttemptId = machineCurrentness ? newId('attempt') : null;
+    const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision, {
+      effectiveMachinePrincipal,
+      machineCurrentness
+    });
     const invocationDigest = invocationEnvelopeDigest(invocationEnvelope);
     await commit(traceId, intent.principal.id, [{
       kind: 'intent.accepted',
@@ -426,6 +462,10 @@ export async function createHypervisorService(config = meshConfig()) {
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
         ...(machineAuthority ? { machine_authority: machineAuthority } : {}),
+        ...(machineCurrentness ? {
+          machine_currentness: machineCurrentness,
+          execution_attempt_id: executionAttemptId
+        } : {}),
         ...(machineAssurance ? { machine_assurance: machineAssurance } : {})
       }
     }]);
@@ -532,7 +572,11 @@ export async function createHypervisorService(config = meshConfig()) {
         commit
       });
     }
-    const plan = buildPlan(intent, decision, { approval });
+    const plan = buildPlan(intent, decision, {
+      approval,
+      machineCurrentness,
+      executionAttemptId
+    });
     const boundPlanDigest = planDigest(plan);
     const now = Math.floor(Date.now() / 1000);
     const capabilityClaims = {
@@ -542,7 +586,12 @@ export async function createHypervisorService(config = meshConfig()) {
       principal_type: intent.principal.type,
       jti: newId('cap'),
       nbf: now - 1,
-      exp: now + config.capabilityTtlSeconds,
+      exp: machineCurrentness && effectiveMachinePrincipal.expires_at
+        ? Math.min(
+            now + config.capabilityTtlSeconds,
+            Math.floor(Date.parse(effectiveMachinePrincipal.expires_at) / 1000)
+          )
+        : now + config.capabilityTtlSeconds,
       intent_digest: digestObject(intent),
       invocation_digest: invocationDigest,
       ...(effectDestination ? { effect_destination: effectDestination } : {}),
@@ -554,6 +603,13 @@ export async function createHypervisorService(config = meshConfig()) {
         sponsor: machineAuthority.sponsor,
         authority_digest: machineAuthority.authority_digest,
         runtime_id: machineAuthority.runtime_id
+      } : {}),
+      ...(machineCurrentness ? {
+        root_authority_digest: machineCurrentness.root_authority_digest,
+        effective_authority_digest: machineCurrentness.effective_authority_digest,
+        currentness_seq: machineCurrentness.lifecycle_seq,
+        currentness_head_digest: machineCurrentness.lifecycle_head_digest,
+        execution_attempt_id: executionAttemptId
       } : {})
     };
     const capability = issueCapability(identity, capabilityClaims);
@@ -688,6 +744,10 @@ export async function createHypervisorService(config = meshConfig()) {
           ...(machineAuthority ? {
             machine_authority_digest: machineAuthority.authority_digest,
             machine_sponsor: machineAuthority.sponsor
+          } : {}),
+          ...(machineCurrentness ? {
+            machine_currentness: machineCurrentness,
+            execution_attempt_id: executionAttemptId
           } : {})
         }
       };
