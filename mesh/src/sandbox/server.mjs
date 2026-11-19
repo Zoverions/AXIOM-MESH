@@ -27,7 +27,9 @@ import { executeSandboxBuiltin } from './education-executor.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 
-export async function createSandboxService(config = meshConfig()) {
+export async function createSandboxService(config = meshConfig(), {
+  executeBuiltin = executeSandboxBuiltin
+} = {}) {
   const identity = await ensureMeshIdentity(config.dataDir, 'sandbox', { create: config.autoBootstrap });
   identity.transport = config.transport.enabled
     ? await loadTransportRuntime({
@@ -180,7 +182,7 @@ export async function createSandboxService(config = meshConfig()) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
     }
     const startedAt = new Date().toISOString();
-    const builtinResult = executeSandboxBuiltin({
+    const builtinResult = executeBuiltin({
       tool: claims.tool,
       intent,
       assurance: plan.assurance

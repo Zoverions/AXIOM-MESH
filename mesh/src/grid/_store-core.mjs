@@ -897,7 +897,11 @@ export class GridStore {
           throw new ValidationError('Machine effect release actor binding mismatch');
         }
         if (attemptId !== claims.execution_attempt_id) {
-          throw new ValidationError('Machine effect release attempt binding mismatch');
+          throw new AxiomError(
+            'machine_effect_release_conflict',
+            'Machine effect release attempt binding conflicts with the capability',
+            409
+          );
         }
         const current = this.readMachineLifecycleHead(claims.subject);
         if (!current) {
