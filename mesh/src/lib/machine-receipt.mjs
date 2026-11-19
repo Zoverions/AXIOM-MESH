@@ -92,6 +92,31 @@ export function buildMachineIntentReceipt({
       409
     );
   }
+  const acceptedCurrentness = acceptedPayload.machine_currentness === undefined
+    ? null
+    : normalizeMachineCurrentnessEvidence(acceptedPayload.machine_currentness);
+  let executionAttemptId = null;
+  if (acceptedCurrentness) {
+    executionAttemptId = acceptedPayload.execution_attempt_id;
+    if (
+      typeof executionAttemptId !== 'string'
+      || !/^attempt_[A-Za-z0-9_-]{1,152}$/.test(executionAttemptId)
+      || acceptedCurrentness.root_authority_digest
+        !== acceptedPayload.machine_authority.authority_digest
+    ) {
+      throw new AxiomError(
+        'receipt_evidence_mismatch',
+        'Accepted machine currentness evidence is invalid',
+        409
+      );
+    }
+  } else if (acceptedPayload.execution_attempt_id !== undefined) {
+    throw new AxiomError(
+      'receipt_evidence_mismatch',
+      'Accepted execution attempt is missing machine currentness',
+      409
+    );
+  }
   if (terminal.payload?.intent_id !== intent.intent_id) {
     throw new AxiomError(
       'receipt_evidence_mismatch',
@@ -118,7 +143,11 @@ export function buildMachineIntentReceipt({
     },
     authority: {
       invocation_digest: acceptedPayload.invocation_digest,
-      machine_authority_digest: acceptedPayload.machine_authority.authority_digest
+      machine_authority_digest: acceptedPayload.machine_authority.authority_digest,
+      ...(acceptedCurrentness ? {
+        machine_currentness: acceptedCurrentness,
+        execution_attempt_id: executionAttemptId
+      } : {})
     },
     outcome,
     evidence_events: [accepted, terminal].map(eventAnchor),
@@ -232,6 +261,31 @@ function terminalOutcome(intent, payload, acceptedPayload) {
     ) {
       throw new AxiomError('receipt_evidence_mismatch', 'Completed result authority evidence does not match acceptance', 409);
     }
+    if (acceptedPayload.machine_currentness !== undefined) {
+      let terminalCurrentness;
+      try {
+        terminalCurrentness = normalizeMachineCurrentnessEvidence(
+          payload.result.evidence?.machine_currentness
+        );
+      } catch {
+        throw new AxiomError(
+          'receipt_evidence_mismatch',
+          'Completed result currentness evidence is invalid',
+          409
+        );
+      }
+      if (
+        digestObject(terminalCurrentness) !== digestObject(acceptedPayload.machine_currentness)
+        || payload.result.evidence?.execution_attempt_id
+          !== acceptedPayload.execution_attempt_id
+      ) {
+        throw new AxiomError(
+          'receipt_evidence_mismatch',
+          'Completed result currentness evidence does not match acceptance',
+          409
+        );
+      }
+    }
     return {
       kind: 'intent.completed',
       result_digest: materializedDigest,
@@ -252,6 +306,34 @@ function terminalOutcome(intent, payload, acceptedPayload) {
     error_digest: materializedDigest,
     terminal_payload_digest: digestObject(payload)
   };
+}
+
+function normalizeMachineCurrentnessEvidence(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ValidationError('Machine currentness evidence must be an object');
+  }
+  const expected = [
+    'effective_authority_digest',
+    'lifecycle_head_digest',
+    'lifecycle_seq',
+    'root_authority_digest'
+  ].sort().join(',');
+  if (Object.keys(value).sort().join(',') !== expected) {
+    throw new ValidationError('Machine currentness evidence fields are invalid');
+  }
+  for (const field of [
+    'root_authority_digest',
+    'effective_authority_digest',
+    'lifecycle_head_digest'
+  ]) {
+    if (typeof value[field] !== 'string' || !DIGEST.test(value[field])) {
+      throw new ValidationError(`Machine currentness ${field} is invalid`);
+    }
+  }
+  if (!Number.isSafeInteger(value.lifecycle_seq) || value.lifecycle_seq < 1) {
+    throw new ValidationError('Machine currentness lifecycle_seq is invalid');
+  }
+  return Object.freeze(structuredClone(value));
 }
 
 function eventAnchor(event) {
