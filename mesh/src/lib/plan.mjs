@@ -28,7 +28,11 @@ function normalizeAssurance(value, label) {
   return value;
 }
 
-export function buildPlan(intent, decision, { approval } = {}) {
+export function buildPlan(intent, decision, {
+  approval,
+  machineCurrentness = null,
+  executionAttemptId = null
+} = {}) {
   const machineAuthorityDigest = intent.principal?.schema === 'axiom-machine-principal.v1'
     ? intent.principal.authority_digest
     : null;
@@ -141,8 +145,10 @@ export function buildPlan(intent, decision, { approval } = {}) {
       single_use: true,
       required_assurance: requiredAssurance,
       achieved_assurance: achievedAssurance,
-      ...(machineAuthorityDigest ? { authority_digest: machineAuthorityDigest } : {})
+      ...(machineAuthorityDigest ? { authority_digest: machineAuthorityDigest } : {}),
+      ...(machineCurrentness ? { execution_attempt_id: executionAttemptId } : {})
     },
+    ...(machineCurrentness ? { machine_currentness: structuredClone(machineCurrentness) } : {}),
     timeout_ms: executionStep.timeout_ms + commitStep.timeout_ms,
     steps: [executionStep, commitStep]
   };
@@ -249,6 +255,21 @@ export function validatePlan(value) {
       throw new ValidationError('Machine plan authority digest is missing from decision provenance');
     }
   }
+  if (plan.machine_currentness !== undefined) {
+    const currentness = validateMachineCurrentnessBinding(
+      plan.machine_currentness,
+      'plan.machine_currentness'
+    );
+    if (capability.authority_digest !== currentness.root_authority_digest) {
+      throw new ValidationError('Plan currentness root digest does not match machine authority');
+    }
+    assertString(capability.execution_attempt_id, 'plan.capability.execution_attempt_id', {
+      max: 160,
+      pattern: /^attempt_[A-Za-z0-9_-]+$/
+    });
+  } else if (capability.execution_attempt_id !== undefined) {
+    throw new ValidationError('Plan execution attempt requires machine currentness');
+  }
   if (!Number.isSafeInteger(plan.timeout_ms) || plan.timeout_ms < 1 || plan.timeout_ms > 300_000) {
     throw new ValidationError('plan.timeout_ms is invalid');
   }
@@ -298,6 +319,33 @@ export function validatePlan(value) {
   }
   detectCycles(plan.steps);
   return plan;
+}
+
+function validateMachineCurrentnessBinding(value, label) {
+  const binding = assertPlainObject(value, label);
+  const keys = Object.keys(binding).sort().join(',');
+  const expected = [
+    'effective_authority_digest',
+    'lifecycle_head_digest',
+    'lifecycle_seq',
+    'root_authority_digest'
+  ].sort().join(',');
+  if (keys !== expected) throw new ValidationError(`${label} fields are invalid`);
+  for (const field of [
+    'root_authority_digest',
+    'effective_authority_digest',
+    'lifecycle_head_digest'
+  ]) {
+    assertString(binding[field], `${label}.${field}`, {
+      min: 64,
+      max: 64,
+      pattern: DIGEST
+    });
+  }
+  if (!Number.isSafeInteger(binding.lifecycle_seq) || binding.lifecycle_seq < 1) {
+    throw new ValidationError(`${label}.lifecycle_seq is invalid`);
+  }
+  return binding;
 }
 
 export function planDigest(plan) {
