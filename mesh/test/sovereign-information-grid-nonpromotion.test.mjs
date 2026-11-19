@@ -34,7 +34,9 @@ const PARENT_BLOBS = Object.freeze({
   // initializes inside the guarded Grid startup and caller-supplied semantic
   // consumption events fail closed. The server still composes no SIEA store;
   // the assertions below are unchanged.
-  grid_server: '7ada138171a4203debb3a7d26893db7ebeffadee',
+  // Updated deliberately for the Hypervisor-only machine-currentness read and
+  // signed-mutation routes. The server still composes no SIEA store.
+  grid_server: 'e438ee66b3362d1df7ad4af4f2a5ad242b2473ba',
   // Updated deliberately for core migration 12: event-derived machine
   // lifecycle/currentness materializations and replay state. The separately
   // gated SIEA store remains absent from ordinary Grid composition.
