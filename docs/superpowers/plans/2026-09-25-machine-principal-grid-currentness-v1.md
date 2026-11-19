@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Start from current `main`; re-read `AGENTS.md`, `CONSTITUTION.md`, and the spec before implementation.
-- Current planning baseline is migration version **10** and service-network policy **42 exact routes**. If either changed before execution, stop and reconcile this plan before coding.
+- Current execution baseline is migration version **12** and service-network policy **47 exact routes / 43 implemented routes**. If either changes before the next task, stop and reconcile this plan before coding.
 - Preserve `Gateway -> Hypervisor -> Sandbox -> Grid` for ordinary execution.
 - Do **not** add a Sandbox -> Grid network edge. Hypervisor performs currentness/release Grid calls and passes a Grid-signed release receipt to Sandbox.
 - Do **not** mount or load the API bearer-token registry in Hypervisor, Sandbox, or Grid. Gateway remains the only service that loads it.
@@ -28,6 +28,30 @@
 - No capability registry promotion, product claim, deployment enablement, or production promotion occurs in this plan.
 - Every task follows RED -> GREEN -> refactor-only-if-needed, with a fresh exact-head protected CI gate before merging each reviewable stage.
 - Every stage must preserve the existing deny-dominant policy, identity, capability, evidence, and service-network boundaries.
+
+## Execution reconciliation — 2026-11-19
+
+- Tasks 1-5 are implemented on protected `main` through PR #2018 / commit
+  `9fed852f52fdd6203dd40ad6953f3726b84a8136`; their step-by-step instructions
+  below are retained as historical implementation provenance and must not be
+  replayed.
+- The currentness schema landed as migration **12**, after an intervening
+  paged-index migration. The `machine_effect_releases` table already exists as
+  an intentionally inert Task 2 staging surface; Task 6 must add event-derived
+  release behavior without creating a second table or migration.
+- Stage B reconciled the measured network policy to **47 exact routes / 43
+  implemented routes**. Task 6 adds exactly one Hypervisor-to-Grid route, so
+  its measured target is **48 exact routes / 44 implemented routes**. No
+  Sandbox-to-Grid edge is permitted.
+- Task 5 enforcement remains default-off for production candidates. Production
+  enablement is still blocked on a verified preflight proving that configured
+  machine principals and retained Grid lifecycle principals/root digests are
+  exact-set matches.
+
+**Ruling:** current repository measurements and merged source are authoritative
+when they differ from historical task baselines. This preserves the design
+invariants while preventing a future worker from duplicating migration 12,
+reusing obsolete route counts, or replaying completed tasks.
 
 ## Review Focus
 
@@ -984,7 +1008,7 @@ git commit -m "feat(auth): bind machine grants to current lifecycle"
   - Grid-signed `axiom-machine-effect-release.v1` receipt binding both `execution_attempt_id` and Sandbox `execution_epoch`
   - deterministic `release_id = machine_release_${sha256(capability_id + '\n' + execution_attempt_id)}`
   - internal helpers `readMachineEffectRelease(releaseId)`, `assertCurrentnessMatchesCapability(current, claims)`, `assertCapabilityConsumptionExists(jti, receiptDigest)`, `buildReleaseStatement(input)`, and `projectMachineEffectReleasedEvent(release)`
-  - service-network policy count 44 -> **45**
+  - service-network policy count 47/43 -> **48/44** (exact/implemented)
 
 - [ ] **Step 1: Write RED release tests**
 
@@ -1070,7 +1094,7 @@ Add exactly:
 {"method":"POST","path":"/internal/v1/machine-effect/release"}
 ```
 
-Expected route count after Task 6: **45**.
+Expected route counts after Task 6: **48 exact / 44 implemented**.
 
 Update all computed current-build network-route claims and `docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md` in the same Stage D commit, then run `npm --prefix mesh run docs:check`.
 
@@ -1132,7 +1156,7 @@ node --test   mesh/test/machine-effect-release.test.mjs   mesh/test/machine-effe
 node mesh/src/check-service-network-policy.mjs
 ```
 
-Expected: PASS and service-network route count 45.
+Expected: PASS and service-network route counts 48 exact / 44 implemented.
 
 - [ ] **Step 8: Commit Task 6**
 
@@ -1321,7 +1345,10 @@ Do **not** mark the capability registry as newly implemented unless a separate p
 
 - [ ] **Step 4: Update network-policy documentation from measured validator output**
 
-By Stage D, the count changes 42 -> 44 in Task 3 and 44 -> 45 in Task 6. Run the validator and use its actual count rather than hand-editing unsupported numbers.
+The historical Task 3 transition was reconciled to the measured 47 exact / 43
+implemented baseline. Task 6 must measure 48 exact / 44 implemented after its
+single new route. Run the validator and use its actual counts rather than
+hand-editing unsupported numbers.
 
 ```bash
 node mesh/src/check-service-network-policy.mjs
