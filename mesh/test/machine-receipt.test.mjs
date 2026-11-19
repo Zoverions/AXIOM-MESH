@@ -25,7 +25,7 @@ function gridIdentity() {
   );
 }
 
-function fixture({ status = 'completed' } = {}) {
+function fixture({ status = 'completed', currentness = false } = {}) {
   const invocationDigest = '1'.repeat(64);
   const authorityDigest = '2'.repeat(64);
   const requestDigest = '3'.repeat(64);
@@ -35,7 +35,19 @@ function fixture({ status = 'completed' } = {}) {
   const traceId = 'trace.receipt-test';
   const result = {
     message: 'verified output', intent_id: intentId, trace_id: traceId, status: 'completed',
-    evidence: { invocation_digest: invocationDigest, machine_authority_digest: authorityDigest }
+    evidence: {
+      invocation_digest: invocationDigest,
+      machine_authority_digest: authorityDigest,
+      ...(currentness ? {
+        machine_currentness: {
+          root_authority_digest: authorityDigest,
+          effective_authority_digest: '9'.repeat(64),
+          lifecycle_seq: 7,
+          lifecycle_head_digest: 'a'.repeat(64)
+        },
+        execution_attempt_id: 'attempt_receipt-currentness-1'
+      } : {})
+    }
   };
   const error = { code: 'policy_denied', message: 'denied for test' };
   const intent = {
@@ -48,7 +60,11 @@ function fixture({ status = 'completed' } = {}) {
   const acceptedPayload = {
     intent_id: intentId, principal, action: 'system.echo', input_digest: inputDigest,
     request_digest: requestDigest, invocation_digest: invocationDigest,
-    machine_authority: { authority_digest: authorityDigest }
+    machine_authority: { authority_digest: authorityDigest },
+    ...(currentness ? {
+      machine_currentness: result.evidence.machine_currentness,
+      execution_attempt_id: result.evidence.execution_attempt_id
+    } : {})
   };
   const terminalPayload = status === 'completed' ? { intent_id: intentId, result } : { intent_id: intentId, error };
   const events = [
@@ -73,6 +89,41 @@ test('machine receipt binds intent, terminal evidence, chain assurance, and Grid
   assert.deepEqual(validateMachineIntentReceipt(receipt), receipt);
   const verified = verifyMachineIntentReceipt(receipt, identity.publicKey);
   assert.equal(verified.valid, true); assert.equal(verified.intent_id, intent.intent_id);
+});
+
+test('machine receipt binds accepted and terminal currentness plus the execution attempt', () => {
+  const identity = gridIdentity();
+  const { intent, events, chain } = fixture({ currentness: true });
+  const receipt = buildMachineIntentReceipt({
+    intent,
+    events,
+    chain,
+    identity,
+    kernelVersion: '0.12.0-dev.3'
+  });
+  assert.deepEqual(receipt.statement.authority.machine_currentness, {
+    root_authority_digest: '2'.repeat(64),
+    effective_authority_digest: '9'.repeat(64),
+    lifecycle_seq: 7,
+    lifecycle_head_digest: 'a'.repeat(64)
+  });
+  assert.equal(
+    receipt.statement.authority.execution_attempt_id,
+    'attempt_receipt-currentness-1'
+  );
+
+  const substituted = structuredClone(events);
+  substituted[1].payload.result.evidence.machine_currentness.lifecycle_seq = 8;
+  assert.throws(
+    () => buildMachineIntentReceipt({
+      intent,
+      events: substituted,
+      chain,
+      identity,
+      kernelVersion: '0.12.0-dev.3'
+    }),
+    error => error.code === 'receipt_evidence_mismatch'
+  );
 });
 
 test('machine receipt verifies denied terminal evidence without exposing raw error', () => {
