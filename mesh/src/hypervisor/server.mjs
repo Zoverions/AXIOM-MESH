@@ -48,6 +48,7 @@ import {
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
+import { verifyMachineEffectReleaseReceipt } from '../lib/machine-effect-release.mjs';
 import { projectExecutionMutationEvent } from '../lib/execution-mutation.mjs';
 import {
   handleMachineLifecycleIntent,
@@ -605,6 +606,8 @@ export async function createHypervisorService(config = meshConfig()) {
         runtime_id: machineAuthority.runtime_id
       } : {}),
       ...(machineCurrentness ? {
+        intent_id: intent.intent_id,
+        action: intent.action,
         root_authority_digest: machineCurrentness.root_authority_digest,
         effective_authority_digest: machineCurrentness.effective_authority_digest,
         currentness_seq: machineCurrentness.lifecycle_seq,
@@ -663,6 +666,37 @@ export async function createHypervisorService(config = meshConfig()) {
       }
       await crashPointForTest(lifecycle, 'after_capability_consumed');
 
+      let machineEffectRelease = null;
+      let machineEffectReleaseReceipt = null;
+      if (machineCurrentness) {
+        machineEffectReleaseReceipt = await signedFetch(
+          identity,
+          'grid',
+          `${config.urls.grid}/internal/v1/machine-effect/release`,
+          {
+            method: 'POST',
+            traceId,
+            body: {
+              actor: intent.principal.id,
+              capability,
+              attempt_id: capabilityClaims.execution_attempt_id,
+              sandbox_execution_epoch: executionEpoch,
+              consumption_receipt_digest: consumption.receipt_digest
+            }
+          }
+        );
+        machineEffectRelease = verifyMachineEffectReleaseReceipt(
+          machineEffectReleaseReceipt,
+          {
+            gridPublicKey: gridKey,
+            claims: capabilityClaims,
+            consumptionReceiptDigest: consumption.receipt_digest,
+            attemptId: capabilityClaims.execution_attempt_id,
+            executionEpoch
+          }
+        );
+      }
+
       const execution = await signedFetch(identity, 'sandbox', `${config.urls.sandbox}/internal/v1/execute`, {
         method: 'POST',
         traceId,
@@ -670,7 +704,10 @@ export async function createHypervisorService(config = meshConfig()) {
           intent,
           capability,
           plan,
-          consumption_receipt: consumption.receipt
+          consumption_receipt: consumption.receipt,
+          ...(machineEffectReleaseReceipt ? {
+            release_receipt: machineEffectReleaseReceipt
+          } : {})
         }
       });
       const statement = execution.attestation?.statement;
@@ -683,6 +720,11 @@ export async function createHypervisorService(config = meshConfig()) {
         || statement.invocation_digest !== invocationDigest
         || statement.effect_destination !== effectDestination
         || statement.capability_consumption_receipt_digest !== consumption.receipt_digest
+        || (
+          machineEffectRelease
+          && statement.machine_effect_release_receipt_digest
+            !== machineEffectRelease.receipt_digest
+        )
         || statement.sandbox_execution_epoch !== executionEpoch
         || statement.result_digest !== digestObject(execution.result)
       ) {
@@ -720,6 +762,9 @@ export async function createHypervisorService(config = meshConfig()) {
           plan_digest: digestObject(plan),
           invocation_digest: invocationDigest,
           capability_consumption_receipt_digest: consumption.receipt_digest,
+          ...(machineEffectRelease ? {
+            machine_effect_release_receipt_digest: machineEffectRelease.receipt_digest
+          } : {}),
           ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution: execution.attestation,
           ...(machineAuthority ? {
@@ -737,6 +782,9 @@ export async function createHypervisorService(config = meshConfig()) {
           plan_digest: boundPlanDigest,
           invocation_digest: invocationDigest,
           capability_consumption_receipt_digest: consumption.receipt_digest,
+          ...(machineEffectRelease ? {
+            machine_effect_release_receipt_digest: machineEffectRelease.receipt_digest
+          } : {}),
           ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
           ...(queryResult ? { query_result_digest: digestObject(queryResult) } : {}),

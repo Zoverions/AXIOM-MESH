@@ -102,11 +102,12 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny 47-route policy permits only current internal
+readable default-deny 48-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
 mTLS peer allowlists. The governed Education learner-progress edge and two
-Hypervisor-only machine-currentness permissions are exact additions. They do
-not expose Education publicly, give Sandbox direct Grid authority, activate an
+Hypervisor-only machine-currentness permissions plus one Hypervisor-only
+transactionally ordered effect-release route are exact additions. They do not
+expose Education publicly, give Sandbox direct Grid authority, activate an
 Education provider or curriculum, or create a second authorization path.
 Signed host evidence and a protected four-container check prove required-path
 operation, selected forbidden edges, Sandbox-loss readiness degradation
@@ -119,6 +120,10 @@ requires explicit public-path lifecycle initialization. Production promotion
 remains blocked until a verified preflight proves the configured machine set,
 retained Grid lifecycle set, and exact root digests agree. Currentness evidence
 does not grant authority, and the gate creates no Sandbox-to-Grid edge.
+When the gate is enabled, logical effect release is ordered after durable
+capability consumption: Grid atomically compares the capability-bound retained
+head and signs one exact attempt/epoch receipt, which Sandbox verifies before
+the builtin. This is not an external-effect rollback or trusted-time claim.
 
 ## Supported production boundary
 

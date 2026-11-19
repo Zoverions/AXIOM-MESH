@@ -15,6 +15,7 @@ import { COLLECTION_PAGE_MAX, collectionPage, decodeCollectionCursor } from '../
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { registerEducationGridRoutes } from './education-routes.mjs';
 import { registerMachineCurrentnessGridRoutes } from './machine-currentness-routes.mjs';
+import { registerMachineEffectReleaseGridRoute } from './machine-effect-release-route.mjs';
 import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
@@ -109,6 +110,12 @@ export async function createGridService(config = meshConfig()) {
 
   registerEducationGridRoutes(router, store);
   registerMachineCurrentnessGridRoutes(router, {
+    store,
+    hypervisorPublicKey
+  });
+  registerMachineEffectReleaseGridRoute(router, {
+    config,
+    identity,
     store,
     hypervisorPublicKey
   });

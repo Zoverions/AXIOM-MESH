@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=d29c207f3723c405578f5fe46544c8f49510884ea0838f98ce039442b086fab4 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -407,11 +407,13 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 47 current internal**
+machine-readable default-deny policy **permits only 48 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
 allowlists, and removes unrelated adjacency. The governed Education
-learner-progress edge and two Hypervisor-only machine-currentness permissions
-are exact additions; they create no public exposure or alternate authority.
+learner-progress edge, two Hypervisor-only machine-currentness permissions,
+and one Hypervisor-only transactionally ordered effect-release permission are
+exact additions; they create no public exposure, Sandbox-to-Grid edge, or
+alternate authority.
 This is single-host isolation, not
 multi-host consensus or automatic failover.
 

@@ -22,6 +22,7 @@ import {
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
+import { verifyMachineEffectReleaseReceipt } from '../lib/machine-effect-release.mjs';
 import { executeSandboxBuiltin } from './education-executor.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -114,6 +115,20 @@ export async function createSandboxService(config = meshConfig()) {
     ) {
       throw new AxiomError('plan_intent_mismatch', 'Plan is not bound to the supplied intent and policy', 403);
     }
+    if (
+      claims.execution_attempt_id !== undefined
+      && (
+        claims.intent_id !== intent.intent_id
+        || claims.action !== intent.action
+        || plan.capability.execution_attempt_id !== claims.execution_attempt_id
+      )
+    ) {
+      throw new AxiomError(
+        'machine_effect_release_mismatch',
+        'Machine capability is not bound to this intent action and execution attempt',
+        403
+      );
+    }
     if (!input.consumption_receipt) {
       throw new AxiomError(
         'capability_consumption_required',
@@ -127,6 +142,22 @@ export async function createSandboxService(config = meshConfig()) {
       claims,
       executionEpoch
     });
+    let machineEffectRelease = null;
+    if (claims.execution_attempt_id !== undefined) {
+      machineEffectRelease = verifyMachineEffectReleaseReceipt(input.release_receipt, {
+        gridPublicKey: gridKey,
+        claims,
+        consumptionReceiptDigest: consumption.receipt_digest,
+        attemptId: claims.execution_attempt_id,
+        executionEpoch
+      });
+    } else if (input.release_receipt !== undefined) {
+      throw new AxiomError(
+        'machine_effect_release_mismatch',
+        'A machine effect release receipt cannot authorize an unbound capability',
+        403
+      );
+    }
     const replayAdmission = capabilityReplay.admit('capability', claims.jti, claims.exp * 1000);
     if (replayAdmission === 'replayed') {
       throw new AxiomError('capability_replayed', 'Capability token has already been used', 409);
@@ -174,6 +205,9 @@ export async function createSandboxService(config = meshConfig()) {
         : {}),
       capability_id: claims.jti,
       capability_consumption_receipt_digest: consumption.receipt_digest,
+      ...(machineEffectRelease ? {
+        machine_effect_release_receipt_digest: machineEffectRelease.receipt_digest
+      } : {}),
       sandbox_execution_epoch: executionEpoch,
       tool: claims.tool,
       policy_digest: claims.policy_digest,

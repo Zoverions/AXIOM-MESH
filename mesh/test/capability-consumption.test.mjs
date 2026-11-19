@@ -488,7 +488,7 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
   );
 });
 
-test('restart-safe consumption reuses existing Hypervisor to Grid commit and adds no route', async () => {
+test('restart-safe consumption and logical release preserve no Sandbox-to-Grid edge', async () => {
   const { authorizeServiceRequest, ACTIVE_SERVICE_NETWORK_POLICY } = await import(
     '../src/lib/service-network-policy.mjs'
   );
@@ -520,8 +520,9 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
   // 44 since the unrelated Gateway-to-Grid bundle-list and sync-update
   // routes (audit S-10); 45 since the unrelated Hypervisor-to-Grid route
   // closing interrupted intents (audit S-15); 47 since the Hypervisor-only
-  // machine-currentness read and signed-mutation routes.
-  assert.equal(routes.length, 47);
+  // machine-currentness read and signed-mutation routes; 48 adds the
+  // Hypervisor-only transactionally ordered machine-effect release.
+  assert.equal(routes.length, 48);
   assert.equal(
     routes.some(route => route.path === '/internal/v1/capabilities/consume'),
     false

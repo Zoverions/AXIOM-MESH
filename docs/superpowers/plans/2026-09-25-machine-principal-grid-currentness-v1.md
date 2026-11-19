@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Start from current `main`; re-read `AGENTS.md`, `CONSTITUTION.md`, and the spec before implementation.
-- Current execution baseline is migration version **12** and service-network policy **47 exact routes / 43 implemented routes**. If either changes before the next task, stop and reconcile this plan before coding.
+- Current execution baseline is migration version **12** and service-network policy **48 exact routes / 44 implemented routes** after Task 6. If either changes before the next task, stop and reconcile this plan before coding.
 - Preserve `Gateway -> Hypervisor -> Sandbox -> Grid` for ordinary execution.
 - Do **not** add a Sandbox -> Grid network edge. Hypervisor performs currentness/release Grid calls and passes a Grid-signed release receipt to Sandbox.
 - Do **not** mount or load the API bearer-token registry in Hypervisor, Sandbox, or Grid. Gateway remains the only service that loads it.
@@ -47,6 +47,12 @@
   enablement is still blocked on a verified preflight proving that configured
   machine principals and retained Grid lifecycle principals/root digests are
   exact-set matches.
+- Task 6 is implemented in the current review change with the measured target
+  **48 exact routes / 44 implemented routes**: durable Grid capability
+  consumption precedes a deterministic, event-derived logical release; Grid
+  signs the exact capability/attempt/Sandbox-epoch receipt; Sandbox verifies it
+  before builtin admission; and no Sandbox-to-Grid edge exists. Task 7 is the
+  next implementation slice.
 
 **Ruling:** current repository measurements and merged source are authoritative
 when they differ from historical task baselines. This preserves the design
@@ -1010,7 +1016,7 @@ git commit -m "feat(auth): bind machine grants to current lifecycle"
   - internal helpers `readMachineEffectRelease(releaseId)`, `assertCurrentnessMatchesCapability(current, claims)`, `assertCapabilityConsumptionExists(jti, receiptDigest)`, `buildReleaseStatement(input)`, and `projectMachineEffectReleasedEvent(release)`
   - service-network policy count 47/43 -> **48/44** (exact/implemented)
 
-- [ ] **Step 1: Write RED release tests**
+- [x] **Step 1: Write RED release tests**
 
 Build a consumed capability bound to current lifecycle and assert:
 
@@ -1036,7 +1042,7 @@ Then advance the same principal lifecycle and assert the old capability release 
 
 Mutate an unrelated principal and assert the release still succeeds.
 
-- [ ] **Step 2: Implement the atomic store method**
+- [x] **Step 2: Implement the atomic store method**
 
 `commitMachineEffectRelease()` runs one Grid transaction:
 
@@ -1073,7 +1079,7 @@ return this.transaction(() => {
 
 The current lifecycle **must equal** the capability-bound lifecycle sequence/head/effective authority digest. Any relevant mutation after issuance makes the capability stale.
 
-- [ ] **Step 3: Implement the Hypervisor-only Grid route**
+- [x] **Step 3: Implement the Hypervisor-only Grid route**
 
 The route:
 - authenticates Hypervisor;
@@ -1086,7 +1092,7 @@ The route:
 - commits release;
 - signs the release statement with Grid identity.
 
-- [ ] **Step 4: Extend service-network policy**
+- [x] **Step 4: Extend service-network policy**
 
 Add exactly:
 
@@ -1100,7 +1106,7 @@ Update all computed current-build network-route claims and `docs/operations/EXPL
 
 No Sandbox->Grid route is added.
 
-- [ ] **Step 5: Hypervisor orders release after durable consumption and before Sandbox execution**
+- [x] **Step 5: Hypervisor orders release after durable consumption and before Sandbox execution**
 
 After capability consumption is verified:
 
@@ -1127,7 +1133,7 @@ Pass `release_receipt` into the existing Sandbox execute request.
 
 Do not perform the release before durable capability consumption.
 
-- [ ] **Step 6: Sandbox verifies release receipt before invoking builtin**
+- [x] **Step 6: Sandbox verifies release receipt before invoking builtin**
 
 Add `verifyMachineEffectReleaseReceipt()` in `machine-effect-release.mjs`.
 
@@ -1149,7 +1155,7 @@ Reject missing/invalid/mismatched release with `machine_effect_release_required`
 
 The receipt is not reusable for another capability, intent, plan, destination, `execution_attempt_id`, or Sandbox `execution_epoch`.
 
-- [ ] **Step 7: Run focused release tests**
+- [x] **Step 7: Run focused release tests**
 
 ```bash
 node --test   mesh/test/machine-effect-release.test.mjs   mesh/test/machine-effect-release-route.test.mjs   mesh/test/capability-consumption.test.mjs
@@ -1158,7 +1164,7 @@ node mesh/src/check-service-network-policy.mjs
 
 Expected: PASS and service-network route counts 48 exact / 44 implemented.
 
-- [ ] **Step 8: Commit Task 6**
+- [x] **Step 8: Commit Task 6**
 
 ```bash
 git add mesh/src/grid/machine-effect-release-route.mjs mesh/src/lib/machine-effect-release.mjs \

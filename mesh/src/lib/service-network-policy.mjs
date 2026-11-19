@@ -46,16 +46,20 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'hypervisor-self-health',
   'sandbox-self-health'
 ]);
-// Updated deliberately for the two Hypervisor-only machine currentness routes:
-// the authoritative projection read and the exact signed mutation command.
+// Updated deliberately for the Hypervisor-only machine currentness read,
+// signed mutation command, and transactionally ordered effect release.
 const EXPECTED_POLICY_DIGEST =
-  '361c2f98279f6f9a3288d6d6cad0ae54ec019f4bf0ec9aed2cfde076988a868a';
+  '8eb9c2f48b2f02839e61c924435baf1ff9b6db753ff035318ad3f24774b10b10';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
 const GRID_CURRENTNESS_ROUTE_IMPORT =
   "import { registerMachineCurrentnessGridRoutes } from './machine-currentness-routes.mjs';";
 const GRID_CURRENTNESS_ROUTE_CALL = 'registerMachineCurrentnessGridRoutes(router, {';
+const GRID_MACHINE_EFFECT_RELEASE_ROUTE_IMPORT =
+  "import { registerMachineEffectReleaseGridRoute } from './machine-effect-release-route.mjs';";
+const GRID_MACHINE_EFFECT_RELEASE_ROUTE_CALL =
+  'registerMachineEffectReleaseGridRoute(router, {';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -392,6 +396,11 @@ function serviceRouteSource(destination, source) {
   if (hasCurrentnessImport !== hasCurrentnessRegistration) {
     throw new ValidationError('Grid machine currentness route registration is incomplete');
   }
+  const hasEffectReleaseImport = source.includes(GRID_MACHINE_EFFECT_RELEASE_ROUTE_IMPORT);
+  const hasEffectReleaseRegistration = source.includes(GRID_MACHINE_EFFECT_RELEASE_ROUTE_CALL);
+  if (hasEffectReleaseImport !== hasEffectReleaseRegistration) {
+    throw new ValidationError('Grid machine effect release route registration is incomplete');
+  }
   const modules = [];
   if (hasEducationImport) {
     modules.push(readFileSync(
@@ -402,6 +411,12 @@ function serviceRouteSource(destination, source) {
   if (hasCurrentnessImport) {
     modules.push(readFileSync(
       new URL('../grid/machine-currentness-routes.mjs', import.meta.url),
+      'utf8'
+    ));
+  }
+  if (hasEffectReleaseImport) {
+    modules.push(readFileSync(
+      new URL('../grid/machine-effect-release-route.mjs', import.meta.url),
       'utf8'
     ));
   }
@@ -437,6 +452,7 @@ function validateExactCurrentRoutes(flows) {
       'GET /internal/v1/approval/:id',
       'POST /internal/v1/commit',
       'POST /internal/v1/machine-currentness/mutate',
+      'POST /internal/v1/machine-effect/release',
       // Audit S-15: closing intents a previous process left accepted.
       'POST /internal/v1/intents/interrupted',
       'POST /internal/v1/education/learner-progress'

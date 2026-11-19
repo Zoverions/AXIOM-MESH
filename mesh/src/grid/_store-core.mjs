@@ -36,6 +36,14 @@ import {
   normalizeMachineLifecycleTransition,
   normalizeMachineMutationAuthorization
 } from '../lib/machine-principal-currentness.mjs';
+import { capabilityConsumptionEventId } from '../lib/capability-consumption.mjs';
+import {
+  assertCurrentnessMatchesCapability,
+  buildMachineEffectRelease,
+  machineEffectReleaseId,
+  normalizeMachineEffectReleasedEventPayload,
+  projectMachineEffectReleasedEvent
+} from '../lib/machine-effect-release.mjs';
 import {
   assertMachineAuthorityAttenuation,
   assertMachineAuthorityTimeActive
@@ -90,7 +98,7 @@ function windowsPathComponentIdentity(value) {
  * Bump CORE_MATERIALIZER_VERSION whenever that logic changes, so anchored
  * state from an older build is rebuilt rather than trusted.
  */
-const CORE_MATERIALIZER_VERSION = 2;
+const CORE_MATERIALIZER_VERSION = 3;
 const CORE_MATERIALIZED_TABLES = Object.freeze([
   'machine_effect_releases',
   'machine_principal_mutation_commands',
@@ -567,7 +575,8 @@ export class GridStore {
     traceId,
     actor,
     events,
-    machineCurrentnessCommandId = null
+    machineCurrentnessCommandId = null,
+    machineEffectReleaseId = null
   }) {
     assertString(traceId, 'trace_id', { max: 160, pattern: ID });
     assertString(actor, 'actor', { max: 160, pattern: ID });
@@ -585,6 +594,14 @@ export class GridStore {
       ) {
         throw new ValidationError(
           'Machine currentness events require the atomic mutation boundary'
+        );
+      }
+      if (
+        event.kind === 'machine.effect.released'
+        && event.subject !== machineEffectReleaseId
+      ) {
+        throw new ValidationError(
+          'Machine effect release events require the atomic release boundary'
         );
       }
       if (TERMINAL_INTENT_EVENTS.has(event.kind)) this.requireAcceptedIntent(event.payload.intent_id, actor);
@@ -767,6 +784,18 @@ export class GridStore {
     };
   }
 
+  readMachineEffectRelease(releaseId) {
+    assertString(releaseId, 'release_id', { max: 160, pattern: ID });
+    const row = this.db.prepare(`
+      SELECT r.*, h.principal_type
+      FROM machine_effect_releases r
+      JOIN machine_principal_lifecycle_heads h ON h.principal_id = r.principal_id
+      WHERE r.release_id = ?
+    `).get(releaseId);
+    if (!row) return null;
+    return buildStoredMachineEffectRelease(row);
+  }
+
   getMachineCurrentness(principalId, { observedAt = new Date() } = {}) {
     const row = this.readMachineLifecycleHead(principalId);
     if (!row) {
@@ -851,6 +880,120 @@ export class GridStore {
     }
   }
 
+  commitMachineEffectRelease({
+    traceId,
+    actor,
+    capabilityClaims,
+    attemptId,
+    sandboxExecutionEpoch,
+    consumptionReceiptDigest,
+    observedAt = new Date()
+  }) {
+    try {
+      return this.transaction(() => {
+        assertString(actor, 'actor', { max: 160, pattern: ID });
+        const claims = assertPlainObject(capabilityClaims, 'capability claims');
+        if (actor !== claims.subject) {
+          throw new ValidationError('Machine effect release actor binding mismatch');
+        }
+        if (attemptId !== claims.execution_attempt_id) {
+          throw new ValidationError('Machine effect release attempt binding mismatch');
+        }
+        const current = this.readMachineLifecycleHead(claims.subject);
+        if (!current) {
+          throw new AxiomError(
+            'machine_currentness_not_found',
+            'Machine principal currentness was not found',
+            404
+          );
+        }
+        assertCurrentnessMatchesCapability(current, claims, { observedAt });
+        this.assertCapabilityConsumptionExists(
+          claims.jti,
+          consumptionReceiptDigest,
+          sandboxExecutionEpoch
+        );
+        const releaseId = machineEffectReleaseId(
+          claims.jti,
+          claims.execution_attempt_id
+        );
+        const existing = this.readMachineEffectRelease(releaseId);
+        if (existing) {
+          const replay = buildMachineEffectRelease({
+            capabilityClaims: claims,
+            sandboxExecutionEpoch,
+            consumptionReceiptDigest,
+            releasedAt: existing.released_at
+          });
+          if (digestObject(existing) !== digestObject(replay)) {
+            throw new AxiomError(
+              'machine_effect_release_conflict',
+              'Effect release id was already used for different bytes',
+              409
+            );
+          }
+          return { event: null, release: existing };
+        }
+        const release = buildMachineEffectRelease({
+          capabilityClaims: claims,
+          sandboxExecutionEpoch,
+          consumptionReceiptDigest,
+          releasedAt: normalizeObservationTime(observedAt)
+        });
+        const [event] = this.appendEventsInTransaction({
+          traceId,
+          actor,
+          events: [projectMachineEffectReleasedEvent(release)],
+          machineEffectReleaseId: release.release_id
+        });
+        return { event, release };
+      });
+    } catch (error) {
+      if (String(error.message).includes('UNIQUE constraint failed')) {
+        throw new AxiomError(
+          'machine_effect_release_conflict',
+          'Machine effect release conflicts with an existing release',
+          409
+        );
+      }
+      throw error;
+    }
+  }
+
+  assertCapabilityConsumptionExists(jti, receiptDigest, executionEpoch) {
+    assertString(jti, 'capability jti', { max: 160, pattern: ID });
+    assertString(receiptDigest, 'capability consumption receipt digest', {
+      min: 64,
+      max: 64,
+      pattern: /^[a-f0-9]{64}$/
+    });
+    assertString(executionEpoch, 'Sandbox execution epoch', { max: 160, pattern: ID });
+    const row = this.db.prepare(`
+      SELECT * FROM events WHERE event_id = ? AND kind = 'capability.consumed'
+    `).get(capabilityConsumptionEventId(jti));
+    if (!row) {
+      throw new AxiomError(
+        'capability_consumption_missing',
+        'Durable capability consumption evidence was not found',
+        409
+      );
+    }
+    const event = this.decodeEventRow(row);
+    if (
+      event.subject !== jti
+      || event.payload?.receipt_digest !== receiptDigest
+      || event.payload?.receipt?.statement?.jti !== jti
+      || event.payload?.receipt?.statement?.execution_epoch !== executionEpoch
+    ) {
+      throw new AxiomError(
+        'capability_consumption_mismatch',
+        'Durable capability consumption evidence does not match this execution',
+        409
+      );
+    }
+    return event;
+  }
+
   applyMaterializedEvent(event) {
     const p = event.payload;
     switch (event.kind) {
@@ -861,6 +1004,37 @@ export class GridStore {
       case 'machine.currentness.expired':
         this.applyMachineLifecycleEvent(event);
         break;
+      case 'machine.effect.released': {
+        const { release, release_digest: releaseDigest } =
+          normalizeMachineEffectReleasedEventPayload(event.subject, p);
+        this.db.prepare(`
+          INSERT INTO machine_effect_releases(
+            release_id, principal_id, capability_id, attempt_id,
+            sandbox_execution_epoch, intent_id, plan_digest, action,
+            destination, root_authority_digest, lifecycle_seq,
+            lifecycle_head_digest, effective_authority_digest,
+            consumption_receipt_digest, release_digest, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          release.release_id,
+          release.principal_id,
+          release.capability_id,
+          release.execution_attempt_id,
+          release.sandbox_execution_epoch,
+          release.intent_id,
+          release.plan_digest,
+          release.action,
+          release.destination,
+          release.root_authority_digest,
+          release.lifecycle_seq,
+          release.lifecycle_head_digest,
+          release.effective_authority_digest,
+          release.consumption_receipt_digest,
+          releaseDigest,
+          release.released_at
+        );
+        break;
+      }
       case 'intent.accepted':
         this.db.prepare(`
           INSERT INTO intents(
@@ -3759,6 +3933,8 @@ function normalizeEvent(raw) {
 function validateMaterializedPayload(kind, p, subject) {
   if (MACHINE_CURRENTNESS_EVENTS.has(kind)) {
     normalizeMachineCurrentnessEventPayload(kind, subject, p);
+  } else if (kind === 'machine.effect.released') {
+    normalizeMachineEffectReleasedEventPayload(subject, p);
   } else if (kind === 'intent.accepted') {
     assertString(p.intent_id, 'intent_id', { max: 160, pattern: ID });
     assertString(p.principal, 'principal', { max: 160, pattern: ID });
@@ -4063,6 +4239,28 @@ function validateMaterializedPayload(kind, p, subject) {
     }
     assertString(p.rollback_path, 'rollback_path', { max: 1000 });
   }
+}
+
+function buildStoredMachineEffectRelease(row) {
+  return buildMachineEffectRelease({
+    capabilityClaims: {
+      subject: row.principal_id,
+      principal_type: row.principal_type,
+      jti: row.capability_id,
+      intent_id: row.intent_id,
+      plan_digest: row.plan_digest,
+      action: row.action,
+      effect_destination: row.destination,
+      root_authority_digest: row.root_authority_digest,
+      currentness_seq: row.lifecycle_seq,
+      currentness_head_digest: row.lifecycle_head_digest,
+      effective_authority_digest: row.effective_authority_digest,
+      execution_attempt_id: row.attempt_id
+    },
+    sandboxExecutionEpoch: row.sandbox_execution_epoch,
+    consumptionReceiptDigest: row.consumption_receipt_digest,
+    releasedAt: row.created_at
+  });
 }
 
 function boundedInteger(value, label, min, max) {

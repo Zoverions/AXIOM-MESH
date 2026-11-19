@@ -209,6 +209,10 @@
         },
         {
           "method": "POST",
+          "path": "/internal/v1/machine-effect/release"
+        },
+        {
+          "method": "POST",
           "path": "/internal/v1/intents/interrupted"
         },
         {
