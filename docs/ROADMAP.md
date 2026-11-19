@@ -277,6 +277,10 @@ They change no current capability status.
   extract commitments, identify missing information, and prepare shareable
   evidence packages;
 - prevent model output from directly authorizing external effects;
+- preserve the default-off retained machine-currentness fence: durable
+  capability consumption must precede a Grid-ordered, exact-attempt/epoch
+  logical release that Sandbox verifies before a builtin, without adding a
+  Sandbox-to-Grid edge or claiming external rollback;
 - maintain the signed synthetic runtime-adapter drill as verifier-only evidence;
   it performs no external effect and makes no runtime compatibility claim;
 - introduce one immutable single-agent Runtime Capsule with exact

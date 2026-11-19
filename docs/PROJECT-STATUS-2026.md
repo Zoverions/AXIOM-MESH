@@ -142,8 +142,14 @@ The production-candidate surface includes:
   non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 47-route application policy,
+  internal network segments, a default-deny 48-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
+- a default-off machine-currentness gate in which human-authorized deny-only
+  Grid lifecycle state is bound through issuance, durable capability
+  consumption precedes atomic logical release, and Sandbox verifies the
+  Grid-signed exact capability/attempt/process-epoch receipt before builtin;
+  production promotion still requires configured-principal/retained-Grid
+  exact-set and root-digest preflight, and no Sandbox-to-Grid route exists;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
   rollback;

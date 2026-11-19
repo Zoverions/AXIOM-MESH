@@ -149,11 +149,13 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes exactly 47 currently allowed internal
+policy additionally authorizes exactly 48 currently allowed internal
 method/path permissions at both sending and receiving services and derives
 inbound mTLS peer allowlists. The governed Education permission and two
-Hypervisor-only machine-currentness permissions are exact additions; they do
-not create public ingress or a second authority path. Because internal routes must
+Hypervisor-only machine-currentness permissions plus the Hypervisor-only
+transactionally ordered effect-release route are exact additions; they do not
+create public ingress, a Sandbox-to-Grid edge, or a second authority path.
+Because internal routes must
 exist, this topology does not use the single-container supervisor's
 `network_mode: none` route check; segmented internal networks plus application
 and transport allowlists are the boundary. Protected CI proves the required
@@ -171,6 +173,13 @@ capability from outliving a non-persistent machine authority. Do not enable the
 flag for a production candidate until a separately verified preflight proves
 the configured-principal and Grid-lifecycle sets and root digests match; there
 is no silent auto-initialization fallback.
+
+For an enabled machine execution, Hypervisor must first obtain the durable
+Grid capability-consumption receipt and then the Grid-signed
+`axiom-machine-effect-release.v1` receipt for that exact capability, lifecycle
+head, attempt ID, and Sandbox process epoch. Sandbox verifies the release
+receipt immediately before invoking the builtin. A missing, stale, substituted,
+or differently consumed release fails closed; Sandbox has no Grid route.
 
 Verify exact policy and Compose membership before startup:
 

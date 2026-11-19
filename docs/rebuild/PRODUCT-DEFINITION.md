@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=bda714008018494bcaf8d2253faf99cc53f4359ff9773c4ad78d49593c7fe81b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=d29c207f3723c405578f5fe46544c8f49510884ea0838f98ce039442b086fab4 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -108,12 +108,13 @@ visible effect.
 
 The current reference unit topology runs the four services across four exact
 single-host internal network segments. A machine-readable default-deny policy
-authorizes only 47 exact caller, destination, method, and route combinations
+authorizes only 48 exact caller, destination, method, and route combinations
 before signing or network I/O, derives each destination's active mTLS peers,
 and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. The governed
-Education edge and two Hypervisor-only machine-currentness permissions are
-exact additions; they create no public ingress and no alternate authority
-path. Plaintext development traffic remains
+Education edge, two Hypervisor-only machine-currentness permissions, and one
+Hypervisor-only transactionally ordered effect-release permission are exact
+additions; they create no public ingress, Sandbox-to-Grid edge, or alternate
+authority path. Plaintext development traffic remains
 loopback-only. This is a reference single-host enforcement claim, not evidence
 of a pilot or multi-host orchestrator policy.
 

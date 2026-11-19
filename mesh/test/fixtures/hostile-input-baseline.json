@@ -1300,6 +1300,7 @@
       "recording-proxy": "read-through",
       "revoked-proxy": "raw"
     },
+    "src/lib/machine-effect-release.mjs#verifyMachineEffectReleaseReceipt": {},
     "src/lib/machine-holder-presentation.mjs#verifyMachineHolderPresentation": {},
     "src/lib/machine-principal-mutation-authorization.mjs#verifyMachineMutationAuthorization": {},
     "src/lib/machine-receipt.mjs#validateMachineIntentReceipt": {},

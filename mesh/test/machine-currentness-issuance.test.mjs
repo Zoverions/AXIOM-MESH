@@ -176,12 +176,21 @@ test('enforced machine issuance requires initialized currentness and binds the e
     event.kind === 'capability.consumed'
     && event.actor === root.id
   ));
+  const release = events.find(event => (
+    event.kind === 'machine.effect.released'
+    && event.actor === root.id
+  ));
   assert.ok(accepted, JSON.stringify(events.map(event => ({
     kind: event.kind,
     subject: event.subject,
     actor: event.actor
   }))));
   assert.ok(consume, JSON.stringify(events.map(event => ({
+    kind: event.kind,
+    subject: event.subject,
+    actor: event.actor
+  }))));
+  assert.ok(release, JSON.stringify(events.map(event => ({
     kind: event.kind,
     subject: event.subject,
     actor: event.actor
@@ -205,6 +214,19 @@ test('enforced machine issuance requires initialized currentness and binds the e
   assert.equal(
     consume.payload.receipt.statement.expires_at,
     Math.floor(Date.parse(expiresAt) / 1000)
+  );
+  assert.equal(release.payload.release.capability_id, consume.subject);
+  assert.equal(
+    release.payload.release.execution_attempt_id,
+    accepted.payload.execution_attempt_id
+  );
+  assert.equal(
+    release.payload.release.sandbox_execution_epoch,
+    consume.payload.receipt.statement.execution_epoch
+  );
+  assert.match(
+    executed.body.evidence.machine_effect_release_receipt_digest,
+    /^[a-f0-9]{64}$/
   );
 
   await approvedLifecycle(
