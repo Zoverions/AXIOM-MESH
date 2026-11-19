@@ -119,7 +119,11 @@ async function fixture(t) {
   const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
   const path = join(dataDir, 'grid.sqlite');
   let store = new GridStore({ path, dataDir, identity, protector });
+  const additionalStores = [];
   t.after(async () => {
+    for (const additionalStore of additionalStores) {
+      try { additionalStore.close(); } catch {}
+    }
     try { store.close(); } catch {}
     await rm(dataDir, { recursive: true, force: true });
   });
@@ -129,6 +133,10 @@ async function fixture(t) {
     identity,
     protector,
     get store() { return store; },
+    trackStore(additionalStore) {
+      additionalStores.push(additionalStore);
+      return additionalStore;
+    },
     restart() {
       store.close();
       store = new GridStore({ path, dataDir, identity, protector });
@@ -360,13 +368,12 @@ test('independent Grid connections allow only one exact-predecessor successor', 
       successor: root
     })
   });
-  const second = new GridStore({
+  const second = f.trackStore(new GridStore({
     path: f.path,
     dataDir: f.dataDir,
     identity: f.identity,
     protector: f.protector
-  });
-  t.after(() => second.close());
+  }));
   const successor = authority({ scopes: ['intent:execute'] });
   const winner = mutation({
     intentCharacter: 'b',
