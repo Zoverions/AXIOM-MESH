@@ -1301,6 +1301,7 @@
       "revoked-proxy": "raw"
     },
     "src/lib/machine-holder-presentation.mjs#verifyMachineHolderPresentation": {},
+    "src/lib/machine-principal-mutation-authorization.mjs#verifyMachineMutationAuthorization": {},
     "src/lib/machine-receipt.mjs#validateMachineIntentReceipt": {},
     "src/lib/machine-receipt.mjs#verifyMachineIntentReceipt": {},
     "src/lib/measurement-source-envelope.mjs#validateMeasurementSourceEnvelopes": {
