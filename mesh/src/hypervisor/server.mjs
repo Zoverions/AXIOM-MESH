@@ -71,7 +71,9 @@ const UNSETTLED_INTENT_LIMIT = 1_024;
 const RECOVERY_BATCH = 100;
 const RECOVERY_PAGE_LIMIT = 100;
 
-export async function createHypervisorService(config = meshConfig()) {
+export async function createHypervisorService(config = meshConfig(), {
+  beforeMachineEffectRelease = async () => {}
+} = {}) {
   const identity = await ensureMeshIdentity(config.dataDir, 'hypervisor', { create: config.autoBootstrap });
   identity.transport = config.transport.enabled
     ? await loadTransportRuntime({
@@ -669,6 +671,13 @@ export async function createHypervisorService(config = meshConfig()) {
       let machineEffectRelease = null;
       let machineEffectReleaseReceipt = null;
       if (machineCurrentness) {
+        await beforeMachineEffectRelease({
+          capability,
+          claims: capabilityClaims,
+          consumption,
+          executionEpoch,
+          intent
+        });
         machineEffectReleaseReceipt = await signedFetch(
           identity,
           'grid',

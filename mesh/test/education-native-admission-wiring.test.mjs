@@ -14,14 +14,16 @@ test('live Sandbox service routes builtin execution through the education-aware 
   );
   assert.match(
     text,
-    /const builtinResult = executeSandboxBuiltin\(\{\s*tool: claims\.tool,\s*intent,\s*assurance: plan\.assurance\s*\}\);/s,
+    /export async function createSandboxService\(config = meshConfig\(\), \{\s*executeBuiltin = executeSandboxBuiltin\s*\} = \{\}\)/s,
+  );
+  assert.match(
+    text,
+    /const builtinResult = executeBuiltin\(\{\s*tool: claims\.tool,\s*intent,\s*assurance: plan\.assurance\s*\}\);/s,
   );
   assert.match(
     text,
     /assurance: structuredClone\(plan\.assurance\)/,
   );
-  assert.doesNotMatch(text, /const result = executeBuiltin\(/);
-
   const executor = await source('../src/sandbox/education-executor.mjs');
   assert.match(
     executor,

@@ -1196,7 +1196,7 @@ git commit -m "feat(auth): order machine effect release against currentness"
 - Consumes: Tasks 4-6.
 - Produces: deterministic #1445 evidence; no production feature beyond already implemented boundaries.
 
-- [ ] **Step 1: Add a test-only barrier seam**
+- [x] **Step 1: Add a test-only barrier seam**
 
 Add explicit test dependency injection without changing production defaults:
 
@@ -1216,7 +1216,7 @@ export async function startDevelopmentStack(overrides = {}, dependencies = {}) {
 
 Production callers provide no second argument, so behavior remains unchanged. Do not add environment-variable, request-controlled, or exported production toggles.
 
-- [ ] **Step 2: Write the deterministic revoke race**
+- [x] **Step 2: Write the deterministic revoke race**
 
 The test sequence is exact:
 
@@ -1258,7 +1258,7 @@ assert.equal(invocationCounter.value, 0);
 
 Do the same for `narrow` that removes the pending action.
 
-- [ ] **Step 3: Add positive ordering controls**
+- [x] **Step 3: Add positive ordering controls**
 
 Prove:
 - unchanged currentness permits exactly one release/invocation;
@@ -1268,7 +1268,7 @@ Prove:
 - the same release receipt cannot execute twice;
 - a new grant after revocation does not revive an old attempt.
 
-- [ ] **Step 4: Add crash/replay tests**
+- [x] **Step 4: Add crash/replay tests**
 
 Test:
 - mutation committed, response lost -> exact command replay returns same successor;
@@ -1278,7 +1278,7 @@ Test:
 - restart between commit and replay preserves the same result;
 - no code path translates an uncertain release into automatic second builtin execution.
 
-- [ ] **Step 5: Run race/recovery tests repeatedly**
+- [x] **Step 5: Run race/recovery tests repeatedly**
 
 ```bash
 for i in 1 2 3 4 5; do
@@ -1288,7 +1288,7 @@ done
 
 Expected: five consecutive green runs.
 
-- [ ] **Step 6: Commit Task 7**
+- [x] **Step 6: Commit Task 7**
 
 ```bash
 git add mesh/test/machine-currentness-effect-race-e2e.test.mjs \
