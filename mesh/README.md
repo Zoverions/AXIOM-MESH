@@ -99,8 +99,12 @@ initialization, subsequent Grid lifecycle mutations may only strictly attenuate
 authority or enter terminal revoke/compromise/expiry. A capability binds the
 exact retained head, and after durable consumption Hypervisor asks Grid for one
 logical release receipt that Sandbox verifies before builtin execution. There
-is no Sandbox-to-Grid route. Production enablement remains blocked until the
-configured-principal/retained-Grid exact-set and root-digest preflight passes.
+is no Sandbox-to-Grid route. When the production gate is deliberately enabled,
+a same-generation, content-addressed configured-principal/retained-Grid
+preflight must be explicitly activated before machine effects are accepted.
+Restart, replay, source/policy/Grid drift,
+or report substitution fails closed; activation is one-use, in-memory, and
+grants no authority or production promotion.
 A release receipt is not proof of execution, rollback, disclosure, or trusted
 time.
 

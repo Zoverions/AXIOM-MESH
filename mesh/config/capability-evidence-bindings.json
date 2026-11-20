@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "8100f09725a437b688afc49301eb09b4d6b8160e2f3620c9804c6bedf050d6d6",
+  "registry_digest": "a1f671f73c0994f18b8c61d5b6e5ef33c66eaeaf7137e267f978d43b94d4c869",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -239,7 +239,7 @@
       "test": "current service network policy is exact, default-deny, and segmented",
       "assertions": [
         "assert.equal(result.default_action, 'deny');",
-        "assert.equal(result.routes, 50);"
+        "assert.equal(result.routes, 51);"
       ]
     },
     {

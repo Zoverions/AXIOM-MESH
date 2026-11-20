@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8100f09725a437b688afc49301eb09b4d6b8160e2f3620c9804c6bedf050d6d6 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=a1f671f73c0994f18b8c61d5b6e5ef33c66eaeaf7137e267f978d43b94d4c869 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -407,7 +407,7 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 50 current internal**
+machine-readable default-deny policy **permits only 51 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
 allowlists, and removes unrelated adjacency. The governed Education
 learner-progress edge, three Hypervisor-only machine-currentness permissions,

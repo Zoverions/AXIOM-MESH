@@ -10,6 +10,7 @@ import {
 
 const DIGEST = /^[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}$/;
+const RUNTIME_GENERATION = /^[A-Za-z0-9_:-]{16,160}$/;
 const CONFIGURED_SOURCE_FIELDS = Object.freeze([
   'authority_effect',
   'complete',
@@ -34,6 +35,7 @@ const REPORT_SEMANTICS = Object.freeze({
 export async function runMachineCurrentnessProductionPreflightAggregation({
   configuredSource,
   gridGet,
+  runtimeGeneration,
   sourceRevision,
   policyVersion,
   policyDigest,
@@ -46,6 +48,10 @@ export async function runMachineCurrentnessProductionPreflightAggregation({
   const revision = assertString(sourceRevision, 'source_revision', {
     max: 40,
     pattern: REVISION
+  });
+  const generation = assertString(runtimeGeneration, 'runtime_generation', {
+    max: 160,
+    pattern: RUNTIME_GENERATION
   });
   const version = assertString(policyVersion, 'policy_version', {
     max: 160,
@@ -132,6 +138,7 @@ export async function runMachineCurrentnessProductionPreflightAggregation({
     schema: 'axiom-machine-currentness-production-preflight-report.v1',
     ready: blockers.length === 0,
     blockers,
+    runtime_generation: generation,
     source_revision: revision,
     policy_version: version,
     policy_digest: policy,

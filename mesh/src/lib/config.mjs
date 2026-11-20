@@ -1,7 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ValidationError } from './canonical.mjs';
+import { ValidationError, assertString } from './canonical.mjs';
 import { normalizeApiPrincipalRegistry } from './principal-registry.mjs';
 
 const MESH_ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
@@ -42,6 +42,14 @@ export function meshConfig(overrides = {}) {
   );
   const requireDenyEgress = overrides.requireDenyEgress
     ?? envBoolean('AXIOM_REQUIRE_DENY_EGRESS', false);
+  const machineCurrentnessEnforcement = overrides.machineCurrentnessEnforcement
+    ?? envBoolean('AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT', false);
+  const machineCurrentnessPreflightRequired = environment === 'production'
+    ? machineCurrentnessEnforcement
+    : Boolean(overrides.machineCurrentnessPreflightRequired ?? false);
+  const machineCurrentnessSourceRevision = optionalSourceRevision(
+    overrides.machineCurrentnessSourceRevision ?? process.env.AXIOM_SOURCE_REVISION
+  );
   const gatewaySocket = optionalAbsolutePath(
     'AXIOM_GATEWAY_SOCKET',
     overrides.gatewaySocket ?? process.env.AXIOM_GATEWAY_SOCKET
@@ -64,8 +72,9 @@ export function meshConfig(overrides = {}) {
     maxBodyBytes: overrides.maxBodyBytes ?? envInteger('AXIOM_MAX_BODY_BYTES', 1_048_576, { min: 1024, max: 10_485_760 }),
     clockSkewSeconds: overrides.clockSkewSeconds ?? envInteger('AXIOM_CLOCK_SKEW_SECONDS', 30, { min: 5, max: 300 }),
     capabilityTtlSeconds: overrides.capabilityTtlSeconds ?? envInteger('AXIOM_CAPABILITY_TTL_SECONDS', 30, { min: 5, max: 300 }),
-    machineCurrentnessEnforcement: overrides.machineCurrentnessEnforcement
-      ?? envBoolean('AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT', false),
+    machineCurrentnessEnforcement,
+    machineCurrentnessPreflightRequired,
+    machineCurrentnessSourceRevision,
     integrityProbeIntervalSeconds: overrides.integrityProbeIntervalSeconds
       ?? envInteger('AXIOM_INTEGRITY_PROBE_INTERVAL_SECONDS', 30, { min: 5, max: 3_600 }),
     rateLimitCapacity: overrides.rateLimitCapacity
@@ -120,6 +129,16 @@ export function meshConfig(overrides = {}) {
   if (environment === 'production' && autoBootstrap) {
     throw new ValidationError('AXIOM_AUTO_BOOTSTRAP must be false in production');
   }
+  if (machineCurrentnessPreflightRequired && !machineCurrentnessEnforcement) {
+    throw new ValidationError(
+      'Machine currentness preflight activation requires enforcement to be enabled'
+    );
+  }
+  if (machineCurrentnessPreflightRequired && !machineCurrentnessSourceRevision) {
+    throw new ValidationError(
+      'Machine currentness enforcement requires an exact source revision'
+    );
+  }
   if (environment === 'production' && !internalTlsEnabled) {
     throw new ValidationError(
       'Production internal services require mutually authenticated TLS'
@@ -148,6 +167,14 @@ export function meshConfig(overrides = {}) {
     }
   }
   return config;
+}
+
+function optionalSourceRevision(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return assertString(value, 'AXIOM_SOURCE_REVISION', {
+    max: 40,
+    pattern: /^[a-f0-9]{40}$/
+  });
 }
 
 function optionalAbsolutePath(name, value) {

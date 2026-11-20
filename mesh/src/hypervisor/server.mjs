@@ -59,6 +59,9 @@ import {
   runMachineCurrentnessProductionPreflightAggregation
 } from './machine-currentness-preflight.mjs';
 import {
+  createMachineCurrentnessActivationGate
+} from './machine-currentness-activation.mjs';
+import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
@@ -90,6 +93,10 @@ export async function createHypervisorService(config = meshConfig(), {
   const basePolicy = await loadPolicyStack(config.policyPaths);
   const router = new Router();
   const telemetry = new ServiceTelemetry('hypervisor');
+  const machineCurrentnessActivation = createMachineCurrentnessActivationGate({
+    enabled: config.machineCurrentnessPreflightRequired,
+    expectedSourceRevision: config.machineCurrentnessSourceRevision
+  });
 
   async function commitToGrid(traceId, principalId, events) {
     return signedFetch(identity, 'grid', `${config.urls.grid}/internal/v1/commit`, {
@@ -196,6 +203,13 @@ export async function createHypervisorService(config = meshConfig(), {
     const own = telemetry.snapshot(readinessState('hypervisor', [
       { name: 'identity', ok: true },
       { name: 'policy', ok: true },
+      ...(machineCurrentnessActivation.enabled ? [{
+        name: 'machine-currentness-preflight',
+        ok: machineCurrentnessActivation.ready,
+        code: machineCurrentnessActivation.ready
+          ? undefined
+          : 'machine_currentness_preflight_required'
+      }] : []),
       { name: 'grid', ...gridCheck },
       { name: 'sandbox', ...sandboxCheck }
     ]));
@@ -243,12 +257,51 @@ export async function createHypervisorService(config = meshConfig(), {
         throw new ValidationError('Machine currentness preflight request fields are invalid');
       }
       const { policy } = await activePolicy(traceId);
-      return runMachineCurrentnessProductionPreflightAggregation({
+      const report = await runMachineCurrentnessProductionPreflightAggregation({
         configuredSource: request.configured_source,
         gridGet: path => gridGet(path, traceId),
+        runtimeGeneration: machineCurrentnessActivation.runtimeGeneration,
         sourceRevision: request.source_revision,
         policyVersion: policy.policy.version,
         policyDigest: policy.digest
+      });
+      if (machineCurrentnessActivation.enabled && !machineCurrentnessActivation.ready && report.ready) {
+        machineCurrentnessActivation.recordPreflight(report);
+      }
+      return report;
+    }
+  );
+
+  router.add(
+    'POST',
+    '/internal/v1/machine-currentness/activate',
+    async ({ body, principal, traceId }) => {
+      if (principal?.service !== 'gateway') {
+        throw new AxiomError(
+          'caller_not_allowed',
+          'Only Gateway may activate machine currentness enforcement',
+          403
+        );
+      }
+      if (!machineCurrentnessActivation.enabled) {
+        machineCurrentnessActivation.activate();
+      }
+      const request = assertPlainObject(
+        parseJsonBody(body),
+        'machine currentness activation request'
+      );
+      if (Object.keys(request).sort().join(',') !== 'report_digest') {
+        throw new ValidationError('Machine currentness activation request fields are invalid');
+      }
+      const [{ policy }, gridStatus] = await Promise.all([
+        activePolicy(traceId),
+        gridGet('/internal/v1/status', traceId)
+      ]);
+      return machineCurrentnessActivation.activate({
+        reportDigest: request.report_digest,
+        policyVersion: policy.policy.version,
+        policyDigest: policy.digest,
+        gridStatus
       });
     }
   );
@@ -388,6 +441,7 @@ export async function createHypervisorService(config = meshConfig(), {
     let effectiveMachinePrincipal = intent.principal;
     let machineCurrentness = null;
     if (machineAuthority && config.machineCurrentnessEnforcement) {
+      machineCurrentnessActivation.assertEffective();
       let projection;
       try {
         projection = await gridGet(

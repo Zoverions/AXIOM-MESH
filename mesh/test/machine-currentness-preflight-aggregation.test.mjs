@@ -101,6 +101,7 @@ test('aggregates a stable authenticated Grid snapshot into a non-authorizing rep
   const report = await runMachineCurrentnessProductionPreflightAggregation({
     configuredSource: configuredSource(root),
     gridGet: stableGrid(root),
+    runtimeGeneration: 'runtime_generation_aggregate_0123456789',
     sourceRevision: R('e'),
     policyVersion: 'policy.test.v1',
     policyDigest: D('f')
@@ -109,6 +110,7 @@ test('aggregates a stable authenticated Grid snapshot into a non-authorizing rep
   assert.equal(report.schema, 'axiom-machine-currentness-production-preflight-report.v1');
   assert.equal(report.ready, true);
   assert.deepEqual(report.blockers, []);
+  assert.equal(report.runtime_generation, 'runtime_generation_aggregate_0123456789');
   assert.equal(report.source_revision, R('e'));
   assert.deepEqual(report.grid_snapshot, {
     schema_version: 12,
@@ -131,6 +133,7 @@ test('fails closed when Grid changes during pagination', async () => {
   let statusReads = 0;
   const report = await runMachineCurrentnessProductionPreflightAggregation({
     configuredSource: configuredSource(root),
+    runtimeGeneration: 'runtime_generation_aggregate_0123456789',
     gridGet: async path => {
       if (path === '/internal/v1/status') {
         statusReads += 1;
@@ -168,6 +171,7 @@ test('fails closed without exposing dependency errors when Grid is unavailable',
   const root = authority('agent.preflight.unavailable');
   const report = await runMachineCurrentnessProductionPreflightAggregation({
     configuredSource: configuredSource(root),
+    runtimeGeneration: 'runtime_generation_aggregate_0123456789',
     gridGet: async () => {
       throw new Error('secret internal path /srv/private/grid.sqlite');
     },
@@ -194,6 +198,7 @@ test('fails closed on an ambiguous Grid page envelope', async () => {
   };
   const report = await runMachineCurrentnessProductionPreflightAggregation({
     configuredSource: configuredSource(root),
+    runtimeGeneration: 'runtime_generation_aggregate_0123456789',
     gridGet: async path => path === '/internal/v1/status'
       ? status
       : {

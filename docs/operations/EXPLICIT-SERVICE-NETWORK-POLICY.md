@@ -4,7 +4,7 @@
 
 **Status:** implemented single-host candidate control
 
-**Updated:** 2026-08-23
+**Updated:** 2026-11-20
 
 ## Enforced policy boundary
 
@@ -19,7 +19,7 @@ The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
 fallback. The active policy contains 10 grouped flows. The source validator
-reports 46 implemented routes and 50 exact route permissions, including bounded
+reports 47 implemented routes and 51 exact route permissions, including bounded
 supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -72,21 +72,46 @@ local operator
                               Hypervisor GET/POST
 ```
 
-Gateway may request Hypervisor operations, submit normalized intents, and call
-one exact read-only machine-currentness production-preflight aggregation route.
+Gateway may request Hypervisor operations, submit normalized intents, call one
+exact read-only machine-currentness production-preflight aggregation route, and
+call one exact machine-currentness activation route.
 That preflight transfers only already-normalized configured machine authority
 snapshots: it never serializes registry token keys/hashes, never exposes bearer
-tokens, and cannot authorize production activation. Hypervisor reads the
+tokens. Hypervisor reads the
 retained Grid collection over its existing authenticated boundary, rejects a
 Grid chain-head change across pagination, and returns a content-addressed
-non-authorizing report. The local operator CLI requires an exact 40-hex source
-revision and exits nonzero when the report is not ready.
+non-authorizing report. When the production machine-currentness gate is enabled,
+the Hypervisor retains a ready report only in memory for its current runtime
+generation. Explicit activation must present that exact report digest and must
+still match the exact source revision, active policy, and current Grid head.
+The candidate is one-use; restart, replay, report substitution, policy drift,
+Grid drift, or revision drift fails closed. Until activation succeeds, service
+readiness is degraded and machine-principal effects are rejected before bearer
+fallback or capability issuance. Activation grants no authority and does not
+promote the build or deployment.
+
+The local operator CLI requires an exact 40-hex source revision and exits
+nonzero when the report is not ready. Run the report-only preflight against the
+exact review head being evaluated:
 
 Run it only against the exact review head being evaluated:
 
 ```bash
 AXIOM_SOURCE_REVISION="$(git rev-parse HEAD)" npm run machine-currentness:preflight
 ```
+
+For a deliberately enabled production candidate, activate only after reviewing
+the ready report:
+
+```bash
+AXIOM_SOURCE_REVISION="$(git rev-parse HEAD)" \
+AXIOM_MACHINE_CURRENTNESS_ACTIVATE=true \
+npm run machine-currentness:preflight
+```
+
+Rollback is an ordinary Hypervisor restart or disabling
+`AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT`; both remove the in-memory activation.
+Re-enabling requires a fresh same-generation report and explicit activation.
 
 Exit status `0` means the bounded report is ready evidence; exit status `2`
 means it is blocked. Neither status enables the production enforcement gate.
@@ -324,12 +349,13 @@ This milestone does not claim:
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 50-route application graph, the reference four-unit
+an exact machine-readable 51-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
 network edges, the remote-social addition remains a Gateway-only bounded
 owner-review read path, the Education addition is one Hypervisor-only POST
 edge, and machine currentness adds point and paginated retained reads, signed
-mutation, and a Hypervisor-only release route ordered after durable
-consumption. These additions create no public ingress,
+mutation, a Hypervisor-only release route ordered after durable consumption,
+and exact Gateway-to-Hypervisor preflight plus one-use same-generation
+activation edges. These additions create no public ingress,
 Sandbox-to-Grid edge, or independent authority.
