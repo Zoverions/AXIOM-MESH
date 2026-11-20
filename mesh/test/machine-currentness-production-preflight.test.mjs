@@ -249,3 +249,87 @@ test('malformed principals, projections, and enumeration claims are rejected', (
     /expected_page_count/
   );
 });
+
+test('configured source enumeration returns only sorted constrained machine authority snapshots', () => {
+  assert.equal(
+    typeof currentness.enumerateConfiguredMachinePrincipalAuthorities,
+    'function',
+    'the configured-source enumerator must exist'
+  );
+
+  const first = authority('agent.configured.first');
+  const second = authority('service.configured.second', 'service');
+  const human = {
+    id: 'owner.alice',
+    type: 'human',
+    roles: ['administrator'],
+    scopes: ['*']
+  };
+  const infrastructureService = {
+    id: 'production-telemetry-relay',
+    type: 'service',
+    roles: ['telemetry-relay'],
+    scopes: ['telemetry:collect']
+  };
+  const tokenHashA = '1'.repeat(64);
+  const tokenHashB = '2'.repeat(64);
+  const result = currentness.enumerateConfiguredMachinePrincipalAuthorities(new Map([
+    [tokenHashB, second],
+    ['3'.repeat(64), human],
+    [tokenHashA, first],
+    ['4'.repeat(64), infrastructureService]
+  ]));
+
+  assert.deepEqual(result, {
+    source_available: true,
+    source_verified: true,
+    complete: true,
+    principal_count: 2,
+    principals: [first, second],
+    production_activation_authorized: false,
+    authority_effect: 'none'
+  });
+  assert.equal(JSON.stringify(result).includes(tokenHashA), false);
+  assert.equal(JSON.stringify(result).includes(tokenHashB), false);
+
+  const reordered = currentness.enumerateConfiguredMachinePrincipalAuthorities(new Map([
+    [tokenHashA, first],
+    [tokenHashB, second]
+  ]));
+  assert.deepEqual(reordered, result);
+});
+
+test('configured source enumeration rejects duplicate machine principal ids', () => {
+  const first = authority('agent.configured.duplicate');
+  assert.throws(
+    () => currentness.enumerateConfiguredMachinePrincipalAuthorities(new Map([
+      ['1'.repeat(64), first],
+      ['2'.repeat(64), structuredClone(first)]
+    ])),
+    /Duplicate configured machine principal id/
+  );
+});
+
+test('configured source enumeration rejects malformed source and machine entries', () => {
+  assert.throws(
+    () => currentness.enumerateConfiguredMachinePrincipalAuthorities([]),
+    /normalized API principal Map/
+  );
+  assert.throws(
+    () => currentness.enumerateConfiguredMachinePrincipalAuthorities(new Map([
+      ['1'.repeat(64), { schema: 'axiom-machine-principal.v1', id: 'agent.invalid' }]
+    ])),
+    /Machine principal/
+  );
+  assert.throws(
+    () => currentness.enumerateConfiguredMachinePrincipalAuthorities(new Map([
+      ['2'.repeat(64), {
+        id: 'agent.legacy',
+        type: 'agent',
+        roles: ['researcher'],
+        scopes: ['intent:execute']
+      }]
+    ])),
+    /must use axiom-machine-principal.v1/
+  );
+});

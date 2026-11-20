@@ -619,6 +619,46 @@ export function evaluateMachineCurrentnessProductionPreflight({
   });
 }
 
+export function enumerateConfiguredMachinePrincipalAuthorities(principals) {
+  if (!(principals instanceof Map)) {
+    throw new ValidationError(
+      'Configured machine principal enumeration requires a normalized API principal Map'
+    );
+  }
+
+  const configured = [];
+  const principalIds = new Set();
+  for (const principal of principals.values()) {
+    if (principal?.schema !== 'axiom-machine-principal.v1') {
+      if (principal?.type === 'agent') {
+        throw new ValidationError(
+          'Configured agent principal must use axiom-machine-principal.v1'
+        );
+      }
+      continue;
+    }
+    const snapshot = normalizeMachinePrincipalAuthoritySnapshot(principal);
+    if (principalIds.has(snapshot.id)) {
+      throw new ValidationError(
+        `Duplicate configured machine principal id: ${snapshot.id}`
+      );
+    }
+    principalIds.add(snapshot.id);
+    configured.push(snapshot);
+  }
+  configured.sort(comparePrincipalBinding);
+
+  return deepFreeze({
+    source_available: true,
+    source_verified: true,
+    complete: true,
+    principal_count: configured.length,
+    principals: configured,
+    production_activation_authorized: false,
+    authority_effect: 'none'
+  });
+}
+
 export function resolveEffectiveMachinePrincipal(
   rootPrincipal,
   currentnessInput,

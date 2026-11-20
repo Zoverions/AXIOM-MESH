@@ -31,6 +31,27 @@
 
 ## Execution reconciliation — 2026-11-19
 
+### Bounded production-preflight Stage B1 plan
+
+**Goal:** deterministically enumerate configured constrained machine-principal
+authority snapshots from the already-normalized API principal registry without
+exposing token keys/hashes or creating authority, mutation, network, storage,
+credential, deployment, or activation effects.
+
+**Interface:**
+`enumerateConfiguredMachinePrincipalAuthorities(principals)` consumes the
+normalized `Map` returned by `loadApiPrincipals(config)` and returns verified,
+complete source metadata plus id-sorted historical authority snapshots and
+fixed `production_activation_authorized: false` / `authority_effect: none`
+semantics.
+
+**TDD/verification:** prove deterministic reordering, exclusion of humans and
+unconstrained infrastructure services, absence of registry keys in output,
+duplicate-id rejection, and malformed-source/principal rejection; run the
+production-preflight, principal-registry, and currentness-contract regressions,
+then the documentation checker and repository suite. Authenticated paginated
+retained-Grid enumeration and activation gating remain later slices.
+
 - Tasks 1-5 are implemented on protected `main` through PR #2018 / commit
   `9fed852f52fdd6203dd40ad6953f3726b84a8136`; their step-by-step instructions
   below are retained as historical implementation provenance and must not be
@@ -48,8 +69,11 @@
   deterministically compares configured machine principals with already
   verified retained Grid projections and fails closed on enumeration gaps,
   duplicate/omitted/orphan principals, type drift, and root-digest mismatch.
-  It does not load either source, mutate state, authorize activation, or enable
-  the gate; authenticated read-only enumeration and a separately reviewed
+  A bounded Stage B1 adapter now enumerates constrained machine-principal
+  authority snapshots from the already-normalized configured registry in
+  deterministic id order without retaining token keys or hashes. It does not
+  load credentials, mutate state, authorize activation, or enable the gate;
+  authenticated read-only retained-Grid pagination and a separately reviewed
   activation boundary remain required.
 - Task 6 is implemented in the current review change with the measured target
   **48 exact routes / 44 implemented routes**: durable Grid capability
