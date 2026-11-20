@@ -11,6 +11,7 @@
     "setup:install": "node mesh/src/setup.mjs install",
     "setup:check": "node mesh/src/setup.mjs check",
     "network-policy:check": "node mesh/src/check-service-network-policy.mjs",
+    "machine-currentness:preflight": "node mesh/scripts/machine-currentness-production-preflight.mjs",
     "gateway-client:check": "node mesh/src/check-gateway-client-contract.mjs",
     "axiom-one": "node apps/axiom-one/server.mjs",
     "axiom-one:check": "node mesh/src/check-axiom-one.mjs",

@@ -102,7 +102,7 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny 49-route policy permits only current internal
+readable default-deny 50-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
 mTLS peer allowlists. The governed Education learner-progress edge and three
 Hypervisor-only machine-currentness permissions plus one Hypervisor-only

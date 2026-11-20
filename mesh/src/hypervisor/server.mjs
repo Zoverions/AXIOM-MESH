@@ -56,6 +56,9 @@ import {
 } from '../lib/machine-principal-mutation-authorization.mjs';
 import { resolveEffectiveMachinePrincipal } from '../lib/machine-principal-currentness.mjs';
 import {
+  runMachineCurrentnessProductionPreflightAggregation
+} from './machine-currentness-preflight.mjs';
+import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
@@ -220,6 +223,35 @@ export async function createHypervisorService(config = meshConfig(), {
       kernelVersion: '0.12.0-dev.3'
     });
   });
+
+  router.add(
+    'POST',
+    '/internal/v1/machine-currentness/preflight',
+    async ({ body, principal, traceId }) => {
+      if (principal?.service !== 'gateway') {
+        throw new AxiomError(
+          'caller_not_allowed',
+          'Only Gateway may request machine currentness preflight aggregation',
+          403
+        );
+      }
+      const request = assertPlainObject(
+        parseJsonBody(body),
+        'machine currentness preflight request'
+      );
+      if (Object.keys(request).sort().join(',') !== 'configured_source,source_revision') {
+        throw new ValidationError('Machine currentness preflight request fields are invalid');
+      }
+      const { policy } = await activePolicy(traceId);
+      return runMachineCurrentnessProductionPreflightAggregation({
+        configuredSource: request.configured_source,
+        gridGet: path => gridGet(path, traceId),
+        sourceRevision: request.source_revision,
+        policyVersion: policy.policy.version,
+        policyDigest: policy.digest
+      });
+    }
+  );
 
   // Scalability audit S-15: every accepted intent reaches a terminal state.
   // The handler records one on every path; if that record cannot be

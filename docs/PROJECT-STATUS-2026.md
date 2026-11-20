@@ -142,7 +142,7 @@ The production-candidate surface includes:
   non-loopback destinations, covered by the telemetry-relay drill);
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 49-route application policy,
+  internal network segments, a default-deny 50-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - a default-off machine-currentness gate in which human-authorized deny-only
   Grid lifecycle state proves strict attenuation or terminal deny, is bound
