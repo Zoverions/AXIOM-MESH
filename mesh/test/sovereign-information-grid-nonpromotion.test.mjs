@@ -14,7 +14,10 @@ const PARENT_BLOBS = Object.freeze({
   // Updated deliberately for the factual service-network summary after the
   // Task 6 Hypervisor-to-Grid release route. Capability state, evidence,
   // activation and SIEA non-promotion remain unchanged.
-  capabilities: '3a4d60e85477f258f77f5d8afc3e6e8c98e245b9',
+  // Updated deliberately for the factual service-network summary after the
+  // retained machine-currentness pagination route. Capability status,
+  // evidence paths, activation and SIEA non-promotion remain unchanged.
+  capabilities: 'ff42db9c53935f0f8f76bcff61917f189686ecf5',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
   // the other paged collections, including accounting journals, and for the
   // read-only `sync_bundles.list` and `sync_updates.get` routes over the
