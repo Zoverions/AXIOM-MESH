@@ -783,8 +783,8 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Runtime and protected-CI proof',
     '## Operator verification and rollback',
     '## Pilot repetition and non-claims',
-    '48 exact route permissions',
-    '44 implemented routes'
+    '49 exact route permissions',
+    '45 implemented routes'
   ],
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': [
     '## Enforced relay boundary',

@@ -57,11 +57,12 @@ function mutation({
   successor = null,
   effectiveAt = '2026-11-19T09:55:00.000Z'
 }) {
+  const principalId = root.id;
   const intentId = `intent_${D(intentCharacter)}`;
   const authorization = {
     schema: 'axiom-machine-principal-mutation-authorization.v1',
     actor_id: ACTOR,
-    target_principal_id: PRINCIPAL,
+    target_principal_id: principalId,
     target_principal_type: 'agent',
     root_authority_digest: root.authority_digest,
     predecessor_lifecycle_seq: current?.lifecycle_seq ?? null,
@@ -91,7 +92,7 @@ function mutation({
   }[transitionKind];
   const transition = {
     schema: 'axiom-machine-principal-lifecycle-transition.v1',
-    principal_id: PRINCIPAL,
+    principal_id: principalId,
     principal_type: 'agent',
     root_authority_digest: root.authority_digest,
     predecessor_lifecycle_seq: current?.lifecycle_seq ?? null,
@@ -111,6 +112,20 @@ function mutation({
     effective_at: effectiveAt
   };
   return { authorization, transition };
+}
+
+function initializePrincipal(store, id, intentCharacter) {
+  const root = authority({ id });
+  return store.commitMachineCurrentnessMutation({
+    traceId: `trace:machine-currentness:list:${id}`,
+    actor: ACTOR,
+    ...mutation({
+      intentCharacter,
+      transitionKind: 'initialize',
+      root,
+      successor: root
+    })
+  });
 }
 
 async function fixture(t) {
@@ -155,6 +170,71 @@ test('migration 12 creates event-derived machine currentness tables', async t =>
   assert.equal(tables.has('machine_principal_lifecycle_heads'), true);
   assert.equal(tables.has('machine_principal_mutation_commands'), true);
   assert.equal(tables.has('machine_effect_releases'), true);
+});
+
+test('retained machine currentness enumeration is empty and deterministically id ordered', async t => {
+  const f = await fixture(t);
+
+  assert.deepEqual(f.store.listMachineCurrentness({ limit: 10 }), []);
+
+  initializePrincipal(f.store, 'agent.currentness.list.z', '7');
+  initializePrincipal(f.store, 'agent.currentness.list.a', '8');
+  initializePrincipal(f.store, 'agent.currentness.list.m', '9');
+
+  assert.deepEqual(
+    f.store.listMachineCurrentness({ limit: 10 }).map(item => item.principal_id),
+    [
+      'agent.currentness.list.a',
+      'agent.currentness.list.m',
+      'agent.currentness.list.z'
+    ]
+  );
+});
+
+test('retained machine currentness enumeration pages without gaps and survives restart', async t => {
+  const f = await fixture(t);
+  initializePrincipal(f.store, 'agent.currentness.page.c', 'a');
+  initializePrincipal(f.store, 'agent.currentness.page.a', 'b');
+  initializePrincipal(f.store, 'agent.currentness.page.b', 'c');
+
+  const first = f.store.listMachineCurrentness({ limit: 2 });
+  assert.deepEqual(first.map(item => item.principal_id), [
+    'agent.currentness.page.a',
+    'agent.currentness.page.b'
+  ]);
+
+  f.restart();
+  const second = f.store.listMachineCurrentness({
+    limit: 2,
+    after: {
+      sort: first.at(-1).principal_id,
+      id: first.at(-1).principal_id
+    }
+  });
+  assert.deepEqual(second.map(item => item.principal_id), [
+    'agent.currentness.page.c'
+  ]);
+  assert.equal(new Set([...first, ...second].map(item => item.principal_id)).size, 3);
+});
+
+test('retained machine currentness enumeration rejects unsafe bounds and cursor binding', async t => {
+  const f = await fixture(t);
+
+  assert.throws(
+    () => f.store.listMachineCurrentness({ limit: 0 }),
+    /machine currentness list limit/i
+  );
+  assert.throws(
+    () => f.store.listMachineCurrentness({ limit: 102 }),
+    /machine currentness list limit/i
+  );
+  assert.throws(
+    () => f.store.listMachineCurrentness({
+      limit: 1,
+      after: { sort: 'agent.a', id: 'agent.b' }
+    }),
+    /cursor binding/i
+  );
 });
 
 test('machine currentness initializes once, replays exactly, and survives restart', async t => {

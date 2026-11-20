@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Start from current `main`; re-read `AGENTS.md`, `CONSTITUTION.md`, and the spec before implementation.
-- Current execution baseline is migration version **12** and service-network policy **48 exact routes / 44 implemented routes** after Task 6. If either changes before the next task, stop and reconcile this plan before coding.
+- Current execution baseline is migration version **12** and service-network policy **49 exact routes / 45 implemented routes** after Stage B2. If either changes before the next task, stop and reconcile this plan before coding.
 - Preserve `Gateway -> Hypervisor -> Sandbox -> Grid` for ordinary execution.
 - Do **not** add a Sandbox -> Grid network edge. Hypervisor performs currentness/release Grid calls and passes a Grid-signed release receipt to Sandbox.
 - Do **not** mount or load the API bearer-token registry in Hypervisor, Sandbox, or Grid. Gateway remains the only service that loads it.
@@ -52,6 +52,43 @@ production-preflight, principal-registry, and currentness-contract regressions,
 then the documentation checker and repository suite. Authenticated paginated
 retained-Grid enumeration and activation gating remain later slices.
 
+### Bounded production-preflight Stage B2 plan
+
+**Goal:** expose the retained Grid lifecycle-head set as a deterministic,
+Hypervisor-authenticated, read-only keyset collection so the existing pure
+production-preflight evaluator can later prove exact configured/retained set
+equality without granting activation or mutation authority.
+
+**Architecture:** add `GridStore.listMachineCurrentness()` over the existing
+`machine_principal_lifecycle_heads` materialization, ordered uniquely by
+`principal_id`, and an exact `GET /internal/v1/machine-currentness` route that
+accepts only Hypervisor, `limit`, and a collection-bound cursor. Each item is
+the existing normalized currentness projection; the route writes nothing,
+loads no API bearer registry, and creates no Gateway or Sandbox edge. The
+service-network policy grows by exactly one Hypervisor-to-Grid read permission
+to **49 exact routes / 45 implemented routes**.
+
+**Task 1 — retained store enumeration (RED -> GREEN):** add literal-fixture
+regressions proving deterministic id order, empty state, disjoint pages without
+duplicates or gaps, restart stability, bounded limit, and rejection of a
+cursor whose sort/id binding is inconsistent. Implement only the bounded
+read method; reuse existing currentness normalization and do not add a table,
+migration, cache, mutation, credential, or activation state.
+
+**Task 2 — authenticated page route and policy (RED -> GREEN):** add route
+regressions proving Hypervisor access, Gateway denial, canonical cursor
+continuation, invalid limit/cursor denial, and no write/event change. Add the
+single exact allowlist permission and update wrong-caller/wrong-method and
+implementation-coverage tests. Reconcile canonical status/readiness/network
+documentation and generated claim text to the measured **49 / 45** boundary
+without changing capability status or production-promotion state.
+
+**Verification:** run the store, route, collection-page, service-network,
+production-preflight, machine-currentness contract, documentation, Clean Kernel,
+and Windows compatibility lanes on the exact review head. Production remains
+default-off; aggregation with the configured-source adapter and activation are
+separate later slices.
+
 - Tasks 1-5 are implemented on protected `main` through PR #2018 / commit
   `9fed852f52fdd6203dd40ad6953f3726b84a8136`; their step-by-step instructions
   below are retained as historical implementation provenance and must not be
@@ -72,9 +109,11 @@ retained-Grid enumeration and activation gating remain later slices.
   A bounded Stage B1 adapter now enumerates constrained machine-principal
   authority snapshots from the already-normalized configured registry in
   deterministic id order without retaining token keys or hashes. It does not
-  load credentials, mutate state, authorize activation, or enable the gate;
-  authenticated read-only retained-Grid pagination and a separately reviewed
-  activation boundary remain required.
+  load credentials, mutate state, authorize activation, or enable the gate.
+  A bounded Stage B2 route now exposes Hypervisor-authenticated, read-only,
+  deterministic retained-Grid keyset pages without mutation or a Gateway/
+  Sandbox edge; source aggregation and a separately reviewed activation
+  boundary remain required.
 - Task 6 is implemented in the current review change with the measured target
   **48 exact routes / 44 implemented routes**: durable Grid capability
   consumption precedes a deterministic, event-derived logical release; Grid

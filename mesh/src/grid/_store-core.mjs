@@ -767,6 +767,56 @@ export class GridStore {
     };
   }
 
+  listMachineCurrentness({
+    limit = COLLECTION_PAGE_MAX + 1,
+    after = null,
+    observedAt = new Date()
+  } = {}) {
+    const safeLimit = boundedInteger(
+      limit,
+      'machine currentness list limit',
+      1,
+      COLLECTION_PAGE_MAX + 1
+    );
+    let afterPrincipalId = null;
+    if (after !== null) {
+      const cursor = assertPlainObject(after, 'machine currentness list cursor');
+      if (Object.keys(cursor).sort().join(',') !== 'id,sort') {
+        throw new ValidationError('Machine currentness list cursor binding is invalid');
+      }
+      const sort = assertString(cursor.sort, 'machine currentness cursor sort', {
+        max: 160,
+        pattern: ID
+      });
+      const id = assertString(cursor.id, 'machine currentness cursor id', {
+        max: 160,
+        pattern: ID
+      });
+      if (sort !== id) {
+        throw new ValidationError('Machine currentness list cursor binding is invalid');
+      }
+      afterPrincipalId = id;
+    }
+    const rows = afterPrincipalId === null
+      ? this.db.prepare(`
+        SELECT principal_id
+        FROM machine_principal_lifecycle_heads
+        ORDER BY principal_id ASC
+        LIMIT ?
+      `).all(safeLimit)
+      : this.db.prepare(`
+        SELECT principal_id
+        FROM machine_principal_lifecycle_heads
+        WHERE principal_id > ?
+        ORDER BY principal_id ASC
+        LIMIT ?
+      `).all(afterPrincipalId, safeLimit);
+    const observed = normalizeObservationTime(observedAt);
+    return rows.map(row => this.getMachineCurrentness(row.principal_id, {
+      observedAt: observed
+    }));
+  }
+
   readMachineMutationCommand(commandId) {
     assertString(commandId, 'command_id', { max: 160, pattern: ID });
     const row = this.db.prepare(`

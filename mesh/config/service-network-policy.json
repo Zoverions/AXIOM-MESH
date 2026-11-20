@@ -189,6 +189,10 @@
         },
         {
           "method": "GET",
+          "path": "/internal/v1/machine-currentness"
+        },
+        {
+          "method": "GET",
           "path": "/internal/v1/machine-currentness/:principal_id"
         },
         {

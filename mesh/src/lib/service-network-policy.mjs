@@ -46,10 +46,10 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'hypervisor-self-health',
   'sandbox-self-health'
 ]);
-// Updated deliberately for the Hypervisor-only machine currentness read,
-// signed mutation command, and transactionally ordered effect release.
+// Updated deliberately for the Hypervisor-only machine currentness point read,
+// retained enumeration, signed mutation command, and ordered effect release.
 const EXPECTED_POLICY_DIGEST =
-  '8eb9c2f48b2f02839e61c924435baf1ff9b6db753ff035318ad3f24774b10b10';
+  '02b375b7752dcd1f6bc35754943c93ce5ca98e51e29cbf1a29ce6c4ccbe90be3';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
@@ -447,6 +447,7 @@ function validateExactCurrentRoutes(flows) {
     ],
     'hypervisor-to-grid': [
       'GET /internal/v1/status',
+      'GET /internal/v1/machine-currentness',
       'GET /internal/v1/machine-currentness/:principal_id',
       'GET /internal/v1/policy-overlays',
       'GET /internal/v1/approval/:id',
