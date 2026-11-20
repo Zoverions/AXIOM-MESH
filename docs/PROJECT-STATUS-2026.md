@@ -150,9 +150,12 @@ The production-candidate surface includes:
   consumption precedes atomic logical release, and Sandbox verifies the
   Grid-signed exact capability/attempt/process-epoch receipt before builtin;
   deterministic revoke/narrow races and restart recovery preserve
-  no-builtin-on-deny and exact-replay semantics;
-  production promotion still requires configured-principal/retained-Grid
-  exact-set and root-digest preflight, and no Sandbox-to-Grid route exists;
+  no-builtin-on-deny and exact-replay semantics; a pure, non-authorizing
+  comparator rejects incomplete/unverified retained-Grid enumeration,
+  pagination gaps, duplicates, omissions, orphans, type drift, and canonical
+  root-digest mismatch; production promotion still requires authenticated
+  read-only source enumeration plus a separately reviewed activation gate, and
+  no Sandbox-to-Grid route exists;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
   rollback;
