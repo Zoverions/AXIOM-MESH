@@ -523,8 +523,9 @@ test('restart-safe consumption and logical release preserve no Sandbox-to-Grid e
   // machine-currentness read and signed-mutation routes; 48 adds the
   // Hypervisor-only transactionally ordered machine-effect release; 49 adds
   // the Hypervisor-only paginated retained machine-currentness read; 50 adds
-  // the Gateway-to-Hypervisor read-only production-preflight aggregation.
-  assert.equal(routes.length, 50);
+  // the Gateway-to-Hypervisor read-only production-preflight aggregation; 51
+  // adds one-use, current-generation enforcement activation.
+  assert.equal(routes.length, 51);
   assert.equal(
     routes.some(route => route.path === '/internal/v1/capabilities/consume'),
     false

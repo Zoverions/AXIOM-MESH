@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Start from current `main`; re-read `AGENTS.md`, `CONSTITUTION.md`, and the spec before implementation.
-- Current execution baseline is migration version **12** and service-network policy **50 exact routes / 46 implemented routes** after Stage B3. If either changes before the next task, stop and reconcile this plan before coding.
+- Current execution baseline is migration version **12** and service-network policy **51 exact routes / 47 implemented routes** after Stage C. If either changes before the next task, stop and reconcile this plan before coding.
 - Preserve `Gateway -> Hypervisor -> Sandbox -> Grid` for ordinary execution.
 - Do **not** add a Sandbox -> Grid network edge. Hypervisor performs currentness/release Grid calls and passes a Grid-signed release receipt to Sandbox.
 - Do **not** mount or load the API bearer-token registry in Hypervisor, Sandbox, or Grid. Gateway remains the only service that loads it.
@@ -111,6 +111,28 @@ unavailable Grid redaction, token non-disclosure, exact Gateway-only caller and
 wrong-caller denial, operator revision validation, route-policy exactness, and
 documentation/checker reconciliation at **50 exact / 46 implemented**. Stage C
 startup/activation enforcement remains a separate reviewed slice.
+
+### Bounded production activation Stage C plan
+
+**Goal:** make production machine-currentness enforcement effective only after
+an explicit, content-addressed activation of a ready Stage B3 report from the
+same Hypervisor runtime generation.
+
+**Architecture:** each Hypervisor process owns one in-memory activation gate.
+The report binds the runtime generation, exact source revision, active policy,
+and Grid head. One exact Gateway-only activation POST consumes that report once;
+restart, replay, substitution, policy drift, Grid drift, or revision drift
+fails closed. Operations readiness is degraded and machine-principal effects
+are rejected until activation succeeds. The flag remains default-off and the
+activation has `authority_effect: none`; it creates no durable state, bearer
+fallback, public route, Sandbox-to-Grid edge, or production-promotion claim.
+
+**TDD/verification:** prove exact same-generation success, one-use consumption,
+prior-generation replay denial, source/policy/Grid substitution denial,
+pre-activation machine-intent denial, exact Gateway-only route policy, and
+disabled-gate compatibility. Reconcile the network boundary to **51 exact / 47
+implemented** and run focused currentness, service-network, docs, Clean Kernel,
+and Windows compatibility gates on the exact review head.
 
 - Tasks 1-5 are implemented on protected `main` through PR #2018 / commit
   `9fed852f52fdd6203dd40ad6953f3726b84a8136`; their step-by-step instructions

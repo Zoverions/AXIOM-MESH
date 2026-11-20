@@ -102,7 +102,7 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny 50-route policy permits only current internal
+readable default-deny 51-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
 mTLS peer allowlists. The governed Education learner-progress edge and three
 Hypervisor-only machine-currentness permissions plus one Hypervisor-only
@@ -116,10 +116,12 @@ Sandbox-only recovery. Pilot-orchestrator repetition remains open.
 
 The machine-currentness issuance fence is implemented behind the default-off
 `AXIOM_MACHINE_CURRENTNESS_ENFORCEMENT` rollout gate. Development/test use
-requires explicit public-path lifecycle initialization. Production promotion
-remains blocked until a verified preflight proves the configured machine set,
-retained Grid lifecycle set, and exact root digests agree. Currentness evidence
-does not grant authority, and the gate creates no Sandbox-to-Grid edge.
+requires explicit public-path lifecycle initialization. An enabled production
+candidate additionally requires an exact source revision and explicit one-use
+activation of a same-Hypervisor-generation preflight bound to the active policy
+and Grid head. Restart, replay, substitution, or state drift fails closed and
+degrades readiness until a fresh activation. This control does not grant
+authority, create a Sandbox-to-Grid edge, or promote the build/deployment.
 After explicit active initialization, subsequent Grid lifecycle mutations may
 only strictly attenuate the same principal or enter terminal deny. Grid enforces
 one-winner competing-successor ordering and preserves exact replay/restart

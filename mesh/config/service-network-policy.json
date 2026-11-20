@@ -55,6 +55,10 @@
         },
         {
           "method": "POST",
+          "path": "/internal/v1/machine-currentness/activate"
+        },
+        {
+          "method": "POST",
           "path": "/internal/v1/machine-currentness/preflight"
         },
         {

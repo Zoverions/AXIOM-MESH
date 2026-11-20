@@ -149,7 +149,7 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes exactly 50 currently allowed internal
+policy additionally authorizes exactly 51 currently allowed internal
 method/path permissions at both sending and receiving services and derives
 inbound mTLS peer allowlists. The governed Education permission and three
 Hypervisor-only machine-currentness permissions plus the Hypervisor-only
@@ -170,9 +170,15 @@ When enabled, Hypervisor fails closed if retained currentness is absent or
 terminal, evaluates the effective retained authority, binds the exact lifecycle
 head into invocation/plan/capability/terminal evidence, and prevents a
 capability from outliving a non-persistent machine authority. Do not enable the
-flag for a production candidate until a separately verified preflight proves
-the configured-principal and Grid-lifecycle sets and root digests match; there
-is no silent auto-initialization fallback.
+flag for a production candidate unless `AXIOM_SOURCE_REVISION` names the exact
+40-hex build revision and a same-generation preflight proves the configured-
+principal and Grid-lifecycle sets and root digests match. The local operator
+must explicitly activate that exact report with
+`AXIOM_MACHINE_CURRENTNESS_ACTIVATE=true`. Hypervisor stores the candidate only
+in memory, consumes it once, degrades readiness until activation, and rejects
+machine effects on restart, replay, source/policy/Grid drift, or report
+substitution. There is no silent auto-initialization or bearer fallback, and
+activation grants no authority or production promotion.
 
 For an enabled machine execution, Hypervisor must first obtain the durable
 Grid capability-consumption receipt and then the Grid-signed

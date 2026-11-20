@@ -88,3 +88,55 @@ test('operator rejects an ambiguous source revision before contacting Hypervisor
   );
   assert.equal(called, false);
 });
+
+test('operator explicitly consumes one ready report through the activation route', async () => {
+  let activationRequest;
+  const report = {
+    schema: 'axiom-machine-currentness-production-preflight-report.v1',
+    ready: true,
+    report_digest: 'd'.repeat(64)
+  };
+  const result = await runMachineCurrentnessProductionPreflightOperator({
+    config: config(),
+    sourceRevision: 'e'.repeat(40),
+    activate: true,
+    callHypervisor: async () => report,
+    callActivation: async request => {
+      activationRequest = request;
+      return {
+        schema: 'axiom-machine-currentness-enforcement-activation.v1',
+        active: true,
+        report_digest: request.report_digest,
+        authority_effect: 'none'
+      };
+    }
+  });
+
+  assert.deepEqual(activationRequest, { report_digest: report.report_digest });
+  assert.equal(result.report, report);
+  assert.equal(result.activation.active, true);
+  assert.equal(result.activation.authority_effect, 'none');
+});
+
+test('operator never calls activation when the current report is blocked', async () => {
+  let activated = false;
+  const report = {
+    schema: 'axiom-machine-currentness-production-preflight-report.v1',
+    ready: false,
+    blockers: ['configured-principal-missing-from-grid'],
+    report_digest: 'd'.repeat(64)
+  };
+  const result = await runMachineCurrentnessProductionPreflightOperator({
+    config: config(),
+    sourceRevision: 'e'.repeat(40),
+    activate: true,
+    callHypervisor: async () => report,
+    callActivation: async () => {
+      activated = true;
+    }
+  });
+
+  assert.equal(activated, false);
+  assert.equal(result.report, report);
+  assert.equal(result.activation, null);
+});
