@@ -15,9 +15,9 @@ const D = character => character.repeat(64);
 const PRINCIPAL = 'agent.currentness.route.1';
 const ACTOR = 'owner.alice';
 
-function authority(expiresAt) {
+function authority(expiresAt, id = PRINCIPAL) {
   const profile = {
-    id: PRINCIPAL,
+    id,
     type: 'agent',
     sponsor: ACTOR,
     roles: ['researcher'],
@@ -50,15 +50,15 @@ function authority(expiresAt) {
   };
 }
 
-function initialization(root) {
+function initialization(root, { intentCharacter = '1' } = {}) {
   const issuedAt = new Date(Date.now() - 1_000).toISOString();
   const effectiveAt = issuedAt;
   const expiresAt = new Date(Date.now() + 60_000).toISOString();
-  const intentId = `intent_${D('1')}`;
+  const intentId = `intent_${D(intentCharacter)}`;
   const authorization = {
     schema: 'axiom-machine-principal-mutation-authorization.v1',
     actor_id: ACTOR,
-    target_principal_id: PRINCIPAL,
+    target_principal_id: root.id,
     target_principal_type: 'agent',
     root_authority_digest: root.authority_digest,
     predecessor_lifecycle_seq: null,
@@ -79,7 +79,7 @@ function initialization(root) {
   const authorizationDigest = digestObject(authorization);
   const transition = {
     schema: 'axiom-machine-principal-lifecycle-transition.v1',
-    principal_id: PRINCIPAL,
+    principal_id: root.id,
     principal_type: 'agent',
     root_authority_digest: root.authority_digest,
     predecessor_lifecycle_seq: null,
@@ -99,6 +99,26 @@ function initialization(root) {
     effective_at: effectiveAt
   };
   return { authorization, transition };
+}
+
+async function initializeViaRoute(fixtureValue, root, intentCharacter) {
+  const command = initialization(root, { intentCharacter });
+  const authorization = command.authorization;
+  return signedFetch(
+    fixtureValue.hypervisor,
+    'grid',
+    `${fixtureValue.config.urls.grid}/internal/v1/machine-currentness/mutate`,
+    {
+      method: 'POST',
+      traceId: `trace_machine_currentness_list_${root.id}`,
+      body: {
+        actor: ACTOR,
+        authorization,
+        authorization_signature: fixtureValue.hypervisor.signObject(authorization),
+        transition: command.transition
+      }
+    }
+  );
 }
 
 async function fixture(t) {
@@ -221,4 +241,67 @@ test('Grid currentness routes require Hypervisor and exact signed mutation bindi
     }),
     error => error?.code === 'validation_error'
   );
+});
+
+test('Grid exposes deterministic Hypervisor-only retained currentness pages without mutation', async t => {
+  const f = await fixture(t);
+  const listUrl = `${f.config.urls.grid}/internal/v1/machine-currentness`;
+
+  await assert.rejects(
+    () => signedFetch(f.gateway, 'grid', `${listUrl}?limit=2`, {
+      traceId: 'trace_machine_currentness_list_wrong_reader'
+    }),
+    error => error?.status === 403
+  );
+
+  const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
+  await initializeViaRoute(f, authority(expiresAt, 'agent.currentness.list.c'), '4');
+  await initializeViaRoute(f, authority(expiresAt, 'agent.currentness.list.a'), '5');
+  await initializeViaRoute(f, authority(expiresAt, 'agent.currentness.list.b'), '6');
+  const committedSeq = f.grid.store.getStatus().last_seq;
+
+  const first = await signedFetch(f.hypervisor, 'grid', `${listUrl}?limit=2`, {
+    traceId: 'trace_machine_currentness_list_first'
+  });
+  assert.deepEqual(first.items.map(item => item.principal_id), [
+    'agent.currentness.list.a',
+    'agent.currentness.list.b'
+  ]);
+  assert.equal(first.page.limit, 2);
+  assert.equal(first.page.has_more, true);
+  assert.equal(typeof first.page.next_cursor, 'string');
+  assert.equal(first.items.every(item => item.authority_effect === 'none'), true);
+
+  const second = await signedFetch(
+    f.hypervisor,
+    'grid',
+    `${listUrl}?limit=2&cursor=${encodeURIComponent(first.page.next_cursor)}`,
+    { traceId: 'trace_machine_currentness_list_second' }
+  );
+  assert.deepEqual(second.items.map(item => item.principal_id), [
+    'agent.currentness.list.c'
+  ]);
+  assert.deepEqual(second.page, {
+    limit: 2,
+    has_more: false,
+    next_cursor: null
+  });
+
+  for (const query of [
+    'limit=0',
+    'limit=101',
+    'limit=01',
+    'limit=1&limit=2',
+    'cursor=not-canonical',
+    'extra=true'
+  ]) {
+    await assert.rejects(
+      () => signedFetch(f.hypervisor, 'grid', `${listUrl}?${query}`, {
+        traceId: `trace_machine_currentness_list_invalid_${query.replaceAll('=', '_')}`
+      }),
+      error => error?.status === 400,
+      query
+    );
+  }
+  assert.equal(f.grid.store.getStatus().last_seq, committedSeq);
 });

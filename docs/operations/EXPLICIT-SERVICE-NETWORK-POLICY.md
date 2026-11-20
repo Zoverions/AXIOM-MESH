@@ -19,7 +19,7 @@ The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
 fallback. The active policy contains 10 grouped flows. The source validator
-reports 44 implemented routes and 48 exact route permissions, including bounded
+reports 45 implemented routes and 49 exact route permissions, including bounded
 supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -305,11 +305,12 @@ This milestone does not claim:
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 48-route application graph, the reference four-unit
+an exact machine-readable 49-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
 network edges, the remote-social addition remains a Gateway-only bounded
 owner-review read path, the Education addition is one Hypervisor-only POST
-edge, and machine currentness adds a Hypervisor-only release route ordered
-after durable consumption. These additions create no public ingress,
+edge, and machine currentness adds point and paginated retained reads, signed
+mutation, and a Hypervisor-only release route ordered after durable
+consumption. These additions create no public ingress,
 Sandbox-to-Grid edge, or independent authority.

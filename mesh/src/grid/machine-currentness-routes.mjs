@@ -8,11 +8,17 @@ import {
 import { verifyObjectSignature } from '../lib/identity.mjs';
 import { parseJsonBody } from '../lib/http.mjs';
 import {
+  COLLECTION_PAGE_MAX,
+  collectionPage,
+  decodeCollectionCursor
+} from '../lib/collection-page.mjs';
+import {
   normalizeMachineLifecycleTransition,
   normalizeMachineMutationAuthorization
 } from '../lib/machine-principal-currentness.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const MACHINE_CURRENTNESS_COLLECTION = 'machine_currentness';
 const REQUEST_FIELDS = Object.freeze([
   'actor',
   'authorization',
@@ -24,6 +30,28 @@ export function registerMachineCurrentnessGridRoutes(router, {
   store,
   hypervisorPublicKey
 }) {
+  router.add(
+    'GET',
+    '/internal/v1/machine-currentness',
+    async ({ principal, url }) => {
+      requireHypervisor(principal);
+      assertPageQuery(url);
+      const limit = pageLimit(url.searchParams.get('limit'));
+      const after = decodeCollectionCursor(
+        MACHINE_CURRENTNESS_COLLECTION,
+        url.searchParams.get('cursor')
+      );
+      return collectionPage(
+        store.listMachineCurrentness({ limit: limit + 1, after }),
+        {
+          collection: MACHINE_CURRENTNESS_COLLECTION,
+          limit,
+          key: item => [item.principal_id, item.principal_id]
+        }
+      );
+    }
+  );
+
   router.add(
     'GET',
     '/internal/v1/machine-currentness/:principal_id',
@@ -72,6 +100,28 @@ export function registerMachineCurrentnessGridRoutes(router, {
       });
     }
   );
+}
+
+function assertPageQuery(url) {
+  const keys = [...url.searchParams.keys()];
+  if (
+    new Set(keys).size !== keys.length
+    || keys.some(key => key !== 'limit' && key !== 'cursor')
+  ) {
+    throw new ValidationError('Machine currentness page query is invalid');
+  }
+}
+
+function pageLimit(value) {
+  if (value === null || value === '') return COLLECTION_PAGE_MAX;
+  if (!/^[1-9][0-9]*$/.test(value)) {
+    throw new ValidationError('Machine currentness page limit is invalid');
+  }
+  const limit = Number(value);
+  if (!Number.isSafeInteger(limit) || limit > COLLECTION_PAGE_MAX) {
+    throw new ValidationError('Machine currentness page limit is invalid');
+  }
+  return limit;
 }
 
 function requireHypervisor(principal) {
