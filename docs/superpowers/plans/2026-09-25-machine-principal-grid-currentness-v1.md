@@ -44,9 +44,13 @@
   its measured target is **48 exact routes / 44 implemented routes**. No
   Sandbox-to-Grid edge is permitted.
 - Task 5 enforcement remains default-off for production candidates. Production
-  enablement is still blocked on a verified preflight proving that configured
-  machine principals and retained Grid lifecycle principals/root digests are
-  exact-set matches.
+  enablement is still blocked. A pure, side-effect-free Stage A evaluator now
+  deterministically compares configured machine principals with already
+  verified retained Grid projections and fails closed on enumeration gaps,
+  duplicate/omitted/orphan principals, type drift, and root-digest mismatch.
+  It does not load either source, mutate state, authorize activation, or enable
+  the gate; authenticated read-only enumeration and a separately reviewed
+  activation boundary remain required.
 - Task 6 is implemented in the current review change with the measured target
   **48 exact routes / 44 implemented routes**: durable Grid capability
   consumption precedes a deterministic, event-derived logical release; Grid

@@ -19,6 +19,8 @@ export const MACHINE_CURRENTNESS_PROJECTION_SCHEMA =
   'axiom-machine-principal-currentness-projection.v1';
 export const MACHINE_EFFECT_RELEASE_SCHEMA =
   'axiom-machine-effect-release.v1';
+export const MACHINE_CURRENTNESS_PRODUCTION_PREFLIGHT_EVALUATION_SCHEMA =
+  'axiom-machine-currentness-production-preflight-evaluation.v1';
 
 export const MACHINE_CURRENTNESS_EVENT_KINDS = Object.freeze([
   'machine.currentness.compromised',
@@ -51,6 +53,20 @@ const STATUSES = new Set([
   'expired'
 ]);
 const TERMINAL = new Set(['revoked', 'compromised', 'expired']);
+const PREFLIGHT_ENUMERATION_FIELDS = Object.freeze([
+  'source_available',
+  'source_verified',
+  'complete',
+  'expected_page_count',
+  'observed_page_numbers'
+]);
+const PREFLIGHT_SEMANTICS = deepFreeze({
+  evaluation_scope: 'pure-configured-principal-retained-grid-comparison',
+  production_activation_authorized: false,
+  registry_mutation_authorized: false,
+  grid_mutation_authorized: false,
+  authority_effect: 'none'
+});
 
 const MUTATION_FIELDS = Object.freeze([
   'schema',
@@ -507,6 +523,102 @@ export function normalizeMachineEffectRelease(raw) {
   });
 }
 
+export function evaluateMachineCurrentnessProductionPreflight({
+  configuredPrincipals,
+  retainedProjections,
+  enumeration
+} = {}) {
+  if (!Array.isArray(configuredPrincipals)) {
+    throw new ValidationError('configuredPrincipals must be an array');
+  }
+  if (!Array.isArray(retainedProjections)) {
+    throw new ValidationError('retainedProjections must be an array');
+  }
+
+  const configured = configuredPrincipals
+    .map(item => normalizeMachinePrincipalAuthoritySnapshot(item))
+    .sort(comparePrincipalBinding);
+  const retained = retainedProjections
+    .map(item => normalizeMachineCurrentnessProjection(item))
+    .sort(comparePrincipalBinding);
+  const enumerationEvidence = normalizePreflightEnumeration(enumeration);
+
+  const configuredById = firstByPrincipalId(configured);
+  const retainedById = firstByPrincipalId(retained);
+  const configuredIds = [...configuredById.keys()].sort();
+  const retainedIds = [...retainedById.keys()].sort();
+  const observedPages = [...enumerationEvidence.observed_page_numbers].sort((a, b) => a - b);
+  const observedPageSet = new Set(observedPages);
+
+  const details = deepFreeze({
+    configured_only_ids: configuredIds.filter(id => !retainedById.has(id)),
+    retained_only_ids: retainedIds.filter(id => !configuredById.has(id)),
+    duplicate_configured_ids: duplicatePrincipalIds(configured),
+    duplicate_retained_ids: duplicatePrincipalIds(retained),
+    principal_type_mismatch_ids: configuredIds.filter(id => (
+      retainedById.has(id)
+      && configuredById.get(id).type !== retainedById.get(id).principal_type
+    )),
+    root_authority_digest_mismatch_ids: configuredIds.filter(id => (
+      retainedById.has(id)
+      && configuredById.get(id).authority_digest
+        !== retainedById.get(id).root_authority_digest
+    )),
+    duplicate_page_numbers: duplicateNumbers(observedPages),
+    missing_page_numbers: integerRange(1, enumerationEvidence.expected_page_count)
+      .filter(page => !observedPageSet.has(page)),
+    unexpected_page_numbers: [...observedPageSet]
+      .filter(page => page > enumerationEvidence.expected_page_count)
+      .sort((a, b) => a - b)
+  });
+
+  const blockers = [];
+  if (!enumerationEvidence.source_available) blockers.push('grid-enumeration-unavailable');
+  if (!enumerationEvidence.source_verified) blockers.push('grid-enumeration-unverified');
+  if (!enumerationEvidence.complete) blockers.push('grid-enumeration-incomplete');
+  if (details.duplicate_page_numbers.length) blockers.push('duplicate-grid-page-number');
+  if (details.missing_page_numbers.length || details.unexpected_page_numbers.length) {
+    blockers.push('grid-pagination-gap');
+  }
+  if (details.duplicate_configured_ids.length) {
+    blockers.push('duplicate-configured-principal-id');
+  }
+  if (details.duplicate_retained_ids.length) blockers.push('duplicate-retained-principal-id');
+  if (details.configured_only_ids.length) blockers.push('configured-principal-missing-from-grid');
+  if (details.retained_only_ids.length) blockers.push('orphan-retained-grid-principal');
+  if (details.principal_type_mismatch_ids.length) blockers.push('principal-type-mismatch');
+  if (details.root_authority_digest_mismatch_ids.length) {
+    blockers.push('root-authority-digest-mismatch');
+  }
+  blockers.sort();
+
+  const body = deepFreeze({
+    schema: MACHINE_CURRENTNESS_PRODUCTION_PREFLIGHT_EVALUATION_SCHEMA,
+    ready: blockers.length === 0,
+    blockers,
+    configured_principal_count: configured.length,
+    retained_projection_count: retained.length,
+    enumeration: enumerationEvidence,
+    configured_bindings: configured.map(item => ({
+      principal_id: item.id,
+      principal_type: item.type,
+      root_authority_digest: item.authority_digest
+    })),
+    retained_bindings: retained.map(item => ({
+      principal_id: item.principal_id,
+      principal_type: item.principal_type,
+      root_authority_digest: item.root_authority_digest
+    })),
+    details,
+    semantics: PREFLIGHT_SEMANTICS
+  });
+
+  return deepFreeze({
+    ...body,
+    evidence_digest: digestObject(body)
+  });
+}
+
 export function resolveEffectiveMachinePrincipal(
   rootPrincipal,
   currentnessInput,
@@ -565,6 +677,90 @@ function statusForTransition(kind) {
     case 'expire': return 'expired';
     default: throw new ValidationError('Machine lifecycle transition kind is invalid');
   }
+}
+
+function normalizePreflightEnumeration(raw) {
+  const value = exactObject(
+    raw,
+    'Machine currentness production preflight enumeration',
+    PREFLIGHT_ENUMERATION_FIELDS
+  );
+  for (const field of ['source_available', 'source_verified', 'complete']) {
+    if (typeof value[field] !== 'boolean') {
+      throw new ValidationError(`Machine currentness production preflight ${field} must be boolean`);
+    }
+  }
+  const expectedPageCount = nonNegativeInteger(
+    value.expected_page_count,
+    'Machine currentness production preflight expected_page_count'
+  );
+  if (expectedPageCount > 10_000) {
+    throw new ValidationError(
+      'Machine currentness production preflight expected_page_count exceeds 10000'
+    );
+  }
+  if (!Array.isArray(value.observed_page_numbers) || value.observed_page_numbers.length > 10_000) {
+    throw new ValidationError(
+      'Machine currentness production preflight observed_page_numbers must contain at most 10000 values'
+    );
+  }
+  const observedPageNumbers = value.observed_page_numbers.map((page, index) => positiveInteger(
+    page,
+    `Machine currentness production preflight observed_page_numbers[${index}]`
+  ));
+  return deepFreeze({
+    source_available: value.source_available,
+    source_verified: value.source_verified,
+    complete: value.complete,
+    expected_page_count: expectedPageCount,
+    observed_page_numbers: [...observedPageNumbers].sort((a, b) => a - b)
+  });
+}
+
+function comparePrincipalBinding(left, right) {
+  const leftId = left.id ?? left.principal_id;
+  const rightId = right.id ?? right.principal_id;
+  if (leftId !== rightId) return leftId.localeCompare(rightId);
+  const leftType = left.type ?? left.principal_type;
+  const rightType = right.type ?? right.principal_type;
+  if (leftType !== rightType) return leftType.localeCompare(rightType);
+  const leftDigest = left.authority_digest ?? left.root_authority_digest;
+  const rightDigest = right.authority_digest ?? right.root_authority_digest;
+  return leftDigest.localeCompare(rightDigest);
+}
+
+function firstByPrincipalId(values) {
+  const byId = new Map();
+  for (const value of values) {
+    const id = value.id ?? value.principal_id;
+    if (!byId.has(id)) byId.set(id, value);
+  }
+  return byId;
+}
+
+function duplicatePrincipalIds(values) {
+  const counts = new Map();
+  for (const value of values) {
+    const id = value.id ?? value.principal_id;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([id]) => id)
+    .sort();
+}
+
+function duplicateNumbers(values) {
+  const counts = new Map();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([value]) => value)
+    .sort((a, b) => a - b);
+}
+
+function integerRange(first, last) {
+  return Array.from({ length: Math.max(0, last - first + 1) }, (_, index) => first + index);
 }
 
 function exactObject(value, label, fields) {
