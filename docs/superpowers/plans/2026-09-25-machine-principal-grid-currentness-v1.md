@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Start from current `main`; re-read `AGENTS.md`, `CONSTITUTION.md`, and the spec before implementation.
-- Current execution baseline is migration version **12** and service-network policy **49 exact routes / 45 implemented routes** after Stage B2. If either changes before the next task, stop and reconcile this plan before coding.
+- Current execution baseline is migration version **12** and service-network policy **50 exact routes / 46 implemented routes** after Stage B3. If either changes before the next task, stop and reconcile this plan before coding.
 - Preserve `Gateway -> Hypervisor -> Sandbox -> Grid` for ordinary execution.
 - Do **not** add a Sandbox -> Grid network edge. Hypervisor performs currentness/release Grid calls and passes a Grid-signed release receipt to Sandbox.
 - Do **not** mount or load the API bearer-token registry in Hypervisor, Sandbox, or Grid. Gateway remains the only service that loads it.
@@ -89,6 +89,29 @@ and Windows compatibility lanes on the exact review head. Production remains
 default-off; aggregation with the configured-source adapter and activation are
 separate later slices.
 
+### Bounded production-preflight Stage B3 plan
+
+**Goal:** aggregate the already-sanitized configured source with one complete,
+authenticated retained-Grid snapshot and emit a deterministic non-authorizing
+operator report without loading the bearer registry outside Gateway or enabling
+the production gate.
+
+**Architecture:** a local operator CLI loads the configured registry through the
+existing production parser, enumerates only constrained machine authority
+snapshots, and sends those snapshots plus an exact 40-hex source revision over
+one exact Gateway-to-Hypervisor POST. Hypervisor reads Grid status before and
+after paginating the existing retained collection; any chain-head drift,
+pagination ambiguity, unavailable source, or malformed response fails closed.
+The report binds the source revision, active policy version/digest, stable Grid
+snapshot digest, configured/retained set digests, and Stage A evaluation. Every
+authority/activation/deployment/promotion semantic remains false/none.
+
+**TDD/verification:** prove stable-snapshot success, concurrent Grid drift,
+unavailable Grid redaction, token non-disclosure, exact Gateway-only caller and
+wrong-caller denial, operator revision validation, route-policy exactness, and
+documentation/checker reconciliation at **50 exact / 46 implemented**. Stage C
+startup/activation enforcement remains a separate reviewed slice.
+
 - Tasks 1-5 are implemented on protected `main` through PR #2018 / commit
   `9fed852f52fdd6203dd40ad6953f3726b84a8136`; their step-by-step instructions
   below are retained as historical implementation provenance and must not be
@@ -112,8 +135,9 @@ separate later slices.
   load credentials, mutate state, authorize activation, or enable the gate.
   A bounded Stage B2 route now exposes Hypervisor-authenticated, read-only,
   deterministic retained-Grid keyset pages without mutation or a Gateway/
-  Sandbox edge; source aggregation and a separately reviewed activation
-  boundary remain required.
+  Sandbox edge. Stage B3 now aggregates the sanitized configured source with a
+  chain-stable authenticated retained snapshot and emits a bounded operator
+  report; the separately reviewed Stage C activation boundary remains required.
 - Task 6 is implemented in the current review change with the measured target
   **48 exact routes / 44 implemented routes**: durable Grid capability
   consumption precedes a deterministic, event-derived logical release; Grid

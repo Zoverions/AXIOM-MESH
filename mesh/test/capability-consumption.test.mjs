@@ -522,8 +522,9 @@ test('restart-safe consumption and logical release preserve no Sandbox-to-Grid e
   // closing interrupted intents (audit S-15); 47 since the Hypervisor-only
   // machine-currentness read and signed-mutation routes; 48 adds the
   // Hypervisor-only transactionally ordered machine-effect release; 49 adds
-  // the Hypervisor-only paginated retained machine-currentness read.
-  assert.equal(routes.length, 49);
+  // the Hypervisor-only paginated retained machine-currentness read; 50 adds
+  // the Gateway-to-Hypervisor read-only production-preflight aggregation.
+  assert.equal(routes.length, 50);
   assert.equal(
     routes.some(route => route.path === '/internal/v1/capabilities/consume'),
     false

@@ -19,7 +19,7 @@ The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
 fallback. The active policy contains 10 grouped flows. The source validator
-reports 45 implemented routes and 49 exact route permissions, including bounded
+reports 46 implemented routes and 50 exact route permissions, including bounded
 supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -72,7 +72,24 @@ local operator
                               Hypervisor GET/POST
 ```
 
-Gateway may request Hypervisor operations and submit normalized intents.
+Gateway may request Hypervisor operations, submit normalized intents, and call
+one exact read-only machine-currentness production-preflight aggregation route.
+That preflight transfers only already-normalized configured machine authority
+snapshots: it never serializes registry token keys/hashes, never exposes bearer
+tokens, and cannot authorize production activation. Hypervisor reads the
+retained Grid collection over its existing authenticated boundary, rejects a
+Grid chain-head change across pagination, and returns a content-addressed
+non-authorizing report. The local operator CLI requires an exact 40-hex source
+revision and exits nonzero when the report is not ready.
+
+Run it only against the exact review head being evaluated:
+
+```bash
+AXIOM_SOURCE_REVISION="$(git rev-parse HEAD)" npm run machine-currentness:preflight
+```
+
+Exit status `0` means the bounded report is ready evidence; exit status `2`
+means it is blocked. Neither status enables the production enforcement gate.
 Gateway may read the exact Grid query routes used by the public operator
 surface. That read set includes one remote-social inspection edge:
 `GET /internal/v1/social/remote-review/:owner`. It is allowed only from
@@ -95,22 +112,24 @@ Scalability audit S-15 adds one more: `POST /internal/v1/intents/interrupted`,
 with which the Hypervisor closes intents a previous Hypervisor process left
 `accepted`, as `intent.failed` with `intent_interrupted`. It writes nothing
 else and only intents accepted before a past cutoff.
-The machine-currentness lifecycle adds exactly three more Hypervisor-to-Grid
-permissions: `GET /internal/v1/machine-currentness/:principal_id` for the
-authoritative deny-only projection and
+The machine-currentness lifecycle adds exactly four Hypervisor-to-Grid
+permissions: `GET /internal/v1/machine-currentness` for deterministic retained
+collection pages, `GET /internal/v1/machine-currentness/:principal_id` for the
+authoritative deny-only projection, and
 `POST /internal/v1/machine-currentness/mutate` for an exact mutation command.
 The mutation route requires both the authenticated Hypervisor transport/request
 identity and a separately verified Hypervisor signature over the normalized
 authorization. Grid binds actor, target, root, predecessor, transition,
 successor, policy, reason, time, command, and authorization digests before the
 transaction. Generic Grid commits reject caller-supplied
-`machine.currentness.*` events. The third permission,
+`machine.currentness.*` events. The fourth permission,
 `POST /internal/v1/machine-effect/release`, is Hypervisor-only and may append
 one event-derived logical release only after exact durable capability
 consumption and retained-head comparison. Sandbox receives the Grid-signed
 release receipt from Hypervisor and therefore needs no Grid route. These routes
-create no Gateway, Sandbox-to-Grid, public, provider, credential, or independent
-authority path.
+create no Sandbox-to-Grid, public, provider, credential, activation, or
+independent authority path. The separate Gateway-to-Hypervisor preflight edge
+does not make Gateway a Grid currentness reader or mutable lifecycle authority.
 Hypervisor alone may request Sandbox operations or execution. Grid and Sandbox
 have no application egress permissions.
 
@@ -305,7 +324,7 @@ This milestone does not claim:
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 49-route application graph, the reference four-unit
+an exact machine-readable 50-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
 network edges, the remote-social addition remains a Gateway-only bounded

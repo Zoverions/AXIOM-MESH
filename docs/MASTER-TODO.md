@@ -160,7 +160,7 @@ production activation decision.
 | NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
 | NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
 | NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
-| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 49-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof; Hypervisor-only machine currentness includes point and paginated retained reads, while effect release remains ordered after durable consumption and creates no Sandbox-to-Grid edge |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 50-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof; Hypervisor-only machine currentness includes point and paginated retained reads, effect release remains ordered after durable consumption, and the Gateway-to-Hypervisor preflight edge carries only sanitized configured snapshots with no activation or Sandbox-to-Grid edge |
 
 ## P3 — controlled adapters and product ecosystem
 

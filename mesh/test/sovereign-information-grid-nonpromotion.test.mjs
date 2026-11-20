@@ -17,7 +17,10 @@ const PARENT_BLOBS = Object.freeze({
   // Updated deliberately for the factual service-network summary after the
   // retained machine-currentness pagination route. Capability status,
   // evidence paths, activation and SIEA non-promotion remain unchanged.
-  capabilities: 'ff42db9c53935f0f8f76bcff61917f189686ecf5',
+  // Updated deliberately for the factual 50-route summary after the bounded
+  // read-only production-preflight aggregation edge. Capability status,
+  // evidence paths, activation and SIEA non-promotion remain unchanged.
+  capabilities: '8f89ae1543f0e9f69851f9acb32c6c9d1fa201a5',
   // Updated deliberately for optional `cursor` and `limit` on `sync.list` and
   // the other paged collections, including accounting journals, and for the
   // read-only `sync_bundles.list` and `sync_updates.get` routes over the

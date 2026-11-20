@@ -46,10 +46,11 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'hypervisor-self-health',
   'sandbox-self-health'
 ]);
-// Updated deliberately for the Hypervisor-only machine currentness point read,
-// retained enumeration, signed mutation command, and ordered effect release.
+// Updated deliberately for the Gateway-to-Hypervisor read-only machine
+// currentness production-preflight aggregation route. The bearer registry
+// remains Gateway-only and activation remains default-off.
 const EXPECTED_POLICY_DIGEST =
-  '02b375b7752dcd1f6bc35754943c93ce5ca98e51e29cbf1a29ce6c4ccbe90be3';
+  'b2ee84943e8a5f5665ea491ccdba67e3b15cc8807b317b11af7555df2153a3db';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
@@ -443,6 +444,7 @@ function validateExactCurrentRoutes(flows) {
     'gateway-to-hypervisor': [
       'GET /internal/v1/operations',
       'POST /internal/v1/machine-discovery',
+      'POST /internal/v1/machine-currentness/preflight',
       'POST /internal/v1/intents'
     ],
     'hypervisor-to-grid': [

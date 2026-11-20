@@ -390,7 +390,7 @@
       "id": "operations.service-network-policy",
       "family": "operations",
       "status": "implemented",
-      "summary": "A default-deny current-build policy permits only 49 exact internal caller, destination, method, and route combinations; Education contributes one bounded Hypervisor-to-Grid learner-progress POST, and machine currentness contributes point and paginated retained reads, signed mutation, and transactionally ordered effect-release POST without public ingress, Sandbox-to-Grid adjacency, or alternate authority; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
+      "summary": "A default-deny current-build policy permits only 50 exact internal caller, destination, method, and route combinations; Education contributes one bounded Hypervisor-to-Grid learner-progress POST, while machine currentness contributes point and paginated retained reads, signed mutation, transactionally ordered effect release, and one Gateway-to-Hypervisor read-only production-preflight aggregation POST that transfers only sanitized configured authority snapshots; no public ingress, Sandbox-to-Grid adjacency, production activation, or alternate authority is added. Four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
       "evidence": [
         "mesh/test/service-network-policy.test.mjs",
         "mesh/src/lib/service-network-policy.mjs",
